@@ -13,7 +13,6 @@ import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
 
 part 'billing_event.dart';
 part 'billing_state.dart';
-part 'billing_bloc.freezed.dart';
 
 /// Bloc for managing billing operations in the super admin panel
 class BillingBloc extends Bloc<BillingEvent, BillingState> {
