@@ -646,8 +646,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                           color: AppColors.warning,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             if (invoice['followUpDate'] != null) const SizedBox(height: 8),
@@ -680,7 +680,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           ],
         ),
       ),
-    )
+    );
   }
 
   @override
