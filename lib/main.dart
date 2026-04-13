@@ -11,6 +11,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ScreenUtil.ensureScreenSize();
 
+  // Initialize error handling
+  _setupErrorHandling();
+
   if (kIsWeb) {
     // Use history mode (no hash in URL) for clean URLs
     usePathUrlStrategy();
@@ -18,6 +21,21 @@ void main() async {
   }
 
   runApp(const NexaTraceApp());
+}
+
+void _setupErrorHandling() {
+  // Set up Flutter error handling
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    // Log to error logger
+    // ErrorLogger.error('Flutter error', details.exception, details.stack);
+  };
+
+  // Set up platform error handling
+  PlatformDispatcher.instance.onError = (error, stack) {
+    // ErrorLogger.error('Platform error', error, stack);
+    return true;
+  };
 }
 
 class NexaTraceApp extends StatelessWidget {

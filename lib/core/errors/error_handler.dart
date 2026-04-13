@@ -5,7 +5,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_exceptions.dart';
-
 import 'error_logger.dart';
 
 class ErrorHandler {

@@ -206,4 +206,9 @@ class ValidationResult {
 
   // Helper method to get error message
   String? get errorMessage => error?.message;
+
+  @override
+  String toString() {
+    return 'ValidationResult{isValid: $isValid, error: $error}';
+  }
 }
