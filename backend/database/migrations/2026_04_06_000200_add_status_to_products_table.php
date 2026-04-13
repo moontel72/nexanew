@@ -1,0 +1,37 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (!Schema::hasTable('products')) {
+            return;
+        }
+
+        if (!Schema::hasColumn('products', 'status')) {
+            Schema::table('products', function (Blueprint $table): void {
+                $table->string('status', 20)->default('active')->after('image_urls');
+                $table->index('status', 'idx_products_status');
+            });
+        }
+    }
+
+    public function down(): void
+    {
+        if (!Schema::hasTable('products')) {
+            return;
+        }
+
+        if (Schema::hasColumn('products', 'status')) {
+            Schema::table('products', function (Blueprint $table): void {
+                $table->dropIndex('idx_products_status');
+                $table->dropColumn('status');
+            });
+        }
+    }
+};
+

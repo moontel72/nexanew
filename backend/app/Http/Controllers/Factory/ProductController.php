@@ -1,0 +1,467 @@
+<?php
+
+namespace App\Http\Controllers\Factory;
+
+use App\Http\Controllers\Controller;
+use App\Models\Product;
+use App\Models\CompanySubscription;
+use App\Models\Invoice;
+use App\Models\SubscriptionPlan;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+
+class ProductController extends Controller
+{
+    public function index(Request $request)
+    {
+        $user = $request->user();
+        $query = Product::query()->where('company_id', $user->company_id);
+
+        if ($search = $request->query('search')) {
+            $search = (string) $search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('sku', 'ilike', "%{$search}%");
+            });
+        }
+
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
+        }
+
+        $page = (int) $request->query('page', 1);
+        $limit = (int) $request->query('limit', 20);
+        $limit = max(1, min(100, $limit));
+
+        $paginator = $query->orderByDesc('created_at')->paginate($limit, ['*'], 'page', $page);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'products' => $paginator->items(),
+                'total' => $paginator->total(),
+                'page' => $paginator->currentPage(),
+                'limit' => $paginator->perPage(),
+                'total_pages' => $paginator->lastPage(),
+            ],
+        ]);
+    }
+
+    public function show(Request $request, Product $product)
+    {
+        $this->assertCompany($request, $product);
+        return response()->json(['success' => true, 'data' => $product]);
+    }
+
+    public function store(Request $request)
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'sku' => ['required', 'string', 'max:100', 'unique:products,sku'],
+            'description' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'max:100'],
+            'product_type' => ['required', 'string', 'max:50'],
+            'requires_manufacturing_date' => ['nullable', 'boolean'],
+            'requires_expiry_date' => ['nullable', 'boolean'],
+            'requires_warranty' => ['nullable', 'boolean'],
+            'default_warranty_months' => ['nullable', 'integer', 'min:0'],
+            'default_storage_conditions' => ['nullable', 'string'],
+            'default_handling_instructions' => ['nullable', 'string'],
+            'image_urls' => ['nullable', 'array'],
+            'status' => ['nullable', Rule::in(['active', 'inactive', 'archived'])],
+            'metadata' => ['nullable', 'array'],
+        ]);
+
+        $product = Product::query()->create(array_merge(
+            ['id' => (string) Str::uuid(), 'company_id' => $user->company_id],
+            $data,
+            ['status' => $data['status'] ?? 'active']
+        ));
+
+        return response()->json(['success' => true, 'data' => $product], 201);
+    }
+
+    public function update(Request $request, Product $product)
+    {
+        $this->assertCompany($request, $product);
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'sku' => ['sometimes', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($product->id, 'id')],
+            'description' => ['sometimes', 'nullable', 'string'],
+            'category' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'product_type' => ['sometimes', 'string', 'max:50'],
+            'requires_manufacturing_date' => ['sometimes', 'boolean'],
+            'requires_expiry_date' => ['sometimes', 'boolean'],
+            'requires_warranty' => ['sometimes', 'boolean'],
+            'default_warranty_months' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'default_storage_conditions' => ['sometimes', 'nullable', 'string'],
+            'default_handling_instructions' => ['sometimes', 'nullable', 'string'],
+            'image_urls' => ['sometimes', 'array'],
+            'status' => ['sometimes', Rule::in(['active', 'inactive', 'archived'])],
+            'metadata' => ['sometimes', 'array'],
+        ]);
+
+        $product->fill($data)->save();
+        return response()->json(['success' => true, 'data' => $product]);
+    }
+
+    public function destroy(Request $request, Product $product)
+    {
+        $this->assertCompany($request, $product);
+        $product->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function types()
+    {
+        return response()->json(['success' => true, 'data' => [
+            'pharmaceutical',
+            'food_beverage',
+            'textile',
+            'electronics',
+            'other',
+        ]]);
+    }
+
+    public function categories()
+    {
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    public function linkCodes(Request $request, Product $product)
+    {
+        $this->assertCompany($request, $product);
+
+        $data = $request->validate([
+            'code_ids' => ['required', 'array', 'min:1', 'max:5000'],
+            'code_ids.*' => ['uuid'],
+            'product_batch_number' => ['nullable', 'string', 'max:100'],
+            'manufacturing_date' => ['nullable', 'date'],
+            'expiry_date' => ['nullable', 'date'],
+            'warranty_months' => ['nullable', 'integer', 'min:0', 'max:240'],
+        ]);
+
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+        $now = now();
+
+        $updated = DB::table('base_codes')
+            ->where('company_id', $companyId)
+            ->where('code_type', 'unit')
+            ->whereIn('id', $data['code_ids'])
+            ->whereNull('published_at')
+            ->update([
+                'product_id' => (string) $product->id,
+                'product_batch_number' => $data['product_batch_number'] ?? null,
+                'manufacturing_date' => $data['manufacturing_date'] ?? null,
+                'expiry_date' => $data['expiry_date'] ?? null,
+                'warranty_months' => $data['warranty_months'] ?? null,
+                'status' => 'linked',
+                'linked_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'linked_count' => (int) $updated,
+            ],
+        ]);
+    }
+
+    public function codes(Request $request, Product $product)
+    {
+        $this->assertCompany($request, $product);
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    public function publishCodes(Request $request, Product $product)
+    {
+        $this->assertCompany($request, $product);
+
+        $data = $request->validate([
+            'code_ids' => ['nullable', 'array', 'min:1', 'max:5000'],
+            'code_ids.*' => ['uuid'],
+            'product_batch_number' => ['nullable', 'string', 'max:100'],
+            'manufacturing_date' => ['nullable', 'date'],
+            'expiry_date' => ['nullable', 'date'],
+            'warranty_months' => ['nullable', 'integer', 'min:0', 'max:240'],
+        ]);
+
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+
+        $subscription = CompanySubscription::query()
+            ->where('company_id', $companyId)
+            ->where('status', 'active')
+            ->first();
+        if (!$subscription) {
+            return response()->json(['message' => 'No active subscription'], 422);
+        }
+
+        $plan = SubscriptionPlan::query()->find((string) $subscription->plan_id);
+        if (!$plan) {
+            return response()->json(['message' => 'Invalid subscription plan'], 422);
+        }
+
+        $query = DB::table('base_codes')
+            ->where('company_id', $companyId)
+            ->where('code_type', 'unit')
+            ->where('product_id', (string) $product->id)
+            ->whereNull('published_at')
+            ->whereIn('status', ['generated', 'linked']);
+
+        if (!empty($data['code_ids'])) {
+            $query->whereIn('id', $data['code_ids']);
+        }
+
+        $toPublish = (int) $query->count('id');
+        if ($toPublish <= 0) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'published_count' => 0,
+                    'remaining_unit_codes' => max(0, (int) ($plan->monthly_unit_codes ?? 0) - (int) ($subscription->current_unit_codes_used ?? 0)),
+                ],
+            ]);
+        }
+
+        $limit = (int) ($plan->monthly_unit_codes ?? 0);
+        $used = (int) ($subscription->current_unit_codes_used ?? 0);
+        if ($limit > 0 && ($used + $toPublish) > $limit) {
+            return response()->json([
+                'message' => 'Unit code publish exceeds subscription limit',
+                'data' => [
+                    'limit' => $limit,
+                    'used' => $used,
+                    'requested' => $toPublish,
+                    'remaining' => max(0, $limit - $used),
+                ],
+            ], 422);
+        }
+
+        $now = now();
+
+        $invoice = null;
+
+        DB::transaction(function () use ($query, $subscription, $plan, $product, $companyId, $toPublish, $data, $now, &$invoice) {
+            $ids = (clone $query)->pluck('id')->map(fn ($v) => (string) $v)->all();
+
+            $linkQuery = clone $query;
+            $linkQuery->whereNull('linked_at')->update([
+                'linked_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $query->update([
+                'status' => 'published',
+                'published_at' => $now,
+                'subscription_plan_id' => (string) $plan->id,
+                'product_batch_number' => $data['product_batch_number'] ?? DB::raw('product_batch_number'),
+                'manufacturing_date' => $data['manufacturing_date'] ?? DB::raw('manufacturing_date'),
+                'expiry_date' => $data['expiry_date'] ?? DB::raw('expiry_date'),
+                'warranty_months' => $data['warranty_months'] ?? DB::raw('warranty_months'),
+                'updated_at' => $now,
+            ]);
+
+            $subscription->current_unit_codes_used = (int) ($subscription->current_unit_codes_used ?? 0) + $toPublish;
+            $subscription->save();
+
+            $invoice = $this->createPublishInvoice(
+                companyId: $companyId,
+                subscription: $subscription,
+                plan: $plan,
+                codeType: 'unit',
+                quantity: $toPublish,
+                publishedAt: $now,
+                context: [
+                    'product_id' => (string) $product->id,
+                    'product_name' => (string) ($product->name ?? ''),
+                    'product_batch_number' => $data['product_batch_number'] ?? null,
+                    'code_ids' => $ids,
+                ],
+            );
+
+            $this->stampInvoiceIdOnCodes($companyId, 'unit', $ids, (string) $invoice->id, $now);
+        });
+
+        $newUsed = (int) ($subscription->current_unit_codes_used ?? 0);
+        $remaining = $limit > 0 ? max(0, $limit - $newUsed) : null;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'published_count' => $toPublish,
+                'used_unit_codes' => $newUsed,
+                'remaining_unit_codes' => $remaining,
+                'published_at' => Carbon::parse($now)->toISOString(),
+                'invoice' => $invoice ? [
+                    'id' => (string) $invoice->id,
+                    'invoice_number' => (string) $invoice->invoice_number,
+                    'status' => (string) $invoice->status,
+                    'total_amount' => (float) $invoice->total_amount,
+                    'currency' => (string) ($invoice->currency ?? 'USD'),
+                    'issue_date' => optional($invoice->issue_date)->toISOString(),
+                    'due_date' => optional($invoice->due_date)->toISOString(),
+                ] : null,
+            ],
+        ]);
+    }
+
+    private function createPublishInvoice(
+        string $companyId,
+        CompanySubscription $subscription,
+        SubscriptionPlan $plan,
+        string $codeType,
+        int $quantity,
+        \DateTimeInterface $publishedAt,
+        array $context = [],
+    ): Invoice {
+        $currency = (string) ($plan->currency ?? 'USD');
+        $unitPrice = $this->calculatePublishUnitPrice($plan, $codeType);
+        $subtotal = round($unitPrice * max(0, $quantity), 2);
+
+        $issueDate = Carbon::parse($publishedAt)->toDateString();
+        $dueDate = Carbon::parse($publishedAt)->copy()->addDays(7)->toDateString();
+        $periodStart = Carbon::parse($publishedAt)->copy()->startOfMonth()->toDateString();
+        $periodEnd = Carbon::parse($publishedAt)->copy()->endOfMonth()->toDateString();
+
+        $invoiceNumber = $this->generateUniqueInvoiceNumber();
+
+        $invoice = new Invoice([
+            'company_id' => $companyId,
+            'subscription_id' => (string) $subscription->id,
+            'invoice_number' => $invoiceNumber,
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'issue_date' => $issueDate,
+            'due_date' => $dueDate,
+            'subtotal' => $subtotal,
+            'tax_amount' => 0,
+            'discount_amount' => 0,
+            'total_amount' => $subtotal,
+            'currency' => $currency,
+            'items' => [
+                [
+                    'id' => (string) Str::uuid(),
+                    'description' => $codeType === 'unit' ? 'Unit codes publish' : ($codeType . ' codes publish'),
+                    'quantity' => (float) $quantity,
+                    'unit_price' => $unitPrice,
+                    'total' => $subtotal,
+                    'currency' => $currency,
+                    'code_type' => $codeType,
+                    'code_count' => $quantity,
+                    'period_start' => $periodStart,
+                    'period_end' => $periodEnd,
+                    'metadata' => [
+                        'source' => 'publish_codes',
+                    ],
+                ],
+            ],
+            'status' => $subtotal > 0 ? 'pending' : 'paid',
+            'payment_date' => $subtotal > 0 ? null : $issueDate,
+            'payment_method' => $subtotal > 0 ? null : 'system',
+            'payment_reference' => $subtotal > 0 ? null : 'FREE',
+            'metadata' => array_merge([
+                'source' => 'publish_codes',
+                'code_type' => $codeType,
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'published_at' => Carbon::parse($publishedAt)->toISOString(),
+                'plan_id_at_publish' => (string) $plan->id,
+                'plan_type_at_publish' => (string) ($plan->type ?? ''),
+                'plan_monthly_price_at_publish' => (float) ($plan->monthly_price ?? 0),
+            ], $context),
+        ]);
+
+        $invoice->id = (string) Str::uuid();
+        $invoice->save();
+
+        return $invoice;
+    }
+
+    private function calculatePublishUnitPrice(SubscriptionPlan $plan, string $codeType): float
+    {
+        $meta = $plan->metadata;
+        if (is_array($meta) && isset($meta['publish_rates']) && is_array($meta['publish_rates'])) {
+            $explicit = $meta['publish_rates'][$codeType] ?? null;
+            if ($explicit !== null && is_numeric($explicit)) {
+                return max(0.0, round((float) $explicit, 6));
+            }
+        }
+
+        $price = (float) ($plan->monthly_price ?? 0);
+        if ($price <= 0) {
+            return 0.0;
+        }
+
+        $quota = match ($codeType) {
+            'bundle' => (int) ($plan->monthly_bundle_codes ?? 0),
+            'carton' => (int) ($plan->monthly_carton_codes ?? 0),
+            'packet' => (int) ($plan->monthly_packet_codes ?? 0),
+            default => (int) ($plan->monthly_unit_codes ?? 0),
+        };
+
+        if ($quota <= 0) {
+            $fallback = (int) ($plan->monthly_unit_codes ?? 0);
+            if ($fallback <= 0) {
+                return 0.0;
+            }
+            $quota = $fallback;
+        }
+
+        return max(0.0, round($price / $quota, 6));
+    }
+
+    private function generateUniqueInvoiceNumber(): string
+    {
+        $prefix = 'INV-' . now()->format('Ym') . '-';
+
+        for ($i = 0; $i < 10; $i++) {
+            $candidate = $prefix . strtoupper(Str::random(8));
+            if (!Invoice::query()->where('invoice_number', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        return $prefix . strtoupper((string) Str::uuid());
+    }
+
+    private function stampInvoiceIdOnCodes(string $companyId, string $codeType, array $ids, string $invoiceId, \DateTimeInterface $now): void
+    {
+        if (empty($ids)) {
+            return;
+        }
+
+        $driver = DB::getDriverName();
+        $jsonExpr = null;
+        if ($driver === 'pgsql') {
+            $jsonExpr = DB::raw("jsonb_set(coalesce(metadata,'{}'::jsonb), '{publish_invoice_id}', '\"{$invoiceId}\"', true)");
+        } else {
+            $jsonExpr = DB::raw("JSON_SET(COALESCE(metadata, JSON_OBJECT()), '$.publish_invoice_id', '{$invoiceId}')");
+        }
+
+        DB::table('base_codes')
+            ->where('company_id', $companyId)
+            ->where('code_type', $codeType)
+            ->whereIn('id', $ids)
+            ->update([
+                'metadata' => $jsonExpr,
+                'updated_at' => $now,
+            ]);
+    }
+
+    private function assertCompany(Request $request, Product $product): void
+    {
+        $user = $request->user();
+        if (!$user || (string) $product->company_id !== (string) $user->company_id) {
+            abort(404);
+        }
+    }
+}

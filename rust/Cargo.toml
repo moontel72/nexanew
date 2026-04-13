@@ -1,0 +1,66 @@
+[package]
+name = "nexatrace_rust"
+version = "0.1.0"
+edition = "2021"
+authors = ["NexaTrace Team"]
+description = "High-performance code generation module for NexaTrace System"
+license = "MIT"
+repository = "https://github.com/nexatrace/nexatrace-system"
+readme = "README.md"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+name = "nexatrace_rust"
+
+[dependencies]
+rand = "0.8.5"
+uuid = { version = "1.6.0", features = ["v4", "serde"] }
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.107"
+chrono = { version = "0.4.31", features = ["serde"] }
+hex = "0.4.3"
+sha2 = "0.10.7"
+aes = "0.8.3"
+base64 = "0.21.5"
+qr-code = "0.13.0"
+barcode = "0.13.0"
+gs1 = "0.3.0"
+regex = "1.10.2"
+thiserror = "1.0.50"
+log = "0.4.20"
+env_logger = "0.10.0"
+rayon = "1.8.0"
+crossbeam = "0.8.2"
+lazy_static = "1.4.0"
+parking_lot = "0.12.1"
+
+# Flutter integration
+flutter_rust_bridge = "1.82.4"
+flutter_rust_bridge_codegen = { version = "1.82.4", optional = true }
+
+[build-dependencies]
+flutter_rust_bridge_codegen = "1.82.4"
+
+[dev-dependencies]
+criterion = "0.5.1"
+tempfile = "3.8.0"
+
+[features]
+default = []
+ffi = ["flutter_rust_bridge/ffi"]
+wasm = ["flutter_rust_bridge/wasm"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.bench]
+opt-level = 3
+lto = true
+codegen-units = 1
