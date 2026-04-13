@@ -1,15 +1,16 @@
+//lib/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart
+part 'invoice_event.dart';
+part 'invoice_state.dart';
+part 'invoice_bloc.freezed.dart';
+
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:nexatrace_system/core/errors/failures.dart';
 import 'package:nexatrace_system/features/nexa_admin/domain/entities/billing_entity.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/repositories/billing_repository.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart';
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
     as shared;
-
-part 'invoice_event.dart';
-part 'invoice_state.dart';
-part 'invoice_bloc.freezed.dart';
 
 /// Bloc for managing invoice-specific operations in the super admin panel
 class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {

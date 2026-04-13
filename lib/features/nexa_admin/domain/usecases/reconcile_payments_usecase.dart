@@ -2,7 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:nexatrace_system/core/errors/failures.dart';
 import 'package:nexatrace_system/core/usecase/usecase.dart';
 import 'package:nexatrace_system/features/nexa_admin/domain/entities/billing_entity.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/repositories/billing_repository.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/models/payment_reconciliation_model.dart';
 
 /// Parameters for payment reconciliation
@@ -60,7 +60,8 @@ class ReconcilePaymentsParams {
       periodStart: periodStart ?? this.periodStart,
       periodEnd: periodEnd ?? this.periodEnd,
       notes: notes ?? this.notes,
-      autoMatchTransactions: autoMatchTransactions ?? this.autoMatchTransactions,
+      autoMatchTransactions:
+          autoMatchTransactions ?? this.autoMatchTransactions,
       matchTolerance: matchTolerance ?? this.matchTolerance,
     );
   }
@@ -97,33 +98,32 @@ class ReconcilePaymentsUseCase
         notes: params.notes,
       );
 
-      return reconciliationResult.fold(
-        (failure) => Left(failure),
-        (reconciliation) async {
-          // Process reconciliation if auto-matching is enabled
-          if (params.autoMatchTransactions) {
-            final processResult = await repository.processReconciliation(
-              reconciliation.id,
-            );
+      return reconciliationResult.fold((failure) => Left(failure), (
+        reconciliation,
+      ) async {
+        // Process reconciliation if auto-matching is enabled
+        if (params.autoMatchTransactions) {
+          final processResult = await repository.processReconciliation(
+            reconciliation.id,
+          );
 
-            if (processResult.isLeft()) {
-              return Left(processResult.left);
-            }
-
-            // Get updated reconciliation status
-            final updatedResult = await repository.getReconciliationById(
-              reconciliation.id,
-            );
-
-            return updatedResult.fold(
-              (failure) => Left(failure),
-              (updatedReconciliation) => Right(updatedReconciliation),
-            );
+          if (processResult.isLeft()) {
+            return Left(processResult.left);
           }
 
-          return Right(reconciliation);
-        },
-      );
+          // Get updated reconciliation status
+          final updatedResult = await repository.getReconciliationById(
+            reconciliation.id,
+          );
+
+          return updatedResult.fold(
+            (failure) => Left(failure),
+            (updatedReconciliation) => Right(updatedReconciliation),
+          );
+        }
+
+        return Right(reconciliation);
+      });
     } catch (e) {
       return Left(
         UnexpectedFailure(
@@ -152,44 +152,44 @@ class AnalyzeReconciliationDiscrepanciesUseCase
         reconciliationId,
       );
 
-      return reconciliationResult.fold(
-        (failure) => Left(failure),
-        (reconciliation) {
-          // Analyze discrepancies
-          final totalDiscrepancy = reconciliation.discrepancyAmount.abs();
-          final discrepancyPercentage = reconciliation.expectedAmount > 0
-              ? (totalDiscrepancy / reconciliation.expectedAmount) * 100
-              : 0.0;
+      return reconciliationResult.fold((failure) => Left(failure), (
+        reconciliation,
+      ) {
+        // Analyze discrepancies
+        final totalDiscrepancy = reconciliation.discrepancyAmount.abs();
+        final discrepancyPercentage = reconciliation.expectedAmount > 0
+            ? (totalDiscrepancy / reconciliation.expectedAmount) * 100
+            : 0.0;
 
-          final analysis = ReconciliationAnalysis(
-            reconciliationId: reconciliationId,
-            totalExpected: reconciliation.expectedAmount,
-            totalActual: reconciliation.actualAmount,
-            totalDiscrepancy: reconciliation.discrepancyAmount,
-            discrepancyPercentage: discrepancyPercentage,
-            totalTransactions: reconciliation.totalTransactions,
-            matchedTransactions: reconciliation.matchedTransactions,
-            unmatchedTransactions: reconciliation.unmatchedTransactions,
-            partialMatchTransactions: reconciliation.partialMatchTransactions,
-            status: reconciliation.status,
-            reconciliationDate: reconciliation.reconciliationDate,
-            periodStart: reconciliation.periodStart,
-            periodEnd: reconciliation.periodEnd,
-            // Categorize discrepancies
-            amountDiscrepancies: _categorizeAmountDiscrepancies(reconciliation),
-            dateDiscrepancies: _categorizeDateDiscrepancies(reconciliation),
-            missingTransactions: _identifyMissingTransactions(reconciliation),
-            duplicateTransactions: _identifyDuplicateTransactions(reconciliation),
-            recommendations: _generateRecommendations(reconciliation),
-          );
+        final analysis = ReconciliationAnalysis(
+          reconciliationId: reconciliationId,
+          totalExpected: reconciliation.expectedAmount,
+          totalActual: reconciliation.actualAmount,
+          totalDiscrepancy: reconciliation.discrepancyAmount,
+          discrepancyPercentage: discrepancyPercentage,
+          totalTransactions: reconciliation.totalTransactions,
+          matchedTransactions: reconciliation.matchedTransactions,
+          unmatchedTransactions: reconciliation.unmatchedTransactions,
+          partialMatchTransactions: reconciliation.partialMatchTransactions,
+          status: reconciliation.status,
+          reconciliationDate: reconciliation.reconciliationDate,
+          periodStart: reconciliation.periodStart,
+          periodEnd: reconciliation.periodEnd,
+          // Categorize discrepancies
+          amountDiscrepancies: _categorizeAmountDiscrepancies(reconciliation),
+          dateDiscrepancies: _categorizeDateDiscrepancies(reconciliation),
+          missingTransactions: _identifyMissingTransactions(reconciliation),
+          duplicateTransactions: _identifyDuplicateTransactions(reconciliation),
+          recommendations: _generateRecommendations(reconciliation),
+        );
 
-          return Right(analysis);
-        },
-      );
+        return Right(analysis);
+      });
     } catch (e) {
       return Left(
         UnexpectedFailure(
-          message: 'Failed to analyze reconciliation discrepancies: ${e.toString()}',
+          message:
+              'Failed to analyze reconciliation discrepancies: ${e.toString()}',
           originalError: e,
         ),
       );
@@ -207,7 +207,8 @@ class AnalyzeReconciliationDiscrepanciesUseCase
         count: reconciliation.unmatchedTransactions,
         totalAmount: reconciliation.discrepancyAmount.abs(),
         averageAmount: reconciliation.unmatchedTransactions > 0
-            ? reconciliation.discrepancyAmount.abs() / reconciliation.unmatchedTransactions
+            ? reconciliation.discrepancyAmount.abs() /
+                  reconciliation.unmatchedTransactions
             : 0.0,
         severity: _determineSeverity(reconciliation.discrepancyAmount.abs()),
       ),
@@ -256,7 +257,8 @@ class AnalyzeReconciliationDiscrepanciesUseCase
       recommendations.add(
         ReconciliationRecommendation(
           action: 'Investigate unmatched transactions',
-          description: '${reconciliation.unmatchedTransactions} transactions remain unmatched',
+          description:
+              '${reconciliation.unmatchedTransactions} transactions remain unmatched',
           priority: Priority.medium,
           expectedImpact: 'Match remaining transactions',
           requiredResources: ['Transaction data', 'Bank statements'],
@@ -347,7 +349,9 @@ class ReconciliationAnalysis {
     'amountDiscrepancies': amountDiscrepancies.map((a) => a.toJson()).toList(),
     'dateDiscrepancies': dateDiscrepancies.map((d) => d.toJson()).toList(),
     'missingTransactions': missingTransactions.map((m) => m.toJson()).toList(),
-    'duplicateTransactions': duplicateTransactions.map((d) => d.toJson()).toList(),
+    'duplicateTransactions': duplicateTransactions
+        .map((d) => d.toJson())
+        .toList(),
     'recommendations': recommendations.map((r) => r.toJson()).toList(),
   };
 }
@@ -436,7 +440,9 @@ class DuplicateTransaction {
     'transactionReference': transactionReference,
     'duplicateCount': duplicateCount,
     'totalAmount': totalAmount,
-    'transactionDates': transactionDates.map((d) => d.toIso8601String()).toList(),
+    'transactionDates': transactionDates
+        .map((d) => d.toIso8601String())
+        .toList(),
   };
 }
 
@@ -465,8 +471,4 @@ class ReconciliationRecommendation {
   };
 }
 
-enum Priority {
-  low,
-  medium,
-  high,
-}
+enum Priority { low, medium, high }

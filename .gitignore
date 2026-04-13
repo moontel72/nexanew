@@ -33,3 +33,4 @@ analysis_output.txt
 *.iml
 .DS_Store
 
+.aider*
