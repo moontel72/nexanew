@@ -10,6 +10,16 @@ import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.d
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 import 'package:nexatrace_system/shared/widgets/cards/data_card.dart';
 
+// Define InvoiceStatus if not imported from elsewhere
+enum InvoiceStatus {
+  draft,
+  pending,
+  paid,
+  overdue,
+  cancelled,
+  refunded,
+}
+
 /// Company Invoices Screen
 /// Displays all invoices for a specific company with filtering and management options
 class CompanyInvoicesScreen extends StatefulWidget {
@@ -208,10 +218,12 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
 
               final filteredInvoices = _searchQuery.isNotEmpty
                   ? invoices.where((invoice) {
-                      return invoice.invoiceNumber.toLowerCase().contains(
+                      final invoiceNumber = invoice['invoiceNumber']?.toString() ?? '';
+                      final companyName = invoice['companyName']?.toString() ?? '';
+                      return invoiceNumber.toLowerCase().contains(
                             _searchQuery.toLowerCase(),
                           ) ||
-                          invoice.companyName.toLowerCase().contains(
+                          companyName.toLowerCase().contains(
                             _searchQuery.toLowerCase(),
                           );
                     }).toList()
