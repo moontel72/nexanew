@@ -15,6 +15,8 @@ import 'package:nexatrace_system/shared/models/company/company_statistics.dart';
 part 'company_management_event.dart';
 part 'company_management_state.dart';
 part 'company_management_bloc.freezed.dart';
+part 'company_management_event.freezed.dart';
+part 'company_management_state.freezed.dart';
 
 /// Company Management BLoC
 /// Manages the state and business logic for company management operations
