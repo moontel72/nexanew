@@ -1,0 +1,17 @@
+name: Deploy to Hetzner
+on:
+  push:
+    branches: [ mainnew ]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to Server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: 135.181.46.27
+          username: root
+          password: qUXXErRRghjE
+          source: "."
+          target: "/var/www/nexatrace/admin-panel"

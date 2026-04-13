@@ -9,7 +9,6 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billin
 import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/payment_timeline_widget.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 import 'package:nexatrace_system/shared/widgets/cards/data_card.dart';
 
 /// Invoice Detail Screen
@@ -17,10 +16,7 @@ import 'package:nexatrace_system/shared/widgets/cards/data_card.dart';
 class InvoiceDetailScreen extends StatefulWidget {
   final String invoiceId;
 
-  const InvoiceDetailScreen({
-    super.key,
-    required this.invoiceId,
-  });
+  const InvoiceDetailScreen({super.key, required this.invoiceId});
 
   @override
   State<InvoiceDetailScreen> createState() => _InvoiceDetailScreenState();
@@ -37,14 +33,14 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   void _loadInvoiceDetail() {
     context.read<InvoiceBloc>().add(
-          LoadInvoiceDetail(invoiceId: widget.invoiceId),
-        );
+      LoadInvoiceDetail(invoiceId: widget.invoiceId),
+    );
   }
 
   void _loadInvoicePayments() {
     context.read<InvoiceBloc>().add(
-          LoadInvoicePayments(invoiceId: widget.invoiceId),
-        );
+      LoadInvoicePayments(invoiceId: widget.invoiceId),
+    );
   }
 
   void _handleRefresh() {
@@ -57,7 +53,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   }
 
   void _navigateToRecordPayment() {
-    context.go('/super-admin/billing/invoices/${widget.invoiceId}/record-payment');
+    context.go(
+      '/super-admin/billing/invoices/${widget.invoiceId}/record-payment',
+    );
   }
 
   void _navigateToEditInvoice() {
@@ -66,20 +64,20 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   void _sendInvoiceReminder() {
     context.read<InvoiceBloc>().add(
-          SendInvoiceReminder(invoiceId: widget.invoiceId),
-        );
+      SendInvoiceReminder(invoiceId: widget.invoiceId),
+    );
   }
 
   void _exportInvoice() {
     context.read<InvoiceBloc>().add(
-          ExportInvoiceDetail(invoiceId: widget.invoiceId),
-        );
+      ExportInvoiceDetail(invoiceId: widget.invoiceId),
+    );
   }
 
   void _validateInvoice() {
     context.read<InvoiceBloc>().add(
-          ValidateInvoice(invoiceId: widget.invoiceId),
-        );
+      ValidateInvoice(invoiceId: widget.invoiceId),
+    );
   }
 
   void _showActionMenu() {
@@ -265,7 +263,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
             const SizedBox(height: 24),
 
             // Admin Notes
-            if (invoice['adminNotes'] != null && invoice['adminNotes'].isNotEmpty)
+            if (invoice['adminNotes'] != null &&
+                invoice['adminNotes'].isNotEmpty)
               _buildAdminNotesSection(invoice),
             const SizedBox(height: 32),
           ],
@@ -358,7 +357,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                             : 'Not set',
                         style: AppTypography.bodyMedium.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: dueDate != null && dueDate.isBefore(DateTime.now())
+                          color:
+                              dueDate != null &&
+                                  dueDate.isBefore(DateTime.now())
                               ? AppColors.error
                               : AppColors.text,
                         ),
@@ -541,15 +542,14 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           _buildTotalRow('Subtotal', subtotal, currencyFormat),
           _buildTotalRow('Tax', taxAmount, currencyFormat),
           if (discountAmount > 0)
-            _buildTotalRow('Discount', -discountAmount, currencyFormat,
-                isDiscount: true),
+            _buildTotalRow(
+              'Discount',
+              -discountAmount,
+              currencyFormat,
+              isDiscount: true,
+            ),
           const Divider(height: 24),
-          _buildTotalRow(
-            'Total',
-            totalAmount,
-            currencyFormat,
-            isTotal: true,
-          ),
+          _buildTotalRow('Total', totalAmount, currencyFormat, isTotal: true),
           const SizedBox(height: 8),
           Text(
             'Amount in $currency',
@@ -584,12 +584,14 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
             isDiscount
                 ? '-${currencyFormat.format(amount.abs())}'
                 : currencyFormat.format(amount),
-            style: (isTotal
-                ? AppTypography.headlineSmall
-                : AppTypography.bodyMedium).copyWith(
-              fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
-              color: isDiscount ? AppColors.error : AppColors.text,
-            ),
+            style:
+                (isTotal
+                        ? AppTypography.headlineSmall
+                        : AppTypography.bodyMedium)
+                    .copyWith(
+                      fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
+                      color: isDiscount ? AppColors.error : AppColors.text,
+                    ),
           ),
         ],
       ),
@@ -601,10 +603,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       title: 'Notes',
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Text(
-          invoice['notes'],
-          style: AppTypography.bodyMedium,
-        ),
+        child: Text(invoice['notes'], style: AppTypography.bodyMedium),
       ),
     );
   }
@@ -633,11 +632,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.flag,
-                      size: 16,
-                      color: AppColors.warning,
-                    ),
+                    Icon(Icons.flag, size: 16, color: AppColors.warning),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -660,11 +655,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.calendar_today,
-                      size: 16,
-                      color: AppColors.info,
-                    ),
+                    Icon(Icons.calendar_today, size: 16, color: AppColors.info),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

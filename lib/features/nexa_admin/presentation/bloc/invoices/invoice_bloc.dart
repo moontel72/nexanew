@@ -5,7 +5,8 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:nexatrace_system/core/errors/failures.dart';
 import 'package:nexatrace_system/features/nexa_admin/domain/entities/billing_entity.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart' as shared;
+import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
+    as shared;
 
 part 'invoice_event.dart';
 part 'invoice_state.dart';
