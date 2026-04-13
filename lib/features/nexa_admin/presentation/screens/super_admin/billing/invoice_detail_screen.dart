@@ -680,7 +680,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           ],
         ),
       ),
-    );
+    )
   }
 
   @override
