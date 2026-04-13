@@ -1,3 +1,4 @@
+//lib/features/nexa_admin/presentation/screens/super_admin/billing/company_invoices_screen.dartS
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -8,17 +9,9 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billin
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/cards/data_card.dart';
-
-// Define InvoiceStatus if not imported from elsewhere
-enum InvoiceStatus {
-  draft,
-  pending,
-  paid,
-  overdue,
-  cancelled,
-  refunded,
-}
+import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
+    as shared;
+import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
 
 /// Company Invoices Screen
 /// Displays all invoices for a specific company with filtering and management options
@@ -67,19 +60,19 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
         statuses: _selectedStatuses?.map((s) {
           switch (s) {
             case 'draft':
-              return InvoiceStatus.draft;
+              return shared.InvoiceStatus.draft;
             case 'pending':
-              return InvoiceStatus.pending;
+              return shared.InvoiceStatus.pending;
             case 'paid':
-              return InvoiceStatus.paid;
+              return shared.InvoiceStatus.paid;
             case 'overdue':
-              return InvoiceStatus.overdue;
+              return shared.InvoiceStatus.overdue;
             case 'cancelled':
-              return InvoiceStatus.cancelled;
+              return shared.InvoiceStatus.cancelled;
             case 'refunded':
-              return InvoiceStatus.refunded;
+              return shared.InvoiceStatus.refunded;
             default:
-              return InvoiceStatus.pending;
+              return shared.InvoiceStatus.pending;
           }
         }).toList(),
         page: _currentPage,
@@ -218,12 +211,10 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
 
               final filteredInvoices = _searchQuery.isNotEmpty
                   ? invoices.where((invoice) {
-                      final invoiceNumber = invoice['invoiceNumber']?.toString() ?? '';
-                      final companyName = invoice['companyName']?.toString() ?? '';
-                      return invoiceNumber.toLowerCase().contains(
+                      return invoice.invoiceNumber.toLowerCase().contains(
                             _searchQuery.toLowerCase(),
                           ) ||
-                          companyName.toLowerCase().contains(
+                          invoice.companyName.toLowerCase().contains(
                             _searchQuery.toLowerCase(),
                           );
                     }).toList()
@@ -250,7 +241,7 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
     );
   }
 
-  Widget _buildInvoicesList(List<dynamic> invoices, bool hasMore) {
+  Widget _buildInvoicesList(List<AdminInvoice> invoices, bool hasMore) {
     return Scrollbar(
       controller: _scrollController,
       thumbVisibility: true,
@@ -284,66 +275,75 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
     );
   }
 
-  Widget _buildSummaryCard(List<dynamic> invoices) {
+  Widget _buildSummaryCard(List<AdminInvoice> invoices) {
     final totalAmount = invoices.fold(
       0.0,
-      (sum, invoice) => sum + (invoice['totalAmount'] ?? 0.0),
+      (sum, invoice) => sum + invoice.totalAmount,
     );
 
     final paidAmount = invoices
-        .where((invoice) => invoice['status'] == 'paid')
-        .fold(0.0, (sum, invoice) => sum + (invoice['totalAmount'] ?? 0.0));
+        .where((invoice) => invoice.status == shared.InvoiceStatus.paid)
+        .fold(0.0, (sum, invoice) => sum + invoice.totalAmount);
 
     final pendingAmount = invoices
-        .where((invoice) => invoice['status'] == 'pending')
-        .fold(0.0, (sum, invoice) => sum + (invoice['totalAmount'] ?? 0.0));
+        .where((invoice) => invoice.status == shared.InvoiceStatus.pending)
+        .fold(0.0, (sum, invoice) => sum + invoice.totalAmount);
 
     final overdueAmount = invoices
-        .where((invoice) => invoice['status'] == 'overdue')
-        .fold(0.0, (sum, invoice) => sum + (invoice['totalAmount'] ?? 0.0));
+        .where((invoice) => invoice.status == shared.InvoiceStatus.overdue)
+        .fold(0.0, (sum, invoice) => sum + invoice.totalAmount);
 
-    return DataCard(
-      title: 'Invoice Summary',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildSummaryItem('Total', totalAmount, AppColors.primary),
-              _buildSummaryItem('Paid', paidAmount, AppColors.success),
-              _buildSummaryItem('Pending', pendingAmount, AppColors.warning),
-              _buildSummaryItem('Overdue', overdueAmount, AppColors.error),
-            ],
-          ),
-          const SizedBox(height: 12),
-          LinearProgressIndicator(
-            value: totalAmount > 0 ? paidAmount / totalAmount : 0,
-            backgroundColor: AppColors.surfaceVariant,
-            color: AppColors.success,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Collection Rate',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Invoice Summary',
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              Text(
-                '${totalAmount > 0 ? (paidAmount / totalAmount * 100).toStringAsFixed(1) : '0.0'}%',
-                style: AppTypography.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.success,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSummaryItem('Total', totalAmount, AppColors.primary),
+                _buildSummaryItem('Paid', paidAmount, AppColors.success),
+                _buildSummaryItem('Pending', pendingAmount, AppColors.warning),
+                _buildSummaryItem('Overdue', overdueAmount, AppColors.error),
+              ],
+            ),
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: totalAmount > 0 ? paidAmount / totalAmount : 0,
+              backgroundColor: AppColors.surfaceVariant,
+              color: AppColors.success,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Collection Rate',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                Text(
+                  '${totalAmount > 0 ? (paidAmount / totalAmount * 100).toStringAsFixed(1) : '0.0'}%',
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.success,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -367,26 +367,20 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
     );
   }
 
-  Widget _buildInvoiceCard(Map<String, dynamic> invoice) {
-    final invoiceNumber = invoice['invoiceNumber'] ?? '';
-    final totalAmount = invoice['totalAmount'] ?? 0.0;
-    final status = invoice['status'] ?? 'pending';
-    final issueDate = invoice['issueDate'] != null
-        ? DateTime.parse(invoice['issueDate']).toLocal()
-        : null;
-    final dueDate = invoice['dueDate'] != null
-        ? DateTime.parse(invoice['dueDate']).toLocal()
-        : null;
+  Widget _buildInvoiceCard(AdminInvoice invoice) {
+    final invoiceNumber = invoice.invoiceNumber;
+    final totalAmount = invoice.totalAmount;
+    final status = invoice.status.name;
+    final issueDate = invoice.issueDate.toLocal();
+    final dueDate = invoice.dueDate.toLocal();
     final isOverdue =
         status == 'overdue' ||
-        (status == 'pending' &&
-            dueDate != null &&
-            dueDate.isBefore(DateTime.now()));
+        (status == 'pending' && dueDate.isBefore(DateTime.now()));
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => _navigateToInvoiceDetail(invoice['id']),
+        onTap: () => _navigateToInvoiceDetail(invoice.id),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -455,7 +449,9 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
                           dueDate.toString().split(' ')[0],
                           style: AppTypography.bodyMedium.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: isOverdue ? AppColors.error : AppColors.text,
+                            color: isOverdue
+                                ? AppColors.error
+                                : AppColors.textPrimary,
                           ),
                         ),
                         if (isOverdue)
@@ -475,16 +471,17 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => _navigateToInvoiceDetail(invoice['id']),
+                      onPressed: () => _navigateToInvoiceDetail(invoice.id),
                       child: const Text('View Details'),
                     ),
                   ),
                   const SizedBox(width: 8),
                   if (status == 'pending' || status == 'overdue')
                     PrimaryButton(
-                      onPressed: () => _navigateToPaymentHistory(invoice['id']),
+                      onPressed: () => _navigateToPaymentHistory(invoice.id),
                       text: 'Record Payment',
-                      size: ButtonSize.small,
+                      width: 150,
+                      height: 36,
                     ),
                 ],
               ),
@@ -759,7 +756,7 @@ class __FilterDialogState extends State<_FilterDialog> {
       onSelected: (_) => _toggleStatus(status),
       backgroundColor: isSelected ? color.withOpacity(0.2) : null,
       selectedColor: color.withOpacity(0.2),
-      labelStyle: TextStyle(color: isSelected ? color : AppColors.text),
+      labelStyle: TextStyle(color: isSelected ? color : AppColors.textPrimary),
       checkmarkColor: color,
     );
   }

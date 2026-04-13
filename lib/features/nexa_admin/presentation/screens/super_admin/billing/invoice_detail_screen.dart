@@ -5,11 +5,12 @@ import 'package:intl/intl.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/theme/typography.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/invoices/invoice_event.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/invoices/invoice_state.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/payment_timeline_widget.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/cards/data_card.dart';
 
 /// Invoice Detail Screen
 /// Displays detailed information about a specific invoice
@@ -361,7 +362,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                               dueDate != null &&
                                   dueDate.isBefore(DateTime.now())
                               ? AppColors.error
-                              : AppColors.text,
+                              : AppColors.textPrimary,
                         ),
                       ),
                     ],
@@ -379,43 +380,53 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     final companyName = invoice['companyName'] ?? 'Unknown';
     final companyId = invoice['companyId'] ?? '';
 
-    return DataCard(
-      title: 'Company Information',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: Text(
-                companyName.substring(0, 1).toUpperCase(),
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            title: Text(
-              companyName,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Company Information',
               style: AppTypography.bodyMedium.copyWith(
                 fontWeight: FontWeight.w600,
-              ),
-            ),
-            subtitle: Text(
-              'ID: $companyId',
-              style: AppTypography.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.arrow_forward_ios),
-              onPressed: () => _navigateToCompanyInvoices(companyId),
-              iconSize: 16,
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+                child: Text(
+                  companyName.substring(0, 1).toUpperCase(),
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              title: Text(
+                companyName,
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'ID: $companyId',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.arrow_forward_ios),
+                onPressed: () => _navigateToCompanyInvoices(companyId),
+                iconSize: 16,
+              ),
+              onTap: () => _navigateToCompanyInvoices(companyId),
             ),
-            onTap: () => _navigateToCompanyInvoices(companyId),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -423,37 +434,60 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   Widget _buildInvoiceItems(dynamic invoice, NumberFormat currencyFormat) {
     final items = invoice['items'] ?? [];
     if (items.isEmpty) {
-      return DataCard(
-        title: 'Invoice Items',
+      return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Center(
-            child: Text(
-              'No items found',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Invoice Items',
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
               ),
-            ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  'No items found',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    return DataCard(
-      title: 'Invoice Items (${items.length})',
-      child: Column(
-        children: [
-          ...items.asMap().entries.map((entry) {
-            final index = entry.key;
-            final item = entry.value;
-            final isLast = index == items.length - 1;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Invoice Items (${items.length})',
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final isLast = index == items.length - 1;
 
-            return Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-              child: _buildInvoiceItem(item, currencyFormat),
-            );
-          }).toList(),
-        ],
+              return Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                child: _buildInvoiceItem(item, currencyFormat),
+              );
+            }).toList(),
+          ],
+        ),
       ),
     );
   }
@@ -535,29 +569,40 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     final totalAmount = invoice['totalAmount'] ?? 0.0;
     final currency = invoice['currency'] ?? 'USD';
 
-    return DataCard(
-      title: 'Totals Summary',
-      child: Column(
-        children: [
-          _buildTotalRow('Subtotal', subtotal, currencyFormat),
-          _buildTotalRow('Tax', taxAmount, currencyFormat),
-          if (discountAmount > 0)
-            _buildTotalRow(
-              'Discount',
-              -discountAmount,
-              currencyFormat,
-              isDiscount: true,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Totals Summary',
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
             ),
-          const Divider(height: 24),
-          _buildTotalRow('Total', totalAmount, currencyFormat, isTotal: true),
-          const SizedBox(height: 8),
-          Text(
-            'Amount in $currency',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textSecondary,
+            const SizedBox(height: 12),
+            _buildTotalRow('Subtotal', subtotal, currencyFormat),
+            _buildTotalRow('Tax', taxAmount, currencyFormat),
+            if (discountAmount > 0)
+              _buildTotalRow(
+                'Discount',
+                -discountAmount,
+                currencyFormat,
+                isDiscount: true,
+              ),
+            const Divider(height: 24),
+            _buildTotalRow('Total', totalAmount, currencyFormat, isTotal: true),
+            const SizedBox(height: 8),
+            Text(
+              'Amount in $currency',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -590,7 +635,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         : AppTypography.bodyMedium)
                     .copyWith(
                       fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
-                      color: isDiscount ? AppColors.error : AppColors.text,
+                      color: isDiscount
+                          ? AppColors.error
+                          : AppColors.textPrimary,
                     ),
           ),
         ],
@@ -599,23 +646,42 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   }
 
   Widget _buildNotesSection(dynamic invoice) {
-    return DataCard(
-      title: 'Notes',
+    return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Text(invoice['notes'], style: AppTypography.bodyMedium),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Notes',
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(invoice['notes'], style: AppTypography.bodyMedium),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildAdminNotesSection(dynamic invoice) {
-    return DataCard(
-      title: 'Admin Notes',
+    return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              'Admin Notes',
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
             Text(
               invoice['adminNotes'],
               style: AppTypography.bodyMedium.copyWith(

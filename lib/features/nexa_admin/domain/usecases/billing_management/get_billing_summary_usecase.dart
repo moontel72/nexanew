@@ -2,6 +2,8 @@ import 'package:dartz/dartz.dart';
 import 'package:nexatrace_system/core/errors/failures.dart';
 import 'package:nexatrace_system/core/usecase/usecase.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart'
+    as admin_models;
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
     as shared;
 
@@ -33,24 +35,33 @@ class GetBillingSummaryParams {
 
 /// Use case for getting billing summary
 class GetBillingSummaryUseCase
-    implements UseCase<BillingSummary, GetBillingSummaryParams> {
+    implements
+        UseCase<admin_models.PlatformRevenueSummary, GetBillingSummaryParams> {
   final BillingRepository repository;
 
   const GetBillingSummaryUseCase(this.repository);
 
   @override
-  Future<Either<Failure, BillingSummary>> call(
+  Future<Either<Failure, admin_models.PlatformRevenueSummary>> call(
     GetBillingSummaryParams params,
   ) async {
     try {
       // Validate parameters
       final validationErrors = _validateParams(params);
       if (validationErrors.isNotEmpty) {
-        return Left(InvalidParamsFailure(validationErrors));
+        return Left(
+          ValidationFailure(
+            'Invalid billing summary parameters',
+            errors: {'general': validationErrors},
+          ),
+        );
       }
 
       // Get billing summary from repository
-      final result = await repository.getBillingSummary(params.toFilter());
+      final result = await repository.getPlatformRevenueSummary(
+        startDate: params.startDate,
+        endDate: params.endDate,
+      );
       return result;
     } catch (e) {
       return Left(ServerFailure(e.toString()));

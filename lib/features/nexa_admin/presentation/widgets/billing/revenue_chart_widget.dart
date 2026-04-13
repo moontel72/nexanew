@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/theme/text_styles.dart';
+import 'package:intl/intl.dart';
 
 /// Revenue Chart Widget
 /// Displays revenue trends and breakdowns using various chart types
@@ -180,7 +181,7 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
   Widget _buildLineChart() {
     return SfCartesianChart(
       primaryXAxis: DateTimeAxis(
-        dateFormat: 'MMM dd',
+        dateFormat: DateFormat('MMM dd'),
         labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         axisLine: AxisLine(color: AppColors.border),
         majorGridLines: MajorGridLines(
@@ -188,7 +189,7 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
         ),
       ),
       primaryYAxis: NumericAxis(
-        numberFormat: '\$#,##0',
+        numberFormat: NumberFormat('\$#,##0'),
         labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         axisLine: AxisLine(color: AppColors.border),
         majorGridLines: MajorGridLines(
@@ -231,7 +232,7 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
         ),
       ),
       primaryYAxis: NumericAxis(
-        numberFormat: '\$#,##0',
+        numberFormat: NumberFormat('\$#,##0'),
         labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         axisLine: AxisLine(color: AppColors.border),
         majorGridLines: MajorGridLines(

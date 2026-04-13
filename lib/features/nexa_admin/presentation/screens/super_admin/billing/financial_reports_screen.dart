@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/models/revenue_report_model.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 import 'package:nexatrace_system/shared/widgets/cards/info_card.dart';
 import 'package:nexatrace_system/shared/widgets/cards/kpi_card.dart';
@@ -21,7 +22,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
   DateTime? _reportEndDate;
   String _reportType = 'profit_loss';
   bool _isLoading = false;
-  Map<String, dynamic>? _reportData;
+  RevenueReport? _reportData;
 
   @override
   void initState() {
@@ -44,9 +45,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
 
     context.read<BillingBloc>().add(
       GenerateRevenueReport(
-        startDate: _reportStartDate!,
-        endDate: _reportEndDate!,
-        reportType: _reportType,
+        type: ReportType.custom,
+        periodStart: _reportStartDate!,
+        periodEnd: _reportEndDate!,
       ),
     );
   }
@@ -100,25 +101,25 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
       body: BlocConsumer<BillingBloc, BillingState>(
         listener: (context, state) {
           state.maybeWhen(
-            revenueReportGenerated: (reportData) {
+            revenueReportGenerated: (reportData, message) {
               setState(() {
                 _isLoading = false;
                 _reportData = reportData;
               });
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Report generated successfully'),
+                SnackBar(
+                  content: Text(message),
                   backgroundColor: AppColors.success,
                 ),
               );
             },
-            error: (failure) {
+            error: (message, error) {
               setState(() {
                 _isLoading = false;
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(failure.message),
+                  content: Text(message),
                   backgroundColor: AppColors.error,
                 ),
               );
@@ -190,33 +191,39 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: TextInput(
-                        label: 'Start Date',
-                        hintText: 'Select start date',
-                        readOnly: true,
+                      child: GestureDetector(
                         onTap: () => _selectDate(isStartDate: true),
-                        controller: TextEditingController(
-                          text:
-                              _reportStartDate?.toLocal().toString().split(
-                                ' ',
-                              )[0] ??
-                              '',
+                        child: AbsorbPointer(
+                          child: TextInput(
+                            label: 'Start Date',
+                            hint: 'Select start date',
+                            controller: TextEditingController(
+                              text:
+                                  _reportStartDate?.toLocal().toString().split(
+                                    ' ',
+                                  )[0] ??
+                                  '',
+                            ),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: TextInput(
-                        label: 'End Date',
-                        hintText: 'Select end date',
-                        readOnly: true,
+                      child: GestureDetector(
                         onTap: () => _selectDate(isStartDate: false),
-                        controller: TextEditingController(
-                          text:
-                              _reportEndDate?.toLocal().toString().split(
-                                ' ',
-                              )[0] ??
-                              '',
+                        child: AbsorbPointer(
+                          child: TextInput(
+                            label: 'End Date',
+                            hint: 'Select end date',
+                            controller: TextEditingController(
+                              text:
+                                  _reportEndDate?.toLocal().toString().split(
+                                    ' ',
+                                  )[0] ??
+                                  '',
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -229,8 +236,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
                 PrimaryButton(
                   text: 'Generate Report',
                   icon: Icons.analytics,
-                  onPressed: _isLoading ? null : _generateReport,
+                  onPressed: _generateReport,
                   isLoading: _isLoading,
+                  isEnabled: !_isLoading,
                 ),
               ],
             ),
@@ -252,11 +260,9 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
   }
 
   Widget _buildReportSummary() {
-    final summary = _reportData?['summary'] ?? {};
-    final totalRevenue = summary['total_revenue'] ?? 0.0;
-    final totalExpenses = summary['total_expenses'] ?? 0.0;
-    final netProfit = summary['net_profit'] ?? 0.0;
-    final taxAmount = summary['tax_amount'] ?? 0.0;
+    final totalRevenue = _reportData?.totalRevenue ?? 0.0;
+    final totalExpenses = _reportData?.creditNoteAmount ?? 0.0;
+    final netProfit = totalRevenue - totalExpenses;
 
     return Row(
       children: [
@@ -298,73 +304,25 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
 
   Widget _buildReportData() {
     final reportType = _reportType;
-    final data = _reportData?['data'] ?? {};
 
     switch (reportType) {
       case 'profit_loss':
-        return _buildProfitLossReport(data);
+        return _buildProfitLossReport();
       case 'revenue_summary':
-        return _buildRevenueSummary(data);
+        return _buildRevenueSummary();
       case 'tax_summary':
-        return _buildTaxSummary(data);
+        return _buildTaxSummary();
       case 'cash_flow':
-        return _buildCashFlowReport(data);
+        return _buildCashFlowReport();
       case 'balance_sheet':
-        return _buildBalanceSheet(data);
+        return _buildBalanceSheet();
       default:
         return const SizedBox();
     }
   }
 
-  Widget _buildProfitLossReport(Map<String, dynamic> data) {
-    final revenueItems = data['revenue_items'] ?? [];
-    final expenseItems = data['expense_items'] ?? [];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InfoCard(
-          title: 'Revenue',
-          child: Column(
-            children: revenueItems.map<Widget>((item) {
-              return ListTile(
-                title: Text(item['description'] ?? ''),
-                trailing: Text(
-                  '\$${(item['amount'] ?? 0.0).toStringAsFixed(2)}',
-                  style: TextStyles.bodyMedium.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.success,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        InfoCard(
-          title: 'Expenses',
-          child: Column(
-            children: expenseItems.map<Widget>((item) {
-              return ListTile(
-                title: Text(item['description'] ?? ''),
-                trailing: Text(
-                  '\$${(item['amount'] ?? 0.0).toStringAsFixed(2)}',
-                  style: TextStyles.bodyMedium.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.error,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRevenueSummary(Map<String, dynamic> data) {
-    final revenueByPlan = data['revenue_by_plan'] ?? {};
-    final revenueByCompany = data['revenue_by_company'] ?? {};
+  Widget _buildProfitLossReport() {
+    final revenueByPlan = _reportData?.revenueByPlan ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,7 +334,49 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
               return ListTile(
                 title: Text(entry.key),
                 trailing: Text(
-                  '\$${(entry.value ?? 0.0).toStringAsFixed(2)}',
+                  '\$${entry.value.toStringAsFixed(2)}',
+                  style: TextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.success,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        InfoCard(
+          title: 'Expenses (Credit Notes)',
+          child: ListTile(
+            title: const Text('Credit Note Amount'),
+            trailing: Text(
+              '\$${(_reportData?.creditNoteAmount ?? 0.0).toStringAsFixed(2)}',
+              style: TextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.error,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRevenueSummary() {
+    final revenueByPlan = _reportData?.revenueByPlan ?? {};
+    final topCompanies = _reportData?.topCompaniesByRevenue ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InfoCard(
+          title: 'Revenue by Plan',
+          child: Column(
+            children: revenueByPlan.entries.map<Widget>((entry) {
+              return ListTile(
+                title: Text(entry.key),
+                trailing: Text(
+                  '\$${entry.value.toStringAsFixed(2)}',
                   style: TextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -389,11 +389,11 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
         InfoCard(
           title: 'Top Companies by Revenue',
           child: Column(
-            children: revenueByCompany.entries.take(10).map<Widget>((entry) {
+            children: topCompanies.take(10).map<Widget>((company) {
               return ListTile(
-                title: Text(entry.key),
+                title: Text(company.companyName),
                 trailing: Text(
-                  '\$${(entry.value ?? 0.0).toStringAsFixed(2)}',
+                  '\$${company.totalRevenue.toStringAsFixed(2)}',
                   style: TextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -406,21 +406,20 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
     );
   }
 
-  Widget _buildTaxSummary(Map<String, dynamic> data) {
-    final taxByType = data['tax_by_type'] ?? {};
-    final taxByCompany = data['tax_by_company'] ?? {};
+  Widget _buildTaxSummary() {
+    final revenueByPaymentMethod = _reportData?.revenueByPaymentMethod ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InfoCard(
-          title: 'Tax by Type',
+          title: 'Revenue by Payment Method',
           child: Column(
-            children: taxByType.entries.map<Widget>((entry) {
+            children: revenueByPaymentMethod.entries.map<Widget>((entry) {
               return ListTile(
                 title: Text(entry.key),
                 trailing: Text(
-                  '\$${(entry.value ?? 0.0).toStringAsFixed(2)}',
+                  '\$${entry.value.toStringAsFixed(2)}',
                   style: TextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -431,40 +430,60 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
         ),
         const SizedBox(height: 16),
         InfoCard(
-          title: 'Tax by Company',
+          title: 'Invoice Statistics',
           child: Column(
-            children: taxByCompany.entries.take(10).map<Widget>((entry) {
-              return ListTile(
-                title: Text(entry.key),
+            children: [
+              ListTile(
+                title: const Text('Total Invoices'),
                 trailing: Text(
-                  '\$${(entry.value ?? 0.0).toStringAsFixed(2)}',
+                  '${_reportData?.totalInvoices ?? 0}',
                   style: TextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              );
-            }).toList(),
+              ),
+              ListTile(
+                title: const Text('Paid Invoices'),
+                trailing: Text(
+                  '${_reportData?.paidInvoices ?? 0}',
+                  style: TextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.success,
+                  ),
+                ),
+              ),
+              ListTile(
+                title: const Text('Pending Invoices'),
+                trailing: Text(
+                  '${_reportData?.pendingInvoices ?? 0}',
+                  style: TextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCashFlowReport(Map<String, dynamic> data) {
-    final cashInflows = data['cash_inflows'] ?? {};
-    final cashOutflows = data['cash_outflows'] ?? {};
+  Widget _buildCashFlowReport() {
+    final monthlyTrends = _reportData?.monthlyTrends ?? [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InfoCard(
-          title: 'Cash Inflows',
+          title: 'Monthly Revenue Trends',
           child: Column(
-            children: cashInflows.entries.map<Widget>((entry) {
+            children: monthlyTrends.map<Widget>((trend) {
               return ListTile(
-                title: Text(entry.key),
+                title: Text('${trend.monthName} ${trend.year}'),
+                subtitle: Text('Invoices: ${trend.invoiceCount}'),
                 trailing: Text(
-                  '\$${(entry.value ?? 0.0).toStringAsFixed(2)}',
+                  '\$${trend.revenue.toStringAsFixed(2)}',
                   style: TextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppColors.success,
@@ -476,42 +495,61 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
         ),
         const SizedBox(height: 16),
         InfoCard(
-          title: 'Cash Outflows',
+          title: 'Cash Flow Summary',
           child: Column(
-            children: cashOutflows.entries.map<Widget>((entry) {
-              return ListTile(
-                title: Text(entry.key),
+            children: [
+              ListTile(
+                title: const Text('Collected Revenue'),
                 trailing: Text(
-                  '\$${(entry.value ?? 0.0).toStringAsFixed(2)}',
+                  '\$${(_reportData?.collectedRevenue ?? 0.0).toStringAsFixed(2)}',
+                  style: TextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.success,
+                  ),
+                ),
+              ),
+              ListTile(
+                title: const Text('Pending Revenue'),
+                trailing: Text(
+                  '\$${(_reportData?.pendingRevenue ?? 0.0).toStringAsFixed(2)}',
+                  style: TextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ),
+              ListTile(
+                title: const Text('Overdue Revenue'),
+                trailing: Text(
+                  '\$${(_reportData?.overdueRevenue ?? 0.0).toStringAsFixed(2)}',
                   style: TextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppColors.error,
                   ),
                 ),
-              );
-            }).toList(),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildBalanceSheet(Map<String, dynamic> data) {
-    final assets = data['assets'] ?? {};
-    final liabilities = data['liabilities'] ?? {};
-    final equity = data['equity'] ?? {};
+  Widget _buildBalanceSheet() {
+    final topPlans = _reportData?.topPlansByRevenue ?? [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InfoCard(
-          title: 'Assets',
+          title: 'Top Plans by Revenue',
           child: Column(
-            children: assets.entries.map<Widget>((entry) {
+            children: topPlans.map<Widget>((plan) {
               return ListTile(
-                title: Text(entry.key),
+                title: Text(plan.planName),
+                subtitle: Text('Subscriptions: ${plan.totalSubscriptions}'),
                 trailing: Text(
-                  '\$${(entry.value ?? 0.0).toStringAsFixed(2)}',
+                  '\$${plan.totalRevenue.toStringAsFixed(2)}',
                   style: TextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppColors.success,
@@ -523,38 +561,75 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
         ),
         const SizedBox(height: 16),
         InfoCard(
-          title: 'Liabilities',
+          title: 'Company Statistics',
           child: Column(
-            children: liabilities.entries.map<Widget>((entry) {
-              return ListTile(
-                title: Text(entry.key),
+            children: [
+              ListTile(
+                title: const Text('Active Companies'),
                 trailing: Text(
-                  '\$${(entry.value ?? 0.0).toStringAsFixed(2)}',
+                  '${_reportData?.activeCompanies ?? 0}',
+                  style: TextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.success,
+                  ),
+                ),
+              ),
+              ListTile(
+                title: const Text('Companies with Overdue'),
+                trailing: Text(
+                  '${_reportData?.companiesWithOverdue ?? 0}',
                   style: TextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppColors.error,
                   ),
                 ),
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        InfoCard(
-          title: 'Equity',
-          child: Column(
-            children: equity.entries.map<Widget>((entry) {
-              return ListTile(
-                title: Text(entry.key),
+              ),
+              ListTile(
+                title: const Text('Companies with Credit'),
                 trailing: Text(
-                  '\$${(entry.value ?? 0.0).toStringAsFixed(2)}',
+                  '${_reportData?.companiesWithCredit ?? 0}',
                   style: TextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppColors.info,
                   ),
                 ),
-              );
-            }).toList(),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        InfoCard(
+          title: 'Payment Statistics',
+          child: Column(
+            children: [
+              ListTile(
+                title: const Text('Total Payments'),
+                trailing: Text(
+                  '${_reportData?.totalPayments ?? 0}',
+                  style: TextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                title: const Text('Average Payment Amount'),
+                trailing: Text(
+                  '\$${(_reportData?.averagePaymentAmount ?? 0.0).toStringAsFixed(2)}',
+                  style: TextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                title: const Text('Average Payment Days'),
+                trailing: Text(
+                  '${_reportData?.averagePaymentDays ?? 0}',
+                  style: TextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

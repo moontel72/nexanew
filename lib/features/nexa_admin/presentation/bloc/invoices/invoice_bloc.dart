@@ -1,16 +1,16 @@
 //lib/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/entities/billing_entity.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart';
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
     as shared;
 
-part 'invoice_event.dart';
-part 'invoice_state.dart';
-part 'invoice_bloc.freezed.dart';
+import 'invoice_event.dart';
+import 'invoice_state.dart';
+export 'invoice_event.dart';
+export 'invoice_state.dart';
 
 /// Bloc for managing invoice-specific operations in the super admin panel
 class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
@@ -77,7 +77,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to load invoice details: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -113,7 +113,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to load invoice payments: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -211,7 +211,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to validate invoice: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -246,8 +246,10 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
           InvoiceState.error(
             message: 'Multiple currencies in invoice items',
             error: ValidationFailure(
-              message: 'All items must use the same currency',
-              errors: ['Currency mismatch detected'],
+              'All items must use the same currency',
+              errors: {
+                'currency': ['Currency mismatch detected'],
+              },
             ),
           ),
         );
@@ -271,7 +273,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to calculate invoice totals: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -320,7 +322,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to search invoices: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -374,7 +376,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to filter invoices: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -458,7 +460,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to sort invoices: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -518,7 +520,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to export invoice: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -555,7 +557,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to send invoice reminder: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -584,14 +586,6 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
               invoice.totalAmount * (event.discountPercentage / 100);
           final newTotalAmount = invoice.totalAmount - discountAmount;
 
-          // Create updated invoice (in a real implementation, this would update in database)
-          final updatedInvoice = invoice.copyWith(
-            discountAmount: discountAmount,
-            totalAmount: newTotalAmount,
-            notes:
-                '${invoice.notes ?? ''}\nDiscount applied: ${event.discountPercentage}% (-\$${discountAmount.toStringAsFixed(2)})',
-          );
-
           emit(
             InvoiceState.discountApplied(
               invoiceId: event.invoiceId,
@@ -608,7 +602,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to apply discount: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -632,18 +626,6 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
           emit(InvoiceState.error(message: failure.message, error: failure));
         },
         (invoice) {
-          // Add note to invoice
-          final currentNotes = invoice.notes ?? '';
-          final newNotes = currentNotes.isEmpty
-              ? '${DateTime.now().toIso8601String()}: ${event.note}'
-              : '$currentNotes\n${DateTime.now().toIso8601String()}: ${event.note}';
-
-          // Create updated invoice
-          final updatedInvoice = invoice.copyWith(
-            notes: newNotes,
-            adminNotes: event.isAdminNote ? newNotes : invoice.adminNotes,
-          );
-
           emit(
             InvoiceState.noteAdded(
               invoiceId: event.invoiceId,
@@ -658,7 +640,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to add note: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -752,7 +734,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to load invoice statistics: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -862,7 +844,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       emit(
         InvoiceState.error(
           message: 'Failed to load invoice trends: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }

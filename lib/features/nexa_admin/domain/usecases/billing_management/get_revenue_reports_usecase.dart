@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:nexatrace_system/core/errors/failures.dart';
 import 'package:nexatrace_system/core/usecase/usecase.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/models/revenue_report_model.dart';
 import 'package:nexatrace_system/shared/models/billing/revenue_report_model.dart'
     as shared;
 
@@ -70,24 +71,32 @@ class GetRevenueReportsParams {
 
 /// Use case for getting revenue reports
 class GetRevenueReportsUseCase
-    implements UseCase<List<FinancialReport>, GetRevenueReportsParams> {
+    implements UseCase<List<RevenueReport>, GetRevenueReportsParams> {
   final BillingRepository repository;
 
   const GetRevenueReportsUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<FinancialReport>>> call(
+  Future<Either<Failure, List<RevenueReport>>> call(
     GetRevenueReportsParams params,
   ) async {
     try {
       // Validate parameters
       final validationErrors = params.validate();
       if (validationErrors.isNotEmpty) {
-        return Left(InvalidParamsFailure(validationErrors));
+        return Left(
+          ValidationFailure(
+            'Invalid revenue report parameters',
+            errors: {'general': validationErrors},
+          ),
+        );
       }
 
       // Get revenue reports from repository
-      final result = await repository.getRevenueReports(params.toFilter());
+      final result = await repository.getRevenueReports(
+        startDate: params.startDate,
+        endDate: params.endDate,
+      );
       return result;
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -170,32 +179,33 @@ class GenerateFinancialReportParams {
 
 /// Use case for generating a financial report
 class GenerateFinancialReportUseCase
-    implements UseCase<FinancialReport, GenerateFinancialReportParams> {
+    implements UseCase<RevenueReport, GenerateFinancialReportParams> {
   final BillingRepository repository;
 
   const GenerateFinancialReportUseCase(this.repository);
 
   @override
-  Future<Either<Failure, FinancialReport>> call(
+  Future<Either<Failure, RevenueReport>> call(
     GenerateFinancialReportParams params,
   ) async {
     try {
       // Validate parameters
       final validationErrors = params.validate();
       if (validationErrors.isNotEmpty) {
-        return Left(InvalidParamsFailure(validationErrors));
+        return Left(
+          ValidationFailure(
+            'Invalid financial report parameters',
+            errors: {'general': validationErrors},
+          ),
+        );
       }
 
       // Generate financial report through repository
-      final result = await repository.generateFinancialReport(
-        reportName: params.reportName,
-        period: params.period,
+      final result = await repository.generateRevenueReport(
+        type: ReportType.custom,
         periodStart: params.periodStart,
         periodEnd: params.periodEnd,
-        includeTypes: params.includeTypes,
-        companyIds: params.companyIds,
-        includeForecast: params.includeForecast,
-        includeTaxSummary: params.includeTaxSummary,
+        reportName: params.reportName,
         notes: params.notes,
       );
       return result;

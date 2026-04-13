@@ -968,12 +968,12 @@ _$PaymentsReconciledCopyWith<_PaymentsReconciled> get copyWith => __$PaymentsRec
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PaymentsReconciled&&const DeepCollectionEquality().equals(other.reconciliation, reconciliation)&&(identical(other.message, message) || other.message == message));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PaymentsReconciled&&(identical(other.reconciliation, reconciliation) || other.reconciliation == reconciliation)&&(identical(other.message, message) || other.message == message));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(reconciliation),message);
+int get hashCode => Object.hash(runtimeType,reconciliation,message);
 
 @override
 String toString() {
@@ -992,7 +992,7 @@ $Res call({
 });
 
 
-
+$PaymentReconciliationCopyWith<$Res> get reconciliation;
 
 }
 /// @nodoc
@@ -1005,15 +1005,24 @@ class __$PaymentsReconciledCopyWithImpl<$Res>
 
 /// Create a copy of BillingState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? reconciliation = freezed,Object? message = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? reconciliation = null,Object? message = null,}) {
   return _then(_PaymentsReconciled(
-reconciliation: freezed == reconciliation ? _self.reconciliation : reconciliation // ignore: cast_nullable_to_non_nullable
+reconciliation: null == reconciliation ? _self.reconciliation : reconciliation // ignore: cast_nullable_to_non_nullable
 as PaymentReconciliation,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
 
-
+/// Create a copy of BillingState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$PaymentReconciliationCopyWith<$Res> get reconciliation {
+  
+  return $PaymentReconciliationCopyWith<$Res>(_self.reconciliation, (value) {
+    return _then(_self.copyWith(reconciliation: value));
+  });
+}
 }
 
 /// @nodoc

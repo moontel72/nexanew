@@ -6,6 +6,17 @@ import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_r
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
     as shared;
 
+/// Converts shared PaymentMethod to entity PaymentMethod
+PaymentMethod _convertPaymentMethod(shared.PaymentMethod method) {
+  return switch (method) {
+    shared.PaymentMethod.wallet => PaymentMethod.wallet,
+    shared.PaymentMethod.creditCard => PaymentMethod.creditCard,
+    shared.PaymentMethod.bankTransfer => PaymentMethod.bankTransfer,
+    shared.PaymentMethod.cash => PaymentMethod.cash,
+    shared.PaymentMethod.other => PaymentMethod.other,
+  };
+}
+
 /// Parameters for processing a payment
 class ProcessPaymentParams {
   final String invoiceId;
@@ -96,8 +107,8 @@ class ProcessPaymentUseCase
     if (validationErrors.isNotEmpty) {
       return Left(
         ValidationFailure(
-          message: 'Invalid payment parameters',
-          errors: validationErrors,
+          'Invalid payment parameters',
+          errors: {'general': validationErrors},
         ),
       );
     }
@@ -131,7 +142,7 @@ class ProcessPaymentUseCase
             status: BillingEntityStatus.paid,
             issueDate: payment.paymentDate,
             paymentDate: payment.paymentDate,
-            paymentMethod: payment.method,
+            paymentMethod: _convertPaymentMethod(payment.method),
             paymentReference: payment.reference,
             transactionId: payment.transactionId,
             notes: params.notes,
@@ -152,10 +163,7 @@ class ProcessPaymentUseCase
       });
     } catch (e) {
       return Left(
-        UnexpectedFailure(
-          message: 'Failed to process payment: ${e.toString()}',
-          originalError: e,
-        ),
+        UnknownFailure('Failed to process payment: ${e.toString()}'),
       );
     }
   }
@@ -177,8 +185,8 @@ class ProcessPartialPaymentUseCase
     if (validationErrors.isNotEmpty) {
       return Left(
         ValidationFailure(
-          message: 'Invalid partial payment parameters',
-          errors: validationErrors,
+          'Invalid partial payment parameters',
+          errors: {'general': validationErrors},
         ),
       );
     }
@@ -193,8 +201,8 @@ class ProcessPartialPaymentUseCase
             invoice.status != shared.InvoiceStatus.overdue) {
           return Left(
             ValidationFailure(
-              message: 'Invoice cannot accept partial payments',
-              errors: ['Invoice status is ${invoice.status}'],
+              'Invoice cannot accept partial payments',
+              errors: {'general': ['Invoice status is ${invoice.status}']},
             ),
           );
         }
@@ -203,10 +211,12 @@ class ProcessPartialPaymentUseCase
         if (params.amount > invoice.totalAmount) {
           return Left(
             ValidationFailure(
-              message: 'Payment amount exceeds invoice total',
-              errors: [
-                'Payment: \$${params.amount}, Invoice: \$${invoice.totalAmount}',
-              ],
+              'Payment amount exceeds invoice total',
+              errors: {
+                'general': [
+                  'Payment: \$${params.amount}, Invoice: \$${invoice.totalAmount}',
+                ],
+              },
             ),
           );
         }
@@ -241,7 +251,7 @@ class ProcessPartialPaymentUseCase
             status: newStatus,
             issueDate: payment.paymentDate,
             paymentDate: payment.paymentDate,
-            paymentMethod: payment.method,
+            paymentMethod: _convertPaymentMethod(payment.method),
             paymentReference: payment.reference,
             transactionId: payment.transactionId,
             notes: 'Partial payment - Remaining: \$$remainingBalance',
@@ -259,10 +269,7 @@ class ProcessPartialPaymentUseCase
       });
     } catch (e) {
       return Left(
-        UnexpectedFailure(
-          message: 'Failed to process partial payment: ${e.toString()}',
-          originalError: e,
-        ),
+        UnknownFailure('Failed to process partial payment: ${e.toString()}'),
       );
     }
   }
@@ -294,8 +301,8 @@ class ProcessBulkPaymentsUseCase
     if (errors.isNotEmpty) {
       return Left(
         ValidationFailure(
-          message: 'Invalid parameters for bulk payment processing',
-          errors: errors,
+          'Invalid parameters for bulk payment processing',
+          errors: {'general': errors},
         ),
       );
     }
@@ -318,10 +325,7 @@ class ProcessBulkPaymentsUseCase
 
     if (errors.isNotEmpty && results.isEmpty) {
       return Left(
-        BulkOperationFailure(
-          message: 'Failed to process any payments',
-          errors: errors,
-        ),
+        UnknownFailure('Failed to process any payments: ${errors.join(", ")}'),
       );
     }
 
@@ -364,10 +368,7 @@ class ValidatePaymentReversalUseCase
       return Right(validation);
     } catch (e) {
       return Left(
-        UnexpectedFailure(
-          message: 'Failed to validate payment reversal: ${e.toString()}',
-          originalError: e,
-        ),
+        UnknownFailure('Failed to validate payment reversal: ${e.toString()}'),
       );
     }
   }
@@ -463,10 +464,7 @@ class CalculatePaymentAllocationUseCase
       return Right(allocation);
     } catch (e) {
       return Left(
-        UnexpectedFailure(
-          message: 'Failed to calculate payment allocation: ${e.toString()}',
-          originalError: e,
-        ),
+        UnknownFailure('Failed to calculate payment allocation: ${e.toString()}'),
       );
     }
   }

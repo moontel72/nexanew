@@ -133,10 +133,10 @@ class DunningAlertWidget extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: severityColor.withOpacity(0.1),
+                          color: severityColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: severityColor.withOpacity(0.3),
+                            color: severityColor.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Icon(
@@ -166,9 +166,11 @@ class DunningAlertWidget extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: statusColor.withOpacity(0.3)),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Text(
                     alert.isActive ? 'ACTIVE' : 'RESOLVED',

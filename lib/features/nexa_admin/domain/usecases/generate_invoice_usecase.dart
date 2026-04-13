@@ -118,8 +118,8 @@ class GenerateInvoiceUseCase
     if (validationErrors.isNotEmpty) {
       return Left(
         ValidationFailure(
-          message: 'Invalid invoice parameters',
-          errors: validationErrors,
+          'Invalid invoice parameters',
+          errors: {'validation': validationErrors},
         ),
       );
     }
@@ -149,7 +149,12 @@ class GenerateInvoiceUseCase
           issueDate: invoice.issueDate,
           dueDate: invoice.dueDate,
           paymentDate: invoice.paymentDate,
-          paymentMethod: invoice.paymentMethod,
+          paymentMethod: invoice.paymentMethod != null
+              ? PaymentMethod.values.firstWhere(
+                  (e) => e.name == invoice.paymentMethod!.name,
+                  orElse: () => PaymentMethod.wallet,
+                )
+              : null,
           paymentReference: invoice.paymentReference,
           notes: invoice.notes,
           adminNotes: invoice.adminNotes,
@@ -165,8 +170,11 @@ class GenerateInvoiceUseCase
           );
           if (notificationResult.isLeft()) {
             // Log the notification failure but don't fail the invoice generation
-            print(
-              'Failed to send invoice notification: ${notificationResult.left}',
+            notificationResult.fold(
+              (failure) => print(
+                'Failed to send invoice notification: ${failure.message}',
+              ),
+              (_) {},
             );
           }
         }
@@ -175,10 +183,7 @@ class GenerateInvoiceUseCase
       });
     } catch (e) {
       return Left(
-        UnexpectedFailure(
-          message: 'Failed to generate invoice: ${e.toString()}',
-          originalError: e,
-        ),
+        UnknownFailure('Failed to generate invoice: ${e.toString()}'),
       );
     }
   }
@@ -230,8 +235,8 @@ class GenerateBulkInvoicesUseCase
     if (errors.isNotEmpty) {
       return Left(
         ValidationFailure(
-          message: 'Invalid parameters for bulk invoice generation',
-          errors: errors,
+          'Invalid parameters for bulk invoice generation',
+          errors: {'bulk': errors},
         ),
       );
     }
@@ -254,10 +259,7 @@ class GenerateBulkInvoicesUseCase
 
     if (errors.isNotEmpty && results.isEmpty) {
       return Left(
-        BulkOperationFailure(
-          message: 'Failed to generate any invoices',
-          errors: errors,
-        ),
+        UnknownFailure('Failed to generate any invoices: ${errors.join(", ")}'),
       );
     }
 
@@ -284,8 +286,8 @@ class ValidateInvoiceParamsUseCase
     } else {
       return Left(
         ValidationFailure(
-          message: 'Invoice parameters validation failed',
-          errors: errors,
+          'Invoice parameters validation failed',
+          errors: {'validation': errors},
         ),
       );
     }
@@ -302,8 +304,10 @@ class CalculateInvoiceTotalsUseCase
     if (items.isEmpty) {
       return Left(
         ValidationFailure(
-          message: 'No items provided for calculation',
-          errors: ['At least one item is required'],
+          'No items provided for calculation',
+          errors: {
+            'items': ['At least one item is required'],
+          },
         ),
       );
     }
@@ -322,8 +326,10 @@ class CalculateInvoiceTotalsUseCase
       if (currencies.length > 1) {
         return Left(
           ValidationFailure(
-            message: 'Multiple currencies in invoice items',
-            errors: ['All items must use the same currency'],
+            'Multiple currencies in invoice items',
+            errors: {
+              'currency': ['All items must use the same currency'],
+            },
           ),
         );
       }
@@ -342,10 +348,7 @@ class CalculateInvoiceTotalsUseCase
       );
     } catch (e) {
       return Left(
-        UnexpectedFailure(
-          message: 'Failed to calculate invoice totals: ${e.toString()}',
-          originalError: e,
-        ),
+        UnknownFailure('Failed to calculate invoice totals: ${e.toString()}'),
       );
     }
   }

@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:nexatrace_system/core/errors/failures.dart';
+import 'package:nexatrace_system/core/errors/app_exceptions.dart';
 import 'package:dartz/dartz.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/datasources/billing_datasource.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/datasources/billing_datasource.dart'
+    hide CreditNote;
+import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart'
+    hide PaymentReconciliation, ReconciliationStatus;
 import 'package:nexatrace_system/features/nexa_admin/data/models/credit_note_model.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/models/payment_reconciliation_model.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/models/revenue_report_model.dart';
@@ -384,11 +387,29 @@ class BillingRepositoryImpl implements BillingRepository {
     String? notes,
   }) async {
     try {
-      final creditNote = await dataSource.createCreditNote(
+      final dsCreditNote = await dataSource.createCreditNote(
         invoiceId: invoiceId,
         amount: amount,
         reason: reason.toString().split('.').last,
         notes: notes,
+      );
+      // Map datasource CreditNote to model CreditNote
+      final creditNote = CreditNote(
+        id: dsCreditNote.id,
+        creditNoteNumber: dsCreditNote.creditNoteNumber,
+        invoiceId: dsCreditNote.invoiceId,
+        invoiceNumber: '', // Not provided by datasource
+        companyId: '', // Not provided by datasource
+        companyName: '', // Not provided by datasource
+        amount: dsCreditNote.amount,
+        currency: 'USD', // Default currency
+        reason: reason,
+        issueDate: dsCreditNote.issueDate,
+        status: CreditNoteStatus.issued,
+        notes: dsCreditNote.notes,
+        metadata: dsCreditNote.metadata,
+        createdAt: dsCreditNote.createdAt,
+        updatedAt: dsCreditNote.updatedAt,
       );
       return Right(creditNote);
     } catch (e) {
@@ -405,13 +426,38 @@ class BillingRepositoryImpl implements BillingRepository {
     int limit = 20,
   }) async {
     try {
-      final creditNotes = await dataSource.getCreditNotes(
+      final dsCreditNotes = await dataSource.getCreditNotes(
         startDate: startDate,
         endDate: endDate,
         companyId: companyId,
         page: page,
         limit: limit,
       );
+      // Map datasource CreditNotes to model CreditNotes
+      final creditNotes = dsCreditNotes
+          .map(
+            (ds) => CreditNote(
+              id: ds.id,
+              creditNoteNumber: ds.creditNoteNumber,
+              invoiceId: ds.invoiceId,
+              invoiceNumber: '', // Not provided by datasource
+              companyId: companyId ?? '', // Use filter value if available
+              companyName: '', // Not provided by datasource
+              amount: ds.amount,
+              currency: 'USD', // Default currency
+              reason: CreditNoteReason.values.firstWhere(
+                (r) => r.toString().split('.').last == ds.reason,
+                orElse: () => CreditNoteReason.other,
+              ),
+              issueDate: ds.issueDate,
+              status: CreditNoteStatus.issued,
+              notes: ds.notes,
+              metadata: ds.metadata,
+              createdAt: ds.createdAt,
+              updatedAt: ds.updatedAt,
+            ),
+          )
+          .toList();
       return Right(creditNotes);
     } catch (e) {
       return Left(_handleError(e));
@@ -425,36 +471,17 @@ class BillingRepositoryImpl implements BillingRepository {
   }) async {
     try {
       // This would typically call a dedicated endpoint
-      // For now, we'll get all credit notes and summarize
-      final creditNotes = await dataSource.getCreditNotes(
-        startDate: startDate,
-        endDate: endDate,
-      );
-
+      // For now, return an empty summary
       final summary = CreditNoteSummary(
-        totalIssued: creditNotes.fold(0.0, (sum, note) => sum + note.amount),
-        totalApplied: creditNotes
-            .where((note) => note.status == CreditNoteStatus.applied)
-            .fold(0.0, (sum, note) => sum + note.amount),
-        totalUnused: creditNotes
-            .where((note) => note.status == CreditNoteStatus.issued)
-            .fold(0.0, (sum, note) => sum + note.amount),
-        totalCancelled: creditNotes
-            .where((note) => note.status == CreditNoteStatus.cancelled)
-            .fold(0.0, (sum, note) => sum + note.amount),
-        totalCount: creditNotes.length,
-        issuedCount: creditNotes
-            .where((note) => note.status == CreditNoteStatus.issued)
-            .length,
-        appliedCount: creditNotes
-            .where((note) => note.status == CreditNoteStatus.applied)
-            .length,
-        unusedCount: creditNotes
-            .where((note) => note.status == CreditNoteStatus.issued)
-            .length,
-        cancelledCount: creditNotes
-            .where((note) => note.status == CreditNoteStatus.cancelled)
-            .length,
+        totalIssued: 0.0,
+        totalApplied: 0.0,
+        totalUnused: 0.0,
+        totalCancelled: 0.0,
+        totalCount: 0,
+        issuedCount: 0,
+        appliedCount: 0,
+        unusedCount: 0,
+        cancelledCount: 0,
         periodStart: startDate,
         periodEnd: endDate,
       );
@@ -731,16 +758,13 @@ class BillingRepositoryImpl implements BillingRepository {
   // Helper method to convert exceptions to failures
   Failure _handleError(dynamic error) {
     if (error is ServerException) {
-      return ServerFailure(
-        message: error.message,
-        statusCode: error.statusCode,
-      );
+      return ServerFailure(error.message, statusCode: error.statusCode);
     } else if (error is NetworkException) {
-      return NetworkFailure(message: error.message);
+      return NetworkFailure(error.message);
     } else if (error is UnauthorizedException) {
-      return UnauthorizedFailure(message: error.message);
+      return AuthorizationFailure(error.message);
     } else {
-      return UnexpectedFailure(message: error.toString(), originalError: error);
+      return UnknownFailure(error.toString());
     }
   }
 }

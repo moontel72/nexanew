@@ -143,41 +143,41 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
                 ],
               ),
             ),
-            _Success: (message) {
+            success: (message) {
               // Reload data after success operations
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 _loadDashboardData();
               });
               return const LoadingIndicator();
             },
-            _InvoiceGenerated: (invoice, message) => const LoadingIndicator(),
-            _BulkInvoicesGenerated: (invoices, message, failedCount) =>
+            invoiceGenerated: (invoice, message) => const LoadingIndicator(),
+            bulkInvoicesGenerated: (invoices, message, failedCount) =>
                 const LoadingIndicator(),
-            _PaymentProcessed: (payment, message) => const LoadingIndicator(),
-            _PartialPaymentProcessed: (payment, message) =>
+            paymentProcessed: (payment, message) => const LoadingIndicator(),
+            partialPaymentProcessed: (payment, message) =>
                 const LoadingIndicator(),
-            _BulkPaymentsProcessed: (payments, message, failedCount) =>
+            bulkPaymentsProcessed: (payments, message, failedCount) =>
                 const LoadingIndicator(),
-            _PaymentsReconciled: (reconciliation, message) =>
+            paymentsReconciled: (reconciliation, message) =>
                 const LoadingIndicator(),
-            _ReconciliationAnalyzed: (analysis, message) =>
+            reconciliationAnalyzed: (analysis, message) =>
                 const LoadingIndicator(),
-            _RevenueReportGenerated: (report, message) =>
+            revenueReportGenerated: (report, message) =>
                 const LoadingIndicator(),
-            _InvoicesExported: (exportUrl, message) => const LoadingIndicator(),
-            _RevenueReportExported: (exportUrl, message) =>
+            invoicesExported: (exportUrl, message) => const LoadingIndicator(),
+            revenueReportExported: (exportUrl, message) =>
                 const LoadingIndicator(),
-            _InvoiceStatusUpdated: (invoice, message) =>
+            invoiceStatusUpdated: (invoice, message) =>
                 const LoadingIndicator(),
-            _CreditNoteCreated: (creditNote, message) =>
+            creditNoteCreated: (creditNote, message) =>
                 const LoadingIndicator(),
-            _CreditNotesLoaded: (creditNotes, hasMore, currentPage) =>
+            creditNotesLoaded: (creditNotes, hasMore, currentPage) =>
                 const LoadingIndicator(),
-            _CompaniesWithOverdueLoaded: (companies, message) =>
+            companiesWithOverdueLoaded: (companies, message) =>
                 const LoadingIndicator(),
-            _PlatformRevenueSummaryLoaded: (revenueSummary, message) =>
+            platformRevenueSummaryLoaded: (revenueSummary, message) =>
                 const LoadingIndicator(),
-            _RevenueByCompanyLoaded: (revenueByCompany, message) =>
+            revenueByCompanyLoaded: (revenueByCompany, message) =>
                 const LoadingIndicator(),
             platformInvoicesLoaded: (invoices, hasMore, currentPage) =>
                 const LoadingIndicator(),
@@ -357,7 +357,7 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
                             ),
                           ),
                           title: Text(company.name),
-                          subtitle: Text(company.email ?? 'No email'),
+                          subtitle: Text(company.email),
                           trailing: IconButton(
                             icon: const Icon(Icons.arrow_forward_ios),
                             onPressed: () =>

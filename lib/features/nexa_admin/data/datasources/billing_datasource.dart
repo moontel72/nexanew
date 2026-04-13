@@ -282,7 +282,9 @@ class BillingDataSourceImpl implements BillingDataSource {
       final list = _extractList(response, key: 'payments');
       return list
           .whereType<Map>()
-          .map((item) => shared.Payment.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => shared.Payment.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList();
     } on AppException {
       rethrow;
@@ -377,7 +379,10 @@ class BillingDataSourceImpl implements BillingDataSource {
       );
 
       final list = _extractList(response, key: 'companies');
-      return list.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+      return list
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
     } on AppException {
       rethrow;
     }
@@ -448,11 +453,8 @@ class BillingDataSourceImpl implements BillingDataSource {
         '/admin/billing/reconcile',
         data: {'reconciliation_date': reconciliationDate.toIso8601String()},
       );
-    } on DioException catch (e) {
-      throw ServerException(
-        message: e.response?.data?['message'] ?? 'Failed to reconcile payments',
-        statusCode: e.response?.statusCode ?? 500,
-      );
+    } on AppException {
+      rethrow;
     }
   }
 }

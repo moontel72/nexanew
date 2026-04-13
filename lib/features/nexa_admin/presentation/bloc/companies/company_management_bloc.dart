@@ -15,8 +15,6 @@ import 'package:nexatrace_system/shared/models/company/company_statistics.dart';
 part 'company_management_event.dart';
 part 'company_management_state.dart';
 part 'company_management_bloc.freezed.dart';
-part 'company_management_event.freezed.dart';
-part 'company_management_state.freezed.dart';
 
 /// Company Management BLoC
 /// Manages the state and business logic for company management operations
@@ -25,8 +23,8 @@ class CompanyManagementBloc
   final CompanyManagementRepository _repository;
 
   CompanyManagementBloc({required CompanyManagementRepository repository})
-      : _repository = repository,
-        super(const CompanyManagementState.initial()) {
+    : _repository = repository,
+      super(const CompanyManagementState.initial()) {
     on<CompanyManagementEvent>((event, emit) async {
       await event.map(
         loadCompanies: (event) => _onLoadCompanies(event, emit),
@@ -83,31 +81,35 @@ class CompanyManagementBloc
         }
       }
 
-      emit(CompanyManagementState.loaded(
-        companies: response.companies,
-        total: response.total,
-        page: response.page,
-        perPage: response.perPage,
-        totalPages: response.totalPages,
-        search: event.search,
-        status: event.status,
-        verificationStatus: event.verificationStatus,
-        country: event.country,
-        planType: event.planType,
-        sortBy: event.sortBy,
-        sortOrder: event.sortOrder,
-        statistics: statistics,
-        filterOptions: CompanyFilterOptions.defaultOptions(),
-      ));
+      emit(
+        CompanyManagementState.loaded(
+          companies: response.companies,
+          total: response.total,
+          page: response.page,
+          perPage: response.perPage,
+          totalPages: response.totalPages,
+          search: event.search,
+          status: event.status,
+          verificationStatus: event.verificationStatus,
+          country: event.country,
+          planType: event.planType,
+          sortBy: event.sortBy,
+          sortOrder: event.sortOrder,
+          statistics: statistics,
+          filterOptions: CompanyFilterOptions.defaultOptions(),
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -123,21 +125,25 @@ class CompanyManagementBloc
       final usageStats = await _repository.getCompanyUsageStats(event.id);
       final availablePlans = await _repository.getAvailablePlans();
 
-      emit(CompanyManagementState.companyDetailLoaded(
-        company: company,
-        usageStats: usageStats,
-        availablePlans: availablePlans,
-        filterOptions: CompanyFilterOptions.defaultOptions(),
-      ));
+      emit(
+        CompanyManagementState.companyDetailLoaded(
+          company: company,
+          usageStats: usageStats,
+          availablePlans: availablePlans,
+          filterOptions: CompanyFilterOptions.defaultOptions(),
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -175,19 +181,23 @@ class CompanyManagementBloc
         adminNotes: event.adminNotes,
       );
 
-      emit(CompanyManagementState.companyCreated(
-        company: company,
-        message: 'Company created successfully',
-      ));
+      emit(
+        CompanyManagementState.companyCreated(
+          company: company,
+          message: 'Company created successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -228,19 +238,23 @@ class CompanyManagementBloc
         adminNotes: event.adminNotes,
       );
 
-      emit(CompanyManagementState.companyUpdated(
-        company: company,
-        message: 'Company updated successfully',
-      ));
+      emit(
+        CompanyManagementState.companyUpdated(
+          company: company,
+          message: 'Company updated successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -254,19 +268,23 @@ class CompanyManagementBloc
     try {
       await _repository.deleteCompany(event.id);
 
-      emit(CompanyManagementState.companyDeleted(
-        companyId: event.id,
-        message: 'Company deleted successfully',
-      ));
+      emit(
+        CompanyManagementState.companyDeleted(
+          companyId: event.id,
+          message: 'Company deleted successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -284,20 +302,24 @@ class CompanyManagementBloc
         reason: event.reason,
       );
 
-      emit(CompanyManagementState.companyStatusUpdated(
-        companyId: event.id,
-        status: event.status,
-        message: 'Company status updated successfully',
-      ));
+      emit(
+        CompanyManagementState.companyStatusUpdated(
+          companyId: event.id,
+          status: event.status,
+          message: 'Company status updated successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -315,20 +337,24 @@ class CompanyManagementBloc
         verificationNotes: event.verificationNotes,
       );
 
-      emit(CompanyManagementState.verificationStatusUpdated(
-        companyId: event.id,
-        verificationStatus: event.verificationStatus,
-        message: 'Verification status updated successfully',
-      ));
+      emit(
+        CompanyManagementState.verificationStatusUpdated(
+          companyId: event.id,
+          verificationStatus: event.verificationStatus,
+          message: 'Verification status updated successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -373,20 +399,24 @@ class CompanyManagementBloc
         ),
       );
 
-      emit(CompanyManagementState.planAssigned(
-        companyId: event.companyId,
-        plan: assignedPlan,
-        message: 'Plan assigned successfully',
-      ));
+      emit(
+        CompanyManagementState.planAssigned(
+          companyId: event.companyId,
+          plan: assignedPlan,
+          message: 'Plan assigned successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -405,20 +435,24 @@ class CompanyManagementBloc
         filePath: event.filePath,
       );
 
-      emit(CompanyManagementState.documentUploaded(
-        companyId: event.companyId,
-        document: document,
-        message: 'Document uploaded successfully',
-      ));
+      emit(
+        CompanyManagementState.documentUploaded(
+          companyId: event.companyId,
+          document: document,
+          message: 'Document uploaded successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -435,20 +469,24 @@ class CompanyManagementBloc
         documentId: event.documentId,
       );
 
-      emit(CompanyManagementState.documentDeleted(
-        companyId: event.companyId,
-        documentId: event.documentId,
-        message: 'Document deleted successfully',
-      ));
+      emit(
+        CompanyManagementState.documentDeleted(
+          companyId: event.companyId,
+          documentId: event.documentId,
+          message: 'Document deleted successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -489,19 +527,23 @@ class CompanyManagementBloc
         planType: event.planType,
       );
 
-      emit(CompanyManagementState.exported(
-        filePath: filePath,
-        message: 'Companies exported successfully',
-      ));
+      emit(
+        CompanyManagementState.exported(
+          filePath: filePath,
+          message: 'Companies exported successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -515,19 +557,23 @@ class CompanyManagementBloc
     try {
       await _repository.sendWelcomeEmail(event.companyId);
 
-      emit(CompanyManagementState.welcomeEmailSent(
-        companyId: event.companyId,
-        message: 'Welcome email sent successfully',
-      ));
+      emit(
+        CompanyManagementState.welcomeEmailSent(
+          companyId: event.companyId,
+          message: 'Welcome email sent successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -541,19 +587,23 @@ class CompanyManagementBloc
     try {
       await _repository.resetCompanyPassword(event.companyId);
 
-      emit(CompanyManagementState.passwordReset(
-        companyId: event.companyId,
-        message: 'Password reset email sent successfully',
-      ));
+      emit(
+        CompanyManagementState.passwordReset(
+          companyId: event.companyId,
+          message: 'Password reset email sent successfully',
+        ),
+      );
     } catch (error, stackTrace) {
       final failure = mapExceptionToFailure(error, stackTrace);
-      emit(CompanyManagementState.error(
-        message: failure.message,
-        isNetworkError: failure is NetworkFailure,
-        isServerError: failure is ServerFailure,
-        isValidationError: failure is ValidationFailure,
-        stackTrace: stackTrace,
-      ));
+      emit(
+        CompanyManagementState.error(
+          message: failure.message,
+          isNetworkError: failure is NetworkFailure,
+          isServerError: failure is ServerFailure,
+          isValidationError: failure is ValidationFailure,
+          stackTrace: stackTrace,
+        ),
+      );
     }
   }
 
@@ -615,17 +665,19 @@ class CompanyManagementBloc
     if (state is _Loaded) {
       final currentState = state as _Loaded;
       if (hasMorePages) {
-        add(CompanyManagementEvent.loadCompanies(
-          search: currentState.search,
-          status: currentState.status,
-          verificationStatus: currentState.verificationStatus,
-          country: currentState.country,
-          planType: currentState.planType,
-          sortBy: currentState.sortBy,
-          sortOrder: currentState.sortOrder,
-          page: currentState.page + 1,
-          perPage: currentState.perPage,
-        ));
+        add(
+          CompanyManagementEvent.loadCompanies(
+            search: currentState.search,
+            status: currentState.status,
+            verificationStatus: currentState.verificationStatus,
+            country: currentState.country,
+            planType: currentState.planType,
+            sortBy: currentState.sortBy,
+            sortOrder: currentState.sortOrder,
+            page: currentState.page + 1,
+            perPage: currentState.perPage,
+          ),
+        );
       }
     }
   }
@@ -634,17 +686,19 @@ class CompanyManagementBloc
   void refreshCompanies() {
     if (state is _Loaded) {
       final currentState = state as _Loaded;
-      add(CompanyManagementEvent.loadCompanies(
-        search: currentState.search,
-        status: currentState.status,
-        verificationStatus: currentState.verificationStatus,
-        country: currentState.country,
-        planType: currentState.planType,
-        sortBy: currentState.sortBy,
-        sortOrder: currentState.sortOrder,
-        page: currentState.page,
-        perPage: currentState.perPage,
-      ));
+      add(
+        CompanyManagementEvent.loadCompanies(
+          search: currentState.search,
+          status: currentState.status,
+          verificationStatus: currentState.verificationStatus,
+          country: currentState.country,
+          planType: currentState.planType,
+          sortBy: currentState.sortBy,
+          sortOrder: currentState.sortOrder,
+          page: currentState.page,
+          perPage: currentState.perPage,
+        ),
+      );
     } else {
       add(const CompanyManagementEvent.loadCompanies());
     }

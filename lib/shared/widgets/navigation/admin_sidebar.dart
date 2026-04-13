@@ -53,7 +53,10 @@ class AdminSidebar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 16,
+                ),
                 child: Row(
                   children: [
                     Container(
@@ -63,20 +66,14 @@ class AdminSidebar extends StatelessWidget {
                         color: AppColors.primary,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
-                        Icons.hub,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      child: Icon(Icons.hub, color: Colors.white, size: 20),
                     ),
                     if (!collapsed) ...[
                       const Gap(10),
                       Expanded(
                         child: Text(
                           'NexaTrace',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.adminSidebarText,
@@ -98,9 +95,7 @@ class AdminSidebar extends StatelessWidget {
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
                           child: Text(
                             section.title.toUpperCase(),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
+                            style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: AppColors.adminSidebarTextMuted,
                                   fontWeight: FontWeight.w700,
@@ -141,9 +136,7 @@ class AdminSidebar extends StatelessWidget {
                           children: [
                             Text(
                               'Super Admin',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
+                              style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.adminSidebarText,
@@ -151,9 +144,7 @@ class AdminSidebar extends StatelessWidget {
                             ),
                             Text(
                               'Platform',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: AppColors.adminSidebarTextMuted,
                                   ),
@@ -170,14 +161,6 @@ class AdminSidebar extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  bool _isSelected(String location, String? route) {
-    if (route == null) return false;
-    if (location == route) return true;
-    if (route == '/dashboard' && location.startsWith('/dashboard')) return true;
-    if (route != '/dashboard' && location.startsWith(route)) return true;
-    return false;
   }
 }
 
@@ -212,9 +195,7 @@ class _SidebarTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = _isSelected(context, item.route) || _isAnyChildSelected();
-    final bg = selected
-        ? Colors.white.withOpacity(0.10)
-        : Colors.transparent;
+    final bg = selected ? Colors.white.withOpacity(0.10) : Colors.transparent;
     final fg = selected ? AppColors.white : AppColors.adminSidebarText;
     final iconColor = selected ? AppColors.white : AppColors.adminSidebarText;
 
@@ -240,8 +221,10 @@ class _SidebarTile extends StatelessWidget {
             ),
             child: ExpansionTile(
               initiallyExpanded: isExpanded,
-              tilePadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              tilePadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 6,
+              ),
               childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
               collapsedIconColor: iconColor,
               iconColor: iconColor,
@@ -250,10 +233,10 @@ class _SidebarTile extends StatelessWidget {
                 item.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: fg, fontWeight: FontWeight.w700),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: fg,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               children: [
                 for (final child in item.children)
@@ -296,10 +279,10 @@ class _SidebarTile extends StatelessWidget {
                       item.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: fg, fontWeight: FontWeight.w600),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: fg,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -316,10 +299,7 @@ class _ChildTile extends StatelessWidget {
   final AdminSidebarItem child;
   final bool selected;
 
-  const _ChildTile({
-    required this.child,
-    required this.selected,
-  });
+  const _ChildTile({required this.child, required this.selected});
 
   @override
   Widget build(BuildContext context) {
@@ -333,8 +313,9 @@ class _ChildTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           decoration: BoxDecoration(
-            color:
-                selected ? Colors.white.withOpacity(0.10) : Colors.transparent,
+            color: selected
+                ? Colors.white.withOpacity(0.10)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: selected
@@ -344,21 +325,21 @@ class _ChildTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(child.icon,
-                  size: 18,
-                  color: selected
-                      ? AppColors.white
-                      : AppColors.adminSidebarText),
+              Icon(
+                child.icon,
+                size: 18,
+                color: selected ? AppColors.white : AppColors.adminSidebarText,
+              ),
               const Gap(8),
               Expanded(
                 child: Text(
                   child.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: fg, fontWeight: FontWeight.w600),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: fg,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -368,4 +349,3 @@ class _ChildTile extends StatelessWidget {
     );
   }
 }
-

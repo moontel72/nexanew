@@ -2,7 +2,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:nexatrace_system/core/errors/failures.dart';
 import 'package:nexatrace_system/features/nexa_admin/domain/entities/billing_entity.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart'
+    hide PaymentReconciliation, $PaymentReconciliationCopyWith;
 import 'package:nexatrace_system/features/nexa_admin/data/models/credit_note_model.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/models/payment_reconciliation_model.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/models/revenue_report_model.dart';

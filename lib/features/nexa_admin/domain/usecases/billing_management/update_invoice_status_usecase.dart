@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:nexatrace_system/core/errors/failures.dart';
 import 'package:nexatrace_system/core/usecase/usecase.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
     as shared;
 
@@ -55,30 +56,31 @@ class UpdateInvoiceStatusParams {
 
 /// Use case for updating invoice status
 class UpdateInvoiceStatusUseCase
-    implements UseCase<Invoice, UpdateInvoiceStatusParams> {
+    implements UseCase<AdminInvoice, UpdateInvoiceStatusParams> {
   final BillingRepository repository;
 
   const UpdateInvoiceStatusUseCase(this.repository);
 
   @override
-  Future<Either<Failure, Invoice>> call(
+  Future<Either<Failure, AdminInvoice>> call(
     UpdateInvoiceStatusParams params,
   ) async {
     try {
       // Validate parameters
       final validationErrors = params.validate();
       if (validationErrors.isNotEmpty) {
-        return Left(InvalidParamsFailure(validationErrors));
+        return Left(
+          ValidationFailure(
+            'Invalid parameters',
+            errors: {'validation': validationErrors},
+          ),
+        );
       }
 
       // Update invoice status through repository
       final result = await repository.updateInvoiceStatus(
-        invoiceId: params.invoiceId,
-        newStatus: params.newStatus,
-        paymentMethod: params.paymentMethod,
-        paymentReference: params.paymentReference,
-        paymentDate: params.paymentDate,
-        notes: params.notes,
+        params.invoiceId,
+        params.newStatus,
       );
       return result;
     } catch (e) {

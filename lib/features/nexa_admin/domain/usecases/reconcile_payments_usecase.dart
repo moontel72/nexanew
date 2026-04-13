@@ -82,8 +82,8 @@ class ReconcilePaymentsUseCase
     if (validationErrors.isNotEmpty) {
       return Left(
         ValidationFailure(
-          message: 'Invalid reconciliation parameters',
-          errors: validationErrors,
+          'Invalid reconciliation parameters',
+          errors: {'general': validationErrors},
         ),
       );
     }
@@ -107,7 +107,10 @@ class ReconcilePaymentsUseCase
           );
 
           if (processResult.isLeft()) {
-            return Left(processResult.left);
+            return processResult.fold(
+              (failure) => Left(failure),
+              (_) => throw Exception('Unexpected state'),
+            );
           }
 
           // Get updated reconciliation status
@@ -125,10 +128,7 @@ class ReconcilePaymentsUseCase
       });
     } catch (e) {
       return Left(
-        UnexpectedFailure(
-          message: 'Failed to reconcile payments: ${e.toString()}',
-          originalError: e,
-        ),
+        UnknownFailure('Failed to reconcile payments: ${e.toString()}'),
       );
     }
   }
@@ -186,10 +186,8 @@ class AnalyzeReconciliationDiscrepanciesUseCase
       });
     } catch (e) {
       return Left(
-        UnexpectedFailure(
-          message:
-              'Failed to analyze reconciliation discrepancies: ${e.toString()}',
-          originalError: e,
+        UnknownFailure(
+          'Failed to analyze reconciliation discrepancies: ${e.toString()}',
         ),
       );
     }

@@ -1,18 +1,16 @@
 //lib/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/entities/billing_entity.dart';
 import 'package:nexatrace_system/features/nexa_admin/domain/usecases/generate_invoice_usecase.dart';
 import 'package:nexatrace_system/features/nexa_admin/domain/usecases/process_payment_usecase.dart';
 import 'package:nexatrace_system/features/nexa_admin/domain/usecases/reconcile_payments_usecase.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
-    as shared;
 
-part 'billing_event.dart';
-part 'billing_state.dart';
+import 'billing_event.dart';
+import 'billing_state.dart';
+export 'billing_event.dart';
+export 'billing_state.dart';
 
 /// Bloc for managing billing operations in the super admin panel
 class BillingBloc extends Bloc<BillingEvent, BillingState> {
@@ -89,7 +87,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to load platform invoices: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -131,7 +129,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to load company invoices: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -389,7 +387,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to generate revenue report: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -425,7 +423,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to load financial dashboard: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -463,7 +461,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to export invoices: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -499,7 +497,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to export revenue report: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -535,7 +533,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to update invoice status: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -569,7 +567,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to send invoice notification: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -607,7 +605,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to create credit note: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -647,7 +645,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to load credit notes: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -682,7 +680,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
         BillingState.error(
           message:
               'Failed to load companies with overdue invoices: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -718,7 +716,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to load platform revenue summary: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
@@ -754,7 +752,7 @@ class BillingBloc extends Bloc<BillingEvent, BillingState> {
       emit(
         BillingState.error(
           message: 'Failed to load revenue by company: ${e.toString()}',
-          error: UnexpectedFailure(message: e.toString(), originalError: e),
+          error: UnknownFailure(e.toString()),
         ),
       );
     }
