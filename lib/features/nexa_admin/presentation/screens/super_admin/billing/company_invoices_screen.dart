@@ -401,13 +401,12 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if (issueDate != null)
-                          Text(
-                            'Issued: ${issueDate.toString().split(' ')[0]}',
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
+                        Text(
+                          'Issued: ${issueDate.toString().split(' ')[0]}',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
                           ),
+                        ),
                       ],
                     ),
                   ),
@@ -435,35 +434,34 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
                       ),
                     ],
                   ),
-                  if (dueDate != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Due Date',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        dueDate.toString().split(' ')[0],
+                        style: AppTypography.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: isOverdue
+                              ? AppColors.error
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                      if (isOverdue)
                         Text(
-                          'Due Date',
+                          'Overdue',
                           style: AppTypography.caption.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        Text(
-                          dueDate.toString().split(' ')[0],
-                          style: AppTypography.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: isOverdue
-                                ? AppColors.error
-                                : AppColors.textPrimary,
-                          ),
-                        ),
-                        if (isOverdue)
-                          Text(
-                            'Overdue',
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.error,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                      ],
-                    ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
