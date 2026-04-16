@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 Route::get("/health", fn() => response()->json(["ok" => true]));
@@ -12,7 +13,7 @@ $registerRoutes = function (): void {
         ]);
         // Temporary GET route for debugging 405 errors
         Route::get("login", function (\Illuminate\Http\Request $request) {
-            \Log::warning("GET request to login endpoint", [
+            Log::warning("GET request to login endpoint", [
                 "method" => $request->method(),
                 "path" => $request->path(),
                 "full_url" => $request->fullUrl(),
@@ -617,4 +618,3 @@ $registerRoutes = function (): void {
 };
 
 Route::prefix("v1")->group($registerRoutes);
-$registerRoutes();
