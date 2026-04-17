@@ -24,8 +24,8 @@ jobs:
 
       - name: Deploy via rsync
         run: |
-          rsync -avz --exclude ".git" --exclude ".github" \
-          ./ root@135.181.46.27:/var/www/nexatrace/admin-panel/
+          rsync -avz --delete --exclude ".git" --exclude ".github" ./ root@135.181.46.27:/var/www/nexatrace/admin-panel/
+
 
       - name: Laravel optimize
         run: |
