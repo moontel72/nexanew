@@ -1,3 +1,4 @@
+# trigger
 name: Deploy Flutter Web Frontend
 
 on:
@@ -41,3 +42,6 @@ jobs:
       - name: Deploy to Hetzner (Flutter Web)
         run: |
           rsync -avz --delete build/web/ root@${{ secrets.SERVER_IP }}:/var/www/nexatrace/frontend/
+
+         
+
