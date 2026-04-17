@@ -1,0 +1,36 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches:
+      - mainnew
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        run: |
+          ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts
+
+      - name: Deploy via rsync
+        run: |
+          rsync -avz --delete --exclude ".git" --exclude ".github" ./ root@135.181.46.27:/var/www/nexatrace/admin-panel/
+
+
+      - name: Laravel optimize
+        run: |
+          ssh root@135.181.46.27 "cd /var/www/nexatrace/admin-panel && php artisan optimize"
+
+      - name: Fix permissions
+        run: |
+          ssh root@135.181.46.27 "cd /var/www/nexatrace/admin-panel && chmod -R 775 storage bootstrap/cache"
