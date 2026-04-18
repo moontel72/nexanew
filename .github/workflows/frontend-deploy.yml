@@ -2,6 +2,8 @@ name: Deploy Flutter Web Frontend
 
 on:
   push:
+    branches:
+      - mainnew
     paths:
       - "lib/**"
       - "web/**"
@@ -31,7 +33,11 @@ jobs:
       - name: Build Flutter Web
         run: flutter build web --release
 
-      # 🔥 Updated SSH Setup (Direct IP)
+      - name: Debug - List Build Files
+        run: |
+          echo "Checking if build/web exists..."
+          ls -la build/web/
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -39,11 +45,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts
 
-      # 🔥 Deploy with Debugging + Progress
       - name: Deploy to Hetzner (Flutter Web)
         run: |
-          echo "📁 Checking build/web/ contents..."
-          ls -la build/web/
-
-          echo "🚀 Starting rsync deployment..."
-          rsync -avz --progress --delete build/web/ root@135.181.46.27:/var/www/nexatrace/frontend/
+          # --verbose (v) lagaya hai taake logs mein file names dikhein
+          rsync -avz --progress build/web/ root@135.181.46.27:/var/www/nexatrace/frontend/
