@@ -13,6 +13,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Install PHP dependencies
+        run: |
+          cd backend
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
@@ -24,8 +34,7 @@ jobs:
 
       - name: Deploy backend via rsync
         run: |
-          rsync -avz --delete \
-          backend/ root@135.181.46.27:/var/www/nexatrace/admin-panel/
+          rsync -avz --delete backend/ root@135.181.46.27:/var/www/nexatrace/admin-panel/
 
       - name: Laravel optimize
         run: |
