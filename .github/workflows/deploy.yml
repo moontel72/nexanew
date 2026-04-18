@@ -22,10 +22,10 @@ jobs:
         run: |
           ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts
 
-      - name: Deploy via rsync
+      - name: Deploy backend via rsync
         run: |
-          rsync -avz --delete --exclude ".git" --exclude ".github" ./ root@135.181.46.27:/var/www/nexatrace/admin-panel/
-
+          rsync -avz --delete \
+          backend/ root@135.181.46.27:/var/www/nexatrace/admin-panel/
 
       - name: Laravel optimize
         run: |
