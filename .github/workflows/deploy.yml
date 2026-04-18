@@ -23,23 +23,29 @@ jobs:
           cd backend
           composer install --no-interaction --prefer-dist --optimize-autoloader
 
+      # 🔥 Updated SSH Setup
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      # 🔥 Add server to known_hosts (Direct IP)
       - name: Add server to known_hosts
         run: |
+          mkdir -p ~/.ssh
           ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts
 
+      # 🔥 Deploy backend via rsync (Direct IP)
       - name: Deploy backend via rsync
         run: |
           rsync -avz --delete backend/ root@135.181.46.27:/var/www/nexatrace/admin-panel/
 
+      # 🔥 Laravel optimize on server
       - name: Laravel optimize
         run: |
           ssh root@135.181.46.27 "cd /var/www/nexatrace/admin-panel && php artisan optimize"
 
+      # 🔥 Fix permissions
       - name: Fix permissions
         run: |
           ssh root@135.181.46.27 "cd /var/www/nexatrace/admin-panel && chmod -R 775 storage bootstrap/cache"

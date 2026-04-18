@@ -32,16 +32,15 @@ jobs:
       - name: Build Flutter Web
         run: flutter build web --release
 
+      # 🔥 Updated SSH Setup (Direct IP)
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts
 
+      # 🔥 Updated rsync deploy (Direct IP)
       - name: Deploy to Hetzner (Flutter Web)
         run: |
-          rsync -avz --delete build/web/ root@${{ secrets.SERVER_IP }}:/var/www/nexatrace/frontend/
-
-         
-
+          rsync -avz --delete build/web/ root@135.181.46.27:/var/www/nexatrace/frontend/
