@@ -5,17 +5,18 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
-        $path = base_path('../database/migrations/001_initial_schema.sql');
-        $sql = file_get_contents($path);
-
-        if ($sql === false) {
-            throw new RuntimeException('Failed to read core schema SQL');
-        }
-
-        DB::unprepared($sql);
+public function up(): void
+{
+    // database_path('sql/...') direct database folder ke andar jata hai
+    $path = database_path('sql/001_initial_schema.sql');
+    
+    if (!file_exists($path)) {
+        throw new RuntimeException("SQL file not found at: " . $path);
     }
+
+    $sql = file_get_contents($path);
+    DB::unprepared($sql);
+}
 
     public function down(): void
     {
