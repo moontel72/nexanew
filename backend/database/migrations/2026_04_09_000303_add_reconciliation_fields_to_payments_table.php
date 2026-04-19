@@ -19,7 +19,14 @@ return new class extends Migration
             $table->decimal('expected_amount', 10, 2)->nullable()->after('reconciliation_status');
             $table->decimal('discrepancy_amount', 10, 2)->nullable()->after('expected_amount');
             $table->text('reconciliation_notes')->nullable()->after('discrepancy_amount');
-            $table->uuid('reconciled_by')->nullable()->after('reconciliation_notes');
+            
+            // FIX: Changed from uuid() to foreignId() to match users.id (BigInt)
+            $table->foreignId('reconciled_by')
+                ->nullable()
+                ->after('reconciliation_notes')
+                ->constrained('users')
+                ->onDelete('set null');
+
             $table->timestamp('reconciled_at')->nullable()->after('reconciled_by');
 
             // Add indexes for reconciliation
@@ -27,13 +34,9 @@ return new class extends Migration
             $table->index('gateway_transaction_id');
             $table->index('reconciliation_status');
             $table->index('reconciled_at');
+            // Index for reconciled_by is automatically handled by foreignId() in some versions, 
+            // but keeping explicit index as per your original code.
             $table->index('reconciled_by');
-
-            // Foreign key for reconciled_by
-            $table->foreign('reconciled_by')
-                ->references('id')
-                ->on('users')
-                ->onDelete('set null');
         });
     }
 
