@@ -22,20 +22,27 @@ return new class extends Migration
             $table->string('reason', 500);
             $table->string('status', 20)->default('pending'); // pending, approved, partially_approved, rejected, processed, failed
             $table->decimal('approved_amount', 10, 2)->nullable();
-            $table->uuid('requested_by')->nullable();
+            
+            // --- FIX START: Changed from uuid to foreignId to match users.id (BigInt) ---
+            $table->foreignId('requested_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('requested_at')->nullable();
-            $table->uuid('processed_by')->nullable();
+            
+            $table->foreignId('processed_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('processed_at')->nullable();
+            
             $table->string('rejection_reason', 500)->nullable();
-            $table->uuid('rejected_by')->nullable();
+            
+            $table->foreignId('rejected_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('rejected_at')->nullable();
+            // --- FIX END ---
+
             $table->string('gateway_refund_id', 255)->nullable();
             $table->string('gateway_name', 50)->nullable();
             $table->text('notes')->nullable();
             $table->jsonb('metadata')->nullable();
             $table->timestamps();
 
-            // Foreign key constraints
+            // Foreign key constraints for non-user tables (these remain UUID)
             $table->foreign('invoice_id')
                 ->references('id')
                 ->on('invoices')
@@ -50,21 +57,6 @@ return new class extends Migration
                 ->references('id')
                 ->on('companies')
                 ->onDelete('cascade');
-
-            $table->foreign('requested_by')
-                ->references('id')
-                ->on('users')
-                ->onDelete('set null');
-
-            $table->foreign('processed_by')
-                ->references('id')
-                ->on('users')
-                ->onDelete('set null');
-
-            $table->foreign('rejected_by')
-                ->references('id')
-                ->on('users')
-                ->onDelete('set null');
 
             // Indexes
             $table->index('invoice_id');
