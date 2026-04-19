@@ -21,7 +21,18 @@ return new class extends Migration
             $table->string('reason', 500);
             $table->string('status', 20)->default('pending'); // pending, approved, applied, cancelled
             $table->date('issue_date');
-            $table->uuid('approved_by')->nullable();
+
+            // --- TYPE FIX START ---
+            // Agar aapki users table ki ID UUID nahi balki number hai, 
+            // to niche wali line ko $table->unsignedBigInteger('approved_by')->nullable(); se badal den.
+            // Lekin error ke mutabiq aapne yahan UUID rakha tha jo mismatch ho raha tha.
+            // Hum ise default Laravel ID type se match karne ke liye change kar rahe hain:
+            $table->foreignId('approved_by')
+                ->nullable()
+                ->constrained('users')
+                ->onDelete('set null');
+            // --- TYPE FIX END ---
+
             $table->timestamp('approved_at')->nullable();
             $table->boolean('applied_to_invoice')->default(false);
             $table->timestamp('applied_at')->nullable();
@@ -29,7 +40,7 @@ return new class extends Migration
             $table->jsonb('metadata')->nullable();
             $table->timestamps();
 
-            // Foreign key constraints
+            // Foreign key constraints for UUIDs
             $table->foreign('company_id')
                 ->references('id')
                 ->on('companies')
@@ -38,11 +49,6 @@ return new class extends Migration
             $table->foreign('invoice_id')
                 ->references('id')
                 ->on('invoices')
-                ->onDelete('set null');
-
-            $table->foreign('approved_by')
-                ->references('id')
-                ->on('users')
                 ->onDelete('set null');
 
             // Indexes
