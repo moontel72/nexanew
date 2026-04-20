@@ -93,10 +93,9 @@ class CorsMiddleware
                 "Access-Control-Allow-Origin",
                 $allowedOrigin,
             );
+            $response->headers->set("Access-Control-Allow-Credentials", "true");
         } else {
-            // Fallback for debugging
-            $response->headers->set("Access-Control-Allow-Origin", "*");
-            \Log::warning("CORS Using wildcard origin for preflight", [
+            \Log::warning("CORS Origin not allowed for preflight", [
                 "requested_origin" => $request->headers->get("Origin"),
                 "path" => $request->path(),
             ]);
@@ -110,7 +109,6 @@ class CorsMiddleware
             "Access-Control-Allow-Headers",
             "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-TOKEN, X-Requested-With",
         );
-        $response->headers->set("Access-Control-Allow-Credentials", "true");
         $response->headers->set("Access-Control-Max-Age", "86400"); // 24 hours
         $response->headers->set(
             "Access-Control-Expose-Headers",
@@ -142,21 +140,6 @@ class CorsMiddleware
                 $allowedOrigin,
             );
             $response->headers->set("Access-Control-Allow-Credentials", "true");
-        } else {
-            // For debugging, allow all origins temporarily
-            $origin = $request->headers->get("Origin");
-            if ($origin && preg_match("#^https?://#", $origin)) {
-                $response->headers->set("Access-Control-Allow-Origin", $origin);
-                $response->headers->set(
-                    "Access-Control-Allow-Credentials",
-                    "true",
-                );
-                \Log::warning("CORS Allowing origin for debugging", [
-                    "origin" => $origin,
-                    "path" => $request->path(),
-                    "method" => $request->getMethod(),
-                ]);
-            }
         }
 
         $response->headers->set(
