@@ -242,7 +242,7 @@ class _SidebarTile extends StatelessWidget {
                 for (final child in item.children)
                   _ChildTile(
                     child: child,
-                    selected: _isSelected(context, child.route),
+                    selected: child.route != null && location == child.route,
                   ),
               ],
             ),

@@ -89,6 +89,18 @@ class FactoryShell extends StatelessWidget {
             label: 'Products',
             icon: Icons.inventory_2_outlined,
             route: '/factory/products',
+            children: [
+              AdminSidebarItem(
+                label: 'Create Product',
+                icon: Icons.add_circle_outline,
+                route: '/factory/products/create',
+              ),
+              AdminSidebarItem(
+                label: 'Product List',
+                icon: Icons.list_alt,
+                route: '/factory/products',
+              ),
+            ],
           ),
         ],
       ),
@@ -169,7 +181,10 @@ class FactoryShell extends StatelessWidget {
   }
 
   String _titleForLocation(String location) {
-    if (location.startsWith('/factory/products')) return 'Products';
+    if (location.startsWith('/factory/products/create')) {
+      return 'Create Product';
+    }
+    if (location.startsWith('/factory/products')) return 'Product List';
     if (location.startsWith('/factory/codes/unit/generate')) {
       return 'Generate Unit';
     }
@@ -193,8 +208,11 @@ class FactoryShell extends StatelessWidget {
   }
 
   List<String> _breadcrumbsForLocation(String location) {
+    if (location.startsWith('/factory/products/create')) {
+      return const ['Factory', 'Products', 'Create Product'];
+    }
     if (location.startsWith('/factory/products')) {
-      return const ['Factory', 'Products'];
+      return const ['Factory', 'Products', 'Product List'];
     }
     if (location.startsWith('/factory/codes/unit')) {
       return const ['Factory', 'Codes', 'Unit'];
