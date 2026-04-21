@@ -5,7 +5,8 @@ on:
     branches:
       - mainnew
     paths:
-      - "backend/**"  # Ab yeh sirf backend ki tabdeeli par chalega
+      - "backend/**"  # Sirf backend ki tabdeeli par chalega
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -24,29 +25,45 @@ jobs:
           cd backend
           composer install --no-interaction --prefer-dist --optimize-autoloader
 
-      # 🔥 Updated SSH Setup
+      # 🔥 SSH Setup
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 🔥 Add server to known_hosts (Direct IP)
+      # 🔥 Add server to known_hosts
       - name: Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts
 
-      # 🔥 Deploy backend via rsync (Direct IP)
+      # 🔥 Deploy backend via rsync (Excluding .env to protect server config)
       - name: Deploy backend via rsync
         run: |
           rsync -avz --delete --exclude='.env' backend/ root@135.181.46.27:/var/www/nexatrace/admin-panel/
 
-      # 🔥 Laravel optimize on server
-      - name: Laravel optimize
+      # 🔥 Laravel optimize, Fix Permissions and Reload Nginx
+      - name: Server Post-Deployment Tasks
         run: |
-          ssh root@135.181.46.27 "cd /var/www/nexatrace/admin-panel && php artisan optimize"
-
-      # 🔥 Fix permissions
-      - name: Fix permissions
-        run: |
-          ssh root@135.181.46.27 "cd /var/www/nexatrace/admin-panel && chmod -R 775 storage bootstrap/cache"
+          ssh root@135.181.46.27 "
+            cd /var/www/nexatrace/admin-panel
+            
+            # 1. Clear and cache Laravel config/routes
+            php artisan optimize:clear
+            php artisan optimize
+            
+            # 2. Fix Ownership (Change from 1001 to www-data)
+            chown -R www-data:www-data /var/www/nexatrace/admin-panel
+            chown -R www-data:www-data /var/www/nexatrace/frontend
+            
+            # 3. Set standard permissions
+            find /var/www/nexatrace/admin-panel -type d -exec chmod 755 {} \;
+            find /var/www/nexatrace/admin-panel -type f -exec chmod 644 {} \;
+            
+            # 4. Special permissions for storage and cache
+            chmod -R 775 /var/www/nexatrace/admin-panel/storage
+            chmod -R 775 /var/www/nexatrace/admin-panel/bootstrap/cache
+            
+            # 5. Reload Nginx to apply any changes
+            systemctl reload nginx
+          "
