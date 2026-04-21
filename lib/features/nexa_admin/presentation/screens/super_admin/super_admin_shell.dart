@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart';
 import 'package:nexatrace_system/routes/app_router.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
@@ -62,7 +64,7 @@ class SuperAdminShell extends StatelessWidget {
                             onLogout: () {
                               innerContext
                                   .read<AdminAuthBloc>()
-                                  .add(const AdminLogoutRequested());
+                                  .add(AdminLogoutRequested());
                             },
                           );
                         },
