@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - mainnew
-
+    paths:
+      - "backend/**"  # Ab yeh sirf backend ki tabdeeli par chalega
 jobs:
   deploy:
     runs-on: ubuntu-latest
