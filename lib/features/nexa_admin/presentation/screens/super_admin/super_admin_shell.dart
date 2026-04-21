@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart';
 import 'package:nexatrace_system/routes/app_router.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
@@ -17,70 +18,79 @@ class SuperAdminShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SuperAdminLayoutCubit, SuperAdminLayoutState>(
-      builder: (context, layout) {
-        final isNarrow = MediaQuery.of(context).size.width < 1024;
-        final sidebar = AdminSidebar(
-          collapsed: isNarrow ? false : layout.isSidebarCollapsed,
-          sections: _sections(),
-        );
+    return BlocListener<AdminAuthBloc, AdminAuthState>(
+      listener: (context, state) {
+        if (state is AdminAuthUnauthenticated) {
+          context.go('/login');
+        }
+      },
+      child: BlocBuilder<SuperAdminLayoutCubit, SuperAdminLayoutState>(
+        builder: (context, layout) {
+          final isNarrow = MediaQuery.of(context).size.width < 1024;
+          final sidebar = AdminSidebar(
+            collapsed: isNarrow ? false : layout.isSidebarCollapsed,
+            sections: _sections(),
+          );
 
-        final location = GoRouterState.of(context).uri.toString();
-        final title = _titleForLocation(location);
-        final crumbs = _breadcrumbsForLocation(location);
+          final location = GoRouterState.of(context).uri.toString();
+          final title = _titleForLocation(location);
+          final crumbs = _breadcrumbsForLocation(location);
 
-        return Scaffold(
-          backgroundColor: AppColors.adminContentBackground,
-          drawer: isNarrow ? Drawer(child: sidebar) : null,
-          body: Row(
-            children: [
-              if (!isNarrow) sidebar,
-              Expanded(
-                child: Column(
-                  children: [
-                    Builder(
-                      builder: (innerContext) {
-                        return AdminTopBar(
-                          title: title,
-                          breadcrumbs: crumbs,
-                          onToggleSidebar: () {
-                            if (isNarrow) {
-                              Scaffold.of(innerContext).openDrawer();
-                              return;
-                            }
-                            innerContext
-                                .read<SuperAdminLayoutCubit>()
-                                .toggleSidebar();
-                          },
-                          onLogout: () async {
-                            innerContext.read<AppRouter>().goToLogin(innerContext);
-                          },
-                        );
-                      },
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: SizedBox.expand(child: child),
+          return Scaffold(
+            backgroundColor: AppColors.adminContentBackground,
+            drawer: isNarrow ? Drawer(child: sidebar) : null,
+            body: Row(
+              children: [
+                if (!isNarrow) sidebar,
+                Expanded(
+                  child: Column(
+                    children: [
+                      Builder(
+                        builder: (innerContext) {
+                          return AdminTopBar(
+                            title: title,
+                            breadcrumbs: crumbs,
+                            onToggleSidebar: () {
+                              if (isNarrow) {
+                                Scaffold.of(innerContext).openDrawer();
+                                return;
+                              }
+                              innerContext
+                                  .read<SuperAdminLayoutCubit>()
+                                  .toggleSidebar();
+                            },
+                            onLogout: () {
+                              innerContext
+                                  .read<AdminAuthBloc>()
+                                  .add(const AdminLogoutRequested());
+                            },
+                          );
+                        },
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: SizedBox.expand(child: child),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 

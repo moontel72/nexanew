@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class CorsMiddleware
@@ -17,7 +18,7 @@ class CorsMiddleware
         $allowedOrigin = $this->resolveAllowedOrigin($origin);
 
         // Log request for debugging
-        \Log::info("CORS Request", [
+        Log::info("CORS Request", [
             "method" => $request->getMethod(),
             "path" => $request->path(),
             "full_url" => $request->fullUrl(),
@@ -29,7 +30,7 @@ class CorsMiddleware
 
         // Handle preflight requests
         if ($request->getMethod() === "OPTIONS") {
-            \Log::info("CORS Preflight Request Handled", [
+            Log::info("CORS Preflight Request Handled", [
                 "path" => $request->path(),
                 "origin" => $origin,
             ]);
@@ -40,7 +41,7 @@ class CorsMiddleware
         $response = $next($request);
 
         // Log response
-        \Log::info("CORS Response", [
+        Log::info("CORS Response", [
             "method" => $request->getMethod(),
             "path" => $request->path(),
             "status" => $response->getStatusCode(),
@@ -70,7 +71,7 @@ class CorsMiddleware
         }
 
         // Log rejected origins for debugging
-        \Log::warning("CORS Origin Rejected", [
+        Log::warning("CORS Origin Rejected", [
             "origin" => $origin,
             "pattern" =>
                 '#^https?://(localhost|127\.0\.0\.1|135\.181\.46\.27)(:\d+)?$#',
@@ -95,7 +96,7 @@ class CorsMiddleware
             );
             $response->headers->set("Access-Control-Allow-Credentials", "true");
         } else {
-            \Log::warning("CORS Origin not allowed for preflight", [
+            Log::warning("CORS Origin not allowed for preflight", [
                 "requested_origin" => $request->headers->get("Origin"),
                 "path" => $request->path(),
             ]);
@@ -116,7 +117,7 @@ class CorsMiddleware
         );
 
         // Log preflight response headers for debugging
-        \Log::info("CORS Preflight Response Headers", [
+        Log::info("CORS Preflight Response Headers", [
             "headers" => $response->headers->all(),
             "path" => $request->path(),
         ]);
@@ -168,7 +169,7 @@ class CorsMiddleware
         }
 
         // Log CORS headers for debugging
-        \Log::info("CORS Headers Added", [
+        Log::info("CORS Headers Added", [
             "method" => $request->getMethod(),
             "path" => $request->path(),
             "status" => $response->getStatusCode(),

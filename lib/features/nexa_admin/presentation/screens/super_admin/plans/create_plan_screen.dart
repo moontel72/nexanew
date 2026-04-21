@@ -23,6 +23,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
+  final _unitCodePriceController = TextEditingController();
   final _currencyController = TextEditingController(text: 'USD');
   final _sortOrderController = TextEditingController(text: '0');
 
@@ -51,6 +52,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    _unitCodePriceController.dispose();
     _currencyController.dispose();
     _sortOrderController.dispose();
     _monthlyUnitCodesController.dispose();
@@ -93,6 +95,22 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
       return;
     }
 
+    final unitCodePriceText = _unitCodePriceController.text.trim();
+    double? unitCodePrice;
+    if (unitCodePriceText.isNotEmpty) {
+      unitCodePrice = double.tryParse(unitCodePriceText);
+      if (unitCodePrice == null || unitCodePrice < 0) {
+        ErrorHandler.showPersistentError(
+          context,
+          title: 'Validation Error',
+          message: 'Unit code price must be a valid number (>= 0)',
+          copyText:
+              'Create Plan Validation Error\n\nUnit code price must be a valid number (>= 0)',
+        );
+        return;
+      }
+    }
+
     final sortOrder = int.tryParse(_sortOrderController.text.trim());
 
     final limits = <String, dynamic>{
@@ -118,6 +136,16 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
       return PlanFeatureInput(id: f, isEnabled: true);
     }).toList();
 
+    final metadata = <String, dynamic>{
+      if (unitCodePrice != null)
+        'publish_rates': <String, dynamic>{
+          'unit': unitCodePrice,
+          'packet': unitCodePrice * 3,
+          'carton': unitCodePrice * 5,
+          'bundle': unitCodePrice * 10,
+        },
+    };
+
     context.read<PlanManagementBloc>().add(
       PlanManagementEvent.createPlan(
         name: _nameController.text.trim(),
@@ -136,6 +164,7 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
         sortOrder: sortOrder,
         limits: limits,
         features: selectedFeatures.isEmpty ? null : selectedFeatures,
+        metadata: metadata.isEmpty ? null : metadata,
       ),
     );
   }
@@ -279,6 +308,29 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                                     ),
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 12),
+                              CustomTextField(
+                                controller: _unitCodePriceController,
+                                labelText: 'Unit Code Price (per code)',
+                                hintText: 'e.g., 0.002',
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return null;
+                                  }
+                                  final parsed = double.tryParse(v.trim());
+                                  if (parsed == null) {
+                                    return 'Enter a valid number';
+                                  }
+                                  if (parsed < 0) {
+                                    return 'Must be >= 0';
+                                  }
+                                  return null;
+                                },
                               ),
                               const SizedBox(height: 12),
                               Row(

@@ -128,6 +128,14 @@ class _PlansListScreenState extends State<PlansListScreen> {
     final priceCtrl =
         TextEditingController(text: initialPrice.toStringAsFixed(2));
 
+    final currentPublishRates = plan.metadata?['publish_rates'];
+    final currentUnitRate = currentPublishRates is Map
+        ? (currentPublishRates['unit'] as num?)?.toDouble()
+        : null;
+    final unitCodePriceCtrl = TextEditingController(
+      text: currentUnitRate == null ? '' : currentUnitRate.toString(),
+    );
+
     bool isFeatured = plan.isFeatured;
     bool isPopular = plan.isPopular;
     final sortOrderCtrl = TextEditingController(text: plan.sortOrder.toString());
@@ -256,6 +264,16 @@ class _PlansListScreenState extends State<PlansListScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
+                      TextField(
+                        controller: unitCodePriceCtrl,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Unit Code Price (per code)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
@@ -376,6 +394,21 @@ class _PlansListScreenState extends State<PlansListScreen> {
                         double.tryParse(priceCtrl.text.trim()) ?? 0.0;
                     final parsedSortOrder =
                         int.tryParse(sortOrderCtrl.text.trim());
+                    final unitCodePriceText = unitCodePriceCtrl.text.trim();
+                    final parsedUnitCodePrice = unitCodePriceText.isEmpty
+                        ? null
+                        : double.tryParse(unitCodePriceText);
+                    final metadata = parsedUnitCodePrice == null
+                        ? null
+                        : <String, dynamic>{
+                            ...?plan.metadata,
+                            'publish_rates': <String, dynamic>{
+                              'unit': parsedUnitCodePrice,
+                              'packet': parsedUnitCodePrice * 3,
+                              'carton': parsedUnitCodePrice * 5,
+                              'bundle': parsedUnitCodePrice * 10,
+                            },
+                          };
 
                     Navigator.pop(context);
                     context.read<PlanManagementBloc>().add(
@@ -394,6 +427,7 @@ class _PlansListScreenState extends State<PlansListScreen> {
                             features: selectedFeatureIds
                                 .map((id) => PlanFeatureInput(id: id))
                                 .toList(),
+                            metadata: metadata,
                           ),
                         );
                   },
