@@ -512,10 +512,20 @@ class CompanyManagementRepository {
         queryParameters: {'status': 'active'},
       );
 
-      final data =
-          (response['data'] as Map?)?.cast<String, dynamic>() ??
-          <String, dynamic>{};
-      final plansData = (data['plans'] as List?) ?? const [];
+      List<dynamic> plansData = const [];
+
+      if (response is Map) {
+        final data = response['data'];
+        if (data is List) {
+          plansData = data;
+        } else if (data is Map) {
+          final nested = data['plans'];
+          if (nested is List) plansData = nested;
+        }
+      } else if (response is List) {
+        plansData = response;
+      }
+
       return plansData
           .whereType<Map>()
           .map(

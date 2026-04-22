@@ -1416,12 +1416,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   future: plansFuture,
                   builder: (context, snapshot) {
                     final plans = snapshot.data ?? const <SubscriptionPlan>[];
-                    final hasCurrent =
-                        selectedPlanId.isNotEmpty &&
-                        plans.any((p) => p.id == selectedPlanId);
-                    final initialValue = hasCurrent
+                    final effectiveSelectedId = plans.any(
+                          (p) => p.id == selectedPlanId,
+                        )
                         ? selectedPlanId
-                        : (plans.isEmpty ? null : plans.first.id);
+                        : (plans.isEmpty ? '' : plans.first.id);
 
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const SizedBox(
@@ -1431,20 +1430,45 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                     }
 
                     if (snapshot.hasError) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextField(
+                            enabled: false,
+                            decoration: InputDecoration(
+                              labelText: 'Update Subscription Plan',
+                              hintText: 'Failed to load plans',
+                              border: const OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            snapshot.error.toString(),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.error,
+                                ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    if (plans.isEmpty) {
                       return TextField(
                         enabled: false,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Update Subscription Plan',
-                          hintText: 'Failed to load plans',
-                          border: const OutlineInputBorder(),
-                          helperText: snapshot.error.toString(),
+                          hintText: 'No active plans found',
+                          border: OutlineInputBorder(),
                         ),
                       );
                     }
 
                     return DropdownButtonFormField<String>(
                       isExpanded: true,
-                      initialValue: initialValue,
+                      key: ValueKey('plan_$effectiveSelectedId'),
+                      initialValue: effectiveSelectedId.isEmpty
+                          ? null
+                          : effectiveSelectedId,
                       items: plans
                           .map(
                             (p) => DropdownMenuItem<String>(
