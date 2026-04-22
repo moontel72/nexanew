@@ -1415,7 +1415,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                 FutureBuilder<List<SubscriptionPlan>>(
                   future: plansFuture,
                   builder: (context, snapshot) {
-                    final plans = snapshot.data ?? const <SubscriptionPlan>[];
+                    final plans =
+                        (snapshot.data ?? const <SubscriptionPlan>[])
+                            .where((p) => p.id.trim().isNotEmpty)
+                            .toList();
                     final effectiveSelectedId = plans.any(
                           (p) => p.id == selectedPlanId,
                         )
@@ -1461,6 +1464,15 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                           border: OutlineInputBorder(),
                         ),
                       );
+                    }
+
+                    if (selectedPlanId.trim().isEmpty) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        setModalState(() {
+                          selectedPlanId = effectiveSelectedId;
+                        });
+                      });
                     }
 
                     return DropdownButtonFormField<String>(

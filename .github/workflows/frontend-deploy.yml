@@ -33,11 +33,6 @@ jobs:
       - name: Build Flutter Web
         run: flutter build web --release
 
-      - name: Debug - List Build Files
-        run: |
-          echo "Checking if build/web exists..."
-          ls -la build/web/
-
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -47,5 +42,13 @@ jobs:
 
       - name: Deploy to Hetzner (Flutter Web)
         run: |
-          # --verbose (v) lagaya hai taake logs mein file names dikhein
-          rsync -avz --progress build/web/ root@135.181.46.27:/var/www/nexatrace/frontend/
+          # --chown use karne se owner upload ke waqt hi set ho jata hai
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/nexatrace/frontend/
+
+      - name: Post-Deployment Permissions Fix
+        run: |
+          # Yeh step confirm karega ke owner www-data hi rahe (1001 khatam ho jaye)
+          ssh root@135.181.46.27 "
+            chown -R www-data:www-data /var/www/nexatrace/frontend && \
+            chmod -R 755 /var/www/nexatrace/frontend
+          "

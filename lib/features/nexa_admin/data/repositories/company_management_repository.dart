@@ -526,13 +526,16 @@ class CompanyManagementRepository {
         plansData = response;
       }
 
-      return plansData
-          .whereType<Map>()
-          .map(
-            (planJson) =>
-                SubscriptionPlan.fromJson(planJson.cast<String, dynamic>()),
-          )
-          .toList();
+      final plans = <SubscriptionPlan>[];
+      for (final item in plansData) {
+        if (item is Map) {
+          final map = Map<String, dynamic>.from(item);
+          final id = map['id']?.toString().trim() ?? '';
+          if (id.isEmpty) continue;
+          plans.add(SubscriptionPlan.fromJson(map));
+        }
+      }
+      return plans;
     } catch (error, stackTrace) {
       throw mapExceptionToFailure(error, stackTrace);
     }
