@@ -1,3 +1,4 @@
+//test
 import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -486,11 +487,12 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                       final isNarrow =
                                           constraints.maxWidth < 640;
 
-                                      final mfgLabelResolved = _manufacturingDate ==
-                                              null
+                                      final mfgLabelResolved =
+                                          _manufacturingDate == null
                                           ? 'Manufacturing Date'
                                           : 'MFG: ${_manufacturingDate!.toIso8601String().split('T').first}${_manufacturingDate == product.defaultManufacturingDate ? ' (Default)' : ''}';
-                                      final expLabelResolved = _expiryDate == null
+                                      final expLabelResolved =
+                                          _expiryDate == null
                                           ? 'Expiry Date'
                                           : 'EXP: ${_expiryDate!.toIso8601String().split('T').first}${_expiryDate == product.defaultExpiryDate ? ' (Default)' : ''}';
 
@@ -512,8 +514,9 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
 
                                         final canResetToDefault =
                                             defaultDate != null &&
-                                                activeDate != defaultDate;
-                                        final canClear = defaultDate == null &&
+                                            activeDate != defaultDate;
+                                        final canClear =
+                                            defaultDate == null &&
                                             activeDate != null;
 
                                         return Row(
@@ -541,10 +544,10 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                                 tooltip: 'Use default',
                                                 onPressed: () =>
                                                     _resetDateToDefault(
-                                                  isManufacturing:
-                                                      isManufacturing,
-                                                  product: product,
-                                                ),
+                                                      isManufacturing:
+                                                          isManufacturing,
+                                                      product: product,
+                                                    ),
                                                 icon: const Icon(
                                                   Icons.restart_alt,
                                                 ),
@@ -586,8 +589,7 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
 
                                       return Row(
                                         children: [
-                                          if (product
-                                              .requiresManufacturingDate)
+                                          if (product.requiresManufacturingDate)
                                             Expanded(
                                               child: dateButton(
                                                 show: true,
@@ -633,7 +635,8 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                                     fontStyle: FontStyle.italic,
                                                   ),
                                             ),
-                                          if (selectedProduct.requiresExpiryDate)
+                                          if (selectedProduct
+                                              .requiresExpiryDate)
                                             Text(
                                               'EXP Default: ${selectedProduct.defaultExpiryDate?.toIso8601String().split('T').first ?? 'None'}',
                                               style: Theme.of(context)
@@ -652,29 +655,34 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                                   .textTheme
                                                   .bodySmall
                                                   ?.copyWith(
-                                                    color: (_manufacturingDate !=
+                                                    color:
+                                                        (_manufacturingDate !=
                                                                 null &&
                                                             _manufacturingDate !=
                                                                 selectedProduct
                                                                     .defaultManufacturingDate)
                                                         ? AppColors.warning
-                                                        : AppColors.textSecondary,
+                                                        : AppColors
+                                                              .textSecondary,
                                                     fontStyle: FontStyle.italic,
                                                   ),
                                             ),
-                                          if (selectedProduct.requiresExpiryDate)
+                                          if (selectedProduct
+                                              .requiresExpiryDate)
                                             Text(
                                               'EXP Active: ${_expiryDate?.toIso8601String().split('T').first ?? selectedProduct.defaultExpiryDate?.toIso8601String().split('T').first ?? 'None'}',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
                                                   ?.copyWith(
-                                                    color: (_expiryDate != null &&
+                                                    color:
+                                                        (_expiryDate != null &&
                                                             _expiryDate !=
                                                                 selectedProduct
                                                                     .defaultExpiryDate)
                                                         ? AppColors.warning
-                                                        : AppColors.textSecondary,
+                                                        : AppColors
+                                                              .textSecondary,
                                                     fontStyle: FontStyle.italic,
                                                   ),
                                             ),
