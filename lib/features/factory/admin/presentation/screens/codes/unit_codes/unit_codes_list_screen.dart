@@ -751,95 +751,88 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                     ),
                   ),
                   SizedBox(height: 16.h),
-                  Scrollbar(
-                    controller: _scrollController,
-                    thumbVisibility: true,
-                    child: ListView.separated(
-                      controller: _scrollController,
-                      padding: EdgeInsets.only(
-                        left: 16.w,
-                        right: 16.w,
-                        bottom: 16.w,
-                      ),
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: units.length,
-                      separatorBuilder: (_, _) => SizedBox(height: 12.h),
-                      itemBuilder: (context, index) {
-                        final u = units[index];
-                        final isSelected = selectedIds.contains(u.id);
+                  ListView.separated(
+                    padding: EdgeInsets.only(
+                      left: 16.w,
+                      right: 16.w,
+                      bottom: 16.w,
+                    ),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: units.length,
+                    separatorBuilder: (_, _) => SizedBox(height: 12.h),
+                    itemBuilder: (context, index) {
+                      final u = units[index];
+                      final isSelected = selectedIds.contains(u.id);
 
-                        return CodeCard(
-                          code: u.code,
-                          codeType: u.type.name,
-                          status: u.status.name,
-                          batchNumber: u.batchId,
-                          generatedDate: u.generatedAt,
-                          productName: u.productId == null
-                              ? null
-                              : (u.productId ?? ''),
-                          actions: [
-                            OutlinedButton.icon(
-                              onPressed: () => _showDetails(u),
-                              icon: const Icon(Icons.visibility_outlined),
-                              label: const Text('View Details'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Download will be added soon',
-                                    ),
+                      return CodeCard(
+                        code: u.code,
+                        codeType: u.type.name,
+                        status: u.status.name,
+                        batchNumber: u.batchId,
+                        generatedDate: u.generatedAt,
+                        productName:
+                            u.productId == null ? null : (u.productId ?? ''),
+                        actions: [
+                          OutlinedButton.icon(
+                            onPressed: () => _showDetails(u),
+                            icon: const Icon(Icons.visibility_outlined),
+                            label: const Text('View Details'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Download will be added soon',
                                   ),
-                                );
-                              },
-                              icon: const Icon(Icons.download_outlined),
-                              label: const Text('Download'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: () {
-                                final productsState = context
-                                    .read<ProductsBloc>()
-                                    .state;
-                                ProductModel? selectedProduct;
-                                if (_selectedProductId != null) {
-                                  for (final p in productsState.products) {
-                                    if (p.id == _selectedProductId) {
-                                      selectedProduct = p;
-                                      break;
-                                    }
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.download_outlined),
+                            label: const Text('Download'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              final productsState =
+                                  context.read<ProductsBloc>().state;
+                              ProductModel? selectedProduct;
+                              if (_selectedProductId != null) {
+                                for (final p in productsState.products) {
+                                  if (p.id == _selectedProductId) {
+                                    selectedProduct = p;
+                                    break;
                                   }
                                 }
+                              }
 
-                                if (selectedProduct == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Select a product first'),
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                _publishSelected(
-                                  product: selectedProduct,
-                                  selectedIds: {u.id},
+                              if (selectedProduct == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Select a product first'),
+                                  ),
                                 );
-                              },
-                              icon: const Icon(Icons.publish_outlined),
-                              label: const Text('Publish'),
-                            ),
-                          ],
-                          isSelected: isSelected,
-                          onSelectedChanged: (v) {
-                            context.read<UnitCodesBloc>().add(
-                              SelectUnitCode(u.id, v == true),
-                            );
-                          },
-                          onTap: () => _showDetails(u),
-                        );
-                      },
-                    ),
+                                return;
+                              }
+
+                              _publishSelected(
+                                product: selectedProduct,
+                                selectedIds: {u.id},
+                              );
+                            },
+                            icon: const Icon(Icons.publish_outlined),
+                            label: const Text('Publish'),
+                          ),
+                        ],
+                        isSelected: isSelected,
+                        onSelectedChanged: (v) {
+                          context.read<UnitCodesBloc>().add(
+                            SelectUnitCode(u.id, v == true),
+                          );
+                        },
+                        onTap: () => _showDetails(u),
+                      );
+                    },
                   ),
                   SizedBox(height: 16.h),
                 ],

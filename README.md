@@ -106,7 +106,7 @@ Password: qUXXErRRghjE
   - Standard reports
   - Mobile app access
 
-#### 2. **Basic Plan** ($49/month)
+#### 2. **Basic Plan** ($49/month)+per code rate
 - **Code Limits**: 50,000 unit codes per month
 - **Stores**: 5 store locations
 - **Drivers**: 3 driver accounts
@@ -121,7 +121,7 @@ Password: qUXXErRRghjE
   - Custom branding
   - Basic transport marketplace access
 
-#### 3. **Standard Plan** ($149/month)
+#### 3. **Standard Plan** ($149/month)+per code rate
 - **Code Limits**: 200,000 unit codes per month
 - **Stores**: 20 store locations
 - **Drivers**: Unlimited drivers
@@ -139,7 +139,7 @@ Password: qUXXErRRghjE
   - Phone support
   - Full transport marketplace access
 
-#### 4. **Premium Plan** ($499/month)
+#### 4. **Premium Plan** ($499/month)+per code rate
 - **Code Limits**: 1,000,000 unit codes per month
 - **Stores**: Unlimited stores
 - **Drivers**: Unlimited drivers
@@ -178,7 +178,7 @@ Password: qUXXErRRghjE
 
 ### Goods Company Subscription Plans (Separate)
 
-#### 1. **Basic Goods Company Plan** ($29/month)
+#### 1. **Basic Goods Company Plan** ($29/month)+per truk rate
 - **Truck Connections**: 20 trucks
 - **Factory Connections**: 10 factories
 - **Monthly Trips**: 50 trips
@@ -189,7 +189,7 @@ Password: qUXXErRRghjE
   - Email support
   - 1,000 API calls per day
 
-#### 2. **Professional Goods Company Plan** ($79/month)
+#### 2. **Professional Goods Company Plan** ($79/month)+per truk rate
 - **Truck Connections**: 50 trucks
 - **Factory Connections**: 25 factories
 - **Monthly Trips**: 150 trips
@@ -201,7 +201,7 @@ Password: qUXXErRRghjE
   - Chat support
   - 5,000 API calls per day
 
-#### 3. **Enterprise Goods Company Plan** ($199/month)
+#### 3. **Enterprise Goods Company Plan** ($199/month)+per truk rate
 - **Truck Connections**: Unlimited trucks
 - **Factory Connections**: Unlimited factories
 - **Monthly Trips**: Unlimited trips
@@ -303,8 +303,8 @@ Password: qUXXErRRghjE
 **3. Factory (Companies) Panel - Under Factory**
 
 3A = This Factory panel will function according to the subscription plan from the Super Admin panel.
-
-3B = Create bundle codes, bundle code list.
+3AA = Create new Product < select food/madical or Non food/maedical product> if food/medical need MFG and Expiry date and if Non food/medical in box will write total worrenty month ,, there also shown product list screen with saparete sub button on dashboard
+3B = Create bundle codes, bundle code list < inside list will show all codes and relaited buttons like publish button etc>. 
 
 3C = In the bundle code, storekeeper codes and international codes will be generated together.
 
@@ -315,7 +315,8 @@ Password: qUXXErRRghjE
 3F = The entire process for Carton Codes and Packet Codes will be the same as (3B, 3C, 3D, and 3E).
 
 3G = The entire process for Unit Codes will also be the same as (3B, 3D, and 3E). The only difference in Units is that before publishing, in the Units Codes list, there will be a product dropdown box; after selecting a product from it, the publish button must be pressed.
-
+note > Unit code < for genrate unit code select product from dropdown button  after select product there 
+showing Default MFG and Expiry date for new Unit code you can change Mfg and Expiry date if not change date then will use default both dates > 
 3H = Unit Codes are different from bundle, carton, and packet codes. The code for storekeepers will be similar, but Unit Codes will not have an international code. Instead, there will be an authentic/fake product code that the customer will scan using their app.
 
 3I = Before clicking the Publish button for Unit Codes, the product must be selected. If the product is not selected, it will not be published. If it is not published, these codes cannot be downloaded.

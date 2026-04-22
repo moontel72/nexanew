@@ -18,6 +18,7 @@ class ProductsListScreen extends StatefulWidget {
 
 class _ProductsListScreenState extends State<ProductsListScreen> {
   final _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -30,6 +31,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -87,7 +89,10 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
 
           final products = state.products;
           return Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: true,
             child: SingleChildScrollView(
+              controller: _scrollController,
               child: Column(
                 children: [
                   Padding(
