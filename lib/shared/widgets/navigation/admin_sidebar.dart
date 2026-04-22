@@ -29,11 +29,15 @@ class AdminSidebarItem {
 class AdminSidebar extends StatelessWidget {
   final bool collapsed;
   final List<AdminSidebarSection> sections;
+  final String footerTitle;
+  final String? footerSubtitle;
 
   const AdminSidebar({
     super.key,
     required this.collapsed,
     required this.sections,
+    this.footerTitle = 'Super Admin',
+    this.footerSubtitle = 'Platform',
   });
 
   @override
@@ -135,20 +139,21 @@ class AdminSidebar extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Super Admin',
+                              footerTitle,
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.adminSidebarText,
                                   ),
                             ),
-                            Text(
-                              'Platform',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: AppColors.adminSidebarTextMuted,
-                                  ),
-                            ),
+                            if (footerSubtitle != null)
+                              Text(
+                                footerSubtitle!,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.adminSidebarTextMuted,
+                                    ),
+                              ),
                           ],
                         ),
                       ),

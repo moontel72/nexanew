@@ -15,62 +15,72 @@ class FactoryShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isNarrow = MediaQuery.of(context).size.width < 1024;
-    final sidebar = AdminSidebar(collapsed: false, sections: _sections());
+    final sidebar = AdminSidebar(
+      collapsed: false,
+      sections: _sections(),
+      footerTitle: 'Admin',
+      footerSubtitle: null,
+    );
 
     final location = GoRouterState.of(context).uri.toString();
     final title = _titleForLocation(location);
     final crumbs = _breadcrumbsForLocation(location);
 
-    return Scaffold(
-      backgroundColor: AppColors.adminContentBackground,
-      drawer: isNarrow ? Drawer(child: sidebar) : null,
-      body: Row(
-        children: [
-          if (!isNarrow) sidebar,
-          Expanded(
-            child: Column(
-              children: [
-                Builder(
-                  builder: (innerContext) {
-                    return AdminTopBar(
-                      title: title,
-                      breadcrumbs: crumbs,
-                      onToggleSidebar: () {
-                        if (isNarrow) {
-                          Scaffold.of(innerContext).openDrawer();
-                        }
-                      },
-                      onLogout: () async {
-                        innerContext.read<FactoryAuthBloc>().add(
-                          FactoryLogoutRequested(),
-                        );
-                        innerContext.read<AppRouter>().goToFactoryLogin(
-                          innerContext,
-                        );
-                      },
-                    );
-                  },
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: SizedBox.expand(child: child),
+    return BlocListener<FactoryAuthBloc, FactoryAuthState>(
+      listenWhen: (previous, current) =>
+          current is FactoryAuthUnauthenticated,
+      listener: (context, state) {
+        context.read<AppRouter>().goToFactoryLogin(context);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.adminContentBackground,
+        drawer: isNarrow ? Drawer(child: sidebar) : null,
+        body: Row(
+          children: [
+            if (!isNarrow) sidebar,
+            Expanded(
+              child: Column(
+                children: [
+                  Builder(
+                    builder: (innerContext) {
+                      return AdminTopBar(
+                        title: title,
+                        breadcrumbs: crumbs,
+                        userLabel: 'Admin',
+                        onToggleSidebar: () {
+                          if (isNarrow) {
+                            Scaffold.of(innerContext).openDrawer();
+                          }
+                        },
+                        onLogout: () {
+                          innerContext
+                              .read<FactoryAuthBloc>()
+                              .add(FactoryLogoutRequested());
+                        },
+                      );
+                    },
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: SizedBox.expand(child: child),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

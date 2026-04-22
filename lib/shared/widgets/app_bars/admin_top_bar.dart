@@ -7,6 +7,7 @@ class AdminTopBar extends StatelessWidget {
   final List<String> breadcrumbs;
   final VoidCallback? onToggleSidebar;
   final VoidCallback? onLogout;
+  final String userLabel;
 
   const AdminTopBar({
     super.key,
@@ -14,6 +15,7 @@ class AdminTopBar extends StatelessWidget {
     required this.breadcrumbs,
     this.onToggleSidebar,
     this.onLogout,
+    this.userLabel = 'Super Admin',
   });
 
   @override
@@ -107,7 +109,7 @@ class AdminTopBar extends StatelessWidget {
                       ),
                       const Gap(8),
                       Text(
-                        'Super Admin',
+                        userLabel,
                         style: Theme.of(context)
                             .textTheme
                             .bodyMedium
