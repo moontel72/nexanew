@@ -45,9 +45,7 @@ class _UnitCodeGenerateScreenState extends State<UnitCodeGenerateScreen> {
       count: int.parse(_countController.text),
       prefix: _prefixController.text.trim(),
       packetCode: '',
-      batchName: _batchNameController.text.trim().isEmpty
-          ? null
-          : _batchNameController.text.trim(),
+      batchName: _batchNameController.text.trim(),
       batchNotes: _batchNotesController.text.trim().isEmpty
           ? null
           : _batchNotesController.text.trim(),
@@ -126,7 +124,13 @@ class _UnitCodeGenerateScreenState extends State<UnitCodeGenerateScreen> {
                     CustomTextField(
                       controller: _batchNameController,
                       labelText: 'Batch Name',
-                      hintText: 'Optional',
+                      hintText: 'Required',
+                      validator: (v) {
+                        if ((v ?? '').trim().isEmpty) {
+                          return 'Enter a batch name';
+                        }
+                        return null;
+                      },
                     ),
                     SizedBox(height: 12.h),
                     CustomTextField(

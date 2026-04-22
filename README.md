@@ -314,9 +314,36 @@ Password: qUXXErRRghjE
 
 3F = The entire process for Carton Codes and Packet Codes will be the same as (3B, 3C, 3D, and 3E).
 
-3G = The entire process for Unit Codes will also be the same as (3B, 3D, and 3E). The only difference in Units is that before publishing, in the Units Codes list, there will be a product dropdown box; after selecting a product from it, the publish button must be pressed.
-note > Unit code < for genrate unit code select product from dropdown button  after select product there 
-showing Default MFG and Expiry date for new Unit code you can change Mfg and Expiry date if not change date then will use default both dates > 
+3G - Revised Functional Requirements
+The overall process for Unit Codes remains consistent with sections 3B, 3D, and 3E . However, the generation and management of Unit Codes follow these specific rules:
+
+1. Generation without Product Selection: Unlike other codes, there is no requirement to select a product at the time of generating Unit Codes.
+
+2. Mandatory Batch Name: While generating codes, the Batch Name is not optional; it is a mandatory field that must be filled.
+
+3. Grouped Batch Processing: If a user specifies a quantity (eg, 5 codes ) in the generation box, all 5 codes will be generated simultaneously under that specific Batch Name.
+
+These codes will appear on the Unit Codes List Screen grouped together under the Batch Name with their respective Serial Numbers .
+
+Individual codes cannot be viewed or downloaded separately; they are managed strictly as a collective batch.
+
+Post-Generation Linking & Configuration:
+Before publishing, the following steps must be completed on the List Screen:
+
+Product Linking: Each batch will have a dropdown menu next to the Batch Name. The user must select a product from this menu to link the entire batch to that specific item.
+
+MFG & Expiry Date Management: Once a product is selected, the system will display the Default MFG and Expiry dates associated with that product.
+
+The user can keep the default dates as they are.
+
+Alternatively, the user can manually select new dates, which will overwrite the default dates for that specific batch.
+
+Publishing Actions:
+Clicking the Publish button triggers two simultaneous actions:
+
+Batch Download: An option to download the entire batch together (for printing/production) will be enabled.
+
+Subscription & Billing Calculation: If the Super Admin subscription plan includes a "Per Unit Price," the system will automatically calculate the total cost for the batch (eg, Price × 5 codes) and apply it accordingly. 
 3H = Unit Codes are different from bundle, carton, and packet codes. The code for storekeepers will be similar, but Unit Codes will not have an international code. Instead, there will be an authentic/fake product code that the customer will scan using their app.
 
 3I = Before clicking the Publish button for Unit Codes, the product must be selected. If the product is not selected, it will not be published. If it is not published, these codes cannot be downloaded.

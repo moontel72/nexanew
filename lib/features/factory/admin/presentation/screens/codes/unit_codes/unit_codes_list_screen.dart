@@ -5,12 +5,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/unit_codes/unit_codes_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/products/products_bloc.dart';
+import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
 import 'package:nexatrace_system/shared/models/code/unit_code_model.dart';
 import 'package:nexatrace_system/shared/models/product/product_model.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/cards/code_card.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 
@@ -21,14 +21,22 @@ class UnitCodesListScreen extends StatefulWidget {
   State<UnitCodesListScreen> createState() => _UnitCodesListScreenState();
 }
 
+class _BatchDraft {
+  String? productId;
+  DateTime? mfgOverride;
+  DateTime? expOverride;
+  final TextEditingController warrantyMonthsController = TextEditingController();
+  final TextEditingController productBatchController = TextEditingController();
+
+  void dispose() {
+    warrantyMonthsController.dispose();
+    productBatchController.dispose();
+  }
+}
+
 class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
   final ScrollController _scrollController = ScrollController();
-  String? _selectedProductId;
-  DateTime? _manufacturingDate;
-  DateTime? _expiryDate;
-  final TextEditingController _warrantyMonthsController =
-      TextEditingController();
-  final TextEditingController _productBatchController = TextEditingController();
+  final Map<String, _BatchDraft> _batchDrafts = {};
 
   @override
   void initState() {
@@ -42,8 +50,9 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _warrantyMonthsController.dispose();
-    _productBatchController.dispose();
+    for (final draft in _batchDrafts.values) {
+      draft.dispose();
+    }
     super.dispose();
   }
 
@@ -51,32 +60,18 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
     context.go('/factory/codes/unit/generate');
   }
 
-  void _resetDateToDefault({
+  _BatchDraft _draftForBatch(String batchName) {
+    return _batchDrafts.putIfAbsent(batchName, () => _BatchDraft());
+  }
+
+  Future<void> _pickBatchDate({
+    required String batchName,
     required bool isManufacturing,
-    required ProductModel product,
-  }) {
-    setState(() {
-      if (isManufacturing) {
-        _manufacturingDate = product.defaultManufacturingDate;
-      } else {
-        _expiryDate = product.defaultExpiryDate;
-      }
-    });
-  }
-
-  void _clearDate({required bool isManufacturing}) {
-    setState(() {
-      if (isManufacturing) {
-        _manufacturingDate = null;
-      } else {
-        _expiryDate = null;
-      }
-    });
-  }
-
-  Future<void> _pickDate({required bool isManufacturing}) async {
+  }) async {
+    final draft = _draftForBatch(batchName);
     final now = DateTime.now();
-    final initial = (isManufacturing ? _manufacturingDate : _expiryDate) ?? now;
+    final current = isManufacturing ? draft.mfgOverride : draft.expOverride;
+    final initial = current ?? now;
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -86,23 +81,38 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
     if (picked == null) return;
     setState(() {
       if (isManufacturing) {
-        _manufacturingDate = picked;
+        draft.mfgOverride = picked;
       } else {
-        _expiryDate = picked;
+        draft.expOverride = picked;
       }
     });
   }
 
-  void _publishSelected({
-    required ProductModel product,
-    required Set<String> selectedIds,
+  void _useDefaultDates({
+    required String batchName,
+    required bool isManufacturing,
   }) {
-    if (selectedIds.isEmpty) return;
+    final draft = _draftForBatch(batchName);
+    setState(() {
+      if (isManufacturing) {
+        draft.mfgOverride = null;
+      } else {
+        draft.expOverride = null;
+      }
+    });
+  }
 
-    // Use product's default dates if available and not overridden by user
+  void _publishBatch({
+    required String batchName,
+    required List<UnitCodeModel> batchUnits,
+    required ProductModel product,
+  }) {
+    if (batchUnits.isEmpty) return;
+
+    final draft = _draftForBatch(batchName);
     final manufacturingDate =
-        _manufacturingDate ?? product.defaultManufacturingDate;
-    final expiryDate = _expiryDate ?? product.defaultExpiryDate;
+        draft.mfgOverride ?? product.defaultManufacturingDate;
+    final expiryDate = draft.expOverride ?? product.defaultExpiryDate;
 
     if (product.requiresManufacturingDate && manufacturingDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -111,24 +121,24 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
       return;
     }
     if (product.requiresExpiryDate && expiryDate == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Select expiry date')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select expiry date')),
+      );
       return;
     }
 
     final warrantyMonths = product.requiresWarranty
-        ? int.tryParse(_warrantyMonthsController.text.trim()) ??
-              product.defaultWarrantyMonths
+        ? int.tryParse(draft.warrantyMonthsController.text.trim()) ??
+            product.defaultWarrantyMonths
         : null;
 
     context.read<UnitCodesBloc>().add(
       PublishSelectedUnitCodes(
         productId: product.id,
-        unitCodeIds: selectedIds.toList(),
-        productBatchNumber: _productBatchController.text.trim().isEmpty
+        unitCodeIds: batchUnits.map((e) => e.id).toList(),
+        productBatchNumber: draft.productBatchController.text.trim().isEmpty
             ? null
-            : _productBatchController.text.trim(),
+            : draft.productBatchController.text.trim(),
         manufacturingDate: manufacturingDate,
         expiryDate: expiryDate,
         warrantyMonths: warrantyMonths,
@@ -136,74 +146,14 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
     );
   }
 
-  void _showDetails(UnitCodeModel unit) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Unit Details',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                SizedBox(height: 12.h),
-                _kv('Code', unit.code),
-                _kv('Status', unit.status.name),
-                _kv('Product', unit.productId ?? ''),
-                _kv('Serial', unit.serialNumber),
-                _kv('Auth', unit.authenticationCode),
-                SizedBox(height: 16.h),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
-                  ),
-                ),
-              ],
-            ),
-          ),
+  void _exportBatch({
+    required List<UnitCodeModel> batchUnits,
+    required String format,
+  }) {
+    if (batchUnits.isEmpty) return;
+    context.read<UnitCodesBloc>().add(
+          ExportUnitCodes(batchUnits.map((e) => e.id).toList(), format),
         );
-      },
-    );
-  }
-
-  Widget _kv(String k, String v) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 92,
-            child: Text(
-              k,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textTertiary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              v,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -289,54 +239,44 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
               ),
             );
           }
+          final batches = <String, List<UnitCodeModel>>{};
+          for (final u in units) {
+            final key = u.batchId.trim().isEmpty ? 'Unbatched' : u.batchId.trim();
+            batches.putIfAbsent(key, () => []).add(u);
+          }
 
-          final selectedIds = state.selectedUnitCodeIds;
+          final batchEntries = batches.entries.toList()
+            ..sort((a, b) {
+              final aMax = a.value
+                  .map((e) => e.generatedAt)
+                  .fold<DateTime?>(null, (p, c) => p == null || c.isAfter(p) ? c : p);
+              final bMax = b.value
+                  .map((e) => e.generatedAt)
+                  .fold<DateTime?>(null, (p, c) => p == null || c.isAfter(p) ? c : p);
+              if (aMax == null && bMax == null) return 0;
+              if (aMax == null) return 1;
+              if (bMax == null) return -1;
+              return bMax.compareTo(aMax);
+            });
 
-          return Scrollbar(
-            controller: _scrollController,
-            thumbVisibility: true,
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: BlocBuilder<ProductsBloc, ProductsState>(
-                      builder: (context, productsState) {
-                        final products = productsState.products;
+          return BlocBuilder<ProductsBloc, ProductsState>(
+            builder: (context, productsState) {
+              final products = productsState.products;
+              final productsById = {
+                for (final p in products) p.id: p,
+              };
 
-                        if (products.isEmpty) {
-                          _selectedProductId = null;
-                        }
-
-                        ProductModel? selectedProduct;
-                        if (_selectedProductId != null) {
-                          for (final p in products) {
-                            if (p.id == _selectedProductId) {
-                              selectedProduct = p;
-                              break;
-                            }
-                          }
-                        }
-
-                        if (products.isNotEmpty && _selectedProductId == null) {
-                          _selectedProductId = products.first.id;
-                          if (products.first.requiresWarranty) {
-                            _warrantyMonthsController.text =
-                                (products.first.defaultWarrantyMonths ?? 12)
-                                    .toString();
-                          } else {
-                            _warrantyMonthsController.text = '';
-                          }
-                        }
-
-                        final canPublish =
-                            selectedProduct != null &&
-                            selectedIds.isNotEmpty &&
-                            productsState.status != ProductsStatus.error;
-
-                        if (productsState.status == ProductsStatus.error) {
-                          return Card(
+              return Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  child: Column(
+                    children: [
+                      if (productsState.status == ProductsStatus.error)
+                        Padding(
+                          padding: EdgeInsets.all(16.w),
+                          child: Card(
                             elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.r),
@@ -358,8 +298,7 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                   Text(
                                     productsState.errorMessage ??
                                         'Failed to load products. Fix the backend error and retry.',
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           color: AppColors.textSecondary,
                                         ),
                                   ),
@@ -374,8 +313,8 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                         width: 140,
                                         onPressed: () {
                                           context.read<ProductsBloc>().add(
-                                            const LoadProducts(),
-                                          );
+                                                const LoadProducts(),
+                                              );
                                         },
                                       ),
                                       SizedBox(width: 12.w),
@@ -386,9 +325,7 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                         textColor: Colors.white,
                                         width: 180,
                                         onPressed: () {
-                                          context.go(
-                                            '/factory/products/create',
-                                          );
+                                          context.go('/factory/products/create');
                                         },
                                       ),
                                     ],
@@ -396,312 +333,345 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                 ],
                               ),
                             ),
-                          );
-                        }
-
-                        return Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            side: BorderSide(color: AppColors.border),
                           ),
-                          child: Padding(
-                            padding: EdgeInsets.all(16.w),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Publish Unit Codes (README 3I)',
-                                  style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                SizedBox(height: 12.h),
-                                DropdownButtonFormField<String>(
-                                  isExpanded: true,
-                                  initialValue: selectedProduct?.id,
-                                  items: products
-                                      .map(
-                                        (p) => DropdownMenuItem<String>(
-                                          value: p.id,
-                                          child: Text(
-                                            '${p.name} (${p.sku})',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            softWrap: false,
-                                          ),
+                        ),
+                      if (products.isEmpty && productsState.status != ProductsStatus.loading)
+                        Padding(
+                          padding: EdgeInsets.all(16.w),
+                          child: Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                              side: BorderSide(color: AppColors.border),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(16.w),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'No products yet',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  SizedBox(height: 8.h),
+                                  Text(
+                                    'Create a product first. Each unit batch must be linked to a product before publish.',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: AppColors.textSecondary,
                                         ),
-                                      )
-                                      .toList(),
-                                  onChanged: products.isEmpty
-                                      ? null
-                                      : (v) {
-                                          setState(() {
-                                            _selectedProductId = v;
-                                            final p = products.firstWhere(
-                                              (x) => x.id == v,
-                                              orElse: () => products.first,
-                                            );
-                                            _warrantyMonthsController.text =
-                                                p.requiresWarranty
-                                                ? (p.defaultWarrantyMonths ??
-                                                          12)
-                                                      .toString()
-                                                : '';
-                                            // Use product's default dates if available
-                                            _manufacturingDate =
-                                                p.defaultManufacturingDate;
-                                            _expiryDate = p.defaultExpiryDate;
-                                          });
-                                        },
-                                  decoration: InputDecoration(
-                                    labelText: 'Select Product',
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
                                   ),
-                                ),
-                                SizedBox(height: 12.h),
-                                TextField(
-                                  controller: _productBatchController,
-                                  decoration: InputDecoration(
-                                    labelText:
-                                        'Product Batch Number (Optional)',
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                  ),
-                                ),
-                                if (selectedProduct != null &&
-                                    (selectedProduct
-                                            .requiresManufacturingDate ||
-                                        selectedProduct
-                                            .requiresExpiryDate)) ...[
                                   SizedBox(height: 12.h),
-                                  LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final product = selectedProduct;
-                                      if (product == null) {
-                                        return const SizedBox.shrink();
-                                      }
+                                  PrimaryButton(
+                                    text: 'Create Product',
+                                    icon: Icons.add,
+                                    backgroundColor: AppColors.secondary,
+                                    textColor: Colors.white,
+                                    onPressed: () => context.go('/factory/products/create'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ListView.separated(
+                        padding: EdgeInsets.only(
+                          left: 16.w,
+                          right: 16.w,
+                          bottom: 16.w,
+                        ),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: batchEntries.length,
+                        separatorBuilder: (_, _) => SizedBox(height: 12.h),
+                        itemBuilder: (context, index) {
+                          final entry = batchEntries[index];
+                          final batchName = entry.key;
+                          final batchUnits = entry.value;
 
-                                      final isNarrow =
-                                          constraints.maxWidth < 640;
+                          final existingProductIds = batchUnits
+                              .map((e) => e.productId)
+                              .whereType<String>()
+                              .where((e) => e.trim().isNotEmpty)
+                              .toSet();
+                          final existingProductId =
+                              existingProductIds.length == 1 ? existingProductIds.first : null;
 
-                                      final mfgLabelResolved =
-                                          _manufacturingDate == null
-                                          ? 'Manufacturing Date'
-                                          : 'MFG: ${_manufacturingDate!.toIso8601String().split('T').first}${_manufacturingDate == product.defaultManufacturingDate ? ' (Default)' : ''}';
-                                      final expLabelResolved =
-                                          _expiryDate == null
-                                          ? 'Expiry Date'
-                                          : 'EXP: ${_expiryDate!.toIso8601String().split('T').first}${_expiryDate == product.defaultExpiryDate ? ' (Default)' : ''}';
+                          final draft = _draftForBatch(batchName);
+                          if (draft.productId == null && existingProductId != null) {
+                            draft.productId = existingProductId;
+                          }
 
-                                      Widget dateButton({
-                                        required bool show,
-                                        required bool isManufacturing,
-                                        required String label,
-                                      }) {
-                                        if (!show) {
-                                          return const SizedBox.shrink();
-                                        }
+                          final product = draft.productId == null
+                              ? null
+                              : productsById[draft.productId];
 
-                                        final defaultDate = isManufacturing
-                                            ? product.defaultManufacturingDate
-                                            : product.defaultExpiryDate;
-                                        final activeDate = isManufacturing
-                                            ? _manufacturingDate
-                                            : _expiryDate;
+                          if (product != null) {
+                            if (product.requiresWarranty &&
+                                draft.warrantyMonthsController.text.trim().isEmpty) {
+                              draft.warrantyMonthsController.text =
+                                  (product.defaultWarrantyMonths ?? 12).toString();
+                            }
+                          }
 
-                                        final canResetToDefault =
-                                            defaultDate != null &&
-                                            activeDate != defaultDate;
-                                        final canClear =
-                                            defaultDate == null &&
-                                            activeDate != null;
+                          final isBatchPublished = batchUnits.every(
+                            (e) => e.status == CodeStatus.published,
+                          );
+                          final canPublish = product != null && !isBatchPublished;
+                          final canDownload = isBatchPublished;
 
-                                        return Row(
+                          final defaultMfg = product?.defaultManufacturingDate;
+                          final defaultExp = product?.defaultExpiryDate;
+                          final activeMfg = draft.mfgOverride ?? defaultMfg;
+                          final activeExp = draft.expOverride ?? defaultExp;
+
+                          return Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                              side: BorderSide(color: AppColors.border),
+                            ),
+                            child: ExpansionTile(
+                              tilePadding: EdgeInsets.symmetric(
+                                horizontal: 16.w,
+                                vertical: 8.h,
+                              ),
+                              childrenPadding: EdgeInsets.fromLTRB(
+                                16.w,
+                                0,
+                                16.w,
+                                16.w,
+                              ),
+                              title: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final isNarrow = constraints.maxWidth < 720;
+                                  final dropdown = DropdownButtonFormField<String>(
+                                    key: ValueKey('product_${batchName}_${draft.productId ?? ''}'),
+                                    isExpanded: true,
+                                    initialValue: draft.productId,
+                                    items: products
+                                        .map(
+                                          (p) => DropdownMenuItem<String>(
+                                            value: p.id,
+                                            child: Text(
+                                              '${p.name} (${p.sku})',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              softWrap: false,
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: products.isEmpty
+                                        ? null
+                                        : (v) {
+                                            setState(() {
+                                              draft.productId = v;
+                                              draft.mfgOverride = null;
+                                              draft.expOverride = null;
+                                              draft.productBatchController.text = '';
+                                              draft.warrantyMonthsController.text = '';
+                                            });
+                                          },
+                                    decoration: InputDecoration(
+                                      labelText: 'Product',
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                    ),
+                                  );
+
+                                  final header = Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        batchName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(fontWeight: FontWeight.w800),
+                                      ),
+                                      SizedBox(height: 4.h),
+                                      Text(
+                                        '${batchUnits.length} unit codes',
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: AppColors.textSecondary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    ],
+                                  );
+
+                                  if (isNarrow) {
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        header,
+                                        SizedBox(height: 10.h),
+                                        dropdown,
+                                      ],
+                                    );
+                                  }
+
+                                  return Row(
+                                    children: [
+                                      Expanded(child: header),
+                                      SizedBox(width: 16.w),
+                                      SizedBox(width: 360.w, child: dropdown),
+                                    ],
+                                  );
+                                },
+                              ),
+                              subtitle: Padding(
+                                padding: EdgeInsets.only(top: 8.h),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 10.w,
+                                        vertical: 4.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: (isBatchPublished
+                                                ? AppColors.success
+                                                : AppColors.warning)
+                                            .withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: isBatchPublished
+                                              ? AppColors.success
+                                              : AppColors.warning,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        isBatchPublished ? 'PUBLISHED' : 'GENERATED',
+                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                              color: isBatchPublished
+                                                  ? AppColors.success
+                                                  : AppColors.warning,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              children: [
+                                if (product != null &&
+                                    (product.requiresManufacturingDate ||
+                                        product.requiresExpiryDate))
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      SizedBox(height: 8.h),
+                                      if (product.requiresManufacturingDate)
+                                        Row(
                                           children: [
                                             Expanded(
                                               child: OutlinedButton.icon(
-                                                onPressed: () => _pickDate(
-                                                  isManufacturing:
-                                                      isManufacturing,
+                                                onPressed: () => _pickBatchDate(
+                                                  batchName: batchName,
+                                                  isManufacturing: true,
                                                 ),
-                                                icon: const Icon(
-                                                  Icons.calendar_month,
-                                                ),
+                                                icon: const Icon(Icons.calendar_month),
                                                 label: Text(
-                                                  label,
+                                                  activeMfg == null
+                                                      ? 'Manufacturing Date'
+                                                      : 'MFG: ${activeMfg.toIso8601String().split('T').first}${draft.mfgOverride == null ? ' (Default)' : ' (Override)'}',
                                                   maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                                  overflow: TextOverflow.ellipsis,
                                                   softWrap: false,
                                                 ),
                                               ),
                                             ),
-                                            if (canResetToDefault)
+                                            if (draft.mfgOverride != null)
                                               IconButton(
                                                 tooltip: 'Use default',
-                                                onPressed: () =>
-                                                    _resetDateToDefault(
-                                                      isManufacturing:
-                                                          isManufacturing,
-                                                      product: product,
-                                                    ),
-                                                icon: const Icon(
-                                                  Icons.restart_alt,
+                                                onPressed: () => _useDefaultDates(
+                                                  batchName: batchName,
+                                                  isManufacturing: true,
                                                 ),
-                                              ),
-                                            if (canClear)
-                                              IconButton(
-                                                tooltip: 'Clear',
-                                                onPressed: () => _clearDate(
-                                                  isManufacturing:
-                                                      isManufacturing,
-                                                ),
-                                                icon: const Icon(Icons.clear),
+                                                icon: const Icon(Icons.restart_alt),
                                               ),
                                           ],
-                                        );
-                                      }
-
-                                      if (isNarrow) {
-                                        return Column(
+                                        ),
+                                      if (product.requiresExpiryDate) ...[
+                                        SizedBox(height: 12.h),
+                                        Row(
                                           children: [
-                                            dateButton(
-                                              show: product
-                                                  .requiresManufacturingDate,
-                                              isManufacturing: true,
-                                              label: mfgLabelResolved,
+                                            Expanded(
+                                              child: OutlinedButton.icon(
+                                                onPressed: () => _pickBatchDate(
+                                                  batchName: batchName,
+                                                  isManufacturing: false,
+                                                ),
+                                                icon: const Icon(Icons.calendar_month),
+                                                label: Text(
+                                                  activeExp == null
+                                                      ? 'Expiry Date'
+                                                      : 'EXP: ${activeExp.toIso8601String().split('T').first}${draft.expOverride == null ? ' (Default)' : ' (Override)'}',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  softWrap: false,
+                                                ),
+                                              ),
                                             ),
-                                            if (product
-                                                    .requiresManufacturingDate &&
-                                                product.requiresExpiryDate)
-                                              SizedBox(height: 12.h),
-                                            dateButton(
-                                              show: product.requiresExpiryDate,
-                                              isManufacturing: false,
-                                              label: expLabelResolved,
-                                            ),
+                                            if (draft.expOverride != null)
+                                              IconButton(
+                                                tooltip: 'Use default',
+                                                onPressed: () => _useDefaultDates(
+                                                  batchName: batchName,
+                                                  isManufacturing: false,
+                                                ),
+                                                icon: const Icon(Icons.restart_alt),
+                                              ),
                                           ],
-                                        );
-                                      }
-
-                                      return Row(
-                                        children: [
-                                          if (product.requiresManufacturingDate)
-                                            Expanded(
-                                              child: dateButton(
-                                                show: true,
-                                                isManufacturing: true,
-                                                label: mfgLabelResolved,
+                                        ),
+                                      ],
+                                      SizedBox(height: 8.h),
+                                      if (product.requiresManufacturingDate)
+                                        Text(
+                                          'MFG Default: ${defaultMfg?.toIso8601String().split('T').first ?? 'None'}',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: AppColors.success,
+                                                fontStyle: FontStyle.italic,
                                               ),
-                                            ),
-                                          if (product
-                                                  .requiresManufacturingDate &&
-                                              product.requiresExpiryDate)
-                                            SizedBox(width: 12.w),
-                                          if (product.requiresExpiryDate)
-                                            Expanded(
-                                              child: dateButton(
-                                                show: true,
-                                                isManufacturing: false,
-                                                label: expLabelResolved,
+                                        ),
+                                      if (product.requiresExpiryDate)
+                                        Text(
+                                          'EXP Default: ${defaultExp?.toIso8601String().split('T').first ?? 'None'}',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: AppColors.success,
+                                                fontStyle: FontStyle.italic,
                                               ),
-                                            ),
-                                        ],
-                                      );
-                                    },
+                                        ),
+                                    ],
                                   ),
-                                  if (selectedProduct
-                                              .defaultManufacturingDate !=
-                                          null ||
-                                      selectedProduct.defaultExpiryDate != null)
-                                    Padding(
-                                      padding: EdgeInsets.only(top: 8.h),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          if (selectedProduct
-                                              .requiresManufacturingDate)
-                                            Text(
-                                              'MFG Default: ${selectedProduct.defaultManufacturingDate?.toIso8601String().split('T').first ?? 'None'}',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: AppColors.success,
-                                                    fontStyle: FontStyle.italic,
-                                                  ),
-                                            ),
-                                          if (selectedProduct
-                                              .requiresExpiryDate)
-                                            Text(
-                                              'EXP Default: ${selectedProduct.defaultExpiryDate?.toIso8601String().split('T').first ?? 'None'}',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: AppColors.success,
-                                                    fontStyle: FontStyle.italic,
-                                                  ),
-                                            ),
-                                          if (selectedProduct
-                                              .requiresManufacturingDate)
-                                            Text(
-                                              'MFG Active: ${_manufacturingDate?.toIso8601String().split('T').first ?? selectedProduct.defaultManufacturingDate?.toIso8601String().split('T').first ?? 'None'}',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        (_manufacturingDate !=
-                                                                null &&
-                                                            _manufacturingDate !=
-                                                                selectedProduct
-                                                                    .defaultManufacturingDate)
-                                                        ? AppColors.warning
-                                                        : AppColors
-                                                              .textSecondary,
-                                                    fontStyle: FontStyle.italic,
-                                                  ),
-                                            ),
-                                          if (selectedProduct
-                                              .requiresExpiryDate)
-                                            Text(
-                                              'EXP Active: ${_expiryDate?.toIso8601String().split('T').first ?? selectedProduct.defaultExpiryDate?.toIso8601String().split('T').first ?? 'None'}',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        (_expiryDate != null &&
-                                                            _expiryDate !=
-                                                                selectedProduct
-                                                                    .defaultExpiryDate)
-                                                        ? AppColors.warning
-                                                        : AppColors
-                                                              .textSecondary,
-                                                    fontStyle: FontStyle.italic,
-                                                  ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                ],
-                                if (selectedProduct != null &&
-                                    selectedProduct.requiresWarranty) ...[
+                                if (product != null && product.requiresWarranty) ...[
                                   SizedBox(height: 12.h),
                                   TextField(
-                                    controller: _warrantyMonthsController,
+                                    controller: draft.warrantyMonthsController,
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
                                       labelText: 'Warranty Months',
                                       border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          12.r,
-                                        ),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                if (product != null) ...[
+                                  SizedBox(height: 12.h),
+                                  TextField(
+                                    controller: draft.productBatchController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Product Batch Number (Optional)',
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12.r),
                                       ),
                                     ),
                                   ),
@@ -710,134 +680,81 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                 Row(
                                   children: [
                                     Expanded(
-                                      child: Text(
-                                        'Selected: ${selectedIds.length}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              color: AppColors.textSecondary,
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                      child: OutlinedButton.icon(
+                                        onPressed: !canDownload
+                                            ? null
+                                            : () => _exportBatch(
+                                                  batchUnits: batchUnits,
+                                                  format: 'csv',
+                                                ),
+                                        icon: const Icon(Icons.download_outlined),
+                                        label: const Text('Download Batch'),
                                       ),
                                     ),
-                                    PrimaryButton(
-                                      onPressed: () {
-                                        if (!canPublish) return;
-                                        _publishSelected(
-                                          product: selectedProduct!,
-                                          selectedIds: selectedIds,
-                                        );
-                                      },
-                                      text: 'Publish',
-                                      icon: Icons.publish,
-                                      backgroundColor: AppColors.secondary,
-                                      textColor: Colors.white,
-                                      isEnabled:
-                                          canPublish &&
-                                          state.status !=
-                                              UnitCodesStatus.publishing,
-                                      isLoading:
-                                          state.status ==
-                                          UnitCodesStatus.publishing,
+                                    SizedBox(width: 12.w),
+                                    Expanded(
+                                      child: PrimaryButton(
+                                        onPressed: () {
+                                          if (!canPublish) return;
+                                          _publishBatch(
+                                            batchName: batchName,
+                                            batchUnits: batchUnits,
+                                            product: product,
+                                          );
+                                        },
+                                        text: isBatchPublished ? 'Published' : 'Publish Batch',
+                                        icon: Icons.publish,
+                                        backgroundColor: AppColors.secondary,
+                                        textColor: Colors.white,
+                                        isEnabled: canPublish &&
+                                            state.status != UnitCodesStatus.publishing,
+                                        isLoading: state.status == UnitCodesStatus.publishing,
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  ListView.separated(
-                    padding: EdgeInsets.only(
-                      left: 16.w,
-                      right: 16.w,
-                      bottom: 16.w,
-                    ),
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: units.length,
-                    separatorBuilder: (_, _) => SizedBox(height: 12.h),
-                    itemBuilder: (context, index) {
-                      final u = units[index];
-                      final isSelected = selectedIds.contains(u.id);
-
-                      return CodeCard(
-                        code: u.code,
-                        codeType: u.type.name,
-                        status: u.status.name,
-                        batchNumber: u.batchId,
-                        generatedDate: u.generatedAt,
-                        productName:
-                            u.productId == null ? null : (u.productId ?? ''),
-                        actions: [
-                          OutlinedButton.icon(
-                            onPressed: () => _showDetails(u),
-                            icon: const Icon(Icons.visibility_outlined),
-                            label: const Text('View Details'),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Download will be added soon',
+                                SizedBox(height: 14.h),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    'Serial Numbers',
+                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                        ),
                                   ),
                                 ),
-                              );
-                            },
-                            icon: const Icon(Icons.download_outlined),
-                            label: const Text('Download'),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              final productsState =
-                                  context.read<ProductsBloc>().state;
-                              ProductModel? selectedProduct;
-                              if (_selectedProductId != null) {
-                                for (final p in productsState.products) {
-                                  if (p.id == _selectedProductId) {
-                                    selectedProduct = p;
-                                    break;
-                                  }
-                                }
-                              }
-
-                              if (selectedProduct == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Select a product first'),
+                                SizedBox(height: 8.h),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    columns: const [
+                                      DataColumn(label: Text('Serial')),
+                                      DataColumn(label: Text('Auth Code')),
+                                      DataColumn(label: Text('Status')),
+                                    ],
+                                    rows: [
+                                      for (final u in batchUnits)
+                                        DataRow(
+                                          cells: [
+                                            DataCell(Text(u.serialNumber)),
+                                            DataCell(Text(u.authenticationCode)),
+                                            DataCell(Text(u.status.name.toUpperCase())),
+                                          ],
+                                        ),
+                                    ],
                                   ),
-                                );
-                                return;
-                              }
-
-                              _publishSelected(
-                                product: selectedProduct,
-                                selectedIds: {u.id},
-                              );
-                            },
-                            icon: const Icon(Icons.publish_outlined),
-                            label: const Text('Publish'),
-                          ),
-                        ],
-                        isSelected: isSelected,
-                        onSelectedChanged: (v) {
-                          context.read<UnitCodesBloc>().add(
-                            SelectUnitCode(u.id, v == true),
+                                ),
+                              ],
+                            ),
                           );
                         },
-                        onTap: () => _showDetails(u),
-                      );
-                    },
+                      ),
+                      SizedBox(height: 16.h),
+                    ],
                   ),
-                  SizedBox(height: 16.h),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       ),
