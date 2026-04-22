@@ -1,10 +1,13 @@
+import 'package:nexatrace_system/core/constants/app_constants.dart';
 import 'package:nexatrace_system/core/constants/api_endpoints.dart';
 import 'package:nexatrace_system/core/errors/failures.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/nexa_admin/domain/entities/subscription_plan.dart';
+import 'package:flutter/foundation.dart';
 import 'package:nexatrace_system/shared/models/company/company_document_input.dart';
 import 'package:nexatrace_system/shared/models/company/company_model.dart';
 import 'package:nexatrace_system/shared/models/company/company_statistics.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CompanyManagementRepository {
   final ApiService _apiService;
@@ -507,35 +510,66 @@ class CompanyManagementRepository {
 
   Future<List<SubscriptionPlan>> getAvailablePlans() async {
     try {
+      if (kDebugMode) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final token = (prefs.getString(AppConstants.authTokenKey) ?? '').trim();
+          print('DEBUG: Super Admin token present: ${token.isNotEmpty}');
+        } catch (e) {
+          print('DEBUG: Failed to read auth token: $e');
+        }
+        print('DEBUG: Plans endpoint: ${ApiEndpoints.adminPlans}');
+      }
+
       final response = await _apiService.get(
         ApiEndpoints.adminPlans,
         queryParameters: {'status': 'active'},
       );
 
-      List<dynamic> plansData = const [];
-
-      if (response is Map) {
-        final data = response['data'];
-        if (data is List) {
-          plansData = data;
-        } else if (data is Map) {
-          final nested = data['plans'];
-          if (nested is List) plansData = nested;
-        }
-      } else if (response is List) {
-        plansData = response;
+      if (kDebugMode) {
+        print('DEBUG: Plans Response: $response');
       }
 
-      final plans = <SubscriptionPlan>[];
-      for (final item in plansData) {
-        if (item is Map) {
-          final map = Map<String, dynamic>.from(item);
-          final id = map['id']?.toString().trim() ?? '';
-          if (id.isEmpty) continue;
-          plans.add(SubscriptionPlan.fromJson(map));
+      try {
+        List<dynamic> plansData = const [];
+
+        if (response is Map) {
+          final data = response['data'];
+          if (data is List) {
+            plansData = data;
+          } else if (data is Map) {
+            final nested = data['plans'];
+            if (nested is List) plansData = nested;
+            final nestedData = data['data'];
+            if (plansData.isEmpty && nestedData is List) plansData = nestedData;
+          }
+        } else if (response is List) {
+          plansData = response;
         }
+
+        final plans = <SubscriptionPlan>[];
+        for (final item in plansData) {
+          if (item is Map) {
+            try {
+              final map = Map<String, dynamic>.from(item);
+              final id = map['id']?.toString().trim() ?? '';
+              if (id.isEmpty) continue;
+              plans.add(SubscriptionPlan.fromJson(map));
+            } catch (e) {
+              if (kDebugMode) {
+                debugPrint('DEBUG: Failed to parse plan item: $item');
+                debugPrint('DEBUG: Parse error: $e');
+              }
+            }
+          }
+        }
+        return plans;
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('DEBUG: Failed to map plans response: $e');
+        }
+        return const <SubscriptionPlan>[];
       }
-      return plans;
     } catch (error, stackTrace) {
       throw mapExceptionToFailure(error, stackTrace);
     }

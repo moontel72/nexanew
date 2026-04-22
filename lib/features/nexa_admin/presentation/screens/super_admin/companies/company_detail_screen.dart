@@ -1281,12 +1281,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     final cpPosCtrl =
         TextEditingController(text: (contact['position'] ?? '').toString());
 
-    final plansFuture = CompanyManagementRepository(apiService: ApiService())
-        .getAvailablePlans();
-
     showDialog(
       context: context,
       builder: (context) {
+        final repo = CompanyManagementRepository(apiService: ApiService());
+        var plansFuture = repo.getAvailablePlans();
         String selectedPlanId = currentPlanId.isEmpty ? '' : currentPlanId;
 
         return StatefulBuilder(
@@ -1436,13 +1435,29 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextField(
-                            enabled: false,
-                            decoration: InputDecoration(
-                              labelText: 'Update Subscription Plan',
-                              hintText: 'Failed to load plans',
-                              border: const OutlineInputBorder(),
-                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  enabled: false,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Update Subscription Plan',
+                                    hintText: 'Failed to load plans',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  setModalState(() {
+                                    plansFuture = repo.getAvailablePlans();
+                                  });
+                                },
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry'),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 6),
                           Text(
@@ -1456,17 +1471,35 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                     }
 
                     if (plans.isEmpty) {
-                      return TextField(
-                        enabled: false,
-                        decoration: const InputDecoration(
-                          labelText: 'Update Subscription Plan',
-                          hintText: 'No active plans found',
-                          border: OutlineInputBorder(),
-                        ),
+                      return Row(
+                        children: [
+                          const Expanded(
+                            child: TextField(
+                              enabled: false,
+                              decoration: InputDecoration(
+                                labelText: 'Update Subscription Plan',
+                                hintText: 'No active plans found',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              setModalState(() {
+                                plansFuture = repo.getAvailablePlans();
+                              });
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                          ),
+                        ],
                       );
                     }
 
-                    if (selectedPlanId.trim().isEmpty) {
+                    if (selectedPlanId.trim().isEmpty &&
+                        effectiveSelectedId.trim().isNotEmpty &&
+                        selectedPlanId != effectiveSelectedId) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (!mounted) return;
                         setModalState(() {
@@ -1637,9 +1670,6 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
 
                   if (planChanged) {
                     try {
-                      final repo = CompanyManagementRepository(
-                        apiService: ApiService(),
-                      );
                       final plans = await plansFuture;
                       final plan = plans.firstWhere(
                         (p) => p.id == newPlanId,
