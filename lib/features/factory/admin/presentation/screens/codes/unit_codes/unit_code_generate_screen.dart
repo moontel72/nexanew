@@ -86,71 +86,76 @@ class _UnitCodeGenerateScreenState extends State<UnitCodeGenerateScreen> {
             _showSuccessDialog(state.generatedCount);
           }
         },
-        child: Scrollbar(
-          controller: _scrollController,
-          thumbVisibility: true,
-          child: SingleChildScrollView(
+        child: SafeArea(
+          child: Scrollbar(
             controller: _scrollController,
-            padding: EdgeInsets.all(16.w),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                CustomTextField(
-                  controller: _countController,
-                  labelText: 'Count',
-                  hintText: 'How many unit codes to generate',
-                  keyboardType: TextInputType.number,
-                  validator: (v) {
-                    final parsed = int.tryParse(v ?? '');
-                    if (parsed == null || parsed <= 0) return 'Enter a number';
-                    if (parsed > 50000) return 'Max 50000 per batch';
-                    return null;
-                  },
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: EdgeInsets.fromLTRB(16.w, 16.w, 16.w, 28.w),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CustomTextField(
+                      controller: _countController,
+                      labelText: 'Count',
+                      hintText: 'How many unit codes to generate',
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        final parsed = int.tryParse(v ?? '');
+                        if (parsed == null || parsed <= 0) {
+                          return 'Enter a number';
+                        }
+                        if (parsed > 50000) return 'Max 50000 per batch';
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 12.h),
+                    CustomTextField(
+                      controller: _prefixController,
+                      labelText: 'Prefix',
+                      hintText: 'Example: U',
+                      validator: (v) {
+                        if ((v ?? '').trim().isEmpty) return 'Enter a prefix';
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 12.h),
+                    CustomTextField(
+                      controller: _batchNameController,
+                      labelText: 'Batch Name',
+                      hintText: 'Optional',
+                    ),
+                    SizedBox(height: 12.h),
+                    CustomTextField(
+                      controller: _batchNotesController,
+                      labelText: 'Batch Notes',
+                      hintText: 'Optional',
+                      maxLines: 3,
+                    ),
+                    SizedBox(height: 16.h),
+                    BlocBuilder<UnitCodesBloc, UnitCodesState>(
+                      builder: (context, state) {
+                        final isBusy =
+                            state.status == UnitCodesStatus.generating;
+                        return SizedBox(
+                          width: double.infinity,
+                          child: PrimaryButton(
+                            onPressed: _generate,
+                            isEnabled: !isBusy,
+                            isLoading: isBusy,
+                            text: 'Generate Unit Codes',
+                            icon: Icons.qr_code_2,
+                            backgroundColor: AppColors.secondary,
+                            textColor: Colors.white,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                SizedBox(height: 12.h),
-                CustomTextField(
-                  controller: _prefixController,
-                  labelText: 'Prefix',
-                  hintText: 'Example: U',
-                  validator: (v) {
-                    if ((v ?? '').trim().isEmpty) return 'Enter a prefix';
-                    return null;
-                  },
-                ),
-                SizedBox(height: 12.h),
-                CustomTextField(
-                  controller: _batchNameController,
-                  labelText: 'Batch Name',
-                  hintText: 'Optional',
-                ),
-                SizedBox(height: 12.h),
-                CustomTextField(
-                  controller: _batchNotesController,
-                  labelText: 'Batch Notes',
-                  hintText: 'Optional',
-                  maxLines: 3,
-                ),
-                SizedBox(height: 16.h),
-                BlocBuilder<UnitCodesBloc, UnitCodesState>(
-                  builder: (context, state) {
-                    final isBusy = state.status == UnitCodesStatus.generating;
-                    return SizedBox(
-                      width: double.infinity,
-                      child: PrimaryButton(
-                        onPressed: _generate,
-                        isEnabled: !isBusy,
-                        isLoading: isBusy,
-                        text: 'Generate Unit Codes',
-                        icon: Icons.qr_code_2,
-                        backgroundColor: AppColors.secondary,
-                        textColor: Colors.white,
-                      ),
-                    );
-                  },
-                ),
-                ],
               ),
             ),
           ),

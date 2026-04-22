@@ -50,6 +50,29 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
     context.go('/factory/codes/unit/generate');
   }
 
+  void _resetDateToDefault({
+    required bool isManufacturing,
+    required ProductModel product,
+  }) {
+    setState(() {
+      if (isManufacturing) {
+        _manufacturingDate = product.defaultManufacturingDate;
+      } else {
+        _expiryDate = product.defaultExpiryDate;
+      }
+    });
+  }
+
+  void _clearDate({required bool isManufacturing}) {
+    setState(() {
+      if (isManufacturing) {
+        _manufacturingDate = null;
+      } else {
+        _expiryDate = null;
+      }
+    });
+  }
+
   Future<void> _pickDate({required bool isManufacturing}) async {
     final now = DateTime.now();
     final initial = (isManufacturing ? _manufacturingDate : _expiryDate) ?? now;
@@ -393,12 +416,18 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                 ),
                                 SizedBox(height: 12.h),
                                 DropdownButtonFormField<String>(
+                                  isExpanded: true,
                                   initialValue: selectedProduct?.id,
                                   items: products
                                       .map(
                                         (p) => DropdownMenuItem<String>(
                                           value: p.id,
-                                          child: Text('${p.name} (${p.sku})'),
+                                          child: Text(
+                                            '${p.name} (${p.sku})',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            softWrap: false,
+                                          ),
                                         ),
                                       )
                                       .toList(),
@@ -447,46 +476,140 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                         selectedProduct
                                             .requiresExpiryDate)) ...[
                                   SizedBox(height: 12.h),
-                                  Row(
-                                    children: [
-                                      if (selectedProduct
-                                          .requiresManufacturingDate)
-                                        Expanded(
-                                          child: OutlinedButton.icon(
-                                            onPressed: () => _pickDate(
+                                  LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final product = selectedProduct;
+                                      if (product == null) {
+                                        return const SizedBox.shrink();
+                                      }
+
+                                      final isNarrow =
+                                          constraints.maxWidth < 640;
+
+                                      final mfgLabelResolved = _manufacturingDate ==
+                                              null
+                                          ? 'Manufacturing Date'
+                                          : 'MFG: ${_manufacturingDate!.toIso8601String().split('T').first}${_manufacturingDate == product.defaultManufacturingDate ? ' (Default)' : ''}';
+                                      final expLabelResolved = _expiryDate == null
+                                          ? 'Expiry Date'
+                                          : 'EXP: ${_expiryDate!.toIso8601String().split('T').first}${_expiryDate == product.defaultExpiryDate ? ' (Default)' : ''}';
+
+                                      Widget dateButton({
+                                        required bool show,
+                                        required bool isManufacturing,
+                                        required String label,
+                                      }) {
+                                        if (!show) {
+                                          return const SizedBox.shrink();
+                                        }
+
+                                        final defaultDate = isManufacturing
+                                            ? product.defaultManufacturingDate
+                                            : product.defaultExpiryDate;
+                                        final activeDate = isManufacturing
+                                            ? _manufacturingDate
+                                            : _expiryDate;
+
+                                        final canResetToDefault =
+                                            defaultDate != null &&
+                                                activeDate != defaultDate;
+                                        final canClear = defaultDate == null &&
+                                            activeDate != null;
+
+                                        return Row(
+                                          children: [
+                                            Expanded(
+                                              child: OutlinedButton.icon(
+                                                onPressed: () => _pickDate(
+                                                  isManufacturing:
+                                                      isManufacturing,
+                                                ),
+                                                icon: const Icon(
+                                                  Icons.calendar_month,
+                                                ),
+                                                label: Text(
+                                                  label,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  softWrap: false,
+                                                ),
+                                              ),
+                                            ),
+                                            if (canResetToDefault)
+                                              IconButton(
+                                                tooltip: 'Use default',
+                                                onPressed: () =>
+                                                    _resetDateToDefault(
+                                                  isManufacturing:
+                                                      isManufacturing,
+                                                  product: product,
+                                                ),
+                                                icon: const Icon(
+                                                  Icons.restart_alt,
+                                                ),
+                                              ),
+                                            if (canClear)
+                                              IconButton(
+                                                tooltip: 'Clear',
+                                                onPressed: () => _clearDate(
+                                                  isManufacturing:
+                                                      isManufacturing,
+                                                ),
+                                                icon: const Icon(Icons.clear),
+                                              ),
+                                          ],
+                                        );
+                                      }
+
+                                      if (isNarrow) {
+                                        return Column(
+                                          children: [
+                                            dateButton(
+                                              show: product
+                                                  .requiresManufacturingDate,
                                               isManufacturing: true,
+                                              label: mfgLabelResolved,
                                             ),
-                                            icon: const Icon(
-                                              Icons.calendar_month,
-                                            ),
-                                            label: Text(
-                                              _manufacturingDate == null
-                                                  ? 'Manufacturing Date'
-                                                  : 'MFG: ${_manufacturingDate!.toIso8601String().split('T').first}${_manufacturingDate == selectedProduct.defaultManufacturingDate ? ' (Default)' : ''}',
-                                            ),
-                                          ),
-                                        ),
-                                      if (selectedProduct
-                                              .requiresManufacturingDate &&
-                                          selectedProduct.requiresExpiryDate)
-                                        SizedBox(width: 12.w),
-                                      if (selectedProduct.requiresExpiryDate)
-                                        Expanded(
-                                          child: OutlinedButton.icon(
-                                            onPressed: () => _pickDate(
+                                            if (product
+                                                    .requiresManufacturingDate &&
+                                                product.requiresExpiryDate)
+                                              SizedBox(height: 12.h),
+                                            dateButton(
+                                              show: product.requiresExpiryDate,
                                               isManufacturing: false,
+                                              label: expLabelResolved,
                                             ),
-                                            icon: const Icon(
-                                              Icons.calendar_month,
+                                          ],
+                                        );
+                                      }
+
+                                      return Row(
+                                        children: [
+                                          if (product
+                                              .requiresManufacturingDate)
+                                            Expanded(
+                                              child: dateButton(
+                                                show: true,
+                                                isManufacturing: true,
+                                                label: mfgLabelResolved,
+                                              ),
                                             ),
-                                            label: Text(
-                                              _expiryDate == null
-                                                  ? 'Expiry Date'
-                                                  : 'EXP: ${_expiryDate!.toIso8601String().split('T').first}${_expiryDate == selectedProduct.defaultExpiryDate ? ' (Default)' : ''}',
+                                          if (product
+                                                  .requiresManufacturingDate &&
+                                              product.requiresExpiryDate)
+                                            SizedBox(width: 12.w),
+                                          if (product.requiresExpiryDate)
+                                            Expanded(
+                                              child: dateButton(
+                                                show: true,
+                                                isManufacturing: false,
+                                                label: expLabelResolved,
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                    ],
+                                        ],
+                                      );
+                                    },
                                   ),
                                   if (selectedProduct
                                               .defaultManufacturingDate !=
@@ -498,14 +621,10 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          if (_manufacturingDate ==
-                                                  selectedProduct
-                                                      .defaultManufacturingDate &&
-                                              selectedProduct
-                                                      .defaultManufacturingDate !=
-                                                  null)
+                                          if (selectedProduct
+                                              .requiresManufacturingDate)
                                             Text(
-                                              'MFG Date: Using product default (${selectedProduct.defaultManufacturingDate!.toIso8601String().split('T').first})',
+                                              'MFG Default: ${selectedProduct.defaultManufacturingDate?.toIso8601String().split('T').first ?? 'None'}',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
@@ -514,14 +633,9 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                                     fontStyle: FontStyle.italic,
                                                   ),
                                             ),
-                                          if (_expiryDate ==
-                                                  selectedProduct
-                                                      .defaultExpiryDate &&
-                                              selectedProduct
-                                                      .defaultExpiryDate !=
-                                                  null)
+                                          if (selectedProduct.requiresExpiryDate)
                                             Text(
-                                              'EXP Date: Using product default (${selectedProduct.defaultExpiryDate!.toIso8601String().split('T').first})',
+                                              'EXP Default: ${selectedProduct.defaultExpiryDate?.toIso8601String().split('T').first ?? 'None'}',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
@@ -530,21 +644,37 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                                     fontStyle: FontStyle.italic,
                                                   ),
                                             ),
-                                          if ((_manufacturingDate != null &&
-                                                  _manufacturingDate !=
-                                                      selectedProduct
-                                                          .defaultManufacturingDate) ||
-                                              (_expiryDate != null &&
-                                                  _expiryDate !=
-                                                      selectedProduct
-                                                          .defaultExpiryDate))
+                                          if (selectedProduct
+                                              .requiresManufacturingDate)
                                             Text(
-                                              'Custom dates selected (overriding defaults)',
+                                              'MFG Active: ${_manufacturingDate?.toIso8601String().split('T').first ?? selectedProduct.defaultManufacturingDate?.toIso8601String().split('T').first ?? 'None'}',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
                                                   ?.copyWith(
-                                                    color: AppColors.warning,
+                                                    color: (_manufacturingDate !=
+                                                                null &&
+                                                            _manufacturingDate !=
+                                                                selectedProduct
+                                                                    .defaultManufacturingDate)
+                                                        ? AppColors.warning
+                                                        : AppColors.textSecondary,
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                            ),
+                                          if (selectedProduct.requiresExpiryDate)
+                                            Text(
+                                              'EXP Active: ${_expiryDate?.toIso8601String().split('T').first ?? selectedProduct.defaultExpiryDate?.toIso8601String().split('T').first ?? 'None'}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: (_expiryDate != null &&
+                                                            _expiryDate !=
+                                                                selectedProduct
+                                                                    .defaultExpiryDate)
+                                                        ? AppColors.warning
+                                                        : AppColors.textSecondary,
                                                     fontStyle: FontStyle.italic,
                                                   ),
                                             ),
