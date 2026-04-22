@@ -7,6 +7,7 @@ import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/utils/extensions.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_detail_bloc.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
+import 'package:nexatrace_system/features/nexa_admin/domain/entities/subscription_plan.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
@@ -1238,6 +1239,12 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
         ? (company['contact_person'] as Map).cast<String, dynamic>()
         : <String, dynamic>{};
 
+    final subscriptionPlan = (company['subscription_plan'] is Map)
+        ? (company['subscription_plan'] as Map).cast<String, dynamic>()
+        : <String, dynamic>{};
+    final currentPlanId =
+        (subscriptionPlan['id'] ?? company['plan_id'] ?? '').toString().trim();
+
     final nameCtrl =
         TextEditingController(text: (company['name'] ?? '').toString());
     final regCtrl = TextEditingController(
@@ -1274,16 +1281,23 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     final cpPosCtrl =
         TextEditingController(text: (contact['position'] ?? '').toString());
 
+    final plansFuture = CompanyManagementRepository(apiService: ApiService())
+        .getAvailablePlans();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Company'),
-        content: SizedBox(
-          width: 560,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+      builder: (context) {
+        String selectedPlanId = currentPlanId.isEmpty ? '' : currentPlanId;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) => AlertDialog(
+            title: const Text('Edit Company'),
+            content: SizedBox(
+              width: 560,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                 TextField(
                   controller: nameCtrl,
                   decoration: const InputDecoration(
@@ -1397,6 +1411,65 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                     border: OutlineInputBorder(),
                   ),
                 ),
+                const SizedBox(height: 12),
+                FutureBuilder<List<SubscriptionPlan>>(
+                  future: plansFuture,
+                  builder: (context, snapshot) {
+                    final plans = snapshot.data ?? const <SubscriptionPlan>[];
+                    final hasCurrent =
+                        selectedPlanId.isNotEmpty &&
+                        plans.any((p) => p.id == selectedPlanId);
+                    final initialValue = hasCurrent
+                        ? selectedPlanId
+                        : (plans.isEmpty ? null : plans.first.id);
+
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const SizedBox(
+                        height: 52,
+                        child: Center(child: LoadingIndicator()),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return TextField(
+                        enabled: false,
+                        decoration: InputDecoration(
+                          labelText: 'Update Subscription Plan',
+                          hintText: 'Failed to load plans',
+                          border: const OutlineInputBorder(),
+                          helperText: snapshot.error.toString(),
+                        ),
+                      );
+                    }
+
+                    return DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      initialValue: initialValue,
+                      items: plans
+                          .map(
+                            (p) => DropdownMenuItem<String>(
+                              value: p.id,
+                              child: Text(
+                                p.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: false,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        setModalState(() {
+                          selectedPlanId = (v ?? '').toString();
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Update Subscription Plan',
+                        border: OutlineInputBorder(),
+                      ),
+                    );
+                  },
+                ),
                 const SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerLeft,
@@ -1458,19 +1531,34 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   minLines: 2,
                   maxLines: 4,
                 ),
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              final updateData = <String, dynamic>{
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final newPlanId = selectedPlanId.trim();
+                  final planChanged =
+                      newPlanId.isNotEmpty && newPlanId != currentPlanId;
+
+                  if (planChanged) {
+                    final confirmed = await _confirm(
+                      title: 'Change Subscription Plan?',
+                      message:
+                          "Are you sure you want to change this company's plan? This may affect billing.",
+                      confirmText: 'Change Plan',
+                    );
+                    if (confirmed != true) return;
+                  }
+
+                  Navigator.pop(context);
+
+                  final updateData = <String, dynamic>{
                 'name': nameCtrl.text.trim(),
                 'business_registration_number': regCtrl.text.trim(),
                 'tax_id':
@@ -1502,19 +1590,61 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                     : notesCtrl.text.trim(),
               };
 
-              updateData.removeWhere((key, value) => value == null);
+                  updateData.removeWhere((key, value) => value == null);
 
-              _companyDetailBloc.add(
-                UpdateCompanyDetail(
-                  companyId: widget.companyId,
-                  companyData: updateData,
-                ),
-              );
-            },
-            child: const Text('Save'),
+                  _companyDetailBloc.add(
+                    UpdateCompanyDetail(
+                      companyId: widget.companyId,
+                      companyData: updateData,
+                    ),
+                  );
+
+                  if (planChanged) {
+                    try {
+                      final repo = CompanyManagementRepository(
+                        apiService: ApiService(),
+                      );
+                      final plans = await plansFuture;
+                      final plan = plans.firstWhere(
+                        (p) => p.id == newPlanId,
+                        orElse: () => plans.first,
+                      );
+                      await repo.assignPlan(
+                        companyId: widget.companyId,
+                        planId: newPlanId,
+                        billingCycle: plan.billingCycle,
+                      );
+                      _companyDetailBloc.add(
+                        LoadCompanyDetail(companyId: widget.companyId),
+                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Subscription plan updated'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Failed to update plan: ${e.toString()}',
+                            ),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
