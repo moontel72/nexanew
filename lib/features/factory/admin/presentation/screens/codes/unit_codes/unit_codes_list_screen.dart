@@ -1,4 +1,3 @@
-//test
 import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -433,318 +432,408 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                               borderRadius: BorderRadius.circular(12.r),
                               side: BorderSide(color: AppColors.border),
                             ),
-                            child: ExpansionTile(
-                              tilePadding: EdgeInsets.symmetric(
-                                horizontal: 16.w,
-                                vertical: 8.h,
-                              ),
-                              childrenPadding: EdgeInsets.fromLTRB(
-                                16.w,
-                                0,
-                                16.w,
-                                16.w,
-                              ),
-                              title: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final isNarrow = constraints.maxWidth < 720;
-                                  final dropdown = DropdownButtonFormField<String>(
-                                    key: ValueKey('product_${batchName}_${draft.productId ?? ''}'),
-                                    isExpanded: true,
-                                    initialValue: draft.productId,
-                                    items: products
-                                        .map(
-                                          (p) => DropdownMenuItem<String>(
-                                            value: p.id,
-                                            child: Text(
-                                              '${p.name} (${p.sku})',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              softWrap: false,
+                            child: Padding(
+                              padding: EdgeInsets.all(16.w),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final isNarrow =
+                                          constraints.maxWidth < 900;
+
+                                      final dropdown =
+                                          DropdownButtonFormField<String>(
+                                        key: ValueKey(
+                                          'product_${batchName}_${draft.productId ?? ''}',
+                                        ),
+                                        isExpanded: true,
+                                        initialValue: draft.productId,
+                                        items: products
+                                            .map(
+                                              (p) => DropdownMenuItem<String>(
+                                                value: p.id,
+                                                child: Text(
+                                                  '${p.name} (${p.sku})',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  softWrap: false,
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: products.isEmpty
+                                            ? null
+                                            : (v) {
+                                                setState(() {
+                                                  draft.productId = v;
+                                                  draft.mfgOverride = null;
+                                                  draft.expOverride = null;
+                                                  draft.productBatchController
+                                                      .text = '';
+                                                  draft.warrantyMonthsController
+                                                      .text = '';
+                                                });
+                                              },
+                                        decoration: InputDecoration(
+                                          labelText: 'Product',
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12.r),
+                                          ),
+                                        ),
+                                      );
+
+                                      final header = Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            batchName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            softWrap: false,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                          ),
+                                          SizedBox(height: 4.h),
+                                          Text(
+                                            '${batchUnits.length} unit codes',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            softWrap: false,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                          ),
+                                        ],
+                                      );
+
+                                      final statusChip = Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w,
+                                          vertical: 4.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: (isBatchPublished
+                                                  ? AppColors.success
+                                                  : AppColors.warning)
+                                              .withValues(alpha: 0.12),
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                          border: Border.all(
+                                            color: isBatchPublished
+                                                ? AppColors.success
+                                                : AppColors.warning,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          isBatchPublished
+                                              ? 'PUBLISHED'
+                                              : 'GENERATED',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          softWrap: false,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall
+                                              ?.copyWith(
+                                                color: isBatchPublished
+                                                    ? AppColors.success
+                                                    : AppColors.warning,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                        ),
+                                      );
+
+                                      if (isNarrow) {
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(child: header),
+                                                SizedBox(width: 12.w),
+                                                statusChip,
+                                              ],
+                                            ),
+                                            SizedBox(height: 12.h),
+                                            dropdown,
+                                          ],
+                                        );
+                                      }
+
+                                      return Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(child: header),
+                                          SizedBox(width: 12.w),
+                                          statusChip,
+                                          SizedBox(width: 16.w),
+                                          SizedBox(
+                                            width: 380.w,
+                                            child: dropdown,
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                  if (product == null) ...[
+                                    SizedBox(height: 10.h),
+                                    Text(
+                                      'Select a product to link this batch before publishing.',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.warning,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ],
+                                  if (product != null &&
+                                      (product.requiresManufacturingDate ||
+                                          product.requiresExpiryDate)) ...[
+                                    SizedBox(height: 12.h),
+                                    if (product.requiresManufacturingDate)
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton.icon(
+                                              onPressed: () =>
+                                                  _pickBatchDate(
+                                                batchName: batchName,
+                                                isManufacturing: true,
+                                              ),
+                                              icon: const Icon(
+                                                Icons.calendar_month,
+                                              ),
+                                              label: Text(
+                                                activeMfg == null
+                                                    ? 'Manufacturing Date'
+                                                    : 'MFG: ${activeMfg.toIso8601String().split('T').first}${draft.mfgOverride == null ? ' (Default)' : ' (Override)'}',
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                                softWrap: false,
+                                              ),
                                             ),
                                           ),
-                                        )
-                                        .toList(),
-                                    onChanged: products.isEmpty
-                                        ? null
-                                        : (v) {
-                                            setState(() {
-                                              draft.productId = v;
-                                              draft.mfgOverride = null;
-                                              draft.expOverride = null;
-                                              draft.productBatchController.text = '';
-                                              draft.warrantyMonthsController.text = '';
-                                            });
-                                          },
-                                    decoration: InputDecoration(
-                                      labelText: 'Product',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12.r),
+                                          if (draft.mfgOverride != null)
+                                            IconButton(
+                                              tooltip: 'Use default',
+                                              onPressed: () =>
+                                                  _useDefaultDates(
+                                                batchName: batchName,
+                                                isManufacturing: true,
+                                              ),
+                                              icon: const Icon(
+                                                Icons.restart_alt,
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                    ),
-                                  );
-
-                                  final header = Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
+                                    if (product.requiresExpiryDate) ...[
+                                      SizedBox(height: 12.h),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton.icon(
+                                              onPressed: () =>
+                                                  _pickBatchDate(
+                                                batchName: batchName,
+                                                isManufacturing: false,
+                                              ),
+                                              icon: const Icon(
+                                                Icons.calendar_month,
+                                              ),
+                                              label: Text(
+                                                activeExp == null
+                                                    ? 'Expiry Date'
+                                                    : 'EXP: ${activeExp.toIso8601String().split('T').first}${draft.expOverride == null ? ' (Default)' : ' (Override)'}',
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                                softWrap: false,
+                                              ),
+                                            ),
+                                          ),
+                                          if (draft.expOverride != null)
+                                            IconButton(
+                                              tooltip: 'Use default',
+                                              onPressed: () =>
+                                                  _useDefaultDates(
+                                                batchName: batchName,
+                                                isManufacturing: false,
+                                              ),
+                                              icon: const Icon(
+                                                Icons.restart_alt,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                    SizedBox(height: 8.h),
+                                    if (product.requiresManufacturingDate)
                                       Text(
-                                        batchName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                        'MFG Default: ${defaultMfg?.toIso8601String().split('T').first ?? 'None'}',
                                         style: Theme.of(context)
                                             .textTheme
-                                            .titleSmall
-                                            ?.copyWith(fontWeight: FontWeight.w800),
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: AppColors.success,
+                                              fontStyle: FontStyle.italic,
+                                            ),
                                       ),
-                                      SizedBox(height: 4.h),
+                                    if (product.requiresExpiryDate)
                                       Text(
-                                        '${batchUnits.length} unit codes',
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: AppColors.textSecondary,
-                                              fontWeight: FontWeight.w700,
+                                        'EXP Default: ${defaultExp?.toIso8601String().split('T').first ?? 'None'}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: AppColors.success,
+                                              fontStyle: FontStyle.italic,
                                             ),
                                       ),
-                                    ],
-                                  );
-
-                                  if (isNarrow) {
-                                    return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        header,
-                                        SizedBox(height: 10.h),
-                                        dropdown,
-                                      ],
-                                    );
-                                  }
-
-                                  return Row(
-                                    children: [
-                                      Expanded(child: header),
-                                      SizedBox(width: 16.w),
-                                      SizedBox(width: 360.w, child: dropdown),
-                                    ],
-                                  );
-                                },
-                              ),
-                              subtitle: Padding(
-                                padding: EdgeInsets.only(top: 8.h),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 10.w,
-                                        vertical: 4.h,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: (isBatchPublished
-                                                ? AppColors.success
-                                                : AppColors.warning)
-                                            .withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(999),
-                                        border: Border.all(
-                                          color: isBatchPublished
-                                              ? AppColors.success
-                                              : AppColors.warning,
+                                  ],
+                                  if (product != null &&
+                                      product.requiresWarranty) ...[
+                                    SizedBox(height: 12.h),
+                                    TextField(
+                                      controller:
+                                          draft.warrantyMonthsController,
+                                      keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(
+                                        labelText: 'Warranty Months',
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
                                         ),
-                                      ),
-                                      child: Text(
-                                        isBatchPublished ? 'PUBLISHED' : 'GENERATED',
-                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                              color: isBatchPublished
-                                                  ? AppColors.success
-                                                  : AppColors.warning,
-                                              fontWeight: FontWeight.w800,
-                                            ),
                                       ),
                                     ),
                                   ],
-                                ),
-                              ),
-                              children: [
-                                if (product != null &&
-                                    (product.requiresManufacturingDate ||
-                                        product.requiresExpiryDate))
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(height: 8.h),
-                                      if (product.requiresManufacturingDate)
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: OutlinedButton.icon(
-                                                onPressed: () => _pickBatchDate(
-                                                  batchName: batchName,
-                                                  isManufacturing: true,
-                                                ),
-                                                icon: const Icon(Icons.calendar_month),
-                                                label: Text(
-                                                  activeMfg == null
-                                                      ? 'Manufacturing Date'
-                                                      : 'MFG: ${activeMfg.toIso8601String().split('T').first}${draft.mfgOverride == null ? ' (Default)' : ' (Override)'}',
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  softWrap: false,
-                                                ),
-                                              ),
-                                            ),
-                                            if (draft.mfgOverride != null)
-                                              IconButton(
-                                                tooltip: 'Use default',
-                                                onPressed: () => _useDefaultDates(
-                                                  batchName: batchName,
-                                                  isManufacturing: true,
-                                                ),
-                                                icon: const Icon(Icons.restart_alt),
-                                              ),
-                                          ],
+                                  if (product != null) ...[
+                                    SizedBox(height: 12.h),
+                                    TextField(
+                                      controller:
+                                          draft.productBatchController,
+                                      decoration: InputDecoration(
+                                        labelText:
+                                            'Product Batch Number (Optional)',
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
                                         ),
-                                      if (product.requiresExpiryDate) ...[
-                                        SizedBox(height: 12.h),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: OutlinedButton.icon(
-                                                onPressed: () => _pickBatchDate(
-                                                  batchName: batchName,
-                                                  isManufacturing: false,
-                                                ),
-                                                icon: const Icon(Icons.calendar_month),
-                                                label: Text(
-                                                  activeExp == null
-                                                      ? 'Expiry Date'
-                                                      : 'EXP: ${activeExp.toIso8601String().split('T').first}${draft.expOverride == null ? ' (Default)' : ' (Override)'}',
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  softWrap: false,
-                                                ),
-                                              ),
-                                            ),
-                                            if (draft.expOverride != null)
-                                              IconButton(
-                                                tooltip: 'Use default',
-                                                onPressed: () => _useDefaultDates(
-                                                  batchName: batchName,
-                                                  isManufacturing: false,
-                                                ),
-                                                icon: const Icon(Icons.restart_alt),
-                                              ),
-                                          ],
-                                        ),
-                                      ],
-                                      SizedBox(height: 8.h),
-                                      if (product.requiresManufacturingDate)
-                                        Text(
-                                          'MFG Default: ${defaultMfg?.toIso8601String().split('T').first ?? 'None'}',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                color: AppColors.success,
-                                                fontStyle: FontStyle.italic,
-                                              ),
-                                        ),
-                                      if (product.requiresExpiryDate)
-                                        Text(
-                                          'EXP Default: ${defaultExp?.toIso8601String().split('T').first ?? 'None'}',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                color: AppColors.success,
-                                                fontStyle: FontStyle.italic,
-                                              ),
-                                        ),
-                                    ],
-                                  ),
-                                if (product != null && product.requiresWarranty) ...[
-                                  SizedBox(height: 12.h),
-                                  TextField(
-                                    controller: draft.warrantyMonthsController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      labelText: 'Warranty Months',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12.r),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                if (product != null) ...[
-                                  SizedBox(height: 12.h),
-                                  TextField(
-                                    controller: draft.productBatchController,
-                                    decoration: InputDecoration(
-                                      labelText: 'Product Batch Number (Optional)',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12.r),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                SizedBox(height: 12.h),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: OutlinedButton.icon(
-                                        onPressed: !canDownload
-                                            ? null
-                                            : () => _exportBatch(
-                                                  batchUnits: batchUnits,
-                                                  format: 'csv',
-                                                ),
-                                        icon: const Icon(Icons.download_outlined),
-                                        label: const Text('Download Batch'),
-                                      ),
-                                    ),
-                                    SizedBox(width: 12.w),
-                                    Expanded(
-                                      child: PrimaryButton(
-                                        onPressed: () {
-                                          if (!canPublish) return;
-                                          _publishBatch(
-                                            batchName: batchName,
-                                            batchUnits: batchUnits,
-                                            product: product,
-                                          );
-                                        },
-                                        text: isBatchPublished ? 'Published' : 'Publish Batch',
-                                        icon: Icons.publish,
-                                        backgroundColor: AppColors.secondary,
-                                        textColor: Colors.white,
-                                        isEnabled: canPublish &&
-                                            state.status != UnitCodesStatus.publishing,
-                                        isLoading: state.status == UnitCodesStatus.publishing,
                                       ),
                                     ),
                                   ],
-                                ),
-                                SizedBox(height: 14.h),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    'Serial Numbers',
-                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                          fontWeight: FontWeight.w800,
+                                  SizedBox(height: 12.h),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: !canDownload
+                                              ? null
+                                              : () => _exportBatch(
+                                                    batchUnits: batchUnits,
+                                                    format: 'csv',
+                                                  ),
+                                          icon: const Icon(
+                                            Icons.download_outlined,
+                                          ),
+                                          label: const Text('Download Batch'),
                                         ),
-                                  ),
-                                ),
-                                SizedBox(height: 8.h),
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: DataTable(
-                                    columns: const [
-                                      DataColumn(label: Text('Serial')),
-                                      DataColumn(label: Text('Auth Code')),
-                                      DataColumn(label: Text('Status')),
-                                    ],
-                                    rows: [
-                                      for (final u in batchUnits)
-                                        DataRow(
-                                          cells: [
-                                            DataCell(Text(u.serialNumber)),
-                                            DataCell(Text(u.authenticationCode)),
-                                            DataCell(Text(u.status.name.toUpperCase())),
-                                          ],
+                                      ),
+                                      SizedBox(width: 12.w),
+                                      Expanded(
+                                        child: PrimaryButton(
+                                          onPressed: () {
+                                            if (!canPublish) return;
+                                            _publishBatch(
+                                              batchName: batchName,
+                                              batchUnits: batchUnits,
+                                              product: product,
+                                            );
+                                          },
+                                          text: isBatchPublished
+                                              ? 'Published'
+                                              : 'Publish Batch',
+                                          icon: Icons.publish,
+                                          backgroundColor:
+                                              AppColors.secondary,
+                                          textColor: Colors.white,
+                                          isEnabled: canPublish &&
+                                              state.status !=
+                                                  UnitCodesStatus.publishing,
+                                          isLoading: state.status ==
+                                              UnitCodesStatus.publishing,
                                         ),
+                                      ),
                                     ],
                                   ),
-                                ),
-                              ],
+                                  SizedBox(height: 14.h),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Codes',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 8.h),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: DataTable(
+                                      columns: const [
+                                        DataColumn(label: Text('Serial')),
+                                        DataColumn(label: Text('Code')),
+                                        DataColumn(
+                                          label: Text('Storekeeper Code'),
+                                        ),
+                                        DataColumn(label: Text('Auth Code')),
+                                        DataColumn(label: Text('Status')),
+                                      ],
+                                      rows: [
+                                        for (final u in batchUnits)
+                                          DataRow(
+                                            cells: [
+                                              DataCell(Text(u.serialNumber)),
+                                              DataCell(Text(u.code)),
+                                              DataCell(
+                                                Text(u.storeKeeperCode),
+                                              ),
+                                              DataCell(
+                                                Text(u.authenticationCode),
+                                              ),
+                                              DataCell(
+                                                Text(
+                                                  u.status.name.toUpperCase(),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
