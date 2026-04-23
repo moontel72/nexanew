@@ -9,6 +9,20 @@ import 'package:nexatrace_system/shared/models/subscription/plan_type.dart';
 
 Map<String, dynamic> _normalizePlanJson(Map<String, dynamic> json) {
   final normalized = Map<String, dynamic>.from(json);
+  int? toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString().trim());
+  }
+
+  double? toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString().trim());
+  }
+
   final metadataRaw = normalized['metadata'];
   final metadata = metadataRaw is Map
       ? Map<String, dynamic>.from(metadataRaw.cast<String, dynamic>())
@@ -20,28 +34,33 @@ Map<String, dynamic> _normalizePlanJson(Map<String, dynamic> json) {
   normalized['billing_cycle'] = normalized['billing_cycle']?.toString() ?? metadata['billing_cycle']?.toString() ?? 'monthly';
 
   normalized['limits'] = <String, dynamic>{
-    'monthly_unit_codes': (normalized['monthly_unit_codes'] as num?)?.toInt(),
-    'monthly_packet_codes': (normalized['monthly_packet_codes'] as num?)?.toInt(),
-    'monthly_carton_codes': (normalized['monthly_carton_codes'] as num?)?.toInt(),
-    'monthly_bundle_codes': (normalized['monthly_bundle_codes'] as num?)?.toInt(),
-    'max_users': (normalized['max_users'] as num?)?.toInt(),
-    'max_stores': (normalized['max_stores'] as num?)?.toInt(),
-    'max_drivers': (normalized['max_drivers'] as num?)?.toInt(),
+    'monthly_unit_codes': toInt(normalized['monthly_unit_codes']),
+    'monthly_packet_codes': toInt(normalized['monthly_packet_codes']),
+    'monthly_carton_codes': toInt(normalized['monthly_carton_codes']),
+    'monthly_bundle_codes': toInt(normalized['monthly_bundle_codes']),
+    'max_users': toInt(normalized['max_users']),
+    'max_stores': toInt(normalized['max_stores']),
+    'max_drivers': toInt(normalized['max_drivers']),
     if (metadata['transport_connections_per_month'] != null)
-      'transport_connections_per_month': metadata['transport_connections_per_month'],
+      'transport_connections_per_month': toInt(metadata['transport_connections_per_month']) ?? metadata['transport_connections_per_month'],
     if (metadata['max_loads_per_month'] != null)
-      'max_loads_per_month': metadata['max_loads_per_month'],
+      'max_loads_per_month': toInt(metadata['max_loads_per_month']) ?? metadata['max_loads_per_month'],
   };
 
   normalized['metadata'] = metadata;
   normalized['user_limits'] = normalized['user_limits'] is Map
       ? normalized['user_limits']
       : {
-          'store_keepers': ((normalized['max_stores'] as num?)?.toInt() ?? 1),
-          'drivers': ((normalized['max_drivers'] as num?)?.toInt() ?? 1),
-          'admin_users': ((normalized['max_users'] as num?)?.toInt() ?? 1),
+          'store_keepers': (toInt(normalized['max_stores']) ?? 1),
+          'drivers': (toInt(normalized['max_drivers']) ?? 1),
+          'admin_users': (toInt(normalized['max_users']) ?? 1),
           'active_products': 1,
         };
+
+  final mp = toDouble(normalized['monthly_price']);
+  if (mp != null) normalized['monthly_price'] = mp;
+  final yp = toDouble(normalized['yearly_price']);
+  if (yp != null) normalized['yearly_price'] = yp;
 
   final featuresRaw = normalized['features'];
   if (featuresRaw is List) {

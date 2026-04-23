@@ -117,6 +117,21 @@ PlanType _parsePlanType(dynamic value) {
   }
 }
 
+double _parseDouble(dynamic value, {double fallback = 0.0}) {
+  if (value == null) return fallback;
+  if (value is num) return value.toDouble();
+  final s = value.toString().trim();
+  return double.tryParse(s) ?? fallback;
+}
+
+int _parseInt(dynamic value, {int fallback = 0}) {
+  if (value == null) return fallback;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  final s = value.toString().trim();
+  return int.tryParse(s) ?? fallback;
+}
+
 /// Helper function to parse PlanStatus with fallback
 PlanStatus _parsePlanStatus(dynamic value) {
   if (value == null) return PlanStatus.active;
@@ -241,8 +256,8 @@ abstract class Plan with _$Plan {
     final name = json['name']?.toString() ?? '';
     final type = _parsePlanType(json['type']);
     final description = json['description']?.toString() ?? '';
-    final monthlyPrice = (json['monthly_price'] as num?)?.toDouble() ?? 0.0;
-    final yearlyPrice = (json['yearly_price'] as num?)?.toDouble() ?? 0.0;
+    final monthlyPrice = _parseDouble(json['monthly_price']);
+    final yearlyPrice = _parseDouble(json['yearly_price']);
     final currency = json['currency']?.toString() ?? 'USD';
     final metadataRaw = json['metadata'];
     final metadata =
@@ -265,16 +280,16 @@ abstract class Plan with _$Plan {
     final limits = (limitsRaw is Map)
         ? Map<String, dynamic>.from(limitsRaw)
         : <String, dynamic>{
-            'monthly_unit_codes': (json['monthly_unit_codes'] as num?)?.toInt(),
+            'monthly_unit_codes': _parseInt(json['monthly_unit_codes'], fallback: 0),
             'monthly_packet_codes':
-                (json['monthly_packet_codes'] as num?)?.toInt(),
+                _parseInt(json['monthly_packet_codes'], fallback: 0),
             'monthly_carton_codes':
-                (json['monthly_carton_codes'] as num?)?.toInt(),
+                _parseInt(json['monthly_carton_codes'], fallback: 0),
             'monthly_bundle_codes':
-                (json['monthly_bundle_codes'] as num?)?.toInt(),
-            'max_users': (json['max_users'] as num?)?.toInt(),
-            'max_stores': (json['max_stores'] as num?)?.toInt(),
-            'max_drivers': (json['max_drivers'] as num?)?.toInt(),
+                _parseInt(json['monthly_bundle_codes'], fallback: 0),
+            'max_users': _parseInt(json['max_users'], fallback: 0),
+            'max_stores': _parseInt(json['max_stores'], fallback: 0),
+            'max_drivers': _parseInt(json['max_drivers'], fallback: 0),
             if (metadata?['transport_connections_per_month'] != null)
               'transport_connections_per_month':
                   metadata?['transport_connections_per_month'],
@@ -286,9 +301,9 @@ abstract class Plan with _$Plan {
     final userLimits = userLimitsRaw is Map
         ? _parseUserLimits(userLimitsRaw)
         : _parseUserLimits({
-            'store_keepers': (json['max_stores'] as num?)?.toInt() ?? 1,
-            'drivers': (json['max_drivers'] as num?)?.toInt() ?? 1,
-            'admin_users': (json['max_users'] as num?)?.toInt() ?? 1,
+            'store_keepers': _parseInt(json['max_stores'], fallback: 1),
+            'drivers': _parseInt(json['max_drivers'], fallback: 1),
+            'admin_users': _parseInt(json['max_users'], fallback: 1),
             'active_products': 1,
           });
     final storageGb = (json['storage_gb'] as num?)?.toInt() ?? 1;

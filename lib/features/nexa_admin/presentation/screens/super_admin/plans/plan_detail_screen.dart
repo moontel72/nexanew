@@ -72,6 +72,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
           body: state.maybeMap(
             loading: (_) => const Center(child: CircularProgressIndicator()),
             planDetailLoaded: (s) => _buildDetail(context, s.plan),
+            planUpdated: (s) => _buildDetail(context, s.plan),
             error: (s) => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -768,4 +769,3 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     );
   }
 }
-
