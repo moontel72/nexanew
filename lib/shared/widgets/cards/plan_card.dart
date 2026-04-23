@@ -38,8 +38,8 @@ class PlanCard extends StatelessWidget {
     }
 
     final units = compactInt(limits['monthly_unit_codes']);
-    final drivers = compactInt(limits['max_drivers'] ?? limits['drivers']);
-    final stores = compactInt(limits['max_stores'] ?? limits['stores']);
+    final drivers = compactInt(plan.userLimits.drivers);
+    final stores = compactInt(plan.userLimits.storeKeepers);
 
     return Card(
       margin: margin ?? EdgeInsets.only(bottom: 12.h),
@@ -169,7 +169,7 @@ class PlanCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Units: $units | Drivers: $drivers | Stores: $stores',
+                      'Units: $units | Drivers: $drivers | Store Keepers: $stores',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
