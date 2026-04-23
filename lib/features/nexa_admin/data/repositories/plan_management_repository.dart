@@ -33,18 +33,39 @@ Map<String, dynamic> _normalizePlanJson(Map<String, dynamic> json) {
   normalized['sort_order'] = (normalized['sort_order'] as num?)?.toInt() ?? (metadata['sort_order'] as num?)?.toInt() ?? 0;
   normalized['billing_cycle'] = normalized['billing_cycle']?.toString() ?? metadata['billing_cycle']?.toString() ?? 'monthly';
 
+  final limitsRaw = normalized['limits'];
+  final limitsFromApi = limitsRaw is Map
+      ? Map<String, dynamic>.from(limitsRaw.cast<String, dynamic>())
+      : <String, dynamic>{};
+
+  int intOrZero(dynamic v) => toInt(v) ?? 0;
+
   normalized['limits'] = <String, dynamic>{
-    'monthly_unit_codes': toInt(normalized['monthly_unit_codes']),
-    'monthly_packet_codes': toInt(normalized['monthly_packet_codes']),
-    'monthly_carton_codes': toInt(normalized['monthly_carton_codes']),
-    'monthly_bundle_codes': toInt(normalized['monthly_bundle_codes']),
-    'max_users': toInt(normalized['max_users']),
-    'max_stores': toInt(normalized['max_stores']),
-    'max_drivers': toInt(normalized['max_drivers']),
+    ...limitsFromApi,
+    'monthly_unit_codes': intOrZero(
+      limitsFromApi['monthly_unit_codes'] ?? normalized['monthly_unit_codes'],
+    ),
+    'monthly_packet_codes': intOrZero(
+      limitsFromApi['monthly_packet_codes'] ?? normalized['monthly_packet_codes'],
+    ),
+    'monthly_carton_codes': intOrZero(
+      limitsFromApi['monthly_carton_codes'] ?? normalized['monthly_carton_codes'],
+    ),
+    'monthly_bundle_codes': intOrZero(
+      limitsFromApi['monthly_bundle_codes'] ?? normalized['monthly_bundle_codes'],
+    ),
+    if (limitsFromApi.containsKey('is_custom')) 'is_custom': limitsFromApi['is_custom'],
+    if (!limitsFromApi.containsKey('is_custom') && metadata.containsKey('is_custom'))
+      'is_custom': metadata['is_custom'],
     if (metadata['transport_connections_per_month'] != null)
-      'transport_connections_per_month': toInt(metadata['transport_connections_per_month']) ?? metadata['transport_connections_per_month'],
+      'transport_connections_per_month': intOrZero(
+        limitsFromApi['transport_connections_per_month'] ??
+            metadata['transport_connections_per_month'],
+      ),
     if (metadata['max_loads_per_month'] != null)
-      'max_loads_per_month': toInt(metadata['max_loads_per_month']) ?? metadata['max_loads_per_month'],
+      'max_loads_per_month': intOrZero(
+        limitsFromApi['max_loads_per_month'] ?? metadata['max_loads_per_month'],
+      ),
   };
 
   normalized['metadata'] = metadata;
