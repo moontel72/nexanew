@@ -250,7 +250,9 @@ class ProductController extends Controller
 
         $invoice = null;
 
-        DB::transaction(function () use ($query, $subscription, $plan, $product, $companyId, $toPublish, $data, $now, &$invoice) {
+        $usedBefore = $used;
+
+        DB::transaction(function () use ($query, $subscription, $plan, $product, $companyId, $toPublish, $data, $now, $usedBefore, &$invoice) {
             $ids = (clone $query)->pluck('id')->map(fn ($v) => (string) $v)->all();
 
             $linkQuery = clone $query;
@@ -285,6 +287,7 @@ class ProductController extends Controller
                     'product_name' => (string) ($product->name ?? ''),
                     'product_batch_number' => $data['product_batch_number'] ?? null,
                     'code_ids' => $ids,
+                    'used_before' => $usedBefore,
                 ],
             );
 
@@ -324,8 +327,20 @@ class ProductController extends Controller
         array $context = [],
     ): Invoice {
         $currency = (string) ($plan->currency ?? 'USD');
+        $usedBefore = (int) ($context['used_before'] ?? 0);
+        $freeQuota = 0;
+        $meta = $plan->metadata;
+        if (is_array($meta) && isset($meta['free_quota']) && is_array($meta['free_quota'])) {
+            $freeQuota = (int) ($meta['free_quota'][$codeType] ?? 0);
+        }
+
         $unitPrice = $this->calculatePublishUnitPrice($plan, $codeType);
-        $subtotal = round($unitPrice * max(0, $quantity), 2);
+
+        $billableQty = max(0, ($usedBefore + max(0, $quantity)) - $freeQuota) - max(0, $usedBefore - $freeQuota);
+        $billableQty = max(0, min((int) $quantity, (int) $billableQty));
+        $freeApplied = max(0, (int) $quantity - (int) $billableQty);
+
+        $subtotal = round($unitPrice * max(0, $billableQty), 2);
 
         $issueDate = Carbon::parse($publishedAt)->toDateString();
         $dueDate = Carbon::parse($publishedAt)->copy()->addDays(7)->toDateString();
@@ -351,7 +366,7 @@ class ProductController extends Controller
                 [
                     'id' => (string) Str::uuid(),
                     'description' => $codeType === 'unit' ? 'Unit codes publish' : ($codeType . ' codes publish'),
-                    'quantity' => (float) $quantity,
+                    'quantity' => (float) $billableQty,
                     'unit_price' => $unitPrice,
                     'total' => $subtotal,
                     'currency' => $currency,
@@ -361,18 +376,29 @@ class ProductController extends Controller
                     'period_end' => $periodEnd,
                     'metadata' => [
                         'source' => 'publish_codes',
+                        'used_before' => $usedBefore,
+                        'free_quota' => $freeQuota,
+                        'free_applied' => $freeApplied,
+                        'billable_count' => $billableQty,
+                        'rate' => $unitPrice,
+                        'monthly_fee' => (float) ($plan->monthly_price ?? 0),
                     ],
                 ],
             ],
-            'status' => $subtotal > 0 ? 'pending' : 'paid',
-            'payment_date' => $subtotal > 0 ? null : $issueDate,
-            'payment_method' => $subtotal > 0 ? null : 'system',
-            'payment_reference' => $subtotal > 0 ? null : 'FREE',
+            'status' => 'paid',
+            'payment_date' => $issueDate,
+            'payment_method' => 'system',
+            'payment_reference' => $subtotal > 0 ? 'ACCRUED' : 'FREE',
             'metadata' => array_merge([
                 'source' => 'publish_codes',
                 'code_type' => $codeType,
                 'quantity' => $quantity,
+                'billable_count' => $billableQty,
+                'free_applied' => $freeApplied,
+                'free_quota' => $freeQuota,
+                'used_before' => $usedBefore,
                 'unit_price' => $unitPrice,
+                'monthly_fee' => (float) ($plan->monthly_price ?? 0),
                 'published_at' => Carbon::parse($publishedAt)->toISOString(),
                 'plan_id_at_publish' => (string) $plan->id,
                 'plan_type_at_publish' => (string) ($plan->type ?? ''),

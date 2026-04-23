@@ -44,6 +44,7 @@ class InvoiceService
             // Calculate usage charges if provided
             $usageCharges = 0;
             $invoiceItems = [];
+            $currency = $company->currency ?? "USD";
 
             if (!empty($usageData)) {
                 $usageCharges = $this->calculateUsageCharges($plan, $usageData);
@@ -59,6 +60,8 @@ class InvoiceService
                         "quantity" => $item["quantity"] ?? 1,
                         "unit_price" => $item["unit_price"] ?? 0,
                         "total_price" => $item["total_price"] ?? 0,
+                        "total" => $item["total_price"] ?? 0,
+                        "currency" => $currency,
                         "metadata" => $item["metadata"] ?? null,
                     ];
                 }
@@ -72,6 +75,8 @@ class InvoiceService
                 "quantity" => 1,
                 "unit_price" => $plan->monthly_price,
                 "total_price" => $plan->monthly_price,
+                "total" => $plan->monthly_price,
+                "currency" => $currency,
                 "metadata" => [
                     "plan_id" => $plan->id,
                     "plan_name" => $plan->name,
@@ -91,15 +96,15 @@ class InvoiceService
                 "company_id" => $company->id,
                 "subscription_id" => $subscription->id,
                 "invoice_number" => $invoiceNumber,
-                "type" => "subscription",
                 "period_start" => $periodStart,
                 "period_end" => $periodEnd,
                 "issue_date" => Carbon::now(),
                 "due_date" => Carbon::now()->addDays(30),
                 "subtotal" => $subtotal,
                 "tax_amount" => $taxAmount,
+                "discount_amount" => 0,
                 "total_amount" => $totalAmount,
-                "currency" => $company->currency ?? "USD",
+                "currency" => $currency,
                 "items" => $invoiceItems,
                 "status" => "pending",
                 "notes" => "Monthly subscription invoice for {$plan->name} plan",
@@ -163,6 +168,8 @@ class InvoiceService
                     "quantity" => $quantity,
                     "unit_price" => $unitPrice,
                     "total_price" => $totalPrice,
+                    "total" => $totalPrice,
+                    "currency" => $data["currency"] ?? ($company->currency ?? "USD"),
                     "metadata" => $item["metadata"] ?? null,
                 ];
             }
@@ -177,7 +184,6 @@ class InvoiceService
                 "id" => Str::uuid()->toString(),
                 "company_id" => $company->id,
                 "invoice_number" => $invoiceNumber,
-                "type" => "manual",
                 "period_start" =>
                     $data["period_start"] ?? Carbon::now()->startOfMonth(),
                 "period_end" =>
@@ -186,6 +192,7 @@ class InvoiceService
                 "due_date" => $data["due_date"] ?? Carbon::now()->addDays(30),
                 "subtotal" => $subtotal,
                 "tax_amount" => $taxAmount,
+                "discount_amount" => 0,
                 "total_amount" => $totalAmount,
                 "currency" =>
                     $data["currency"] ?? ($company->currency ?? "USD"),

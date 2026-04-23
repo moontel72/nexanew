@@ -501,6 +501,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           // Items list
           ...invoice.items.map((item) => _buildInvoiceItemRow(item)),
           const SizedBox(height: 16),
+          _buildBillingBreakdown(invoice),
+          const SizedBox(height: 16),
           // Totals
           _buildInvoiceTotals(invoice),
         ],
@@ -563,6 +565,56 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               textAlign: TextAlign.right,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBillingBreakdown(Invoice invoice) {
+    final publishItem = invoice.items.cast<InvoiceItem?>().firstWhere(
+          (i) => (i?.metadata?['source']?.toString() ?? '') == 'publish_codes',
+          orElse: () => null,
+        );
+    if (publishItem == null) return const SizedBox.shrink();
+
+    final monthlyFee =
+        (publishItem.metadata?['monthly_fee'] as num?)?.toDouble() ?? 0.0;
+    final rate =
+        (publishItem.metadata?['rate'] as num?)?.toDouble() ?? publishItem.unitPrice;
+    final billableCount =
+        (publishItem.metadata?['billable_count'] as num?)?.toDouble() ??
+        publishItem.quantity;
+    final freeApplied =
+        (publishItem.metadata?['free_applied'] as num?)?.toDouble() ?? 0.0;
+    final codeCount = (publishItem.codeCount ?? 0).toDouble();
+
+    final usageCharge = billableCount * rate;
+    final monthlyTotal = monthlyFee + usageCharge;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Billing Breakdown',
+            style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          _buildTotalRow('Monthly Fee', monthlyFee),
+          _buildTotalRow('Codes Published', codeCount),
+          _buildTotalRow('Free Codes Applied', freeApplied),
+          _buildTotalRow('Billed Codes', billableCount),
+          _buildTotalRow('Per-Unit Rate', rate),
+          const Divider(),
+          _buildTotalRow('Usage Charge (Billed × Rate)', usageCharge),
+          _buildTotalRow('Monthly Total (Fee + Usage)', monthlyTotal, isTotal: true),
         ],
       ),
     );

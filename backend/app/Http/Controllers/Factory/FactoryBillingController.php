@@ -124,15 +124,35 @@ class FactoryBillingController extends Controller
 
             // Apply filters
             if ($request->has("start_date")) {
-                $query->where(
-                    "issue_date",
-                    ">=",
-                    $request->input("start_date"),
-                );
+                try {
+                    $start = Carbon::parse($request->input("start_date"))
+                        ->toDateString();
+                    $query->where("issue_date", ">=", $start);
+                } catch (\Exception $e) {
+                    return response()->json(
+                        [
+                            "success" => false,
+                            "message" => "Invalid start_date",
+                        ],
+                        422,
+                    );
+                }
             }
 
             if ($request->has("end_date")) {
-                $query->where("issue_date", "<=", $request->input("end_date"));
+                try {
+                    $end = Carbon::parse($request->input("end_date"))
+                        ->toDateString();
+                    $query->where("issue_date", "<=", $end);
+                } catch (\Exception $e) {
+                    return response()->json(
+                        [
+                            "success" => false,
+                            "message" => "Invalid end_date",
+                        ],
+                        422,
+                    );
+                }
             }
 
             if ($request->has("statuses")) {
@@ -141,19 +161,31 @@ class FactoryBillingController extends Controller
             }
 
             if ($request->has("min_amount")) {
-                $query->where(
-                    "total_amount",
-                    ">=",
-                    $request->input("min_amount"),
-                );
+                $min = $request->input("min_amount");
+                if (!is_numeric($min)) {
+                    return response()->json(
+                        [
+                            "success" => false,
+                            "message" => "Invalid min_amount",
+                        ],
+                        422,
+                    );
+                }
+                $query->where("total_amount", ">=", $min);
             }
 
             if ($request->has("max_amount")) {
-                $query->where(
-                    "total_amount",
-                    "<=",
-                    $request->input("max_amount"),
-                );
+                $max = $request->input("max_amount");
+                if (!is_numeric($max)) {
+                    return response()->json(
+                        [
+                            "success" => false,
+                            "message" => "Invalid max_amount",
+                        ],
+                        422,
+                    );
+                }
+                $query->where("total_amount", "<=", $max);
             }
 
             if ($request->has("search")) {
@@ -168,13 +200,29 @@ class FactoryBillingController extends Controller
             }
 
             // Apply sorting
+            $allowedSortBy = [
+                "issue_date",
+                "due_date",
+                "created_at",
+                "updated_at",
+                "total_amount",
+                "status",
+                "invoice_number",
+            ];
             $sortBy = $request->input("sort_by", "issue_date");
+            if (!in_array($sortBy, $allowedSortBy, true)) {
+                $sortBy = "issue_date";
+            }
             $sortDesc = $request->input("sort_desc", "true") === "true";
             $query->orderBy($sortBy, $sortDesc ? "desc" : "asc");
 
             // Pagination
             $page = (int) $request->input("page", 1);
             $limit = (int) $request->input("limit", 20);
+            if ($limit <= 0) {
+                $limit = 20;
+            }
+            $limit = min(200, $limit);
             $offset = ($page - 1) * $limit;
 
             $total = $query->count();
