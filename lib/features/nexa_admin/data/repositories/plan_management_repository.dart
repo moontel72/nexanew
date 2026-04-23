@@ -7,6 +7,58 @@ import 'package:nexatrace_system/core/services/api_client.dart';
 import 'package:nexatrace_system/shared/models/subscription/plan_model.dart';
 import 'package:nexatrace_system/shared/models/subscription/plan_type.dart';
 
+Map<String, dynamic> _normalizePlanJson(Map<String, dynamic> json) {
+  final normalized = Map<String, dynamic>.from(json);
+  final metadataRaw = normalized['metadata'];
+  final metadata = metadataRaw is Map
+      ? Map<String, dynamic>.from(metadataRaw.cast<String, dynamic>())
+      : <String, dynamic>{};
+
+  normalized['is_featured'] = normalized['is_featured'] == true || metadata['is_featured'] == true;
+  normalized['is_popular'] = normalized['is_popular'] == true || metadata['is_popular'] == true;
+  normalized['sort_order'] = (normalized['sort_order'] as num?)?.toInt() ?? (metadata['sort_order'] as num?)?.toInt() ?? 0;
+  normalized['billing_cycle'] = normalized['billing_cycle']?.toString() ?? metadata['billing_cycle']?.toString() ?? 'monthly';
+
+  normalized['limits'] = <String, dynamic>{
+    'monthly_unit_codes': (normalized['monthly_unit_codes'] as num?)?.toInt(),
+    'monthly_packet_codes': (normalized['monthly_packet_codes'] as num?)?.toInt(),
+    'monthly_carton_codes': (normalized['monthly_carton_codes'] as num?)?.toInt(),
+    'monthly_bundle_codes': (normalized['monthly_bundle_codes'] as num?)?.toInt(),
+    'max_users': (normalized['max_users'] as num?)?.toInt(),
+    'max_stores': (normalized['max_stores'] as num?)?.toInt(),
+    'max_drivers': (normalized['max_drivers'] as num?)?.toInt(),
+    if (metadata['transport_connections_per_month'] != null)
+      'transport_connections_per_month': metadata['transport_connections_per_month'],
+    if (metadata['max_loads_per_month'] != null)
+      'max_loads_per_month': metadata['max_loads_per_month'],
+  };
+
+  normalized['metadata'] = metadata;
+  normalized['user_limits'] = normalized['user_limits'] is Map
+      ? normalized['user_limits']
+      : {
+          'store_keepers': ((normalized['max_stores'] as num?)?.toInt() ?? 1),
+          'drivers': ((normalized['max_drivers'] as num?)?.toInt() ?? 1),
+          'admin_users': ((normalized['max_users'] as num?)?.toInt() ?? 1),
+          'active_products': 1,
+        };
+
+  final featuresRaw = normalized['features'];
+  if (featuresRaw is List) {
+    final now = DateTime.now().toIso8601String();
+    normalized['features'] = featuresRaw.map((f) {
+      if (f is Map) return f;
+      final id = f?.toString() ?? '';
+      return {
+        'id': id, 'name': id, 'description': '', 'type': 'core',
+        'is_included': true, 'sort_order': 0, 'is_highlight': false,
+        'metadata': const <String, dynamic>{}, 'created_at': now, 'updated_at': now,
+      };
+    }).toList();
+  }
+  return normalized;
+}
+
 /// Plan response model
 class PlansResponse {
   final List<Plan> plans;
@@ -32,7 +84,7 @@ class PlansResponse {
       plans = data.map((plan) {
         if (plan is Map) {
           try {
-            return Plan.fromJson(Map<String, dynamic>.from(plan));
+            return Plan.fromJson(_normalizePlanJson(Map<String, dynamic>.from(plan)));
           } catch (e) {
             // Return a default plan if parsing fails
             return Plan(
@@ -121,7 +173,7 @@ class PlanManagementRepository {
       if (response is List) {
         final plans = response
             .whereType<Map>()
-            .map((e) => Plan.fromJson(Map<String, dynamic>.from(e)))
+            .map((e) => Plan.fromJson(_normalizePlanJson(Map<String, dynamic>.from(e))))
             .toList();
         return PlansResponse(
           plans: plans,
@@ -178,7 +230,7 @@ class PlanManagementRepository {
         throw Exception('Invalid plan data format');
       }
 
-      return Plan.fromJson(Map<String, dynamic>.from(data));
+      return Plan.fromJson(_normalizePlanJson(Map<String, dynamic>.from(data)));
     } catch (error) {
       if (error is NotFoundException) {
         throw Exception('Plan not found');
@@ -205,7 +257,7 @@ class PlanManagementRepository {
         throw Exception('Invalid plan data format');
       }
 
-      return Plan.fromJson(Map<String, dynamic>.from(data));
+      return Plan.fromJson(_normalizePlanJson(Map<String, dynamic>.from(data)));
     } catch (error) {
       if (error is ValidationException) {
         rethrow;
@@ -232,7 +284,7 @@ class PlanManagementRepository {
         throw Exception('Invalid plan data format');
       }
 
-      return Plan.fromJson(Map<String, dynamic>.from(data));
+      return Plan.fromJson(_normalizePlanJson(Map<String, dynamic>.from(data)));
     } catch (error) {
       if (error is ValidationException) {
         rethrow;
@@ -474,7 +526,7 @@ class PlanManagementRepository {
         throw Exception('Invalid plan data format');
       }
 
-      return Plan.fromJson(Map<String, dynamic>.from(data));
+      return Plan.fromJson(_normalizePlanJson(Map<String, dynamic>.from(data)));
     } catch (error) {
       throw Exception('Failed to duplicate plan: ${error.toString()}');
     }
