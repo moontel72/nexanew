@@ -212,11 +212,12 @@ class PlanManagementBloc
       }
       if (event.currency != null) updateData['currency'] = event.currency;
       if (event.status != null) updateData['status'] = event.status;
-      if (event.isFeatured != null) {
-        updateData['is_featured'] = event.isFeatured;
-      }
-      if (event.isPopular != null) updateData['is_popular'] = event.isPopular;
-      if (event.sortOrder != null) updateData['sort_order'] = event.sortOrder;
+      final metaUpdate = <String, dynamic>{
+        ...?event.metadata,
+        if (event.isFeatured != null) 'is_featured': event.isFeatured,
+        if (event.isPopular != null) 'is_popular': event.isPopular,
+        if (event.sortOrder != null) 'sort_order': event.sortOrder,
+      };
 
       if (event.limits != null) {
         final limits = event.limits!;
@@ -242,11 +243,11 @@ class PlanManagementBloc
           updateData['max_users'] = limits['max_users'];
         }
         if (limits['transport_connections_per_month'] != null) {
-          updateData['transport_connections_per_month'] =
+          metaUpdate['transport_connections_per_month'] =
               limits['transport_connections_per_month'];
         }
         if (limits['max_loads_per_month'] != null) {
-          updateData['max_loads_per_month'] = limits['max_loads_per_month'];
+          metaUpdate['max_loads_per_month'] = limits['max_loads_per_month'];
         }
       }
 
@@ -254,8 +255,8 @@ class PlanManagementBloc
         updateData['features'] = event.features!.map((f) => f.id).toList();
       }
 
-      if (event.metadata != null) {
-        updateData['metadata'] = event.metadata;
+      if (metaUpdate.isNotEmpty) {
+        updateData['metadata'] = metaUpdate;
       }
 
       final plan = await planRepository.updatePlan(event.id, updateData);

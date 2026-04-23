@@ -239,7 +239,28 @@ class BillingRepositoryImpl implements BillingRepository {
     if (filter.searchQuery != null) {
       params['search'] = filter.searchQuery;
     }
-    params['sort_by'] = filter.sortBy;
+    String sortBy = filter.sortBy;
+    switch (sortBy) {
+      case 'issueDate':
+        sortBy = 'issue_date';
+        break;
+      case 'dueDate':
+        sortBy = 'due_date';
+        break;
+      case 'totalAmount':
+        sortBy = 'total_amount';
+        break;
+      case 'invoiceNumber':
+        sortBy = 'invoice_number';
+        break;
+      case 'createdAt':
+        sortBy = 'created_at';
+        break;
+      case 'updatedAt':
+        sortBy = 'updated_at';
+        break;
+    }
+    params['sort_by'] = sortBy;
     params['sort_desc'] = filter.sortDesc ? 'true' : 'false';
     params['page'] = filter.page;
     params['limit'] = filter.limit;

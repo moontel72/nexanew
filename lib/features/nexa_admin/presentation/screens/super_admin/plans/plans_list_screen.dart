@@ -91,15 +91,176 @@ class _PlansListScreenState extends State<PlansListScreen> {
   }
 
   void _onPlanTap(Plan plan) {
-    // TODO: Navigate to plan detail screen
-    /*
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PlanDetailScreen(planId: plan.id),
-      ),
+    final limits = plan.limits;
+    final metadata = plan.metadata ?? const <String, dynamic>{};
+    final publishRatesRaw = metadata['publish_rates'];
+    final publishRates = publishRatesRaw is Map
+        ? Map<String, dynamic>.from(publishRatesRaw.cast<String, dynamic>())
+        : const <String, dynamic>{};
+    final freeQuotaRaw = metadata['free_quota'];
+    final freeQuota = freeQuotaRaw is Map
+        ? Map<String, dynamic>.from(freeQuotaRaw.cast<String, dynamic>())
+        : const <String, dynamic>{};
+
+    String v(dynamic value) {
+      final s = value?.toString().trim() ?? '';
+      return s.isEmpty ? '-' : s;
+    }
+
+    Widget row(String label, String value) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 220,
+              child: Text(
+                label,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                value,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(plan.name),
+          content: SizedBox(
+            width: 720,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  row('Plan ID', v(plan.id)),
+                  row('Type', v(plan.type.name)),
+                  row('Status', v(plan.status.name)),
+                  row('Billing Cycle', v(plan.billingCycle)),
+                  row('Currency', v(plan.currency)),
+                  row('Monthly Price', plan.monthlyPrice.toStringAsFixed(2)),
+                  row('Yearly Price', plan.yearlyPrice.toStringAsFixed(2)),
+                  row('Featured', plan.isFeatured ? 'Yes' : 'No'),
+                  row('Popular', plan.isPopular ? 'Yes' : 'No'),
+                  row('Sort Order', v(plan.sortOrder)),
+                  const Divider(height: 24),
+                  Text(
+                    'Limits',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  row(
+                    'Monthly Unit Codes',
+                    v(limits['monthly_unit_codes']),
+                  ),
+                  row(
+                    'Monthly Packet Codes',
+                    v(limits['monthly_packet_codes']),
+                  ),
+                  row(
+                    'Monthly Carton Codes',
+                    v(limits['monthly_carton_codes']),
+                  ),
+                  row(
+                    'Monthly Bundle Codes',
+                    v(limits['monthly_bundle_codes']),
+                  ),
+                  row('Max Stores', v(limits['max_stores'] ?? limits['stores'])),
+                  row(
+                    'Max Drivers',
+                    v(limits['max_drivers'] ?? limits['drivers']),
+                  ),
+                  row('Max Users', v(limits['max_users'])),
+                  row(
+                    'Transport Connections / Month',
+                    v(limits['transport_connections_per_month']),
+                  ),
+                  row('Loads / Month', v(limits['max_loads_per_month'])),
+                  const Divider(height: 24),
+                  Text(
+                    'Publish Rates',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  row('Unit', v(publishRates['unit'])),
+                  row('Packet', v(publishRates['packet'])),
+                  row('Carton', v(publishRates['carton'])),
+                  row('Bundle', v(publishRates['bundle'])),
+                  const Divider(height: 24),
+                  Text(
+                    'Free Quota',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  row('Unit', v(freeQuota['unit'])),
+                  row('Packet', v(freeQuota['packet'])),
+                  row('Carton', v(freeQuota['carton'])),
+                  row('Bundle', v(freeQuota['bundle'])),
+                  const Divider(height: 24),
+                  Text(
+                    'Features',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  if (plan.features.isEmpty)
+                    const Text('-')
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: plan.features
+                          .map(
+                            (f) => Chip(
+                              label: Text(f.name),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _showEditPlanDialog(plan);
+              },
+              child: const Text('Edit'),
+            ),
+          ],
+        );
+      },
     );
-    */
   }
 
   void _onEditPlan(Plan plan) {
@@ -139,6 +300,43 @@ class _PlansListScreenState extends State<PlansListScreen> {
     bool isFeatured = plan.isFeatured;
     bool isPopular = plan.isPopular;
     final sortOrderCtrl = TextEditingController(text: plan.sortOrder.toString());
+
+    final limits = plan.limits;
+    String intText(dynamic value) {
+      final v = value;
+      if (v == null) return '';
+      if (v is num) return v.toInt().toString();
+      final s = v.toString().trim();
+      return s;
+    }
+
+    final monthlyUnitCodesCtrl = TextEditingController(
+      text: intText(limits['monthly_unit_codes']),
+    );
+    final monthlyPacketCodesCtrl = TextEditingController(
+      text: intText(limits['monthly_packet_codes']),
+    );
+    final monthlyCartonCodesCtrl = TextEditingController(
+      text: intText(limits['monthly_carton_codes']),
+    );
+    final monthlyBundleCodesCtrl = TextEditingController(
+      text: intText(limits['monthly_bundle_codes']),
+    );
+    final maxStoresCtrl = TextEditingController(
+      text: intText(limits['max_stores'] ?? limits['stores']),
+    );
+    final maxDriversCtrl = TextEditingController(
+      text: intText(limits['max_drivers'] ?? limits['drivers']),
+    );
+    final maxUsersCtrl = TextEditingController(
+      text: intText(limits['max_users']),
+    );
+    final transportConnectionsCtrl = TextEditingController(
+      text: intText(limits['transport_connections_per_month']),
+    );
+    final loadsPerMonthCtrl = TextEditingController(
+      text: intText(limits['max_loads_per_month']),
+    );
 
     showDialog(
       context: context,
@@ -332,6 +530,130 @@ class _PlansListScreenState extends State<PlansListScreen> {
                         title: const Text('Popular'),
                         contentPadding: EdgeInsets.zero,
                       ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Limits',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: monthlyUnitCodesCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Monthly Unit Codes',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: monthlyPacketCodesCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Monthly Packet Codes',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: monthlyCartonCodesCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Monthly Carton Codes',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: monthlyBundleCodesCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Monthly Bundle Codes',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: maxStoresCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Max Stores',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: maxDriversCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Max Drivers',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: maxUsersCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Max Users',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: transportConnectionsCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Transport Connections / Month',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: loadsPerMonthCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Loads / Month',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
                       if (availableFeatures.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Align(
@@ -398,17 +720,41 @@ class _PlansListScreenState extends State<PlansListScreen> {
                     final parsedUnitCodePrice = unitCodePriceText.isEmpty
                         ? null
                         : double.tryParse(unitCodePriceText);
-                    final metadata = parsedUnitCodePrice == null
-                        ? null
-                        : <String, dynamic>{
-                            ...?plan.metadata,
-                            'publish_rates': <String, dynamic>{
-                              'unit': parsedUnitCodePrice,
-                              'packet': parsedUnitCodePrice * 3,
-                              'carton': parsedUnitCodePrice * 5,
-                              'bundle': parsedUnitCodePrice * 10,
-                            },
-                          };
+                    final metadata = <String, dynamic>{...?(plan.metadata)};
+                    if (parsedUnitCodePrice != null) {
+                      metadata['publish_rates'] = <String, dynamic>{
+                        'unit': parsedUnitCodePrice,
+                        'packet': parsedUnitCodePrice * 3,
+                        'carton': parsedUnitCodePrice * 5,
+                        'bundle': parsedUnitCodePrice * 10,
+                      };
+                    }
+
+                    final limitsUpdate = <String, dynamic>{};
+                    final mu = int.tryParse(monthlyUnitCodesCtrl.text.trim());
+                    if (mu != null) limitsUpdate['monthly_unit_codes'] = mu;
+                    final mp =
+                        int.tryParse(monthlyPacketCodesCtrl.text.trim());
+                    if (mp != null) limitsUpdate['monthly_packet_codes'] = mp;
+                    final mc =
+                        int.tryParse(monthlyCartonCodesCtrl.text.trim());
+                    if (mc != null) limitsUpdate['monthly_carton_codes'] = mc;
+                    final mb =
+                        int.tryParse(monthlyBundleCodesCtrl.text.trim());
+                    if (mb != null) limitsUpdate['monthly_bundle_codes'] = mb;
+                    final ms = int.tryParse(maxStoresCtrl.text.trim());
+                    if (ms != null) limitsUpdate['max_stores'] = ms;
+                    final md = int.tryParse(maxDriversCtrl.text.trim());
+                    if (md != null) limitsUpdate['max_drivers'] = md;
+                    final mu2 = int.tryParse(maxUsersCtrl.text.trim());
+                    if (mu2 != null) limitsUpdate['max_users'] = mu2;
+                    final tc =
+                        int.tryParse(transportConnectionsCtrl.text.trim());
+                    if (tc != null) {
+                      limitsUpdate['transport_connections_per_month'] = tc;
+                    }
+                    final lm = int.tryParse(loadsPerMonthCtrl.text.trim());
+                    if (lm != null) limitsUpdate['max_loads_per_month'] = lm;
 
                     Navigator.pop(context);
                     context.read<PlanManagementBloc>().add(
@@ -424,10 +770,11 @@ class _PlansListScreenState extends State<PlansListScreen> {
                             isFeatured: isFeatured,
                             isPopular: isPopular,
                             sortOrder: parsedSortOrder,
+                            limits: limitsUpdate.isEmpty ? null : limitsUpdate,
                             features: selectedFeatureIds
                                 .map((id) => PlanFeatureInput(id: id))
                                 .toList(),
-                            metadata: metadata,
+                            metadata: metadata.isEmpty ? null : metadata,
                           ),
                         );
                   },
