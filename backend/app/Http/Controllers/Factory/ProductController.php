@@ -442,7 +442,14 @@ class ProductController extends Controller
         $driver = DB::getDriverName();
         $jsonExpr = null;
         if ($driver === 'pgsql') {
-            $jsonExpr = DB::raw("jsonb_set(coalesce(metadata,'{}'::jsonb), '{publish_invoice_id}', '\"{$invoiceId}\"', true)");
+            $jsonExpr = DB::raw(
+                "jsonb_set(" .
+                    "case when jsonb_typeof(metadata) = 'object' then metadata else '{}'::jsonb end," .
+                    " '{publish_invoice_id}'," .
+                    " to_jsonb('{$invoiceId}'::text)," .
+                    " true" .
+                ")"
+            );
         } else {
             $jsonExpr = DB::raw("JSON_SET(COALESCE(metadata, JSON_OBJECT()), '$.publish_invoice_id', '{$invoiceId}')");
         }

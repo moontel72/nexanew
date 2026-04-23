@@ -110,7 +110,7 @@ class FactoryProductsRepository {
               .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
-        'warranty_months': ?warrantyMonths,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
 
@@ -140,7 +140,7 @@ class FactoryProductsRepository {
               .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
-        'warranty_months': ?warrantyMonths,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
 

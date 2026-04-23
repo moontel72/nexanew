@@ -87,10 +87,32 @@ class ApiClient {
   }
 
   // Initialize headers with auth token
-  Future<void> _initializeHeaders() async {
-    final token = await _getAuthToken();
-    if (token != null) {
+  Future<void> _initializeHeaders({String? endpoint}) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String? token;
+    if (endpoint != null) {
+      final path = endpoint.contains('://')
+          ? (Uri.tryParse(endpoint)?.path ?? endpoint)
+          : endpoint;
+      final normalizedPath = path.startsWith('/') ? path : '/$path';
+
+      final isFactoryEndpoint = normalizedPath.startsWith('/factory/') ||
+          normalizedPath.startsWith('/codes/');
+
+      if (isFactoryEndpoint) {
+        token = prefs.getString('factory_auth_token');
+      }
+
+      token ??= prefs.getString(AppConstants.authTokenKey);
+    } else {
+      token = prefs.getString(AppConstants.authTokenKey);
+    }
+
+    if (token != null && token.trim().isNotEmpty) {
       _headers['Authorization'] = 'Bearer $token';
+    } else {
+      _headers.remove('Authorization');
     }
   }
 
@@ -202,7 +224,7 @@ class ApiClient {
   }) async {
     try {
       if (requiresAuth) {
-        await _initializeHeaders();
+        await _initializeHeaders(endpoint: endpoint);
       }
 
       final requestHeaders = {
@@ -257,7 +279,7 @@ class ApiClient {
   }) async {
     try {
       if (requiresAuth) {
-        await _initializeHeaders();
+        await _initializeHeaders(endpoint: endpoint);
       }
 
       final requestHeaders = {
@@ -360,7 +382,7 @@ class ApiClient {
           endpoint != ApiEndpoints.login) {
         try {
           await refreshToken();
-          await _initializeHeaders();
+          await _initializeHeaders(endpoint: endpoint);
           return await _makeRequest(
             method,
             endpoint,

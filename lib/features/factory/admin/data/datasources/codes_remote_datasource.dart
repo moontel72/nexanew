@@ -1,5 +1,6 @@
 import 'package:nexatrace_system/core/constants/api_endpoints.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
+import 'package:flutter/foundation.dart';
 
 class CodesRemoteDatasource {
   final ApiService _api;
@@ -26,6 +27,11 @@ class CodesRemoteDatasource {
     String? search,
     String? status,
   }) async {
+    if (kDebugMode) {
+      debugPrint(
+        'DEBUG: listUnitCodes endpoint=${ApiEndpoints.unitCodes}/list page=$page limit=$limit search=$search status=$status',
+      );
+    }
     final res = await _api.get(
       '${ApiEndpoints.unitCodes}/list',
       queryParameters: {
@@ -48,7 +54,7 @@ class CodesRemoteDatasource {
       data: {
         'count': count,
         if (batchId != null && batchId.isNotEmpty) 'batch_id': batchId,
-        'unit_count': ?unitCount,
+        if (unitCount != null) 'unit_count': unitCount,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -78,8 +84,8 @@ class CodesRemoteDatasource {
         'count': count,
         if (batchId != null && batchId.isNotEmpty) 'batch_id': batchId,
         'packet_count': packetCount,
-        'total_units': ?totalUnits,
-        'units_per_packet': ?unitsPerPacket,
+        if (totalUnits != null) 'total_units': totalUnits,
+        if (unitsPerPacket != null) 'units_per_packet': unitsPerPacket,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -144,7 +150,7 @@ class CodesRemoteDatasource {
               .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
-        'warranty_months': ?warrantyMonths,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -158,6 +164,11 @@ class CodesRemoteDatasource {
     DateTime? expiryDate,
     int? warrantyMonths,
   }) async {
+    if (kDebugMode) {
+      debugPrint(
+        'DEBUG: publishUnitCodesForProduct productId=$productId codeIds=${unitCodeIds.length} batch=$productBatchNumber mfg=$manufacturingDate exp=$expiryDate warrantyMonths=$warrantyMonths',
+      );
+    }
     final res = await _api.post(
       ApiEndpoints.publishProductCodes.replaceFirst('{id}', productId),
       data: {
@@ -171,9 +182,12 @@ class CodesRemoteDatasource {
               .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
-        'warranty_months': ?warrantyMonths,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
+    if (kDebugMode) {
+      debugPrint('DEBUG: publishUnitCodesForProduct response=$res');
+    }
     return (res as Map).cast<String, dynamic>();
   }
 
@@ -198,7 +212,7 @@ class CodesRemoteDatasource {
               .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
-        'warranty_months': ?warrantyMonths,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -224,7 +238,7 @@ class CodesRemoteDatasource {
               .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
-        'warranty_months': ?warrantyMonths,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -271,7 +285,7 @@ class CodesRemoteDatasource {
               .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
-        'warranty_months': ?warrantyMonths,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -297,7 +311,7 @@ class CodesRemoteDatasource {
               .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
-        'warranty_months': ?warrantyMonths,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -344,7 +358,7 @@ class CodesRemoteDatasource {
               .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
-        'warranty_months': ?warrantyMonths,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -370,7 +384,7 @@ class CodesRemoteDatasource {
               .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
-        'warranty_months': ?warrantyMonths,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
     return (res as Map).cast<String, dynamic>();
