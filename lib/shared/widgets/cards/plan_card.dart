@@ -27,6 +27,20 @@ class PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final limits = plan.limits;
+
+    String compactInt(dynamic value) {
+      final n = value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+      if (n == null) return '-';
+      if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(n % 1000000 == 0 ? 0 : 1)}M';
+      if (n >= 1000) return '${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}k';
+      return n.toString();
+    }
+
+    final units = compactInt(limits['monthly_unit_codes']);
+    final drivers = compactInt(limits['max_drivers'] ?? limits['drivers']);
+    final stores = compactInt(limits['max_stores'] ?? limits['stores']);
+
     return Card(
       margin: margin ?? EdgeInsets.only(bottom: 12.h),
       elevation: 2,
@@ -148,6 +162,26 @@ class PlanCard extends StatelessWidget {
                 ),
               ],
 
+              SizedBox(height: 12.h),
+
+              // Quick Info (Limits)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Units: $units | Drivers: $drivers | Stores: $stores',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+                ],
+              ),
               SizedBox(height: 12.h),
 
               // Plan Footer with Action Buttons

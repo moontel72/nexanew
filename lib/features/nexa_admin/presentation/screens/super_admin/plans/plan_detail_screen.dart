@@ -1,113 +1,270 @@
-import 'dart:async';
-import 'package:flutter/material.dart' hide SearchBar;
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:nexatrace_system/core/errors/error_handler.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/cards/plan_card.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/plans/plan_detail_screen.dart';
-import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
-import 'package:nexatrace_system/shared/widgets/search/search_bar.dart'
-    as custom;
-import 'package:nexatrace_system/shared/models/subscription/plan_model.dart';
-import 'package:nexatrace_system/shared/models/subscription/plan_feature_model.dart';
-import 'package:nexatrace_system/shared/models/subscription/plan_type.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
-import 'package:nexatrace_system/shared/widgets/cards/kpi_card.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/plans/plan_filter_sheet.dart';
-import 'package:nexatrace_system/routes/app_router.dart';
-import 'package:nexatrace_system/shared/utils/extensions.dart';
+import 'package:nexatrace_system/shared/models/subscription/plan_feature_model.dart';
+import 'package:nexatrace_system/shared/models/subscription/plan_model.dart';
+import 'package:nexatrace_system/shared/theme/colors.dart';
 
-/// Plans List Screen - Displays all subscription plans with filtering and actions
-class PlansListScreen extends StatefulWidget {
-  final bool inShell;
+class PlanDetailScreen extends StatefulWidget {
+  final String planId;
 
-  const PlansListScreen({super.key, this.inShell = false});
+  const PlanDetailScreen({super.key, required this.planId});
 
   @override
-  State<PlansListScreen> createState() => _PlansListScreenState();
+  State<PlanDetailScreen> createState() => _PlanDetailScreenState();
 }
 
-class _PlansListScreenState extends State<PlansListScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  Timer? _searchDebounceTimer;
-  String _currentSearch = '';
-  String? _currentType;
-  String? _currentStatus;
-  String _currentSortBy = 'created_at';
-  String _currentSortOrder = 'desc';
-
+class _PlanDetailScreenState extends State<PlanDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPlans();
+    _load();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _searchDebounceTimer?.cancel();
-    super.dispose();
-  }
-
-  void _loadPlans() {
+  void _load() {
     context.read<PlanManagementBloc>().add(
-          PlanManagementEvent.loadPlans(
-            page: 1,
-            search: _currentSearch,
-            type: _currentType,
-            status: _currentStatus,
-            sortBy: _currentSortBy,
-            sortOrder: _currentSortOrder,
-          ),
+          PlanManagementEvent.loadPlan(widget.planId),
         );
   }
 
-  void _onSearchChanged(String value) {
-    _searchDebounceTimer?.cancel();
-    _searchDebounceTimer = Timer(const Duration(milliseconds: 500), () {
-      if (_currentSearch != value) {
-        _currentSearch = value;
-        _loadPlans();
-      }
-    });
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<PlanManagementBloc, PlanManagementState>(
+      listener: (context, state) {
+        state.maybeMap(
+          planUpdated: (s) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(s.message),
+                backgroundColor: AppColors.success,
+              ),
+            );
+            context.read<PlanManagementBloc>().add(
+                  PlanManagementEvent.loadPlan(widget.planId),
+                );
+          },
+          error: (s) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(s.message),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          },
+          orElse: () {},
+        );
+      },
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('Plan Details'),
+            actions: [
+              state.maybeMap(
+                planDetailLoaded: (s) => TextButton(
+                  onPressed: () => _showEditPlanDialog(s.plan),
+                  child: const Text('Edit'),
+                ),
+                orElse: () => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+          body: state.maybeMap(
+            loading: (_) => const Center(child: CircularProgressIndicator()),
+            planDetailLoaded: (s) => _buildDetail(context, s.plan),
+            error: (s) => Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(s.message),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: _load,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+        );
+      },
+    );
   }
 
-  void _onFilterApplied({
-    String? type,
-    String? status,
-    String? sortBy,
-    String? sortOrder,
-  }) {
-    setState(() {
-      _currentType = type;
-      _currentStatus = status;
-      _currentSortBy = sortBy ?? _currentSortBy;
-      _currentSortOrder = sortOrder ?? _currentSortOrder;
-    });
-    _loadPlans();
-  }
+  Widget _buildDetail(BuildContext context, Plan plan) {
+    final limits = plan.limits;
+    final metadata = plan.metadata ?? const <String, dynamic>{};
+    final publishRatesRaw = metadata['publish_rates'];
+    final publishRates = publishRatesRaw is Map
+        ? Map<String, dynamic>.from(publishRatesRaw.cast<String, dynamic>())
+        : const <String, dynamic>{};
+    final freeQuotaRaw = metadata['free_quota'];
+    final freeQuota = freeQuotaRaw is Map
+        ? Map<String, dynamic>.from(freeQuotaRaw.cast<String, dynamic>())
+        : const <String, dynamic>{};
 
-  void _onPlanTap(Plan plan) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PlanDetailScreen(planId: plan.id),
+    final otherMeta = <String, dynamic>{...metadata};
+    otherMeta.remove('publish_rates');
+    otherMeta.remove('free_quota');
+    otherMeta.remove('is_featured');
+    otherMeta.remove('is_popular');
+    otherMeta.remove('sort_order');
+    otherMeta.remove('billing_cycle');
+    otherMeta.remove('transport_connections_per_month');
+    otherMeta.remove('max_loads_per_month');
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(context, plan.name),
+          const SizedBox(height: 8),
+          _infoTable(context, <List<String>>[
+            ['Plan ID', _v(plan.id)],
+            ['Type', _v(plan.type.name)],
+            ['Status', _v(plan.status.name)],
+            ['Billing Cycle', _v(plan.billingCycle)],
+            ['Currency', _v(plan.currency)],
+            ['Monthly Price', plan.monthlyPrice.toStringAsFixed(2)],
+            ['Yearly Price', plan.yearlyPrice.toStringAsFixed(2)],
+            ['Featured', plan.isFeatured ? 'Yes' : 'No'],
+            ['Popular', plan.isPopular ? 'Yes' : 'No'],
+            ['Sort Order', _v(plan.sortOrder)],
+          ]),
+          const SizedBox(height: 20),
+          _sectionTitle(context, 'Limits'),
+          const SizedBox(height: 8),
+          _infoTable(context, <List<String>>[
+            ['Monthly Unit Codes', _v(limits['monthly_unit_codes'])],
+            ['Monthly Packet Codes', _v(limits['monthly_packet_codes'])],
+            ['Monthly Carton Codes', _v(limits['monthly_carton_codes'])],
+            ['Monthly Bundle Codes', _v(limits['monthly_bundle_codes'])],
+            ['Max Stores', _v(limits['max_stores'] ?? limits['stores'])],
+            ['Max Drivers', _v(limits['max_drivers'] ?? limits['drivers'])],
+            ['Max Users', _v(limits['max_users'])],
+            [
+              'Transport Connections / Month',
+              _v(limits['transport_connections_per_month']),
+            ],
+            ['Loads / Month', _v(limits['max_loads_per_month'])],
+          ]),
+          const SizedBox(height: 20),
+          _sectionTitle(context, 'Publish Rates'),
+          const SizedBox(height: 8),
+          _infoTable(context, <List<String>>[
+            ['Unit', _v(publishRates['unit'])],
+            ['Packet', _v(publishRates['packet'])],
+            ['Carton', _v(publishRates['carton'])],
+            ['Bundle', _v(publishRates['bundle'])],
+          ]),
+          const SizedBox(height: 20),
+          _sectionTitle(context, 'Free Quota'),
+          const SizedBox(height: 8),
+          _infoTable(context, <List<String>>[
+            ['Unit', _v(freeQuota['unit'])],
+            ['Packet', _v(freeQuota['packet'])],
+            ['Carton', _v(freeQuota['carton'])],
+            ['Bundle', _v(freeQuota['bundle'])],
+          ]),
+          const SizedBox(height: 20),
+          _sectionTitle(context, 'Features'),
+          const SizedBox(height: 8),
+          if (plan.features.isEmpty)
+            const Text('-')
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: plan.features
+                  .map((f) => Chip(label: Text(f.name)))
+                  .toList(),
+            ),
+          const SizedBox(height: 20),
+          _sectionTitle(context, 'Metadata (Other)'),
+          const SizedBox(height: 8),
+          if (otherMeta.isEmpty)
+            const Text('-')
+          else
+            _infoTable(
+              context,
+              otherMeta.entries
+                  .map((e) => <String>[e.key, _v(e.value)])
+                  .toList(),
+            ),
+        ],
       ),
     );
   }
 
-  void _onEditPlan(Plan plan) {
-    _showEditPlanDialog(plan);
+  Widget _sectionTitle(BuildContext context, String title) {
+    return Text(
+      title,
+      style: Theme.of(context)
+          .textTheme
+          .titleMedium
+          ?.copyWith(fontWeight: FontWeight.w800),
+    );
+  }
+
+  Widget _infoTable(BuildContext context, List<List<String>> rows) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(260),
+          1: FlexColumnWidth(),
+        },
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+        children: rows.map((r) {
+          return TableRow(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 12,
+                ),
+                child: Text(
+                  r[0],
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 12,
+                ),
+                child: Text(
+                  r[1],
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _v(dynamic value) {
+    final s = value?.toString().trim() ?? '';
+    return s.isEmpty ? '-' : s;
   }
 
   void _showEditPlanDialog(Plan plan) {
     final currentState = context.read<PlanManagementBloc>().state;
     final availableFeatures = currentState.maybeMap(
       loaded: (s) => s.availableFeatures,
+      planDetailLoaded: (s) => s.availableFeatures,
       orElse: () => <String, List<PlanFeature>>{},
     );
 
@@ -123,8 +280,7 @@ class _PlansListScreenState extends State<PlansListScreen> {
 
     final initialPrice =
         billingCycle.toLowerCase() == 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
-    final priceCtrl =
-        TextEditingController(text: initialPrice.toStringAsFixed(2));
+    final priceCtrl = TextEditingController(text: initialPrice.toStringAsFixed(2));
 
     final currentPublishRates = plan.metadata?['publish_rates'];
     final currentUnitRate = currentPublishRates is Map
@@ -143,8 +299,7 @@ class _PlansListScreenState extends State<PlansListScreen> {
       final v = value;
       if (v == null) return '';
       if (v is num) return v.toInt().toString();
-      final s = v.toString().trim();
-      return s;
+      return v.toString().trim();
     }
 
     final monthlyUnitCodesCtrl = TextEditingController(
@@ -183,7 +338,7 @@ class _PlansListScreenState extends State<PlansListScreen> {
             return AlertDialog(
               title: const Text('Edit Plan'),
               content: SizedBox(
-                width: 640,
+                width: 720,
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -239,12 +394,9 @@ class _PlansListScreenState extends State<PlansListScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(
-                                    value: 'active', child: Text('Active')),
-                                DropdownMenuItem(
-                                    value: 'inactive', child: Text('Inactive')),
-                                DropdownMenuItem(
-                                    value: 'archived', child: Text('Archived')),
+                                DropdownMenuItem(value: 'active', child: Text('Active')),
+                                DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                                DropdownMenuItem(value: 'archived', child: Text('Archived')),
                               ],
                               onChanged: (v) {
                                 if (v == null) return;
@@ -279,14 +431,10 @@ class _PlansListScreenState extends State<PlansListScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(
-                                    value: 'monthly', child: Text('Monthly')),
-                                DropdownMenuItem(
-                                    value: 'quarterly', child: Text('Quarterly')),
-                                DropdownMenuItem(
-                                    value: 'yearly', child: Text('Yearly')),
-                                DropdownMenuItem(
-                                    value: 'one_time', child: Text('One Time')),
+                                DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                                DropdownMenuItem(value: 'quarterly', child: Text('Quarterly')),
+                                DropdownMenuItem(value: 'yearly', child: Text('Yearly')),
+                                DropdownMenuItem(value: 'one_time', child: Text('One Time')),
                               ],
                               onChanged: (v) {
                                 if (v == null) return;
@@ -505,16 +653,14 @@ class _PlansListScreenState extends State<PlansListScreen> {
                         ),
                         const SizedBox(height: 8),
                         ...availableFeatures.entries.map((entry) {
-                          final title = entry.key.capitalizeFirst;
                           final features = entry.value;
                           return ExpansionTile(
                             tilePadding: EdgeInsets.zero,
-                            title: Text(title),
+                            title: Text(entry.key),
                             children: features
                                 .map(
                                   (feature) => CheckboxListTile(
-                                    value:
-                                        selectedFeatureIds.contains(feature.id),
+                                    value: selectedFeatureIds.contains(feature.id),
                                     onChanged: (checked) {
                                       setLocalState(() {
                                         if (checked == true) {
@@ -529,8 +675,7 @@ class _PlansListScreenState extends State<PlansListScreen> {
                                     subtitle: feature.description.isNotEmpty
                                         ? Text(feature.description)
                                         : null,
-                                    controlAffinity:
-                                        ListTileControlAffinity.leading,
+                                    controlAffinity: ListTileControlAffinity.leading,
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                 )
@@ -557,6 +702,7 @@ class _PlansListScreenState extends State<PlansListScreen> {
                     final parsedUnitCodePrice = unitCodePriceText.isEmpty
                         ? null
                         : double.tryParse(unitCodePriceText);
+
                     final metadata = <String, dynamic>{...?(plan.metadata)};
                     if (parsedUnitCodePrice != null) {
                       metadata['publish_rates'] = <String, dynamic>{
@@ -570,14 +716,11 @@ class _PlansListScreenState extends State<PlansListScreen> {
                     final limitsUpdate = <String, dynamic>{};
                     final mu = int.tryParse(monthlyUnitCodesCtrl.text.trim());
                     if (mu != null) limitsUpdate['monthly_unit_codes'] = mu;
-                    final mp =
-                        int.tryParse(monthlyPacketCodesCtrl.text.trim());
+                    final mp = int.tryParse(monthlyPacketCodesCtrl.text.trim());
                     if (mp != null) limitsUpdate['monthly_packet_codes'] = mp;
-                    final mc =
-                        int.tryParse(monthlyCartonCodesCtrl.text.trim());
+                    final mc = int.tryParse(monthlyCartonCodesCtrl.text.trim());
                     if (mc != null) limitsUpdate['monthly_carton_codes'] = mc;
-                    final mb =
-                        int.tryParse(monthlyBundleCodesCtrl.text.trim());
+                    final mb = int.tryParse(monthlyBundleCodesCtrl.text.trim());
                     if (mb != null) limitsUpdate['monthly_bundle_codes'] = mb;
                     final ms = int.tryParse(maxStoresCtrl.text.trim());
                     if (ms != null) limitsUpdate['max_stores'] = ms;
@@ -624,377 +767,5 @@ class _PlansListScreenState extends State<PlansListScreen> {
       },
     );
   }
-
-  void _onDeletePlan(Plan plan) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Plan'),
-        content: const Text(
-          'Are you sure you want to delete this plan? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<PlanManagementBloc>().add(
-                    PlanManagementEvent.deletePlan(plan.id),
-                  );
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.error,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _onTogglePlanStatus(Plan plan) {
-    final newStatus = plan.status == PlanStatus.active
-        ? PlanStatus.inactive
-        : PlanStatus.active;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          newStatus == PlanStatus.active ? 'Activate Plan' : 'Deactivate Plan',
-        ),
-        content: Text(
-          newStatus == PlanStatus.active
-              ? 'Are you sure you want to activate this plan?'
-              : 'Are you sure you want to deactivate this plan?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<PlanManagementBloc>().add(
-                    PlanManagementEvent.updatePlanStatus(
-                      planId: plan.id,
-                      status: newStatus,
-                    ),
-                  );
-            },
-            child: Text(
-                newStatus == PlanStatus.active ? 'Activate' : 'Deactivate'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _onCreatePlan() {
-    context.read<AppRouter>().goToCreatePlan(context);
-  }
-
-  void _onExportPlans() {
-    context.read<PlanManagementBloc>().add(
-          PlanManagementEvent.exportPlans(
-            search: _currentSearch,
-            type: _currentType,
-            status: _currentStatus,
-          ),
-        );
-  }
-
-  void _onRefresh() {
-    _loadPlans();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final content = Container(
-      color: widget.inShell ? AppColors.surface : AppColors.background,
-      child: Column(
-        children: [
-          if (widget.inShell)
-            Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 4.h),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Subscription Plans',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.filter_list),
-                        onPressed: _openFilterSheet,
-                        tooltip: 'Filter',
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.download),
-                        onPressed: _onExportPlans,
-                        tooltip: 'Export Plans',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isNarrow = constraints.maxWidth < 520;
-
-                final search = custom.SearchBar(
-                  onSearchChanged: _onSearchChanged,
-                  hintText: 'Search plans...',
-                );
-
-                final create = PrimaryButton(
-                  onPressed: _onCreatePlan,
-                  text: 'Create Plan',
-                  icon: Icons.add,
-                );
-
-                if (isNarrow) {
-                  return Column(
-                    children: [
-                      search,
-                      SizedBox(height: 12.h),
-                      SizedBox(width: double.infinity, child: create),
-                    ],
-                  );
-                }
-
-                return Row(
-                  children: [
-                    Expanded(child: search),
-                    SizedBox(width: 12.w),
-                    create,
-                  ],
-                );
-              },
-            ),
-          ),
-          BlocBuilder<PlanManagementBloc, PlanManagementState>(
-            builder: (context, state) {
-              return state.maybeMap(
-                loaded: (loadedState) {
-                  if (loadedState.statistics == null) {
-                    return const SizedBox.shrink();
-                  }
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 8.h,
-                    ),
-                    child: Row(
-                      children: [
-                        KPICard(
-                          title: 'Total Plans',
-                          value: loadedState.statistics!.totalPlans.toString(),
-                          icon: Icons.list_alt,
-                          color: AppColors.primary,
-                        ),
-                        SizedBox(width: 12.w),
-                        KPICard(
-                          title: 'Active Plans',
-                          value: loadedState.statistics!.activePlans.toString(),
-                          icon: Icons.check_circle,
-                          color: AppColors.success,
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                orElse: () => const SizedBox.shrink(),
-              );
-            },
-          ),
-          Expanded(
-            child: BlocConsumer<PlanManagementBloc, PlanManagementState>(
-              listener: (context, state) {
-                state.maybeMap(
-                  error: (s) {
-                    ErrorHandler.showPersistentError(
-                      context,
-                      title: 'Plans Error',
-                      message: s.message,
-                      copyText: 'Plans Error\n\n${s.message}',
-                    );
-                  },
-                  planUpdated: (s) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(s.message),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  },
-                  planDeleted: (s) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(s.message),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  },
-                  planStatusUpdated: (s) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(s.message),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  },
-                  exported: (s) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(s.message),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  },
-                  orElse: () {},
-                );
-              },
-              builder: (context, state) {
-                return RefreshIndicator(
-                  onRefresh: () async => _onRefresh(),
-                  child: _buildContent(state),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (widget.inShell) return content;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CustomAppBar(
-        title: 'Subscription Plans',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _openFilterSheet,
-          ),
-          IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: _onExportPlans,
-            tooltip: 'Export Plans',
-          ),
-        ],
-      ),
-      body: content,
-    );
-  }
-
-  void _openFilterSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => PlanFilterSheet(
-        currentType: _currentType,
-        currentStatus: _currentStatus,
-        currentSortBy: _currentSortBy,
-        currentSortOrder: _currentSortOrder,
-        onApply: _onFilterApplied,
-      ),
-    );
-  }
-
-  Widget _buildContent(PlanManagementState state) {
-    return state.maybeMap(
-      loading: (loadingState) => const Center(child: LoadingIndicator()),
-      error: (errorState) => EmptyState(
-        icon: Icons.error_outline,
-        title: 'Error Loading Plans',
-        description: errorState.message,
-        actionButton: PrimaryButton(
-          text: 'Retry',
-          onPressed: _loadPlans,
-        ),
-      ),
-      loaded: (loadedState) {
-        if (loadedState.plans.isEmpty) {
-          return EmptyState(
-            icon: Icons.list_alt,
-            title: 'No Plans Found',
-            description: _currentSearch.isNotEmpty
-                ? 'No plans match your search criteria'
-                : 'Create your first subscription plan to get started',
-            actionButton: PrimaryButton(
-              text: 'Create Plan',
-              onPressed: _onCreatePlan,
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-          itemCount: loadedState.plans.length +
-              (loadedState.page < loadedState.totalPages ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == loadedState.plans.length) {
-              return _buildLoadMoreIndicator(loadedState);
-            }
-
-            final plan = loadedState.plans[index];
-            return PlanCard(
-              plan: plan,
-              onTap: () => _onPlanTap(plan),
-              onEdit: () => _onEditPlan(plan),
-              onDelete: () => _onDeletePlan(plan),
-              onToggleStatus: () => _onTogglePlanStatus(plan),
-            );
-          },
-        );
-      },
-      orElse: () => const Center(child: LoadingIndicator()),
-    );
-  }
-
-  Widget _buildLoadMoreIndicator(dynamic state) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 16.h),
-      child: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            final bloc = context.read<PlanManagementBloc>();
-            bloc.add(PlanManagementEvent.loadPlans(
-              page: state.page + 1,
-              search: _currentSearch,
-              type: _currentType,
-              status: _currentStatus,
-              sortBy: _currentSortBy,
-              sortOrder: _currentSortOrder,
-            ));
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary.withAlpha(25),
-            foregroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-          ),
-          child: const Text('Load More'),
-        ),
-      ),
-    );
-  }
 }
+

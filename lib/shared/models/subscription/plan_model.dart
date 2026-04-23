@@ -47,8 +47,8 @@ List<PlanFeature> _parseFeatures(dynamic featuresJson) {
       final id = item.toString();
       features.add(
         PlanFeature(
-          id: 'feature_$id',
-          name: 'Feature $id',
+          id: id,
+          name: id,
           description: '',
           type: FeatureType.core,
           isIncluded: true,
@@ -244,20 +244,53 @@ abstract class Plan with _$Plan {
     final monthlyPrice = (json['monthly_price'] as num?)?.toDouble() ?? 0.0;
     final yearlyPrice = (json['yearly_price'] as num?)?.toDouble() ?? 0.0;
     final currency = json['currency']?.toString() ?? 'USD';
-    final billingCycle = json['billing_cycle']?.toString() ?? 'monthly';
+    final metadataRaw = json['metadata'];
+    final metadata =
+        (metadataRaw is Map) ? Map<String, dynamic>.from(metadataRaw) : null;
+    final billingCycle =
+        json['billing_cycle']?.toString() ??
+        metadata?['billing_cycle']?.toString() ??
+        'monthly';
     final status = _parsePlanStatus(json['status']);
-    final isFeatured = json['is_featured'] == true;
-    final isPopular = json['is_popular'] == true;
-    final sortOrder = (json['sort_order'] as num?)?.toInt() ?? 0;
+    final isFeatured =
+        json['is_featured'] == true || metadata?['is_featured'] == true;
+    final isPopular =
+        json['is_popular'] == true || metadata?['is_popular'] == true;
+    final sortOrder =
+        (json['sort_order'] as num?)?.toInt() ??
+        (metadata?['sort_order'] as num?)?.toInt() ??
+        0;
     final features = _parseFeatures(json['features']);
     final limitsRaw = json['limits'];
     final limits = (limitsRaw is Map)
         ? Map<String, dynamic>.from(limitsRaw)
-        : const <String, dynamic>{};
-    final metadataRaw = json['metadata'];
-    final metadata =
-        (metadataRaw is Map) ? Map<String, dynamic>.from(metadataRaw) : null;
-    final userLimits = _parseUserLimits(json['user_limits']);
+        : <String, dynamic>{
+            'monthly_unit_codes': (json['monthly_unit_codes'] as num?)?.toInt(),
+            'monthly_packet_codes':
+                (json['monthly_packet_codes'] as num?)?.toInt(),
+            'monthly_carton_codes':
+                (json['monthly_carton_codes'] as num?)?.toInt(),
+            'monthly_bundle_codes':
+                (json['monthly_bundle_codes'] as num?)?.toInt(),
+            'max_users': (json['max_users'] as num?)?.toInt(),
+            'max_stores': (json['max_stores'] as num?)?.toInt(),
+            'max_drivers': (json['max_drivers'] as num?)?.toInt(),
+            if (metadata?['transport_connections_per_month'] != null)
+              'transport_connections_per_month':
+                  metadata?['transport_connections_per_month'],
+            if (metadata?['max_loads_per_month'] != null)
+              'max_loads_per_month': metadata?['max_loads_per_month'],
+          };
+
+    final userLimitsRaw = json['user_limits'];
+    final userLimits = userLimitsRaw is Map
+        ? _parseUserLimits(userLimitsRaw)
+        : _parseUserLimits({
+            'store_keepers': (json['max_stores'] as num?)?.toInt() ?? 1,
+            'drivers': (json['max_drivers'] as num?)?.toInt() ?? 1,
+            'admin_users': (json['max_users'] as num?)?.toInt() ?? 1,
+            'active_products': 1,
+          });
     final storageGb = (json['storage_gb'] as num?)?.toInt() ?? 1;
     final dailyApiCalls = (json['daily_api_calls'] as num?)?.toInt() ?? 0;
     final isRecommended = json['is_recommended'] == true;
