@@ -506,6 +506,8 @@ class ApiClient {
         throw UnprocessableEntityException(message);
       case 429:
         throw RateLimitException(message);
+      case 423:
+        throw ServerException(message, statusCode, errorResponse);
       case 500:
       case 502:
       case 503:

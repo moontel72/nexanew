@@ -7,11 +7,13 @@ import 'package:nexatrace_system/features/factory/admin/presentation/bloc/produc
 import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
 import 'package:nexatrace_system/shared/models/code/unit_code_model.dart';
 import 'package:nexatrace_system/shared/models/product/product_model.dart';
+import 'package:nexatrace_system/core/config/api_config.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class UnitCodesListScreen extends StatefulWidget {
   const UnitCodesListScreen({super.key});
@@ -179,6 +181,30 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
         listener: (context, state) {
           if (state.status == UnitCodesStatus.error &&
               state.errorMessage != null) {
+            final msg = state.errorMessage!.trim();
+            if (msg == 'DOWNLOAD_LOCKED' || msg.startsWith('DOWNLOAD_LOCKED|')) {
+              final parts = msg.split('|');
+              final invoiceNumber = parts.length > 1 ? parts[1].trim() : '';
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Download Locked'),
+                  content: Text(
+                    invoiceNumber.isEmpty
+                        ? 'Please pay the pending invoice to proceed.'
+                        : 'Please pay Invoice #$invoiceNumber to proceed.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+              return;
+            }
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.errorMessage!),
@@ -190,6 +216,28 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
           if (state.status == UnitCodesStatus.published) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Unit codes published')),
+            );
+          }
+
+          if (state.status == UnitCodesStatus.exported) {
+            final rawPath = (state.exportPath ?? '').trim();
+            if (rawPath.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Export completed but no file path returned'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+              return;
+            }
+
+            final url = rawPath.startsWith('http')
+                ? rawPath
+                : '${ApiConfig.baseUrl}${rawPath.startsWith('/') ? '' : '/'}$rawPath';
+
+            launchUrl(
+              Uri.parse(url),
+              mode: LaunchMode.platformDefault,
             );
           }
         },

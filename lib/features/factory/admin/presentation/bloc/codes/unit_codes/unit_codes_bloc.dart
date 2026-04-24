@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:nexatrace_system/core/errors/app_exceptions.dart';
 import 'package:nexatrace_system/features/factory/admin/domain/repositories/codes_repository.dart';
 import 'package:nexatrace_system/shared/models/code/unit_code_model.dart';
 import 'package:nexatrace_system/shared/models/code/code_generation_request.dart';
@@ -260,6 +261,29 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
         exportPath: path,
       ));
     } catch (error) {
+      if (error is ServerException && error.statusCode == 423) {
+        String invoiceNumber = '';
+        final data = error.responseData;
+        if (data is Map) {
+          final root = Map<String, dynamic>.from(data.cast<String, dynamic>());
+          final nested = root['data'];
+          if (nested is Map) {
+            final nestedMap =
+                Map<String, dynamic>.from(nested.cast<String, dynamic>());
+            invoiceNumber = (nestedMap['invoice_number'] ?? '').toString();
+          }
+        }
+
+        emit(state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: invoiceNumber.trim().isEmpty
+              ? 'DOWNLOAD_LOCKED'
+              : 'DOWNLOAD_LOCKED|$invoiceNumber',
+          isExporting: false,
+        ));
+        return;
+      }
+
       emit(state.copyWith(
         status: UnitCodesStatus.error,
         errorMessage: error.toString(),
