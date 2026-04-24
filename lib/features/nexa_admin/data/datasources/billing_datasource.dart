@@ -93,6 +93,84 @@ class BillingDataSourceImpl implements BillingDataSource {
 
   BillingDataSourceImpl(this._apiClient);
 
+  String _paymentMethodToWireValue(shared.PaymentMethod method) {
+    switch (method) {
+      case shared.PaymentMethod.wallet:
+        return 'wallet';
+      case shared.PaymentMethod.creditCard:
+        return 'credit_card';
+      case shared.PaymentMethod.bankTransfer:
+        return 'bank_transfer';
+      case shared.PaymentMethod.cash:
+        return 'cash';
+      case shared.PaymentMethod.other:
+        return 'other';
+    }
+  }
+
+  String _normalizePaymentMethodWireValue(dynamic value) {
+    final raw = value?.toString().trim() ?? '';
+    if (raw.isEmpty || raw.toLowerCase() == 'null') return 'bank_transfer';
+
+    final lowered = raw.toLowerCase();
+    if (lowered == 'system') return 'bank_transfer';
+
+    final compact = lowered.replaceAll(RegExp(r'[\s_-]'), '');
+    switch (compact) {
+      case 'wallet':
+        return 'wallet';
+      case 'cash':
+        return 'cash';
+      case 'other':
+        return 'other';
+      case 'creditcard':
+        return 'credit_card';
+      case 'banktransfer':
+        return 'bank_transfer';
+    }
+
+    if (shared.PaymentMethod.values.any((e) => e.name.toLowerCase() == compact)) {
+      if (compact == shared.PaymentMethod.creditCard.name.toLowerCase()) {
+        return 'credit_card';
+      }
+      if (compact == shared.PaymentMethod.bankTransfer.name.toLowerCase()) {
+        return 'bank_transfer';
+      }
+      if (compact == shared.PaymentMethod.wallet.name.toLowerCase()) return 'wallet';
+      if (compact == shared.PaymentMethod.cash.name.toLowerCase()) return 'cash';
+      if (compact == shared.PaymentMethod.other.name.toLowerCase()) return 'other';
+    }
+
+    return 'other';
+  }
+
+  Map<String, dynamic> _normalizeAdminInvoiceJson(Map<String, dynamic> json) {
+    final m = Map<String, dynamic>.from(json);
+    m['paymentMethod'] = _normalizePaymentMethodWireValue(
+      m['paymentMethod'] ?? m['payment_method'],
+    );
+    return m;
+  }
+
+  Map<String, dynamic> _normalizeSharedPaymentJson(Map<String, dynamic> json) {
+    final m = Map<String, dynamic>.from(json);
+    m['method'] = _normalizePaymentMethodWireValue(m['method'] ?? m['payment_method']);
+
+    if (!m.containsKey('invoiceId') && m['invoice_id'] != null) {
+      m['invoiceId'] = m['invoice_id'];
+    }
+    if (!m.containsKey('paymentDate') && m['payment_date'] != null) {
+      m['paymentDate'] = m['payment_date'];
+    }
+    if (!m.containsKey('createdAt') && m['created_at'] != null) {
+      m['createdAt'] = m['created_at'];
+    }
+    if (!m.containsKey('transactionId') && m['transaction_id'] != null) {
+      m['transactionId'] = m['transaction_id'];
+    }
+    return m;
+  }
+
   List<dynamic> _extractList(dynamic responseData, {String? key}) {
     if (responseData is! Map) {
       return const [];
@@ -162,7 +240,11 @@ class BillingDataSourceImpl implements BillingDataSource {
       final list = _extractList(response, key: 'invoices');
       return list
           .whereType<Map>()
-          .map((item) => AdminInvoice.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => AdminInvoice.fromJson(
+              _normalizeAdminInvoiceJson(Map<String, dynamic>.from(item)),
+            ),
+          )
           .toList();
     } on AppException {
       rethrow;
@@ -175,7 +257,9 @@ class BillingDataSourceImpl implements BillingDataSource {
       final response = await _apiClient.get(
         '/admin/billing/invoices/$invoiceId',
       );
-      return AdminInvoice.fromJson(_extractMap(response, key: 'invoice'));
+      return AdminInvoice.fromJson(
+        _normalizeAdminInvoiceJson(_extractMap(response, key: 'invoice')),
+      );
     } on AppException {
       rethrow;
     }
@@ -210,7 +294,11 @@ class BillingDataSourceImpl implements BillingDataSource {
       final list = _extractList(response, key: 'invoices');
       return list
           .whereType<Map>()
-          .map((item) => AdminInvoice.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => AdminInvoice.fromJson(
+              _normalizeAdminInvoiceJson(Map<String, dynamic>.from(item)),
+            ),
+          )
           .toList();
     } on AppException {
       rethrow;
@@ -241,7 +329,9 @@ class BillingDataSourceImpl implements BillingDataSource {
         body: data,
       );
 
-      return AdminInvoice.fromJson(_extractMap(response, key: 'invoice'));
+      return AdminInvoice.fromJson(
+        _normalizeAdminInvoiceJson(_extractMap(response, key: 'invoice')),
+      );
     } on AppException {
       rethrow;
     }
@@ -258,7 +348,9 @@ class BillingDataSourceImpl implements BillingDataSource {
         body: {'status': status.toString().split('.').last},
       );
 
-      return AdminInvoice.fromJson(_extractMap(response, key: 'invoice'));
+      return AdminInvoice.fromJson(
+        _normalizeAdminInvoiceJson(_extractMap(response, key: 'invoice')),
+      );
     } on AppException {
       rethrow;
     }
@@ -283,7 +375,9 @@ class BillingDataSourceImpl implements BillingDataSource {
       return list
           .whereType<Map>()
           .map(
-            (item) => shared.Payment.fromJson(Map<String, dynamic>.from(item)),
+            (item) => shared.Payment.fromJson(
+              _normalizeSharedPaymentJson(Map<String, dynamic>.from(item)),
+            ),
           )
           .toList();
     } on AppException {
@@ -304,7 +398,7 @@ class BillingDataSourceImpl implements BillingDataSource {
     try {
       final data = {
         'amount': amount,
-        'method': method.toString().split('.').last,
+        'method': _paymentMethodToWireValue(method),
         'payment_date': paymentDate.toIso8601String(),
         if (reference != null && reference.isNotEmpty) 'reference': reference,
         if (transactionId != null && transactionId.isNotEmpty)
@@ -319,7 +413,9 @@ class BillingDataSourceImpl implements BillingDataSource {
 
       final paymentMap = _extractMap(response, key: 'payment');
       return shared.Payment.fromJson(
-        paymentMap.isEmpty ? _extractMap(response) : paymentMap,
+        _normalizeSharedPaymentJson(
+          paymentMap.isEmpty ? _extractMap(response) : paymentMap,
+        ),
       );
     } on AppException {
       rethrow;

@@ -37,6 +37,57 @@ class BillingRepositoryImpl implements BillingRepository {
     return s;
   }
 
+  String _paymentMethodToWireValue(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.wallet:
+        return 'wallet';
+      case PaymentMethod.creditCard:
+        return 'credit_card';
+      case PaymentMethod.bankTransfer:
+        return 'bank_transfer';
+      case PaymentMethod.cash:
+        return 'cash';
+      case PaymentMethod.other:
+        return 'other';
+    }
+  }
+
+  String _normalizePaymentMethodWireValue(dynamic value) {
+    final raw = value?.toString().trim() ?? '';
+    if (raw.isEmpty || raw.toLowerCase() == 'null') return 'bank_transfer';
+
+    final lowered = raw.toLowerCase();
+    if (lowered == 'system') return 'bank_transfer';
+
+    final compact = lowered.replaceAll(RegExp(r'[\s_-]'), '');
+    switch (compact) {
+      case 'wallet':
+        return 'wallet';
+      case 'cash':
+        return 'cash';
+      case 'other':
+        return 'other';
+      case 'creditcard':
+        return 'credit_card';
+      case 'banktransfer':
+        return 'bank_transfer';
+    }
+
+    if (PaymentMethod.values.any((e) => e.name.toLowerCase() == compact)) {
+      if (compact == PaymentMethod.creditCard.name.toLowerCase()) {
+        return 'credit_card';
+      }
+      if (compact == PaymentMethod.bankTransfer.name.toLowerCase()) {
+        return 'bank_transfer';
+      }
+      if (compact == PaymentMethod.wallet.name.toLowerCase()) return 'wallet';
+      if (compact == PaymentMethod.cash.name.toLowerCase()) return 'cash';
+      if (compact == PaymentMethod.other.name.toLowerCase()) return 'other';
+    }
+
+    return 'other';
+  }
+
   Map<String, dynamic> _normalizeBillingSummaryJson(Map<String, dynamic> json) {
     final m = Map<String, dynamic>.from(json);
     return {
@@ -107,12 +158,31 @@ class BillingRepositoryImpl implements BillingRepository {
       'items': items,
       'status': m['status'] ?? 'pending',
       'paymentDate': m['paymentDate'] ?? m['payment_date'],
-      'paymentMethod': m['paymentMethod'] ?? m['payment_method'],
+      'paymentMethod': _normalizePaymentMethodWireValue(
+        m['paymentMethod'] ?? m['payment_method'],
+      ),
       'paymentReference': m['paymentReference'] ?? m['payment_reference'],
       'notes': m['notes'],
       'metadata': m['metadata'],
       'createdAt': m['createdAt'] ?? m['created_at'],
       'updatedAt': m['updatedAt'] ?? m['updated_at'],
+    };
+  }
+
+  Map<String, dynamic> _normalizePaymentJson(Map<String, dynamic> json) {
+    final m = Map<String, dynamic>.from(json);
+    return {
+      'id': _toStringValue(m['id']),
+      'invoiceId': _toStringValue(m['invoiceId'] ?? m['invoice_id']),
+      'amount': _toDouble(m['amount']),
+      'currency': _toStringValue(m['currency'], fallback: 'USD'),
+      'method': _normalizePaymentMethodWireValue(m['method'] ?? m['payment_method']),
+      'paymentDate': _toIsoDate(m['paymentDate'] ?? m['payment_date']),
+      'reference': m['reference'],
+      'transactionId': m['transactionId'] ?? m['transaction_id'],
+      'notes': m['notes'],
+      'metadata': m['metadata'],
+      'createdAt': m['createdAt'] ?? m['created_at'],
     };
   }
 
@@ -213,7 +283,23 @@ class BillingRepositoryImpl implements BillingRepository {
       );
 
       final List<dynamic> paymentsData = response['data'] ?? [];
-      return paymentsData.map((json) => Payment.fromJson(json)).toList();
+      return paymentsData.map((json) {
+        if (json is! Map) {
+          return Payment(
+            id: '',
+            invoiceId: '',
+            amount: 0.0,
+            currency: 'USD',
+            method: PaymentMethod.other,
+            paymentDate: DateTime.now(),
+          );
+        }
+        return Payment.fromJson(
+          _normalizePaymentJson(
+            Map<String, dynamic>.from(json.cast<String, dynamic>()),
+          ),
+        );
+      }).toList();
     } catch (error) {
       throw Exception('Failed to load payment history: $error');
     }
@@ -228,7 +314,23 @@ class BillingRepositoryImpl implements BillingRepository {
       );
 
       final List<dynamic> paymentsData = response['data'] ?? [];
-      return paymentsData.map((json) => Payment.fromJson(json)).toList();
+      return paymentsData.map((json) {
+        if (json is! Map) {
+          return Payment(
+            id: '',
+            invoiceId: invoiceId,
+            amount: 0.0,
+            currency: 'USD',
+            method: PaymentMethod.other,
+            paymentDate: DateTime.now(),
+          );
+        }
+        return Payment.fromJson(
+          _normalizePaymentJson(
+            Map<String, dynamic>.from(json.cast<String, dynamic>()),
+          ),
+        );
+      }).toList();
     } catch (error) {
       throw Exception('Failed to load invoice payments: $error');
     }
@@ -246,7 +348,7 @@ class BillingRepositoryImpl implements BillingRepository {
       final payload = {
         'invoice_id': invoiceId,
         'amount': amount,
-        'payment_method': paymentMethod.name,
+        'payment_method': _paymentMethodToWireValue(paymentMethod),
         'reference': reference,
         'notes': notes,
       };
@@ -257,8 +359,30 @@ class BillingRepositoryImpl implements BillingRepository {
         headers: _getAuthHeaders(),
       );
 
-      final payment = Payment.fromJson(response['data']['payment']);
-      final updatedInvoice = Invoice.fromJson(response['data']['invoice']);
+      final rawPayment = response['data']?['payment'];
+      final payment = rawPayment is Map
+          ? Payment.fromJson(
+              _normalizePaymentJson(
+                Map<String, dynamic>.from(rawPayment.cast<String, dynamic>()),
+              ),
+            )
+          : Payment(
+              id: '',
+              invoiceId: invoiceId,
+              amount: amount,
+              currency: 'USD',
+              method: PaymentMethod.other,
+              paymentDate: DateTime.now(),
+            );
+
+      final rawInvoice = response['data']?['invoice'];
+      final updatedInvoice = rawInvoice is Map
+          ? Invoice.fromJson(
+              _normalizeInvoiceJson(
+                Map<String, dynamic>.from(rawInvoice.cast<String, dynamic>()),
+              ),
+            )
+          : Invoice.empty();
 
       return PaymentResult(payment: payment, updatedInvoice: updatedInvoice);
     } catch (error) {
