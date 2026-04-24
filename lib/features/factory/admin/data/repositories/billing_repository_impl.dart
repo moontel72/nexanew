@@ -11,16 +11,44 @@ class BillingRepositoryImpl implements BillingRepository {
   BillingRepositoryImpl({required ApiClient apiClient})
     : _apiClient = apiClient;
 
+  double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString().trim()) ?? 0.0;
+  }
+
+  int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString().trim()) ?? 0;
+  }
+
+  String _toStringValue(dynamic value, {String fallback = ''}) {
+    final s = value?.toString().trim() ?? '';
+    return s.isEmpty ? fallback : s;
+  }
+
+  String _toIsoDate(dynamic value) {
+    if (value == null) return DateTime.now().toIso8601String();
+    if (value is DateTime) return value.toIso8601String();
+    final s = value.toString().trim();
+    if (s.isEmpty) return DateTime.now().toIso8601String();
+    return s;
+  }
+
   Map<String, dynamic> _normalizeBillingSummaryJson(Map<String, dynamic> json) {
     final m = Map<String, dynamic>.from(json);
     return {
-      'totalOwed': m['totalOwed'] ?? m['total_owed'],
-      'totalPaid': m['totalPaid'] ?? m['total_paid'],
-      'pendingInvoices': m['pendingInvoices'] ?? m['pending_invoices'],
-      'paidInvoices': m['paidInvoices'] ?? m['paid_invoices'],
-      'overdueInvoices': m['overdueInvoices'] ?? m['overdue_invoices'],
+      'totalOwed': _toDouble(m['totalOwed'] ?? m['total_owed']),
+      'totalPaid': _toDouble(m['totalPaid'] ?? m['total_paid']),
+      'pendingInvoices': _toInt(m['pendingInvoices'] ?? m['pending_invoices']),
+      'paidInvoices': _toInt(m['paidInvoices'] ?? m['paid_invoices']),
+      'overdueInvoices': _toInt(m['overdueInvoices'] ?? m['overdue_invoices']),
       'nextPaymentDate': m['nextPaymentDate'] ?? m['next_payment_date'],
-      'nextPaymentAmount': m['nextPaymentAmount'] ?? m['next_payment_amount'],
+      'nextPaymentAmount': _toDouble(
+        m['nextPaymentAmount'] ?? m['next_payment_amount'],
+      ),
       'nextPaymentCurrency':
           m['nextPaymentCurrency'] ?? m['next_payment_currency'],
       'usageSummary': m['usageSummary'] ?? m['usage_summary'],
@@ -30,14 +58,14 @@ class BillingRepositoryImpl implements BillingRepository {
   Map<String, dynamic> _normalizeInvoiceItemJson(Map<String, dynamic> json) {
     final m = Map<String, dynamic>.from(json);
     return {
-      'id': m['id']?.toString() ?? '',
-      'description': (m['description'] ?? '').toString(),
-      'quantity': m['quantity'] ?? 0,
-      'unitPrice': m['unitPrice'] ?? m['unit_price'] ?? 0,
-      'total': m['total'] ?? 0,
-      'currency': (m['currency'] ?? 'USD').toString(),
+      'id': _toStringValue(m['id']),
+      'description': _toStringValue(m['description']),
+      'quantity': _toDouble(m['quantity']),
+      'unitPrice': _toDouble(m['unitPrice'] ?? m['unit_price']),
+      'total': _toDouble(m['total']),
+      'currency': _toStringValue(m['currency'], fallback: 'USD'),
       'codeType': m['codeType'] ?? m['code_type'],
-      'codeCount': m['codeCount'] ?? m['code_count'],
+      'codeCount': _toInt(m['codeCount'] ?? m['code_count']),
       'periodStart': m['periodStart'] ?? m['period_start'],
       'periodEnd': m['periodEnd'] ?? m['period_end'],
       'metadata': m['metadata'],
@@ -57,20 +85,25 @@ class BillingRepositoryImpl implements BillingRepository {
             .toList()
         : const <Map<String, dynamic>>[];
 
+    final issueDate = _toIsoDate(m['issueDate'] ?? m['issue_date'] ?? m['created_at']);
+    final dueDate = _toIsoDate(m['dueDate'] ?? m['due_date'] ?? issueDate);
+    final periodStart = _toIsoDate(m['periodStart'] ?? m['period_start'] ?? issueDate);
+    final periodEnd = _toIsoDate(m['periodEnd'] ?? m['period_end'] ?? dueDate);
+
     return {
-      'id': m['id']?.toString() ?? '',
-      'invoiceNumber': (m['invoiceNumber'] ?? m['invoice_number'] ?? '').toString(),
-      'companyId': (m['companyId'] ?? m['company_id'] ?? '').toString(),
+      'id': _toStringValue(m['id']),
+      'invoiceNumber': _toStringValue(m['invoiceNumber'] ?? m['invoice_number']),
+      'companyId': _toStringValue(m['companyId'] ?? m['company_id']),
       'subscriptionId': m['subscriptionId'] ?? m['subscription_id'],
-      'periodStart': m['periodStart'] ?? m['period_start'] ?? m['issueDate'] ?? m['issue_date'],
-      'periodEnd': m['periodEnd'] ?? m['period_end'] ?? m['dueDate'] ?? m['due_date'],
-      'issueDate': m['issueDate'] ?? m['issue_date'] ?? m['created_at'],
-      'dueDate': m['dueDate'] ?? m['due_date'] ?? m['issueDate'] ?? m['issue_date'],
-      'subtotal': m['subtotal'] ?? 0,
-      'taxAmount': m['taxAmount'] ?? m['tax_amount'] ?? 0,
-      'discountAmount': m['discountAmount'] ?? m['discount_amount'] ?? 0,
-      'totalAmount': m['totalAmount'] ?? m['total_amount'] ?? 0,
-      'currency': (m['currency'] ?? 'USD').toString(),
+      'periodStart': periodStart,
+      'periodEnd': periodEnd,
+      'issueDate': issueDate,
+      'dueDate': dueDate,
+      'subtotal': _toDouble(m['subtotal']),
+      'taxAmount': _toDouble(m['taxAmount'] ?? m['tax_amount']),
+      'discountAmount': _toDouble(m['discountAmount'] ?? m['discount_amount']),
+      'totalAmount': _toDouble(m['totalAmount'] ?? m['total_amount']),
+      'currency': _toStringValue(m['currency'], fallback: 'USD'),
       'items': items,
       'status': m['status'] ?? 'pending',
       'paymentDate': m['paymentDate'] ?? m['payment_date'],
