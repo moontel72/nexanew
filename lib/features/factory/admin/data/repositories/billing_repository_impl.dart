@@ -11,6 +11,78 @@ class BillingRepositoryImpl implements BillingRepository {
   BillingRepositoryImpl({required ApiClient apiClient})
     : _apiClient = apiClient;
 
+  Map<String, dynamic> _normalizeBillingSummaryJson(Map<String, dynamic> json) {
+    final m = Map<String, dynamic>.from(json);
+    return {
+      'totalOwed': m['totalOwed'] ?? m['total_owed'],
+      'totalPaid': m['totalPaid'] ?? m['total_paid'],
+      'pendingInvoices': m['pendingInvoices'] ?? m['pending_invoices'],
+      'paidInvoices': m['paidInvoices'] ?? m['paid_invoices'],
+      'overdueInvoices': m['overdueInvoices'] ?? m['overdue_invoices'],
+      'nextPaymentDate': m['nextPaymentDate'] ?? m['next_payment_date'],
+      'nextPaymentAmount': m['nextPaymentAmount'] ?? m['next_payment_amount'],
+      'nextPaymentCurrency':
+          m['nextPaymentCurrency'] ?? m['next_payment_currency'],
+      'usageSummary': m['usageSummary'] ?? m['usage_summary'],
+    };
+  }
+
+  Map<String, dynamic> _normalizeInvoiceItemJson(Map<String, dynamic> json) {
+    final m = Map<String, dynamic>.from(json);
+    return {
+      'id': m['id']?.toString() ?? '',
+      'description': (m['description'] ?? '').toString(),
+      'quantity': m['quantity'] ?? 0,
+      'unitPrice': m['unitPrice'] ?? m['unit_price'] ?? 0,
+      'total': m['total'] ?? 0,
+      'currency': (m['currency'] ?? 'USD').toString(),
+      'codeType': m['codeType'] ?? m['code_type'],
+      'codeCount': m['codeCount'] ?? m['code_count'],
+      'periodStart': m['periodStart'] ?? m['period_start'],
+      'periodEnd': m['periodEnd'] ?? m['period_end'],
+      'metadata': m['metadata'],
+    };
+  }
+
+  Map<String, dynamic> _normalizeInvoiceJson(Map<String, dynamic> json) {
+    final m = Map<String, dynamic>.from(json);
+
+    final rawItems = m['items'];
+    final items = rawItems is List
+        ? rawItems
+            .whereType<Map>()
+            .map((e) => _normalizeInvoiceItemJson(
+                  Map<String, dynamic>.from(e.cast<String, dynamic>()),
+                ))
+            .toList()
+        : const <Map<String, dynamic>>[];
+
+    return {
+      'id': m['id']?.toString() ?? '',
+      'invoiceNumber': (m['invoiceNumber'] ?? m['invoice_number'] ?? '').toString(),
+      'companyId': (m['companyId'] ?? m['company_id'] ?? '').toString(),
+      'subscriptionId': m['subscriptionId'] ?? m['subscription_id'],
+      'periodStart': m['periodStart'] ?? m['period_start'] ?? m['issueDate'] ?? m['issue_date'],
+      'periodEnd': m['periodEnd'] ?? m['period_end'] ?? m['dueDate'] ?? m['due_date'],
+      'issueDate': m['issueDate'] ?? m['issue_date'] ?? m['created_at'],
+      'dueDate': m['dueDate'] ?? m['due_date'] ?? m['issueDate'] ?? m['issue_date'],
+      'subtotal': m['subtotal'] ?? 0,
+      'taxAmount': m['taxAmount'] ?? m['tax_amount'] ?? 0,
+      'discountAmount': m['discountAmount'] ?? m['discount_amount'] ?? 0,
+      'totalAmount': m['totalAmount'] ?? m['total_amount'] ?? 0,
+      'currency': (m['currency'] ?? 'USD').toString(),
+      'items': items,
+      'status': m['status'] ?? 'pending',
+      'paymentDate': m['paymentDate'] ?? m['payment_date'],
+      'paymentMethod': m['paymentMethod'] ?? m['payment_method'],
+      'paymentReference': m['paymentReference'] ?? m['payment_reference'],
+      'notes': m['notes'],
+      'metadata': m['metadata'],
+      'createdAt': m['createdAt'] ?? m['created_at'],
+      'updatedAt': m['updatedAt'] ?? m['updated_at'],
+    };
+  }
+
   @override
   Future<BillingSummary> getBillingSummary() async {
     try {
@@ -19,7 +91,19 @@ class BillingRepositoryImpl implements BillingRepository {
         headers: _getAuthHeaders(),
       );
 
-      return BillingSummary.fromJson(response['data']);
+      if (response is! Map) {
+        throw Exception('Invalid response format');
+      }
+      final data = response['data'];
+      if (data is! Map) {
+        throw Exception('Invalid billing summary data format');
+      }
+
+      return BillingSummary.fromJson(
+        _normalizeBillingSummaryJson(
+          Map<String, dynamic>.from(data.cast<String, dynamic>()),
+        ),
+      );
     } catch (error) {
       throw Exception('Failed to load billing summary: $error');
     }
@@ -36,8 +120,24 @@ class BillingRepositoryImpl implements BillingRepository {
         headers: _getAuthHeaders(),
       );
 
-      final List<dynamic> invoicesData = response['data'] ?? [];
-      return invoicesData.map((json) => Invoice.fromJson(json)).toList();
+      if (response is! Map) {
+        throw Exception('Invalid response format');
+      }
+
+      final rawData = response['data'];
+      final List<dynamic> invoicesData = rawData is List
+          ? rawData
+          : (rawData is Map && rawData['invoices'] is List)
+              ? (rawData['invoices'] as List)
+              : const [];
+
+      return invoicesData.map((json) {
+        if (json is! Map) return Invoice.empty();
+        final normalized = _normalizeInvoiceJson(
+          Map<String, dynamic>.from(json.cast<String, dynamic>()),
+        );
+        return Invoice.fromJson(normalized);
+      }).toList();
     } catch (error) {
       throw Exception('Failed to load invoices: $error');
     }
@@ -51,7 +151,18 @@ class BillingRepositoryImpl implements BillingRepository {
         headers: _getAuthHeaders(),
       );
 
-      return Invoice.fromJson(response['data']);
+      if (response is! Map) {
+        throw Exception('Invalid response format');
+      }
+      final data = response['data'];
+      if (data is! Map) {
+        throw Exception('Invalid invoice data format');
+      }
+      return Invoice.fromJson(
+        _normalizeInvoiceJson(
+          Map<String, dynamic>.from(data.cast<String, dynamic>()),
+        ),
+      );
     } catch (error) {
       throw Exception('Failed to load invoice: $error');
     }
