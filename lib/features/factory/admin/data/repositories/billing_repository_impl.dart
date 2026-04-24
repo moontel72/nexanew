@@ -2,7 +2,6 @@
 // Implements billing data operations using remote datasource
 
 import 'package:nexatrace_system/core/services/api_client.dart';
-import 'package:nexatrace_system/core/utils/auth_state.dart';
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
 import 'package:nexatrace_system/features/factory/admin/domain/repositories/billing_repository.dart';
 
@@ -204,17 +203,9 @@ class BillingRepositoryImpl implements BillingRepository {
   // Helper methods
 
   Map<String, String> _getAuthHeaders() {
-    final token = getFactoryAuthToken();
-    final factoryId = getFactoryId();
-
-    if (factoryId == null) {
-      throw Exception('Factory ID not found. Please login again.');
-    }
-
     return {
-      'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
-      'X-Factory-ID': factoryId,
+      'Accept': 'application/json',
     };
   }
 
