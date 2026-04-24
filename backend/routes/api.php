@@ -518,8 +518,13 @@ $registerRoutes = function (): void {
     });
 
     Route::prefix("codes")
-        ->middleware("auth:factory")
         ->group(function (): void {
+            Route::get('exports/{companyId}/{file}', [
+                \App\Http\Controllers\Factory\Codes\CodeExportsController::class,
+                'download',
+            ])->middleware('signed')->name('codes.exports.download');
+
+            Route::middleware("auth:factory")->group(function (): void {
             Route::prefix("unit")->group(function (): void {
                 Route::post("generate", [
                     \App\Http\Controllers\Factory\Codes\UnitCodesController::class,
@@ -602,6 +607,7 @@ $registerRoutes = function (): void {
                     \App\Http\Controllers\Factory\Codes\BundleCodesController::class,
                     "download",
                 ]);
+            });
             });
         });
 

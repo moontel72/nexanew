@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use App\Services\Pdf\SimplePdfGenerator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\URL;
 
 class CodeExportService
 {
@@ -63,6 +64,11 @@ class CodeExportService
         return [
             'file_name' => $fileName,
             'file_path' => '/storage/exports/' . $companyId . '/' . $fileName,
+            'download_url' => URL::temporarySignedRoute(
+                'codes.exports.download',
+                now()->addMinutes(10),
+                ['companyId' => $companyId, 'file' => $fileName],
+            ),
         ];
     }
 

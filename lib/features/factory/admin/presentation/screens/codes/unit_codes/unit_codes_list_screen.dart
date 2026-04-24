@@ -237,7 +237,7 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
 
             launchUrl(
               Uri.parse(url),
-              mode: LaunchMode.platformDefault,
+              mode: LaunchMode.externalApplication,
             );
           }
         },

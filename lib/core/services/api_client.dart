@@ -97,8 +97,8 @@ class ApiClient {
           : endpoint;
       final normalizedPath = path.startsWith('/') ? path : '/$path';
 
-      final isFactoryEndpoint = normalizedPath.startsWith('/factory/') ||
-          normalizedPath.startsWith('/codes/');
+      final isFactoryEndpoint =
+          normalizedPath.contains('/factory/') || normalizedPath.contains('/codes/');
 
       if (isFactoryEndpoint) {
         token = prefs.getString('factory_auth_token');

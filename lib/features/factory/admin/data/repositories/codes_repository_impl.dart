@@ -394,6 +394,8 @@ class CodesRepositoryImpl implements CodesRepository {
     );
 
     final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    final downloadUrl = (data['download_url'] ?? '').toString().trim();
+    if (downloadUrl.isNotEmpty) return downloadUrl;
     return (data['file_path'] ?? '').toString();
   }
 }
