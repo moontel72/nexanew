@@ -836,6 +836,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                               ],
                             )
                           : const SizedBox.shrink(),
+                      const SizedBox(height: 30),
                     ],
                   ),
                 ),

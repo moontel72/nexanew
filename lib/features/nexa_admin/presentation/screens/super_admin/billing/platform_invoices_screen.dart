@@ -1,52 +1,428 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:nexatrace_system/core/services/api_client.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
+import 'package:nexatrace_system/shared/models/billing/invoice_model.dart' as shared;
 import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+import 'package:nexatrace_system/shared/theme/typography.dart';
+import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 
-class PlatformInvoicesScreen extends StatelessWidget {
+class PlatformInvoicesScreen extends StatefulWidget {
   const PlatformInvoicesScreen({super.key});
 
   @override
+  State<PlatformInvoicesScreen> createState() => _PlatformInvoicesScreenState();
+}
+
+class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
+  final _scrollController = ScrollController();
+  final _searchController = TextEditingController();
+
+  int _currentPage = 1;
+  final int _limit = 20;
+  bool _hasMore = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInvoices(resetPage: true);
+    });
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent &&
+        _hasMore) {
+      _currentPage++;
+      _loadInvoices();
+    }
+  }
+
+  void _loadInvoices({bool resetPage = false}) {
+    if (resetPage) {
+      _currentPage = 1;
+      _hasMore = true;
+    }
+
+    context.read<BillingBloc>().add(
+          BillingEvent.loadPlatformInvoices(
+            page: _currentPage,
+            limit: _limit,
+            searchQuery: _searchController.text.trim().isEmpty
+                ? null
+                : _searchController.text.trim(),
+          ),
+        );
+  }
+
+  Future<void> _finalize(AdminInvoice invoice) async {
+    context.read<BillingBloc>().add(
+          BillingEvent.updateInvoiceStatus(
+            invoiceId: invoice.id,
+            status: shared.InvoiceStatus.pending,
+          ),
+        );
+  }
+
+  Future<void> _markPaid(AdminInvoice invoice) async {
+    final selected = await showDialog<shared.PaymentMethod>(
+      context: context,
+      builder: (context) => const _MarkPaidDialog(),
+    );
+    if (selected == null) return;
+
+    context.read<BillingBloc>().add(
+          BillingEvent.processPayment(
+            invoiceId: invoice.id,
+            amount: invoice.totalAmount,
+            method: selected,
+            paymentDate: DateTime.now(),
+            sendNotification: false,
+          ),
+        );
+  }
+
+  Future<void> _addExtraCharge(AdminInvoice invoice) async {
+    final result = await showDialog<_ExtraChargeInput>(
+      context: context,
+      builder: (context) => const _ExtraChargeDialog(),
+    );
+    if (result == null) return;
+
+    await context.read<ApiClient>().post(
+          '/admin/billing/invoices/${invoice.id}/extra-charges',
+          body: {
+            'description': result.description,
+            'unit_price': result.unitPrice,
+            'quantity': result.quantity,
+          },
+        );
+
+    if (!mounted) return;
+    _loadInvoices(resetPage: true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Extra charge added')),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.surface,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Platform Invoices'),
+        actions: [
+          IconButton(
+            onPressed: () => _loadInvoices(resetPage: true),
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(64),
           child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.receipt_long, size: 64, color: AppColors.primary),
-                const SizedBox(height: 16),
-                Text(
-                  'Platform Invoices',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'This module will list invoices and payment status for all tenant companies.\n'
-                  'Backend alignment will provide data for the BLoC states.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: AppColors.textSecondary),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                PrimaryButton(
-                  text: 'Refresh',
-                  onPressed: () {},
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search invoice # or company...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _loadInvoices(resetPage: true),
             ),
           ),
         ),
       ),
+      body: BlocConsumer<BillingBloc, BillingState>(
+        listener: (context, state) {
+          state.maybeWhen(
+            platformInvoicesLoaded: (invoices, hasMore, currentPage) {
+              setState(() {
+                _hasMore = hasMore;
+                _currentPage = currentPage;
+              });
+            },
+            invoiceStatusUpdated: (invoice, message) {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(message)));
+              _loadInvoices(resetPage: true);
+            },
+            paymentProcessed: (payment, message) {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(message)));
+              _loadInvoices(resetPage: true);
+            },
+            error: (message, error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(message),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            },
+            orElse: () {},
+          );
+        },
+        builder: (context, state) {
+          return state.maybeWhen(
+            platformInvoicesLoaded: (invoices, hasMore, currentPage) {
+              if (invoices.isEmpty) {
+                return const Center(child: Text('No invoices found'));
+              }
+
+              return Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'All Company Invoices',
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTable(invoices),
+                      if (hasMore)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              );
+            },
+            loading: () => const LoadingIndicator(),
+            processing: () => const LoadingIndicator(),
+            orElse: () => const LoadingIndicator(),
+          );
+        },
+      ),
     );
+  }
+
+  Widget _buildTable(List<AdminInvoice> invoices) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: DataTable(
+              columns: const [
+                DataColumn(label: Text('Company Name')),
+                DataColumn(label: Text('Invoice #')),
+                DataColumn(label: Text('Amount')),
+                DataColumn(label: Text('Status')),
+                DataColumn(label: Text('Actions')),
+              ],
+              rows: invoices.map((inv) {
+                final statusText = inv.status.toString().split('.').last;
+                return DataRow(
+                  cells: [
+                    DataCell(Text(inv.companyName)),
+                    DataCell(Text(inv.invoiceNumber)),
+                    DataCell(Text('\$${inv.totalAmount.toStringAsFixed(2)}')),
+                    DataCell(InvoiceStatusBadge(status: statusText)),
+                    DataCell(
+                      PopupMenuButton<String>(
+                        onSelected: (value) async {
+                          if (value == 'finalize') {
+                            await _finalize(inv);
+                            return;
+                          }
+                          if (value == 'paid') {
+                            await _markPaid(inv);
+                            return;
+                          }
+                          if (value == 'charge') {
+                            await _addExtraCharge(inv);
+                            return;
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'finalize',
+                            enabled: inv.status == shared.InvoiceStatus.draft,
+                            child: const Text('Finalize (Draft -> Pending)'),
+                          ),
+                          const PopupMenuItem(
+                            value: 'paid',
+                            child: Text('Mark as Paid (Cash/Bank)'),
+                          ),
+                          const PopupMenuItem(
+                            value: 'charge',
+                            child: Text('Add Extra Charge'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+}
+
+class _MarkPaidDialog extends StatefulWidget {
+  const _MarkPaidDialog();
+
+  @override
+  State<_MarkPaidDialog> createState() => _MarkPaidDialogState();
+}
+
+class _MarkPaidDialogState extends State<_MarkPaidDialog> {
+  shared.PaymentMethod _method = shared.PaymentMethod.bankTransfer;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Mark as Paid'),
+      content: DropdownButtonFormField<shared.PaymentMethod>(
+        initialValue: _method,
+        items: const [
+          DropdownMenuItem(
+            value: shared.PaymentMethod.bankTransfer,
+            child: Text('Bank Transfer'),
+          ),
+          DropdownMenuItem(
+            value: shared.PaymentMethod.cash,
+            child: Text('Cash'),
+          ),
+        ],
+        onChanged: (v) {
+          if (v == null) return;
+          setState(() => _method = v);
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _method),
+          child: const Text('Confirm'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ExtraChargeInput {
+  final String description;
+  final double unitPrice;
+  final double quantity;
+
+  const _ExtraChargeInput({
+    required this.description,
+    required this.unitPrice,
+    required this.quantity,
+  });
+}
+
+class _ExtraChargeDialog extends StatefulWidget {
+  const _ExtraChargeDialog();
+
+  @override
+  State<_ExtraChargeDialog> createState() => _ExtraChargeDialogState();
+}
+
+class _ExtraChargeDialogState extends State<_ExtraChargeDialog> {
+  final _descCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  final _qtyCtrl = TextEditingController(text: '1');
+
+  double _d(String s) => double.tryParse(s.trim()) ?? 0.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add Extra Charge'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _descCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _priceCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Unit Price',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _qtyCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Quantity',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            final description = _descCtrl.text.trim();
+            if (description.isEmpty) return;
+            Navigator.pop(
+              context,
+              _ExtraChargeInput(
+                description: description,
+                unitPrice: _d(_priceCtrl.text),
+                quantity: _d(_qtyCtrl.text),
+              ),
+            );
+          },
+          child: const Text('Add'),
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _descCtrl.dispose();
+    _priceCtrl.dispose();
+    _qtyCtrl.dispose();
+    super.dispose();
   }
 }
 

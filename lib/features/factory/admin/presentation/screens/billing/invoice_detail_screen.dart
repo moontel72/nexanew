@@ -39,22 +39,6 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         title: const Text('Invoice Details'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: () {
-              context.read<BillingBloc>().add(
-                BillingEvent.downloadInvoice(invoiceId: widget.invoiceId),
-              );
-            },
-            tooltip: 'Download PDF',
-          ),
-          IconButton(
-            icon: const Icon(Icons.email),
-            onPressed: () {
-              _showSendEmailDialog();
-            },
-            tooltip: 'Send via Email',
-          ),
-          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
               context.read<BillingBloc>().add(
@@ -73,32 +57,6 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Invoice downloaded successfully'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            }
-          }
-
-          // Handle email sent success
-          if (state is BillingInvoiceEmailSent) {
-            if (state.invoiceId == widget.invoiceId) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Invoice sent via email'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            }
-          }
-
-          // Handle payment success
-          if (state is BillingPaymentSuccess) {
-            if (state.updatedInvoice.id == widget.invoiceId) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Payment of \$${state.payment.amount.toStringAsFixed(2)} successful',
-                  ),
                   backgroundColor: AppColors.success,
                 ),
               );
@@ -370,37 +328,10 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       title: 'Invoice Actions',
       child: Column(
         children: [
-          if (invoice.status == InvoiceStatus.pending ||
-              invoice.status == InvoiceStatus.overdue) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: PrimaryButton(
-                    text: 'Pay Now',
-                    icon: Icons.payment,
-                    onPressed: () {
-                      _showPaymentDialog(invoice);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SecondaryButton(
-                    text: 'Request Extension',
-                    icon: Icons.calendar_today,
-                    onPressed: () {
-                      _showExtensionDialog(invoice);
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-          ],
           Row(
             children: [
               Expanded(
-                child: invoice.status == InvoiceStatus.paid
+                child: invoice.status != InvoiceStatus.draft
                     ? PrimaryButton(
                         text: 'Download PDF',
                         icon: Icons.download,
@@ -414,39 +345,30 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         text: 'Download PDF',
                         icon: Icons.download,
                         onPressed: () {
-                          _showLockedDialog(invoice);
+                          _showNotFinalizedDialog();
                         },
                       ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SecondaryButton(
-                  text: 'Send Email',
-                  icon: Icons.email,
-                  onPressed: () {
-                    _showSendEmailDialog();
-                  },
-                ),
-              ),
             ],
           ),
-          if (invoice.status != InvoiceStatus.paid) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.lock, size: 16, color: AppColors.warning),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Invoice must be paid before downloading PDF',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.warning,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+        ],
+      ),
+    );
+  }
+
+  void _showNotFinalizedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Invoice Not Finalized'),
+        content: const Text(
+          'This invoice is not finalized yet. Please wait for Super Admin to finalize it.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
         ],
       ),
     );
@@ -571,21 +493,24 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   }
 
   Widget _buildBillingBreakdown(Invoice invoice) {
+    double n(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString().trim()) ?? 0.0;
+    }
+
     final publishItem = invoice.items.cast<InvoiceItem?>().firstWhere(
           (i) => (i?.metadata?['source']?.toString() ?? '') == 'publish_codes',
           orElse: () => null,
         );
     if (publishItem == null) return const SizedBox.shrink();
 
-    final monthlyFee =
-        (publishItem.metadata?['monthly_fee'] as num?)?.toDouble() ?? 0.0;
+    final monthlyFee = n(publishItem.metadata?['monthly_fee']);
     final rate =
-        (publishItem.metadata?['rate'] as num?)?.toDouble() ?? publishItem.unitPrice;
+        n(publishItem.metadata?['rate']) == 0.0 ? publishItem.unitPrice : n(publishItem.metadata?['rate']);
     final billableCount =
-        (publishItem.metadata?['billable_count'] as num?)?.toDouble() ??
-        publishItem.quantity;
-    final freeApplied =
-        (publishItem.metadata?['free_applied'] as num?)?.toDouble() ?? 0.0;
+        n(publishItem.metadata?['billable_count']) == 0.0 ? publishItem.quantity : n(publishItem.metadata?['billable_count']);
+    final freeApplied = n(publishItem.metadata?['free_applied']);
     final codeCount = (publishItem.codeCount ?? 0).toDouble();
 
     final usageCharge = billableCount * rate;

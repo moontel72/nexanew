@@ -1600,6 +1600,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   minLines: 2,
                   maxLines: 4,
                 ),
+                const SizedBox(height: 30),
                   ],
                 ),
               ),

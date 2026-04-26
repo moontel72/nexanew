@@ -34,6 +34,16 @@ import 'package:nexatrace_system/features/factory/admin/data/repositories/billin
 import 'package:nexatrace_system/features/factory/admin/domain/repositories/billing_repository.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/billing/billing_bloc.dart';
 
+import 'package:nexatrace_system/features/nexa_admin/data/datasources/billing_datasource.dart'
+    as admin_billing_ds;
+import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart'
+    as admin_billing_repo;
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart'
+    as admin_billing_bloc;
+import 'package:nexatrace_system/features/nexa_admin/domain/usecases/generate_invoice_usecase.dart';
+import 'package:nexatrace_system/features/nexa_admin/domain/usecases/process_payment_usecase.dart';
+import 'package:nexatrace_system/features/nexa_admin/domain/usecases/reconcile_payments_usecase.dart';
+
 class AppProviders {
   /// Get all repository providers for the root of the app
   static List<RepositoryProvider> getRepositoryProviders({
@@ -82,6 +92,16 @@ class AppProviders {
       RepositoryProvider<DashboardRepository>(
         create: (context) =>
             DashboardRepository(apiClient: context.read<ApiClient>()),
+      ),
+
+      RepositoryProvider<admin_billing_ds.BillingDataSource>(
+        create: (context) =>
+            admin_billing_ds.BillingDataSourceImpl(context.read<ApiClient>()),
+      ),
+      RepositoryProvider<admin_billing_repo.BillingRepository>(
+        create: (context) => admin_billing_repo.BillingRepositoryImpl(
+          context.read<admin_billing_ds.BillingDataSource>(),
+        ),
       ),
 
       // Factory Admin Repositories
@@ -150,6 +170,17 @@ class AppProviders {
       ),
       BlocProvider<SuperAdminLayoutCubit>(
         create: (context) => SuperAdminLayoutCubit(),
+      ),
+      BlocProvider<admin_billing_bloc.BillingBloc>(
+        create: (context) {
+          final repo = context.read<admin_billing_repo.BillingRepository>();
+          return admin_billing_bloc.BillingBloc(
+            generateInvoiceUseCase: GenerateInvoiceUseCase(repo),
+            processPaymentUseCase: ProcessPaymentUseCase(repo),
+            reconcilePaymentsUseCase: ReconcilePaymentsUseCase(repo),
+            billingRepository: repo,
+          );
+        },
       ),
     ];
   }

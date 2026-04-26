@@ -93,6 +93,32 @@ class BillingDataSourceImpl implements BillingDataSource {
 
   BillingDataSourceImpl(this._apiClient);
 
+  double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString().trim()) ?? 0.0;
+  }
+
+  int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString().trim()) ?? 0;
+  }
+
+  String _toStringValue(dynamic value, {String fallback = ''}) {
+    final s = value?.toString().trim() ?? '';
+    return s.isEmpty ? fallback : s;
+  }
+
+  String _toIsoDate(dynamic value) {
+    if (value == null) return DateTime.now().toIso8601String();
+    if (value is DateTime) return value.toIso8601String();
+    final s = value.toString().trim();
+    if (s.isEmpty) return DateTime.now().toIso8601String();
+    return s;
+  }
+
   String _paymentMethodToWireValue(shared.PaymentMethod method) {
     switch (method) {
       case shared.PaymentMethod.wallet:
@@ -146,10 +172,75 @@ class BillingDataSourceImpl implements BillingDataSource {
 
   Map<String, dynamic> _normalizeAdminInvoiceJson(Map<String, dynamic> json) {
     final m = Map<String, dynamic>.from(json);
-    m['paymentMethod'] = _normalizePaymentMethodWireValue(
-      m['paymentMethod'] ?? m['payment_method'],
-    );
-    return m;
+
+    final issueDate = _toIsoDate(m['issueDate'] ?? m['issue_date'] ?? m['created_at']);
+    final dueDate = _toIsoDate(m['dueDate'] ?? m['due_date'] ?? issueDate);
+    final periodStart = _toIsoDate(m['periodStart'] ?? m['period_start'] ?? issueDate);
+    final periodEnd = _toIsoDate(m['periodEnd'] ?? m['period_end'] ?? dueDate);
+
+    final rawItems = m['items'];
+    final items = rawItems is List
+        ? rawItems
+            .whereType<Map>()
+            .map((e) {
+              final item = Map<String, dynamic>.from(e.cast<String, dynamic>());
+              return {
+                'id': _toStringValue(item['id']),
+                'description': _toStringValue(item['description']),
+                'quantity': _toDouble(item['quantity']),
+                'unitPrice': _toDouble(item['unitPrice'] ?? item['unit_price']),
+                'total': _toDouble(
+                  item['total'] ?? item['total_price'] ?? item['totalPrice'],
+                ),
+                'currency': _toStringValue(item['currency'], fallback: 'USD'),
+                'codeType': item['codeType'] ?? item['code_type'],
+                'codeCount': (item['codeCount'] ?? item['code_count']) == null
+                    ? null
+                    : _toInt(item['codeCount'] ?? item['code_count']),
+                'periodStart': item['periodStart'] ?? item['period_start'],
+                'periodEnd': item['periodEnd'] ?? item['period_end'],
+                'metadata': item['metadata'],
+              };
+            })
+            .toList()
+        : const <Map<String, dynamic>>[];
+
+    return {
+      'id': _toStringValue(m['id']),
+      'invoiceNumber': _toStringValue(m['invoiceNumber'] ?? m['invoice_number']),
+      'companyId': _toStringValue(m['companyId'] ?? m['company_id']),
+      'companyName': _toStringValue(m['companyName'] ?? m['company_name']),
+      'subscriptionId': _toStringValue(m['subscriptionId'] ?? m['subscription_id']),
+      'subscriptionName': _toStringValue(
+        m['subscriptionName'] ?? m['subscription_name'],
+      ),
+      'periodStart': periodStart,
+      'periodEnd': periodEnd,
+      'issueDate': issueDate,
+      'dueDate': dueDate,
+      'subtotal': _toDouble(m['subtotal']),
+      'taxAmount': _toDouble(m['taxAmount'] ?? m['tax_amount']),
+      'discountAmount': _toDouble(m['discountAmount'] ?? m['discount_amount']),
+      'totalAmount': _toDouble(m['totalAmount'] ?? m['total_amount']),
+      'currency': _toStringValue(m['currency'], fallback: 'USD'),
+      'items': items,
+      'status': m['status'] ?? 'pending',
+      'paymentDate': m['paymentDate'] ?? m['payment_date'],
+      'paymentMethod': _normalizePaymentMethodWireValue(
+        m['paymentMethod'] ?? m['payment_method'],
+      ),
+      'paymentReference': m['paymentReference'] ?? m['payment_reference'],
+      'notes': m['notes'],
+      'metadata': m['metadata'],
+      'createdAt': m['createdAt'] ?? m['created_at'],
+      'updatedAt': m['updatedAt'] ?? m['updated_at'],
+      'adminNotes': m['adminNotes'] ?? m['admin_notes'],
+      'requiresFollowUp': m['requiresFollowUp'] ?? m['requires_follow_up'],
+      'followUpReason': m['followUpReason'] ?? m['follow_up_reason'],
+      'followUpDate': m['followUpDate'] ?? m['follow_up_date'],
+      'assignedToAdminId': m['assignedToAdminId'] ?? m['assigned_to_admin_id'],
+      'assignedToAdminName': m['assignedToAdminName'] ?? m['assigned_to_admin_name'],
+    };
   }
 
   Map<String, dynamic> _normalizeSharedPaymentJson(Map<String, dynamic> json) {
@@ -343,14 +434,12 @@ class BillingDataSourceImpl implements BillingDataSource {
     shared.InvoiceStatus status,
   ) async {
     try {
-      final response = await _apiClient.put(
+      await _apiClient.put(
         '/admin/billing/invoices/$invoiceId/status',
         body: {'status': status.toString().split('.').last},
       );
 
-      return AdminInvoice.fromJson(
-        _normalizeAdminInvoiceJson(_extractMap(response, key: 'invoice')),
-      );
+      return getInvoiceById(invoiceId);
     } on AppException {
       rethrow;
     }
