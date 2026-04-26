@@ -5,7 +5,6 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admi
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart';
-import 'package:nexatrace_system/routes/app_router.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/admin_top_bar.dart';
 import 'package:nexatrace_system/shared/widgets/navigation/admin_sidebar.dart';

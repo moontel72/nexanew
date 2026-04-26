@@ -5,17 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Company;
-use App\Models\Subscription;
 use App\Models\CreditNote;
 use App\Models\Payment;
 use App\Services\BillingService;
 use App\Services\InvoiceService;
 use App\Services\RevenueService;
+use App\Services\ExportService;
+use App\Services\Pdf\SimplePdfGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class AdminBillingController extends Controller
 {
@@ -65,7 +67,7 @@ class AdminBillingController extends Controller
         }
 
         try {
-            $query = Invoice::with(['company:id,name,email', 'subscription:id,name'])
+            $query = Invoice::with(['company:id,name,email', 'subscription.plan:id,name'])
                 ->select('invoices.*')
                 ->join('companies', 'invoices.company_id', '=', 'companies.id');
 
@@ -117,28 +119,28 @@ class AdminBillingController extends Controller
             $transformedInvoices = $invoices->map(function ($invoice) {
                 return [
                     'id' => $invoice->id,
-                    'invoice_number' => $invoice->invoice_number,
-                    'company_id' => $invoice->company_id,
-                    'company_name' => $invoice->company->name,
-                    'company_email' => $invoice->company->email,
-                    'subscription_id' => $invoice->subscription_id,
-                    'subscription_name' => $invoice->subscription?->name,
-                    'period_start' => $invoice->period_start->toDateString(),
-                    'period_end' => $invoice->period_end->toDateString(),
-                    'issue_date' => $invoice->issue_date->toDateString(),
-                    'due_date' => $invoice->due_date->toDateString(),
+                    'invoiceNumber' => $invoice->invoice_number,
+                    'companyId' => $invoice->company_id,
+                    'companyName' => $invoice->company->name,
+                    'companyEmail' => $invoice->company->email,
+                    'subscriptionId' => $invoice->subscription_id,
+                    'subscriptionName' => $invoice->subscription?->plan?->name,
+                    'periodStart' => $invoice->period_start->toDateString(),
+                    'periodEnd' => $invoice->period_end->toDateString(),
+                    'issueDate' => $invoice->issue_date->toDateString(),
+                    'dueDate' => $invoice->due_date->toDateString(),
                     'subtotal' => (float) $invoice->subtotal,
-                    'tax_amount' => (float) $invoice->tax_amount,
-                    'discount_amount' => (float) $invoice->discount_amount,
-                    'total_amount' => (float) $invoice->total_amount,
+                    'taxAmount' => (float) $invoice->tax_amount,
+                    'discountAmount' => (float) $invoice->discount_amount,
+                    'totalAmount' => (float) $invoice->total_amount,
                     'currency' => $invoice->currency,
                     'status' => $invoice->status,
-                    'payment_date' => $invoice->payment_date?->toDateString(),
-                    'payment_method' => $invoice->payment_method,
-                    'payment_reference' => $invoice->payment_reference,
+                    'paymentDate' => $invoice->payment_date?->toDateString(),
+                    'paymentMethod' => $invoice->payment_method,
+                    'paymentReference' => $invoice->payment_reference,
                     'notes' => $invoice->notes,
-                    'created_at' => $invoice->created_at->toISOString(),
-                    'updated_at' => $invoice->updated_at->toISOString(),
+                    'createdAt' => $invoice->created_at->toISOString(),
+                    'updatedAt' => $invoice->updated_at->toISOString(),
                 ];
             });
 
@@ -155,11 +157,11 @@ class AdminBillingController extends Controller
                         'to' => $invoices->lastItem(),
                     ],
                     'summary' => [
-                        'total_invoices' => $invoices->total(),
-                        'total_amount' => (float) $invoices->sum('total_amount'),
-                        'paid_amount' => (float) $invoices->where('status', 'paid')->sum('total_amount'),
-                        'pending_amount' => (float) $invoices->where('status', 'pending')->sum('total_amount'),
-                        'overdue_amount' => (float) $invoices->where('status', 'overdue')->sum('total_amount'),
+                        'totalInvoices' => $invoices->total(),
+                        'totalAmount' => (float) $invoices->sum('total_amount'),
+                        'paidAmount' => (float) $invoices->where('status', 'paid')->sum('total_amount'),
+                        'pendingAmount' => (float) $invoices->where('status', 'pending')->sum('total_amount'),
+                        'overdueAmount' => (float) $invoices->where('status', 'overdue')->sum('total_amount'),
                     ],
                 ],
                 'message' => 'Invoices retrieved successfully',
@@ -189,61 +191,65 @@ class AdminBillingController extends Controller
         try {
             $invoice = Invoice::with([
                 'company:id,name,email,phone,address',
-                'subscription:id,name,plan_type',
+                'subscription.plan:id,name',
                 'payments' => function ($query) {
                     $query->orderBy('payment_date', 'desc');
                 },
             ])->findOrFail($id);
 
-            // Get invoice items from JSON field
-            $items = json_decode($invoice->items, true) ?? [];
+            $items = $invoice->items ?? [];
+            if (!is_array($items)) {
+                $items = [];
+            }
+
+            $normalizedItems = array_map(function ($item) {
+                $m = is_array($item) ? $item : [];
+                $unitPrice = $m['unit_price'] ?? ($m['unitPrice'] ?? 0);
+                $total = $m['total'] ?? ($m['total_price'] ?? ($m['totalPrice'] ?? 0));
+
+                return [
+                    'id' => $m['id'] ?? Str::uuid()->toString(),
+                    'description' => $m['description'] ?? '',
+                    'quantity' => (float) ($m['quantity'] ?? 0),
+                    'unitPrice' => (float) $unitPrice,
+                    'total' => (float) $total,
+                    'currency' => $m['currency'] ?? 'USD',
+                    'codeType' => $m['code_type'] ?? ($m['codeType'] ?? null),
+                    'codeCount' => $m['code_count'] ?? ($m['codeCount'] ?? null),
+                    'periodStart' => $m['period_start'] ?? ($m['periodStart'] ?? null),
+                    'periodEnd' => $m['period_end'] ?? ($m['periodEnd'] ?? null),
+                    'metadata' => $m['metadata'] ?? null,
+                ];
+            }, $items);
 
             $transformedInvoice = [
                 'id' => $invoice->id,
-                'invoice_number' => $invoice->invoice_number,
-                'company' => [
-                    'id' => $invoice->company_id,
-                    'name' => $invoice->company->name,
-                    'email' => $invoice->company->email,
-                    'phone' => $invoice->company->phone,
-                    'address' => $invoice->company->address,
-                ],
-                'subscription' => $invoice->subscription ? [
-                    'id' => $invoice->subscription_id,
-                    'name' => $invoice->subscription->name,
-                    'plan_type' => $invoice->subscription->plan_type,
-                ] : null,
-                'period_start' => $invoice->period_start->toDateString(),
-                'period_end' => $invoice->period_end->toDateString(),
-                'issue_date' => $invoice->issue_date->toDateString(),
-                'due_date' => $invoice->due_date->toDateString(),
+                'invoiceNumber' => $invoice->invoice_number,
+                'companyId' => $invoice->company_id,
+                'companyName' => $invoice->company->name,
+                'companyEmail' => $invoice->company->email,
+                'companyPhone' => $invoice->company->phone,
+                'companyAddress' => $invoice->company->address,
+                'subscriptionId' => $invoice->subscription_id,
+                'subscriptionName' => $invoice->subscription?->plan?->name,
+                'periodStart' => $invoice->period_start->toDateString(),
+                'periodEnd' => $invoice->period_end->toDateString(),
+                'issueDate' => $invoice->issue_date->toDateString(),
+                'dueDate' => $invoice->due_date->toDateString(),
                 'subtotal' => (float) $invoice->subtotal,
-                'tax_amount' => (float) $invoice->tax_amount,
-                'discount_amount' => (float) $invoice->discount_amount,
-                'total_amount' => (float) $invoice->total_amount,
+                'taxAmount' => (float) $invoice->tax_amount,
+                'discountAmount' => (float) $invoice->discount_amount,
+                'totalAmount' => (float) $invoice->total_amount,
                 'currency' => $invoice->currency,
-                'items' => $items,
+                'items' => $normalizedItems,
                 'status' => $invoice->status,
-                'payment_date' => $invoice->payment_date?->toDateString(),
-                'payment_method' => $invoice->payment_method,
-                'payment_reference' => $invoice->payment_reference,
+                'paymentDate' => $invoice->payment_date?->toDateString(),
+                'paymentMethod' => $invoice->payment_method,
+                'paymentReference' => $invoice->payment_reference,
                 'notes' => $invoice->notes,
-                'metadata' => json_decode($invoice->metadata, true) ?? [],
-                'payments' => $invoice->payments->map(function ($payment) {
-                    return [
-                        'id' => $payment->id,
-                        'amount' => (float) $payment->amount,
-                        'currency' => $payment->currency,
-                        'method' => $payment->method,
-                        'payment_date' => $payment->payment_date->toDateString(),
-                        'reference' => $payment->reference,
-                        'transaction_id' => $payment->transaction_id,
-                        'notes' => $payment->notes,
-                        'created_at' => $payment->created_at->toISOString(),
-                    ];
-                }),
-                'created_at' => $invoice->created_at->toISOString(),
-                'updated_at' => $invoice->updated_at->toISOString(),
+                'metadata' => $invoice->metadata ?? [],
+                'createdAt' => $invoice->created_at->toISOString(),
+                'updatedAt' => $invoice->updated_at->toISOString(),
             ];
 
             return response()->json([

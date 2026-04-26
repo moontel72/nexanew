@@ -147,19 +147,19 @@ $registerRoutes = function (): void {
             Route::prefix("billing")->group(function (): void {
                 // Platform invoices
                 Route::get("invoices", [
-                    \App\Http\Controllers\Admin\AdminBillingController::class,
+                    \App\Http\Controllers\Admin\AdminBillingControllerNew::class,
                     "getPlatformInvoices",
                 ]);
                 Route::get("invoices/{id}", [
-                    \App\Http\Controllers\Admin\AdminBillingController::class,
+                    \App\Http\Controllers\Admin\AdminBillingControllerNew::class,
                     "getInvoiceById",
                 ]);
                 Route::post("invoices/generate", [
-                    \App\Http\Controllers\Admin\AdminBillingController::class,
+                    \App\Http\Controllers\Admin\AdminBillingControllerNew::class,
                     "generateInvoice",
                 ]);
                 Route::put("invoices/{id}/status", [
-                    \App\Http\Controllers\Admin\AdminBillingController::class,
+                    \App\Http\Controllers\Admin\AdminBillingControllerNew::class,
                     "updateInvoiceStatus",
                 ]);
                 Route::post("invoices/{id}/send", [
@@ -167,8 +167,12 @@ $registerRoutes = function (): void {
                     "sendInvoiceNotification",
                 ]);
                 Route::post("invoices/{id}/mark-paid", [
-                    \App\Http\Controllers\Admin\AdminBillingController::class,
+                    \App\Http\Controllers\Admin\AdminBillingControllerNew::class,
                     "markInvoiceAsPaid",
+                ]);
+                Route::post("invoices/{id}/extra-charges", [
+                    \App\Http\Controllers\Admin\AdminBillingControllerNew::class,
+                    "addExtraCharge",
                 ]);
                 Route::get("invoices/{id}/pdf", [
                     \App\Http\Controllers\Admin\AdminBillingController::class,

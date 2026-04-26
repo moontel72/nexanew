@@ -359,7 +359,7 @@ class BillingDataSourceImpl implements BillingDataSource {
   @override
   Future<void> sendInvoiceNotification(String invoiceId) async {
     try {
-      await _apiClient.post('/admin/billing/invoices/$invoiceId/notify');
+      await _apiClient.post('/admin/billing/invoices/$invoiceId/send');
     } on AppException {
       rethrow;
     }
