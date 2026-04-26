@@ -441,6 +441,7 @@ class PacketCodesController extends Controller
         $invoice = new Invoice([
             'company_id' => $companyId,
             'subscription_id' => (string) $subscription->id,
+            'type' => 'platform',
             'invoice_number' => $invoiceNumber,
             'period_start' => $periodStart,
             'period_end' => $periodEnd,

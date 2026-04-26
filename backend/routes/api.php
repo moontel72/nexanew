@@ -154,6 +154,10 @@ $registerRoutes = function (): void {
                     \App\Http\Controllers\Admin\AdminBillingControllerNew::class,
                     "getInvoiceById",
                 ]);
+                Route::get("invoices/{id}/usage-breakdown", [
+                    \App\Http\Controllers\Admin\AdminBillingControllerNew::class,
+                    "getInvoiceUsageBreakdown",
+                ]);
                 Route::post("invoices/generate", [
                     \App\Http\Controllers\Admin\AdminBillingControllerNew::class,
                     "generateInvoice",
@@ -491,6 +495,21 @@ $registerRoutes = function (): void {
                 Route::get("statistics", [
                     \App\Http\Controllers\Factory\FactoryBillingController::class,
                     "getInvoiceStatistics",
+                ]);
+            });
+
+            Route::prefix("customer-invoices")->group(function (): void {
+                Route::get("", [
+                    \App\Http\Controllers\Factory\FactoryCustomerInvoicesController::class,
+                    "list",
+                ]);
+                Route::post("generate", [
+                    \App\Http\Controllers\Factory\FactoryCustomerInvoicesController::class,
+                    "generate",
+                ]);
+                Route::post("{invoiceId}/send-email", [
+                    \App\Http\Controllers\Factory\FactoryCustomerInvoicesController::class,
+                    "sendEmail",
                 ]);
             });
 

@@ -44,7 +44,8 @@ class AdminBillingControllerNew extends Controller
         }
 
         try {
-            $query = Invoice::with(['company:id,name,email', 'subscription.plan:id,name']);
+            $query = Invoice::with(['company:id,name,email', 'subscription.plan:id,name'])
+                ->where('type', 'platform');
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -389,6 +390,35 @@ class AdminBillingControllerNew extends Controller
         try {
             $invoice = Invoice::findOrFail($id);
 
+            if ($invoice->status === 'paid') {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'INVOICE_ALREADY_PAID',
+                        'message' => 'Invoice is already paid',
+                    ],
+                    'timestamp' => now()->toISOString(),
+                    'request_id' => $request->header('X-Request-ID'),
+                ], 409);
+            }
+
+            if (!in_array($invoice->status, ['pending', 'overdue'], true)) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'INVOICE_NOT_PAYABLE',
+                        'message' => 'Invoice status does not allow payment',
+                        'details' => [
+                            'status' => $invoice->status,
+                        ],
+                    ],
+                    'timestamp' => now()->toISOString(),
+                    'request_id' => $request->header('X-Request-ID'),
+                ], 409);
+            }
+
             $invoice->status = 'paid';
             $invoice->payment_date = $request->payment_date ?? now();
             $invoice->payment_method = $request->payment_method;
@@ -442,6 +472,55 @@ class AdminBillingControllerNew extends Controller
                 'error' => [
                     'code' => 'SERVER_ERROR',
                     'message' => 'Failed to mark invoice as paid',
+                    'details' => config('app.debug') ? $e->getMessage() : null,
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => $request->header('X-Request-ID'),
+            ], 500);
+        }
+    }
+
+    public function getInvoiceUsageBreakdown(Request $request, string $id): JsonResponse
+    {
+        try {
+            $invoice = Invoice::findOrFail($id);
+
+            $rows = DB::table('base_codes')
+                ->selectRaw("DATE(COALESCE(published_at, created_at)) as day")
+                ->selectRaw('code_type')
+                ->selectRaw('COUNT(*)::int as count')
+                ->where('company_id', $invoice->company_id)
+                ->whereRaw("metadata->>'publish_invoice_id' = ?", [$invoice->id])
+                ->groupByRaw('DATE(COALESCE(published_at, created_at)), code_type')
+                ->orderBy('day')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'invoiceId' => $invoice->id,
+                    'rows' => $rows,
+                ],
+                'message' => 'Usage breakdown retrieved successfully',
+                'timestamp' => now()->toISOString(),
+                'request_id' => $request->header('X-Request-ID'),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'INVOICE_NOT_FOUND',
+                    'message' => 'Invoice not found',
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => $request->header('X-Request-ID'),
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'SERVER_ERROR',
+                    'message' => 'Failed to retrieve usage breakdown',
                     'details' => config('app.debug') ? $e->getMessage() : null,
                 ],
                 'timestamp' => now()->toISOString(),

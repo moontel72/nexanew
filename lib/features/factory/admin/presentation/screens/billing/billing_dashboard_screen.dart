@@ -11,6 +11,7 @@ import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.d
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/billing/billing_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/billing/invoice_detail_screen.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/screens/billing/invoices_list_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/billing/payment_history_screen.dart';
 
 class BillingDashboardScreen extends StatefulWidget {
@@ -377,14 +378,22 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
             text: 'View All Invoices',
             icon: Icons.list,
             onPressed: () {
-              context.read<BillingBloc>().add(
-                    const BillingEvent.loadInvoices(
-                      filter: BillingFilter(
-                        sortBy: 'issueDate',
-                        sortDesc: true,
-                      ),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const InvoicesListScreen(
+                    initialFilter: BillingFilter(
+                      sortBy: 'issueDate',
+                      sortDesc: true,
+                      statuses: [
+                        InvoiceStatus.pending,
+                        InvoiceStatus.overdue,
+                        InvoiceStatus.paid,
+                      ],
                     ),
-                  );
+                  ),
+                ),
+              );
             },
           ),
           PrimaryButton(
@@ -400,10 +409,20 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
             text: 'Download Reports',
             icon: Icons.download,
             onPressed: () {
-              // TODO: Implement report download
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Report download feature coming soon'),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const InvoicesListScreen(
+                    initialFilter: BillingFilter(
+                      sortBy: 'issueDate',
+                      sortDesc: true,
+                      statuses: [
+                        InvoiceStatus.pending,
+                        InvoiceStatus.overdue,
+                        InvoiceStatus.paid,
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
@@ -419,14 +438,22 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
       action: hasMore
           ? TextButton(
               onPressed: () {
-                context.read<BillingBloc>().add(
-                      const BillingEvent.loadInvoices(
-                        filter: BillingFilter(
-                          sortBy: 'issueDate',
-                          sortDesc: true,
-                        ),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InvoicesListScreen(
+                      initialFilter: BillingFilter(
+                        sortBy: 'issueDate',
+                        sortDesc: true,
+                        statuses: [
+                          InvoiceStatus.pending,
+                          InvoiceStatus.overdue,
+                          InvoiceStatus.paid,
+                        ],
                       ),
-                    );
+                    ),
+                  ),
+                );
               },
               child: const Text('View All'),
             )

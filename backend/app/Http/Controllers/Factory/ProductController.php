@@ -352,6 +352,7 @@ class ProductController extends Controller
         $invoice = new Invoice([
             'company_id' => $companyId,
             'subscription_id' => (string) $subscription->id,
+            'type' => 'platform',
             'invoice_number' => $invoiceNumber,
             'period_start' => $periodStart,
             'period_end' => $periodEnd,
@@ -385,10 +386,10 @@ class ProductController extends Controller
                     ],
                 ],
             ],
-            'status' => 'paid',
-            'payment_date' => $issueDate,
-            'payment_method' => 'system',
-            'payment_reference' => $subtotal > 0 ? 'ACCRUED' : 'FREE',
+            'status' => $subtotal > 0 ? 'pending' : 'paid',
+            'payment_date' => $subtotal > 0 ? null : $issueDate,
+            'payment_method' => $subtotal > 0 ? null : 'system',
+            'payment_reference' => $subtotal > 0 ? null : 'FREE',
             'metadata' => array_merge([
                 'source' => 'publish_codes',
                 'code_type' => $codeType,

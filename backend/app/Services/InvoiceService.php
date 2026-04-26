@@ -95,6 +95,7 @@ class InvoiceService
                 "id" => Str::uuid()->toString(),
                 "company_id" => $company->id,
                 "subscription_id" => $subscription->id,
+                "type" => "platform",
                 "invoice_number" => $invoiceNumber,
                 "period_start" => $periodStart,
                 "period_end" => $periodEnd,
@@ -183,6 +184,7 @@ class InvoiceService
             $invoice = Invoice::create([
                 "id" => Str::uuid()->toString(),
                 "company_id" => $company->id,
+                "type" => "customer",
                 "invoice_number" => $invoiceNumber,
                 "period_start" =>
                     $data["period_start"] ?? Carbon::now()->startOfMonth(),
@@ -199,6 +201,7 @@ class InvoiceService
                 "items" => $invoiceItems,
                 "status" => "pending",
                 "notes" => $data["notes"] ?? null,
+                "metadata" => $data["metadata"] ?? null,
             ]);
 
             DB::commit();

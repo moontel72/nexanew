@@ -32,24 +32,29 @@ class FactoryBillingController extends Controller
 
             // Calculate total owed (pending + overdue invoices)
             $totalOwed = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->whereIn("status", ["pending", "overdue"])
                 ->sum("total_amount");
 
             // Calculate total paid
             $totalPaid = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("status", "paid")
                 ->sum("total_amount");
 
             // Count invoices by status
             $pendingInvoices = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("status", "pending")
                 ->count();
 
             $paidInvoices = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("status", "paid")
                 ->count();
 
             $overdueInvoices = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("status", "overdue")
                 ->count();
 
@@ -118,7 +123,9 @@ class FactoryBillingController extends Controller
         try {
             $factoryId = $this->getFactoryId();
 
-            $query = Invoice::where("company_id", $factoryId)->with([
+            $query = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
+                ->with([
                 "subscription.plan",
             ]);
 
@@ -259,6 +266,7 @@ class FactoryBillingController extends Controller
             $factoryId = $this->getFactoryId();
 
             $invoice = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("id", $invoiceId)
                 ->with(["subscription.plan"])
                 ->firstOrFail();
@@ -363,6 +371,7 @@ class FactoryBillingController extends Controller
 
             // Verify invoice belongs to factory
             $invoice = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("id", $invoiceId)
                 ->firstOrFail();
 
@@ -418,6 +427,7 @@ class FactoryBillingController extends Controller
 
             // Get and verify invoice
             $invoice = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("id", $request->input("invoice_id"))
                 ->firstOrFail();
 
@@ -522,15 +532,15 @@ class FactoryBillingController extends Controller
             $factoryId = $this->getFactoryId();
 
             $invoice = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("id", $invoiceId)
                 ->firstOrFail();
 
-            // Check if invoice is paid (only paid invoices can be downloaded)
-            if ($invoice->status !== "paid") {
+            if ($invoice->status === "draft") {
                 return response()->json(
                     [
                         "success" => false,
-                        "message" => "Invoice must be paid before downloading",
+                        "message" => "Invoice must be finalized before downloading",
                         "downloadable" => false,
                     ],
                     403,
@@ -615,10 +625,11 @@ class FactoryBillingController extends Controller
             $factoryId = $this->getFactoryId();
 
             $invoice = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("id", $invoiceId)
                 ->firstOrFail();
 
-            $downloadable = $invoice->status === "paid";
+            $downloadable = $invoice->status !== "draft";
 
             return response()->json([
                 "success" => true,
@@ -627,7 +638,7 @@ class FactoryBillingController extends Controller
                     "status" => $invoice->status,
                     "message" => $downloadable
                         ? "Invoice is ready for download"
-                        : "Invoice must be paid before downloading",
+                        : "Invoice must be finalized before downloading",
                 ],
             ]);
         } catch (\Exception $e) {
@@ -653,6 +664,7 @@ class FactoryBillingController extends Controller
             $factoryId = $this->getFactoryId();
 
             $invoice = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("id", $invoiceId)
                 ->firstOrFail();
 
@@ -706,25 +718,30 @@ class FactoryBillingController extends Controller
 
             // Calculate statistics
             $totalRevenue = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("status", "paid")
                 ->whereBetween("payment_date", [$startDate, $endDate])
                 ->sum("total_amount");
 
             $totalInvoices = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->whereBetween("issue_date", [$startDate, $endDate])
                 ->count();
 
             $paidInvoices = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("status", "paid")
                 ->whereBetween("payment_date", [$startDate, $endDate])
                 ->count();
 
             $pendingInvoices = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("status", "pending")
                 ->whereBetween("issue_date", [$startDate, $endDate])
                 ->count();
 
             $overdueInvoices = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("status", "overdue")
                 ->whereBetween("issue_date", [$startDate, $endDate])
                 ->count();
@@ -745,6 +762,7 @@ class FactoryBillingController extends Controller
 
             // Get monthly breakdown
             $monthlyData = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->where("status", "paid")
                 ->whereBetween("payment_date", [$startDate, $endDate])
                 ->selectRaw(
@@ -765,6 +783,7 @@ class FactoryBillingController extends Controller
 
             // Get status counts
             $statusCounts = Invoice::where("company_id", $factoryId)
+                ->where("type", "platform")
                 ->whereBetween("issue_date", [$startDate, $endDate])
                 ->selectRaw("status, COUNT(*) as count")
                 ->groupBy("status")

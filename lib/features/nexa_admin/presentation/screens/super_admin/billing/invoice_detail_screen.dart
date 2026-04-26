@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/typography.dart';
+import 'package:nexatrace_system/core/services/api_client.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/payment_timeline_widget.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:nexatrace_system/shared/models/billing/invoice_model.dart' as shared;
+import 'package:nexatrace_system/shared/theme/colors.dart';
+import 'package:nexatrace_system/shared/theme/typography.dart';
 import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
+import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 
-/// Invoice Detail Screen
-/// Displays detailed information about a specific invoice
 class InvoiceDetailScreen extends StatefulWidget {
   final String invoiceId;
 
@@ -27,189 +27,75 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadInvoiceDetail();
+    _load();
   }
 
-  void _loadInvoiceDetail() {
-    context.read<InvoiceBloc>().add(
-      LoadInvoiceDetail(invoiceId: widget.invoiceId),
-    );
+  void _load() {
+    context.read<InvoiceBloc>().add(LoadInvoiceDetail(invoiceId: widget.invoiceId));
+    context.read<InvoiceBloc>().add(LoadInvoicePayments(invoiceId: widget.invoiceId));
   }
 
-  void _loadInvoicePayments() {
-    context.read<InvoiceBloc>().add(
-      LoadInvoicePayments(invoiceId: widget.invoiceId),
-    );
+  double _n(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString().trim()) ?? 0.0;
   }
 
-  void _handleRefresh() {
-    _loadInvoiceDetail();
-    _loadInvoicePayments();
-  }
-
-  void _navigateToCompanyInvoices(String companyId) {
-    context.go('/super-admin/billing/companies/$companyId/invoices');
-  }
-
-  void _navigateToRecordPayment() {
-    context.go(
-      '/super-admin/billing/invoices/${widget.invoiceId}/record-payment',
-    );
-  }
-
-  void _navigateToEditInvoice() {
-    context.go('/super-admin/billing/invoices/${widget.invoiceId}/edit');
-  }
-
-  void _sendInvoiceReminder() {
-    context.read<InvoiceBloc>().add(
-      SendInvoiceReminder(invoiceId: widget.invoiceId),
-    );
-  }
-
-  void _exportInvoice() {
-    context.read<InvoiceBloc>().add(
-      ExportInvoiceDetail(invoiceId: widget.invoiceId),
-    );
-  }
-
-  void _validateInvoice() {
-    context.read<InvoiceBloc>().add(
-      ValidateInvoice(invoiceId: widget.invoiceId),
-    );
-  }
-
-  void _showActionMenu() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => _buildActionMenu(),
-    );
-  }
-
-  Widget _buildActionMenu() {
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.edit),
-            title: const Text('Edit Invoice'),
-            onTap: () {
-              Navigator.pop(context);
-              _navigateToEditInvoice();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.payment),
-            title: const Text('Record Payment'),
-            onTap: () {
-              Navigator.pop(context);
-              _navigateToRecordPayment();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.notifications),
-            title: const Text('Send Reminder'),
-            onTap: () {
-              Navigator.pop(context);
-              _sendInvoiceReminder();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.download),
-            title: const Text('Export Invoice'),
-            onTap: () {
-              Navigator.pop(context);
-              _exportInvoice();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.verified),
-            title: const Text('Validate Invoice'),
-            onTap: () {
-              Navigator.pop(context);
-              _validateInvoice();
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.close),
-            title: const Text('Cancel'),
-            onTap: () => Navigator.pop(context),
-          ),
-        ],
-      ),
-    );
+  String _s(dynamic value, {String fallback = ''}) {
+    final v = value?.toString().trim() ?? '';
+    return v.isEmpty ? fallback : v;
   }
 
   @override
   Widget build(BuildContext context) {
+    final dateFormat = DateFormat('MMM dd, yyyy');
+    final money = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Invoice Details'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _handleRefresh,
+            onPressed: _load,
             tooltip: 'Refresh',
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: _showActionMenu,
-            tooltip: 'More Actions',
           ),
         ],
       ),
-      body: BlocConsumer<InvoiceBloc, InvoiceState>(
-        listener: (context, state) {
-          state.maybeWhen(
-            invoiceReminderSent: (invoiceId, reminderType, message) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(message),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
-            invoiceExported: (invoiceId, format, exportData, message) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(message),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
-            invoiceValidated: (invoiceId, isValid, message, warnings) {
-              if (!isValid) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(message),
-                    backgroundColor: AppColors.warning,
-                  ),
-                );
-              }
-            },
-            error: (message, error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(message),
-                  backgroundColor: AppColors.error,
-                ),
-              );
-            },
-            orElse: () {},
-          );
-        },
+      body: BlocBuilder<InvoiceBloc, InvoiceState>(
         builder: (context, state) {
           return state.maybeWhen(
-            invoiceDetailLoaded: (invoice, payments, message) =>
-                _buildInvoiceDetail(invoice, payments),
             loading: () => const LoadingIndicator(),
             processing: () => const LoadingIndicator(),
+            invoiceDetailLoaded: (invoice, payments, message) {
+              return Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _header(invoice, dateFormat, money),
+                      const SizedBox(height: 16),
+                      _billingBreakdown(invoice, money),
+                      const SizedBox(height: 16),
+                      _lineItems(invoice, money),
+                      const SizedBox(height: 16),
+                      _usageBreakdown(invoice),
+                      const SizedBox(height: 16),
+                      _payments(invoice, payments),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              );
+            },
             error: (message, error) => ErrorState.generic(
               title: 'Error',
               message: message,
-              onRetry: _handleRefresh,
+              onRetry: _load,
             ),
             orElse: () => const LoadingIndicator(),
           );
@@ -218,69 +104,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     );
   }
 
-  Widget _buildInvoiceDetail(dynamic invoice, List<dynamic> payments) {
-    final dateFormat = DateFormat('MMM dd, yyyy');
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
-
-    return Scrollbar(
-      controller: _scrollController,
-      thumbVisibility: true,
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Invoice Header
-            _buildInvoiceHeader(invoice, dateFormat),
-            const SizedBox(height: 24),
-
-            // Company Information
-            _buildCompanyInfo(invoice),
-            const SizedBox(height: 24),
-
-            // Invoice Items
-            _buildInvoiceItems(invoice, currencyFormat),
-            const SizedBox(height: 24),
-
-            // Totals Summary
-            _buildTotalsSummary(invoice, currencyFormat),
-            const SizedBox(height: 24),
-
-            // Payment Timeline
-            if (payments.isNotEmpty)
-              PaymentTimelineWidget(
-                payments: payments.cast(),
-                invoiceTotal: invoice['totalAmount'] ?? 0.0,
-                invoiceDueDate: DateTime.parse(invoice['dueDate']),
-              ),
-            const SizedBox(height: 24),
-
-            // Notes
-            if (invoice['notes'] != null && invoice['notes'].isNotEmpty)
-              _buildNotesSection(invoice),
-            const SizedBox(height: 24),
-
-            // Admin Notes
-            if (invoice['adminNotes'] != null &&
-                invoice['adminNotes'].isNotEmpty)
-              _buildAdminNotesSection(invoice),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInvoiceHeader(dynamic invoice, DateFormat dateFormat) {
-    final invoiceNumber = invoice['invoiceNumber'] ?? '';
-    final status = invoice['status'] ?? 'pending';
-    final issueDate = invoice['issueDate'] != null
-        ? DateTime.parse(invoice['issueDate']).toLocal()
-        : null;
-    final dueDate = invoice['dueDate'] != null
-        ? DateTime.parse(invoice['dueDate']).toLocal()
-        : null;
+  Widget _header(AdminInvoice invoice, DateFormat dateFormat, NumberFormat money) {
+    final statusText = invoice.status.toString().split('.').last;
+    final currency = invoice.currency.isEmpty ? 'USD' : invoice.currency;
 
     return Card(
       child: Padding(
@@ -289,283 +115,60 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        invoiceNumber,
-                        style: AppTypography.headlineMedium.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Invoice',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                InvoiceStatusBadge(status: status),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Issue Date',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        issueDate != null
-                            ? dateFormat.format(issueDate)
-                            : 'Not set',
-                        style: AppTypography.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Due Date',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        dueDate != null
-                            ? dateFormat.format(dueDate)
-                            : 'Not set',
-                        style: AppTypography.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color:
-                              dueDate != null &&
-                                  dueDate.isBefore(DateTime.now())
-                              ? AppColors.error
-                              : AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompanyInfo(dynamic invoice) {
-    final companyName = invoice['companyName'] ?? 'Unknown';
-    final companyId = invoice['companyId'] ?? '';
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Company Information',
-              style: AppTypography.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                backgroundColor: AppColors.primary.withOpacity(0.1),
-                child: Text(
-                  companyName.substring(0, 1).toUpperCase(),
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              title: Text(
-                companyName,
-                style: AppTypography.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Text(
-                'ID: $companyId',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.arrow_forward_ios),
-                onPressed: () => _navigateToCompanyInvoices(companyId),
-                iconSize: 16,
-              ),
-              onTap: () => _navigateToCompanyInvoices(companyId),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInvoiceItems(dynamic invoice, NumberFormat currencyFormat) {
-    final items = invoice['items'] ?? [];
-    if (items.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Invoice Items',
-                style: AppTypography.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                  'No items found',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Invoice Items (${items.length})',
-              style: AppTypography.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...items.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              final isLast = index == items.length - 1;
-
-              return Padding(
-                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-                child: _buildInvoiceItem(item, currencyFormat),
-              );
-            }).toList(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInvoiceItem(dynamic item, NumberFormat currencyFormat) {
-    final description = item['description'] ?? '';
-    final quantity = item['quantity'] ?? 0.0;
-    final unitPrice = item['unitPrice'] ?? 0.0;
-    final total = item['total'] ?? 0.0;
-    final codeType = item['codeType'];
-    final codeCount = item['codeCount'];
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  description,
-                  style: AppTypography.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Text(
-                currencyFormat.format(total),
-                style: AppTypography.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${quantity.toStringAsFixed(2)} × ${currencyFormat.format(unitPrice)}',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              if (codeType != null && codeCount != null)
-                Chip(
-                  label: Text(
-                    '$codeCount ${codeType.replaceAll('_', ' ')}',
-                    style: AppTypography.caption.copyWith(
-                      fontWeight: FontWeight.w600,
+                  child: Text(
+                    invoice.invoiceNumber,
+                    style: AppTypography.titleLarge.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
-                  ),
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-            ],
-          ),
-        ],
+                InvoiceStatusBadge(status: statusText),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              children: [
+                _kv('Company', invoice.companyName),
+                _kv('Plan', invoice.subscriptionName),
+                _kv('Issue', dateFormat.format(invoice.issueDate)),
+                _kv('Due', dateFormat.format(invoice.dueDate)),
+                _kv(
+                  'Period',
+                  '${dateFormat.format(invoice.periodStart)} - ${dateFormat.format(invoice.periodEnd)}',
+                ),
+                _kv('Total', '${money.format(invoice.totalAmount)} $currency'),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTotalsSummary(dynamic invoice, NumberFormat currencyFormat) {
-    final subtotal = invoice['subtotal'] ?? 0.0;
-    final taxAmount = invoice['taxAmount'] ?? 0.0;
-    final discountAmount = invoice['discountAmount'] ?? 0.0;
-    final totalAmount = invoice['totalAmount'] ?? 0.0;
-    final currency = invoice['currency'] ?? 'USD';
+  Widget _billingBreakdown(AdminInvoice invoice, NumberFormat money) {
+    final AdminInvoiceItem? publishItem = invoice.items
+        .cast<AdminInvoiceItem?>()
+        .firstWhere(
+          (i) => i != null && _s(i.metadata?['source']) == 'publish_codes',
+          orElse: () => null,
+        );
+    if (publishItem == null) return const SizedBox.shrink();
+
+    final meta = publishItem.metadata ?? const <String, dynamic>{};
+    final monthlyFee = _n(meta['monthly_fee']);
+    final rate = _n(meta['rate']) == 0.0 ? publishItem.unitPrice : _n(meta['rate']);
+    final billedCodes = _n(meta['billable_count']) == 0.0
+        ? publishItem.quantity
+        : _n(meta['billable_count']);
+    final freeApplied = _n(meta['free_applied']);
+    final published = (publishItem.codeCount ?? 0).toDouble();
+    final usageCharge = billedCodes * rate;
+    final monthlyTotal = monthlyFee + usageCharge;
 
     return Card(
       child: Padding(
@@ -574,29 +177,24 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Totals Summary',
-              style: AppTypography.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
+              'Billing Breakdown',
+              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
-            _buildTotalRow('Subtotal', subtotal, currencyFormat),
-            _buildTotalRow('Tax', taxAmount, currencyFormat),
-            if (discountAmount > 0)
-              _buildTotalRow(
-                'Discount',
-                -discountAmount,
-                currencyFormat,
-                isDiscount: true,
-              ),
+            _row2('Codes Published', published.toStringAsFixed(0)),
+            _row2('Free Applied', freeApplied.toStringAsFixed(0)),
+            _row2('Billed Codes', billedCodes.toStringAsFixed(0)),
+            _row2('Rate', money.format(rate)),
             const Divider(height: 24),
-            _buildTotalRow('Total', totalAmount, currencyFormat, isTotal: true),
-            const SizedBox(height: 8),
-            Text(
-              'Amount in $currency',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textSecondary,
+            _row2('Monthly Fee', money.format(monthlyFee)),
+            _row2('Usage Charge', money.format(usageCharge)),
+            const Divider(height: 24),
+            _row2(
+              'Monthly Total (Fee + Usage)',
+              money.format(monthlyTotal),
+              valueStyle: AppTypography.bodyLarge.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppColors.primary,
               ),
             ),
           ],
@@ -605,135 +203,188 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     );
   }
 
-  Widget _buildTotalRow(
-    String label,
-    double amount,
-    NumberFormat currencyFormat, {
-    bool isDiscount = false,
-    bool isTotal = false,
-  }) {
+  Widget _lineItems(AdminInvoice invoice, NumberFormat money) {
+    final currency = invoice.currency.isEmpty ? 'USD' : invoice.currency;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Line Items',
+              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('Description')),
+                        DataColumn(label: Text('Qty')),
+                        DataColumn(label: Text('Unit')),
+                        DataColumn(label: Text('Total')),
+                      ],
+                      rows: invoice.items.map((item) {
+                        return DataRow(
+                          cells: [
+                            DataCell(Text(item.description)),
+                            DataCell(Text(item.quantity.toStringAsFixed(2))),
+                            DataCell(Text(money.format(item.unitPrice))),
+                            DataCell(Text('${money.format(item.total)} $currency')),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _usageBreakdown(AdminInvoice invoice) {
+    final isPublishCodes = invoice.items.any(
+      (i) => _s(i.metadata?['source']) == 'publish_codes',
+    );
+    if (!isPublishCodes) return const SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Daily Usage Breakdown',
+              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            FutureBuilder<dynamic>(
+              future: context
+                  .read<ApiClient>()
+                  .get('/admin/billing/invoices/${invoice.id}/usage-breakdown'),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: LinearProgressIndicator(),
+                  );
+                }
+                if (!snapshot.hasData) {
+                  return const Text('No usage data');
+                }
+
+                final data = snapshot.data;
+                final rows = (data is Map ? (data['data']?['rows'] as List?) : null) ??
+                    const [];
+                if (rows.isEmpty) {
+                  return const Text('No usage data');
+                }
+
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                        child: DataTable(
+                          columns: const [
+                            DataColumn(label: Text('Date')),
+                            DataColumn(label: Text('Code Type')),
+                            DataColumn(label: Text('Count')),
+                          ],
+                          rows: rows.map<DataRow>((r) {
+                            final m = r is Map ? r : const {};
+                            final day = _s(m['day']);
+                            final codeType = _s(m['code_type']);
+                            final count = _s(m['count'], fallback: '0');
+                            return DataRow(
+                              cells: [
+                                DataCell(Text(day)),
+                                DataCell(Text(codeType)),
+                                DataCell(Text(count)),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _payments(AdminInvoice invoice, List<shared.Payment> payments) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Payments',
+              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            if (payments.isEmpty)
+              const Text('No payments recorded')
+            else
+              PaymentTimelineWidget(
+                payments: payments,
+                invoiceTotal: invoice.totalAmount,
+                invoiceDueDate: invoice.dueDate,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _kv(String k, String v) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          k,
+          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          v,
+          style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  Widget _row2(String label, String value, {TextStyle? valueStyle}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: isTotal
-                ? AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w700)
-                : AppTypography.bodyMedium,
+          Expanded(
+            child: Text(
+              label,
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+            ),
           ),
-          Text(
-            isDiscount
-                ? '-${currencyFormat.format(amount.abs())}'
-                : currencyFormat.format(amount),
-            style:
-                (isTotal
-                        ? AppTypography.headlineSmall
-                        : AppTypography.bodyMedium)
-                    .copyWith(
-                      fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
-                      color: isDiscount
-                          ? AppColors.error
-                          : AppColors.textPrimary,
-                    ),
-          ),
+          Text(value, style: valueStyle ?? AppTypography.bodyMedium),
         ],
-      ),
-    );
-  }
-
-  Widget _buildNotesSection(dynamic invoice) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Notes',
-              style: AppTypography.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(invoice['notes'], style: AppTypography.bodyMedium),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAdminNotesSection(dynamic invoice) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Admin Notes',
-              style: AppTypography.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              invoice['adminNotes'],
-              style: AppTypography.bodyMedium.copyWith(
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (invoice['requiresFollowUp'] == true)
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.flag, size: 16, color: AppColors.warning),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Requires follow-up',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.warning,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (invoice['followUpDate'] != null) const SizedBox(height: 8),
-            if (invoice['followUpDate'] != null)
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.info.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today, size: 16, color: AppColors.info),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Follow-up date: ${DateFormat('MMM dd, yyyy').format(DateTime.parse(invoice['followUpDate']))}',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.info,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }
@@ -744,3 +395,4 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     super.dispose();
   }
 }
+

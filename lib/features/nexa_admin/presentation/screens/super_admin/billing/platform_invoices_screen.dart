@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nexatrace_system/core/services/api_client.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/billing/invoice_detail_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart' as shared;
 import 'package:nexatrace_system/shared/theme/colors.dart';
@@ -20,7 +21,7 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
   final _scrollController = ScrollController();
   final _searchController = TextEditingController();
 
-  int _currentPage = 1;
+  int _page = 1;
   final int _limit = 20;
   bool _hasMore = true;
 
@@ -28,29 +29,27 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadInvoices(resetPage: true);
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load(reset: true));
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent &&
         _hasMore) {
-      _currentPage++;
-      _loadInvoices();
+      _page++;
+      _load();
     }
   }
 
-  void _loadInvoices({bool resetPage = false}) {
-    if (resetPage) {
-      _currentPage = 1;
+  void _load({bool reset = false}) {
+    if (reset) {
+      _page = 1;
       _hasMore = true;
     }
 
     context.read<BillingBloc>().add(
           BillingEvent.loadPlatformInvoices(
-            page: _currentPage,
+            page: _page,
             limit: _limit,
             searchQuery: _searchController.text.trim().isEmpty
                 ? null
@@ -60,6 +59,7 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
   }
 
   Future<void> _finalize(AdminInvoice invoice) async {
+    if (invoice.status != shared.InvoiceStatus.draft) return;
     context.read<BillingBloc>().add(
           BillingEvent.updateInvoiceStatus(
             invoiceId: invoice.id,
@@ -69,43 +69,76 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
   }
 
   Future<void> _markPaid(AdminInvoice invoice) async {
-    final selected = await showDialog<shared.PaymentMethod>(
+    if (invoice.status == shared.InvoiceStatus.paid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invoice is already paid')),
+      );
+      return;
+    }
+    if (invoice.status == shared.InvoiceStatus.draft) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Finalize invoice before marking paid')),
+      );
+      return;
+    }
+
+    final method = await showDialog<shared.PaymentMethod>(
       context: context,
       builder: (context) => const _MarkPaidDialog(),
     );
-    if (selected == null) return;
-
-    context.read<BillingBloc>().add(
-          BillingEvent.processPayment(
-            invoiceId: invoice.id,
-            amount: invoice.totalAmount,
-            method: selected,
-            paymentDate: DateTime.now(),
-            sendNotification: false,
-          ),
-        );
-  }
-
-  Future<void> _addExtraCharge(AdminInvoice invoice) async {
-    final result = await showDialog<_ExtraChargeInput>(
-      context: context,
-      builder: (context) => const _ExtraChargeDialog(),
-    );
-    if (result == null) return;
+    if (method == null) return;
 
     await context.read<ApiClient>().post(
-          '/admin/billing/invoices/${invoice.id}/extra-charges',
+          '/admin/billing/invoices/${invoice.id}/mark-paid',
           body: {
-            'description': result.description,
-            'unit_price': result.unitPrice,
-            'quantity': result.quantity,
+            'payment_method': method == shared.PaymentMethod.cash
+                ? 'cash'
+                : 'bank_transfer',
+            'payment_date': DateTime.now().toIso8601String(),
           },
         );
 
     if (!mounted) return;
-    _loadInvoices(resetPage: true);
+    _load(reset: true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Invoice marked as paid')),
+    );
+  }
+
+  Future<void> _addExtraCharge(AdminInvoice invoice) async {
+    if (invoice.status == shared.InvoiceStatus.draft ||
+        invoice.status == shared.InvoiceStatus.paid) {
+      return;
+    }
+
+    final input = await showDialog<_ExtraChargeInput>(
+      context: context,
+      builder: (context) => const _ExtraChargeDialog(),
+    );
+    if (input == null) return;
+
+    await context.read<ApiClient>().post(
+          '/admin/billing/invoices/${invoice.id}/extra-charges',
+          body: {
+            'description': input.description,
+            'unit_price': input.unitPrice,
+            'quantity': input.quantity,
+          },
+        );
+
+    if (!mounted) return;
+    _load(reset: true);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Extra charge added')),
+    );
+  }
+
+  void _openDetail(AdminInvoice invoice) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => InvoiceDetailScreen(invoiceId: invoice.id),
+      ),
     );
   }
 
@@ -116,7 +149,7 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
         title: const Text('Platform Invoices'),
         actions: [
           IconButton(
-            onPressed: () => _loadInvoices(resetPage: true),
+            onPressed: () => _load(reset: true),
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
           ),
@@ -132,7 +165,7 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(),
               ),
-              onSubmitted: (_) => _loadInvoices(resetPage: true),
+              onSubmitted: (_) => _load(reset: true),
             ),
           ),
         ),
@@ -143,25 +176,17 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
             platformInvoicesLoaded: (invoices, hasMore, currentPage) {
               setState(() {
                 _hasMore = hasMore;
-                _currentPage = currentPage;
+                _page = currentPage;
               });
             },
             invoiceStatusUpdated: (invoice, message) {
               ScaffoldMessenger.of(context)
                   .showSnackBar(SnackBar(content: Text(message)));
-              _loadInvoices(resetPage: true);
-            },
-            paymentProcessed: (payment, message) {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(message)));
-              _loadInvoices(resetPage: true);
+              _load(reset: true);
             },
             error: (message, error) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(message),
-                  backgroundColor: AppColors.error,
-                ),
+                SnackBar(content: Text(message), backgroundColor: AppColors.error),
               );
             },
             orElse: () {},
@@ -169,6 +194,8 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
         },
         builder: (context, state) {
           return state.maybeWhen(
+            loading: () => const LoadingIndicator(),
+            processing: () => const LoadingIndicator(),
             platformInvoicesLoaded: (invoices, hasMore, currentPage) {
               if (invoices.isEmpty) {
                 return const Center(child: Text('No invoices found'));
@@ -186,11 +213,11 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
                       Text(
                         'All Company Invoices',
                         style: AppTypography.titleMedium.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _buildTable(invoices),
+                      _table(invoices),
                       if (hasMore)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 16),
@@ -202,8 +229,6 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
                 ),
               );
             },
-            loading: () => const LoadingIndicator(),
-            processing: () => const LoadingIndicator(),
             orElse: () => const LoadingIndicator(),
           );
         },
@@ -211,7 +236,7 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
     );
   }
 
-  Widget _buildTable(List<AdminInvoice> invoices) {
+  Widget _table(List<AdminInvoice> invoices) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
@@ -231,12 +256,19 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
                 return DataRow(
                   cells: [
                     DataCell(Text(inv.companyName)),
-                    DataCell(Text(inv.invoiceNumber)),
+                    DataCell(
+                      Text(inv.invoiceNumber),
+                      onTap: () => _openDetail(inv),
+                    ),
                     DataCell(Text('\$${inv.totalAmount.toStringAsFixed(2)}')),
                     DataCell(InvoiceStatusBadge(status: statusText)),
                     DataCell(
                       PopupMenuButton<String>(
                         onSelected: (value) async {
+                          if (value == 'view') {
+                            _openDetail(inv);
+                            return;
+                          }
                           if (value == 'finalize') {
                             await _finalize(inv);
                             return;
@@ -251,18 +283,23 @@ class _PlatformInvoicesScreenState extends State<PlatformInvoicesScreen> {
                           }
                         },
                         itemBuilder: (context) => [
+                          const PopupMenuItem(value: 'view', child: Text('View Detail')),
                           PopupMenuItem(
                             value: 'finalize',
                             enabled: inv.status == shared.InvoiceStatus.draft,
                             child: const Text('Finalize (Draft -> Pending)'),
                           ),
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'paid',
-                            child: Text('Mark as Paid (Cash/Bank)'),
+                            enabled: inv.status == shared.InvoiceStatus.pending ||
+                                inv.status == shared.InvoiceStatus.overdue,
+                            child: const Text('Mark as Paid (Cash/Bank)'),
                           ),
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'charge',
-                            child: Text('Add Extra Charge'),
+                            enabled: inv.status == shared.InvoiceStatus.pending ||
+                                inv.status == shared.InvoiceStatus.overdue,
+                            child: const Text('Add Extra Charge'),
                           ),
                         ],
                       ),
