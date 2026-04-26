@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class FactoryBillingController extends Controller
@@ -31,30 +32,45 @@ class FactoryBillingController extends Controller
                 ->first();
 
             // Calculate total owed (pending + overdue invoices)
-            $totalOwed = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $totalOwedQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $totalOwedQuery->where('type', 'platform');
+            }
+            $totalOwed = $totalOwedQuery
                 ->whereIn("status", ["pending", "overdue"])
                 ->sum("total_amount");
 
             // Calculate total paid
-            $totalPaid = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $totalPaidQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $totalPaidQuery->where('type', 'platform');
+            }
+            $totalPaid = $totalPaidQuery
                 ->where("status", "paid")
                 ->sum("total_amount");
 
             // Count invoices by status
-            $pendingInvoices = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $pendingInvoicesQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $pendingInvoicesQuery->where('type', 'platform');
+            }
+            $pendingInvoices = $pendingInvoicesQuery
                 ->where("status", "pending")
                 ->count();
 
-            $paidInvoices = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $paidInvoicesQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $paidInvoicesQuery->where('type', 'platform');
+            }
+            $paidInvoices = $paidInvoicesQuery
                 ->where("status", "paid")
                 ->count();
 
-            $overdueInvoices = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $overdueInvoicesQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $overdueInvoicesQuery->where('type', 'platform');
+            }
+            $overdueInvoices = $overdueInvoicesQuery
                 ->where("status", "overdue")
                 ->count();
 
@@ -123,11 +139,13 @@ class FactoryBillingController extends Controller
         try {
             $factoryId = $this->getFactoryId();
 
-            $query = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
-                ->with([
+            $query = Invoice::where("company_id", $factoryId)->with([
                 "subscription.plan",
             ]);
+
+            if (Schema::hasColumn('invoices', 'type')) {
+                $query->where('type', 'platform');
+            }
 
             // Apply filters
             if ($request->has("start_date")) {
@@ -266,10 +284,19 @@ class FactoryBillingController extends Controller
             $factoryId = $this->getFactoryId();
 
             $invoice = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
                 ->where("id", $invoiceId)
                 ->with(["subscription.plan"])
                 ->firstOrFail();
+
+            if (Schema::hasColumn('invoices', 'type') && $invoice->type !== 'platform') {
+                return response()->json(
+                    [
+                        "success" => false,
+                        "message" => "Invoice not found",
+                    ],
+                    404,
+                );
+            }
 
             return response()->json([
                 "success" => true,
@@ -371,9 +398,18 @@ class FactoryBillingController extends Controller
 
             // Verify invoice belongs to factory
             $invoice = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
                 ->where("id", $invoiceId)
                 ->firstOrFail();
+
+            if (Schema::hasColumn('invoices', 'type') && $invoice->type !== 'platform') {
+                return response()->json(
+                    [
+                        "success" => false,
+                        "message" => "Invoice not found",
+                    ],
+                    404,
+                );
+            }
 
             $payments = Payment::where("invoice_id", $invoiceId)
                 ->orderBy("payment_date", "desc")
@@ -427,9 +463,18 @@ class FactoryBillingController extends Controller
 
             // Get and verify invoice
             $invoice = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
                 ->where("id", $request->input("invoice_id"))
                 ->firstOrFail();
+
+            if (Schema::hasColumn('invoices', 'type') && $invoice->type !== 'platform') {
+                return response()->json(
+                    [
+                        "success" => false,
+                        "message" => "Invoice not found",
+                    ],
+                    404,
+                );
+            }
 
             // Check if invoice is already paid
             if ($invoice->status === "paid") {
@@ -532,9 +577,18 @@ class FactoryBillingController extends Controller
             $factoryId = $this->getFactoryId();
 
             $invoice = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
                 ->where("id", $invoiceId)
                 ->firstOrFail();
+
+            if (Schema::hasColumn('invoices', 'type') && $invoice->type !== 'platform') {
+                return response()->json(
+                    [
+                        "success" => false,
+                        "message" => "Invoice not found",
+                    ],
+                    404,
+                );
+            }
 
             if ($invoice->status === "draft") {
                 return response()->json(
@@ -625,9 +679,18 @@ class FactoryBillingController extends Controller
             $factoryId = $this->getFactoryId();
 
             $invoice = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
                 ->where("id", $invoiceId)
                 ->firstOrFail();
+
+            if (Schema::hasColumn('invoices', 'type') && $invoice->type !== 'platform') {
+                return response()->json(
+                    [
+                        "success" => false,
+                        "message" => "Invoice not found",
+                    ],
+                    404,
+                );
+            }
 
             $downloadable = $invoice->status !== "draft";
 
@@ -664,9 +727,18 @@ class FactoryBillingController extends Controller
             $factoryId = $this->getFactoryId();
 
             $invoice = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
                 ->where("id", $invoiceId)
                 ->firstOrFail();
+
+            if (Schema::hasColumn('invoices', 'type') && $invoice->type !== 'platform') {
+                return response()->json(
+                    [
+                        "success" => false,
+                        "message" => "Invoice not found",
+                    ],
+                    404,
+                );
+            }
 
             $email = $request->input("email") ?? Auth::user()->email;
 
@@ -717,31 +789,46 @@ class FactoryBillingController extends Controller
                 : $endDate->copy()->subMonths(12);
 
             // Calculate statistics
-            $totalRevenue = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $totalRevenueQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $totalRevenueQuery->where('type', 'platform');
+            }
+            $totalRevenue = $totalRevenueQuery
                 ->where("status", "paid")
                 ->whereBetween("payment_date", [$startDate, $endDate])
                 ->sum("total_amount");
 
-            $totalInvoices = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $totalInvoicesQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $totalInvoicesQuery->where('type', 'platform');
+            }
+            $totalInvoices = $totalInvoicesQuery
                 ->whereBetween("issue_date", [$startDate, $endDate])
                 ->count();
 
-            $paidInvoices = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $paidInvoicesQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $paidInvoicesQuery->where('type', 'platform');
+            }
+            $paidInvoices = $paidInvoicesQuery
                 ->where("status", "paid")
                 ->whereBetween("payment_date", [$startDate, $endDate])
                 ->count();
 
-            $pendingInvoices = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $pendingInvoicesQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $pendingInvoicesQuery->where('type', 'platform');
+            }
+            $pendingInvoices = $pendingInvoicesQuery
                 ->where("status", "pending")
                 ->whereBetween("issue_date", [$startDate, $endDate])
                 ->count();
 
-            $overdueInvoices = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $overdueInvoicesQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $overdueInvoicesQuery->where('type', 'platform');
+            }
+            $overdueInvoices = $overdueInvoicesQuery
                 ->where("status", "overdue")
                 ->whereBetween("issue_date", [$startDate, $endDate])
                 ->count();
@@ -761,8 +848,11 @@ class FactoryBillingController extends Controller
             ];
 
             // Get monthly breakdown
-            $monthlyData = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $monthlyDataQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $monthlyDataQuery->where('type', 'platform');
+            }
+            $monthlyData = $monthlyDataQuery
                 ->where("status", "paid")
                 ->whereBetween("payment_date", [$startDate, $endDate])
                 ->selectRaw(
@@ -782,8 +872,11 @@ class FactoryBillingController extends Controller
             }
 
             // Get status counts
-            $statusCounts = Invoice::where("company_id", $factoryId)
-                ->where("type", "platform")
+            $statusCountsQuery = Invoice::where("company_id", $factoryId);
+            if (Schema::hasColumn('invoices', 'type')) {
+                $statusCountsQuery->where('type', 'platform');
+            }
+            $statusCounts = $statusCountsQuery
                 ->whereBetween("issue_date", [$startDate, $endDate])
                 ->selectRaw("status, COUNT(*) as count")
                 ->groupBy("status")

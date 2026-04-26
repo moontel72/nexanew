@@ -9,6 +9,7 @@ use App\Services\InvoiceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -44,8 +45,11 @@ class AdminBillingControllerNew extends Controller
         }
 
         try {
-            $query = Invoice::with(['company:id,name,email', 'subscription.plan:id,name'])
-                ->where('type', 'platform');
+            $query = Invoice::with(['company:id,name,email', 'subscription.plan:id,name']);
+
+            if (Schema::hasColumn('invoices', 'type')) {
+                $query->where('type', 'platform');
+            }
 
             if ($request->filled('search')) {
                 $search = $request->search;

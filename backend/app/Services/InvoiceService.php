@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\CreditNote;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
@@ -95,7 +96,7 @@ class InvoiceService
                 "id" => Str::uuid()->toString(),
                 "company_id" => $company->id,
                 "subscription_id" => $subscription->id,
-                "type" => "platform",
+                ...(Schema::hasColumn('invoices', 'type') ? ["type" => "platform"] : []),
                 "invoice_number" => $invoiceNumber,
                 "period_start" => $periodStart,
                 "period_end" => $periodEnd,
@@ -184,7 +185,7 @@ class InvoiceService
             $invoice = Invoice::create([
                 "id" => Str::uuid()->toString(),
                 "company_id" => $company->id,
-                "type" => "customer",
+                ...(Schema::hasColumn('invoices', 'type') ? ["type" => "customer"] : []),
                 "invoice_number" => $invoiceNumber,
                 "period_start" =>
                     $data["period_start"] ?? Carbon::now()->startOfMonth(),

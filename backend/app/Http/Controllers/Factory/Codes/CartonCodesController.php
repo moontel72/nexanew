@@ -453,10 +453,9 @@ class CartonCodesController extends Controller
 
         $invoiceNumber = $this->generateUniqueInvoiceNumber();
 
-        $invoice = new Invoice([
+        $invoiceData = [
             'company_id' => $companyId,
             'subscription_id' => (string) $subscription->id,
-            'type' => 'platform',
             'invoice_number' => $invoiceNumber,
             'period_start' => $periodStart,
             'period_end' => $periodEnd,
@@ -498,7 +497,13 @@ class CartonCodesController extends Controller
                 'plan_type_at_publish' => (string) ($plan->type ?? ''),
                 'plan_monthly_price_at_publish' => (float) ($plan->monthly_price ?? 0),
             ], $context),
-        ]);
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('invoices', 'type')) {
+            $invoiceData['type'] = 'platform';
+        }
+
+        $invoice = new Invoice($invoiceData);
 
         $invoice->id = (string) Str::uuid();
         $invoice->save();
