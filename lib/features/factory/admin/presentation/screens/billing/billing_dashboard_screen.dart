@@ -334,9 +334,9 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withAlpha((0.1 * 255).round()),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withAlpha((0.2 * 255).round())),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -547,7 +547,8 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
                         ),
                         decoration: BoxDecoration(
                           color:
-                              _getStatusColor(invoice.status).withOpacity(0.1),
+                              _getStatusColor(invoice.status)
+                                  .withAlpha((0.1 * 255).round()),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -678,18 +679,21 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
             text: 'View Invoices',
             onPressed: () {
               Navigator.pop(context);
-              context.read<BillingBloc>().add(
-                    const BillingEvent.loadInvoices(
-                      filter: BillingFilter(
-                        statuses: [
-                          InvoiceStatus.pending,
-                          InvoiceStatus.overdue
-                        ],
-                        sortBy: 'dueDate',
-                        sortDesc: false,
-                      ),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const InvoicesListScreen(
+                    initialFilter: BillingFilter(
+                      statuses: [
+                        InvoiceStatus.pending,
+                        InvoiceStatus.overdue,
+                      ],
+                      sortBy: 'dueDate',
+                      sortDesc: false,
                     ),
-                  );
+                  ),
+                ),
+              );
             },
           ),
         ],

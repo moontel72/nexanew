@@ -8,6 +8,8 @@ import 'package:nexatrace_system/shared/widgets/cards/info_card.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
 import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:nexatrace_system/core/config/api_config.dart';
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/billing/billing_bloc.dart';
 
@@ -32,6 +34,20 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     });
   }
 
+  Uri? _normalizeDownloadUri(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null) return null;
+    if (uri.hasScheme) return uri;
+
+    if (trimmed.startsWith('/')) {
+      return Uri.parse('${ApiConfig.baseUrl}$trimmed');
+    }
+    return Uri.parse('${ApiConfig.baseUrl}/$trimmed');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,12 +70,21 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           // Handle download success
           if (state is BillingInvoiceDownloadSuccess) {
             if (state.invoiceId == widget.invoiceId) {
+              final uri = _normalizeDownloadUri(state.filePath);
+              if (uri != null) {
+                launchUrl(uri, mode: LaunchMode.platformDefault);
+              }
+
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Invoice downloaded successfully'),
                   backgroundColor: AppColors.success,
                 ),
               );
+
+              context.read<BillingBloc>().add(
+                    BillingEvent.loadInvoice(invoiceId: widget.invoiceId),
+                  );
             }
           }
         },
@@ -236,10 +261,12 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(invoice.status).withOpacity(0.1),
+                  color: _getStatusColor(invoice.status)
+                      .withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: _getStatusColor(invoice.status).withOpacity(0.3),
+                    color: _getStatusColor(invoice.status)
+                        .withAlpha((0.3 * 255).round()),
                   ),
                 ),
                 child: Text(
@@ -697,7 +724,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: _getMethodColor(payment.method).withOpacity(0.1),
+                  color: _getMethodColor(payment.method)
+                      .withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -747,176 +775,6 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  void _showPaymentDialog(Invoice invoice) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Make Payment'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Invoice #${invoice.invoiceNumber}',
-                style: AppTypography.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Amount Due: \$${invoice.totalAmount.toStringAsFixed(2)}',
-                style: AppTypography.headlineSmall.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Select payment method:',
-                style: AppTypography.bodyMedium,
-              ),
-              const SizedBox(height: 12),
-              // Payment method options would go here
-              // For now, show a simple message
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'Payment integration will be implemented based on available payment gateways.',
-                  style: AppTypography.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          PrimaryButton(
-            text: 'Proceed to Payment',
-            onPressed: () {
-              Navigator.pop(context);
-              // In a real implementation, this would navigate to payment screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Payment gateway integration required'),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showExtensionDialog(Invoice invoice) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Request Extension'),
-        content: const Text(
-          'You can request an extension for this invoice. '
-          'An extension request will be sent to the billing department for approval.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          PrimaryButton(
-            text: 'Request Extension',
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Extension request sent for approval'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showLockedDialog(Invoice invoice) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Invoice Locked'),
-        content: Text(
-          'This invoice is currently ${_getStatusText(invoice.status).toLowerCase()}. '
-          'You must pay the invoice before downloading the PDF.\n\n'
-          'Amount due: \$${invoice.totalAmount.toStringAsFixed(2)}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          PrimaryButton(
-            text: 'Pay Now',
-            onPressed: () {
-              Navigator.pop(context);
-              _showPaymentDialog(invoice);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSendEmailDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Send Invoice via Email'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Enter the email address where you want to send the invoice:',
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Email Address',
-                hintText: 'example@company.com',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          PrimaryButton(
-            text: 'Send Invoice',
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<BillingBloc>().add(
-                BillingEvent.sendInvoiceEmail(invoiceId: widget.invoiceId),
-              );
-            },
-          ),
         ],
       ),
     );

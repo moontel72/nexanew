@@ -6,6 +6,8 @@ import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/theme/text_styles.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:nexatrace_system/core/config/api_config.dart';
 
 class InvoicesListScreen extends StatefulWidget {
   final BillingFilter initialFilter;
@@ -18,6 +20,21 @@ class InvoicesListScreen extends StatefulWidget {
 
 class _InvoicesListScreenState extends State<InvoicesListScreen> {
   BillingFilter _filter = const BillingFilter();
+  List<Invoice> _cachedInvoices = const [];
+
+  Uri? _normalizeDownloadUri(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null) return null;
+    if (uri.hasScheme) return uri;
+
+    if (trimmed.startsWith('/')) {
+      return Uri.parse('${ApiConfig.baseUrl}$trimmed');
+    }
+    return Uri.parse('${ApiConfig.baseUrl}/$trimmed');
+  }
 
   @override
   void initState() {
@@ -47,12 +64,19 @@ class _InvoicesListScreenState extends State<InvoicesListScreen> {
       body: BlocConsumer<BillingBloc, BillingState>(
         listener: (context, state) {
           if (state is BillingInvoiceDownloadSuccess) {
+            final uri = _normalizeDownloadUri(state.filePath);
+            if (uri != null) {
+              launchUrl(uri, mode: LaunchMode.platformDefault);
+            }
+
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Invoice downloaded successfully'),
                 backgroundColor: AppColors.success,
               ),
             );
+
+            _refresh();
           }
           if (state is BillingError) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -64,6 +88,10 @@ class _InvoicesListScreenState extends State<InvoicesListScreen> {
           }
         },
         builder: (context, state) {
+          if (state is BillingInvoicesLoaded) {
+            _cachedInvoices = state.invoices;
+          }
+
           if (state is BillingLoading || state is BillingInitial) {
             return const LoadingIndicator();
           }
@@ -110,6 +138,79 @@ class _InvoicesListScreenState extends State<InvoicesListScreen> {
                         Text(
                           '\$${inv.totalAmount.toStringAsFixed(2)}',
                           style: TextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.download),
+                          onPressed: inv.status == InvoiceStatus.draft
+                              ? null
+                              : () {
+                                  context.read<BillingBloc>().add(
+                                        BillingEvent.downloadInvoice(invoiceId: inv.id),
+                                      );
+                                },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    InvoiceDetailScreen(invoiceId: inv.id),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => InvoiceDetailScreen(invoiceId: inv.id),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            );
+          }
+
+          if (_cachedInvoices.isNotEmpty) {
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _cachedInvoices.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final inv = _cachedInvoices[index];
+                final status = inv.status.toString().split('.').last;
+                final isDownloading =
+                    state is BillingInvoiceDownloading && state.invoiceId == inv.id;
+
+                return Card(
+                  child: ListTile(
+                    title: Text(
+                      inv.invoiceNumber,
+                      style: TextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    subtitle: Text(
+                      isDownloading ? 'Downloading...' : 'Status: $status',
+                      style: TextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '\$${inv.totalAmount.toStringAsFixed(2)}',
+                          style: TextStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         IconButton(

@@ -398,10 +398,16 @@ class BillingRepositoryImpl implements BillingRepository {
         headers: _getAuthHeaders(),
       );
 
-      // In a real implementation, this would handle file download
-      // For now, return a placeholder file path
-      return response['data']['file_path'] ??
-          '/downloads/invoice_$invoiceId.pdf';
+      final data = response['data'];
+      if (data is Map) {
+        final filePath = data['file_path']?.toString().trim();
+        if (filePath != null && filePath.isNotEmpty) return filePath;
+
+        final url = data['download_url']?.toString().trim();
+        if (url != null && url.isNotEmpty) return url;
+      }
+
+      return '/downloads/invoice_$invoiceId.pdf';
     } catch (error) {
       throw Exception('Failed to download invoice: $error');
     }
