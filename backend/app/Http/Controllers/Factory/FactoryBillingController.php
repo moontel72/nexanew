@@ -674,7 +674,8 @@ class FactoryBillingController extends Controller
     {
         $factoryId = $this->getFactoryId();
 
-        $invoice = Invoice::where('company_id', $factoryId)
+        $invoice = Invoice::with(['company'])
+            ->where('company_id', $factoryId)
             ->where('id', $invoiceId)
             ->firstOrFail();
 
@@ -742,9 +743,13 @@ class FactoryBillingController extends Controller
         }
 
         $lines = [];
-        $lines[] = 'NexaTrace Invoice';
+        $lines[] = 'NexaTrace';
+        $lines[] = 'INVOICE';
         $lines[] = 'Invoice #: ' . (string) $invoice->invoice_number;
         $lines[] = 'Status: ' . (string) $invoice->status;
+        $lines[] = 'Bill To: ' . (string) ($invoice->company?->name ?? '');
+        $lines[] = 'Factory ID: ' . (string) $invoice->company_id;
+        $lines[] = 'Address: ' . (string) ($invoice->company?->address ?? '');
         $lines[] = 'Issue Date: ' . (string) $invoice->issue_date;
         $lines[] = 'Due Date: ' . (string) $invoice->due_date;
         $lines[] = 'Period: ' . (string) $invoice->period_start . ' - ' . (string) $invoice->period_end;
@@ -796,11 +801,21 @@ class FactoryBillingController extends Controller
         $lines[] = 'Total: ' . (string) $invoice->total_amount;
 
         $pdf = app(SimplePdfGenerator::class)->generate($lines);
+        if (!is_string($pdf) || $pdf === '') {
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Failed to generate PDF',
+                ],
+                500,
+            );
+        }
         $fileName = (string) $invoice->invoice_number . '.pdf';
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Length' => (string) strlen($pdf),
         ]);
     }
 

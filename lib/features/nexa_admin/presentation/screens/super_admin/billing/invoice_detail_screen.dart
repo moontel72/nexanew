@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:nexatrace_system/core/services/api_client.dart';
 import 'package:nexatrace_system/core/utils/file_saver.dart';
@@ -55,6 +56,15 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Invoice Details'),
+        leading: BackButton(
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+              return;
+            }
+            context.go('/billing/invoices');
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

@@ -56,7 +56,7 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
   }
 
   void _navigateToInvoiceDetail(String invoiceId) {
-    context.go('/super-admin/billing/invoices/$invoiceId');
+    context.push('/billing/invoices/$invoiceId');
   }
 
   void _navigateToRevenueReports() {
@@ -472,7 +472,7 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
             Text('Recent Invoices', style: AppTypography.headlineSmall),
             TextButton(
               onPressed: () {
-                context.go('/super-admin/billing/invoices');
+                context.go('/billing/invoices');
               },
               child: const Text('View All'),
             ),

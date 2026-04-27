@@ -176,6 +176,9 @@ class ApiClient {
       }
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (response.bodyBytes.isEmpty) {
+          throw Exception('Empty response body for $endpoint');
+        }
         return response.bodyBytes;
       }
 

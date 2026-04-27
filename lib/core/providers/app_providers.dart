@@ -26,6 +26,7 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/dashboard/admin_dashboard_bloc.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart';
 import 'package:nexatrace_system/core/interfaces/secure_storage_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -181,6 +182,11 @@ class AppProviders {
             billingRepository: repo,
           );
         },
+      ),
+      BlocProvider<InvoiceBloc>(
+        create: (context) => InvoiceBloc(
+          billingRepository: context.read<admin_billing_repo.BillingRepository>(),
+        ),
       ),
     ];
   }

@@ -9,6 +9,8 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/super_admin_shell.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/login_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/billing/platform_invoices_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/billing/invoice_detail_screen.dart'
+    as admin_invoice_detail;
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/plans/plans_list_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/plans/create_plan_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/companies_list_screen.dart';
@@ -209,6 +211,16 @@ class AppRouter {
               path: '/billing/invoices',
               name: 'billing_invoices',
               builder: (context, state) => const PlatformInvoicesScreen(),
+              routes: [
+                GoRoute(
+                  path: ':invoiceId',
+                  name: 'billing_invoice_detail',
+                  builder: (context, state) {
+                    final id = state.pathParameters['invoiceId'] ?? '';
+                    return admin_invoice_detail.InvoiceDetailScreen(invoiceId: id);
+                  },
+                ),
+              ],
             ),
             GoRoute(
               path: '/transport/wallet',

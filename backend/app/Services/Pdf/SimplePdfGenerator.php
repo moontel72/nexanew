@@ -95,10 +95,24 @@ class SimplePdfGenerator
         $out .= "{$x} {$y} Td\n";
 
         foreach ($lines as $i => $line) {
+            if ($i === 0) {
+                $out .= "/F1 20 Tf\n";
+            } elseif ($i === 1) {
+                $out .= "/F1 14 Tf\n";
+            } else {
+                $out .= "/F1 {$fontSize} Tf\n";
+            }
+
             $escaped = $this->escapePdfText((string) $line);
             $out .= "({$escaped}) Tj\n";
             if ($i !== count($lines) - 1) {
-                $out .= "0 -" . $lineHeight . " Td\n";
+                if ($i === 0) {
+                    $out .= "0 -24 Td\n";
+                } elseif ($i === 1) {
+                    $out .= "0 -18 Td\n";
+                } else {
+                    $out .= "0 -" . $lineHeight . " Td\n";
+                }
             }
         }
 

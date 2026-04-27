@@ -116,7 +116,7 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
   }
 
   void _navigateToInvoiceDetail(String invoiceId) {
-    context.go('/super-admin/billing/invoices/$invoiceId');
+    context.push('/billing/invoices/$invoiceId');
   }
 
   void _navigateToGenerateInvoice() {
@@ -126,7 +126,7 @@ class _CompanyInvoicesScreenState extends State<CompanyInvoicesScreen> {
   }
 
   void _navigateToPaymentHistory(String invoiceId) {
-    context.go('/super-admin/billing/invoices/$invoiceId/payments');
+    context.push('/billing/invoices/$invoiceId');
   }
 
   void _showFilterDialog() {
