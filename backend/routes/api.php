@@ -476,6 +476,10 @@ $registerRoutes = function (): void {
                     \App\Http\Controllers\Factory\FactoryBillingController::class,
                     "downloadInvoice",
                 ]);
+                Route::get("invoices/{invoiceId}/pdf", [
+                    \App\Http\Controllers\Factory\FactoryBillingController::class,
+                    "downloadInvoicePdf",
+                ]);
                 Route::get("invoices/{invoiceId}/downloadable", [
                     \App\Http\Controllers\Factory\FactoryBillingController::class,
                     "checkInvoiceDownloadable",

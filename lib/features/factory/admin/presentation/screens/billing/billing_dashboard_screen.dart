@@ -12,6 +12,7 @@ import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/billing/billing_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/billing/invoice_detail_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/billing/invoices_list_screen.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/screens/billing/make_payment_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/billing/payment_history_screen.dart';
 
 class BillingDashboardScreen extends StatefulWidget {
@@ -112,7 +113,9 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
           if (state.retryEvent != null) {
             context.read<BillingBloc>().add(state.retryEvent!);
           } else {
-            context.read<BillingBloc>().add(const BillingEvent.loadBillingSummary());
+            context.read<BillingBloc>().add(
+              const BillingEvent.loadBillingSummary(),
+            );
           }
         },
       );
@@ -126,7 +129,9 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
         actionButton: PrimaryButton(
           text: 'Refresh',
           onPressed: () {
-            context.read<BillingBloc>().add(const BillingEvent.loadBillingSummary());
+            context.read<BillingBloc>().add(
+              const BillingEvent.loadBillingSummary(),
+            );
           },
         ),
       );
@@ -329,7 +334,11 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
   }
 
   Widget _buildStatCard(
-      String label, String value, IconData icon, Color color) {
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -400,9 +409,12 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
             text: 'Make Payment',
             icon: Icons.payment,
             onPressed: () {
-              // This would navigate to a payment screen
-              // For now, show a dialog
-              _showPaymentDialog();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MakePaymentScreen(),
+                ),
+              );
             },
           ),
           SecondaryButton(
@@ -546,9 +558,9 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              _getStatusColor(invoice.status)
-                                  .withAlpha((0.1 * 255).round()),
+                          color: _getStatusColor(
+                            invoice.status,
+                          ).withAlpha((0.1 * 255).round()),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -632,10 +644,7 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label,
-                style: TextStyles.bodyMedium,
-              ),
+              Text(label, style: TextStyles.bodyMedium),
               Text(
                 value,
                 style: TextStyles.bodyMedium.copyWith(
@@ -651,50 +660,10 @@ class _BillingDashboardScreenState extends State<BillingDashboardScreen> {
             color: percentage >= 0.9
                 ? AppColors.error
                 : percentage >= 0.7
-                    ? AppColors.warning
-                    : AppColors.success,
+                ? AppColors.warning
+                : AppColors.success,
             minHeight: 6,
             borderRadius: BorderRadius.circular(3),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPaymentDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Make Payment'),
-        content: const Text(
-          'This feature will allow you to make payments for outstanding invoices. '
-          'You can pay using wallet balance, credit card, or bank transfer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          PrimaryButton(
-            text: 'View Invoices',
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const InvoicesListScreen(
-                    initialFilter: BillingFilter(
-                      statuses: [
-                        InvoiceStatus.pending,
-                        InvoiceStatus.overdue,
-                      ],
-                      sortBy: 'dueDate',
-                      sortDesc: false,
-                    ),
-                  ),
-                ),
-              );
-            },
           ),
         ],
       ),

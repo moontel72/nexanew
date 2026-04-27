@@ -670,6 +670,140 @@ class FactoryBillingController extends Controller
         }
     }
 
+    public function downloadInvoicePdf(string $invoiceId)
+    {
+        $factoryId = $this->getFactoryId();
+
+        $invoice = Invoice::where('company_id', $factoryId)
+            ->where('id', $invoiceId)
+            ->firstOrFail();
+
+        if (Schema::hasColumn('invoices', 'type') && $invoice->type !== 'platform') {
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Invoice not found',
+                ],
+                404,
+            );
+        }
+
+        if ($invoice->status === 'draft') {
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Invoice must be finalized before downloading',
+                ],
+                403,
+            );
+        }
+
+        $items = is_array($invoice->items) ? $invoice->items : [];
+        $publishItem = null;
+        foreach ($items as $it) {
+            if (!is_array($it)) {
+                continue;
+            }
+            $src = (string) (($it['metadata']['source'] ?? '') ?: '');
+            if ($src === 'publish_codes') {
+                $publishItem = $it;
+                break;
+            }
+        }
+
+        $dailyRows = DB::table('base_codes')
+            ->selectRaw("DATE(COALESCE(published_at, created_at)) as day")
+            ->selectRaw('code_type')
+            ->selectRaw('COUNT(*)::int as count')
+            ->where('company_id', $invoice->company_id)
+            ->whereRaw("metadata->>'publish_invoice_id' = ?", [$invoice->id])
+            ->groupByRaw('DATE(COALESCE(published_at, created_at)), code_type')
+            ->orderBy('day')
+            ->get();
+
+        $totalsByDay = [];
+        $hasUnit = false;
+        foreach ($dailyRows as $r) {
+            if (strtolower((string) ($r->code_type ?? '')) === 'unit') {
+                $hasUnit = true;
+                break;
+            }
+        }
+        $totalUnits = 0;
+        foreach ($dailyRows as $r) {
+            $day = (string) ($r->day ?? '');
+            $codeType = strtolower((string) ($r->code_type ?? ''));
+            $count = (int) ($r->count ?? 0);
+            if ($hasUnit && $codeType !== 'unit') {
+                continue;
+            }
+            $totalsByDay[$day] = ($totalsByDay[$day] ?? 0) + $count;
+            $totalUnits += $count;
+        }
+
+        $lines = [];
+        $lines[] = 'NexaTrace Invoice';
+        $lines[] = 'Invoice #: ' . (string) $invoice->invoice_number;
+        $lines[] = 'Status: ' . (string) $invoice->status;
+        $lines[] = 'Issue Date: ' . (string) $invoice->issue_date;
+        $lines[] = 'Due Date: ' . (string) $invoice->due_date;
+        $lines[] = 'Period: ' . (string) $invoice->period_start . ' - ' . (string) $invoice->period_end;
+        $lines[] = 'Currency: ' . (string) ($invoice->currency ?? 'USD');
+
+        if ($publishItem !== null) {
+            $meta = is_array($publishItem['metadata'] ?? null) ? $publishItem['metadata'] : [];
+            $monthlyFee = (float) ($meta['monthly_fee'] ?? 0);
+            $rate = (float) ($meta['rate'] ?? ($publishItem['unit_price'] ?? 0));
+            $billed = (float) ($meta['billable_count'] ?? ($publishItem['quantity'] ?? 0));
+            $freeApplied = (float) ($meta['free_applied'] ?? 0);
+            $usageCharge = round($billed * $rate, 2);
+            $monthlyTotal = round($monthlyFee + $usageCharge, 2);
+
+            $lines[] = '';
+            $lines[] = 'Billing Breakdown:';
+            $lines[] = 'Total Units: ' . (string) $totalUnits;
+            $lines[] = 'Free Applied: ' . (string) $freeApplied;
+            $lines[] = 'Billed Codes: ' . (string) $billed;
+            $lines[] = 'Rate: ' . (string) $rate;
+            $lines[] = 'Billed Amount (Billed x Rate): ' . (string) $usageCharge;
+            $lines[] = 'Monthly Fee: ' . (string) $monthlyFee;
+            $lines[] = 'Monthly Total (Fee + Usage): ' . (string) $monthlyTotal;
+
+            if (!empty($totalsByDay)) {
+                $lines[] = '';
+                $lines[] = 'Daily Units:';
+                foreach ($totalsByDay as $day => $cnt) {
+                    $lines[] = '- ' . (string) $day . ': ' . (string) $cnt;
+                }
+            }
+        }
+
+        $lines[] = '';
+        $lines[] = 'Line Items:';
+        foreach ($items as $item) {
+            $desc = is_array($item) ? (string) ($item['description'] ?? '') : '';
+            $qty = is_array($item) ? (string) ($item['quantity'] ?? '') : '';
+            $unitPrice = is_array($item) ? (string) ($item['unit_price'] ?? '') : '';
+            $total = is_array($item) ? (string) ($item['total'] ?? '') : '';
+            $lines[] = '- ' . $desc;
+            $lines[] = '  Qty: ' . $qty . '  Unit: ' . $unitPrice . '  Total: ' . $total;
+        }
+
+        $lines[] = '';
+        $lines[] = 'Subtotal: ' . (string) $invoice->subtotal;
+        $lines[] = 'Tax: ' . (string) $invoice->tax_amount;
+        $lines[] = 'Discount: ' . (string) $invoice->discount_amount;
+        $lines[] = 'Total: ' . (string) $invoice->total_amount;
+
+        $pdf = app(SimplePdfGenerator::class)->generate($lines);
+        $fileName = (string) $invoice->invoice_number . '.pdf';
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
+    }
+
     /**
      * Check if invoice is downloadable
      */

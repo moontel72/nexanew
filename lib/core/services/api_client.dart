@@ -4,6 +4,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -98,7 +99,8 @@ class ApiClient {
       final normalizedPath = path.startsWith('/') ? path : '/$path';
 
       final isFactoryEndpoint =
-          normalizedPath.contains('/factory/') || normalizedPath.contains('/codes/');
+          normalizedPath.contains('/factory/') ||
+          normalizedPath.contains('/codes/');
 
       if (isFactoryEndpoint) {
         token = prefs.getString('factory_auth_token');
@@ -131,6 +133,57 @@ class ApiClient {
       extraHeaders: headers,
       requiresAuth: requiresAuth,
     );
+  }
+
+  Future<Uint8List> getBytes(
+    String endpoint, {
+    Map<String, dynamic>? queryParams,
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+    bool requiresAuth = true,
+  }) async {
+    try {
+      if (requiresAuth) {
+        await _initializeHeaders(endpoint: endpoint);
+      }
+
+      final requestHeaders = {..._headers, if (headers != null) ...headers};
+
+      requestHeaders['Accept'] =
+          requestHeaders['Accept'] ??
+          'application/pdf,application/octet-stream,*/*';
+
+      final normalizedEndpoint = _normalizeEndpoint(endpoint);
+      final uri = Uri.parse(normalizedEndpoint).replace(
+        queryParameters: (queryParams ?? queryParameters)?.map(
+          (key, value) => MapEntry(key, value.toString()),
+        ),
+      );
+
+      final response = await _makeCustomRequest(
+        'GET',
+        uri,
+        headers: requestHeaders,
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.isRedirect) {
+        final location = response.headers['location'];
+        throw RedirectException(
+          'GET request was redirected. This may indicate authentication failed.',
+          location: location,
+          originalMethod: 'GET',
+        );
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.bodyBytes;
+      }
+
+      _handleErrorResponse(response.statusCode, response.body);
+      throw Exception('Failed to download bytes');
+    } catch (error) {
+      throw _handleError(error);
+    }
   }
 
   // Make POST request
@@ -227,10 +280,7 @@ class ApiClient {
         await _initializeHeaders(endpoint: endpoint);
       }
 
-      final requestHeaders = {
-        ..._headers,
-        if (headers != null) ...headers,
-      };
+      final requestHeaders = {..._headers, if (headers != null) ...headers};
 
       requestHeaders['Accept'] = 'application/json';
 
@@ -307,8 +357,11 @@ class ApiClient {
       // Use custom request method to disable redirects
       switch (method) {
         case 'GET':
-          response = await _makeCustomRequest('GET', uri, headers: requestHeaders)
-              .timeout(const Duration(seconds: 30));
+          response = await _makeCustomRequest(
+            'GET',
+            uri,
+            headers: requestHeaders,
+          ).timeout(const Duration(seconds: 30));
           break;
         case 'POST':
           response = await _makeCustomRequest(
@@ -370,7 +423,11 @@ class ApiClient {
 
       return _handleResponse(response);
     } catch (error, stackTrace) {
-      ErrorLogger.error('API Request Failed: $method $endpoint', error, stackTrace);
+      ErrorLogger.error(
+        'API Request Failed: $method $endpoint',
+        error,
+        stackTrace,
+      );
       ErrorLogger.debug(
         'API Request Failed Details: Method: $method - Endpoint: $endpoint - Auth: $requiresAuth - Retry: $retryCount - Error: ${error.toString()}',
       );
@@ -465,7 +522,8 @@ class ApiClient {
       // If response is not JSON, use raw response
     }
 
-    final message = errorResponse?['message']?.toString() ??
+    final message =
+        errorResponse?['message']?.toString() ??
         errorResponse?['error']?.toString() ??
         'HTTP Error $statusCode';
 
@@ -545,7 +603,7 @@ class ApiClient {
 
     final token = response is Map
         ? (response['token'] ??
-            (response['data'] is Map ? response['data']['token'] : null))
+              (response['data'] is Map ? response['data']['token'] : null))
         : null;
 
     if (token != null) {
@@ -570,7 +628,7 @@ class ApiClient {
 
     final token = response is Map
         ? (response['token'] ??
-            (response['data'] is Map ? response['data']['token'] : null))
+              (response['data'] is Map ? response['data']['token'] : null))
         : null;
 
     if (token != null) {
@@ -657,7 +715,7 @@ class ApiClient {
 // Additional exception classes
 class BadRequestException extends AppException {
   const BadRequestException([String? message])
-      : super(message ?? 'Bad request');
+    : super(message ?? 'Bad request');
 }
 
 class ForbiddenException extends AppException {
@@ -674,12 +732,12 @@ class ConflictException extends AppException {
 
 class UnprocessableEntityException extends AppException {
   const UnprocessableEntityException([String? message])
-      : super(message ?? 'Unprocessable entity');
+    : super(message ?? 'Unprocessable entity');
 }
 
 class RateLimitException extends AppException {
   const RateLimitException([String? message])
-      : super(message ?? 'Rate limit exceeded');
+    : super(message ?? 'Rate limit exceeded');
 }
 
 class HttpException extends AppException {

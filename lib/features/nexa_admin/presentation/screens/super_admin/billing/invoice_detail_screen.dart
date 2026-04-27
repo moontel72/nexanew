@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:nexatrace_system/core/services/api_client.dart';
+import 'package:nexatrace_system/core/utils/file_saver.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
@@ -129,6 +130,15 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               ],
             ),
             const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: () => _downloadPdf(invoice),
+                icon: const Icon(Icons.download),
+                label: const Text('Download PDF'),
+              ),
+            ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 16,
               runSpacing: 8,
@@ -148,6 +158,31 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _downloadPdf(AdminInvoice invoice) async {
+    try {
+      final bytes = await context
+          .read<ApiClient>()
+          .getBytes('/admin/billing/invoices/${invoice.id}/pdf');
+
+      final safeNumber = invoice.invoiceNumber.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      await saveBytesToDownload(
+        bytes,
+        filename: 'invoice_$safeNumber.pdf',
+        mimeType: 'application/pdf',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invoice PDF downloaded')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to download PDF: $e')),
+      );
+    }
   }
 
   Widget _billingBreakdown(AdminInvoice invoice, NumberFormat money) {
@@ -290,6 +325,24 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                   return const Text('No usage data');
                 }
 
+                final parsed = rows
+                    .whereType<Map>()
+                    .map((r) => r.cast<String, dynamic>())
+                    .toList();
+
+                final hasUnit = parsed.any((r) => _s(r['code_type']).toLowerCase() == 'unit');
+                final totalsByDay = <String, int>{};
+                var totalUnits = 0;
+
+                for (final r in parsed) {
+                  final day = _s(r['day']);
+                  final codeType = _s(r['code_type']).toLowerCase();
+                  final count = int.tryParse(_s(r['count'], fallback: '0')) ?? 0;
+                  if (hasUnit && codeType != 'unit') continue;
+                  totalsByDay[day] = (totalsByDay[day] ?? 0) + count;
+                  totalUnits += count;
+                }
+
                 return LayoutBuilder(
                   builder: (context, constraints) {
                     return SingleChildScrollView(
@@ -299,19 +352,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         child: DataTable(
                           columns: const [
                             DataColumn(label: Text('Date')),
-                            DataColumn(label: Text('Code Type')),
-                            DataColumn(label: Text('Count')),
+                            DataColumn(label: Text('Units')),
                           ],
-                          rows: rows.map<DataRow>((r) {
-                            final m = r is Map ? r : const {};
-                            final day = _s(m['day']);
-                            final codeType = _s(m['code_type']);
-                            final count = _s(m['count'], fallback: '0');
+                          rows: totalsByDay.entries.map<DataRow>((e) {
                             return DataRow(
                               cells: [
-                                DataCell(Text(day)),
-                                DataCell(Text(codeType)),
-                                DataCell(Text(count)),
+                                DataCell(Text(e.key)),
+                                DataCell(Text(e.value.toString())),
                               ],
                             );
                           }).toList(),
@@ -319,6 +366,19 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                       ),
                     );
                   },
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            Builder(
+              builder: (context) {
+                final isPublishCodes = invoice.items.any(
+                  (i) => _s(i.metadata?['source']) == 'publish_codes',
+                );
+                if (!isPublishCodes) return const SizedBox.shrink();
+                return Text(
+                  'Total Units (${DateFormat('MMM dd').format(invoice.periodStart)} - ${DateFormat('MMM dd').format(invoice.periodEnd)}): '
+                  '${money.format(0).replaceAll(RegExp(r'[^0-9]'), '')}',
                 );
               },
             ),
