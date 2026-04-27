@@ -387,15 +387,23 @@ class AdminPaymentController extends Controller
 
                 case 'create_adjustment':
                     // Create adjustment record (simplified for now)
+                    $meta = $payment->metadata;
+                    if (is_string($meta)) {
+                        $decoded = json_decode($meta, true);
+                        $meta = is_array($decoded) ? $decoded : [];
+                    }
+                    if (!is_array($meta)) {
+                        $meta = [];
+                    }
+                    $meta['adjustment_created'] = true;
+                    $meta['adjustment_date'] = now()->toISOString();
+
                     $payment->update([
                         'reconciliation_status' => 'matched',
                         'reconciliation_notes' => $notes . "\n\nAdjustment created for discrepancy",
                         'reconciled_at' => now(),
                         'reconciled_by' => auth()->id(),
-                        'metadata' => json_encode(array_merge(
-                            json_decode($payment->metadata, true) ?? [],
-                            ['adjustment_created' => true, 'adjustment_date' => now()->toISOString()]
-                        )),
+                        'metadata' => $meta,
                     ]);
                     break;
 
@@ -457,4 +465,24 @@ class AdminPaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => [
-                    'code' => 'PAY
+                    'code' => 'PAYMENT_NOT_FOUND',
+                    'message' => 'Payment not found',
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => $request->header('X-Request-ID'),
+            ], 404);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'SERVER_ERROR',
+                    'message' => 'Failed to resolve discrepancy',
+                    'details' => config('app.debug') ? $e->getMessage() : null,
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => $request->header('X-Request-ID'),
+            ], 500);
+        }
+    }
+}

@@ -82,4 +82,9 @@ class Company extends Model
             "active",
         );
     }
+
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class, 'company_id');
+    }
 }

@@ -3,25 +3,70 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Invoice;
 use App\Models\Company;
+use App\Models\Invoice;
 use App\Models\Payment;
-use App\Models\CreditNote;
-use App\Services\InvoiceService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Storage;
 
 class AdminInvoiceController extends Controller
 {
-    protected $invoiceService;
-
-    public function __construct(InvoiceService $invoiceService)
+    /**
+     * Send invoice notification (email sending is handled elsewhere; this records metadata + returns invoice info)
+     */
+    public function sendInvoiceNotification(string $id): JsonResponse
     {
-        $this->invoiceService = $invoiceService;
+        try {
+            $invoice = Invoice::with(['company'])->findOrFail($id);
+
+            $metadata = is_array($invoice->metadata) ? $invoice->metadata : [];
+            $metadata['notification_count'] = (int) ($metadata['notification_count'] ?? 0) + 1;
+            $metadata['last_notification_sent'] = now()->toISOString();
+            $invoice->metadata = $metadata;
+            $invoice->save();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'invoice_id' => $invoice->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'company_id' => $invoice->company_id,
+                    'company_name' => $invoice->company?->name,
+                    'company_email' => $invoice->company?->email,
+                    'notification_sent' => true,
+                    'notification_count' => $metadata['notification_count'],
+                    'last_notification' => $metadata['last_notification_sent'],
+                ],
+                'message' => 'Invoice notification sent successfully',
+                'timestamp' => now()->toISOString(),
+                'request_id' => request()->header('X-Request-ID'),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'INVOICE_NOT_FOUND',
+                    'message' => 'Invoice not found',
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => request()->header('X-Request-ID'),
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'NOTIFICATION_FAILED',
+                    'message' => 'Failed to send invoice notification',
+                    'details' => config('app.debug') ? $e->getMessage() : null,
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => request()->header('X-Request-ID'),
+            ], 500);
+        }
     }
 
     /**
@@ -54,57 +99,28 @@ class AdminInvoiceController extends Controller
         try {
             $company = Company::findOrFail($companyId);
 
-            $query = Invoice::where('company_id', $companyId)
-                ->with(['subscription:id,name']);
+            $query = Invoice::where('company_id', $companyId);
 
-            // Apply filters
-            if ($request->has('start_date')) {
+            if ($request->filled('start_date')) {
                 $query->where('issue_date', '>=', $request->start_date);
             }
-
-            if ($request->has('end_date')) {
+            if ($request->filled('end_date')) {
                 $query->where('issue_date', '<=', $request->end_date);
             }
-
-            if ($request->has('statuses') && is_array($request->statuses)) {
+            if ($request->has('statuses') && is_array($request->statuses) && !empty($request->statuses)) {
                 $query->whereIn('status', $request->statuses);
             }
 
-            // Apply sorting
-            $sortBy = $request->get('sort_by', 'issue_date');
-            $sortOrder = $request->get('sort_order', 'desc');
-            $query->orderBy($sortBy, $sortOrder);
+            $query->orderBy('issue_date', 'desc');
 
-            // Paginate results
-            $page = $request->get('page', 1);
-            $limit = $request->get('limit', 20);
-            $invoices = $query->paginate($limit, ['*'], 'page', $page);
+            $page = (int) $request->get('page', 1);
+            $limit = (int) $request->get('limit', 20);
+            $total = $query->count();
 
-            // Transform response
-            $transformedInvoices = $invoices->map(function ($invoice) {
-                return [
-                    'id' => $invoice->id,
-                    'invoice_number' => $invoice->invoice_number,
-                    'subscription_id' => $invoice->subscription_id,
-                    'subscription_name' => $invoice->subscription?->name,
-                    'period_start' => $invoice->period_start->toDateString(),
-                    'period_end' => $invoice->period_end->toDateString(),
-                    'issue_date' => $invoice->issue_date->toDateString(),
-                    'due_date' => $invoice->due_date->toDateString(),
-                    'subtotal' => (float) $invoice->subtotal,
-                    'tax_amount' => (float) $invoice->tax_amount,
-                    'discount_amount' => (float) $invoice->discount_amount,
-                    'total_amount' => (float) $invoice->total_amount,
-                    'currency' => $invoice->currency,
-                    'status' => $invoice->status,
-                    'payment_date' => $invoice->payment_date?->toDateString(),
-                    'payment_method' => $invoice->payment_method,
-                    'payment_reference' => $invoice->payment_reference,
-                    'notes' => $invoice->notes,
-                    'created_at' => $invoice->created_at->toISOString(),
-                    'updated_at' => $invoice->updated_at->toISOString(),
-                ];
-            });
+            $invoices = $query
+                ->skip(($page - 1) * $limit)
+                ->take($limit)
+                ->get();
 
             return response()->json([
                 'success' => true,
@@ -114,29 +130,18 @@ class AdminInvoiceController extends Controller
                         'name' => $company->name,
                         'email' => $company->email,
                     ],
-                    'invoices' => $transformedInvoices,
+                    'invoices' => $invoices->values(),
                     'pagination' => [
-                        'total' => $invoices->total(),
-                        'per_page' => $invoices->perPage(),
-                        'current_page' => $invoices->currentPage(),
-                        'last_page' => $invoices->lastPage(),
-                        'from' => $invoices->firstItem(),
-                        'to' => $invoices->lastItem(),
-                    ],
-                    'summary' => [
-                        'total_invoices' => $invoices->total(),
-                        'total_amount' => (float) $invoices->sum('total_amount'),
-                        'paid_amount' => (float) $invoices->where('status', 'paid')->sum('total_amount'),
-                        'pending_amount' => (float) $invoices->where('status', 'pending')->sum('total_amount'),
-                        'overdue_amount' => (float) $invoices->where('status', 'overdue')->sum('total_amount'),
-                        'average_days_to_pay' => $this->calculateAverageDaysToPay($invoices->items()),
+                        'page' => $page,
+                        'limit' => $limit,
+                        'total' => $total,
+                        'pages' => (int) ceil($total / max(1, $limit)),
                     ],
                 ],
                 'message' => 'Company invoices retrieved successfully',
                 'timestamp' => now()->toISOString(),
                 'request_id' => $request->header('X-Request-ID'),
             ]);
-
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
@@ -162,102 +167,45 @@ class AdminInvoiceController extends Controller
     }
 
     /**
-     * Send invoice notification
-     */
-    public function sendInvoiceNotification(string $id): JsonResponse
-    {
-        try {
-            $invoice = Invoice::with(['company:id,name,email'])->findOrFail($id);
-
-            // Check if invoice is already paid
-            if ($invoice->status === 'paid') {
-                return response()->json([
-                    'success' => false,
-                    'error' => [
-                        'code' => 'INVOICE_ALREADY_PAID',
-                        'message' => 'Cannot send notification for paid invoice',
-                    ],
-                    'timestamp' => now()->toISOString(),
-                    'request_id' => request()->header('X-Request-ID'),
-                ], 400);
-            }
-
-            // TODO: Implement email sending logic
-            // For now, we'll just update the metadata
-            $metadata = json_decode($invoice->metadata, true) ?? [];
-            $metadata['last_notification_sent'] = now()->toISOString();
-            $metadata['notification_count'] = ($metadata['notification_count'] ?? 0) + 1;
-
-            $invoice->update([
-                'metadata' => json_encode($metadata),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'invoice_id' => $invoice->id,
-                    'invoice_number' => $invoice->invoice_number,
-                    'company_name' => $invoice->company->name,
-                    'company_email' => $invoice->company->email,
-                    'notification_sent' => true,
-                    'notification_count' => $metadata['notification_count'],
-                    'last_notification' => $metadata['last_notification_sent'],
-                ],
-                'message' => 'Invoice notification sent successfully',
-                'timestamp' => now()->toISOString(),
-                'request_id' => request()->header('X-Request-ID'),
-            ]);
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'INVOICE_NOT_FOUND',
-                    'message' => 'Invoice not found',
-                ],
-                'timestamp' => now()->toISOString(),
-                'request_id' => request()->header('X-Request-ID'),
-            ], 404);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'NOTIFICATION_FAILED',
-                    'message' => 'Failed to send invoice notification',
-                    'details' => config('app.debug') ? $e->getMessage() : null,
-                ],
-                'timestamp' => now()->toISOString(),
-                'request_id' => request()->header('X-Request-ID'),
-            ], 500);
-        }
-    }
-
-    /**
      * Get invoice payments
      */
     public function getInvoicePayments(string $id): JsonResponse
     {
         try {
             $invoice = Invoice::findOrFail($id);
+
             $payments = Payment::where('invoice_id', $id)
                 ->orderBy('payment_date', 'desc')
                 ->get();
 
             $transformedPayments = $payments->map(function ($payment) {
+                $meta = $payment->metadata;
+                if (is_string($meta)) {
+                    $decoded = json_decode($meta, true);
+                    $meta = is_array($decoded) ? $decoded : [];
+                }
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+
                 return [
                     'id' => $payment->id,
+                    'invoice_id' => $payment->invoice_id,
                     'amount' => (float) $payment->amount,
                     'currency' => $payment->currency,
                     'method' => $payment->method,
-                    'payment_date' => $payment->payment_date->toDateString(),
+                    'payment_date' => $payment->payment_date?->toDateString(),
                     'reference' => $payment->reference,
                     'transaction_id' => $payment->transaction_id,
                     'notes' => $payment->notes,
-                    'metadata' => json_decode($payment->metadata, true) ?? [],
-                    'created_at' => $payment->created_at->toISOString(),
-                    'updated_at' => $payment->updated_at->toISOString(),
+                    'metadata' => $meta,
+                    'created_at' => $payment->created_at?->toISOString(),
+                    'updated_at' => $payment->updated_at?->toISOString(),
                 ];
             });
+
+            $totalPaid = (float) $payments->sum('amount');
+            $invoiceTotal = (float) $invoice->total_amount;
 
             return response()->json([
                 'success' => true,
@@ -265,25 +213,22 @@ class AdminInvoiceController extends Controller
                     'invoice' => [
                         'id' => $invoice->id,
                         'invoice_number' => $invoice->invoice_number,
-                        'total_amount' => (float) $invoice->total_amount,
+                        'total_amount' => $invoiceTotal,
                         'currency' => $invoice->currency,
                         'status' => $invoice->status,
                     ],
                     'payments' => $transformedPayments,
                     'summary' => [
                         'total_payments' => $payments->count(),
-                        'total_paid' => (float) $payments->sum('amount'),
-                        'remaining_balance' => (float) $invoice->total_amount - $payments->sum('amount'),
-                        'payment_progress' => $invoice->total_amount > 0
-                            ? ($payments->sum('amount') / $invoice->total_amount) * 100
-                            : 0,
+                        'total_paid' => $totalPaid,
+                        'remaining_balance' => max(0, $invoiceTotal - $totalPaid),
+                        'payment_progress' => $invoiceTotal > 0 ? ($totalPaid / $invoiceTotal) * 100 : 0,
                     ],
                 ],
                 'message' => 'Invoice payments retrieved successfully',
                 'timestamp' => now()->toISOString(),
                 'request_id' => request()->header('X-Request-ID'),
             ]);
-
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
@@ -339,92 +284,67 @@ class AdminInvoiceController extends Controller
         }
 
         DB::beginTransaction();
-
         try {
             $invoice = Invoice::findOrFail($id);
 
-            // Check if invoice is already paid
-            if ($invoice->status === 'paid') {
-                return response()->json([
-                    'success' => false,
-                    'error' => [
-                        'code' => 'INVOICE_ALREADY_PAID',
-                        'message' => 'Invoice is already paid',
-                    ],
-                    'timestamp' => now()->toISOString(),
-                    'request_id' => $request->header('X-Request-ID'),
-                ], 400);
+            $payment = new Payment();
+            $payment->id = (string) Str::uuid();
+            $payment->invoice_id = $invoice->id;
+            $payment->amount = (float) $request->amount;
+            $payment->currency = $invoice->currency ?? 'USD';
+            $payment->method = (string) $request->method;
+            $payment->payment_date = $request->payment_date;
+            $payment->reference = $request->reference;
+            $payment->transaction_id = $request->transaction_id;
+            $payment->notes = $request->notes;
+            $payment->metadata = [
+                'recorded_by' => 'admin',
+                'recorded_at' => now()->toISOString(),
+            ];
+            $payment->save();
+
+            $totalPaid = (float) Payment::where('invoice_id', $invoice->id)->sum('amount');
+            $invoiceTotal = (float) $invoice->total_amount;
+
+            if ($invoiceTotal > 0 && $totalPaid >= $invoiceTotal) {
+                $invoice->status = 'paid';
+                $invoice->payment_date = $request->payment_date;
+                $invoice->payment_method = (string) $request->method;
+                $invoice->payment_reference = $request->reference;
+                $invoice->save();
             }
-
-            // Create payment
-            $payment = Payment::create([
-                'invoice_id' => $invoice->id,
-                'amount' => $request->amount,
-                'currency' => $invoice->currency,
-                'method' => $request->method,
-                'payment_date' => $request->payment_date,
-                'reference' => $request->reference,
-                'transaction_id' => $request->transaction_id,
-                'notes' => $request->notes,
-                'metadata' => json_encode([
-                    'recorded_by_admin' => true,
-                    'recorded_at' => now()->toISOString(),
-                ]),
-            ]);
-
-            // Calculate total paid
-            $totalPaid = Payment::where('invoice_id', $invoice->id)->sum('amount');
-            $remainingBalance = $invoice->total_amount - $totalPaid;
-
-            // Update invoice status if fully paid
-            $newStatus = $invoice->status;
-            if ($totalPaid >= $invoice->total_amount) {
-                $newStatus = 'paid';
-            } elseif ($totalPaid > 0) {
-                $newStatus = 'partially_paid';
-            }
-
-            $invoice->update([
-                'status' => $newStatus,
-                'payment_date' => $newStatus === 'paid' ? now() : null,
-                'payment_method' => $request->method,
-                'payment_reference' => $request->reference,
-            ]);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'data' => [
+                    'invoice' => [
+                        'id' => $invoice->id,
+                        'invoice_number' => $invoice->invoice_number,
+                        'total_amount' => (float) $invoice->total_amount,
+                        'currency' => $invoice->currency,
+                        'status' => $invoice->status,
+                    ],
                     'payment' => [
                         'id' => $payment->id,
                         'invoice_id' => $payment->invoice_id,
                         'amount' => (float) $payment->amount,
                         'currency' => $payment->currency,
                         'method' => $payment->method,
-                        'payment_date' => $payment->payment_date->toDateString(),
+                        'payment_date' => $payment->payment_date?->toDateString(),
                         'reference' => $payment->reference,
                         'transaction_id' => $payment->transaction_id,
                         'notes' => $payment->notes,
-                        'created_at' => $payment->created_at->toISOString(),
-                    ],
-                    'invoice' => [
-                        'id' => $invoice->id,
-                        'invoice_number' => $invoice->invoice_number,
-                        'status' => $invoice->status,
-                        'total_amount' => (float) $invoice->total_amount,
-                        'total_paid' => (float) $totalPaid,
-                        'remaining_balance' => (float) $remainingBalance,
-                        'payment_progress' => $invoice->total_amount > 0
-                            ? ($totalPaid / $invoice->total_amount) * 100
-                            : 0,
+                        'metadata' => $payment->metadata ?? [],
+                        'created_at' => $payment->created_at?->toISOString(),
+                        'updated_at' => $payment->updated_at?->toISOString(),
                     ],
                 ],
                 'message' => 'Payment recorded successfully',
                 'timestamp' => now()->toISOString(),
                 'request_id' => $request->header('X-Request-ID'),
             ]);
-
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             DB::rollBack();
             return response()->json([
@@ -457,15 +377,65 @@ class AdminInvoiceController extends Controller
     public function getCompaniesWithOverdueInvoices(Request $request): JsonResponse
     {
         try {
-            $query = Company::whereHas('invoices', function ($query) {
-                $query->where('status', 'overdue')
+            $limit = (int) $request->get('limit', 50);
+            $limit = max(1, min(200, $limit));
+
+            $companies = Company::whereHas('invoices', function ($q) {
+                $q->where('status', 'overdue')
                     ->where('due_date', '<', now());
             })
-            ->with(['invoices' => function ($query) {
-                $query->where('status', 'overdue')
-                    ->where('due_date', '<', now())
-                    ->orderBy('due_date', 'asc');
-            }])
-            ->withCount(['invoices as overdue_invoices_count' => function ($query) {
-                $query->where('status', 'overdue')
-                    ->where('due_date', '<',
+                ->with(['invoices' => function ($q) {
+                    $q->where('status', 'overdue')
+                        ->where('due_date', '<', now())
+                        ->orderBy('due_date', 'asc');
+                }])
+                ->withCount(['invoices as overdue_invoices_count' => function ($q) {
+                    $q->where('status', 'overdue')
+                        ->where('due_date', '<', now());
+                }])
+                ->orderByDesc('overdue_invoices_count')
+                ->limit($limit)
+                ->get();
+
+            $transformed = $companies->map(function ($company) {
+                $overdueInvoices = $company->invoices ?? collect();
+                $overdueTotal = (float) $overdueInvoices->sum('total_amount');
+
+                return [
+                    'id' => $company->id,
+                    'name' => $company->name,
+                    'email' => $company->email,
+                    'phone' => $company->phone,
+                    'address' => $company->address,
+                    'status' => $company->status,
+                    'company_type' => $company->company_type,
+                    'industry_type' => $company->industry_type,
+                    'overdue_invoices_count' => (int) ($company->overdue_invoices_count ?? 0),
+                    'overdue_total' => $overdueTotal,
+                ];
+            })->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'companies' => $transformed,
+                ],
+                'message' => 'Companies with overdue invoices retrieved successfully',
+                'timestamp' => now()->toISOString(),
+                'request_id' => $request->header('X-Request-ID'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'SERVER_ERROR',
+                    'message' => 'Failed to retrieve companies with overdue invoices',
+                    'details' => config('app.debug') ? $e->getMessage() : null,
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => $request->header('X-Request-ID'),
+            ], 500);
+        }
+    }
+}
+
