@@ -2,6 +2,7 @@
 // Implements billing data operations using remote datasource
 
 import 'package:nexatrace_system/core/services/api_client.dart';
+import 'package:nexatrace_system/core/utils/file_saver.dart';
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
 import 'package:nexatrace_system/features/factory/admin/domain/repositories/billing_repository.dart';
 
@@ -393,21 +394,22 @@ class BillingRepositoryImpl implements BillingRepository {
   @override
   Future<String> downloadInvoice(String invoiceId) async {
     try {
-      final response = await _apiClient.get(
-        '/factory/billing/invoices/$invoiceId/download',
-        headers: _getAuthHeaders(),
+      final bytes = await _apiClient.getBytes(
+        '/factory/billing/invoices/$invoiceId/pdf',
+        headers: {
+          ..._getAuthHeaders(),
+          'Accept': 'application/pdf',
+        },
       );
 
-      final data = response['data'];
-      if (data is Map) {
-        final filePath = data['file_path']?.toString().trim();
-        if (filePath != null && filePath.isNotEmpty) return filePath;
+      final filename = 'invoice_$invoiceId.pdf';
+      final savedPath = await saveBytesToDownload(
+        bytes,
+        filename: filename,
+        mimeType: 'application/pdf',
+      );
 
-        final url = data['download_url']?.toString().trim();
-        if (url != null && url.isNotEmpty) return url;
-      }
-
-      return '/downloads/invoice_$invoiceId.pdf';
+      return savedPath ?? filename;
     } catch (error) {
       throw Exception('Failed to download invoice: $error');
     }

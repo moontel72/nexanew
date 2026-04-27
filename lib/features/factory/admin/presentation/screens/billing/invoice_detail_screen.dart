@@ -8,8 +8,6 @@ import 'package:nexatrace_system/shared/widgets/cards/info_card.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
 import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:nexatrace_system/core/config/api_config.dart';
 import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/billing/billing_bloc.dart';
 
@@ -34,20 +32,6 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     });
   }
 
-  Uri? _normalizeDownloadUri(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) return null;
-
-    final uri = Uri.tryParse(trimmed);
-    if (uri == null) return null;
-    if (uri.hasScheme) return uri;
-
-    if (trimmed.startsWith('/')) {
-      return Uri.parse('${ApiConfig.baseUrl}$trimmed');
-    }
-    return Uri.parse('${ApiConfig.baseUrl}/$trimmed');
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,11 +54,6 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           // Handle download success
           if (state is BillingInvoiceDownloadSuccess) {
             if (state.invoiceId == widget.invoiceId) {
-              final uri = _normalizeDownloadUri(state.filePath);
-              if (uri != null) {
-                launchUrl(uri, mode: LaunchMode.platformDefault);
-              }
-
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Invoice downloaded successfully'),

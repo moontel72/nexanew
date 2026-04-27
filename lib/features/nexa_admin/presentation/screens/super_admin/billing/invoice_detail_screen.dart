@@ -343,42 +343,40 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                   totalUnits += count;
                 }
 
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                        child: DataTable(
-                          columns: const [
-                            DataColumn(label: Text('Date')),
-                            DataColumn(label: Text('Units')),
-                          ],
-                          rows: totalsByDay.entries.map<DataRow>((e) {
-                            return DataRow(
-                              cells: [
-                                DataCell(Text(e.key)),
-                                DataCell(Text(e.value.toString())),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total Units (${DateFormat('MMM dd, yyyy').format(invoice.periodStart)} - '
+                      '${DateFormat('MMM dd, yyyy').format(invoice.periodEnd)}): $totalUnits',
+                      style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 12),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                            child: DataTable(
+                              columns: const [
+                                DataColumn(label: Text('Date')),
+                                DataColumn(label: Text('Units')),
                               ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            Builder(
-              builder: (context) {
-                final isPublishCodes = invoice.items.any(
-                  (i) => _s(i.metadata?['source']) == 'publish_codes',
-                );
-                if (!isPublishCodes) return const SizedBox.shrink();
-                return Text(
-                  'Total Units (${DateFormat('MMM dd').format(invoice.periodStart)} - ${DateFormat('MMM dd').format(invoice.periodEnd)}): '
-                  '${money.format(0).replaceAll(RegExp(r'[^0-9]'), '')}',
+                              rows: totalsByDay.entries.map<DataRow>((e) {
+                                return DataRow(
+                                  cells: [
+                                    DataCell(Text(e.key)),
+                                    DataCell(Text(e.value.toString())),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 );
               },
             ),

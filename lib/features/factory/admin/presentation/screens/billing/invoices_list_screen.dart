@@ -6,8 +6,6 @@ import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/theme/text_styles.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:nexatrace_system/core/config/api_config.dart';
 
 class InvoicesListScreen extends StatefulWidget {
   final BillingFilter initialFilter;
@@ -21,20 +19,6 @@ class InvoicesListScreen extends StatefulWidget {
 class _InvoicesListScreenState extends State<InvoicesListScreen> {
   BillingFilter _filter = const BillingFilter();
   List<Invoice> _cachedInvoices = const [];
-
-  Uri? _normalizeDownloadUri(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) return null;
-
-    final uri = Uri.tryParse(trimmed);
-    if (uri == null) return null;
-    if (uri.hasScheme) return uri;
-
-    if (trimmed.startsWith('/')) {
-      return Uri.parse('${ApiConfig.baseUrl}$trimmed');
-    }
-    return Uri.parse('${ApiConfig.baseUrl}/$trimmed');
-  }
 
   @override
   void initState() {
@@ -64,11 +48,6 @@ class _InvoicesListScreenState extends State<InvoicesListScreen> {
       body: BlocConsumer<BillingBloc, BillingState>(
         listener: (context, state) {
           if (state is BillingInvoiceDownloadSuccess) {
-            final uri = _normalizeDownloadUri(state.filePath);
-            if (uri != null) {
-              launchUrl(uri, mode: LaunchMode.platformDefault);
-            }
-
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Invoice downloaded successfully'),
