@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/carton_codes/carton_codes_bloc.dart';
+import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
 import 'package:nexatrace_system/shared/models/code/code_generation_request.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
@@ -27,46 +28,17 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
   final TextEditingController _countController = TextEditingController(
     text: '1',
   );
-  final TextEditingController _prefixController = TextEditingController(
-    text: 'C',
-  );
-  final TextEditingController _packetsPerCartonController =
-      TextEditingController(text: '10');
   final TextEditingController _batchNameController = TextEditingController();
-  final TextEditingController _batchNotesController = TextEditingController();
-  final TextEditingController _cartonWeightController = TextEditingController();
-  final TextEditingController _cartonDimensionsController =
-      TextEditingController();
-  final TextEditingController _cartonTypeController = TextEditingController();
-  final TextEditingController _gradeController = TextEditingController();
-  final TextEditingController _maxWeightCapacityController =
-      TextEditingController();
-  final TextEditingController _temperatureRequirementsController =
-      TextEditingController();
-  final TextEditingController _handlingInstructionsController =
-      TextEditingController();
+  final TextEditingController _prefixController = TextEditingController();
 
-  bool _includeInternationalCodes = true;
-  bool _generateQrCodes = true;
-  bool _generateBarcodes = true;
-  bool _generateCartonBarcode = true;
-  bool _generateCartonQrCode = true;
+  CartonCodeFormat _selectedFormat = CartonCodeFormat.qr;
 
   @override
   void dispose() {
     _scrollController.dispose();
     _countController.dispose();
-    _prefixController.dispose();
-    _packetsPerCartonController.dispose();
     _batchNameController.dispose();
-    _batchNotesController.dispose();
-    _cartonWeightController.dispose();
-    _cartonDimensionsController.dispose();
-    _cartonTypeController.dispose();
-    _gradeController.dispose();
-    _maxWeightCapacityController.dispose();
-    _temperatureRequirementsController.dispose();
-    _handlingInstructionsController.dispose();
+    _prefixController.dispose();
     super.dispose();
   }
 
@@ -76,7 +48,9 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
         factoryId: 'factory_123', // TODO: Get from auth state
         subscriptionPlanId: 'plan_premium', // TODO: Get from subscription state
         count: int.parse(_countController.text),
-        prefix: 'C',
+        prefix: _prefixController.text.isNotEmpty
+            ? _prefixController.text
+            : 'C',
         bundleCode: '',
         packetsPerCarton: 0,
         includeInternationalCodes: true,
@@ -84,6 +58,10 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
         generateBarcodes: true,
         generateCartonBarcode: true,
         generateCartonQrCode: true,
+        batchName: _batchNameController.text.isNotEmpty
+            ? _batchNameController.text
+            : null,
+        codeFormat: _selectedFormat.value,
       );
 
       context.read<CartonCodesBloc>().add(GenerateCartonCodes(request));
@@ -96,7 +74,7 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
       builder: (context) => CodeGenerationSuccessDialog(
         title: 'Carton Codes Generated',
         content:
-            'Successfully generated $count carton codes.\n\nYou can now publish and download this list for printing. Linking to bundles happens later in the Storekeeper app during scanning.',
+            'Successfully generated $count ${_selectedFormat.displayName} carton codes.\n\nYou can now publish and download this list for printing. Linking to bundles happens later in the Storekeeper app during scanning.',
         onOk: () => Navigator.pop(context),
         onViewCodes: () {
           Navigator.pop(context);
@@ -115,28 +93,142 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
             'Carton Codes are generated as standalone codes in the Factory Panel. They are linked to bundles later in the Storekeeper app during scanning.',
         items: [
           HelpItem(
-            title: 'Packets per Carton',
+            title: 'Code Format',
             description:
-                'Number of packets that will be contained in each carton. Typically 10-20 packets.',
+                'Select the barcode/QR format type. Each format is optimized for specific use cases (e.g., ITF-14 for industrial, DataMatrix for pharma).',
           ),
           HelpItem(
-            title: 'Carton Specifications',
+            title: 'Quantity',
             description:
-                'Weight, dimensions, type, and grade help in logistics and handling.',
+                'Number of carton codes to generate in this batch (1-1000).',
           ),
           HelpItem(
-            title: 'Temperature Requirements',
+            title: 'Batch Name',
             description:
-                'For temperature-sensitive products (e.g., food, medicine).',
+                'Optional identifier for grouping codes generated together.',
           ),
           HelpItem(
-            title: 'Carton Barcode/QR Code',
+            title: 'Prefix',
             description:
-                'Separate codes for carton tracking independent of product codes.',
+                'Optional code prefix for easy identification of this batch.',
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildFormatSelector() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Code Format',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              'Select ONE format type for this batch',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+            SizedBox(height: 12.h),
+            Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: CartonCodeFormat.values.map((format) {
+                final isSelected = _selectedFormat == format;
+                return ChoiceChip(
+                  label: Text(format.displayName),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _selectedFormat = format;
+                      });
+                    }
+                  },
+                  selectedColor: AppColors.primary.withAlpha(30),
+                  backgroundColor: AppColors.surface,
+                  side: BorderSide(
+                    color: isSelected ? AppColors.primary : AppColors.border,
+                    width: isSelected ? 2 : 1,
+                  ),
+                  labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.textPrimary,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                  avatar: isSelected
+                      ? Icon(
+                          Icons.check_circle,
+                          size: 18,
+                          color: AppColors.primary,
+                        )
+                      : Icon(
+                          _formatIcon(format.value),
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
+                );
+              }).toList(),
+            ),
+            SizedBox(height: 8.h),
+            Container(
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withAlpha(8),
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(color: AppColors.primary.withAlpha(25)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: AppColors.primary),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      _selectedFormat.description,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _formatIcon(String format) {
+    switch (format) {
+      case 'itf14':
+        return Icons.bar_chart;
+      case 'gs1_128':
+        return Icons.qr_code_scanner;
+      case 'code128_industrial':
+        return Icons.factory;
+      case 'qr':
+        return Icons.qr_code_2;
+      case 'datamatrix':
+        return Icons.grid_on;
+      case 'code128_label':
+        return Icons.label;
+      default:
+        return Icons.code;
+    }
   }
 
   Widget _buildBasicInfoSection() {
@@ -149,7 +241,7 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Basic Information',
+              'Generation Details',
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
@@ -174,225 +266,17 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
                 return null;
               },
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCartonSpecificationsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Carton Specifications',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
-            ),
             SizedBox(height: 16.h),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    controller: _cartonWeightController,
-                    labelText: 'Weight (kg)',
-                    hintText: 'e.g., 5.0',
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: CustomTextField(
-                    controller: _cartonDimensionsController,
-                    labelText: 'Dimensions (LxWxH cm)',
-                    hintText: 'e.g., 30x20x15',
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    controller: _cartonTypeController,
-                    labelText: 'Carton Type',
-                    hintText: 'e.g., Corrugated, Cardboard, Plastic',
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: CustomTextField(
-                    controller: _gradeController,
-                    labelText: 'Grade/Quality',
-                    hintText: 'e.g., A, B, Premium',
-                  ),
-                ),
-              ],
+            CustomTextField(
+              controller: _batchNameController,
+              labelText: 'Batch Name / ID (Optional)',
+              hintText: 'e.g., BATCH-2024-001',
             ),
             SizedBox(height: 16.h),
             CustomTextField(
-              controller: _maxWeightCapacityController,
-              labelText: 'Max Weight Capacity (kg)',
-              hintText: 'e.g., 20.0',
-              keyboardType: TextInputType.number,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHandlingRequirementsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Handling & Requirements',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
-            ),
-            SizedBox(height: 16.h),
-            CustomTextField(
-              controller: _temperatureRequirementsController,
-              labelText: 'Temperature Requirements',
-              hintText: 'e.g., 15-25°C, Keep Frozen',
-            ),
-            SizedBox(height: 16.h),
-            CustomTextField(
-              controller: _handlingInstructionsController,
-              labelText: 'Handling Instructions',
-              hintText: 'e.g., Fragile, This Side Up, Keep Dry',
-              maxLines: 3,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCodeOptionsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Code Options',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
-            ),
-            SizedBox(height: 16.h),
-            SwitchListTile(
-              title: Text(
-                'Include International Codes (GS1)',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Add GS1-compliant international codes',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _includeInternationalCodes,
-              onChanged: (value) {
-                setState(() {
-                  _includeInternationalCodes = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-            SwitchListTile(
-              title: Text(
-                'Generate QR Codes',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Generate QR codes for product verification',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _generateQrCodes,
-              onChanged: (value) {
-                setState(() {
-                  _generateQrCodes = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-            SwitchListTile(
-              title: Text(
-                'Generate Barcodes',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Generate barcodes for scanning',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _generateBarcodes,
-              onChanged: (value) {
-                setState(() {
-                  _generateBarcodes = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-            SwitchListTile(
-              title: Text(
-                'Generate Carton Barcode',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Separate barcode for carton tracking',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _generateCartonBarcode,
-              onChanged: (value) {
-                setState(() {
-                  _generateCartonBarcode = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-            SwitchListTile(
-              title: Text(
-                'Generate Carton QR Code',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Separate QR code for carton tracking',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _generateCartonQrCode,
-              onChanged: (value) {
-                setState(() {
-                  _generateCartonQrCode = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
+              controller: _prefixController,
+              labelText: 'Prefix (Optional)',
+              hintText: 'e.g., C, CTN',
             ),
           ],
         ),
@@ -414,7 +298,7 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
 
         return PrimaryButton(
           onPressed: _generateCodes,
-          text: 'Generate Carton Codes',
+          text: 'Generate ${_selectedFormat.displayName} Carton Codes',
           icon: Icons.qr_code,
         );
       },
@@ -462,17 +346,21 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
+                    'Format: ${_selectedFormat.displayName}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  Text(
                     'Bundle: Linked later via Storekeeper app',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  Text(
-                    'Packets: ${_packetsPerCartonController.text.isNotEmpty ? _packetsPerCartonController.text : "10"}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    'Total Units: ${_packetsPerCartonController.text.isNotEmpty ? (int.parse(_packetsPerCartonController.text) * 12).toString() : "120"}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  if (_batchNameController.text.isNotEmpty)
+                    Text(
+                      'Batch: ${_batchNameController.text}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                 ],
               ),
             ),
@@ -519,7 +407,11 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildFormatSelector(),
+                    SizedBox(height: 24.h),
                     _buildBasicInfoSection(),
+                    SizedBox(height: 24.h),
+                    _buildCodePreview(),
                     SizedBox(height: 24.h),
                     _buildGenerateButton(),
                     SizedBox(height: 16.h),

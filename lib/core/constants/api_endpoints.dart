@@ -140,6 +140,14 @@ class ApiEndpoints {
   static const String linkCartonCodes = '/codes/carton/link';
   static const String publishCartonCodes = '/codes/carton/publish';
 
+  // Carton Code Format-specific endpoints
+  // POST /v1/codes/carton/{format}/generate -- generate codes for specific format
+  // GET /v1/codes/carton/{format}/list -- list codes for specific format
+  static String generateCartonCodesByFormat(String format) =>
+      '/codes/carton/$format/generate';
+  static String listCartonCodesByFormat(String format) =>
+      '/codes/carton/$format/list';
+
   // Packet Codes
   static const String packetCodes = '/codes/packet';
   static const String generatePacketCodes = '/codes/packet/generate';
@@ -394,13 +402,16 @@ class ApiEndpoints {
   // Helper to get subscription details URL
   static String getSubscriptionDetailsUrl(String subscriptionId) {
     return getFullUrl(
-        adminSubscriptionDetails.replaceFirst('{id}', subscriptionId));
+      adminSubscriptionDetails.replaceFirst('{id}', subscriptionId),
+    );
   }
 
   // Helper to get document delete URL
   static String getDocumentDeleteUrl(String factoryId, String documentId) {
-    return getFullUrl(adminDeleteDocument
-        .replaceFirst('{id}', factoryId)
-        .replaceFirst('{document}', documentId));
+    return getFullUrl(
+      adminDeleteDocument
+          .replaceFirst('{id}', factoryId)
+          .replaceFirst('{document}', documentId),
+    );
   }
 }

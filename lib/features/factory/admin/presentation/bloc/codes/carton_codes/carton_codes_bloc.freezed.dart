@@ -55,7 +55,7 @@ extension CartonCodesEventPatterns on CartonCodesEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( LoadCartonCodes value)?  load,TResult Function( GenerateCartonCodes value)?  generate,TResult Function( DeleteCartonCode value)?  delete,TResult Function( DeleteCartonCodeBatch value)?  deleteBatch,TResult Function( LinkCartonCodeToProduct value)?  linkToProduct,TResult Function( PublishCartonCode value)?  publish,TResult Function( DeactivateCartonCode value)?  deactivate,TResult Function( SearchCartonCodes value)?  search,TResult Function( FilterCartonCodes value)?  filter,TResult Function( ExportCartonCodes value)?  export,TResult Function( SelectCartonCode value)?  select,TResult Function( ClearSelection value)?  clearSelection,TResult Function( RefreshCartonCodes value)?  refresh,TResult Function( SealCarton value)?  seal,TResult Function( UpdateCartonInspection value)?  updateInspection,TResult Function( UpdateCartonProperties value)?  updateProperties,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( LoadCartonCodes value)?  load,TResult Function( GenerateCartonCodes value)?  generate,TResult Function( DeleteCartonCode value)?  delete,TResult Function( DeleteCartonCodeBatch value)?  deleteBatch,TResult Function( LinkCartonCodeToProduct value)?  linkToProduct,TResult Function( PublishCartonCode value)?  publish,TResult Function( DeactivateCartonCode value)?  deactivate,TResult Function( SearchCartonCodes value)?  search,TResult Function( FilterCartonCodes value)?  filter,TResult Function( FilterCartonCodesByFormat value)?  filterByFormat,TResult Function( ExportCartonCodes value)?  export,TResult Function( SelectCartonCode value)?  select,TResult Function( ClearSelection value)?  clearSelection,TResult Function( RefreshCartonCodes value)?  refresh,TResult Function( SealCarton value)?  seal,TResult Function( UpdateCartonInspection value)?  updateInspection,TResult Function( UpdateCartonProperties value)?  updateProperties,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case LoadCartonCodes() when load != null:
@@ -67,7 +67,8 @@ return linkToProduct(_that);case PublishCartonCode() when publish != null:
 return publish(_that);case DeactivateCartonCode() when deactivate != null:
 return deactivate(_that);case SearchCartonCodes() when search != null:
 return search(_that);case FilterCartonCodes() when filter != null:
-return filter(_that);case ExportCartonCodes() when export != null:
+return filter(_that);case FilterCartonCodesByFormat() when filterByFormat != null:
+return filterByFormat(_that);case ExportCartonCodes() when export != null:
 return export(_that);case SelectCartonCode() when select != null:
 return select(_that);case ClearSelection() when clearSelection != null:
 return clearSelection(_that);case RefreshCartonCodes() when refresh != null:
@@ -92,7 +93,7 @@ return updateProperties(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( LoadCartonCodes value)  load,required TResult Function( GenerateCartonCodes value)  generate,required TResult Function( DeleteCartonCode value)  delete,required TResult Function( DeleteCartonCodeBatch value)  deleteBatch,required TResult Function( LinkCartonCodeToProduct value)  linkToProduct,required TResult Function( PublishCartonCode value)  publish,required TResult Function( DeactivateCartonCode value)  deactivate,required TResult Function( SearchCartonCodes value)  search,required TResult Function( FilterCartonCodes value)  filter,required TResult Function( ExportCartonCodes value)  export,required TResult Function( SelectCartonCode value)  select,required TResult Function( ClearSelection value)  clearSelection,required TResult Function( RefreshCartonCodes value)  refresh,required TResult Function( SealCarton value)  seal,required TResult Function( UpdateCartonInspection value)  updateInspection,required TResult Function( UpdateCartonProperties value)  updateProperties,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( LoadCartonCodes value)  load,required TResult Function( GenerateCartonCodes value)  generate,required TResult Function( DeleteCartonCode value)  delete,required TResult Function( DeleteCartonCodeBatch value)  deleteBatch,required TResult Function( LinkCartonCodeToProduct value)  linkToProduct,required TResult Function( PublishCartonCode value)  publish,required TResult Function( DeactivateCartonCode value)  deactivate,required TResult Function( SearchCartonCodes value)  search,required TResult Function( FilterCartonCodes value)  filter,required TResult Function( FilterCartonCodesByFormat value)  filterByFormat,required TResult Function( ExportCartonCodes value)  export,required TResult Function( SelectCartonCode value)  select,required TResult Function( ClearSelection value)  clearSelection,required TResult Function( RefreshCartonCodes value)  refresh,required TResult Function( SealCarton value)  seal,required TResult Function( UpdateCartonInspection value)  updateInspection,required TResult Function( UpdateCartonProperties value)  updateProperties,}){
 final _that = this;
 switch (_that) {
 case LoadCartonCodes():
@@ -104,7 +105,8 @@ return linkToProduct(_that);case PublishCartonCode():
 return publish(_that);case DeactivateCartonCode():
 return deactivate(_that);case SearchCartonCodes():
 return search(_that);case FilterCartonCodes():
-return filter(_that);case ExportCartonCodes():
+return filter(_that);case FilterCartonCodesByFormat():
+return filterByFormat(_that);case ExportCartonCodes():
 return export(_that);case SelectCartonCode():
 return select(_that);case ClearSelection():
 return clearSelection(_that);case RefreshCartonCodes():
@@ -128,7 +130,7 @@ return updateProperties(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( LoadCartonCodes value)?  load,TResult? Function( GenerateCartonCodes value)?  generate,TResult? Function( DeleteCartonCode value)?  delete,TResult? Function( DeleteCartonCodeBatch value)?  deleteBatch,TResult? Function( LinkCartonCodeToProduct value)?  linkToProduct,TResult? Function( PublishCartonCode value)?  publish,TResult? Function( DeactivateCartonCode value)?  deactivate,TResult? Function( SearchCartonCodes value)?  search,TResult? Function( FilterCartonCodes value)?  filter,TResult? Function( ExportCartonCodes value)?  export,TResult? Function( SelectCartonCode value)?  select,TResult? Function( ClearSelection value)?  clearSelection,TResult? Function( RefreshCartonCodes value)?  refresh,TResult? Function( SealCarton value)?  seal,TResult? Function( UpdateCartonInspection value)?  updateInspection,TResult? Function( UpdateCartonProperties value)?  updateProperties,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( LoadCartonCodes value)?  load,TResult? Function( GenerateCartonCodes value)?  generate,TResult? Function( DeleteCartonCode value)?  delete,TResult? Function( DeleteCartonCodeBatch value)?  deleteBatch,TResult? Function( LinkCartonCodeToProduct value)?  linkToProduct,TResult? Function( PublishCartonCode value)?  publish,TResult? Function( DeactivateCartonCode value)?  deactivate,TResult? Function( SearchCartonCodes value)?  search,TResult? Function( FilterCartonCodes value)?  filter,TResult? Function( FilterCartonCodesByFormat value)?  filterByFormat,TResult? Function( ExportCartonCodes value)?  export,TResult? Function( SelectCartonCode value)?  select,TResult? Function( ClearSelection value)?  clearSelection,TResult? Function( RefreshCartonCodes value)?  refresh,TResult? Function( SealCarton value)?  seal,TResult? Function( UpdateCartonInspection value)?  updateInspection,TResult? Function( UpdateCartonProperties value)?  updateProperties,}){
 final _that = this;
 switch (_that) {
 case LoadCartonCodes() when load != null:
@@ -140,7 +142,8 @@ return linkToProduct(_that);case PublishCartonCode() when publish != null:
 return publish(_that);case DeactivateCartonCode() when deactivate != null:
 return deactivate(_that);case SearchCartonCodes() when search != null:
 return search(_that);case FilterCartonCodes() when filter != null:
-return filter(_that);case ExportCartonCodes() when export != null:
+return filter(_that);case FilterCartonCodesByFormat() when filterByFormat != null:
+return filterByFormat(_that);case ExportCartonCodes() when export != null:
 return export(_that);case SelectCartonCode() when select != null:
 return select(_that);case ClearSelection() when clearSelection != null:
 return clearSelection(_that);case RefreshCartonCodes() when refresh != null:
@@ -164,10 +167,10 @@ return updateProperties(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  load,TResult Function( CartonCodeGenerationRequest request)?  generate,TResult Function( String cartonCodeId)?  delete,TResult Function( List<String> cartonCodeIds)?  deleteBatch,TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult Function( String cartonCodeId)?  publish,TResult Function( String cartonCodeId,  String reason)?  deactivate,TResult Function( String query)?  search,TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult Function( List<String> cartonCodeIds,  String format)?  export,TResult Function( String cartonCodeId,  bool isSelected)?  select,TResult Function()?  clearSelection,TResult Function()?  refresh,TResult Function( String cartonCodeId,  String sealedBy)?  seal,TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String? codeFormat)?  load,TResult Function( CartonCodeGenerationRequest request)?  generate,TResult Function( String cartonCodeId)?  delete,TResult Function( List<String> cartonCodeIds)?  deleteBatch,TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult Function( String cartonCodeId)?  publish,TResult Function( String cartonCodeId,  String reason)?  deactivate,TResult Function( String query)?  search,TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult Function( String? codeFormat)?  filterByFormat,TResult Function( List<String> cartonCodeIds,  String format)?  export,TResult Function( String cartonCodeId,  bool isSelected)?  select,TResult Function()?  clearSelection,TResult Function()?  refresh,TResult Function( String cartonCodeId,  String sealedBy)?  seal,TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case LoadCartonCodes() when load != null:
-return load();case GenerateCartonCodes() when generate != null:
+return load(_that.codeFormat);case GenerateCartonCodes() when generate != null:
 return generate(_that.request);case DeleteCartonCode() when delete != null:
 return delete(_that.cartonCodeId);case DeleteCartonCodeBatch() when deleteBatch != null:
 return deleteBatch(_that.cartonCodeIds);case LinkCartonCodeToProduct() when linkToProduct != null:
@@ -175,7 +178,8 @@ return linkToProduct(_that.cartonCodeId,_that.productId,_that.productBatchNumber
 return publish(_that.cartonCodeId);case DeactivateCartonCode() when deactivate != null:
 return deactivate(_that.cartonCodeId,_that.reason);case SearchCartonCodes() when search != null:
 return search(_that.query);case FilterCartonCodes() when filter != null:
-return filter(_that.status,_that.bundleCode,_that.startDate,_that.endDate,_that.cartonType,_that.condition);case ExportCartonCodes() when export != null:
+return filter(_that.status,_that.bundleCode,_that.startDate,_that.endDate,_that.cartonType,_that.condition);case FilterCartonCodesByFormat() when filterByFormat != null:
+return filterByFormat(_that.codeFormat);case ExportCartonCodes() when export != null:
 return export(_that.cartonCodeIds,_that.format);case SelectCartonCode() when select != null:
 return select(_that.cartonCodeId,_that.isSelected);case ClearSelection() when clearSelection != null:
 return clearSelection();case RefreshCartonCodes() when refresh != null:
@@ -200,10 +204,10 @@ return updateProperties(_that.cartonCodeId,_that.weight,_that.dimensions,_that.t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  load,required TResult Function( CartonCodeGenerationRequest request)  generate,required TResult Function( String cartonCodeId)  delete,required TResult Function( List<String> cartonCodeIds)  deleteBatch,required TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)  linkToProduct,required TResult Function( String cartonCodeId)  publish,required TResult Function( String cartonCodeId,  String reason)  deactivate,required TResult Function( String query)  search,required TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)  filter,required TResult Function( List<String> cartonCodeIds,  String format)  export,required TResult Function( String cartonCodeId,  bool isSelected)  select,required TResult Function()  clearSelection,required TResult Function()  refresh,required TResult Function( String cartonCodeId,  String sealedBy)  seal,required TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)  updateInspection,required TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)  updateProperties,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String? codeFormat)  load,required TResult Function( CartonCodeGenerationRequest request)  generate,required TResult Function( String cartonCodeId)  delete,required TResult Function( List<String> cartonCodeIds)  deleteBatch,required TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)  linkToProduct,required TResult Function( String cartonCodeId)  publish,required TResult Function( String cartonCodeId,  String reason)  deactivate,required TResult Function( String query)  search,required TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)  filter,required TResult Function( String? codeFormat)  filterByFormat,required TResult Function( List<String> cartonCodeIds,  String format)  export,required TResult Function( String cartonCodeId,  bool isSelected)  select,required TResult Function()  clearSelection,required TResult Function()  refresh,required TResult Function( String cartonCodeId,  String sealedBy)  seal,required TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)  updateInspection,required TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)  updateProperties,}) {final _that = this;
 switch (_that) {
 case LoadCartonCodes():
-return load();case GenerateCartonCodes():
+return load(_that.codeFormat);case GenerateCartonCodes():
 return generate(_that.request);case DeleteCartonCode():
 return delete(_that.cartonCodeId);case DeleteCartonCodeBatch():
 return deleteBatch(_that.cartonCodeIds);case LinkCartonCodeToProduct():
@@ -211,7 +215,8 @@ return linkToProduct(_that.cartonCodeId,_that.productId,_that.productBatchNumber
 return publish(_that.cartonCodeId);case DeactivateCartonCode():
 return deactivate(_that.cartonCodeId,_that.reason);case SearchCartonCodes():
 return search(_that.query);case FilterCartonCodes():
-return filter(_that.status,_that.bundleCode,_that.startDate,_that.endDate,_that.cartonType,_that.condition);case ExportCartonCodes():
+return filter(_that.status,_that.bundleCode,_that.startDate,_that.endDate,_that.cartonType,_that.condition);case FilterCartonCodesByFormat():
+return filterByFormat(_that.codeFormat);case ExportCartonCodes():
 return export(_that.cartonCodeIds,_that.format);case SelectCartonCode():
 return select(_that.cartonCodeId,_that.isSelected);case ClearSelection():
 return clearSelection();case RefreshCartonCodes():
@@ -235,10 +240,10 @@ return updateProperties(_that.cartonCodeId,_that.weight,_that.dimensions,_that.t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  load,TResult? Function( CartonCodeGenerationRequest request)?  generate,TResult? Function( String cartonCodeId)?  delete,TResult? Function( List<String> cartonCodeIds)?  deleteBatch,TResult? Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult? Function( String cartonCodeId)?  publish,TResult? Function( String cartonCodeId,  String reason)?  deactivate,TResult? Function( String query)?  search,TResult? Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult? Function( List<String> cartonCodeIds,  String format)?  export,TResult? Function( String cartonCodeId,  bool isSelected)?  select,TResult? Function()?  clearSelection,TResult? Function()?  refresh,TResult? Function( String cartonCodeId,  String sealedBy)?  seal,TResult? Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult? Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String? codeFormat)?  load,TResult? Function( CartonCodeGenerationRequest request)?  generate,TResult? Function( String cartonCodeId)?  delete,TResult? Function( List<String> cartonCodeIds)?  deleteBatch,TResult? Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult? Function( String cartonCodeId)?  publish,TResult? Function( String cartonCodeId,  String reason)?  deactivate,TResult? Function( String query)?  search,TResult? Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult? Function( String? codeFormat)?  filterByFormat,TResult? Function( List<String> cartonCodeIds,  String format)?  export,TResult? Function( String cartonCodeId,  bool isSelected)?  select,TResult? Function()?  clearSelection,TResult? Function()?  refresh,TResult? Function( String cartonCodeId,  String sealedBy)?  seal,TResult? Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult? Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,}) {final _that = this;
 switch (_that) {
 case LoadCartonCodes() when load != null:
-return load();case GenerateCartonCodes() when generate != null:
+return load(_that.codeFormat);case GenerateCartonCodes() when generate != null:
 return generate(_that.request);case DeleteCartonCode() when delete != null:
 return delete(_that.cartonCodeId);case DeleteCartonCodeBatch() when deleteBatch != null:
 return deleteBatch(_that.cartonCodeIds);case LinkCartonCodeToProduct() when linkToProduct != null:
@@ -246,7 +251,8 @@ return linkToProduct(_that.cartonCodeId,_that.productId,_that.productBatchNumber
 return publish(_that.cartonCodeId);case DeactivateCartonCode() when deactivate != null:
 return deactivate(_that.cartonCodeId,_that.reason);case SearchCartonCodes() when search != null:
 return search(_that.query);case FilterCartonCodes() when filter != null:
-return filter(_that.status,_that.bundleCode,_that.startDate,_that.endDate,_that.cartonType,_that.condition);case ExportCartonCodes() when export != null:
+return filter(_that.status,_that.bundleCode,_that.startDate,_that.endDate,_that.cartonType,_that.condition);case FilterCartonCodesByFormat() when filterByFormat != null:
+return filterByFormat(_that.codeFormat);case ExportCartonCodes() when export != null:
 return export(_that.cartonCodeIds,_that.format);case SelectCartonCode() when select != null:
 return select(_that.cartonCodeId,_that.isSelected);case ClearSelection() when clearSelection != null:
 return clearSelection();case RefreshCartonCodes() when refresh != null:
@@ -265,33 +271,67 @@ return updateProperties(_that.cartonCodeId,_that.weight,_that.dimensions,_that.t
 
 
 class LoadCartonCodes implements CartonCodesEvent {
-  const LoadCartonCodes();
+  const LoadCartonCodes({this.codeFormat});
   
 
+ final  String? codeFormat;
 
-
+/// Create a copy of CartonCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$LoadCartonCodesCopyWith<LoadCartonCodes> get copyWith => _$LoadCartonCodesCopyWithImpl<LoadCartonCodes>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoadCartonCodes);
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoadCartonCodes&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
 }
 
 
 @override
-int get hashCode => runtimeType.hashCode;
+int get hashCode => Object.hash(runtimeType,codeFormat);
 
 @override
 String toString() {
-  return 'CartonCodesEvent.load()';
+  return 'CartonCodesEvent.load(codeFormat: $codeFormat)';
 }
 
 
 }
 
+/// @nodoc
+abstract mixin class $LoadCartonCodesCopyWith<$Res> implements $CartonCodesEventCopyWith<$Res> {
+  factory $LoadCartonCodesCopyWith(LoadCartonCodes value, $Res Function(LoadCartonCodes) _then) = _$LoadCartonCodesCopyWithImpl;
+@useResult
+$Res call({
+ String? codeFormat
+});
 
 
+
+
+}
+/// @nodoc
+class _$LoadCartonCodesCopyWithImpl<$Res>
+    implements $LoadCartonCodesCopyWith<$Res> {
+  _$LoadCartonCodesCopyWithImpl(this._self, this._then);
+
+  final LoadCartonCodes _self;
+  final $Res Function(LoadCartonCodes) _then;
+
+/// Create a copy of CartonCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? codeFormat = freezed,}) {
+  return _then(LoadCartonCodes(
+codeFormat: freezed == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
 
 /// @nodoc
 
@@ -861,6 +901,72 @@ as String?,
 /// @nodoc
 
 
+class FilterCartonCodesByFormat implements CartonCodesEvent {
+  const FilterCartonCodesByFormat(this.codeFormat);
+  
+
+ final  String? codeFormat;
+
+/// Create a copy of CartonCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FilterCartonCodesByFormatCopyWith<FilterCartonCodesByFormat> get copyWith => _$FilterCartonCodesByFormatCopyWithImpl<FilterCartonCodesByFormat>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FilterCartonCodesByFormat&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,codeFormat);
+
+@override
+String toString() {
+  return 'CartonCodesEvent.filterByFormat(codeFormat: $codeFormat)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FilterCartonCodesByFormatCopyWith<$Res> implements $CartonCodesEventCopyWith<$Res> {
+  factory $FilterCartonCodesByFormatCopyWith(FilterCartonCodesByFormat value, $Res Function(FilterCartonCodesByFormat) _then) = _$FilterCartonCodesByFormatCopyWithImpl;
+@useResult
+$Res call({
+ String? codeFormat
+});
+
+
+
+
+}
+/// @nodoc
+class _$FilterCartonCodesByFormatCopyWithImpl<$Res>
+    implements $FilterCartonCodesByFormatCopyWith<$Res> {
+  _$FilterCartonCodesByFormatCopyWithImpl(this._self, this._then);
+
+  final FilterCartonCodesByFormat _self;
+  final $Res Function(FilterCartonCodesByFormat) _then;
+
+/// Create a copy of CartonCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? codeFormat = freezed,}) {
+  return _then(FilterCartonCodesByFormat(
+freezed == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
 class ExportCartonCodes implements CartonCodesEvent {
   const ExportCartonCodes(final  List<String> cartonCodeIds, this.format): _cartonCodeIds = cartonCodeIds;
   
@@ -1279,7 +1385,7 @@ as String?,
 /// @nodoc
 mixin _$CartonCodesState {
 
- CartonCodesStatus get status; List<CartonCodeModel> get cartonCodes; List<CartonCodeModel> get filteredCartonCodes; Set<String> get selectedCartonCodeIds; String get searchQuery; CodeStatus? get filterStatus; String? get filterBundleCode; DateTime? get filterStartDate; DateTime? get filterEndDate; String? get filterCartonType; String? get filterCondition; String? get errorMessage; bool get hasReachedMax; int get currentPage; int get totalCount; bool get isLoadingMore; int get generatedCount; DateTime? get lastGeneratedAt; String? get exportPath; bool get isExporting;
+ CartonCodesStatus get status; List<CartonCodeModel> get cartonCodes; List<CartonCodeModel> get filteredCartonCodes; Set<String> get selectedCartonCodeIds; String get searchQuery; CodeStatus? get filterStatus; String? get filterBundleCode; DateTime? get filterStartDate; DateTime? get filterEndDate; String? get filterCartonType; String? get filterCondition; String get filterCodeFormat; String? get errorMessage; bool get hasReachedMax; int get currentPage; int get totalCount; bool get isLoadingMore; int get generatedCount; DateTime? get lastGeneratedAt; String? get exportPath; bool get isExporting;
 /// Create a copy of CartonCodesState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1290,16 +1396,16 @@ $CartonCodesStateCopyWith<CartonCodesState> get copyWith => _$CartonCodesStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CartonCodesState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.cartonCodes, cartonCodes)&&const DeepCollectionEquality().equals(other.filteredCartonCodes, filteredCartonCodes)&&const DeepCollectionEquality().equals(other.selectedCartonCodeIds, selectedCartonCodeIds)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&(identical(other.filterStatus, filterStatus) || other.filterStatus == filterStatus)&&(identical(other.filterBundleCode, filterBundleCode) || other.filterBundleCode == filterBundleCode)&&(identical(other.filterStartDate, filterStartDate) || other.filterStartDate == filterStartDate)&&(identical(other.filterEndDate, filterEndDate) || other.filterEndDate == filterEndDate)&&(identical(other.filterCartonType, filterCartonType) || other.filterCartonType == filterCartonType)&&(identical(other.filterCondition, filterCondition) || other.filterCondition == filterCondition)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.currentPage, currentPage) || other.currentPage == currentPage)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.isLoadingMore, isLoadingMore) || other.isLoadingMore == isLoadingMore)&&(identical(other.generatedCount, generatedCount) || other.generatedCount == generatedCount)&&(identical(other.lastGeneratedAt, lastGeneratedAt) || other.lastGeneratedAt == lastGeneratedAt)&&(identical(other.exportPath, exportPath) || other.exportPath == exportPath)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CartonCodesState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.cartonCodes, cartonCodes)&&const DeepCollectionEquality().equals(other.filteredCartonCodes, filteredCartonCodes)&&const DeepCollectionEquality().equals(other.selectedCartonCodeIds, selectedCartonCodeIds)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&(identical(other.filterStatus, filterStatus) || other.filterStatus == filterStatus)&&(identical(other.filterBundleCode, filterBundleCode) || other.filterBundleCode == filterBundleCode)&&(identical(other.filterStartDate, filterStartDate) || other.filterStartDate == filterStartDate)&&(identical(other.filterEndDate, filterEndDate) || other.filterEndDate == filterEndDate)&&(identical(other.filterCartonType, filterCartonType) || other.filterCartonType == filterCartonType)&&(identical(other.filterCondition, filterCondition) || other.filterCondition == filterCondition)&&(identical(other.filterCodeFormat, filterCodeFormat) || other.filterCodeFormat == filterCodeFormat)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.currentPage, currentPage) || other.currentPage == currentPage)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.isLoadingMore, isLoadingMore) || other.isLoadingMore == isLoadingMore)&&(identical(other.generatedCount, generatedCount) || other.generatedCount == generatedCount)&&(identical(other.lastGeneratedAt, lastGeneratedAt) || other.lastGeneratedAt == lastGeneratedAt)&&(identical(other.exportPath, exportPath) || other.exportPath == exportPath)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting));
 }
 
 
 @override
-int get hashCode => Object.hashAll([runtimeType,status,const DeepCollectionEquality().hash(cartonCodes),const DeepCollectionEquality().hash(filteredCartonCodes),const DeepCollectionEquality().hash(selectedCartonCodeIds),searchQuery,filterStatus,filterBundleCode,filterStartDate,filterEndDate,filterCartonType,filterCondition,errorMessage,hasReachedMax,currentPage,totalCount,isLoadingMore,generatedCount,lastGeneratedAt,exportPath,isExporting]);
+int get hashCode => Object.hashAll([runtimeType,status,const DeepCollectionEquality().hash(cartonCodes),const DeepCollectionEquality().hash(filteredCartonCodes),const DeepCollectionEquality().hash(selectedCartonCodeIds),searchQuery,filterStatus,filterBundleCode,filterStartDate,filterEndDate,filterCartonType,filterCondition,filterCodeFormat,errorMessage,hasReachedMax,currentPage,totalCount,isLoadingMore,generatedCount,lastGeneratedAt,exportPath,isExporting]);
 
 @override
 String toString() {
-  return 'CartonCodesState(status: $status, cartonCodes: $cartonCodes, filteredCartonCodes: $filteredCartonCodes, selectedCartonCodeIds: $selectedCartonCodeIds, searchQuery: $searchQuery, filterStatus: $filterStatus, filterBundleCode: $filterBundleCode, filterStartDate: $filterStartDate, filterEndDate: $filterEndDate, filterCartonType: $filterCartonType, filterCondition: $filterCondition, errorMessage: $errorMessage, hasReachedMax: $hasReachedMax, currentPage: $currentPage, totalCount: $totalCount, isLoadingMore: $isLoadingMore, generatedCount: $generatedCount, lastGeneratedAt: $lastGeneratedAt, exportPath: $exportPath, isExporting: $isExporting)';
+  return 'CartonCodesState(status: $status, cartonCodes: $cartonCodes, filteredCartonCodes: $filteredCartonCodes, selectedCartonCodeIds: $selectedCartonCodeIds, searchQuery: $searchQuery, filterStatus: $filterStatus, filterBundleCode: $filterBundleCode, filterStartDate: $filterStartDate, filterEndDate: $filterEndDate, filterCartonType: $filterCartonType, filterCondition: $filterCondition, filterCodeFormat: $filterCodeFormat, errorMessage: $errorMessage, hasReachedMax: $hasReachedMax, currentPage: $currentPage, totalCount: $totalCount, isLoadingMore: $isLoadingMore, generatedCount: $generatedCount, lastGeneratedAt: $lastGeneratedAt, exportPath: $exportPath, isExporting: $isExporting)';
 }
 
 
@@ -1310,7 +1416,7 @@ abstract mixin class $CartonCodesStateCopyWith<$Res>  {
   factory $CartonCodesStateCopyWith(CartonCodesState value, $Res Function(CartonCodesState) _then) = _$CartonCodesStateCopyWithImpl;
 @useResult
 $Res call({
- CartonCodesStatus status, List<CartonCodeModel> cartonCodes, List<CartonCodeModel> filteredCartonCodes, Set<String> selectedCartonCodeIds, String searchQuery, CodeStatus? filterStatus, String? filterBundleCode, DateTime? filterStartDate, DateTime? filterEndDate, String? filterCartonType, String? filterCondition, String? errorMessage, bool hasReachedMax, int currentPage, int totalCount, bool isLoadingMore, int generatedCount, DateTime? lastGeneratedAt, String? exportPath, bool isExporting
+ CartonCodesStatus status, List<CartonCodeModel> cartonCodes, List<CartonCodeModel> filteredCartonCodes, Set<String> selectedCartonCodeIds, String searchQuery, CodeStatus? filterStatus, String? filterBundleCode, DateTime? filterStartDate, DateTime? filterEndDate, String? filterCartonType, String? filterCondition, String filterCodeFormat, String? errorMessage, bool hasReachedMax, int currentPage, int totalCount, bool isLoadingMore, int generatedCount, DateTime? lastGeneratedAt, String? exportPath, bool isExporting
 });
 
 
@@ -1327,7 +1433,7 @@ class _$CartonCodesStateCopyWithImpl<$Res>
 
 /// Create a copy of CartonCodesState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? cartonCodes = null,Object? filteredCartonCodes = null,Object? selectedCartonCodeIds = null,Object? searchQuery = null,Object? filterStatus = freezed,Object? filterBundleCode = freezed,Object? filterStartDate = freezed,Object? filterEndDate = freezed,Object? filterCartonType = freezed,Object? filterCondition = freezed,Object? errorMessage = freezed,Object? hasReachedMax = null,Object? currentPage = null,Object? totalCount = null,Object? isLoadingMore = null,Object? generatedCount = null,Object? lastGeneratedAt = freezed,Object? exportPath = freezed,Object? isExporting = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? cartonCodes = null,Object? filteredCartonCodes = null,Object? selectedCartonCodeIds = null,Object? searchQuery = null,Object? filterStatus = freezed,Object? filterBundleCode = freezed,Object? filterStartDate = freezed,Object? filterEndDate = freezed,Object? filterCartonType = freezed,Object? filterCondition = freezed,Object? filterCodeFormat = null,Object? errorMessage = freezed,Object? hasReachedMax = null,Object? currentPage = null,Object? totalCount = null,Object? isLoadingMore = null,Object? generatedCount = null,Object? lastGeneratedAt = freezed,Object? exportPath = freezed,Object? isExporting = null,}) {
   return _then(_self.copyWith(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as CartonCodesStatus,cartonCodes: null == cartonCodes ? _self.cartonCodes : cartonCodes // ignore: cast_nullable_to_non_nullable
@@ -1340,7 +1446,8 @@ as String?,filterStartDate: freezed == filterStartDate ? _self.filterStartDate :
 as DateTime?,filterEndDate: freezed == filterEndDate ? _self.filterEndDate : filterEndDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,filterCartonType: freezed == filterCartonType ? _self.filterCartonType : filterCartonType // ignore: cast_nullable_to_non_nullable
 as String?,filterCondition: freezed == filterCondition ? _self.filterCondition : filterCondition // ignore: cast_nullable_to_non_nullable
-as String?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
+as String?,filterCodeFormat: null == filterCodeFormat ? _self.filterCodeFormat : filterCodeFormat // ignore: cast_nullable_to_non_nullable
+as String,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,hasReachedMax: null == hasReachedMax ? _self.hasReachedMax : hasReachedMax // ignore: cast_nullable_to_non_nullable
 as bool,currentPage: null == currentPage ? _self.currentPage : currentPage // ignore: cast_nullable_to_non_nullable
 as int,totalCount: null == totalCount ? _self.totalCount : totalCount // ignore: cast_nullable_to_non_nullable
@@ -1434,10 +1541,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CartonCodesStatus status,  List<CartonCodeModel> cartonCodes,  List<CartonCodeModel> filteredCartonCodes,  Set<String> selectedCartonCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterBundleCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterCartonType,  String? filterCondition,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CartonCodesStatus status,  List<CartonCodeModel> cartonCodes,  List<CartonCodeModel> filteredCartonCodes,  Set<String> selectedCartonCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterBundleCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterCartonType,  String? filterCondition,  String filterCodeFormat,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CartonCodesState() when $default != null:
-return $default(_that.status,_that.cartonCodes,_that.filteredCartonCodes,_that.selectedCartonCodeIds,_that.searchQuery,_that.filterStatus,_that.filterBundleCode,_that.filterStartDate,_that.filterEndDate,_that.filterCartonType,_that.filterCondition,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
+return $default(_that.status,_that.cartonCodes,_that.filteredCartonCodes,_that.selectedCartonCodeIds,_that.searchQuery,_that.filterStatus,_that.filterBundleCode,_that.filterStartDate,_that.filterEndDate,_that.filterCartonType,_that.filterCondition,_that.filterCodeFormat,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
   return orElse();
 
 }
@@ -1455,10 +1562,10 @@ return $default(_that.status,_that.cartonCodes,_that.filteredCartonCodes,_that.s
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CartonCodesStatus status,  List<CartonCodeModel> cartonCodes,  List<CartonCodeModel> filteredCartonCodes,  Set<String> selectedCartonCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterBundleCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterCartonType,  String? filterCondition,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CartonCodesStatus status,  List<CartonCodeModel> cartonCodes,  List<CartonCodeModel> filteredCartonCodes,  Set<String> selectedCartonCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterBundleCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterCartonType,  String? filterCondition,  String filterCodeFormat,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)  $default,) {final _that = this;
 switch (_that) {
 case _CartonCodesState():
-return $default(_that.status,_that.cartonCodes,_that.filteredCartonCodes,_that.selectedCartonCodeIds,_that.searchQuery,_that.filterStatus,_that.filterBundleCode,_that.filterStartDate,_that.filterEndDate,_that.filterCartonType,_that.filterCondition,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
+return $default(_that.status,_that.cartonCodes,_that.filteredCartonCodes,_that.selectedCartonCodeIds,_that.searchQuery,_that.filterStatus,_that.filterBundleCode,_that.filterStartDate,_that.filterEndDate,_that.filterCartonType,_that.filterCondition,_that.filterCodeFormat,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1475,10 +1582,10 @@ return $default(_that.status,_that.cartonCodes,_that.filteredCartonCodes,_that.s
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CartonCodesStatus status,  List<CartonCodeModel> cartonCodes,  List<CartonCodeModel> filteredCartonCodes,  Set<String> selectedCartonCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterBundleCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterCartonType,  String? filterCondition,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CartonCodesStatus status,  List<CartonCodeModel> cartonCodes,  List<CartonCodeModel> filteredCartonCodes,  Set<String> selectedCartonCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterBundleCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterCartonType,  String? filterCondition,  String filterCodeFormat,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)?  $default,) {final _that = this;
 switch (_that) {
 case _CartonCodesState() when $default != null:
-return $default(_that.status,_that.cartonCodes,_that.filteredCartonCodes,_that.selectedCartonCodeIds,_that.searchQuery,_that.filterStatus,_that.filterBundleCode,_that.filterStartDate,_that.filterEndDate,_that.filterCartonType,_that.filterCondition,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
+return $default(_that.status,_that.cartonCodes,_that.filteredCartonCodes,_that.selectedCartonCodeIds,_that.searchQuery,_that.filterStatus,_that.filterBundleCode,_that.filterStartDate,_that.filterEndDate,_that.filterCartonType,_that.filterCondition,_that.filterCodeFormat,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
   return null;
 
 }
@@ -1490,7 +1597,7 @@ return $default(_that.status,_that.cartonCodes,_that.filteredCartonCodes,_that.s
 
 
 class _CartonCodesState extends CartonCodesState {
-  const _CartonCodesState({this.status = CartonCodesStatus.initial, final  List<CartonCodeModel> cartonCodes = const [], final  List<CartonCodeModel> filteredCartonCodes = const [], final  Set<String> selectedCartonCodeIds = const {}, this.searchQuery = '', this.filterStatus, this.filterBundleCode, this.filterStartDate, this.filterEndDate, this.filterCartonType, this.filterCondition, this.errorMessage, this.hasReachedMax = false, this.currentPage = 1, this.totalCount = 0, this.isLoadingMore = false, this.generatedCount = 0, this.lastGeneratedAt, this.exportPath, this.isExporting = false}): _cartonCodes = cartonCodes,_filteredCartonCodes = filteredCartonCodes,_selectedCartonCodeIds = selectedCartonCodeIds,super._();
+  const _CartonCodesState({this.status = CartonCodesStatus.initial, final  List<CartonCodeModel> cartonCodes = const [], final  List<CartonCodeModel> filteredCartonCodes = const [], final  Set<String> selectedCartonCodeIds = const {}, this.searchQuery = '', this.filterStatus, this.filterBundleCode, this.filterStartDate, this.filterEndDate, this.filterCartonType, this.filterCondition, this.filterCodeFormat = 'qr', this.errorMessage, this.hasReachedMax = false, this.currentPage = 1, this.totalCount = 0, this.isLoadingMore = false, this.generatedCount = 0, this.lastGeneratedAt, this.exportPath, this.isExporting = false}): _cartonCodes = cartonCodes,_filteredCartonCodes = filteredCartonCodes,_selectedCartonCodeIds = selectedCartonCodeIds,super._();
   
 
 @override@JsonKey() final  CartonCodesStatus status;
@@ -1522,6 +1629,7 @@ class _CartonCodesState extends CartonCodesState {
 @override final  DateTime? filterEndDate;
 @override final  String? filterCartonType;
 @override final  String? filterCondition;
+@override@JsonKey() final  String filterCodeFormat;
 @override final  String? errorMessage;
 @override@JsonKey() final  bool hasReachedMax;
 @override@JsonKey() final  int currentPage;
@@ -1542,16 +1650,16 @@ _$CartonCodesStateCopyWith<_CartonCodesState> get copyWith => __$CartonCodesStat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CartonCodesState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._cartonCodes, _cartonCodes)&&const DeepCollectionEquality().equals(other._filteredCartonCodes, _filteredCartonCodes)&&const DeepCollectionEquality().equals(other._selectedCartonCodeIds, _selectedCartonCodeIds)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&(identical(other.filterStatus, filterStatus) || other.filterStatus == filterStatus)&&(identical(other.filterBundleCode, filterBundleCode) || other.filterBundleCode == filterBundleCode)&&(identical(other.filterStartDate, filterStartDate) || other.filterStartDate == filterStartDate)&&(identical(other.filterEndDate, filterEndDate) || other.filterEndDate == filterEndDate)&&(identical(other.filterCartonType, filterCartonType) || other.filterCartonType == filterCartonType)&&(identical(other.filterCondition, filterCondition) || other.filterCondition == filterCondition)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.currentPage, currentPage) || other.currentPage == currentPage)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.isLoadingMore, isLoadingMore) || other.isLoadingMore == isLoadingMore)&&(identical(other.generatedCount, generatedCount) || other.generatedCount == generatedCount)&&(identical(other.lastGeneratedAt, lastGeneratedAt) || other.lastGeneratedAt == lastGeneratedAt)&&(identical(other.exportPath, exportPath) || other.exportPath == exportPath)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CartonCodesState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._cartonCodes, _cartonCodes)&&const DeepCollectionEquality().equals(other._filteredCartonCodes, _filteredCartonCodes)&&const DeepCollectionEquality().equals(other._selectedCartonCodeIds, _selectedCartonCodeIds)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&(identical(other.filterStatus, filterStatus) || other.filterStatus == filterStatus)&&(identical(other.filterBundleCode, filterBundleCode) || other.filterBundleCode == filterBundleCode)&&(identical(other.filterStartDate, filterStartDate) || other.filterStartDate == filterStartDate)&&(identical(other.filterEndDate, filterEndDate) || other.filterEndDate == filterEndDate)&&(identical(other.filterCartonType, filterCartonType) || other.filterCartonType == filterCartonType)&&(identical(other.filterCondition, filterCondition) || other.filterCondition == filterCondition)&&(identical(other.filterCodeFormat, filterCodeFormat) || other.filterCodeFormat == filterCodeFormat)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.currentPage, currentPage) || other.currentPage == currentPage)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.isLoadingMore, isLoadingMore) || other.isLoadingMore == isLoadingMore)&&(identical(other.generatedCount, generatedCount) || other.generatedCount == generatedCount)&&(identical(other.lastGeneratedAt, lastGeneratedAt) || other.lastGeneratedAt == lastGeneratedAt)&&(identical(other.exportPath, exportPath) || other.exportPath == exportPath)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting));
 }
 
 
 @override
-int get hashCode => Object.hashAll([runtimeType,status,const DeepCollectionEquality().hash(_cartonCodes),const DeepCollectionEquality().hash(_filteredCartonCodes),const DeepCollectionEquality().hash(_selectedCartonCodeIds),searchQuery,filterStatus,filterBundleCode,filterStartDate,filterEndDate,filterCartonType,filterCondition,errorMessage,hasReachedMax,currentPage,totalCount,isLoadingMore,generatedCount,lastGeneratedAt,exportPath,isExporting]);
+int get hashCode => Object.hashAll([runtimeType,status,const DeepCollectionEquality().hash(_cartonCodes),const DeepCollectionEquality().hash(_filteredCartonCodes),const DeepCollectionEquality().hash(_selectedCartonCodeIds),searchQuery,filterStatus,filterBundleCode,filterStartDate,filterEndDate,filterCartonType,filterCondition,filterCodeFormat,errorMessage,hasReachedMax,currentPage,totalCount,isLoadingMore,generatedCount,lastGeneratedAt,exportPath,isExporting]);
 
 @override
 String toString() {
-  return 'CartonCodesState(status: $status, cartonCodes: $cartonCodes, filteredCartonCodes: $filteredCartonCodes, selectedCartonCodeIds: $selectedCartonCodeIds, searchQuery: $searchQuery, filterStatus: $filterStatus, filterBundleCode: $filterBundleCode, filterStartDate: $filterStartDate, filterEndDate: $filterEndDate, filterCartonType: $filterCartonType, filterCondition: $filterCondition, errorMessage: $errorMessage, hasReachedMax: $hasReachedMax, currentPage: $currentPage, totalCount: $totalCount, isLoadingMore: $isLoadingMore, generatedCount: $generatedCount, lastGeneratedAt: $lastGeneratedAt, exportPath: $exportPath, isExporting: $isExporting)';
+  return 'CartonCodesState(status: $status, cartonCodes: $cartonCodes, filteredCartonCodes: $filteredCartonCodes, selectedCartonCodeIds: $selectedCartonCodeIds, searchQuery: $searchQuery, filterStatus: $filterStatus, filterBundleCode: $filterBundleCode, filterStartDate: $filterStartDate, filterEndDate: $filterEndDate, filterCartonType: $filterCartonType, filterCondition: $filterCondition, filterCodeFormat: $filterCodeFormat, errorMessage: $errorMessage, hasReachedMax: $hasReachedMax, currentPage: $currentPage, totalCount: $totalCount, isLoadingMore: $isLoadingMore, generatedCount: $generatedCount, lastGeneratedAt: $lastGeneratedAt, exportPath: $exportPath, isExporting: $isExporting)';
 }
 
 
@@ -1562,7 +1670,7 @@ abstract mixin class _$CartonCodesStateCopyWith<$Res> implements $CartonCodesSta
   factory _$CartonCodesStateCopyWith(_CartonCodesState value, $Res Function(_CartonCodesState) _then) = __$CartonCodesStateCopyWithImpl;
 @override @useResult
 $Res call({
- CartonCodesStatus status, List<CartonCodeModel> cartonCodes, List<CartonCodeModel> filteredCartonCodes, Set<String> selectedCartonCodeIds, String searchQuery, CodeStatus? filterStatus, String? filterBundleCode, DateTime? filterStartDate, DateTime? filterEndDate, String? filterCartonType, String? filterCondition, String? errorMessage, bool hasReachedMax, int currentPage, int totalCount, bool isLoadingMore, int generatedCount, DateTime? lastGeneratedAt, String? exportPath, bool isExporting
+ CartonCodesStatus status, List<CartonCodeModel> cartonCodes, List<CartonCodeModel> filteredCartonCodes, Set<String> selectedCartonCodeIds, String searchQuery, CodeStatus? filterStatus, String? filterBundleCode, DateTime? filterStartDate, DateTime? filterEndDate, String? filterCartonType, String? filterCondition, String filterCodeFormat, String? errorMessage, bool hasReachedMax, int currentPage, int totalCount, bool isLoadingMore, int generatedCount, DateTime? lastGeneratedAt, String? exportPath, bool isExporting
 });
 
 
@@ -1579,7 +1687,7 @@ class __$CartonCodesStateCopyWithImpl<$Res>
 
 /// Create a copy of CartonCodesState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? cartonCodes = null,Object? filteredCartonCodes = null,Object? selectedCartonCodeIds = null,Object? searchQuery = null,Object? filterStatus = freezed,Object? filterBundleCode = freezed,Object? filterStartDate = freezed,Object? filterEndDate = freezed,Object? filterCartonType = freezed,Object? filterCondition = freezed,Object? errorMessage = freezed,Object? hasReachedMax = null,Object? currentPage = null,Object? totalCount = null,Object? isLoadingMore = null,Object? generatedCount = null,Object? lastGeneratedAt = freezed,Object? exportPath = freezed,Object? isExporting = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? cartonCodes = null,Object? filteredCartonCodes = null,Object? selectedCartonCodeIds = null,Object? searchQuery = null,Object? filterStatus = freezed,Object? filterBundleCode = freezed,Object? filterStartDate = freezed,Object? filterEndDate = freezed,Object? filterCartonType = freezed,Object? filterCondition = freezed,Object? filterCodeFormat = null,Object? errorMessage = freezed,Object? hasReachedMax = null,Object? currentPage = null,Object? totalCount = null,Object? isLoadingMore = null,Object? generatedCount = null,Object? lastGeneratedAt = freezed,Object? exportPath = freezed,Object? isExporting = null,}) {
   return _then(_CartonCodesState(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as CartonCodesStatus,cartonCodes: null == cartonCodes ? _self._cartonCodes : cartonCodes // ignore: cast_nullable_to_non_nullable
@@ -1592,7 +1700,8 @@ as String?,filterStartDate: freezed == filterStartDate ? _self.filterStartDate :
 as DateTime?,filterEndDate: freezed == filterEndDate ? _self.filterEndDate : filterEndDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,filterCartonType: freezed == filterCartonType ? _self.filterCartonType : filterCartonType // ignore: cast_nullable_to_non_nullable
 as String?,filterCondition: freezed == filterCondition ? _self.filterCondition : filterCondition // ignore: cast_nullable_to_non_nullable
-as String?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
+as String?,filterCodeFormat: null == filterCodeFormat ? _self.filterCodeFormat : filterCodeFormat // ignore: cast_nullable_to_non_nullable
+as String,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,hasReachedMax: null == hasReachedMax ? _self.hasReachedMax : hasReachedMax // ignore: cast_nullable_to_non_nullable
 as bool,currentPage: null == currentPage ? _self.currentPage : currentPage // ignore: cast_nullable_to_non_nullable
 as int,totalCount: null == totalCount ? _self.totalCount : totalCount // ignore: cast_nullable_to_non_nullable

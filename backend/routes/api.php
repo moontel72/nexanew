@@ -607,6 +607,14 @@ $registerRoutes = function (): void {
                     \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
                     "list",
                 ]);
+                Route::post("{format}/generate", [
+                    \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
+                    "generateForFormat",
+                ])->where(['format' => 'itf14|gs1_128|code128_industrial|qr|datamatrix|code128_label']);
+                Route::get("{format}/list", [
+                    \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
+                    "listForFormat",
+                ])->where(['format' => 'itf14|gs1_128|code128_industrial|qr|datamatrix|code128_label']);
                 Route::put("{id}", [
                     \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
                     "update",

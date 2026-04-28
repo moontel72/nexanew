@@ -119,6 +119,7 @@ _CartonCodeGenerationRequest _$CartonCodeGenerationRequestFromJson(
   handlingInstructions: json['handlingInstructions'] as String?,
   generateCartonBarcode: json['generateCartonBarcode'] as bool? ?? true,
   generateCartonQrCode: json['generateCartonQrCode'] as bool? ?? true,
+  codeFormat: json['codeFormat'] as String? ?? 'qr',
 );
 
 Map<String, dynamic> _$CartonCodeGenerationRequestToJson(
@@ -146,6 +147,7 @@ Map<String, dynamic> _$CartonCodeGenerationRequestToJson(
   'handlingInstructions': instance.handlingInstructions,
   'generateCartonBarcode': instance.generateCartonBarcode,
   'generateCartonQrCode': instance.generateCartonQrCode,
+  'codeFormat': instance.codeFormat,
 };
 
 _PacketCodeGenerationRequest _$PacketCodeGenerationRequestFromJson(

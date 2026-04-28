@@ -40,6 +40,7 @@ abstract class CartonCodesState with _$CartonCodesState {
     DateTime? filterEndDate,
     String? filterCartonType,
     String? filterCondition,
+    @Default('qr') String filterCodeFormat,
     String? errorMessage,
     @Default(false) bool hasReachedMax,
     @Default(1) int currentPage,

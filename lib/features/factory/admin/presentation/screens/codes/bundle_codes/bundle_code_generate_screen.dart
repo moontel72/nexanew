@@ -10,7 +10,6 @@ import 'package:nexatrace_system/shared/widgets/inputs/custom_text_field.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 
-import 'bundle_specifications_section.dart';
 
 class BundleCodeGenerateScreen extends StatefulWidget {
   const BundleCodeGenerateScreen({super.key});

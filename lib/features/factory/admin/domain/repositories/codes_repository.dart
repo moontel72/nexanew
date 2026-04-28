@@ -10,10 +10,7 @@ abstract class CodesRepository {
     int? cartonsPerBundle,
   });
 
-  Future<List<BundleCodeModel>> getBundleCodes({
-    int page = 1,
-    int limit = 50,
-  });
+  Future<List<BundleCodeModel>> getBundleCodes({int page = 1, int limit = 50});
 
   Future<void> generateCartonCodes({
     required int count,
@@ -21,11 +18,14 @@ abstract class CodesRepository {
     int? packetCount,
     int? totalUnits,
     int? unitsPerPacket,
+    String? codeFormat,
+    String? prefix,
   });
 
   Future<List<CartonCodeModel>> getCartonCodes({
     int page = 1,
     int limit = 50,
+    String? codeFormat,
   });
 
   Future<void> generatePacketCodes({
@@ -34,15 +34,9 @@ abstract class CodesRepository {
     int? unitCount,
   });
 
-  Future<List<PacketCodeModel>> getPacketCodes({
-    int page = 1,
-    int limit = 50,
-  });
+  Future<List<PacketCodeModel>> getPacketCodes({int page = 1, int limit = 50});
 
-  Future<void> generateUnitCodes({
-    required int count,
-    String? batchId,
-  });
+  Future<void> generateUnitCodes({required int count, String? batchId});
 
   Future<List<UnitCodeModel>> getUnitCodes({
     int page = 1,

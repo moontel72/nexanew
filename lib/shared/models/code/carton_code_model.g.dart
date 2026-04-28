@@ -69,6 +69,7 @@ _CartonCodeModel _$CartonCodeModelFromJson(
   handlingInstructions: json['handlingInstructions'] as String?,
   cartonBarcode: json['cartonBarcode'] as String?,
   cartonQrCode: json['cartonQrCode'] as String?,
+  codeFormat: json['codeFormat'] as String? ?? 'qr',
   condition: json['condition'] as String? ?? 'New',
   lastInspectionDate: json['lastInspectionDate'] == null
       ? null
@@ -120,6 +121,7 @@ Map<String, dynamic> _$CartonCodeModelToJson(_CartonCodeModel instance) =>
       'handlingInstructions': instance.handlingInstructions,
       'cartonBarcode': instance.cartonBarcode,
       'cartonQrCode': instance.cartonQrCode,
+      'codeFormat': instance.codeFormat,
       'condition': instance.condition,
       'lastInspectionDate': instance.lastInspectionDate?.toIso8601String(),
       'inspectionNotes': instance.inspectionNotes,

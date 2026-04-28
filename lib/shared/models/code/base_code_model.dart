@@ -32,6 +32,41 @@ enum CodeType {
   unit,
 }
 
+/// Carton Code Format Enum
+/// Defines the 6 independent carton code format types supported by the backend
+enum CartonCodeFormat {
+  itf14('itf14', 'ITF-14', 'Standard industrial barcode'),
+  gs1_128('gs1_128', 'GS1-128', 'GS1-128 barcode'),
+  code128Industrial(
+    'code128_industrial',
+    'Code 128 Industrial',
+    'Code 128 (Industrial/factory)',
+  ),
+  qr('qr', 'QR Code', 'QR Code (default)'),
+  datamatrix('datamatrix', 'DataMatrix', 'DataMatrix (pharma)'),
+  code128Label('code128_label', 'Code 128 Label', 'Code 128 (Label printer)');
+
+  const CartonCodeFormat(this.value, this.displayName, this.description);
+
+  /// The API value sent to the backend
+  final String value;
+
+  /// Human-readable display name for the UI
+  final String displayName;
+
+  /// Description of the format
+  final String description;
+
+  /// Find a format by its API value, defaults to [CartonCodeFormat.qr]
+  static CartonCodeFormat fromValue(String? value) {
+    if (value == null) return CartonCodeFormat.qr;
+    return CartonCodeFormat.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => CartonCodeFormat.qr,
+    );
+  }
+}
+
 /// Base Code Model
 /// This model contains common properties for all code types
 @freezed

@@ -7,10 +7,7 @@ class CodesRemoteDatasource {
 
   CodesRemoteDatasource({required ApiService apiService}) : _api = apiService;
 
-  Future<void> deleteCode({
-    required String type,
-    required String id,
-  }) async {
+  Future<void> deleteCode({required String type, required String id}) async {
     await _api.delete('/codes/$type/$id');
   }
 
@@ -84,7 +81,25 @@ class CodesRemoteDatasource {
     int? packetCount,
     int? totalUnits,
     int? unitsPerPacket,
+    String? codeFormat,
+    String? prefix,
   }) async {
+    // If a specific format is provided, use the format-specific endpoint
+    if (codeFormat != null && codeFormat.isNotEmpty) {
+      final res = await _api.post(
+        ApiEndpoints.generateCartonCodesByFormat(codeFormat),
+        data: {
+          'count': count,
+          if (batchId != null && batchId.isNotEmpty) 'batch_id': batchId,
+          if (packetCount != null) 'packet_count': packetCount,
+          if (totalUnits != null) 'total_units': totalUnits,
+          if (unitsPerPacket != null) 'units_per_packet': unitsPerPacket,
+          if (prefix != null && prefix.isNotEmpty) 'prefix': prefix,
+        },
+      );
+      return (res as Map).cast<String, dynamic>();
+    }
+    // Fallback to the generic endpoint
     final res = await _api.post(
       '${ApiEndpoints.cartonCodes}/generate',
       data: {
@@ -93,6 +108,7 @@ class CodesRemoteDatasource {
         if (packetCount != null) 'packet_count': packetCount,
         if (totalUnits != null) 'total_units': totalUnits,
         if (unitsPerPacket != null) 'units_per_packet': unitsPerPacket,
+        if (prefix != null && prefix.isNotEmpty) 'prefix': prefix,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -101,7 +117,17 @@ class CodesRemoteDatasource {
   Future<Map<String, dynamic>> listCartonCodes({
     int page = 1,
     int limit = 50,
+    String? codeFormat,
   }) async {
+    // If a specific format is provided, use the format-specific endpoint
+    if (codeFormat != null && codeFormat.isNotEmpty) {
+      final res = await _api.get(
+        ApiEndpoints.listCartonCodesByFormat(codeFormat),
+        queryParameters: {'page': page.toString(), 'limit': limit.toString()},
+      );
+      return (res as Map).cast<String, dynamic>();
+    }
+    // Fallback to the generic endpoint
     final res = await _api.get(
       '${ApiEndpoints.cartonCodes}/list',
       queryParameters: {'page': page.toString(), 'limit': limit.toString()},

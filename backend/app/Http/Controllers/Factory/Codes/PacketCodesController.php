@@ -49,9 +49,10 @@ class PacketCodesController extends Controller
         $includeInternational = (bool) ($data['include_international_codes'] ?? true);
 
         DB::transaction(function () use ($companyId, $planId, $count, $nextSeq, $data, $includeInternational) {
-            $baseOverrides = [
-                'batch_id' => $data['batch_id'] ?? null,
-            ];
+            $baseOverrides = [];
+            if (!empty($data['batch_id'])) {
+                $baseOverrides['batch_id'] = (string) $data['batch_id'];
+            }
             if (!empty($data['prefix'])) {
                 $baseOverrides['store_keeper_prefix'] = (string) $data['prefix'];
             }

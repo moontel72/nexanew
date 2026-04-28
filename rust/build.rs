@@ -21,68 +21,50 @@ fn main() {
 
     // Set up linking for different platforms
     setup_linking();
+
+    // Add build information
+    add_build_info();
 }
 
 fn generate_flutter_rust_bridge() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let bridge_file = out_dir.join("bridge_generated.rs");
 
-    // Generate the bridge code
-    flutter_rust_bridge_codegen::generate(
-        flutter_rust_bridge_codegen::Opts {
-            // Input Rust file
-            rust_input: "src/lib.rs".to_string(),
+    // Build raw options for the code generator
+    let raw_opts = lib_flutter_rust_bridge_codegen::RawOpts {
+        rust_input: vec!["src/lib.rs".to_string()],
+        dart_output: vec![
+            "../lib/rust_module/bridge/nexatrace_rust_bridge.dart".to_string(),
+        ],
+        rust_output: Some(vec![bridge_file.to_str().unwrap().to_string()]),
+        dart_format_line_length: 120,
+        dart_decl_output: Some(
+            "../lib/rust_module/bridge/nexatrace_rust_bridge.dart".to_string(),
+        ),
+        wasm: false,
+        llvm_path: None,
+        llvm_compiler_opts: None,
+        skip_add_mod_to_lib: false,
+        skip_deps_check: false,
+        c_output: Some(vec![
+            "../lib/rust_module/bridge/bindings.h".to_string(),
+        ]),
+        extra_c_output_path: None,
+        dart_enums_style: false,
+        verbose: false,
+        ..Default::default()
+    };
 
-            // Output directory for generated code
-            dart_output: vec![
-                "../lib/rust_module/bridge/nexatrace_rust_bridge.dart".to_string(),
-            ],
+    // Parse raw options into codegen configs
+    let configs = lib_flutter_rust_bridge_codegen::config_parse(raw_opts);
 
-            // Output Rust file
-            rust_output: Some(bridge_file.to_str().unwrap().to_string()),
+    // Validate API symbols and check for duplicates
+    let all_symbols = lib_flutter_rust_bridge_codegen::get_symbols_if_no_duplicates(&configs)
+        .expect("Failed to get symbols for Flutter Rust Bridge codegen");
 
-            // Additional options
-            dart_format_line_length: 120,
-            dart_decl_output: Some(
-                "../lib/rust_module/bridge/nexatrace_rust_bridge.dart".to_string(),
-            ),
-
-            // Web support
-            wasm: false,
-
-            // FFI mode
-            llvm_path: None,
-            llvm_compiler_opts: None,
-
-            // Skip modules
-            skip_add_mod_to_lib: false,
-            skip_deps_check: false,
-
-            // Code generation options
-            rust_bridge_generated_mod_path: Some("nexatrace_rust::bridge_generated".to_string()),
-
-            // C bindings output (for FFI)
-            c_output: Some(vec![
-                "../lib/rust_module/bridge/bindings.h".to_string(),
-                "../lib/rust_module/bridge/bindings.c".to_string(),
-            ]),
-
-            // Extra headers for C bindings
-            extra_c_output_paths: None,
-
-            // Swift/Kotlin bindings (for mobile)
-            swift_bridge_support_path: None,
-            kotlin_bridge_support_path: None,
-
-            // Customize code generation
-            dart_enums_style: false,
-            dart_entrypoint_class_name: None,
-            dart_root_namespace: None,
-
-            // Logging
-            verbose: false,
-        },
-    ).expect("Failed to generate Flutter Rust Bridge code");
+    // Generate the bridge code (single block API)
+    lib_flutter_rust_bridge_codegen::frb_codegen(&configs[0], &all_symbols)
+        .expect("Failed to generate Flutter Rust Bridge code");
 
     println!("cargo:warning=Flutter Rust Bridge code generated successfully");
     println!("cargo:warning=Dart output: ../lib/rust_module/bridge/nexatrace_rust_bridge.dart");

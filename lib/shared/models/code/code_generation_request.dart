@@ -152,6 +152,9 @@ abstract class CartonCodeGenerationRequest with _$CartonCodeGenerationRequest {
 
     /// Should generate separate carton QR code?
     @Default(true) bool generateCartonQrCode,
+
+    /// Code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label)
+    @Default('qr') String codeFormat,
   }) = _CartonCodeGenerationRequest;
 
   factory CartonCodeGenerationRequest.fromJson(Map<String, dynamic> json) =>

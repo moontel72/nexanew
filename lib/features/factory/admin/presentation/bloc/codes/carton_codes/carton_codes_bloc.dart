@@ -27,6 +27,7 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
     on<DeactivateCartonCode>(_onDeactivateCartonCode);
     on<SearchCartonCodes>(_onSearchCartonCodes);
     on<FilterCartonCodes>(_onFilterCartonCodes);
+    on<FilterCartonCodesByFormat>(_onFilterCartonCodesByFormat);
     on<ExportCartonCodes>(_onExportCartonCodes);
     on<SelectCartonCode>(_onSelectCartonCode);
     on<ClearSelection>(_onClearSelection);
@@ -43,7 +44,12 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
     try {
       emit(state.copyWith(status: CartonCodesStatus.loading));
 
-      final codes = await _codesRepository.getCartonCodes(page: 1, limit: 200);
+      final format = event.codeFormat ?? state.filterCodeFormat;
+      final codes = await _codesRepository.getCartonCodes(
+        page: 1,
+        limit: 200,
+        codeFormat: format.isNotEmpty ? format : null,
+      );
 
       emit(
         state.copyWith(
@@ -51,6 +57,7 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
           cartonCodes: codes,
           filteredCartonCodes: codes,
           totalCount: codes.length,
+          filterCodeFormat: format,
         ),
       );
     } catch (e) {
@@ -77,6 +84,10 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
             ? event.request.packetsPerCarton
             : null,
         unitsPerPacket: null,
+        codeFormat: event.request.codeFormat.isNotEmpty
+            ? event.request.codeFormat
+            : null,
+        prefix: event.request.prefix.isNotEmpty ? event.request.prefix : null,
       );
 
       final updatedCodes = await _codesRepository.getCartonCodes(
@@ -294,7 +305,9 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
 
       if (carton.status != CodeStatus.generated &&
           carton.status != CodeStatus.linked) {
-        throw Exception('Only generated or linked carton codes can be published');
+        throw Exception(
+          'Only generated or linked carton codes can be published',
+        );
       }
 
       await _codesRepository.publishCartonCodes(codeIds: [carton.id]);
@@ -390,6 +403,42 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
         .applyFilters();
 
     emit(updatedState);
+  }
+
+  Future<void> _onFilterCartonCodesByFormat(
+    FilterCartonCodesByFormat event,
+    Emitter<CartonCodesState> emit,
+  ) async {
+    final format = event.codeFormat ?? 'qr';
+
+    // Reload codes with the new format filter from the API
+    try {
+      emit(
+        state.copyWith(
+          status: CartonCodesStatus.loading,
+          filterCodeFormat: format,
+        ),
+      );
+
+      final codes = await _codesRepository.getCartonCodes(
+        page: 1,
+        limit: 200,
+        codeFormat: format.isNotEmpty ? format : null,
+      );
+
+      final updatedState = state
+          .copyWith(cartonCodes: codes, filterCodeFormat: format)
+          .applyFilters();
+
+      emit(updatedState.copyWith(status: CartonCodesStatus.loaded));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: CartonCodesStatus.error,
+          errorMessage: 'Failed to filter carton codes by format: $e',
+        ),
+      );
+    }
   }
 
   Future<void> _onFilterCartonCodes(
@@ -661,6 +710,12 @@ extension CartonCodesStateX on CartonCodesState {
       if (filterBundleCode != null &&
           carton.bundleCode != filterBundleCode &&
           filterBundleCode!.isNotEmpty) {
+        return false;
+      }
+
+      // Code format filter
+      if (filterCodeFormat.isNotEmpty &&
+          carton.codeFormat != filterCodeFormat) {
         return false;
       }
 

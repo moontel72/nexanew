@@ -92,6 +92,8 @@ class CodesRepositoryImpl implements CodesRepository {
     int? packetCount,
     int? totalUnits,
     int? unitsPerPacket,
+    String? codeFormat,
+    String? prefix,
   }) async {
     await _remote.generateCartonCodes(
       count: count,
@@ -99,6 +101,8 @@ class CodesRepositoryImpl implements CodesRepository {
       packetCount: packetCount,
       totalUnits: totalUnits,
       unitsPerPacket: unitsPerPacket,
+      codeFormat: codeFormat,
+      prefix: prefix,
     );
   }
 
@@ -106,8 +110,13 @@ class CodesRepositoryImpl implements CodesRepository {
   Future<List<CartonCodeModel>> getCartonCodes({
     int page = 1,
     int limit = 50,
+    String? codeFormat,
   }) async {
-    final res = await _remote.listCartonCodes(page: page, limit: limit);
+    final res = await _remote.listCartonCodes(
+      page: page,
+      limit: limit,
+      codeFormat: codeFormat,
+    );
     final data = _asMap(_asMap(res)['data']);
     final items = _asList(data['carton_codes']);
 

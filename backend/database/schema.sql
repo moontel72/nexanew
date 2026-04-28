@@ -384,6 +384,9 @@ CREATE TABLE bundle_codes (
 CREATE TABLE carton_codes (
     id UUID PRIMARY KEY REFERENCES base_codes(id) ON DELETE CASCADE,
 
+    -- Code Format
+    code_format VARCHAR(30) NOT NULL DEFAULT 'qr', -- itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label
+
     -- Hierarchy
     bundle_code_id UUID REFERENCES bundle_codes(id) ON DELETE CASCADE,
 
@@ -421,7 +424,8 @@ CREATE TABLE carton_codes (
     -- Indexes
     INDEX idx_carton_codes_bundle (bundle_code_id),
     INDEX idx_carton_codes_condition (condition),
-    INDEX idx_carton_codes_sealed (is_sealed)
+    INDEX idx_carton_codes_sealed (is_sealed),
+    INDEX idx_carton_codes_code_format (code_format)
 );
 
 -- Packet Codes (Extends base_codes)

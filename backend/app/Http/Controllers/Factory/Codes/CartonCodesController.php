@@ -17,6 +17,8 @@ use Illuminate\Support\Str;
 
 class CartonCodesController extends Controller
 {
+    private const CODE_FORMATS = ['itf14', 'gs1_128', 'code128_industrial', 'qr', 'datamatrix', 'code128_label'];
+
     public function __construct(private CodeGenerator $generator, private CodeExportService $exporter)
     {
     }
@@ -27,8 +29,10 @@ class CartonCodesController extends Controller
 
         $data = $request->validate([
             'count' => ['required', 'integer', 'min:1', 'max:2000'],
+            'code_format' => ['required', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
             'batch_id' => ['nullable', 'string', 'max:100'],
             'prefix' => ['nullable', 'string', 'max:10'],
+            'packet_count' => ['nullable', 'integer', 'min:0', 'max:10000'],
             'include_international_codes' => ['nullable', 'boolean'],
         ]);
 
@@ -49,9 +53,10 @@ class CartonCodesController extends Controller
         $includeInternational = (bool) ($data['include_international_codes'] ?? true);
 
         DB::transaction(function () use ($companyId, $planId, $count, $nextSeq, $data, $includeInternational) {
-            $baseOverrides = [
-                'batch_id' => $data['batch_id'] ?? null,
-            ];
+            $baseOverrides = [];
+            if (!empty($data['batch_id'])) {
+                $baseOverrides['batch_id'] = (string) $data['batch_id'];
+            }
             if (!empty($data['prefix'])) {
                 $baseOverrides['store_keeper_prefix'] = (string) $data['prefix'];
             }
@@ -70,13 +75,17 @@ class CartonCodesController extends Controller
                 DB::table('base_codes')->upsert($updates, ['id'], ['international_code', 'updated_at']);
             }
 
+            $packetCount = (int) ($data['packet_count'] ?? 0);
+            $codeFormat = (string) $data['code_format'];
+
             $rows = [];
             for ($i = 0; $i < $count; $i++) {
                 $id = $baseRows[$i]['id'];
                 $rows[] = [
                     'id' => $id,
+                    'code_format' => $codeFormat,
                     'bundle_code_id' => null,
-                    'packet_count' => 0,
+                    'packet_count' => $packetCount,
                     'packet_codes' => '{}',
                     'sequence_number' => $nextSeq + $i,
                     'total_units' => 0,
@@ -142,6 +151,11 @@ class CartonCodesController extends Controller
             ->where('base_codes.code_type', 'carton')
             ->where('base_codes.is_deleted', false);
 
+        $codeFormat = $request->input('code_format');
+        if (!empty($codeFormat) && in_array((string) $codeFormat, self::CODE_FORMATS, true)) {
+            $query->where('carton_codes.code_format', (string) $codeFormat);
+        }
+
         $page = (int) $request->query('page', 1);
         $limit = (int) $request->query('limit', 50);
         $limit = max(1, min(200, $limit));
@@ -155,6 +169,7 @@ class CartonCodesController extends Controller
                 'id' => (string) $row->id,
                 'code' => (string) $row->code,
                 'type' => (string) $row->code_type,
+                'codeFormat' => (string) ($row->code_format ?? 'qr'),
                 'status' => (string) $row->status,
                 'factoryId' => (string) $row->company_id,
                 'subscriptionPlanId' => (string) $row->subscription_plan_id,
@@ -210,6 +225,18 @@ class CartonCodesController extends Controller
                 'total_pages' => $paginator->lastPage(),
             ],
         ]);
+    }
+
+    public function generateForFormat(Request $request, string $format)
+    {
+        $request->merge(['code_format' => $format]);
+        return $this->generate($request);
+    }
+
+    public function listForFormat(Request $request, string $format)
+    {
+        $request->merge(['code_format' => $format]);
+        return $this->list($request);
     }
 
     public function update(Request $request, string $id)

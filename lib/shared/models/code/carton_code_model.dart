@@ -113,6 +113,9 @@ abstract class CartonCodeModel with _$CartonCodeModel {
     /// Carton QR code (separate from product QR code)
     @HiveField(41) String? cartonQrCode,
 
+    /// Carton code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label)
+    @HiveField(45) @Default('qr') String codeFormat,
+
     /// Carton condition (e.g., "New", "Good", "Damaged")
     @HiveField(42) @Default('New') String condition,
 

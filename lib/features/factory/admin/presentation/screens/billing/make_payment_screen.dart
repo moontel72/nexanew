@@ -174,7 +174,7 @@ class _MakePaymentScreenState extends State<MakePaymentScreen> {
                           ),
                         )
                       : DropdownButtonFormField<String>(
-                          value: _selected?.id,
+                          initialValue: _selected?.id,
                           decoration: const InputDecoration(
                             labelText: 'Select Invoice',
                             border: OutlineInputBorder(),
@@ -292,7 +292,7 @@ class _MakePaymentScreenState extends State<MakePaymentScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<PaymentMethod>(
-            value: _method,
+            initialValue: _method,
             decoration: const InputDecoration(
               labelText: 'Payment Method',
               border: OutlineInputBorder(),

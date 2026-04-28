@@ -695,7 +695,8 @@ mixin _$CartonCodeGenerationRequest {
  String? get temperatureRequirements;/// Handling instructions
  String? get handlingInstructions;/// Should generate separate carton barcode?
  bool get generateCartonBarcode;/// Should generate separate carton QR code?
- bool get generateCartonQrCode;
+ bool get generateCartonQrCode;/// Code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label)
+ String get codeFormat;
 /// Create a copy of CartonCodeGenerationRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -708,16 +709,16 @@ $CartonCodeGenerationRequestCopyWith<CartonCodeGenerationRequest> get copyWith =
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CartonCodeGenerationRequest&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.subscriptionPlanId, subscriptionPlanId) || other.subscriptionPlanId == subscriptionPlanId)&&(identical(other.count, count) || other.count == count)&&(identical(other.prefix, prefix) || other.prefix == prefix)&&(identical(other.startSequence, startSequence) || other.startSequence == startSequence)&&(identical(other.includeInternationalCodes, includeInternationalCodes) || other.includeInternationalCodes == includeInternationalCodes)&&(identical(other.generateQrCodes, generateQrCodes) || other.generateQrCodes == generateQrCodes)&&(identical(other.generateBarcodes, generateBarcodes) || other.generateBarcodes == generateBarcodes)&&(identical(other.batchName, batchName) || other.batchName == batchName)&&(identical(other.batchNotes, batchNotes) || other.batchNotes == batchNotes)&&(identical(other.metadata, metadata) || other.metadata == metadata)&&(identical(other.bundleCode, bundleCode) || other.bundleCode == bundleCode)&&(identical(other.packetsPerCarton, packetsPerCarton) || other.packetsPerCarton == packetsPerCarton)&&(identical(other.cartonWeight, cartonWeight) || other.cartonWeight == cartonWeight)&&(identical(other.cartonDimensions, cartonDimensions) || other.cartonDimensions == cartonDimensions)&&(identical(other.cartonType, cartonType) || other.cartonType == cartonType)&&(identical(other.grade, grade) || other.grade == grade)&&(identical(other.maxWeightCapacity, maxWeightCapacity) || other.maxWeightCapacity == maxWeightCapacity)&&(identical(other.temperatureRequirements, temperatureRequirements) || other.temperatureRequirements == temperatureRequirements)&&(identical(other.handlingInstructions, handlingInstructions) || other.handlingInstructions == handlingInstructions)&&(identical(other.generateCartonBarcode, generateCartonBarcode) || other.generateCartonBarcode == generateCartonBarcode)&&(identical(other.generateCartonQrCode, generateCartonQrCode) || other.generateCartonQrCode == generateCartonQrCode));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CartonCodeGenerationRequest&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.subscriptionPlanId, subscriptionPlanId) || other.subscriptionPlanId == subscriptionPlanId)&&(identical(other.count, count) || other.count == count)&&(identical(other.prefix, prefix) || other.prefix == prefix)&&(identical(other.startSequence, startSequence) || other.startSequence == startSequence)&&(identical(other.includeInternationalCodes, includeInternationalCodes) || other.includeInternationalCodes == includeInternationalCodes)&&(identical(other.generateQrCodes, generateQrCodes) || other.generateQrCodes == generateQrCodes)&&(identical(other.generateBarcodes, generateBarcodes) || other.generateBarcodes == generateBarcodes)&&(identical(other.batchName, batchName) || other.batchName == batchName)&&(identical(other.batchNotes, batchNotes) || other.batchNotes == batchNotes)&&(identical(other.metadata, metadata) || other.metadata == metadata)&&(identical(other.bundleCode, bundleCode) || other.bundleCode == bundleCode)&&(identical(other.packetsPerCarton, packetsPerCarton) || other.packetsPerCarton == packetsPerCarton)&&(identical(other.cartonWeight, cartonWeight) || other.cartonWeight == cartonWeight)&&(identical(other.cartonDimensions, cartonDimensions) || other.cartonDimensions == cartonDimensions)&&(identical(other.cartonType, cartonType) || other.cartonType == cartonType)&&(identical(other.grade, grade) || other.grade == grade)&&(identical(other.maxWeightCapacity, maxWeightCapacity) || other.maxWeightCapacity == maxWeightCapacity)&&(identical(other.temperatureRequirements, temperatureRequirements) || other.temperatureRequirements == temperatureRequirements)&&(identical(other.handlingInstructions, handlingInstructions) || other.handlingInstructions == handlingInstructions)&&(identical(other.generateCartonBarcode, generateCartonBarcode) || other.generateCartonBarcode == generateCartonBarcode)&&(identical(other.generateCartonQrCode, generateCartonQrCode) || other.generateCartonQrCode == generateCartonQrCode)&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,factoryId,subscriptionPlanId,count,prefix,startSequence,includeInternationalCodes,generateQrCodes,generateBarcodes,batchName,batchNotes,metadata,bundleCode,packetsPerCarton,cartonWeight,cartonDimensions,cartonType,grade,maxWeightCapacity,temperatureRequirements,handlingInstructions,generateCartonBarcode,generateCartonQrCode]);
+int get hashCode => Object.hashAll([runtimeType,factoryId,subscriptionPlanId,count,prefix,startSequence,includeInternationalCodes,generateQrCodes,generateBarcodes,batchName,batchNotes,metadata,bundleCode,packetsPerCarton,cartonWeight,cartonDimensions,cartonType,grade,maxWeightCapacity,temperatureRequirements,handlingInstructions,generateCartonBarcode,generateCartonQrCode,codeFormat]);
 
 @override
 String toString() {
-  return 'CartonCodeGenerationRequest(factoryId: $factoryId, subscriptionPlanId: $subscriptionPlanId, count: $count, prefix: $prefix, startSequence: $startSequence, includeInternationalCodes: $includeInternationalCodes, generateQrCodes: $generateQrCodes, generateBarcodes: $generateBarcodes, batchName: $batchName, batchNotes: $batchNotes, metadata: $metadata, bundleCode: $bundleCode, packetsPerCarton: $packetsPerCarton, cartonWeight: $cartonWeight, cartonDimensions: $cartonDimensions, cartonType: $cartonType, grade: $grade, maxWeightCapacity: $maxWeightCapacity, temperatureRequirements: $temperatureRequirements, handlingInstructions: $handlingInstructions, generateCartonBarcode: $generateCartonBarcode, generateCartonQrCode: $generateCartonQrCode)';
+  return 'CartonCodeGenerationRequest(factoryId: $factoryId, subscriptionPlanId: $subscriptionPlanId, count: $count, prefix: $prefix, startSequence: $startSequence, includeInternationalCodes: $includeInternationalCodes, generateQrCodes: $generateQrCodes, generateBarcodes: $generateBarcodes, batchName: $batchName, batchNotes: $batchNotes, metadata: $metadata, bundleCode: $bundleCode, packetsPerCarton: $packetsPerCarton, cartonWeight: $cartonWeight, cartonDimensions: $cartonDimensions, cartonType: $cartonType, grade: $grade, maxWeightCapacity: $maxWeightCapacity, temperatureRequirements: $temperatureRequirements, handlingInstructions: $handlingInstructions, generateCartonBarcode: $generateCartonBarcode, generateCartonQrCode: $generateCartonQrCode, codeFormat: $codeFormat)';
 }
 
 
@@ -728,7 +729,7 @@ abstract mixin class $CartonCodeGenerationRequestCopyWith<$Res>  {
   factory $CartonCodeGenerationRequestCopyWith(CartonCodeGenerationRequest value, $Res Function(CartonCodeGenerationRequest) _then) = _$CartonCodeGenerationRequestCopyWithImpl;
 @useResult
 $Res call({
- String factoryId, String subscriptionPlanId, int count, String prefix, int startSequence, bool includeInternationalCodes, bool generateQrCodes, bool generateBarcodes, String? batchName, String? batchNotes, String? metadata, String bundleCode, int packetsPerCarton, double? cartonWeight, String? cartonDimensions, String? cartonType, String? grade, double? maxWeightCapacity, String? temperatureRequirements, String? handlingInstructions, bool generateCartonBarcode, bool generateCartonQrCode
+ String factoryId, String subscriptionPlanId, int count, String prefix, int startSequence, bool includeInternationalCodes, bool generateQrCodes, bool generateBarcodes, String? batchName, String? batchNotes, String? metadata, String bundleCode, int packetsPerCarton, double? cartonWeight, String? cartonDimensions, String? cartonType, String? grade, double? maxWeightCapacity, String? temperatureRequirements, String? handlingInstructions, bool generateCartonBarcode, bool generateCartonQrCode, String codeFormat
 });
 
 
@@ -745,7 +746,7 @@ class _$CartonCodeGenerationRequestCopyWithImpl<$Res>
 
 /// Create a copy of CartonCodeGenerationRequest
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? factoryId = null,Object? subscriptionPlanId = null,Object? count = null,Object? prefix = null,Object? startSequence = null,Object? includeInternationalCodes = null,Object? generateQrCodes = null,Object? generateBarcodes = null,Object? batchName = freezed,Object? batchNotes = freezed,Object? metadata = freezed,Object? bundleCode = null,Object? packetsPerCarton = null,Object? cartonWeight = freezed,Object? cartonDimensions = freezed,Object? cartonType = freezed,Object? grade = freezed,Object? maxWeightCapacity = freezed,Object? temperatureRequirements = freezed,Object? handlingInstructions = freezed,Object? generateCartonBarcode = null,Object? generateCartonQrCode = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? factoryId = null,Object? subscriptionPlanId = null,Object? count = null,Object? prefix = null,Object? startSequence = null,Object? includeInternationalCodes = null,Object? generateQrCodes = null,Object? generateBarcodes = null,Object? batchName = freezed,Object? batchNotes = freezed,Object? metadata = freezed,Object? bundleCode = null,Object? packetsPerCarton = null,Object? cartonWeight = freezed,Object? cartonDimensions = freezed,Object? cartonType = freezed,Object? grade = freezed,Object? maxWeightCapacity = freezed,Object? temperatureRequirements = freezed,Object? handlingInstructions = freezed,Object? generateCartonBarcode = null,Object? generateCartonQrCode = null,Object? codeFormat = null,}) {
   return _then(_self.copyWith(
 factoryId: null == factoryId ? _self.factoryId : factoryId // ignore: cast_nullable_to_non_nullable
 as String,subscriptionPlanId: null == subscriptionPlanId ? _self.subscriptionPlanId : subscriptionPlanId // ignore: cast_nullable_to_non_nullable
@@ -769,7 +770,8 @@ as double?,temperatureRequirements: freezed == temperatureRequirements ? _self.t
 as String?,handlingInstructions: freezed == handlingInstructions ? _self.handlingInstructions : handlingInstructions // ignore: cast_nullable_to_non_nullable
 as String?,generateCartonBarcode: null == generateCartonBarcode ? _self.generateCartonBarcode : generateCartonBarcode // ignore: cast_nullable_to_non_nullable
 as bool,generateCartonQrCode: null == generateCartonQrCode ? _self.generateCartonQrCode : generateCartonQrCode // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,codeFormat: null == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -854,10 +856,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String factoryId,  String subscriptionPlanId,  int count,  String prefix,  int startSequence,  bool includeInternationalCodes,  bool generateQrCodes,  bool generateBarcodes,  String? batchName,  String? batchNotes,  String? metadata,  String bundleCode,  int packetsPerCarton,  double? cartonWeight,  String? cartonDimensions,  String? cartonType,  String? grade,  double? maxWeightCapacity,  String? temperatureRequirements,  String? handlingInstructions,  bool generateCartonBarcode,  bool generateCartonQrCode)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String factoryId,  String subscriptionPlanId,  int count,  String prefix,  int startSequence,  bool includeInternationalCodes,  bool generateQrCodes,  bool generateBarcodes,  String? batchName,  String? batchNotes,  String? metadata,  String bundleCode,  int packetsPerCarton,  double? cartonWeight,  String? cartonDimensions,  String? cartonType,  String? grade,  double? maxWeightCapacity,  String? temperatureRequirements,  String? handlingInstructions,  bool generateCartonBarcode,  bool generateCartonQrCode,  String codeFormat)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CartonCodeGenerationRequest() when $default != null:
-return $default(_that.factoryId,_that.subscriptionPlanId,_that.count,_that.prefix,_that.startSequence,_that.includeInternationalCodes,_that.generateQrCodes,_that.generateBarcodes,_that.batchName,_that.batchNotes,_that.metadata,_that.bundleCode,_that.packetsPerCarton,_that.cartonWeight,_that.cartonDimensions,_that.cartonType,_that.grade,_that.maxWeightCapacity,_that.temperatureRequirements,_that.handlingInstructions,_that.generateCartonBarcode,_that.generateCartonQrCode);case _:
+return $default(_that.factoryId,_that.subscriptionPlanId,_that.count,_that.prefix,_that.startSequence,_that.includeInternationalCodes,_that.generateQrCodes,_that.generateBarcodes,_that.batchName,_that.batchNotes,_that.metadata,_that.bundleCode,_that.packetsPerCarton,_that.cartonWeight,_that.cartonDimensions,_that.cartonType,_that.grade,_that.maxWeightCapacity,_that.temperatureRequirements,_that.handlingInstructions,_that.generateCartonBarcode,_that.generateCartonQrCode,_that.codeFormat);case _:
   return orElse();
 
 }
@@ -875,10 +877,10 @@ return $default(_that.factoryId,_that.subscriptionPlanId,_that.count,_that.prefi
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String factoryId,  String subscriptionPlanId,  int count,  String prefix,  int startSequence,  bool includeInternationalCodes,  bool generateQrCodes,  bool generateBarcodes,  String? batchName,  String? batchNotes,  String? metadata,  String bundleCode,  int packetsPerCarton,  double? cartonWeight,  String? cartonDimensions,  String? cartonType,  String? grade,  double? maxWeightCapacity,  String? temperatureRequirements,  String? handlingInstructions,  bool generateCartonBarcode,  bool generateCartonQrCode)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String factoryId,  String subscriptionPlanId,  int count,  String prefix,  int startSequence,  bool includeInternationalCodes,  bool generateQrCodes,  bool generateBarcodes,  String? batchName,  String? batchNotes,  String? metadata,  String bundleCode,  int packetsPerCarton,  double? cartonWeight,  String? cartonDimensions,  String? cartonType,  String? grade,  double? maxWeightCapacity,  String? temperatureRequirements,  String? handlingInstructions,  bool generateCartonBarcode,  bool generateCartonQrCode,  String codeFormat)  $default,) {final _that = this;
 switch (_that) {
 case _CartonCodeGenerationRequest():
-return $default(_that.factoryId,_that.subscriptionPlanId,_that.count,_that.prefix,_that.startSequence,_that.includeInternationalCodes,_that.generateQrCodes,_that.generateBarcodes,_that.batchName,_that.batchNotes,_that.metadata,_that.bundleCode,_that.packetsPerCarton,_that.cartonWeight,_that.cartonDimensions,_that.cartonType,_that.grade,_that.maxWeightCapacity,_that.temperatureRequirements,_that.handlingInstructions,_that.generateCartonBarcode,_that.generateCartonQrCode);case _:
+return $default(_that.factoryId,_that.subscriptionPlanId,_that.count,_that.prefix,_that.startSequence,_that.includeInternationalCodes,_that.generateQrCodes,_that.generateBarcodes,_that.batchName,_that.batchNotes,_that.metadata,_that.bundleCode,_that.packetsPerCarton,_that.cartonWeight,_that.cartonDimensions,_that.cartonType,_that.grade,_that.maxWeightCapacity,_that.temperatureRequirements,_that.handlingInstructions,_that.generateCartonBarcode,_that.generateCartonQrCode,_that.codeFormat);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -895,10 +897,10 @@ return $default(_that.factoryId,_that.subscriptionPlanId,_that.count,_that.prefi
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String factoryId,  String subscriptionPlanId,  int count,  String prefix,  int startSequence,  bool includeInternationalCodes,  bool generateQrCodes,  bool generateBarcodes,  String? batchName,  String? batchNotes,  String? metadata,  String bundleCode,  int packetsPerCarton,  double? cartonWeight,  String? cartonDimensions,  String? cartonType,  String? grade,  double? maxWeightCapacity,  String? temperatureRequirements,  String? handlingInstructions,  bool generateCartonBarcode,  bool generateCartonQrCode)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String factoryId,  String subscriptionPlanId,  int count,  String prefix,  int startSequence,  bool includeInternationalCodes,  bool generateQrCodes,  bool generateBarcodes,  String? batchName,  String? batchNotes,  String? metadata,  String bundleCode,  int packetsPerCarton,  double? cartonWeight,  String? cartonDimensions,  String? cartonType,  String? grade,  double? maxWeightCapacity,  String? temperatureRequirements,  String? handlingInstructions,  bool generateCartonBarcode,  bool generateCartonQrCode,  String codeFormat)?  $default,) {final _that = this;
 switch (_that) {
 case _CartonCodeGenerationRequest() when $default != null:
-return $default(_that.factoryId,_that.subscriptionPlanId,_that.count,_that.prefix,_that.startSequence,_that.includeInternationalCodes,_that.generateQrCodes,_that.generateBarcodes,_that.batchName,_that.batchNotes,_that.metadata,_that.bundleCode,_that.packetsPerCarton,_that.cartonWeight,_that.cartonDimensions,_that.cartonType,_that.grade,_that.maxWeightCapacity,_that.temperatureRequirements,_that.handlingInstructions,_that.generateCartonBarcode,_that.generateCartonQrCode);case _:
+return $default(_that.factoryId,_that.subscriptionPlanId,_that.count,_that.prefix,_that.startSequence,_that.includeInternationalCodes,_that.generateQrCodes,_that.generateBarcodes,_that.batchName,_that.batchNotes,_that.metadata,_that.bundleCode,_that.packetsPerCarton,_that.cartonWeight,_that.cartonDimensions,_that.cartonType,_that.grade,_that.maxWeightCapacity,_that.temperatureRequirements,_that.handlingInstructions,_that.generateCartonBarcode,_that.generateCartonQrCode,_that.codeFormat);case _:
   return null;
 
 }
@@ -910,7 +912,7 @@ return $default(_that.factoryId,_that.subscriptionPlanId,_that.count,_that.prefi
 @JsonSerializable()
 
 class _CartonCodeGenerationRequest implements CartonCodeGenerationRequest {
-  const _CartonCodeGenerationRequest({required this.factoryId, required this.subscriptionPlanId, required this.count, required this.prefix, this.startSequence = 1, this.includeInternationalCodes = true, this.generateQrCodes = true, this.generateBarcodes = true, this.batchName, this.batchNotes, this.metadata, required this.bundleCode, required this.packetsPerCarton, this.cartonWeight, this.cartonDimensions, this.cartonType, this.grade, this.maxWeightCapacity, this.temperatureRequirements, this.handlingInstructions, this.generateCartonBarcode = true, this.generateCartonQrCode = true});
+  const _CartonCodeGenerationRequest({required this.factoryId, required this.subscriptionPlanId, required this.count, required this.prefix, this.startSequence = 1, this.includeInternationalCodes = true, this.generateQrCodes = true, this.generateBarcodes = true, this.batchName, this.batchNotes, this.metadata, required this.bundleCode, required this.packetsPerCarton, this.cartonWeight, this.cartonDimensions, this.cartonType, this.grade, this.maxWeightCapacity, this.temperatureRequirements, this.handlingInstructions, this.generateCartonBarcode = true, this.generateCartonQrCode = true, this.codeFormat = 'qr'});
   factory _CartonCodeGenerationRequest.fromJson(Map<String, dynamic> json) => _$CartonCodeGenerationRequestFromJson(json);
 
 /// Base request parameters
@@ -948,6 +950,8 @@ class _CartonCodeGenerationRequest implements CartonCodeGenerationRequest {
 @override@JsonKey() final  bool generateCartonBarcode;
 /// Should generate separate carton QR code?
 @override@JsonKey() final  bool generateCartonQrCode;
+/// Code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label)
+@override@JsonKey() final  String codeFormat;
 
 /// Create a copy of CartonCodeGenerationRequest
 /// with the given fields replaced by the non-null parameter values.
@@ -962,16 +966,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CartonCodeGenerationRequest&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.subscriptionPlanId, subscriptionPlanId) || other.subscriptionPlanId == subscriptionPlanId)&&(identical(other.count, count) || other.count == count)&&(identical(other.prefix, prefix) || other.prefix == prefix)&&(identical(other.startSequence, startSequence) || other.startSequence == startSequence)&&(identical(other.includeInternationalCodes, includeInternationalCodes) || other.includeInternationalCodes == includeInternationalCodes)&&(identical(other.generateQrCodes, generateQrCodes) || other.generateQrCodes == generateQrCodes)&&(identical(other.generateBarcodes, generateBarcodes) || other.generateBarcodes == generateBarcodes)&&(identical(other.batchName, batchName) || other.batchName == batchName)&&(identical(other.batchNotes, batchNotes) || other.batchNotes == batchNotes)&&(identical(other.metadata, metadata) || other.metadata == metadata)&&(identical(other.bundleCode, bundleCode) || other.bundleCode == bundleCode)&&(identical(other.packetsPerCarton, packetsPerCarton) || other.packetsPerCarton == packetsPerCarton)&&(identical(other.cartonWeight, cartonWeight) || other.cartonWeight == cartonWeight)&&(identical(other.cartonDimensions, cartonDimensions) || other.cartonDimensions == cartonDimensions)&&(identical(other.cartonType, cartonType) || other.cartonType == cartonType)&&(identical(other.grade, grade) || other.grade == grade)&&(identical(other.maxWeightCapacity, maxWeightCapacity) || other.maxWeightCapacity == maxWeightCapacity)&&(identical(other.temperatureRequirements, temperatureRequirements) || other.temperatureRequirements == temperatureRequirements)&&(identical(other.handlingInstructions, handlingInstructions) || other.handlingInstructions == handlingInstructions)&&(identical(other.generateCartonBarcode, generateCartonBarcode) || other.generateCartonBarcode == generateCartonBarcode)&&(identical(other.generateCartonQrCode, generateCartonQrCode) || other.generateCartonQrCode == generateCartonQrCode));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CartonCodeGenerationRequest&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.subscriptionPlanId, subscriptionPlanId) || other.subscriptionPlanId == subscriptionPlanId)&&(identical(other.count, count) || other.count == count)&&(identical(other.prefix, prefix) || other.prefix == prefix)&&(identical(other.startSequence, startSequence) || other.startSequence == startSequence)&&(identical(other.includeInternationalCodes, includeInternationalCodes) || other.includeInternationalCodes == includeInternationalCodes)&&(identical(other.generateQrCodes, generateQrCodes) || other.generateQrCodes == generateQrCodes)&&(identical(other.generateBarcodes, generateBarcodes) || other.generateBarcodes == generateBarcodes)&&(identical(other.batchName, batchName) || other.batchName == batchName)&&(identical(other.batchNotes, batchNotes) || other.batchNotes == batchNotes)&&(identical(other.metadata, metadata) || other.metadata == metadata)&&(identical(other.bundleCode, bundleCode) || other.bundleCode == bundleCode)&&(identical(other.packetsPerCarton, packetsPerCarton) || other.packetsPerCarton == packetsPerCarton)&&(identical(other.cartonWeight, cartonWeight) || other.cartonWeight == cartonWeight)&&(identical(other.cartonDimensions, cartonDimensions) || other.cartonDimensions == cartonDimensions)&&(identical(other.cartonType, cartonType) || other.cartonType == cartonType)&&(identical(other.grade, grade) || other.grade == grade)&&(identical(other.maxWeightCapacity, maxWeightCapacity) || other.maxWeightCapacity == maxWeightCapacity)&&(identical(other.temperatureRequirements, temperatureRequirements) || other.temperatureRequirements == temperatureRequirements)&&(identical(other.handlingInstructions, handlingInstructions) || other.handlingInstructions == handlingInstructions)&&(identical(other.generateCartonBarcode, generateCartonBarcode) || other.generateCartonBarcode == generateCartonBarcode)&&(identical(other.generateCartonQrCode, generateCartonQrCode) || other.generateCartonQrCode == generateCartonQrCode)&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,factoryId,subscriptionPlanId,count,prefix,startSequence,includeInternationalCodes,generateQrCodes,generateBarcodes,batchName,batchNotes,metadata,bundleCode,packetsPerCarton,cartonWeight,cartonDimensions,cartonType,grade,maxWeightCapacity,temperatureRequirements,handlingInstructions,generateCartonBarcode,generateCartonQrCode]);
+int get hashCode => Object.hashAll([runtimeType,factoryId,subscriptionPlanId,count,prefix,startSequence,includeInternationalCodes,generateQrCodes,generateBarcodes,batchName,batchNotes,metadata,bundleCode,packetsPerCarton,cartonWeight,cartonDimensions,cartonType,grade,maxWeightCapacity,temperatureRequirements,handlingInstructions,generateCartonBarcode,generateCartonQrCode,codeFormat]);
 
 @override
 String toString() {
-  return 'CartonCodeGenerationRequest(factoryId: $factoryId, subscriptionPlanId: $subscriptionPlanId, count: $count, prefix: $prefix, startSequence: $startSequence, includeInternationalCodes: $includeInternationalCodes, generateQrCodes: $generateQrCodes, generateBarcodes: $generateBarcodes, batchName: $batchName, batchNotes: $batchNotes, metadata: $metadata, bundleCode: $bundleCode, packetsPerCarton: $packetsPerCarton, cartonWeight: $cartonWeight, cartonDimensions: $cartonDimensions, cartonType: $cartonType, grade: $grade, maxWeightCapacity: $maxWeightCapacity, temperatureRequirements: $temperatureRequirements, handlingInstructions: $handlingInstructions, generateCartonBarcode: $generateCartonBarcode, generateCartonQrCode: $generateCartonQrCode)';
+  return 'CartonCodeGenerationRequest(factoryId: $factoryId, subscriptionPlanId: $subscriptionPlanId, count: $count, prefix: $prefix, startSequence: $startSequence, includeInternationalCodes: $includeInternationalCodes, generateQrCodes: $generateQrCodes, generateBarcodes: $generateBarcodes, batchName: $batchName, batchNotes: $batchNotes, metadata: $metadata, bundleCode: $bundleCode, packetsPerCarton: $packetsPerCarton, cartonWeight: $cartonWeight, cartonDimensions: $cartonDimensions, cartonType: $cartonType, grade: $grade, maxWeightCapacity: $maxWeightCapacity, temperatureRequirements: $temperatureRequirements, handlingInstructions: $handlingInstructions, generateCartonBarcode: $generateCartonBarcode, generateCartonQrCode: $generateCartonQrCode, codeFormat: $codeFormat)';
 }
 
 
@@ -982,7 +986,7 @@ abstract mixin class _$CartonCodeGenerationRequestCopyWith<$Res> implements $Car
   factory _$CartonCodeGenerationRequestCopyWith(_CartonCodeGenerationRequest value, $Res Function(_CartonCodeGenerationRequest) _then) = __$CartonCodeGenerationRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String factoryId, String subscriptionPlanId, int count, String prefix, int startSequence, bool includeInternationalCodes, bool generateQrCodes, bool generateBarcodes, String? batchName, String? batchNotes, String? metadata, String bundleCode, int packetsPerCarton, double? cartonWeight, String? cartonDimensions, String? cartonType, String? grade, double? maxWeightCapacity, String? temperatureRequirements, String? handlingInstructions, bool generateCartonBarcode, bool generateCartonQrCode
+ String factoryId, String subscriptionPlanId, int count, String prefix, int startSequence, bool includeInternationalCodes, bool generateQrCodes, bool generateBarcodes, String? batchName, String? batchNotes, String? metadata, String bundleCode, int packetsPerCarton, double? cartonWeight, String? cartonDimensions, String? cartonType, String? grade, double? maxWeightCapacity, String? temperatureRequirements, String? handlingInstructions, bool generateCartonBarcode, bool generateCartonQrCode, String codeFormat
 });
 
 
@@ -999,7 +1003,7 @@ class __$CartonCodeGenerationRequestCopyWithImpl<$Res>
 
 /// Create a copy of CartonCodeGenerationRequest
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? factoryId = null,Object? subscriptionPlanId = null,Object? count = null,Object? prefix = null,Object? startSequence = null,Object? includeInternationalCodes = null,Object? generateQrCodes = null,Object? generateBarcodes = null,Object? batchName = freezed,Object? batchNotes = freezed,Object? metadata = freezed,Object? bundleCode = null,Object? packetsPerCarton = null,Object? cartonWeight = freezed,Object? cartonDimensions = freezed,Object? cartonType = freezed,Object? grade = freezed,Object? maxWeightCapacity = freezed,Object? temperatureRequirements = freezed,Object? handlingInstructions = freezed,Object? generateCartonBarcode = null,Object? generateCartonQrCode = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? factoryId = null,Object? subscriptionPlanId = null,Object? count = null,Object? prefix = null,Object? startSequence = null,Object? includeInternationalCodes = null,Object? generateQrCodes = null,Object? generateBarcodes = null,Object? batchName = freezed,Object? batchNotes = freezed,Object? metadata = freezed,Object? bundleCode = null,Object? packetsPerCarton = null,Object? cartonWeight = freezed,Object? cartonDimensions = freezed,Object? cartonType = freezed,Object? grade = freezed,Object? maxWeightCapacity = freezed,Object? temperatureRequirements = freezed,Object? handlingInstructions = freezed,Object? generateCartonBarcode = null,Object? generateCartonQrCode = null,Object? codeFormat = null,}) {
   return _then(_CartonCodeGenerationRequest(
 factoryId: null == factoryId ? _self.factoryId : factoryId // ignore: cast_nullable_to_non_nullable
 as String,subscriptionPlanId: null == subscriptionPlanId ? _self.subscriptionPlanId : subscriptionPlanId // ignore: cast_nullable_to_non_nullable
@@ -1023,7 +1027,8 @@ as double?,temperatureRequirements: freezed == temperatureRequirements ? _self.t
 as String?,handlingInstructions: freezed == handlingInstructions ? _self.handlingInstructions : handlingInstructions // ignore: cast_nullable_to_non_nullable
 as String?,generateCartonBarcode: null == generateCartonBarcode ? _self.generateCartonBarcode : generateCartonBarcode // ignore: cast_nullable_to_non_nullable
 as bool,generateCartonQrCode: null == generateCartonQrCode ? _self.generateCartonQrCode : generateCartonQrCode // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,codeFormat: null == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

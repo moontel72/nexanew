@@ -108,12 +108,95 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     );
   }
 
+  Widget _buildFormatFilter(CartonCodesState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Code Format',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 8.h),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(right: 8.w),
+                child: ChoiceChip(
+                  label: const Text('All'),
+                  selected: state.filterCodeFormat.isEmpty,
+                  onSelected: (selected) {
+                    if (selected) {
+                      context.read<CartonCodesBloc>().add(
+                        const FilterCartonCodesByFormat(null),
+                      );
+                    }
+                  },
+                  selectedColor: AppColors.primary.withAlpha(30),
+                  backgroundColor: AppColors.surface,
+                  side: BorderSide(
+                    color: state.filterCodeFormat.isEmpty
+                        ? AppColors.primary
+                        : AppColors.border,
+                  ),
+                  labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: state.filterCodeFormat.isEmpty
+                        ? AppColors.primary
+                        : AppColors.textPrimary,
+                    fontWeight: state.filterCodeFormat.isEmpty
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                ),
+              ),
+              ...CartonCodeFormat.values.map((format) {
+                final isSelected = state.filterCodeFormat == format.value;
+                return Padding(
+                  padding: EdgeInsets.only(right: 8.w),
+                  child: ChoiceChip(
+                    label: Text(format.displayName),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        context.read<CartonCodesBloc>().add(
+                          FilterCartonCodesByFormat(format.value),
+                        );
+                      }
+                    },
+                    selectedColor: AppColors.primary.withAlpha(30),
+                    backgroundColor: AppColors.surface,
+                    side: BorderSide(
+                      color: isSelected ? AppColors.primary : AppColors.border,
+                    ),
+                    labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textPrimary,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCartonCard(CartonCodeModel carton) {
     return Column(
       children: [
         CodeCard(
           code: carton.code,
-          codeType: carton.type.name,
+          codeType:
+              '${carton.type.name} (${CartonCodeFormat.fromValue(carton.codeFormat).displayName})',
           status: carton.status.name,
           batchNumber: carton.batchId,
           generatedDate: carton.generatedAt,
@@ -150,9 +233,9 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                         },
                       );
                       if (format == null) return;
-                      context
-                          .read<CartonCodesBloc>()
-                          .add(ExportCartonCodes([carton.id], format));
+                      context.read<CartonCodesBloc>().add(
+                        ExportCartonCodes([carton.id], format),
+                      );
                     }
                   : null,
               icon: const Icon(Icons.download_outlined),
@@ -403,23 +486,25 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
             final downloadUri = (uri != null && uri.hasScheme)
                 ? uri
                 : Uri.parse(
-                    ApiEndpoints.getFullUrl(raw.startsWith('/') ? raw : '/$raw'),
+                    ApiEndpoints.getFullUrl(
+                      raw.startsWith('/') ? raw : '/$raw',
+                    ),
                   );
 
             await launchUrl(downloadUri, mode: LaunchMode.platformDefault);
 
             if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Download started')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Download started')));
           }
 
           if (state.status == CartonCodesStatus.error &&
               state.errorMessage != null &&
               state.errorMessage!.trim().isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
           }
         },
         builder: (context, state) {
@@ -461,6 +546,10 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                             .add(SearchCartonCodes(query)),
                         hintText: 'Search carton codes...',
                       ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: _buildFormatFilter(state),
                     ),
                     Padding(
                       padding: EdgeInsets.all(16.w),
@@ -509,6 +598,9 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                               .add(SearchCartonCodes(query)),
                           hintText: 'Search carton codes...',
                         ),
+                        SizedBox(height: 12.h),
+                        // Format filter chips
+                        _buildFormatFilter(state),
                         SizedBox(height: 12.h),
                         _buildStatistics(),
                         SizedBox(height: 12.h),
@@ -706,6 +798,11 @@ class _CartonDetailsBottomSheet extends StatelessWidget {
               ),
               SizedBox(height: 16.h),
               _buildDetailRow(context, 'Code', carton.code),
+              _buildDetailRow(
+                context,
+                'Format',
+                CartonCodeFormat.fromValue(carton.codeFormat).displayName,
+              ),
               _buildDetailRow(context, 'Bundle', carton.bundleCode),
               _buildDetailRow(
                 context,
