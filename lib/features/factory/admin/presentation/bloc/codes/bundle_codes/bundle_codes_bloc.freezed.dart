@@ -1244,7 +1244,7 @@ as String,
 /// @nodoc
 mixin _$BundleCodesState {
 
- BundleCodesStatus get status; CodeGenerationStatus get generationStatus; ExportStatus get exportStatus; List<BundleCodeModel> get codes; List<BundleCodeModel> get filteredCodes; Set<String> get selectedCodes; String? get error; String get searchQuery; FilterBundleCodes? get currentFilter; String? get lastGeneratedBatchId; int? get lastGeneratedCount; bool get hasReachedMax; int get page; int get pageSize;
+ BundleCodesStatus get status; CodeGenerationStatus get generationStatus; ExportStatus get exportStatus; List<BundleCodeModel> get codes; List<BundleCodeModel> get filteredCodes; Set<String> get selectedCodes; String? get exportPath; String? get error; String get searchQuery; FilterBundleCodes? get currentFilter; String? get lastGeneratedBatchId; int? get lastGeneratedCount; bool get hasReachedMax; int get page; int get pageSize;
 /// Create a copy of BundleCodesState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1255,16 +1255,16 @@ $BundleCodesStateCopyWith<BundleCodesState> get copyWith => _$BundleCodesStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BundleCodesState&&(identical(other.status, status) || other.status == status)&&(identical(other.generationStatus, generationStatus) || other.generationStatus == generationStatus)&&(identical(other.exportStatus, exportStatus) || other.exportStatus == exportStatus)&&const DeepCollectionEquality().equals(other.codes, codes)&&const DeepCollectionEquality().equals(other.filteredCodes, filteredCodes)&&const DeepCollectionEquality().equals(other.selectedCodes, selectedCodes)&&(identical(other.error, error) || other.error == error)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&const DeepCollectionEquality().equals(other.currentFilter, currentFilter)&&(identical(other.lastGeneratedBatchId, lastGeneratedBatchId) || other.lastGeneratedBatchId == lastGeneratedBatchId)&&(identical(other.lastGeneratedCount, lastGeneratedCount) || other.lastGeneratedCount == lastGeneratedCount)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.page, page) || other.page == page)&&(identical(other.pageSize, pageSize) || other.pageSize == pageSize));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BundleCodesState&&(identical(other.status, status) || other.status == status)&&(identical(other.generationStatus, generationStatus) || other.generationStatus == generationStatus)&&(identical(other.exportStatus, exportStatus) || other.exportStatus == exportStatus)&&const DeepCollectionEquality().equals(other.codes, codes)&&const DeepCollectionEquality().equals(other.filteredCodes, filteredCodes)&&const DeepCollectionEquality().equals(other.selectedCodes, selectedCodes)&&(identical(other.exportPath, exportPath) || other.exportPath == exportPath)&&(identical(other.error, error) || other.error == error)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&const DeepCollectionEquality().equals(other.currentFilter, currentFilter)&&(identical(other.lastGeneratedBatchId, lastGeneratedBatchId) || other.lastGeneratedBatchId == lastGeneratedBatchId)&&(identical(other.lastGeneratedCount, lastGeneratedCount) || other.lastGeneratedCount == lastGeneratedCount)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.page, page) || other.page == page)&&(identical(other.pageSize, pageSize) || other.pageSize == pageSize));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,generationStatus,exportStatus,const DeepCollectionEquality().hash(codes),const DeepCollectionEquality().hash(filteredCodes),const DeepCollectionEquality().hash(selectedCodes),error,searchQuery,const DeepCollectionEquality().hash(currentFilter),lastGeneratedBatchId,lastGeneratedCount,hasReachedMax,page,pageSize);
+int get hashCode => Object.hash(runtimeType,status,generationStatus,exportStatus,const DeepCollectionEquality().hash(codes),const DeepCollectionEquality().hash(filteredCodes),const DeepCollectionEquality().hash(selectedCodes),exportPath,error,searchQuery,const DeepCollectionEquality().hash(currentFilter),lastGeneratedBatchId,lastGeneratedCount,hasReachedMax,page,pageSize);
 
 @override
 String toString() {
-  return 'BundleCodesState(status: $status, generationStatus: $generationStatus, exportStatus: $exportStatus, codes: $codes, filteredCodes: $filteredCodes, selectedCodes: $selectedCodes, error: $error, searchQuery: $searchQuery, currentFilter: $currentFilter, lastGeneratedBatchId: $lastGeneratedBatchId, lastGeneratedCount: $lastGeneratedCount, hasReachedMax: $hasReachedMax, page: $page, pageSize: $pageSize)';
+  return 'BundleCodesState(status: $status, generationStatus: $generationStatus, exportStatus: $exportStatus, codes: $codes, filteredCodes: $filteredCodes, selectedCodes: $selectedCodes, exportPath: $exportPath, error: $error, searchQuery: $searchQuery, currentFilter: $currentFilter, lastGeneratedBatchId: $lastGeneratedBatchId, lastGeneratedCount: $lastGeneratedCount, hasReachedMax: $hasReachedMax, page: $page, pageSize: $pageSize)';
 }
 
 
@@ -1275,7 +1275,7 @@ abstract mixin class $BundleCodesStateCopyWith<$Res>  {
   factory $BundleCodesStateCopyWith(BundleCodesState value, $Res Function(BundleCodesState) _then) = _$BundleCodesStateCopyWithImpl;
 @useResult
 $Res call({
- BundleCodesStatus status, CodeGenerationStatus generationStatus, ExportStatus exportStatus, List<BundleCodeModel> codes, List<BundleCodeModel> filteredCodes, Set<String> selectedCodes, String? error, String searchQuery, FilterBundleCodes? currentFilter, String? lastGeneratedBatchId, int? lastGeneratedCount, bool hasReachedMax, int page, int pageSize
+ BundleCodesStatus status, CodeGenerationStatus generationStatus, ExportStatus exportStatus, List<BundleCodeModel> codes, List<BundleCodeModel> filteredCodes, Set<String> selectedCodes, String? exportPath, String? error, String searchQuery, FilterBundleCodes? currentFilter, String? lastGeneratedBatchId, int? lastGeneratedCount, bool hasReachedMax, int page, int pageSize
 });
 
 
@@ -1292,7 +1292,7 @@ class _$BundleCodesStateCopyWithImpl<$Res>
 
 /// Create a copy of BundleCodesState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? generationStatus = null,Object? exportStatus = null,Object? codes = null,Object? filteredCodes = null,Object? selectedCodes = null,Object? error = freezed,Object? searchQuery = null,Object? currentFilter = freezed,Object? lastGeneratedBatchId = freezed,Object? lastGeneratedCount = freezed,Object? hasReachedMax = null,Object? page = null,Object? pageSize = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? generationStatus = null,Object? exportStatus = null,Object? codes = null,Object? filteredCodes = null,Object? selectedCodes = null,Object? exportPath = freezed,Object? error = freezed,Object? searchQuery = null,Object? currentFilter = freezed,Object? lastGeneratedBatchId = freezed,Object? lastGeneratedCount = freezed,Object? hasReachedMax = null,Object? page = null,Object? pageSize = null,}) {
   return _then(_self.copyWith(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as BundleCodesStatus,generationStatus: null == generationStatus ? _self.generationStatus : generationStatus // ignore: cast_nullable_to_non_nullable
@@ -1300,7 +1300,8 @@ as CodeGenerationStatus,exportStatus: null == exportStatus ? _self.exportStatus 
 as ExportStatus,codes: null == codes ? _self.codes : codes // ignore: cast_nullable_to_non_nullable
 as List<BundleCodeModel>,filteredCodes: null == filteredCodes ? _self.filteredCodes : filteredCodes // ignore: cast_nullable_to_non_nullable
 as List<BundleCodeModel>,selectedCodes: null == selectedCodes ? _self.selectedCodes : selectedCodes // ignore: cast_nullable_to_non_nullable
-as Set<String>,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as Set<String>,exportPath: freezed == exportPath ? _self.exportPath : exportPath // ignore: cast_nullable_to_non_nullable
+as String?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as String?,searchQuery: null == searchQuery ? _self.searchQuery : searchQuery // ignore: cast_nullable_to_non_nullable
 as String,currentFilter: freezed == currentFilter ? _self.currentFilter : currentFilter // ignore: cast_nullable_to_non_nullable
 as FilterBundleCodes?,lastGeneratedBatchId: freezed == lastGeneratedBatchId ? _self.lastGeneratedBatchId : lastGeneratedBatchId // ignore: cast_nullable_to_non_nullable
@@ -1393,10 +1394,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( BundleCodesStatus status,  CodeGenerationStatus generationStatus,  ExportStatus exportStatus,  List<BundleCodeModel> codes,  List<BundleCodeModel> filteredCodes,  Set<String> selectedCodes,  String? error,  String searchQuery,  FilterBundleCodes? currentFilter,  String? lastGeneratedBatchId,  int? lastGeneratedCount,  bool hasReachedMax,  int page,  int pageSize)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( BundleCodesStatus status,  CodeGenerationStatus generationStatus,  ExportStatus exportStatus,  List<BundleCodeModel> codes,  List<BundleCodeModel> filteredCodes,  Set<String> selectedCodes,  String? exportPath,  String? error,  String searchQuery,  FilterBundleCodes? currentFilter,  String? lastGeneratedBatchId,  int? lastGeneratedCount,  bool hasReachedMax,  int page,  int pageSize)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BundleCodesState() when $default != null:
-return $default(_that.status,_that.generationStatus,_that.exportStatus,_that.codes,_that.filteredCodes,_that.selectedCodes,_that.error,_that.searchQuery,_that.currentFilter,_that.lastGeneratedBatchId,_that.lastGeneratedCount,_that.hasReachedMax,_that.page,_that.pageSize);case _:
+return $default(_that.status,_that.generationStatus,_that.exportStatus,_that.codes,_that.filteredCodes,_that.selectedCodes,_that.exportPath,_that.error,_that.searchQuery,_that.currentFilter,_that.lastGeneratedBatchId,_that.lastGeneratedCount,_that.hasReachedMax,_that.page,_that.pageSize);case _:
   return orElse();
 
 }
@@ -1414,10 +1415,10 @@ return $default(_that.status,_that.generationStatus,_that.exportStatus,_that.cod
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( BundleCodesStatus status,  CodeGenerationStatus generationStatus,  ExportStatus exportStatus,  List<BundleCodeModel> codes,  List<BundleCodeModel> filteredCodes,  Set<String> selectedCodes,  String? error,  String searchQuery,  FilterBundleCodes? currentFilter,  String? lastGeneratedBatchId,  int? lastGeneratedCount,  bool hasReachedMax,  int page,  int pageSize)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( BundleCodesStatus status,  CodeGenerationStatus generationStatus,  ExportStatus exportStatus,  List<BundleCodeModel> codes,  List<BundleCodeModel> filteredCodes,  Set<String> selectedCodes,  String? exportPath,  String? error,  String searchQuery,  FilterBundleCodes? currentFilter,  String? lastGeneratedBatchId,  int? lastGeneratedCount,  bool hasReachedMax,  int page,  int pageSize)  $default,) {final _that = this;
 switch (_that) {
 case _BundleCodesState():
-return $default(_that.status,_that.generationStatus,_that.exportStatus,_that.codes,_that.filteredCodes,_that.selectedCodes,_that.error,_that.searchQuery,_that.currentFilter,_that.lastGeneratedBatchId,_that.lastGeneratedCount,_that.hasReachedMax,_that.page,_that.pageSize);case _:
+return $default(_that.status,_that.generationStatus,_that.exportStatus,_that.codes,_that.filteredCodes,_that.selectedCodes,_that.exportPath,_that.error,_that.searchQuery,_that.currentFilter,_that.lastGeneratedBatchId,_that.lastGeneratedCount,_that.hasReachedMax,_that.page,_that.pageSize);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1434,10 +1435,10 @@ return $default(_that.status,_that.generationStatus,_that.exportStatus,_that.cod
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( BundleCodesStatus status,  CodeGenerationStatus generationStatus,  ExportStatus exportStatus,  List<BundleCodeModel> codes,  List<BundleCodeModel> filteredCodes,  Set<String> selectedCodes,  String? error,  String searchQuery,  FilterBundleCodes? currentFilter,  String? lastGeneratedBatchId,  int? lastGeneratedCount,  bool hasReachedMax,  int page,  int pageSize)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( BundleCodesStatus status,  CodeGenerationStatus generationStatus,  ExportStatus exportStatus,  List<BundleCodeModel> codes,  List<BundleCodeModel> filteredCodes,  Set<String> selectedCodes,  String? exportPath,  String? error,  String searchQuery,  FilterBundleCodes? currentFilter,  String? lastGeneratedBatchId,  int? lastGeneratedCount,  bool hasReachedMax,  int page,  int pageSize)?  $default,) {final _that = this;
 switch (_that) {
 case _BundleCodesState() when $default != null:
-return $default(_that.status,_that.generationStatus,_that.exportStatus,_that.codes,_that.filteredCodes,_that.selectedCodes,_that.error,_that.searchQuery,_that.currentFilter,_that.lastGeneratedBatchId,_that.lastGeneratedCount,_that.hasReachedMax,_that.page,_that.pageSize);case _:
+return $default(_that.status,_that.generationStatus,_that.exportStatus,_that.codes,_that.filteredCodes,_that.selectedCodes,_that.exportPath,_that.error,_that.searchQuery,_that.currentFilter,_that.lastGeneratedBatchId,_that.lastGeneratedCount,_that.hasReachedMax,_that.page,_that.pageSize);case _:
   return null;
 
 }
@@ -1449,7 +1450,7 @@ return $default(_that.status,_that.generationStatus,_that.exportStatus,_that.cod
 
 
 class _BundleCodesState extends BundleCodesState {
-  const _BundleCodesState({this.status = BundleCodesStatus.initial, this.generationStatus = CodeGenerationStatus.initial, this.exportStatus = ExportStatus.initial, final  List<BundleCodeModel> codes = const [], final  List<BundleCodeModel> filteredCodes = const [], final  Set<String> selectedCodes = const {}, this.error, this.searchQuery = '', this.currentFilter, this.lastGeneratedBatchId, this.lastGeneratedCount, this.hasReachedMax = false, this.page = 1, this.pageSize = 20}): _codes = codes,_filteredCodes = filteredCodes,_selectedCodes = selectedCodes,super._();
+  const _BundleCodesState({this.status = BundleCodesStatus.initial, this.generationStatus = CodeGenerationStatus.initial, this.exportStatus = ExportStatus.initial, final  List<BundleCodeModel> codes = const [], final  List<BundleCodeModel> filteredCodes = const [], final  Set<String> selectedCodes = const {}, this.exportPath, this.error, this.searchQuery = '', this.currentFilter, this.lastGeneratedBatchId, this.lastGeneratedCount, this.hasReachedMax = false, this.page = 1, this.pageSize = 20}): _codes = codes,_filteredCodes = filteredCodes,_selectedCodes = selectedCodes,super._();
   
 
 @override@JsonKey() final  BundleCodesStatus status;
@@ -1476,6 +1477,7 @@ class _BundleCodesState extends BundleCodesState {
   return EqualUnmodifiableSetView(_selectedCodes);
 }
 
+@override final  String? exportPath;
 @override final  String? error;
 @override@JsonKey() final  String searchQuery;
 @override final  FilterBundleCodes? currentFilter;
@@ -1495,16 +1497,16 @@ _$BundleCodesStateCopyWith<_BundleCodesState> get copyWith => __$BundleCodesStat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BundleCodesState&&(identical(other.status, status) || other.status == status)&&(identical(other.generationStatus, generationStatus) || other.generationStatus == generationStatus)&&(identical(other.exportStatus, exportStatus) || other.exportStatus == exportStatus)&&const DeepCollectionEquality().equals(other._codes, _codes)&&const DeepCollectionEquality().equals(other._filteredCodes, _filteredCodes)&&const DeepCollectionEquality().equals(other._selectedCodes, _selectedCodes)&&(identical(other.error, error) || other.error == error)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&const DeepCollectionEquality().equals(other.currentFilter, currentFilter)&&(identical(other.lastGeneratedBatchId, lastGeneratedBatchId) || other.lastGeneratedBatchId == lastGeneratedBatchId)&&(identical(other.lastGeneratedCount, lastGeneratedCount) || other.lastGeneratedCount == lastGeneratedCount)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.page, page) || other.page == page)&&(identical(other.pageSize, pageSize) || other.pageSize == pageSize));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BundleCodesState&&(identical(other.status, status) || other.status == status)&&(identical(other.generationStatus, generationStatus) || other.generationStatus == generationStatus)&&(identical(other.exportStatus, exportStatus) || other.exportStatus == exportStatus)&&const DeepCollectionEquality().equals(other._codes, _codes)&&const DeepCollectionEquality().equals(other._filteredCodes, _filteredCodes)&&const DeepCollectionEquality().equals(other._selectedCodes, _selectedCodes)&&(identical(other.exportPath, exportPath) || other.exportPath == exportPath)&&(identical(other.error, error) || other.error == error)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&const DeepCollectionEquality().equals(other.currentFilter, currentFilter)&&(identical(other.lastGeneratedBatchId, lastGeneratedBatchId) || other.lastGeneratedBatchId == lastGeneratedBatchId)&&(identical(other.lastGeneratedCount, lastGeneratedCount) || other.lastGeneratedCount == lastGeneratedCount)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.page, page) || other.page == page)&&(identical(other.pageSize, pageSize) || other.pageSize == pageSize));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,generationStatus,exportStatus,const DeepCollectionEquality().hash(_codes),const DeepCollectionEquality().hash(_filteredCodes),const DeepCollectionEquality().hash(_selectedCodes),error,searchQuery,const DeepCollectionEquality().hash(currentFilter),lastGeneratedBatchId,lastGeneratedCount,hasReachedMax,page,pageSize);
+int get hashCode => Object.hash(runtimeType,status,generationStatus,exportStatus,const DeepCollectionEquality().hash(_codes),const DeepCollectionEquality().hash(_filteredCodes),const DeepCollectionEquality().hash(_selectedCodes),exportPath,error,searchQuery,const DeepCollectionEquality().hash(currentFilter),lastGeneratedBatchId,lastGeneratedCount,hasReachedMax,page,pageSize);
 
 @override
 String toString() {
-  return 'BundleCodesState(status: $status, generationStatus: $generationStatus, exportStatus: $exportStatus, codes: $codes, filteredCodes: $filteredCodes, selectedCodes: $selectedCodes, error: $error, searchQuery: $searchQuery, currentFilter: $currentFilter, lastGeneratedBatchId: $lastGeneratedBatchId, lastGeneratedCount: $lastGeneratedCount, hasReachedMax: $hasReachedMax, page: $page, pageSize: $pageSize)';
+  return 'BundleCodesState(status: $status, generationStatus: $generationStatus, exportStatus: $exportStatus, codes: $codes, filteredCodes: $filteredCodes, selectedCodes: $selectedCodes, exportPath: $exportPath, error: $error, searchQuery: $searchQuery, currentFilter: $currentFilter, lastGeneratedBatchId: $lastGeneratedBatchId, lastGeneratedCount: $lastGeneratedCount, hasReachedMax: $hasReachedMax, page: $page, pageSize: $pageSize)';
 }
 
 
@@ -1515,7 +1517,7 @@ abstract mixin class _$BundleCodesStateCopyWith<$Res> implements $BundleCodesSta
   factory _$BundleCodesStateCopyWith(_BundleCodesState value, $Res Function(_BundleCodesState) _then) = __$BundleCodesStateCopyWithImpl;
 @override @useResult
 $Res call({
- BundleCodesStatus status, CodeGenerationStatus generationStatus, ExportStatus exportStatus, List<BundleCodeModel> codes, List<BundleCodeModel> filteredCodes, Set<String> selectedCodes, String? error, String searchQuery, FilterBundleCodes? currentFilter, String? lastGeneratedBatchId, int? lastGeneratedCount, bool hasReachedMax, int page, int pageSize
+ BundleCodesStatus status, CodeGenerationStatus generationStatus, ExportStatus exportStatus, List<BundleCodeModel> codes, List<BundleCodeModel> filteredCodes, Set<String> selectedCodes, String? exportPath, String? error, String searchQuery, FilterBundleCodes? currentFilter, String? lastGeneratedBatchId, int? lastGeneratedCount, bool hasReachedMax, int page, int pageSize
 });
 
 
@@ -1532,7 +1534,7 @@ class __$BundleCodesStateCopyWithImpl<$Res>
 
 /// Create a copy of BundleCodesState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? generationStatus = null,Object? exportStatus = null,Object? codes = null,Object? filteredCodes = null,Object? selectedCodes = null,Object? error = freezed,Object? searchQuery = null,Object? currentFilter = freezed,Object? lastGeneratedBatchId = freezed,Object? lastGeneratedCount = freezed,Object? hasReachedMax = null,Object? page = null,Object? pageSize = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? generationStatus = null,Object? exportStatus = null,Object? codes = null,Object? filteredCodes = null,Object? selectedCodes = null,Object? exportPath = freezed,Object? error = freezed,Object? searchQuery = null,Object? currentFilter = freezed,Object? lastGeneratedBatchId = freezed,Object? lastGeneratedCount = freezed,Object? hasReachedMax = null,Object? page = null,Object? pageSize = null,}) {
   return _then(_BundleCodesState(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as BundleCodesStatus,generationStatus: null == generationStatus ? _self.generationStatus : generationStatus // ignore: cast_nullable_to_non_nullable
@@ -1540,7 +1542,8 @@ as CodeGenerationStatus,exportStatus: null == exportStatus ? _self.exportStatus 
 as ExportStatus,codes: null == codes ? _self._codes : codes // ignore: cast_nullable_to_non_nullable
 as List<BundleCodeModel>,filteredCodes: null == filteredCodes ? _self._filteredCodes : filteredCodes // ignore: cast_nullable_to_non_nullable
 as List<BundleCodeModel>,selectedCodes: null == selectedCodes ? _self._selectedCodes : selectedCodes // ignore: cast_nullable_to_non_nullable
-as Set<String>,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as Set<String>,exportPath: freezed == exportPath ? _self.exportPath : exportPath // ignore: cast_nullable_to_non_nullable
+as String?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as String?,searchQuery: null == searchQuery ? _self.searchQuery : searchQuery // ignore: cast_nullable_to_non_nullable
 as String,currentFilter: freezed == currentFilter ? _self.currentFilter : currentFilter // ignore: cast_nullable_to_non_nullable
 as FilterBundleCodes?,lastGeneratedBatchId: freezed == lastGeneratedBatchId ? _self.lastGeneratedBatchId : lastGeneratedBatchId // ignore: cast_nullable_to_non_nullable

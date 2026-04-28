@@ -18,6 +18,7 @@ abstract class BundleCodesState with _$BundleCodesState {
     @Default([]) List<BundleCodeModel> codes,
     @Default([]) List<BundleCodeModel> filteredCodes,
     @Default({}) Set<String> selectedCodes,
+    String? exportPath,
     String? error,
     @Default('') String searchQuery,
     FilterBundleCodes? currentFilter,

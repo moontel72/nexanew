@@ -388,7 +388,7 @@ class BundleCodesBloc extends Bloc<BundleCodesEvent, BundleCodesState> {
     Emitter<BundleCodesState> emit,
   ) async {
     try {
-      emit(state.copyWith(exportStatus: ExportStatus.exporting));
+      emit(state.copyWith(exportStatus: ExportStatus.exporting, error: null));
 
       final ids = (event.codeIds ?? state.selectedCodes.toList()).toList();
       if (ids.isEmpty) {
@@ -406,7 +406,7 @@ class BundleCodesBloc extends Bloc<BundleCodesEvent, BundleCodesState> {
         _ => 'csv',
       };
 
-      await _codesRepository.downloadBundleCodes(
+      final exportPath = await _codesRepository.downloadBundleCodes(
         codeIds: ids,
         format: format,
         includeQrCodes: event.includeQrCodes,
@@ -414,7 +414,7 @@ class BundleCodesBloc extends Bloc<BundleCodesEvent, BundleCodesState> {
         includeInternationalCodes: event.includeInternationalCodes,
       );
 
-      emit(state.copyWith(exportStatus: ExportStatus.success));
+      emit(state.copyWith(exportStatus: ExportStatus.success, exportPath: exportPath));
     } catch (error) {
       if (error is LockedException) {
         emit(

@@ -103,7 +103,7 @@ class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
       appBar: _buildAppBar(),
       body: BlocConsumer<BundleCodesBloc, BundleCodesState>(
         listener: (context, state) async {
-          if (state.status == BundleCodesStatus.exported &&
+          if (state.exportStatus == ExportStatus.success &&
               state.exportPath != null &&
               state.exportPath!.trim().isNotEmpty) {
             final raw = state.exportPath!.trim();
@@ -122,11 +122,11 @@ class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
             );
           }
 
-          if (state.status == BundleCodesStatus.error &&
-              state.errorMessage != null &&
-              state.errorMessage!.trim().isNotEmpty) {
+          if (state.exportStatus == ExportStatus.failure &&
+              state.error != null &&
+              state.error!.trim().isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
+              SnackBar(content: Text(state.error!)),
             );
           }
         },
@@ -352,9 +352,16 @@ class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
                                 },
                               );
                               if (format == null) return;
+                              final exportFormat =
+                                  (format == 'pdf') ? ExportFormat.pdf : ExportFormat.csv;
                               context
                                   .read<BundleCodesBloc>()
-                                  .add(ExportBundleCodes([code.id], format));
+                                  .add(
+                                    ExportBundleCodes(
+                                      format: exportFormat,
+                                      codeIds: [code.id],
+                                    ),
+                                  );
                             }
                           : null,
                       icon: const Icon(Icons.download_outlined),
