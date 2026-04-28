@@ -154,7 +154,8 @@ abstract class PacketCodeModel with _$PacketCodeModel {
       status == CodeStatus.generated || status == CodeStatus.linked;
 
   /// Check if code can be published
-  bool get canPublish => status == CodeStatus.linked;
+  bool get canPublish =>
+      status == CodeStatus.generated || status == CodeStatus.linked;
 
   /// Check if code can be deactivated
   bool get canDeactivate => status == CodeStatus.published;

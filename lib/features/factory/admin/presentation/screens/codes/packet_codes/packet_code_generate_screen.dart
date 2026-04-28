@@ -70,38 +70,17 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
         factoryId: 'factory_123', // TODO: Get from auth state
         subscriptionPlanId: 'plan_premium', // TODO: Get from subscription state
         count: int.parse(_countController.text),
-        prefix: _prefixController.text,
+        prefix: 'P',
         cartonCode: '',
-        unitsPerPacket: 1,
-        includeInternationalCodes: _includeInternationalCodes,
-        generateQrCodes: _generateQrCodes,
-        generateBarcodes: _generateBarcodes,
-        batchName: _batchNameController.text.isNotEmpty
-            ? _batchNameController.text
-            : null,
-        batchNotes: _batchNotesController.text.isNotEmpty
-            ? _batchNotesController.text
-            : null,
-        packetWeight: _packetWeightController.text.isNotEmpty
-            ? double.tryParse(_packetWeightController.text)
-            : null,
-        packetDimensions: _packetDimensionsController.text.isNotEmpty
-            ? _packetDimensionsController.text
-            : null,
-        packetType: _packetTypeController.text.isNotEmpty
-            ? _packetTypeController.text
-            : null,
-        material: _materialController.text.isNotEmpty
-            ? _materialController.text
-            : null,
-        sealingMethod: _sealingMethodController.text.isNotEmpty
-            ? _sealingMethodController.text
-            : null,
-        includeTamperEvidence: _includeTamperEvidence,
-        includeChildSafety: _includeChildSafety,
-        includeInstructions: _includeInstructions,
-        generatePacketBarcode: _generatePacketBarcode,
-        generatePacketQrCode: _generatePacketQrCode,
+        unitsPerPacket: 0,
+        includeInternationalCodes: true,
+        generateQrCodes: true,
+        generateBarcodes: true,
+        includeTamperEvidence: false,
+        includeChildSafety: false,
+        includeInstructions: true,
+        generatePacketBarcode: true,
+        generatePacketQrCode: true,
       );
 
       context.read<PacketCodesBloc>().add(GeneratePacketCodes(request));
@@ -168,67 +147,24 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
               ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
             ),
             SizedBox(height: 16.h),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    controller: _countController,
-                    labelText: 'Number of Packets',
-                    hintText: 'Enter number',
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter number of packets';
-                      }
-                      final count = int.tryParse(value);
-                      if (count == null || count <= 0) {
-                        return 'Please enter a valid number';
-                      }
-                      if (count > 5000) {
-                        return 'Maximum 5000 packets per batch';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: CustomTextField(
-                    controller: _prefixController,
-                    labelText: 'Code Prefix',
-                    hintText: 'e.g., P, PKT, PACK',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter code prefix';
-                      }
-                      if (value.length > 4) {
-                        return 'Prefix should be 1-4 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    controller: _batchNameController,
-                    labelText: 'Batch Name (Optional)',
-                    hintText: 'e.g., Medicine Packets Q2',
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: CustomTextField(
-                    controller: _batchNotesController,
-                    labelText: 'Batch Notes (Optional)',
-                    hintText: 'Additional information',
-                  ),
-                ),
-              ],
+            CustomTextField(
+              controller: _countController,
+              labelText: 'Quantity',
+              hintText: 'e.g., 500',
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter quantity';
+                }
+                final count = int.tryParse(value);
+                if (count == null || count <= 0) {
+                  return 'Please enter a valid number';
+                }
+                if (count > 5000) {
+                  return 'Maximum 5000 packets per batch';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -535,12 +471,6 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
                 child: Column(
                   children: [
                     _buildBasicInfoSection(),
-                    SizedBox(height: 16.h),
-                    _buildPacketSpecificationsSection(),
-                    SizedBox(height: 16.h),
-                    _buildSafetyFeaturesSection(),
-                    SizedBox(height: 16.h),
-                    _buildCodeOptionsSection(),
                     SizedBox(height: 32.h),
                     PrimaryButton(
                       onPressed: _generateCodes,

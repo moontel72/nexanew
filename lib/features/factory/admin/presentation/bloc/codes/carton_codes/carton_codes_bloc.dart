@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:nexatrace_system/core/errors/app_exceptions.dart';
+import 'package:nexatrace_system/features/factory/admin/data/repositories/codes_repository_impl.dart';
 import 'package:nexatrace_system/features/factory/admin/domain/repositories/codes_repository.dart';
 import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
 import 'package:nexatrace_system/shared/models/code/carton_code_model.dart';
@@ -71,8 +73,10 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
       await _codesRepository.generateCartonCodes(
         count: event.request.count,
         batchId: event.request.batchName,
-        packetCount: event.request.packetsPerCarton,
-        unitsPerPacket: 12,
+        packetCount: event.request.packetsPerCarton > 0
+            ? event.request.packetsPerCarton
+            : null,
+        unitsPerPacket: null,
       );
 
       final updatedCodes = await _codesRepository.getCartonCodes(
@@ -125,8 +129,10 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
         );
       }
 
-      // TODO: Implement API call to delete carton code
-      await Future.delayed(const Duration(milliseconds: 300));
+      await (_codesRepository as CodesRepositoryImpl).deleteCode(
+        type: 'carton',
+        id: event.cartonCodeId,
+      );
 
       // Remove from lists
       final updatedCodes = List<CartonCodeModel>.from(state.cartonCodes);
@@ -173,8 +179,10 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
         throw Exception('No deletable carton codes found in selection');
       }
 
-      // TODO: Implement API call to delete carton codes in batch
-      await Future.delayed(const Duration(milliseconds: 500));
+      await (_codesRepository as CodesRepositoryImpl).deleteCodesBatch(
+        type: 'carton',
+        ids: deletableCartons.map((c) => c.id).toList(),
+      );
 
       // Remove from lists
       final updatedCodes = state.cartonCodes
@@ -284,18 +292,12 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
 
       final carton = state.cartonCodes[cartonIndex];
 
-      // Check if carton can be published (only linked codes)
-      if (carton.status != CodeStatus.linked) {
-        throw Exception('Only linked carton codes can be published');
+      if (carton.status != CodeStatus.generated &&
+          carton.status != CodeStatus.linked) {
+        throw Exception('Only generated or linked carton codes can be published');
       }
 
-      await _codesRepository.publishCartonCodes(
-        codeIds: [carton.id],
-        productBatchNumber: carton.productBatchNumber,
-        manufacturingDate: carton.manufacturingDate,
-        expiryDate: carton.expiryDate,
-        warrantyMonths: carton.warrantyMonths,
-      );
+      await _codesRepository.publishCartonCodes(codeIds: [carton.id]);
 
       // Update carton
       final updatedCarton = carton.copyWith(
@@ -439,6 +441,16 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
         ),
       );
     } catch (e) {
+      if (e is LockedException) {
+        emit(
+          state.copyWith(
+            status: CartonCodesStatus.error,
+            isExporting: false,
+            errorMessage: '${e.message} (Invoice: ${e.invoiceId})',
+          ),
+        );
+        return;
+      }
       emit(
         state.copyWith(
           status: CartonCodesStatus.error,

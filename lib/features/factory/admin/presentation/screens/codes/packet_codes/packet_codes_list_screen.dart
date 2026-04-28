@@ -10,6 +10,8 @@ import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 import 'package:nexatrace_system/shared/widgets/cards/code_card.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:nexatrace_system/core/constants/api_endpoints.dart';
 
 class PacketCodesListScreen extends StatefulWidget {
   const PacketCodesListScreen({super.key});
@@ -60,7 +62,6 @@ class _PacketCodesListScreenState extends State<PacketCodesListScreen> {
                 SizedBox(height: 12.h),
                 _kv('Code', packet.code),
                 _kv('Status', packet.status.name),
-                _kv('Carton', packet.cartonCode),
                 _kv('Units', packet.unitCount.toString()),
                 if (packet.packetType != null) _kv('Type', packet.packetType!),
                 if (packet.dimensions != null)
@@ -131,7 +132,33 @@ class _PacketCodesListScreenState extends State<PacketCodesListScreen> {
           ),
         ],
       ),
-      body: BlocBuilder<PacketCodesBloc, PacketCodesState>(
+      body: BlocConsumer<PacketCodesBloc, PacketCodesState>(
+        listener: (context, state) async {
+          if (state.status == PacketCodesStatus.exported &&
+              state.exportPath != null &&
+              state.exportPath!.trim().isNotEmpty) {
+            final raw = state.exportPath!.trim();
+            final uri = Uri.tryParse(raw);
+            final downloadUri = (uri != null && uri.hasScheme)
+                ? uri
+                : Uri.parse(ApiEndpoints.getFullUrl(raw.startsWith('/') ? raw : '/$raw'));
+
+            await launchUrl(downloadUri, mode: LaunchMode.platformDefault);
+
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Download started')),
+            );
+          }
+
+          if (state.status == PacketCodesStatus.error &&
+              state.errorMessage != null &&
+              state.errorMessage!.trim().isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.errorMessage!)),
+            );
+          }
+        },
         builder: (context, state) {
           if (state.status == PacketCodesStatus.loading ||
               state.status == PacketCodesStatus.generating) {
@@ -196,7 +223,7 @@ class _PacketCodesListScreenState extends State<PacketCodesListScreen> {
                 status: p.status.name,
                 batchNumber: p.batchId,
                 generatedDate: p.generatedAt,
-                productName: 'Carton: ${p.cartonCode}',
+                productName: '',
                 actions: [
                   OutlinedButton.icon(
                     onPressed: () => _showDetails(p),
@@ -204,13 +231,36 @@ class _PacketCodesListScreenState extends State<PacketCodesListScreen> {
                     label: const Text('View Details'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Download will be added soon'),
-                        ),
-                      );
-                    },
+                    onPressed: p.status == CodeStatus.published
+                        ? () async {
+                            final format = await showModalBottomSheet<String>(
+                              context: context,
+                              builder: (context) {
+                                return SafeArea(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ListTile(
+                                        leading: const Icon(Icons.picture_as_pdf),
+                                        title: const Text('Download PDF'),
+                                        onTap: () => Navigator.pop(context, 'pdf'),
+                                      ),
+                                      ListTile(
+                                        leading: const Icon(Icons.table_chart),
+                                        title: const Text('Download CSV'),
+                                        onTap: () => Navigator.pop(context, 'csv'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                            if (format == null) return;
+                            context
+                                .read<PacketCodesBloc>()
+                                .add(ExportPacketCodes([p.id], format));
+                          }
+                        : null,
                     icon: const Icon(Icons.download_outlined),
                     label: const Text('Download'),
                   ),

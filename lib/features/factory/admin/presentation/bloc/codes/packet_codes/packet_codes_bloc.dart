@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:nexatrace_system/core/errors/app_exceptions.dart';
+import 'package:nexatrace_system/features/factory/admin/data/repositories/codes_repository_impl.dart';
 import 'package:nexatrace_system/features/factory/admin/domain/repositories/codes_repository.dart';
 import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
 import 'package:nexatrace_system/shared/models/code/packet_code_model.dart';
@@ -110,8 +112,10 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
     try {
       emit(state.copyWith(status: PacketCodesStatus.deleting));
 
-      // TODO: Implement API call to delete packet code
-      await Future.delayed(const Duration(milliseconds: 300));
+      await (_codesRepository as CodesRepositoryImpl).deleteCode(
+        type: 'packet',
+        id: event.packetCodeId,
+      );
 
       final updatedCodes = state.packetCodes
           .where((packet) => packet.id != event.packetCodeId)
@@ -141,8 +145,10 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
     try {
       emit(state.copyWith(status: PacketCodesStatus.deleting));
 
-      // TODO: Implement batch delete logic
-      await Future.delayed(const Duration(milliseconds: 500));
+      await (_codesRepository as CodesRepositoryImpl).deleteCodesBatch(
+        type: 'packet',
+        ids: event.packetCodeIds,
+      );
 
       final updatedCodes = state.packetCodes
           .where((packet) => !event.packetCodeIds.contains(packet.id))
@@ -224,13 +230,11 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
         (p) => p.id == event.packetCodeId,
       );
 
-      await _codesRepository.publishPacketCodes(
-        codeIds: [event.packetCodeId],
-        productBatchNumber: packet.productBatchNumber,
-        manufacturingDate: packet.manufacturingDate,
-        expiryDate: packet.expiryDate,
-        warrantyMonths: packet.warrantyMonths,
-      );
+      if (packet.status != CodeStatus.generated && packet.status != CodeStatus.linked) {
+        throw Exception('Only generated or linked packet codes can be published');
+      }
+
+      await _codesRepository.publishPacketCodes(codeIds: [event.packetCodeId]);
 
       final updatedCodes = state.packetCodes.map((packet) {
         if (packet.id == event.packetCodeId) {
@@ -410,6 +414,16 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
         ),
       );
     } catch (e) {
+      if (e is LockedException) {
+        emit(
+          state.copyWith(
+            status: PacketCodesStatus.error,
+            isExporting: false,
+            errorMessage: '${e.message} (Invoice: ${e.invoiceId})',
+          ),
+        );
+        return;
+      }
       emit(
         state.copyWith(
           status: PacketCodesStatus.error,

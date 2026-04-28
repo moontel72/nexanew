@@ -7,7 +7,7 @@ abstract class CodesRepository {
   Future<void> generateBundleCodes({
     required int count,
     String? batchId,
-    required int cartonsPerBundle,
+    int? cartonsPerBundle,
   });
 
   Future<List<BundleCodeModel>> getBundleCodes({
@@ -18,7 +18,7 @@ abstract class CodesRepository {
   Future<void> generateCartonCodes({
     required int count,
     String? batchId,
-    required int packetCount,
+    int? packetCount,
     int? totalUnits,
     int? unitsPerPacket,
   });

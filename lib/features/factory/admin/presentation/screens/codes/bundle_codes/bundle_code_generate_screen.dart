@@ -93,43 +93,12 @@ class _BundleCodeGenerateScreenState extends State<BundleCodeGenerateScreen> {
         factoryId: 'factory_123', // TODO: Get from auth state
         subscriptionPlanId: 'plan_premium', // TODO: Get from subscription state
         count: int.parse(_countController.text),
-        prefix: _prefixController.text,
-        includeInternationalCodes: _includeInternationalCodes,
-        generateQrCodes: _generateQrCodes,
-        generateBarcodes: _generateBarcodes,
-        batchName: _batchNameController.text.isNotEmpty
-            ? _batchNameController.text
-            : null,
-        batchNotes: _batchNotesController.text.isNotEmpty
-            ? _batchNotesController.text
-            : null,
-        cartonsPerBundle: int.parse(_cartonsPerBundleController.text),
-        bundleWeight: _bundleWeightController.text.isNotEmpty
-            ? double.tryParse(_bundleWeightController.text)
-            : null,
-        bundleDimensions: _bundleDimensionsController.text.isNotEmpty
-            ? _bundleDimensionsController.text
-            : null,
-        storageLocation: _storageLocationController.text.isNotEmpty
-            ? _storageLocationController.text
-            : null,
-        shippingMethod: _shippingMethodController.text.isNotEmpty
-            ? _shippingMethodController.text
-            : null,
-        expectedDeliveryDate: _expectedDeliveryDate,
-        category: _categoryController.text.isNotEmpty
-            ? _categoryController.text
-            : null,
-        handlingInstructions: _handlingInstructionsController.text.isNotEmpty
-            ? _handlingInstructionsController.text
-            : null,
-        customsDeclarationNumber: _customsDeclarationController.text.isNotEmpty
-            ? _customsDeclarationController.text
-            : null,
-        insuranceValue: _insuranceValueController.text.isNotEmpty
-            ? double.tryParse(_insuranceValueController.text)
-            : null,
-        priority: _priority,
+        prefix: 'B',
+        includeInternationalCodes: true,
+        generateQrCodes: true,
+        generateBarcodes: true,
+        cartonsPerBundle: 0,
+        priority: 2,
       );
 
       context.read<BundleCodesBloc>().add(GenerateBundleCodes(request));
@@ -181,22 +150,8 @@ class _BundleCodeGenerateScreenState extends State<BundleCodeGenerateScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildBasicInfoSection(),
-                    SizedBox(height: 24.h),
-                    BundleSpecificationsSection(
-                      cartonsPerBundleController: _cartonsPerBundleController,
-                      bundleWeightController: _bundleWeightController,
-                      bundleDimensionsController: _bundleDimensionsController,
-                    ),
-                    SizedBox(height: 24.h),
-                    _buildShippingInfoSection(),
-                    SizedBox(height: 24.h),
-                    _buildAdditionalInfoSection(),
-                    SizedBox(height: 24.h),
-                    _buildCodeOptionsSection(),
                     SizedBox(height: 32.h),
                     _buildGenerateButton(state),
-                    SizedBox(height: 16.h),
-                    _buildCodePreview(state),
                   ],
                 ),
               ),
@@ -221,60 +176,24 @@ class _BundleCodeGenerateScreenState extends State<BundleCodeGenerateScreen> {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 16.h),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    controller: _countController,
-                    labelText: 'Number of Bundle Codes',
-                    hintText: 'Enter number of codes',
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter number of codes';
-                      }
-                      final count = int.tryParse(value);
-                      if (count == null || count <= 0) {
-                        return 'Please enter a valid number';
-                      }
-                      if (count > 1000) {
-                        return 'Maximum 1000 codes per batch';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: CustomTextField(
-                    controller: _prefixController,
-                    labelText: 'Code Prefix',
-                    hintText: 'e.g., A, B, C',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter code prefix';
-                      }
-                      if (value.length > 5) {
-                        return 'Prefix too long (max 5 characters)';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
             CustomTextField(
-              controller: _batchNameController,
-              labelText: 'Batch Name (Optional)',
-              hintText: 'e.g., Summer Collection 2024',
-            ),
-            SizedBox(height: 16.h),
-            CustomTextField(
-              controller: _batchNotesController,
-              labelText: 'Batch Notes (Optional)',
-              hintText: 'Additional information about this batch',
-              maxLines: 3,
+              controller: _countController,
+              labelText: 'Quantity',
+              hintText: 'e.g., 50',
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter quantity';
+                }
+                final count = int.tryParse(value);
+                if (count == null || count <= 0) {
+                  return 'Please enter a valid number';
+                }
+                if (count > 1000) {
+                  return 'Maximum 1000 bundles per batch';
+                }
+                return null;
+              },
             ),
           ],
         ),

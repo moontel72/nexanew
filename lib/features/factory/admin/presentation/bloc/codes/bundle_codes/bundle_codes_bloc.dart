@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:nexatrace_system/core/errors/app_exceptions.dart';
+import 'package:nexatrace_system/features/factory/admin/data/repositories/codes_repository_impl.dart';
 import 'package:nexatrace_system/features/factory/admin/domain/repositories/codes_repository.dart';
 import 'package:nexatrace_system/shared/models/code/bundle_code_model.dart';
 import 'package:nexatrace_system/shared/models/code/code_generation_request.dart';
@@ -124,8 +126,10 @@ class BundleCodesBloc extends Bloc<BundleCodesEvent, BundleCodesState> {
         );
       }
 
-      // TODO: Implement API call to delete code
-      await Future.delayed(const Duration(milliseconds: 300));
+      await (_codesRepository as CodesRepositoryImpl).deleteCode(
+        type: 'bundle',
+        id: event.codeId,
+      );
 
       final updatedCodes = state.codes
           .where((code) => code.id != event.codeId)
@@ -169,8 +173,10 @@ class BundleCodesBloc extends Bloc<BundleCodesEvent, BundleCodesState> {
         }
       }
 
-      // TODO: Implement API call to delete batch
-      await Future.delayed(const Duration(milliseconds: 500));
+      await (_codesRepository as CodesRepositoryImpl).deleteCodesBatch(
+        type: 'bundle',
+        ids: event.codeIds,
+      );
 
       final updatedCodes = state.codes
           .where((code) => !event.codeIds.contains(code.id))
@@ -410,6 +416,15 @@ class BundleCodesBloc extends Bloc<BundleCodesEvent, BundleCodesState> {
 
       emit(state.copyWith(exportStatus: ExportStatus.success));
     } catch (error) {
+      if (error is LockedException) {
+        emit(
+          state.copyWith(
+            exportStatus: ExportStatus.failure,
+            error: '${error.message} (Invoice: ${error.invoiceId})',
+          ),
+        );
+        return;
+      }
       emit(
         state.copyWith(
           exportStatus: ExportStatus.failure,

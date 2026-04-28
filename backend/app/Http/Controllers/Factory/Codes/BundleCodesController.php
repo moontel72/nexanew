@@ -28,7 +28,8 @@ class BundleCodesController extends Controller
         $data = $request->validate([
             'count' => ['required', 'integer', 'min:1', 'max:2000'],
             'batch_id' => ['nullable', 'string', 'max:100'],
-            'cartons_per_bundle' => ['required', 'integer', 'min:1', 'max:10000'],
+            'prefix' => ['nullable', 'string', 'max:10'],
+            'include_international_codes' => ['nullable', 'boolean'],
         ]);
 
         $companyId = (string) $user->company_id;
@@ -39,18 +40,36 @@ class BundleCodesController extends Controller
 
         $planId = (string) $subscription->plan_id;
         $count = (int) $data['count'];
+        $includeInternational = (bool) ($data['include_international_codes'] ?? true);
 
-        DB::transaction(function () use ($companyId, $planId, $count, $data) {
-            $baseRows = $this->generator->generateBase($companyId, $planId, 'bundle', $count, [
+        DB::transaction(function () use ($companyId, $planId, $count, $data, $includeInternational) {
+            $baseOverrides = [
                 'batch_id' => $data['batch_id'] ?? null,
-            ]);
+            ];
+            if (!empty($data['prefix'])) {
+                $baseOverrides['store_keeper_prefix'] = (string) $data['prefix'];
+            }
+
+            $baseRows = $this->generator->generateBase($companyId, $planId, 'bundle', $count, $baseOverrides);
+
+            if ($includeInternational) {
+                $updates = [];
+                foreach ($baseRows as $r) {
+                    $updates[] = [
+                        'id' => (string) $r['id'],
+                        'international_code' => 'INT-BUNDLE-' . strtoupper((string) Str::ulid()),
+                        'updated_at' => now(),
+                    ];
+                }
+                DB::table('base_codes')->upsert($updates, ['id'], ['international_code', 'updated_at']);
+            }
 
             $rows = [];
             for ($i = 0; $i < $count; $i++) {
                 $id = $baseRows[$i]['id'];
                 $rows[] = [
                     'id' => $id,
-                    'cartons_per_bundle' => (int) $data['cartons_per_bundle'],
+                    'cartons_per_bundle' => 0,
                     'bundle_weight_kg' => null,
                     'bundle_dimensions' => null,
                     'storage_location' => null,
@@ -105,7 +124,8 @@ class BundleCodesController extends Controller
                 'base_codes.updated_at',
             ])
             ->where('base_codes.company_id', $companyId)
-            ->where('base_codes.code_type', 'bundle');
+            ->where('base_codes.code_type', 'bundle')
+            ->where('base_codes.is_deleted', false);
 
         $page = (int) $request->query('page', 1);
         $limit = (int) $request->query('limit', 50);
@@ -172,6 +192,91 @@ class BundleCodesController extends Controller
         ]);
     }
 
+    public function update(Request $request, string $id)
+    {
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+
+        $data = $request->validate([
+            'batch_id' => ['nullable', 'string', 'max:100'],
+            'cartons_per_bundle' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'bundle_weight_kg' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+            'bundle_dimensions' => ['nullable', 'string', 'max:255'],
+            'storage_location' => ['nullable', 'string', 'max:255'],
+            'shipping_method' => ['nullable', 'string', 'max:255'],
+            'expected_delivery_date' => ['nullable', 'date'],
+            'category' => ['nullable', 'string', 'max:100'],
+            'handling_instructions' => ['nullable', 'string', 'max:1000'],
+            'customs_declaration_number' => ['nullable', 'string', 'max:100'],
+            'insurance_value' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
+            'priority' => ['nullable', 'integer', 'min:1', 'max:3'],
+        ]);
+
+        $now = now();
+
+        $baseUpdated = DB::table('base_codes')
+            ->where('company_id', $companyId)
+            ->where('code_type', 'bundle')
+            ->where('id', $id)
+            ->whereNull('published_at')
+            ->where('is_deleted', false)
+            ->update([
+                'batch_id' => array_key_exists('batch_id', $data) ? ($data['batch_id'] ?? null) : DB::raw('batch_id'),
+                'updated_at' => $now,
+            ]);
+
+        $bundleUpdated = DB::table('bundle_codes')
+            ->where('id', $id)
+            ->update([
+                'cartons_per_bundle' => array_key_exists('cartons_per_bundle', $data) ? ((int) ($data['cartons_per_bundle'] ?? 0)) : DB::raw('cartons_per_bundle'),
+                'bundle_weight_kg' => array_key_exists('bundle_weight_kg', $data) ? ($data['bundle_weight_kg'] ?? null) : DB::raw('bundle_weight_kg'),
+                'bundle_dimensions' => array_key_exists('bundle_dimensions', $data) ? ($data['bundle_dimensions'] ?? null) : DB::raw('bundle_dimensions'),
+                'storage_location' => array_key_exists('storage_location', $data) ? ($data['storage_location'] ?? null) : DB::raw('storage_location'),
+                'shipping_method' => array_key_exists('shipping_method', $data) ? ($data['shipping_method'] ?? null) : DB::raw('shipping_method'),
+                'expected_delivery_date' => array_key_exists('expected_delivery_date', $data) ? ($data['expected_delivery_date'] ?? null) : DB::raw('expected_delivery_date'),
+                'category' => array_key_exists('category', $data) ? ($data['category'] ?? null) : DB::raw('category'),
+                'handling_instructions' => array_key_exists('handling_instructions', $data) ? ($data['handling_instructions'] ?? null) : DB::raw('handling_instructions'),
+                'customs_declaration_number' => array_key_exists('customs_declaration_number', $data) ? ($data['customs_declaration_number'] ?? null) : DB::raw('customs_declaration_number'),
+                'insurance_value' => array_key_exists('insurance_value', $data) ? ($data['insurance_value'] ?? null) : DB::raw('insurance_value'),
+                'priority' => array_key_exists('priority', $data) ? ((int) ($data['priority'] ?? 2)) : DB::raw('priority'),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'updated' => (int) ($baseUpdated > 0 ? 1 : 0),
+                'bundle_updated' => (int) ($bundleUpdated > 0 ? 1 : 0),
+            ],
+        ]);
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+
+        $now = now();
+
+        $updated = DB::table('base_codes')
+            ->where('company_id', $companyId)
+            ->where('code_type', 'bundle')
+            ->where('id', $id)
+            ->whereNull('published_at')
+            ->where('is_deleted', false)
+            ->update([
+                'is_deleted' => true,
+                'status' => 'deleted',
+                'updated_at' => $now,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'deleted' => (int) $updated,
+            ],
+        ]);
+    }
+
     public function link(Request $request)
     {
         $user = $request->user();
@@ -223,13 +328,18 @@ class BundleCodesController extends Controller
         $companyId = (string) $user->company_id;
 
         $data = $request->validate([
-            'code_ids' => ['required', 'array', 'min:1', 'max:5000'],
+            'code_ids' => ['nullable', 'array', 'min:1', 'max:5000'],
             'code_ids.*' => ['uuid'],
+            'batch_id' => ['nullable', 'string', 'max:100'],
             'product_batch_number' => ['nullable', 'string', 'max:100'],
             'manufacturing_date' => ['nullable', 'date'],
             'expiry_date' => ['nullable', 'date'],
             'warranty_months' => ['nullable', 'integer', 'min:0', 'max:240'],
         ]);
+
+        if (empty($data['code_ids']) && empty($data['batch_id'])) {
+            return response()->json(['message' => 'code_ids or batch_id is required'], 422);
+        }
 
         $subscription = CompanySubscription::query()
             ->where('company_id', $companyId)
@@ -247,9 +357,13 @@ class BundleCodesController extends Controller
         $query = DB::table('base_codes')
             ->where('company_id', $companyId)
             ->where('code_type', 'bundle')
-            ->whereIn('id', $data['code_ids'])
             ->whereNull('published_at')
             ->whereIn('status', ['generated', 'linked']);
+        if (!empty($data['batch_id'])) {
+            $query->where('batch_id', (string) $data['batch_id']);
+        } else {
+            $query->whereIn('id', $data['code_ids']);
+        }
 
         $toPublish = (int) $query->count('id');
         if ($toPublish <= 0) {
@@ -319,6 +433,7 @@ class BundleCodesController extends Controller
                 publishedAt: $now,
                 context: [
                     'code_ids' => $ids,
+                    'batch_id' => $data['batch_id'] ?? null,
                 ],
             );
 

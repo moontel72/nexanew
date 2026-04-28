@@ -15,6 +15,8 @@ import 'package:nexatrace_system/shared/widgets/filters/filter_chip_row.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 import 'package:nexatrace_system/shared/widgets/search/search_bar.dart'
     as custom;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:nexatrace_system/core/constants/api_endpoints.dart';
 
 class CartonCodesListScreen extends StatefulWidget {
   const CartonCodesListScreen({super.key});
@@ -123,11 +125,36 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               label: const Text('View Details'),
             ),
             OutlinedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Download will be added soon')),
-                );
-              },
+              onPressed: carton.status == CodeStatus.published
+                  ? () async {
+                      final format = await showModalBottomSheet<String>(
+                        context: context,
+                        builder: (context) {
+                          return SafeArea(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.picture_as_pdf),
+                                  title: const Text('Download PDF'),
+                                  onTap: () => Navigator.pop(context, 'pdf'),
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.table_chart),
+                                  title: const Text('Download CSV'),
+                                  onTap: () => Navigator.pop(context, 'csv'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                      if (format == null) return;
+                      context
+                          .read<CartonCodesBloc>()
+                          .add(ExportCartonCodes([carton.id], format));
+                    }
+                  : null,
               icon: const Icon(Icons.download_outlined),
               label: const Text('Download'),
             ),
@@ -366,7 +393,35 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
-      body: BlocBuilder<CartonCodesBloc, CartonCodesState>(
+      body: BlocConsumer<CartonCodesBloc, CartonCodesState>(
+        listener: (context, state) async {
+          if (state.status == CartonCodesStatus.exported &&
+              state.exportPath != null &&
+              state.exportPath!.trim().isNotEmpty) {
+            final raw = state.exportPath!.trim();
+            final uri = Uri.tryParse(raw);
+            final downloadUri = (uri != null && uri.hasScheme)
+                ? uri
+                : Uri.parse(
+                    ApiEndpoints.getFullUrl(raw.startsWith('/') ? raw : '/$raw'),
+                  );
+
+            await launchUrl(downloadUri, mode: LaunchMode.platformDefault);
+
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Download started')),
+            );
+          }
+
+          if (state.status == CartonCodesStatus.error &&
+              state.errorMessage != null &&
+              state.errorMessage!.trim().isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.errorMessage!)),
+            );
+          }
+        },
         builder: (context, state) {
           if (state.status == CartonCodesStatus.loading &&
               state.cartonCodes.isEmpty) {
@@ -757,33 +812,7 @@ class _CartonDetailsBottomSheet extends StatelessWidget {
                   ),
                 ),
               SizedBox(height: 16.h),
-              Row(
-                children: [
-                  Expanded(
-                    child: PrimaryButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        // TODO: Implement edit functionality
-                      },
-                      text: 'Edit',
-                      icon: Icons.edit,
-                      backgroundColor: Colors.transparent,
-                      textColor: AppColors.primary,
-                    ),
-                  ),
-                  SizedBox(width: 8.w),
-                  Expanded(
-                    child: PrimaryButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        // TODO: Implement view packets functionality
-                      },
-                      text: 'View Packets',
-                      icon: Icons.list,
-                    ),
-                  ),
-                ],
-              ),
+              SizedBox(height: 16.h),
             ],
           ),
         ),
@@ -850,17 +879,8 @@ class _CartonActionMenu extends StatelessWidget {
               );
             },
           ),
-          if (carton.status == CodeStatus.generated)
-            _buildActionItem(
-              context,
-              icon: Icons.link,
-              label: 'Link to Product',
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Implement link to product
-              },
-            ),
-          if (carton.status == CodeStatus.linked)
+          if (carton.status == CodeStatus.generated ||
+              carton.status == CodeStatus.linked)
             _buildActionItem(
               context,
               icon: Icons.publish,

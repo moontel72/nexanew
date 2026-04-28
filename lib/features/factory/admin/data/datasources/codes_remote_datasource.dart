@@ -7,6 +7,13 @@ class CodesRemoteDatasource {
 
   CodesRemoteDatasource({required ApiService apiService}) : _api = apiService;
 
+  Future<void> deleteCode({
+    required String type,
+    required String id,
+  }) async {
+    await _api.delete('/codes/$type/$id');
+  }
+
   Future<Map<String, dynamic>> generateUnitCodes({
     required int count,
     String? batchId,
@@ -74,7 +81,7 @@ class CodesRemoteDatasource {
   Future<Map<String, dynamic>> generateCartonCodes({
     required int count,
     String? batchId,
-    required int packetCount,
+    int? packetCount,
     int? totalUnits,
     int? unitsPerPacket,
   }) async {
@@ -83,7 +90,7 @@ class CodesRemoteDatasource {
       data: {
         'count': count,
         if (batchId != null && batchId.isNotEmpty) 'batch_id': batchId,
-        'packet_count': packetCount,
+        if (packetCount != null) 'packet_count': packetCount,
         if (totalUnits != null) 'total_units': totalUnits,
         if (unitsPerPacket != null) 'units_per_packet': unitsPerPacket,
       },
@@ -105,14 +112,14 @@ class CodesRemoteDatasource {
   Future<Map<String, dynamic>> generateBundleCodes({
     required int count,
     String? batchId,
-    required int cartonsPerBundle,
+    int? cartonsPerBundle,
   }) async {
     final res = await _api.post(
       '${ApiEndpoints.bundleCodes}/generate',
       data: {
         'count': count,
         if (batchId != null && batchId.isNotEmpty) 'batch_id': batchId,
-        'cartons_per_bundle': cartonsPerBundle,
+        if (cartonsPerBundle != null) 'cartons_per_bundle': cartonsPerBundle,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -244,6 +251,16 @@ class CodesRemoteDatasource {
     return (res as Map).cast<String, dynamic>();
   }
 
+  Future<Map<String, dynamic>> publishBundleCodesByBatch({
+    required String batchId,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.publishBundleCodes,
+      data: {'batch_id': batchId},
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
   Future<Map<String, dynamic>> downloadBundleCodes({
     required List<String> codeIds,
     required String format,
@@ -317,6 +334,16 @@ class CodesRemoteDatasource {
     return (res as Map).cast<String, dynamic>();
   }
 
+  Future<Map<String, dynamic>> publishCartonCodesByBatch({
+    required String batchId,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.publishCartonCodes,
+      data: {'batch_id': batchId},
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
   Future<Map<String, dynamic>> downloadCartonCodes({
     required List<String> codeIds,
     required String format,
@@ -386,6 +413,16 @@ class CodesRemoteDatasource {
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> publishPacketCodesByBatch({
+    required String batchId,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.publishPacketCodes,
+      data: {'batch_id': batchId},
     );
     return (res as Map).cast<String, dynamic>();
   }

@@ -76,40 +76,14 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
         factoryId: 'factory_123', // TODO: Get from auth state
         subscriptionPlanId: 'plan_premium', // TODO: Get from subscription state
         count: int.parse(_countController.text),
-        prefix: _prefixController.text,
+        prefix: 'C',
         bundleCode: '',
-        packetsPerCarton: int.parse(_packetsPerCartonController.text),
-        includeInternationalCodes: _includeInternationalCodes,
-        generateQrCodes: _generateQrCodes,
-        generateBarcodes: _generateBarcodes,
-        batchName: _batchNameController.text.isNotEmpty
-            ? _batchNameController.text
-            : null,
-        batchNotes: _batchNotesController.text.isNotEmpty
-            ? _batchNotesController.text
-            : null,
-        cartonWeight: _cartonWeightController.text.isNotEmpty
-            ? double.tryParse(_cartonWeightController.text)
-            : null,
-        cartonDimensions: _cartonDimensionsController.text.isNotEmpty
-            ? _cartonDimensionsController.text
-            : null,
-        cartonType: _cartonTypeController.text.isNotEmpty
-            ? _cartonTypeController.text
-            : null,
-        grade: _gradeController.text.isNotEmpty ? _gradeController.text : null,
-        maxWeightCapacity: _maxWeightCapacityController.text.isNotEmpty
-            ? double.tryParse(_maxWeightCapacityController.text)
-            : null,
-        temperatureRequirements:
-            _temperatureRequirementsController.text.isNotEmpty
-            ? _temperatureRequirementsController.text
-            : null,
-        handlingInstructions: _handlingInstructionsController.text.isNotEmpty
-            ? _handlingInstructionsController.text
-            : null,
-        generateCartonBarcode: _generateCartonBarcode,
-        generateCartonQrCode: _generateCartonQrCode,
+        packetsPerCarton: 0,
+        includeInternationalCodes: true,
+        generateQrCodes: true,
+        generateBarcodes: true,
+        generateCartonBarcode: true,
+        generateCartonQrCode: true,
       );
 
       context.read<CartonCodesBloc>().add(GenerateCartonCodes(request));
@@ -181,87 +155,24 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
               ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
             ),
             SizedBox(height: 16.h),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    controller: _countController,
-                    labelText: 'Number of Cartons',
-                    hintText: 'Enter number',
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter number of cartons';
-                      }
-                      final count = int.tryParse(value);
-                      if (count == null || count <= 0) {
-                        return 'Please enter a valid number';
-                      }
-                      if (count > 1000) {
-                        return 'Maximum 1000 cartons per batch';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: CustomTextField(
-                    controller: _prefixController,
-                    labelText: 'Code Prefix',
-                    hintText: 'e.g., C, CC, CTN',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter code prefix';
-                      }
-                      if (value.length > 4) {
-                        return 'Prefix should be 1-4 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
             CustomTextField(
-              controller: _packetsPerCartonController,
-              labelText: 'Packets per Carton',
-              hintText: 'Enter number (e.g., 10)',
+              controller: _countController,
+              labelText: 'Quantity',
+              hintText: 'e.g., 500',
               keyboardType: TextInputType.number,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Please enter packets per carton';
+                  return 'Please enter quantity';
                 }
                 final count = int.tryParse(value);
                 if (count == null || count <= 0) {
                   return 'Please enter a valid number';
                 }
-                if (count > 100) {
-                  return 'Maximum 100 packets per carton';
+                if (count > 1000) {
+                  return 'Maximum 1000 cartons per batch';
                 }
                 return null;
               },
-            ),
-            SizedBox(height: 16.h),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    controller: _batchNameController,
-                    labelText: 'Batch Name (Optional)',
-                    hintText: 'e.g., Summer Collection Cartons',
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: CustomTextField(
-                    controller: _batchNotesController,
-                    labelText: 'Batch Notes (Optional)',
-                    hintText: 'Additional information',
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -609,14 +520,6 @@ class _CartonCodeGenerateScreenState extends State<CartonCodeGenerateScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildBasicInfoSection(),
-                    SizedBox(height: 16.h),
-                    _buildCartonSpecificationsSection(),
-                    SizedBox(height: 16.h),
-                    _buildHandlingRequirementsSection(),
-                    SizedBox(height: 16.h),
-                    _buildCodeOptionsSection(),
-                    SizedBox(height: 16.h),
-                    _buildCodePreview(),
                     SizedBox(height: 24.h),
                     _buildGenerateButton(),
                     SizedBox(height: 16.h),

@@ -568,7 +568,22 @@ class ApiClient {
       case 429:
         throw RateLimitException(message);
       case 423:
-        throw ServerException(message, statusCode, errorResponse);
+        final data = (errorResponse?['data'] is Map)
+            ? (errorResponse?['data'] as Map).cast<String, dynamic>()
+            : <String, dynamic>{};
+        final invoice = (data['invoice'] is Map)
+            ? (data['invoice'] as Map).cast<String, dynamic>()
+            : <String, dynamic>{};
+        final invoiceId =
+            (invoice['id'] ?? data['invoice_id'] ?? errorResponse?['invoice_id'])
+                ?.toString()
+                .trim();
+        throw LockedException(
+          message: 'Please pay the invoice to unlock download',
+          invoiceId: (invoiceId == null || invoiceId.isEmpty)
+              ? 'unknown'
+              : invoiceId,
+        );
       case 500:
       case 502:
       case 503:

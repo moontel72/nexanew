@@ -28,9 +28,8 @@ class PacketCodesController extends Controller
         $data = $request->validate([
             'count' => ['required', 'integer', 'min:1', 'max:2000'],
             'batch_id' => ['nullable', 'string', 'max:100'],
-            'carton_code_id' => ['nullable', 'uuid'],
-            'carton_code' => ['nullable', 'string', 'max:255'],
-            'unit_count' => ['nullable', 'integer', 'min:1', 'max:10000'],
+            'prefix' => ['nullable', 'string', 'max:10'],
+            'include_international_codes' => ['nullable', 'boolean'],
         ]);
 
         $companyId = (string) $user->company_id;
@@ -47,29 +46,37 @@ class PacketCodesController extends Controller
             ->where('base_codes.company_id', $companyId)
             ->max('packet_codes.sequence_number') ?? 0) + 1;
 
-        $cartonCodeId = $data['carton_code_id'] ?? null;
-        if (!$cartonCodeId && !empty($data['carton_code'])) {
-            $cartonCodeId = DB::table('carton_codes')
-                ->join('base_codes', 'carton_codes.id', '=', 'base_codes.id')
-                ->where('base_codes.company_id', $companyId)
-                ->where('base_codes.code_type', 'carton')
-                ->where('base_codes.code', (string) $data['carton_code'])
-                ->value('carton_codes.id');
-        }
-        $unitCount = (int) ($data['unit_count'] ?? 0);
+        $includeInternational = (bool) ($data['include_international_codes'] ?? true);
 
-        DB::transaction(function () use ($companyId, $planId, $count, $nextSeq, $cartonCodeId, $unitCount, $data) {
-            $baseRows = $this->generator->generateBase($companyId, $planId, 'packet', $count, [
+        DB::transaction(function () use ($companyId, $planId, $count, $nextSeq, $data, $includeInternational) {
+            $baseOverrides = [
                 'batch_id' => $data['batch_id'] ?? null,
-            ]);
+            ];
+            if (!empty($data['prefix'])) {
+                $baseOverrides['store_keeper_prefix'] = (string) $data['prefix'];
+            }
+
+            $baseRows = $this->generator->generateBase($companyId, $planId, 'packet', $count, $baseOverrides);
+
+            if ($includeInternational) {
+                $updates = [];
+                foreach ($baseRows as $r) {
+                    $updates[] = [
+                        'id' => (string) $r['id'],
+                        'international_code' => 'INT-PACKET-' . strtoupper((string) Str::ulid()),
+                        'updated_at' => now(),
+                    ];
+                }
+                DB::table('base_codes')->upsert($updates, ['id'], ['international_code', 'updated_at']);
+            }
 
             $rows = [];
             for ($i = 0; $i < $count; $i++) {
                 $id = $baseRows[$i]['id'];
                 $rows[] = [
                     'id' => $id,
-                    'carton_code_id' => $cartonCodeId,
-                    'unit_count' => $unitCount > 0 ? $unitCount : 0,
+                    'carton_code_id' => null,
+                    'unit_count' => 0,
                     'unit_codes' => '{}',
                     'sequence_number' => $nextSeq + $i,
                     'weight_grams' => null,
@@ -104,7 +111,6 @@ class PacketCodesController extends Controller
 
         $query = DB::table('packet_codes')
             ->join('base_codes', 'packet_codes.id', '=', 'base_codes.id')
-            ->leftJoin('base_codes as carton_base', 'packet_codes.carton_code_id', '=', 'carton_base.id')
             ->select([
                 'packet_codes.*',
                 'base_codes.code',
@@ -131,10 +137,10 @@ class PacketCodesController extends Controller
                 'base_codes.is_deleted',
                 'base_codes.created_at',
                 'base_codes.updated_at',
-                'carton_base.code as carton_code_value',
             ])
             ->where('base_codes.company_id', $companyId)
-            ->where('base_codes.code_type', 'packet');
+            ->where('base_codes.code_type', 'packet')
+            ->where('base_codes.is_deleted', false);
 
         $page = (int) $request->query('page', 1);
         $limit = (int) $request->query('limit', 50);
@@ -171,7 +177,7 @@ class PacketCodesController extends Controller
                 'createdAt' => $dt($row->created_at),
                 'updatedAt' => $dt($row->updated_at),
                 'isDeleted' => (bool) ($row->is_deleted ?? false),
-                'cartonCode' => (string) ($row->carton_code_value ?? ''),
+                'cartonCode' => '',
                 'unitCount' => (int) ($row->unit_count ?? 0),
                 'unitCodes' => [],
                 'sequenceNumber' => (int) ($row->sequence_number ?? 0),
@@ -263,13 +269,18 @@ class PacketCodesController extends Controller
         $companyId = (string) $user->company_id;
 
         $data = $request->validate([
-            'code_ids' => ['required', 'array', 'min:1', 'max:5000'],
+            'code_ids' => ['nullable', 'array', 'min:1', 'max:5000'],
             'code_ids.*' => ['uuid'],
+            'batch_id' => ['nullable', 'string', 'max:100'],
             'product_batch_number' => ['nullable', 'string', 'max:100'],
             'manufacturing_date' => ['nullable', 'date'],
             'expiry_date' => ['nullable', 'date'],
             'warranty_months' => ['nullable', 'integer', 'min:0', 'max:240'],
         ]);
+
+        if (empty($data['code_ids']) && empty($data['batch_id'])) {
+            return response()->json(['message' => 'code_ids or batch_id is required'], 422);
+        }
 
         $subscription = CompanySubscription::query()
             ->where('company_id', $companyId)
@@ -287,9 +298,13 @@ class PacketCodesController extends Controller
         $query = DB::table('base_codes')
             ->where('company_id', $companyId)
             ->where('code_type', 'packet')
-            ->whereIn('id', $data['code_ids'])
             ->whereNull('published_at')
             ->whereIn('status', ['generated', 'linked']);
+        if (!empty($data['batch_id'])) {
+            $query->where('batch_id', (string) $data['batch_id']);
+        } else {
+            $query->whereIn('id', $data['code_ids']);
+        }
 
         $toPublish = (int) $query->count('id');
         if ($toPublish <= 0) {
@@ -358,6 +373,7 @@ class PacketCodesController extends Controller
                 publishedAt: $now,
                 context: [
                     'code_ids' => $ids,
+                    'batch_id' => $data['batch_id'] ?? null,
                 ],
             );
 
@@ -375,6 +391,81 @@ class PacketCodesController extends Controller
                     'total_amount' => (float) $invoice->total_amount,
                     'currency' => (string) ($invoice->currency ?? 'USD'),
                 ] : null,
+            ],
+        ]);
+    }
+
+    public function update(Request $request, string $id)
+    {
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+
+        $data = $request->validate([
+            'batch_id' => ['nullable', 'string', 'max:100'],
+            'unit_count' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'weight_grams' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
+            'dimensions' => ['nullable', 'string', 'max:255'],
+            'packet_type' => ['nullable', 'string', 'max:100'],
+            'material' => ['nullable', 'string', 'max:100'],
+            'sealing_method' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $now = now();
+
+        $baseUpdated = DB::table('base_codes')
+            ->where('company_id', $companyId)
+            ->where('code_type', 'packet')
+            ->where('id', $id)
+            ->whereNull('published_at')
+            ->where('is_deleted', false)
+            ->update([
+                'batch_id' => array_key_exists('batch_id', $data) ? ($data['batch_id'] ?? null) : DB::raw('batch_id'),
+                'updated_at' => $now,
+            ]);
+
+        $packetUpdated = DB::table('packet_codes')
+            ->where('id', $id)
+            ->update([
+                'unit_count' => array_key_exists('unit_count', $data) ? ((int) ($data['unit_count'] ?? 0)) : DB::raw('unit_count'),
+                'weight_grams' => array_key_exists('weight_grams', $data) ? ($data['weight_grams'] ?? null) : DB::raw('weight_grams'),
+                'dimensions' => array_key_exists('dimensions', $data) ? ($data['dimensions'] ?? null) : DB::raw('dimensions'),
+                'packet_type' => array_key_exists('packet_type', $data) ? ($data['packet_type'] ?? null) : DB::raw('packet_type'),
+                'material' => array_key_exists('material', $data) ? ($data['material'] ?? null) : DB::raw('material'),
+                'sealing_method' => array_key_exists('sealing_method', $data) ? ($data['sealing_method'] ?? null) : DB::raw('sealing_method'),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'updated' => (int) ($baseUpdated > 0 ? 1 : 0),
+                'packet_updated' => (int) ($packetUpdated > 0 ? 1 : 0),
+            ],
+        ]);
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+
+        $now = now();
+
+        $updated = DB::table('base_codes')
+            ->where('company_id', $companyId)
+            ->where('code_type', 'packet')
+            ->where('id', $id)
+            ->whereNull('published_at')
+            ->where('is_deleted', false)
+            ->update([
+                'is_deleted' => true,
+                'status' => 'deleted',
+                'updated_at' => $now,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'deleted' => (int) $updated,
             ],
         ]);
     }

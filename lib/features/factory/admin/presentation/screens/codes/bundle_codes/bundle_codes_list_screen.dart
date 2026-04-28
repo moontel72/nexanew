@@ -14,6 +14,8 @@ import 'package:nexatrace_system/shared/widgets/filters/filter_chip_row.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 import 'package:nexatrace_system/shared/widgets/search/search_bar.dart'
     as custom;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:nexatrace_system/core/constants/api_endpoints.dart';
 
 class BundleCodesListScreen extends StatefulWidget {
   const BundleCodesListScreen({super.key});
@@ -99,7 +101,35 @@ class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
-      body: BlocBuilder<BundleCodesBloc, BundleCodesState>(
+      body: BlocConsumer<BundleCodesBloc, BundleCodesState>(
+        listener: (context, state) async {
+          if (state.status == BundleCodesStatus.exported &&
+              state.exportPath != null &&
+              state.exportPath!.trim().isNotEmpty) {
+            final raw = state.exportPath!.trim();
+            final uri = Uri.tryParse(raw);
+            final downloadUri = (uri != null && uri.hasScheme)
+                ? uri
+                : Uri.parse(
+                    ApiEndpoints.getFullUrl(raw.startsWith('/') ? raw : '/$raw'),
+                  );
+
+            await launchUrl(downloadUri, mode: LaunchMode.platformDefault);
+
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Download started')),
+            );
+          }
+
+          if (state.status == BundleCodesStatus.error &&
+              state.errorMessage != null &&
+              state.errorMessage!.trim().isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.errorMessage!)),
+            );
+          }
+        },
         builder: (context, state) {
           if (state.isLoading && state.codes.isEmpty) {
             return const Center(child: LoadingIndicator());
@@ -297,13 +327,36 @@ class _BundleCodesListScreenState extends State<BundleCodesListScreen> {
                       label: const Text('View Details'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Download will be added soon'),
-                          ),
-                        );
-                      },
+                      onPressed: code.status == CodeStatus.published
+                          ? () async {
+                              final format = await showModalBottomSheet<String>(
+                                context: context,
+                                builder: (context) {
+                                  return SafeArea(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        ListTile(
+                                          leading: const Icon(Icons.picture_as_pdf),
+                                          title: const Text('Download PDF'),
+                                          onTap: () => Navigator.pop(context, 'pdf'),
+                                        ),
+                                        ListTile(
+                                          leading: const Icon(Icons.table_chart),
+                                          title: const Text('Download CSV'),
+                                          onTap: () => Navigator.pop(context, 'csv'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                              if (format == null) return;
+                              context
+                                  .read<BundleCodesBloc>()
+                                  .add(ExportBundleCodes([code.id], format));
+                            }
+                          : null,
                       icon: const Icon(Icons.download_outlined),
                       label: const Text('Download'),
                     ),
@@ -868,18 +921,8 @@ class _CodeActionMenu extends StatelessWidget {
               Navigator.pop(context);
               _showDeleteConfirmation(context, code);
             }),
-          if (code.status == CodeStatus.generated)
-            _buildActionButton(
-              context,
-              Icons.link,
-              'Link to Product',
-              Colors.blue,
-              () {
-                Navigator.pop(context);
-                // TODO: Navigate to link screen
-              },
-            ),
-          if (code.status == CodeStatus.linked)
+          if (code.status == CodeStatus.generated ||
+              code.status == CodeStatus.linked)
             _buildActionButton(
               context,
               Icons.publish,

@@ -39,6 +39,16 @@ class ServerException extends NetworkException {
   ]) : super(message, stackTrace);
 }
 
+class LockedException extends NetworkException {
+  final String invoiceId;
+
+  const LockedException({
+    required String message,
+    required this.invoiceId,
+    StackTrace? stackTrace,
+  }) : super(message, stackTrace);
+}
+
 class RedirectException extends NetworkException {
   final String? location;
   final String? originalMethod;

@@ -11,6 +11,38 @@ class CodesRepositoryImpl implements CodesRepository {
   CodesRepositoryImpl({required CodesRemoteDatasource remoteDatasource})
       : _remote = remoteDatasource;
 
+  Future<void> deleteCode({
+    required String type,
+    required String id,
+  }) async {
+    await _remote.deleteCode(type: type, id: id);
+  }
+
+  Future<void> deleteCodesBatch({
+    required String type,
+    required List<String> ids,
+  }) async {
+    await Future.wait(ids.map((id) => _remote.deleteCode(type: type, id: id)));
+  }
+
+  Future<Map<String, dynamic>> publishBundleCodesByBatch({
+    required String batchId,
+  }) async {
+    return await _remote.publishBundleCodesByBatch(batchId: batchId);
+  }
+
+  Future<Map<String, dynamic>> publishCartonCodesByBatch({
+    required String batchId,
+  }) async {
+    return await _remote.publishCartonCodesByBatch(batchId: batchId);
+  }
+
+  Future<Map<String, dynamic>> publishPacketCodesByBatch({
+    required String batchId,
+  }) async {
+    return await _remote.publishPacketCodesByBatch(batchId: batchId);
+  }
+
   Map<String, dynamic> _asMap(dynamic value) {
     if (value is Map) {
       return value.cast<String, dynamic>();
@@ -29,7 +61,7 @@ class CodesRepositoryImpl implements CodesRepository {
   Future<void> generateBundleCodes({
     required int count,
     String? batchId,
-    required int cartonsPerBundle,
+    int? cartonsPerBundle,
   }) async {
     await _remote.generateBundleCodes(
       count: count,
@@ -57,7 +89,7 @@ class CodesRepositoryImpl implements CodesRepository {
   Future<void> generateCartonCodes({
     required int count,
     String? batchId,
-    required int packetCount,
+    int? packetCount,
     int? totalUnits,
     int? unitsPerPacket,
   }) async {
@@ -250,6 +282,8 @@ class CodesRepositoryImpl implements CodesRepository {
     );
 
     final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    final downloadUrl = (data['download_url'] ?? '').toString().trim();
+    if (downloadUrl.isNotEmpty) return downloadUrl;
     return (data['file_path'] ?? '').toString();
   }
 
@@ -312,6 +346,8 @@ class CodesRepositoryImpl implements CodesRepository {
     );
 
     final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    final downloadUrl = (data['download_url'] ?? '').toString().trim();
+    if (downloadUrl.isNotEmpty) return downloadUrl;
     return (data['file_path'] ?? '').toString();
   }
 
@@ -374,6 +410,8 @@ class CodesRepositoryImpl implements CodesRepository {
     );
 
     final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    final downloadUrl = (data['download_url'] ?? '').toString().trim();
+    if (downloadUrl.isNotEmpty) return downloadUrl;
     return (data['file_path'] ?? '').toString();
   }
 

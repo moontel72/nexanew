@@ -576,6 +576,14 @@ $registerRoutes = function (): void {
                     \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
                     "list",
                 ]);
+                Route::put("{id}", [
+                    \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
+                    "update",
+                ]);
+                Route::delete("{id}", [
+                    \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
+                    "delete",
+                ]);
                 Route::post("link", [
                     \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
                     "link",
@@ -599,6 +607,14 @@ $registerRoutes = function (): void {
                     \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
                     "list",
                 ]);
+                Route::put("{id}", [
+                    \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
+                    "update",
+                ]);
+                Route::delete("{id}", [
+                    \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
+                    "delete",
+                ]);
                 Route::post("link", [
                     \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
                     "link",
@@ -621,6 +637,14 @@ $registerRoutes = function (): void {
                 Route::get("list", [
                     \App\Http\Controllers\Factory\Codes\BundleCodesController::class,
                     "list",
+                ]);
+                Route::put("{id}", [
+                    \App\Http\Controllers\Factory\Codes\BundleCodesController::class,
+                    "update",
+                ]);
+                Route::delete("{id}", [
+                    \App\Http\Controllers\Factory\Codes\BundleCodesController::class,
+                    "delete",
                 ]);
                 Route::post("link", [
                     \App\Http\Controllers\Factory\Codes\BundleCodesController::class,
