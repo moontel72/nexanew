@@ -502,4 +502,38 @@ class AdminRevenueController extends Controller
                     'message' => 'Validation failed',
                     'details' => $validator->errors(),
                 ],
-                '
+                'timestamp' => now()->toISOString(),
+                'request_id' => $request->header('X-Request-ID'),
+            ], 422);
+        }
+
+        try {
+            // TODO: Implement actual export logic (CSV, Excel, PDF generation)
+            $exportType = $request->input('export_type');
+            $format = $request->input('format');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => "Export for {$exportType} in {$format} format is being processed",
+                    'export_type' => $exportType,
+                    'format' => $format,
+                    'status' => 'processing',
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => $request->header('X-Request-ID'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'SERVER_ERROR',
+                    'message' => 'Failed to export revenue data',
+                    'details' => config('app.debug') ? $e->getMessage() : null,
+                ],
+                'timestamp' => now()->toISOString(),
+                'request_id' => $request->header('X-Request-ID'),
+            ], 500);
+        }
+    }
+}

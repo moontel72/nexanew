@@ -10,6 +10,7 @@ on:
       - "assets/**"
       - "pubspec.yaml"
       - "pubspec.lock"
+      - "rust/**"
 
 jobs:
   build-and-deploy:
@@ -18,6 +19,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2

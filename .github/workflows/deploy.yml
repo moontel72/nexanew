@@ -6,6 +6,7 @@ on:
       - mainnew
     paths:
       - "backend/**"  # Sirf backend ki tabdeeli par chalega
+      - "rust/**"
 
 jobs:
   deploy:
@@ -25,6 +26,14 @@ jobs:
           cd backend
           composer install --no-interaction --prefer-dist --optimize-autoloader
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Rust library
+        run: |
+          cd rust
+          cargo build --release
+
       # 🔥 SSH Setup
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
@@ -42,12 +51,21 @@ jobs:
         run: |
           rsync -avz --delete --exclude='.env' backend/ root@135.181.46.27:/var/www/nexatrace/admin-panel/
 
+      - name: Deploy Rust library to server
+        run: |
+          rsync -avz rust/target/release/*.so root@135.181.46.27:/var/www/nexatrace/rust-lib/
+
       # 🔥 Laravel optimize, Fix Permissions and Reload Nginx
       - name: Server Post-Deployment Tasks
         run: |
           ssh root@135.181.46.27 "
             cd /var/www/nexatrace/admin-panel
-            
+
+            # 0. Ensure Rust library directory and permissions
+            mkdir -p /var/www/nexatrace/rust-lib
+            chmod 755 /var/www/nexatrace/rust-lib/*.so 2>/dev/null || true
+            chown -R www-data:www-data /var/www/nexatrace/rust-lib
+
             # 1. Clear and cache Laravel config/routes
             php artisan optimize:clear
             php artisan optimize

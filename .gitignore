@@ -25,6 +25,8 @@ node_modules/
 
 rust/target/
 **/target/
+rust/target_check/
+**/target_check/
 
 .trae/
 
