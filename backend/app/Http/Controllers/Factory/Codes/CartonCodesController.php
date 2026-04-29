@@ -72,15 +72,14 @@ class CartonCodesController extends Controller
             $baseRows = $this->generator->generateBase($companyId, $planId, 'carton', $count, $baseOverrides);
 
             if ($includeInternational) {
-                $updates = [];
                 foreach ($baseRows as $r) {
-                    $updates[] = [
-                        'id' => (string) $r['id'],
-                        'international_code' => 'INT-CARTON-' . strtoupper((string) Str::ulid()),
-                        'updated_at' => now(),
-                    ];
+                    DB::table('base_codes')
+                        ->where('id', (string) $r['id'])
+                        ->update([
+                            'international_code' => 'INT-CARTON-' . strtoupper((string) Str::ulid()),
+                            'updated_at' => now(),
+                        ]);
                 }
-                DB::table('base_codes')->upsert($updates, ['id'], ['international_code', 'updated_at']);
             }
 
             $packetCount = (int) ($data['packet_count'] ?? 0);
