@@ -94,7 +94,6 @@ class CartonCodesController extends Controller
                     'code_format' => $codeFormat,
                     'bundle_code_id' => null,
                     'packet_count' => $packetCount,
-                    'packet_codes' => '{}',
                     'sequence_number' => $nextSeq + $i,
                     'total_units' => 0,
                     'weight_kg' => null,
