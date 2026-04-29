@@ -666,3 +666,4 @@ mod tests {
         assert!(validate_units_per_master(0).is_err()); // Zero
         assert!(validate_units_per_master(1001).is_err()); // Too many
     }
+}

@@ -247,14 +247,14 @@ pub fn generate_gs1_code(
 /// Generate QR code data for a code
 #[frb]
 pub fn generate_qr_code_data(code: String, additional_data: Option<String>) -> Result<String, String> {
-    international::qr::generate_qr_data(code, additional_data.unwrap_or_default())
+    international::qr::generate_qr_data(code, additional_data)
         .map_err(|e| e.to_string())
 }
 
 /// Generate barcode data for a code
 #[frb]
 pub fn generate_barcode_data(code: String, barcode_type: String) -> Result<String, String> {
-    international::barcode::generate_barcode_data(code, &barcode_type)
+    international::barcode::generate_barcode_data(code, barcode_type)
         .map_err(|e| e.to_string())
 }
 

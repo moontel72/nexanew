@@ -7,7 +7,6 @@
 //! - Error detection and correction
 //! - Support for different code types
 
-use std::collections::HashMap;
 
 /// Checksum algorithm types
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -475,4 +474,6 @@ mod tests {
             custom_weights: None,
         };
 
-        assert!(verify("799273987
+        assert!(verify("79927398713", &config).unwrap());
+    }
+}

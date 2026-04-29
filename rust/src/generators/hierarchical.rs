@@ -608,15 +608,15 @@ mod tests {
         assert_eq!(result.codes_generated, 19);
 
         // Verify all code lists are present
-        assert!(result.generated_codes.is_some());
-        assert!(result.qr_codes.is_some());
-        assert!(result.barcodes.is_some());
-        assert!(result.international_codes.is_some());
+        assert!(!result.generated_codes.is_empty());
+        assert!(!result.qr_codes.is_empty());
+        assert!(!result.barcodes.is_empty());
+        assert!(!result.international_codes.is_empty());
 
-        let codes = result.generated_codes.unwrap();
-        let qr_codes = result.qr_codes.unwrap();
-        let barcodes = result.barcodes.unwrap();
-        let intl_codes = result.international_codes.unwrap();
+        let codes = &result.generated_codes;
+        let qr_codes = &result.qr_codes;
+        let barcodes = &result.barcodes;
+        let intl_codes = &result.international_codes;
 
         assert_eq!(codes.len(), 19);
         assert_eq!(qr_codes.len(), 19);
@@ -781,3 +781,4 @@ mod tests {
         assert!(!is_valid_unit_prefix("tsfg"));     // lowercase
         assert!(!is_valid_unit_prefix("TSF1"));     // contains number
     }
+}

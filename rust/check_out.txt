@@ -1,0 +1,20 @@
+﻿cargo :     Blocking waiting for file lock on package cache
+At line:1 char:40
++ cd c:\Ecosystem\NexaTrace_System\rust; cargo check 2>&1 | Out-File -F ...
++                                        ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Blocking wa...n package cache 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Blocking waiting for file lock on build directory
+    Checking nexatrace_rust v0.1.0 (C:\Ecosystem\NexaTrace_System\rust)
+error: this file contains an unclosed delimiter
+   --> src\generators\hierarchical.rs:783:7
+    |
+531 | mod tests {
+    |           - unclosed delimiter
+...
+783 |     }
+    |      ^
+
+error: could not compile `nexatrace_rust` (lib) due to 1 previous error

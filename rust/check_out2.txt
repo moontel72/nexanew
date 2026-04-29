@@ -1,0 +1,493 @@
+﻿cargo :     Checking nexatrace_rust v0.1.0 (C:\Ecosystem\NexaTrace_System\rust)
+At line:1 char:40
++ cd c:\Ecosystem\NexaTrace_System\rust; cargo check 2>&1 | Out-File -F ...
++                                        ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking ne...ce_System\rust) 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error[E0252]: the name `OsRng` is defined multiple times
+  --> src\algorithms\encryption.rs:17:9
+   |
+11 |     aead::{Aead, KeyInit, OsRng},
+   |                           ----- previous import of the type `OsRng` here
+...
+17 |         rand_core::OsRng,
+   |         ^^^^^^^^^^^^^^^^-
+   |         |
+   |         `OsRng` reimported here
+   |         help: remove unnecessary import
+   |
+   = note: `OsRng` must be defined only once in the type namespace of this 
+module
+
+warning: unused import: `rngs::ThreadRng`
+  --> src\algorithms\authentication.rs:10:17
+   |
+10 | use rand::{Rng, rngs::ThreadRng};
+   |                 ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `std::collections::HashMap`
+  --> src\algorithms\checksum.rs:10:5
+   |
+10 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `PasswordHash`, `PasswordVerifier`, and 
+`rand_core::OsRng`
+  --> src\algorithms\encryption.rs:17:9
+   |
+17 |         rand_core::OsRng,
+   |         ^^^^^^^^^^^^^^^^
+18 |         PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
+   |         ^^^^^^^^^^^^                  ^^^^^^^^^^^^^^^^
+
+warning: unused import: `rngs::ThreadRng`
+  --> src\algorithms\encryption.rs:26:21
+   |
+26 | use rand::{RngCore, rngs::ThreadRng};
+   |                     ^^^^^^^^^^^^^^^
+
+warning: unused import: `rngs::ThreadRng`
+  --> src\algorithms\mod.rs:38:21
+   |
+38 |     use rand::{Rng, rngs::ThreadRng};
+   |                     ^^^^^^^^^^^^^^^
+
+error[E0204]: the trait `std::marker::Copy` cannot be implemented for this type
+   --> src\models\mod.rs:297:24
+    |
+297 | #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+    |                        ^^^^
+...
+303 |     Other(String),
+    |           ------ this field does not implement `std::marker::Copy`
+
+error[E0599]: the function or associated item `new` exists for struct 
+`CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, UInt<..., ...>, ...>>`, but 
+its trait bounds were not satisfied
+   --> src\algorithms\encryption.rs:249:38
+    |
+249 |             let mut hasher = Sha256::new();
+    |                                      ^^^ function or associated item 
+cannot be called due to unsatisfied trait bounds
+    |
+   ::: C:\Users\picks\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dige
+st-0.10.7\src\core_api\wrapper.rs:24:1
+    |
+ 24 | pub struct CoreWrapper<T>
+    | ------------------------- doesn't satisfy `_: MacMarker` or `_: Mac`
+    |
+note: if you're trying to build a new 
+`CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>`, consider using `CoreWrapper::<T>::from_core` which returns 
+`CoreWrapper<_>`
+   --> C:\Users\picks\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dige
+st-0.10.7\src\core_api\wrapper.rs:70:5
+    |
+ 70 |     pub fn from_core(core: T) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: the following trait bounds were not satisfied:
+            `CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: MacMarker`
+            which is required by 
+`CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: InnerInit`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: KeyInit`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: InnerUser`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: KeyInit`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: Update`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: FixedOutput`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: MacMarker`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: InnerInit`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: KeyInit`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: InnerUser`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: KeyInit`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: Update`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: FixedOutput`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: MacMarker`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+    = help: items from traits can only be used if the trait is in scope
+    = note: the full name for the type has been written to 'C:\Ecosystem\NexaTr
+ace_System\rust\target\debug\deps\nexatrace_rust-89dee2996f0dbbd9.long-type-421
+5554153118337062.txt'
+    = note: consider using `--verbose` to print the full type name to the 
+console
+help: trait `Digest` which provides `new` is implemented but not in scope; 
+perhaps you want to import it
+    |
+ 10 + use sha2::Digest;
+    |
+
+error[E0599]: the function or associated item `new` exists for struct 
+`CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, UInt<..., ...>, ...>>`, but 
+its trait bounds were not satisfied
+   --> src\algorithms\encryption.rs:255:38
+    |
+255 |             let mut hasher = Sha512::new();
+    |                                      ^^^ function or associated item 
+cannot be called due to unsatisfied trait bounds
+    |
+   ::: C:\Users\picks\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dige
+st-0.10.7\src\core_api\wrapper.rs:24:1
+    |
+ 24 | pub struct CoreWrapper<T>
+    | ------------------------- doesn't satisfy `_: MacMarker` or `_: Mac`
+    |
+note: if you're trying to build a new 
+`CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>`, consider using `CoreWrapper::<T>::from_core` which returns 
+`CoreWrapper<_>`
+   --> C:\Users\picks\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dige
+st-0.10.7\src\core_api\wrapper.rs:70:5
+    |
+ 70 |     pub fn from_core(core: T) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: the following trait bounds were not satisfied:
+            `CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: MacMarker`
+            which is required by 
+`CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: hmac::Mac`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: InnerInit`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: KeyInit`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: InnerUser`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: KeyInit`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: Update`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: hmac::Mac`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: FixedOutput`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: hmac::Mac`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: MacMarker`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: hmac::Mac`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: InnerInit`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: KeyInit`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: InnerUser`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: KeyInit`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: Update`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: hmac::Mac`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: FixedOutput`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: hmac::Mac`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: MacMarker`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha512VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, B0>, 
+OidSha512>>: hmac::Mac`
+    = help: items from traits can only be used if the trait is in scope
+    = note: the full name for the type has been written to 'C:\Ecosystem\NexaTr
+ace_System\rust\target\debug\deps\nexatrace_rust-89dee2996f0dbbd9.long-type-866
+7222730027455193.txt'
+    = note: consider using `--verbose` to print the full type name to the 
+console
+help: trait `Digest` which provides `new` is implemented but not in scope; 
+perhaps you want to import it
+    |
+ 10 + use sha2::Digest;
+    |
+
+error[E0034]: multiple applicable items in scope
+   --> src\algorithms\encryption.rs:272:35
+    |
+272 |     let mut mac = Hmac::<Sha256>::new_from_slice(key)
+    |                                   ^^^^^^^^^^^^^^ multiple 
+`new_from_slice` found
+    |
+    = note: candidate #1 is defined in an impl of the trait `KeyInit` for the 
+type `CoreWrapper<T>`
+    = note: candidate #2 is defined in an impl of the trait `hmac::Mac` for 
+the type `T`
+help: use fully-qualified syntax to disambiguate
+    |
+272 -     let mut mac = Hmac::<Sha256>::new_from_slice(key)
+272 +     let mut mac = 
+<CoreWrapper<HmacCore<CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>>> as KeyInit>::new_from_slice(key)
+    |
+272 -     let mut mac = Hmac::<Sha256>::new_from_slice(key)
+272 +     let mut mac = 
+<CoreWrapper<HmacCore<CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>>> as hmac::Mac>::new_from_slice(key)
+    |
+
+error[E0599]: the function or associated item `new` exists for struct 
+`CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, UInt<..., ...>, ...>>`, but 
+its trait bounds were not satisfied
+   --> src\algorithms\encryption.rs:478:30
+    |
+478 |     let mut hasher = Sha256::new();
+    |                              ^^^ function or associated item cannot be 
+called due to unsatisfied trait bounds
+    |
+   ::: C:\Users\picks\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dige
+st-0.10.7\src\core_api\wrapper.rs:24:1
+    |
+ 24 | pub struct CoreWrapper<T>
+    | ------------------------- doesn't satisfy `_: MacMarker` or `_: Mac`
+    |
+note: if you're trying to build a new 
+`CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>`, consider using `CoreWrapper::<T>::from_core` which returns 
+`CoreWrapper<_>`
+   --> C:\Users\picks\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dige
+st-0.10.7\src\core_api\wrapper.rs:70:5
+    |
+ 70 |     pub fn from_core(core: T) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: the following trait bounds were not satisfied:
+            `CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: MacMarker`
+            which is required by 
+`CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: InnerInit`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: KeyInit`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: InnerUser`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: KeyInit`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: Update`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: FixedOutput`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: MacMarker`
+            which is required by 
+`&CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: InnerInit`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: KeyInit`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: InnerUser`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: KeyInit`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: Update`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: FixedOutput`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+            `&mut CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: MacMarker`
+            which is required by `&mut 
+CoreWrapper<CtVariableCoreWrapper<Sha256VarCore, 
+UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>, 
+OidSha256>>: hmac::Mac`
+    = help: items from traits can only be used if the trait is in scope
+    = note: the full name for the type has been written to 'C:\Ecosystem\NexaTr
+ace_System\rust\target\debug\deps\nexatrace_rust-89dee2996f0dbbd9.long-type-421
+5554153118337062.txt'
+    = note: consider using `--verbose` to print the full type name to the 
+console
+help: trait `Digest` which provides `new` is implemented but not in scope; 
+perhaps you want to import it
+    |
+ 10 + use sha2::Digest;
+    |
+
+warning: unused variable: `config`
+   --> src\algorithms\encryption.rs:290:5
+    |
+290 |     config: &EncryptionConfig,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: 
+`_config`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by 
+default
+
+warning: unused variable: `config`
+   --> src\algorithms\encryption.rs:313:5
+    |
+313 |     config: &EncryptionConfig,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: 
+`_config`
+
+warning: unused variable: `config`
+   --> src\algorithms\encryption.rs:336:5
+    |
+336 |     config: &EncryptionConfig,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: 
+`_config`
+
+warning: unused variable: `config`
+   --> src\algorithms\encryption.rs:359:5
+    |
+359 |     config: &EncryptionConfig,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: 
+`_config`
+
+error[E0716]: temporary value dropped while borrowed
+   --> src\algorithms\encryption.rs:431:54
+    |
+431 |                 .hash_password(password.as_bytes(), 
+&SaltString::encode_b64(salt).map_err(|e| format!("Failed to encode salt: {}", 
+e))?)
+    |                                                      ^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ creates a 
+temporary value which is freed while still in use
+432 |                 .map_err(|e| format!("Failed to hash password: {}", e))?;
+    |                                                                         
+- temporary value is freed at the end of this statement
+433 |
+434 |             let hash_bytes = password_hash.hash.ok_or("Failed to get 
+hash bytes")?;
+    |                              ------------------ borrow later used here
+    |
+    = note: consider using a `let` binding to create a longer lived value
+
+Some errors have detailed explanations: E0034, E0204, E0252, E0599, E0716.
+For more information about an error, try `rustc --explain E0034`.
+warning: `nexatrace_rust` (lib) generated 9 warnings
+error: could not compile `nexatrace_rust` (lib) due to 7 previous errors; 9 
+warnings emitted
