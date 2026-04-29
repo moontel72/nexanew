@@ -609,14 +609,14 @@ mod tests {
 
         // Verify all code lists are present
         assert!(!result.generated_codes.is_empty());
-        assert!(!result.qr_codes.is_empty());
-        assert!(!result.barcodes.is_empty());
-        assert!(!result.international_codes.is_empty());
+        assert!(result.qr_codes.as_ref().is_some_and(|v| !v.is_empty()));
+        assert!(result.barcodes.as_ref().is_some_and(|v| !v.is_empty()));
+        assert!(result.international_codes.as_ref().is_some_and(|v| !v.is_empty()));
 
         let codes = &result.generated_codes;
-        let qr_codes = &result.qr_codes;
-        let barcodes = &result.barcodes;
-        let intl_codes = &result.international_codes;
+        let qr_codes = result.qr_codes.as_ref().unwrap();
+        let barcodes = result.barcodes.as_ref().unwrap();
+        let intl_codes = result.international_codes.as_ref().unwrap();
 
         assert_eq!(codes.len(), 19);
         assert_eq!(qr_codes.len(), 19);

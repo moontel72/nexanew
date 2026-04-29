@@ -12,6 +12,7 @@ use App\Services\Codes\CodeGenerator;
 use App\Services\Codes\CodeExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -26,6 +27,13 @@ class CartonCodesController extends Controller
     public function generate(Request $request)
     {
         $user = $request->user();
+
+        if (!Schema::hasColumn('carton_codes', 'code_format')) {
+            return response()->json([
+                'success' => false,
+                'message' => "Database schema out of date: carton_codes.code_format is missing. Run migrations.",
+            ], 500);
+        }
 
         $data = $request->validate([
             'count' => ['required', 'integer', 'min:1', 'max:2000'],
@@ -117,6 +125,13 @@ class CartonCodesController extends Controller
     {
         $user = $request->user();
         $companyId = (string) $user->company_id;
+
+        if (!Schema::hasColumn('carton_codes', 'code_format')) {
+            return response()->json([
+                'success' => false,
+                'message' => "Database schema out of date: carton_codes.code_format is missing. Run migrations.",
+            ], 500);
+        }
 
         $query = DB::table('carton_codes')
             ->join('base_codes', 'carton_codes.id', '=', 'base_codes.id')

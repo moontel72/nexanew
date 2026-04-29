@@ -336,6 +336,9 @@ CREATE TABLE bundle_codes (
 CREATE TABLE carton_codes (
     id UUID PRIMARY KEY REFERENCES base_codes(id) ON DELETE CASCADE,
 
+    -- Code Format
+    code_format VARCHAR(30) NOT NULL DEFAULT 'qr',
+
     -- Hierarchy
     bundle_code_id UUID REFERENCES bundle_codes(id) ON DELETE CASCADE,
 
@@ -370,6 +373,8 @@ CREATE TABLE carton_codes (
     last_inspection_date DATE,
     inspection_notes TEXT
 );
+
+CREATE INDEX idx_carton_codes_code_format ON carton_codes (code_format);
 
 -- Packet Codes (Extends base_codes)
 CREATE TABLE packet_codes (

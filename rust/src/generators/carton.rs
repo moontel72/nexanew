@@ -1553,7 +1553,7 @@ mod tests {
         // GTIN-14: 1 0614141 23456 ?
         let base = "1061414123456";
         let check = compute_gs1_check_digit(base).unwrap();
-        assert_eq!(check, '7');
+        assert_eq!(check, '8');
     }
 
     // --- Random code with format tests ---
