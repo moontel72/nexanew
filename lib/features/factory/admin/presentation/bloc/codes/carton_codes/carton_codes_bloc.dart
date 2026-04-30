@@ -24,6 +24,9 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
     on<DeleteCartonCodeBatch>(_onDeleteCartonCodeBatch);
     on<LinkCartonCodeToProduct>(_onLinkCartonCodeToProduct);
     on<PublishCartonCode>(_onPublishCartonCode);
+    on<PushCartonBatch>(_onPushCartonBatch);
+    on<DeleteCartonBatchByGroup>(_onDeleteCartonBatchByGroup);
+    on<ExportCartonBatch>(_onExportCartonBatch);
     on<DeactivateCartonCode>(_onDeactivateCartonCode);
     on<SearchCartonCodes>(_onSearchCartonCodes);
     on<FilterCartonCodes>(_onFilterCartonCodes);
@@ -334,6 +337,122 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
         state.copyWith(
           status: CartonCodesStatus.error,
           errorMessage: 'Failed to publish carton code: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onPushCartonBatch(
+    PushCartonBatch event,
+    Emitter<CartonCodesState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: CartonCodesStatus.publishing));
+
+      final publishedCount = await _codesRepository.publishCartonBatch(
+        batchId: event.batchId,
+        codeFormat: event.codeFormat,
+      );
+
+      if (publishedCount <= 0) {
+        emit(state.copyWith(status: CartonCodesStatus.published));
+        return;
+      }
+
+      final now = DateTime.now();
+      final updated = state.cartonCodes.map((c) {
+        if (c.batchId == event.batchId &&
+            c.codeFormat == event.codeFormat &&
+            (c.status == CodeStatus.generated || c.status == CodeStatus.linked)) {
+          return c.copyWith(
+            status: CodeStatus.published,
+            publishedAt: now,
+            updatedAt: now,
+          );
+        }
+        return c;
+      }).toList();
+
+      final updatedState = state.copyWith(cartonCodes: updated).applyFilters();
+      emit(updatedState.copyWith(status: CartonCodesStatus.published));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: CartonCodesStatus.error,
+          errorMessage: 'Failed to push batch: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onDeleteCartonBatchByGroup(
+    DeleteCartonBatchByGroup event,
+    Emitter<CartonCodesState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: CartonCodesStatus.deleting));
+
+      final deletedCount = await _codesRepository.deleteCartonBatch(
+        batchId: event.batchId,
+        codeFormat: event.codeFormat,
+      );
+
+      if (deletedCount <= 0) {
+        emit(state.copyWith(status: CartonCodesStatus.deleted));
+        return;
+      }
+
+      final updated = state.cartonCodes
+          .where(
+            (c) => !(c.batchId == event.batchId && c.codeFormat == event.codeFormat),
+          )
+          .toList();
+
+      final updatedState = state.copyWith(cartonCodes: updated).applyFilters();
+      emit(updatedState.copyWith(status: CartonCodesStatus.deleted));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: CartonCodesStatus.error,
+          errorMessage: 'Failed to delete batch: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportCartonBatch(
+    ExportCartonBatch event,
+    Emitter<CartonCodesState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: CartonCodesStatus.exporting,
+          isExporting: true,
+          exportPath: null,
+          errorMessage: null,
+        ),
+      );
+
+      final url = await _codesRepository.downloadCartonBatch(
+        batchId: event.batchId,
+        codeFormat: event.codeFormat,
+        format: event.format,
+      );
+
+      emit(
+        state.copyWith(
+          status: CartonCodesStatus.exported,
+          isExporting: false,
+          exportPath: url,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: CartonCodesStatus.error,
+          isExporting: false,
+          errorMessage: 'Failed to export batch: $e',
         ),
       );
     }

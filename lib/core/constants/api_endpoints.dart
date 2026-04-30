@@ -139,6 +139,8 @@ class ApiEndpoints {
   static const String downloadCartonCodes = '/codes/carton/download';
   static const String linkCartonCodes = '/codes/carton/link';
   static const String publishCartonCodes = '/codes/carton/publish';
+  static const String cartonBatches = '/codes/carton/batches';
+  static const String deleteCartonBatch = '/codes/carton/batch/delete';
 
   // Carton Code Format-specific endpoints
   // POST /v1/codes/carton/{format}/generate -- generate codes for specific format

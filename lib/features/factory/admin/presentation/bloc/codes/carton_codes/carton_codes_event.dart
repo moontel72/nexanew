@@ -18,6 +18,19 @@ abstract class CartonCodesEvent with _$CartonCodesEvent {
   }) = LinkCartonCodeToProduct;
   const factory CartonCodesEvent.publish(String cartonCodeId) =
       PublishCartonCode;
+  const factory CartonCodesEvent.pushBatch({
+    required String batchId,
+    required String codeFormat,
+  }) = PushCartonBatch;
+  const factory CartonCodesEvent.deleteBatchByGroup({
+    required String batchId,
+    required String codeFormat,
+  }) = DeleteCartonBatchByGroup;
+  const factory CartonCodesEvent.exportBatch(
+    String batchId,
+    String codeFormat,
+    String format,
+  ) = ExportCartonBatch;
   const factory CartonCodesEvent.deactivate(
     String cartonCodeId,
     String reason,

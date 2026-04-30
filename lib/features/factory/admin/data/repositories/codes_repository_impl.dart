@@ -361,6 +361,56 @@ class CodesRepositoryImpl implements CodesRepository {
   }
 
   @override
+  Future<int> publishCartonBatch({
+    required String batchId,
+    required String codeFormat,
+  }) async {
+    final res = await _remote.publishCartonCodesByBatchAndFormat(
+      batchId: batchId,
+      codeFormat: codeFormat,
+    );
+    final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    return int.tryParse((data['published_count'] ?? 0).toString()) ?? 0;
+  }
+
+  @override
+  Future<int> deleteCartonBatch({
+    required String batchId,
+    required String codeFormat,
+  }) async {
+    final res = await _remote.deleteCartonBatch(
+      batchId: batchId,
+      codeFormat: codeFormat,
+    );
+    final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    return int.tryParse((data['deleted'] ?? 0).toString()) ?? 0;
+  }
+
+  @override
+  Future<String> downloadCartonBatch({
+    required String batchId,
+    required String codeFormat,
+    required String format,
+    bool includeQrCodes = true,
+    bool includeBarcodes = true,
+    bool includeInternationalCodes = true,
+  }) async {
+    final res = await _remote.downloadCartonBatch(
+      batchId: batchId,
+      codeFormat: codeFormat,
+      format: format,
+      includeQrCodes: includeQrCodes,
+      includeBarcodes: includeBarcodes,
+      includeInternationalCodes: includeInternationalCodes,
+    );
+
+    final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    final downloadUrl = (data['download_url'] ?? '').toString().trim();
+    if (downloadUrl.isNotEmpty) return downloadUrl;
+    return (data['file_path'] ?? '').toString();
+  }
+
+  @override
   Future<int> linkPacketCodeToProduct({
     required String codeId,
     required String productId,

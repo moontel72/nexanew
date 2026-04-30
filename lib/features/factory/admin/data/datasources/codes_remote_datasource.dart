@@ -370,6 +370,34 @@ class CodesRemoteDatasource {
     return (res as Map).cast<String, dynamic>();
   }
 
+  Future<Map<String, dynamic>> publishCartonCodesByBatchAndFormat({
+    required String batchId,
+    required String codeFormat,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.publishCartonCodes,
+      data: {
+        'batch_id': batchId,
+        'code_format': codeFormat,
+      },
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> deleteCartonBatch({
+    required String batchId,
+    required String codeFormat,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.deleteCartonBatch,
+      data: {
+        'batch_id': batchId,
+        'code_format': codeFormat,
+      },
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
   Future<Map<String, dynamic>> downloadCartonCodes({
     required List<String> codeIds,
     required String format,
@@ -382,6 +410,28 @@ class CodesRemoteDatasource {
       data: {
         'format': format,
         'code_ids': codeIds,
+        'include_qr_codes': includeQrCodes,
+        'include_barcodes': includeBarcodes,
+        'include_international_codes': includeInternationalCodes,
+      },
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> downloadCartonBatch({
+    required String batchId,
+    required String codeFormat,
+    required String format,
+    bool includeQrCodes = true,
+    bool includeBarcodes = true,
+    bool includeInternationalCodes = true,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.downloadCartonCodes,
+      data: {
+        'format': format,
+        'batch_id': batchId,
+        'code_format': codeFormat,
         'include_qr_codes': includeQrCodes,
         'include_barcodes': includeBarcodes,
         'include_international_codes': includeInternationalCodes,

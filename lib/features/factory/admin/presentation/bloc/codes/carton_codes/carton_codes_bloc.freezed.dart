@@ -55,7 +55,7 @@ extension CartonCodesEventPatterns on CartonCodesEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( LoadCartonCodes value)?  load,TResult Function( GenerateCartonCodes value)?  generate,TResult Function( DeleteCartonCode value)?  delete,TResult Function( DeleteCartonCodeBatch value)?  deleteBatch,TResult Function( LinkCartonCodeToProduct value)?  linkToProduct,TResult Function( PublishCartonCode value)?  publish,TResult Function( DeactivateCartonCode value)?  deactivate,TResult Function( SearchCartonCodes value)?  search,TResult Function( FilterCartonCodes value)?  filter,TResult Function( FilterCartonCodesByFormat value)?  filterByFormat,TResult Function( ExportCartonCodes value)?  export,TResult Function( SelectCartonCode value)?  select,TResult Function( ClearSelection value)?  clearSelection,TResult Function( RefreshCartonCodes value)?  refresh,TResult Function( SealCarton value)?  seal,TResult Function( UpdateCartonInspection value)?  updateInspection,TResult Function( UpdateCartonProperties value)?  updateProperties,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( LoadCartonCodes value)?  load,TResult Function( GenerateCartonCodes value)?  generate,TResult Function( DeleteCartonCode value)?  delete,TResult Function( DeleteCartonCodeBatch value)?  deleteBatch,TResult Function( LinkCartonCodeToProduct value)?  linkToProduct,TResult Function( PublishCartonCode value)?  publish,TResult Function( PushCartonBatch value)?  pushBatch,TResult Function( DeleteCartonBatchByGroup value)?  deleteBatchByGroup,TResult Function( ExportCartonBatch value)?  exportBatch,TResult Function( DeactivateCartonCode value)?  deactivate,TResult Function( SearchCartonCodes value)?  search,TResult Function( FilterCartonCodes value)?  filter,TResult Function( FilterCartonCodesByFormat value)?  filterByFormat,TResult Function( ExportCartonCodes value)?  export,TResult Function( SelectCartonCode value)?  select,TResult Function( ClearSelection value)?  clearSelection,TResult Function( RefreshCartonCodes value)?  refresh,TResult Function( SealCarton value)?  seal,TResult Function( UpdateCartonInspection value)?  updateInspection,TResult Function( UpdateCartonProperties value)?  updateProperties,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case LoadCartonCodes() when load != null:
@@ -64,7 +64,10 @@ return generate(_that);case DeleteCartonCode() when delete != null:
 return delete(_that);case DeleteCartonCodeBatch() when deleteBatch != null:
 return deleteBatch(_that);case LinkCartonCodeToProduct() when linkToProduct != null:
 return linkToProduct(_that);case PublishCartonCode() when publish != null:
-return publish(_that);case DeactivateCartonCode() when deactivate != null:
+return publish(_that);case PushCartonBatch() when pushBatch != null:
+return pushBatch(_that);case DeleteCartonBatchByGroup() when deleteBatchByGroup != null:
+return deleteBatchByGroup(_that);case ExportCartonBatch() when exportBatch != null:
+return exportBatch(_that);case DeactivateCartonCode() when deactivate != null:
 return deactivate(_that);case SearchCartonCodes() when search != null:
 return search(_that);case FilterCartonCodes() when filter != null:
 return filter(_that);case FilterCartonCodesByFormat() when filterByFormat != null:
@@ -93,7 +96,7 @@ return updateProperties(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( LoadCartonCodes value)  load,required TResult Function( GenerateCartonCodes value)  generate,required TResult Function( DeleteCartonCode value)  delete,required TResult Function( DeleteCartonCodeBatch value)  deleteBatch,required TResult Function( LinkCartonCodeToProduct value)  linkToProduct,required TResult Function( PublishCartonCode value)  publish,required TResult Function( DeactivateCartonCode value)  deactivate,required TResult Function( SearchCartonCodes value)  search,required TResult Function( FilterCartonCodes value)  filter,required TResult Function( FilterCartonCodesByFormat value)  filterByFormat,required TResult Function( ExportCartonCodes value)  export,required TResult Function( SelectCartonCode value)  select,required TResult Function( ClearSelection value)  clearSelection,required TResult Function( RefreshCartonCodes value)  refresh,required TResult Function( SealCarton value)  seal,required TResult Function( UpdateCartonInspection value)  updateInspection,required TResult Function( UpdateCartonProperties value)  updateProperties,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( LoadCartonCodes value)  load,required TResult Function( GenerateCartonCodes value)  generate,required TResult Function( DeleteCartonCode value)  delete,required TResult Function( DeleteCartonCodeBatch value)  deleteBatch,required TResult Function( LinkCartonCodeToProduct value)  linkToProduct,required TResult Function( PublishCartonCode value)  publish,required TResult Function( PushCartonBatch value)  pushBatch,required TResult Function( DeleteCartonBatchByGroup value)  deleteBatchByGroup,required TResult Function( ExportCartonBatch value)  exportBatch,required TResult Function( DeactivateCartonCode value)  deactivate,required TResult Function( SearchCartonCodes value)  search,required TResult Function( FilterCartonCodes value)  filter,required TResult Function( FilterCartonCodesByFormat value)  filterByFormat,required TResult Function( ExportCartonCodes value)  export,required TResult Function( SelectCartonCode value)  select,required TResult Function( ClearSelection value)  clearSelection,required TResult Function( RefreshCartonCodes value)  refresh,required TResult Function( SealCarton value)  seal,required TResult Function( UpdateCartonInspection value)  updateInspection,required TResult Function( UpdateCartonProperties value)  updateProperties,}){
 final _that = this;
 switch (_that) {
 case LoadCartonCodes():
@@ -102,7 +105,10 @@ return generate(_that);case DeleteCartonCode():
 return delete(_that);case DeleteCartonCodeBatch():
 return deleteBatch(_that);case LinkCartonCodeToProduct():
 return linkToProduct(_that);case PublishCartonCode():
-return publish(_that);case DeactivateCartonCode():
+return publish(_that);case PushCartonBatch():
+return pushBatch(_that);case DeleteCartonBatchByGroup():
+return deleteBatchByGroup(_that);case ExportCartonBatch():
+return exportBatch(_that);case DeactivateCartonCode():
 return deactivate(_that);case SearchCartonCodes():
 return search(_that);case FilterCartonCodes():
 return filter(_that);case FilterCartonCodesByFormat():
@@ -130,7 +136,7 @@ return updateProperties(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( LoadCartonCodes value)?  load,TResult? Function( GenerateCartonCodes value)?  generate,TResult? Function( DeleteCartonCode value)?  delete,TResult? Function( DeleteCartonCodeBatch value)?  deleteBatch,TResult? Function( LinkCartonCodeToProduct value)?  linkToProduct,TResult? Function( PublishCartonCode value)?  publish,TResult? Function( DeactivateCartonCode value)?  deactivate,TResult? Function( SearchCartonCodes value)?  search,TResult? Function( FilterCartonCodes value)?  filter,TResult? Function( FilterCartonCodesByFormat value)?  filterByFormat,TResult? Function( ExportCartonCodes value)?  export,TResult? Function( SelectCartonCode value)?  select,TResult? Function( ClearSelection value)?  clearSelection,TResult? Function( RefreshCartonCodes value)?  refresh,TResult? Function( SealCarton value)?  seal,TResult? Function( UpdateCartonInspection value)?  updateInspection,TResult? Function( UpdateCartonProperties value)?  updateProperties,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( LoadCartonCodes value)?  load,TResult? Function( GenerateCartonCodes value)?  generate,TResult? Function( DeleteCartonCode value)?  delete,TResult? Function( DeleteCartonCodeBatch value)?  deleteBatch,TResult? Function( LinkCartonCodeToProduct value)?  linkToProduct,TResult? Function( PublishCartonCode value)?  publish,TResult? Function( PushCartonBatch value)?  pushBatch,TResult? Function( DeleteCartonBatchByGroup value)?  deleteBatchByGroup,TResult? Function( ExportCartonBatch value)?  exportBatch,TResult? Function( DeactivateCartonCode value)?  deactivate,TResult? Function( SearchCartonCodes value)?  search,TResult? Function( FilterCartonCodes value)?  filter,TResult? Function( FilterCartonCodesByFormat value)?  filterByFormat,TResult? Function( ExportCartonCodes value)?  export,TResult? Function( SelectCartonCode value)?  select,TResult? Function( ClearSelection value)?  clearSelection,TResult? Function( RefreshCartonCodes value)?  refresh,TResult? Function( SealCarton value)?  seal,TResult? Function( UpdateCartonInspection value)?  updateInspection,TResult? Function( UpdateCartonProperties value)?  updateProperties,}){
 final _that = this;
 switch (_that) {
 case LoadCartonCodes() when load != null:
@@ -139,7 +145,10 @@ return generate(_that);case DeleteCartonCode() when delete != null:
 return delete(_that);case DeleteCartonCodeBatch() when deleteBatch != null:
 return deleteBatch(_that);case LinkCartonCodeToProduct() when linkToProduct != null:
 return linkToProduct(_that);case PublishCartonCode() when publish != null:
-return publish(_that);case DeactivateCartonCode() when deactivate != null:
+return publish(_that);case PushCartonBatch() when pushBatch != null:
+return pushBatch(_that);case DeleteCartonBatchByGroup() when deleteBatchByGroup != null:
+return deleteBatchByGroup(_that);case ExportCartonBatch() when exportBatch != null:
+return exportBatch(_that);case DeactivateCartonCode() when deactivate != null:
 return deactivate(_that);case SearchCartonCodes() when search != null:
 return search(_that);case FilterCartonCodes() when filter != null:
 return filter(_that);case FilterCartonCodesByFormat() when filterByFormat != null:
@@ -167,7 +176,7 @@ return updateProperties(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String? codeFormat)?  load,TResult Function( CartonCodeGenerationRequest request)?  generate,TResult Function( String cartonCodeId)?  delete,TResult Function( List<String> cartonCodeIds)?  deleteBatch,TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult Function( String cartonCodeId)?  publish,TResult Function( String cartonCodeId,  String reason)?  deactivate,TResult Function( String query)?  search,TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult Function( String? codeFormat)?  filterByFormat,TResult Function( List<String> cartonCodeIds,  String format)?  export,TResult Function( String cartonCodeId,  bool isSelected)?  select,TResult Function()?  clearSelection,TResult Function()?  refresh,TResult Function( String cartonCodeId,  String sealedBy)?  seal,TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String? codeFormat)?  load,TResult Function( CartonCodeGenerationRequest request)?  generate,TResult Function( String cartonCodeId)?  delete,TResult Function( List<String> cartonCodeIds)?  deleteBatch,TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult Function( String cartonCodeId)?  publish,TResult Function( String batchId,  String codeFormat)?  pushBatch,TResult Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult Function( String cartonCodeId,  String reason)?  deactivate,TResult Function( String query)?  search,TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult Function( String? codeFormat)?  filterByFormat,TResult Function( List<String> cartonCodeIds,  String format)?  export,TResult Function( String cartonCodeId,  bool isSelected)?  select,TResult Function()?  clearSelection,TResult Function()?  refresh,TResult Function( String cartonCodeId,  String sealedBy)?  seal,TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case LoadCartonCodes() when load != null:
 return load(_that.codeFormat);case GenerateCartonCodes() when generate != null:
@@ -175,7 +184,10 @@ return generate(_that.request);case DeleteCartonCode() when delete != null:
 return delete(_that.cartonCodeId);case DeleteCartonCodeBatch() when deleteBatch != null:
 return deleteBatch(_that.cartonCodeIds);case LinkCartonCodeToProduct() when linkToProduct != null:
 return linkToProduct(_that.cartonCodeId,_that.productId,_that.productBatchNumber,_that.manufacturingDate,_that.expiryDate,_that.warrantyMonths);case PublishCartonCode() when publish != null:
-return publish(_that.cartonCodeId);case DeactivateCartonCode() when deactivate != null:
+return publish(_that.cartonCodeId);case PushCartonBatch() when pushBatch != null:
+return pushBatch(_that.batchId,_that.codeFormat);case DeleteCartonBatchByGroup() when deleteBatchByGroup != null:
+return deleteBatchByGroup(_that.batchId,_that.codeFormat);case ExportCartonBatch() when exportBatch != null:
+return exportBatch(_that.batchId,_that.codeFormat,_that.format);case DeactivateCartonCode() when deactivate != null:
 return deactivate(_that.cartonCodeId,_that.reason);case SearchCartonCodes() when search != null:
 return search(_that.query);case FilterCartonCodes() when filter != null:
 return filter(_that.status,_that.bundleCode,_that.startDate,_that.endDate,_that.cartonType,_that.condition);case FilterCartonCodesByFormat() when filterByFormat != null:
@@ -204,7 +216,7 @@ return updateProperties(_that.cartonCodeId,_that.weight,_that.dimensions,_that.t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String? codeFormat)  load,required TResult Function( CartonCodeGenerationRequest request)  generate,required TResult Function( String cartonCodeId)  delete,required TResult Function( List<String> cartonCodeIds)  deleteBatch,required TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)  linkToProduct,required TResult Function( String cartonCodeId)  publish,required TResult Function( String cartonCodeId,  String reason)  deactivate,required TResult Function( String query)  search,required TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)  filter,required TResult Function( String? codeFormat)  filterByFormat,required TResult Function( List<String> cartonCodeIds,  String format)  export,required TResult Function( String cartonCodeId,  bool isSelected)  select,required TResult Function()  clearSelection,required TResult Function()  refresh,required TResult Function( String cartonCodeId,  String sealedBy)  seal,required TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)  updateInspection,required TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)  updateProperties,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String? codeFormat)  load,required TResult Function( CartonCodeGenerationRequest request)  generate,required TResult Function( String cartonCodeId)  delete,required TResult Function( List<String> cartonCodeIds)  deleteBatch,required TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)  linkToProduct,required TResult Function( String cartonCodeId)  publish,required TResult Function( String batchId,  String codeFormat)  pushBatch,required TResult Function( String batchId,  String codeFormat)  deleteBatchByGroup,required TResult Function( String batchId,  String codeFormat,  String format)  exportBatch,required TResult Function( String cartonCodeId,  String reason)  deactivate,required TResult Function( String query)  search,required TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)  filter,required TResult Function( String? codeFormat)  filterByFormat,required TResult Function( List<String> cartonCodeIds,  String format)  export,required TResult Function( String cartonCodeId,  bool isSelected)  select,required TResult Function()  clearSelection,required TResult Function()  refresh,required TResult Function( String cartonCodeId,  String sealedBy)  seal,required TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)  updateInspection,required TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)  updateProperties,}) {final _that = this;
 switch (_that) {
 case LoadCartonCodes():
 return load(_that.codeFormat);case GenerateCartonCodes():
@@ -212,7 +224,10 @@ return generate(_that.request);case DeleteCartonCode():
 return delete(_that.cartonCodeId);case DeleteCartonCodeBatch():
 return deleteBatch(_that.cartonCodeIds);case LinkCartonCodeToProduct():
 return linkToProduct(_that.cartonCodeId,_that.productId,_that.productBatchNumber,_that.manufacturingDate,_that.expiryDate,_that.warrantyMonths);case PublishCartonCode():
-return publish(_that.cartonCodeId);case DeactivateCartonCode():
+return publish(_that.cartonCodeId);case PushCartonBatch():
+return pushBatch(_that.batchId,_that.codeFormat);case DeleteCartonBatchByGroup():
+return deleteBatchByGroup(_that.batchId,_that.codeFormat);case ExportCartonBatch():
+return exportBatch(_that.batchId,_that.codeFormat,_that.format);case DeactivateCartonCode():
 return deactivate(_that.cartonCodeId,_that.reason);case SearchCartonCodes():
 return search(_that.query);case FilterCartonCodes():
 return filter(_that.status,_that.bundleCode,_that.startDate,_that.endDate,_that.cartonType,_that.condition);case FilterCartonCodesByFormat():
@@ -240,7 +255,7 @@ return updateProperties(_that.cartonCodeId,_that.weight,_that.dimensions,_that.t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String? codeFormat)?  load,TResult? Function( CartonCodeGenerationRequest request)?  generate,TResult? Function( String cartonCodeId)?  delete,TResult? Function( List<String> cartonCodeIds)?  deleteBatch,TResult? Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult? Function( String cartonCodeId)?  publish,TResult? Function( String cartonCodeId,  String reason)?  deactivate,TResult? Function( String query)?  search,TResult? Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult? Function( String? codeFormat)?  filterByFormat,TResult? Function( List<String> cartonCodeIds,  String format)?  export,TResult? Function( String cartonCodeId,  bool isSelected)?  select,TResult? Function()?  clearSelection,TResult? Function()?  refresh,TResult? Function( String cartonCodeId,  String sealedBy)?  seal,TResult? Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult? Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String? codeFormat)?  load,TResult? Function( CartonCodeGenerationRequest request)?  generate,TResult? Function( String cartonCodeId)?  delete,TResult? Function( List<String> cartonCodeIds)?  deleteBatch,TResult? Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult? Function( String cartonCodeId)?  publish,TResult? Function( String batchId,  String codeFormat)?  pushBatch,TResult? Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult? Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult? Function( String cartonCodeId,  String reason)?  deactivate,TResult? Function( String query)?  search,TResult? Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult? Function( String? codeFormat)?  filterByFormat,TResult? Function( List<String> cartonCodeIds,  String format)?  export,TResult? Function( String cartonCodeId,  bool isSelected)?  select,TResult? Function()?  clearSelection,TResult? Function()?  refresh,TResult? Function( String cartonCodeId,  String sealedBy)?  seal,TResult? Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult? Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,}) {final _that = this;
 switch (_that) {
 case LoadCartonCodes() when load != null:
 return load(_that.codeFormat);case GenerateCartonCodes() when generate != null:
@@ -248,7 +263,10 @@ return generate(_that.request);case DeleteCartonCode() when delete != null:
 return delete(_that.cartonCodeId);case DeleteCartonCodeBatch() when deleteBatch != null:
 return deleteBatch(_that.cartonCodeIds);case LinkCartonCodeToProduct() when linkToProduct != null:
 return linkToProduct(_that.cartonCodeId,_that.productId,_that.productBatchNumber,_that.manufacturingDate,_that.expiryDate,_that.warrantyMonths);case PublishCartonCode() when publish != null:
-return publish(_that.cartonCodeId);case DeactivateCartonCode() when deactivate != null:
+return publish(_that.cartonCodeId);case PushCartonBatch() when pushBatch != null:
+return pushBatch(_that.batchId,_that.codeFormat);case DeleteCartonBatchByGroup() when deleteBatchByGroup != null:
+return deleteBatchByGroup(_that.batchId,_that.codeFormat);case ExportCartonBatch() when exportBatch != null:
+return exportBatch(_that.batchId,_that.codeFormat,_that.format);case DeactivateCartonCode() when deactivate != null:
 return deactivate(_that.cartonCodeId,_that.reason);case SearchCartonCodes() when search != null:
 return search(_that.query);case FilterCartonCodes() when filter != null:
 return filter(_that.status,_that.bundleCode,_that.startDate,_that.endDate,_that.cartonType,_that.condition);case FilterCartonCodesByFormat() when filterByFormat != null:
@@ -681,6 +699,212 @@ class _$PublishCartonCodeCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') $Res call({Object? cartonCodeId = null,}) {
   return _then(PublishCartonCode(
 null == cartonCodeId ? _self.cartonCodeId : cartonCodeId // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class PushCartonBatch implements CartonCodesEvent {
+  const PushCartonBatch({required this.batchId, required this.codeFormat});
+  
+
+ final  String batchId;
+ final  String codeFormat;
+
+/// Create a copy of CartonCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$PushCartonBatchCopyWith<PushCartonBatch> get copyWith => _$PushCartonBatchCopyWithImpl<PushCartonBatch>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PushCartonBatch&&(identical(other.batchId, batchId) || other.batchId == batchId)&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,batchId,codeFormat);
+
+@override
+String toString() {
+  return 'CartonCodesEvent.pushBatch(batchId: $batchId, codeFormat: $codeFormat)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $PushCartonBatchCopyWith<$Res> implements $CartonCodesEventCopyWith<$Res> {
+  factory $PushCartonBatchCopyWith(PushCartonBatch value, $Res Function(PushCartonBatch) _then) = _$PushCartonBatchCopyWithImpl;
+@useResult
+$Res call({
+ String batchId, String codeFormat
+});
+
+
+
+
+}
+/// @nodoc
+class _$PushCartonBatchCopyWithImpl<$Res>
+    implements $PushCartonBatchCopyWith<$Res> {
+  _$PushCartonBatchCopyWithImpl(this._self, this._then);
+
+  final PushCartonBatch _self;
+  final $Res Function(PushCartonBatch) _then;
+
+/// Create a copy of CartonCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? batchId = null,Object? codeFormat = null,}) {
+  return _then(PushCartonBatch(
+batchId: null == batchId ? _self.batchId : batchId // ignore: cast_nullable_to_non_nullable
+as String,codeFormat: null == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class DeleteCartonBatchByGroup implements CartonCodesEvent {
+  const DeleteCartonBatchByGroup({required this.batchId, required this.codeFormat});
+  
+
+ final  String batchId;
+ final  String codeFormat;
+
+/// Create a copy of CartonCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DeleteCartonBatchByGroupCopyWith<DeleteCartonBatchByGroup> get copyWith => _$DeleteCartonBatchByGroupCopyWithImpl<DeleteCartonBatchByGroup>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DeleteCartonBatchByGroup&&(identical(other.batchId, batchId) || other.batchId == batchId)&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,batchId,codeFormat);
+
+@override
+String toString() {
+  return 'CartonCodesEvent.deleteBatchByGroup(batchId: $batchId, codeFormat: $codeFormat)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DeleteCartonBatchByGroupCopyWith<$Res> implements $CartonCodesEventCopyWith<$Res> {
+  factory $DeleteCartonBatchByGroupCopyWith(DeleteCartonBatchByGroup value, $Res Function(DeleteCartonBatchByGroup) _then) = _$DeleteCartonBatchByGroupCopyWithImpl;
+@useResult
+$Res call({
+ String batchId, String codeFormat
+});
+
+
+
+
+}
+/// @nodoc
+class _$DeleteCartonBatchByGroupCopyWithImpl<$Res>
+    implements $DeleteCartonBatchByGroupCopyWith<$Res> {
+  _$DeleteCartonBatchByGroupCopyWithImpl(this._self, this._then);
+
+  final DeleteCartonBatchByGroup _self;
+  final $Res Function(DeleteCartonBatchByGroup) _then;
+
+/// Create a copy of CartonCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? batchId = null,Object? codeFormat = null,}) {
+  return _then(DeleteCartonBatchByGroup(
+batchId: null == batchId ? _self.batchId : batchId // ignore: cast_nullable_to_non_nullable
+as String,codeFormat: null == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class ExportCartonBatch implements CartonCodesEvent {
+  const ExportCartonBatch(this.batchId, this.codeFormat, this.format);
+  
+
+ final  String batchId;
+ final  String codeFormat;
+ final  String format;
+
+/// Create a copy of CartonCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ExportCartonBatchCopyWith<ExportCartonBatch> get copyWith => _$ExportCartonBatchCopyWithImpl<ExportCartonBatch>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExportCartonBatch&&(identical(other.batchId, batchId) || other.batchId == batchId)&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat)&&(identical(other.format, format) || other.format == format));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,batchId,codeFormat,format);
+
+@override
+String toString() {
+  return 'CartonCodesEvent.exportBatch(batchId: $batchId, codeFormat: $codeFormat, format: $format)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ExportCartonBatchCopyWith<$Res> implements $CartonCodesEventCopyWith<$Res> {
+  factory $ExportCartonBatchCopyWith(ExportCartonBatch value, $Res Function(ExportCartonBatch) _then) = _$ExportCartonBatchCopyWithImpl;
+@useResult
+$Res call({
+ String batchId, String codeFormat, String format
+});
+
+
+
+
+}
+/// @nodoc
+class _$ExportCartonBatchCopyWithImpl<$Res>
+    implements $ExportCartonBatchCopyWith<$Res> {
+  _$ExportCartonBatchCopyWithImpl(this._self, this._then);
+
+  final ExportCartonBatch _self;
+  final $Res Function(ExportCartonBatch) _then;
+
+/// Create a copy of CartonCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? batchId = null,Object? codeFormat = null,Object? format = null,}) {
+  return _then(ExportCartonBatch(
+null == batchId ? _self.batchId : batchId // ignore: cast_nullable_to_non_nullable
+as String,null == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String,null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

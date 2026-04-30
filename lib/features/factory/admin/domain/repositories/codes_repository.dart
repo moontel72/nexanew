@@ -113,6 +113,25 @@ abstract class CodesRepository {
     bool includeInternationalCodes = true,
   });
 
+  Future<int> publishCartonBatch({
+    required String batchId,
+    required String codeFormat,
+  });
+
+  Future<int> deleteCartonBatch({
+    required String batchId,
+    required String codeFormat,
+  });
+
+  Future<String> downloadCartonBatch({
+    required String batchId,
+    required String codeFormat,
+    required String format,
+    bool includeQrCodes = true,
+    bool includeBarcodes = true,
+    bool includeInternationalCodes = true,
+  });
+
   Future<int> linkPacketCodeToProduct({
     required String codeId,
     required String productId,

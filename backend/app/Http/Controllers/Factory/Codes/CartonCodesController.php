@@ -252,6 +252,156 @@ class CartonCodesController extends Controller
         return $this->list($request);
     }
 
+    public function listBatches(Request $request)
+    {
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+
+        if (!Schema::hasColumn('carton_codes', 'code_format')) {
+            return response()->json([
+                'success' => false,
+                'message' => "Database schema out of date: carton_codes.code_format is missing. Run migrations.",
+            ], 500);
+        }
+
+        $data = $request->validate([
+            'code_format' => ['nullable', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+        ]);
+
+        $page = (int) ($data['page'] ?? $request->query('page', 1));
+        $limit = (int) ($data['limit'] ?? $request->query('limit', 50));
+        $limit = max(1, min(200, $limit));
+        $offset = ($page - 1) * $limit;
+
+        $driver = DB::getDriverName();
+        $isPushedExpr = $driver === 'pgsql'
+            ? DB::raw('bool_or(base_codes.published_at is not null) as is_pushed')
+            : DB::raw('MAX(CASE WHEN base_codes.published_at IS NOT NULL THEN 1 ELSE 0 END) as is_pushed');
+
+        $baseGroup = DB::table('carton_codes')
+            ->join('base_codes', 'carton_codes.id', '=', 'base_codes.id')
+            ->where('base_codes.company_id', $companyId)
+            ->where('base_codes.code_type', 'carton')
+            ->where('base_codes.is_deleted', false)
+            ->when(
+                !empty($data['code_format'] ?? null),
+                fn ($q) => $q->where('carton_codes.code_format', (string) $data['code_format']),
+            )
+            ->groupBy('base_codes.batch_id', 'carton_codes.code_format')
+            ->select([
+                'base_codes.batch_id',
+                'carton_codes.code_format',
+                DB::raw('COUNT(base_codes.id) as code_count'),
+                DB::raw('MAX(base_codes.generated_at) as generated_at'),
+                $isPushedExpr,
+            ]);
+
+        $total = DB::query()->fromSub(
+            DB::table('carton_codes')
+                ->join('base_codes', 'carton_codes.id', '=', 'base_codes.id')
+                ->where('base_codes.company_id', $companyId)
+                ->where('base_codes.code_type', 'carton')
+                ->where('base_codes.is_deleted', false)
+                ->when(
+                    !empty($data['code_format'] ?? null),
+                    fn ($q) => $q->where('carton_codes.code_format', (string) $data['code_format']),
+                )
+                ->groupBy('base_codes.batch_id', 'carton_codes.code_format')
+                ->select(['base_codes.batch_id', 'carton_codes.code_format']),
+            't',
+        )->count();
+
+        $rows = (clone $baseGroup)
+            ->orderByDesc(DB::raw('MAX(base_codes.generated_at)'))
+            ->offset($offset)
+            ->limit($limit)
+            ->get();
+
+        $dt = static fn ($v) => $v ? Carbon::parse($v)->toISOString() : null;
+
+        $items = collect($rows)->map(function ($row) use ($dt) {
+            $isPushed = (bool) ($row->is_pushed ?? false);
+            return [
+                'batchId' => (string) ($row->batch_id ?? ''),
+                'codeFormat' => (string) ($row->code_format ?? 'qr'),
+                'codeCount' => (int) ($row->code_count ?? 0),
+                'generatedAt' => $dt($row->generated_at),
+                'status' => $isPushed ? 'pushed' : 'draft',
+                'isPushed' => $isPushed,
+            ];
+        })->all();
+
+        $totalPages = (int) ceil(max(1, $total) / $limit);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'batches' => $items,
+                'total' => (int) $total,
+                'page' => $page,
+                'limit' => $limit,
+                'total_pages' => $totalPages,
+            ],
+        ]);
+    }
+
+    public function deleteBatch(Request $request)
+    {
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+
+        $data = $request->validate([
+            'batch_id' => ['required', 'string', 'max:100'],
+            'code_format' => ['nullable', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
+        ]);
+
+        $ids = DB::table('carton_codes')
+            ->join('base_codes', 'carton_codes.id', '=', 'base_codes.id')
+            ->where('base_codes.company_id', $companyId)
+            ->where('base_codes.code_type', 'carton')
+            ->where('base_codes.is_deleted', false)
+            ->whereNull('base_codes.published_at')
+            ->where('base_codes.batch_id', (string) $data['batch_id'])
+            ->when(
+                !empty($data['code_format'] ?? null),
+                fn ($q) => $q->where('carton_codes.code_format', (string) $data['code_format']),
+            )
+            ->pluck('base_codes.id')
+            ->map(fn ($v) => (string) $v)
+            ->all();
+
+        if (empty($ids)) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'deleted' => 0,
+                ],
+            ]);
+        }
+
+        $now = now();
+        $updated = DB::table('base_codes')
+            ->where('company_id', $companyId)
+            ->where('code_type', 'carton')
+            ->whereIn('id', $ids)
+            ->whereNull('published_at')
+            ->where('is_deleted', false)
+            ->update([
+                'is_deleted' => true,
+                'status' => 'deleted',
+                'updated_at' => $now,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'deleted' => (int) $updated,
+            ],
+        ]);
+    }
+
     public function update(Request $request, string $id)
     {
         $user = $request->user();
@@ -387,6 +537,7 @@ class CartonCodesController extends Controller
             'code_ids' => ['nullable', 'array', 'min:1', 'max:5000'],
             'code_ids.*' => ['uuid'],
             'batch_id' => ['nullable', 'string', 'max:100'],
+            'code_format' => ['nullable', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
             'product_batch_number' => ['nullable', 'string', 'max:100'],
             'manufacturing_date' => ['nullable', 'date'],
             'expiry_date' => ['nullable', 'date'],
@@ -417,6 +568,10 @@ class CartonCodesController extends Controller
             ->whereIn('status', ['generated', 'linked']);
         if (!empty($data['batch_id'])) {
             $query->where('batch_id', (string) $data['batch_id']);
+            if (!empty($data['code_format'] ?? null)) {
+                $query->join('carton_codes', 'carton_codes.id', '=', 'base_codes.id')
+                    ->where('carton_codes.code_format', (string) $data['code_format']);
+            }
         } else {
             $query->whereIn('id', $data['code_ids']);
         }
@@ -517,18 +672,47 @@ class CartonCodesController extends Controller
 
         $data = $request->validate([
             'format' => ['required', 'string'],
-            'code_ids' => ['required', 'array', 'min:1', 'max:5000'],
+            'code_ids' => ['nullable', 'array', 'min:1', 'max:5000'],
             'code_ids.*' => ['uuid'],
+            'batch_id' => ['nullable', 'string', 'max:100'],
+            'code_format' => ['nullable', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
             'include_qr_codes' => ['nullable', 'boolean'],
             'include_barcodes' => ['nullable', 'boolean'],
             'include_international_codes' => ['nullable', 'boolean'],
         ]);
 
+        if (empty($data['code_ids']) && empty($data['batch_id'])) {
+            return response()->json(['message' => 'code_ids or batch_id is required'], 422);
+        }
+
+        $codeIds = $data['code_ids'] ?? [];
+        if (empty($codeIds) && !empty($data['batch_id'])) {
+            $codeIds = DB::table('carton_codes')
+                ->join('base_codes', 'carton_codes.id', '=', 'base_codes.id')
+                ->where('base_codes.company_id', $companyId)
+                ->where('base_codes.code_type', 'carton')
+                ->where('base_codes.is_deleted', false)
+                ->whereNotNull('base_codes.published_at')
+                ->where('base_codes.batch_id', (string) $data['batch_id'])
+                ->when(
+                    !empty($data['code_format'] ?? null),
+                    fn ($q) => $q->where('carton_codes.code_format', (string) $data['code_format']),
+                )
+                ->limit(5000)
+                ->pluck('base_codes.id')
+                ->map(fn ($v) => (string) $v)
+                ->all();
+        }
+
+        if (empty($codeIds)) {
+            return response()->json(['message' => 'No codes found for download'], 422);
+        }
+
         try {
             $res = $this->exporter->exportCodesToFile(
                 companyId: $companyId,
                 codeType: 'carton',
-                codeIds: $data['code_ids'],
+                codeIds: $codeIds,
                 format: (string) $data['format'],
                 options: $data,
             );

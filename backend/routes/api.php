@@ -599,6 +599,14 @@ $registerRoutes = function (): void {
             });
 
             Route::prefix("carton")->group(function (): void {
+                Route::get("batches", [
+                    \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
+                    "listBatches",
+                ]);
+                Route::post("batch/delete", [
+                    \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
+                    "deleteBatch",
+                ]);
                 Route::post("generate", [
                     \App\Http\Controllers\Factory\Codes\CartonCodesController::class,
                     "generate",
