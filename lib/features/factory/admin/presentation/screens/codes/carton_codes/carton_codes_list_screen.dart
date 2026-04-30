@@ -636,7 +636,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                     ),
                   ),
                   ListView.builder(
-                    controller: _scrollController,
                     padding: EdgeInsets.only(
                       bottom: 80.h,
                       left: 16.w,
