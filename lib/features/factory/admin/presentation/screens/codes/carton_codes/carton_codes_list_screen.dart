@@ -47,14 +47,10 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
 
   void _onScroll() {
     if (_scrollController.position.pixels ==
-        _scrollController.position.maxScrollExtent) {
-      // TODO: Implement load more functionality
-    }
+        _scrollController.position.maxScrollExtent) {}
   }
 
-  void _showFilterDialog() {
-    // TODO: Implement filter dialog
-  }
+  void _showFilterDialog() {}
 
   void _showCartonDetails(CartonCodeModel carton) {
     showModalBottomSheet(
@@ -284,21 +280,18 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               ),
             ),
           ),
-
           if (isExpanded) ...[
             const Divider(height: 1, color: AppColors.borderColor),
-
             if (!isValidBatch)
               Padding(
                 padding: EdgeInsets.all(12.w),
                 child: Text(
-                  'BatchId missing for these codes. Regenerate to enable Push/Delete/Download.',
+                  'BatchId missing for these codes. Regenerate to enable actions.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
                   ),
                 ),
               ),
-
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
               child: Table(
@@ -353,9 +346,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                 ],
               ),
             ),
-
             SizedBox(height: 8.h),
-
             Padding(
               padding: EdgeInsets.fromLTRB(12.w, 0, 12.w, 12.h),
               child: Row(
@@ -364,12 +355,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: isValidBatch
-                            ? () => _confirmDeleteBatch(
-                                context,
-                                group,
-                                formatName,
-                                batchId,
-                              )
+                            ? () => _confirmDeleteBatch(context, group)
                             : null,
                         icon: const Icon(Icons.delete_outline, size: 18),
                         label: const Text('Delete'),
@@ -383,12 +369,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: isValidBatch
-                            ? () => _confirmPushBatch(
-                                context,
-                                group,
-                                formatName,
-                                batchId,
-                              )
+                            ? () => _confirmPushBatch(context, group)
                             : null,
                         icon: const Icon(Icons.publish_outlined, size: 18),
                         label: const Text('Push'),
@@ -458,13 +439,10 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     }
   }
 
-  void _confirmDeleteBatch(
-    BuildContext context,
-    _CartonBatchGroup group,
-    String formatName,
-    String batchId,
-  ) {
+  void _confirmDeleteBatch(BuildContext context, _CartonBatchGroup group) {
     final bloc = context.read<CartonCodesBloc>();
+    final formatName = CartonCodeFormat.fromValue(group.codeFormat).displayName;
+    final batchId = group.batchId.trim().isEmpty ? 'NO-BATCH' : group.batchId;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -475,8 +453,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
           ).textTheme.titleMedium?.copyWith(color: AppColors.error),
         ),
         content: Text(
-          'Delete all ${group.codeCount} codes in this batch?\n\n$formatName \u2022 $batchId',
-          style: Theme.of(ctx).textTheme.bodyMedium,
+          'Delete all ${group.codeCount} codes?\n\n$formatName \u2022 $batchId',
         ),
         actions: [
           TextButton(
@@ -505,20 +482,16 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     );
   }
 
-  void _confirmPushBatch(
-    BuildContext context,
-    _CartonBatchGroup group,
-    String formatName,
-    String batchId,
-  ) {
+  void _confirmPushBatch(BuildContext context, _CartonBatchGroup group) {
     final bloc = context.read<CartonCodesBloc>();
+    final formatName = CartonCodeFormat.fromValue(group.codeFormat).displayName;
+    final batchId = group.batchId.trim().isEmpty ? 'NO-BATCH' : group.batchId;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Push Batch'),
         content: Text(
-          'Finalize all ${group.codeCount} codes in this batch?\n\n$formatName \u2022 $batchId',
-          style: Theme.of(ctx).textTheme.bodyMedium,
+          'Finalize all ${group.codeCount} codes?\n\n$formatName \u2022 $batchId',
         ),
         actions: [
           TextButton(
@@ -546,25 +519,23 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     final bloc = context.read<CartonCodesBloc>();
     final format = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.picture_as_pdf),
-                title: const Text('Download PDF'),
-                onTap: () => Navigator.pop(ctx, 'pdf'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.table_chart),
-                title: const Text('Download CSV'),
-                onTap: () => Navigator.pop(ctx, 'csv'),
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf),
+              title: const Text('Download PDF'),
+              onTap: () => Navigator.pop(ctx, 'pdf'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.table_chart),
+              title: const Text('Download CSV'),
+              onTap: () => Navigator.pop(ctx, 'csv'),
+            ),
+          ],
+        ),
+      ),
     );
     if (format == null) return;
     bloc.add(ExportCartonBatch(group.batchId, group.codeFormat, format));
@@ -578,10 +549,10 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     final totalPackets = codes.fold<int>(0, (sum, c) => sum + c.packetCount);
     final totalUnits = codes.fold<int>(0, (sum, c) => sum + c.totalUnits);
     final overweightCartons = codes.where((c) => c.isOverweight).length;
-    final sealedPercentage = totalCartons > 0
+    final sealedPct = totalCartons > 0
         ? (sealedCartons * 100 ~/ totalCartons)
         : 0;
-    final inspectionPercentage = totalCartons > 0
+    final inspPct = totalCartons > 0
         ? (needInspection * 100 ~/ totalCartons)
         : 0;
 
@@ -604,20 +575,20 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildStatItem(
-                  label: 'Total Cartons',
+                  label: 'Total',
                   value: totalCartons.toString(),
                   icon: Icons.inventory_2,
                   color: AppColors.primary,
                 ),
                 _buildStatItem(
                   label: 'Sealed',
-                  value: '$sealedCartons ($sealedPercentage%)',
+                  value: '$sealedCartons ($sealedPct%)',
                   icon: Icons.lock,
                   color: AppColors.success,
                 ),
                 _buildStatItem(
-                  label: 'Need Inspection',
-                  value: '$needInspection ($inspectionPercentage%)',
+                  label: 'Inspect',
+                  value: '$needInspection ($inspPct%)',
                   icon: Icons.warning,
                   color: AppColors.warning,
                 ),
@@ -628,19 +599,19 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildStatItem(
-                  label: 'Total Packets',
+                  label: 'Packets',
                   value: totalPackets.toString(),
                   icon: Icons.inventory_2,
                   color: AppColors.info,
                 ),
                 _buildStatItem(
-                  label: 'Total Units',
+                  label: 'Units',
                   value: totalUnits.toString(),
                   icon: Icons.shopping_bag,
                   color: AppColors.secondary,
                 ),
                 _buildStatItem(
-                  label: 'Overweight',
+                  label: 'Overwt',
                   value: overweightCartons.toString(),
                   icon: Icons.warning_amber,
                   color: AppColors.error,
@@ -711,7 +682,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               context,
             ).showSnackBar(const SnackBar(content: Text('Download started')));
           }
-
           if (state.status == CartonCodesStatus.error &&
               state.errorMessage != null &&
               state.errorMessage!.trim().isNotEmpty) {
@@ -725,7 +695,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               state.cartonCodes.isEmpty) {
             return const Center(child: LoadingIndicator());
           }
-
           if (state.status == CartonCodesStatus.error &&
               state.cartonCodes.isEmpty) {
             return Center(
@@ -742,7 +711,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               ),
             );
           }
-
           if (state.filteredCartonCodes.isEmpty) {
             return Scrollbar(
               controller: _scrollController,
@@ -803,7 +771,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               child: Column(
                 children: [
                   Padding(
-                    padding: EdgeInsets.all(16.w),
+                    padding: EdgeInsets.fromLTRB(16.w, 16.w, 16.w, 0),
                     child: Column(
                       children: [
                         custom.SearchBar(
@@ -848,7 +816,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                       ],
                     ),
                   ),
-
                   Builder(
                     builder: (context) {
                       final groups = _groupBatches(state.filteredCartonCodes);
@@ -858,11 +825,10 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                             horizontal: 16.w,
                             vertical: 32.h,
                           ),
-                          child: EmptyState(
+                          child: const EmptyState(
                             icon: Icons.inventory_2,
                             title: 'No Batch Groups',
-                            description:
-                                'Codes exist but no batch groups could be formed.',
+                            description: 'No batch groups could be formed.',
                           ),
                         );
                       }
@@ -900,7 +866,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
 class _CartonCodesAppBar extends StatelessWidget
     implements PreferredSizeWidget {
   final VoidCallback onShowFilterDialog;
-
   const _CartonCodesAppBar({required this.onShowFilterDialog});
 
   @override
@@ -961,13 +926,8 @@ class _CartonBatchGroup {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// Bottom sheets for individual code actions (kept for context menu)
-// ═══════════════════════════════════════════════════════════
-
 class _CartonDetailsBottomSheet extends StatelessWidget {
   final CartonCodeModel carton;
-
   const _CartonDetailsBottomSheet({required this.carton});
 
   @override
@@ -1006,44 +966,32 @@ class _CartonDetailsBottomSheet extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 16.h),
-                _buildDetailRow(context, 'Code', carton.code),
-                _buildDetailRow(context, 'Type', carton.type.name),
-                _buildDetailRow(context, 'Status', carton.status.name),
-                _buildDetailRow(context, 'Batch ID', carton.batchId),
-                _buildDetailRow(
+                _dr(context, 'Code', carton.code),
+                _dr(context, 'Type', carton.type.name),
+                _dr(context, 'Status', carton.status.name),
+                _dr(context, 'Batch ID', carton.batchId),
+                _dr(
                   context,
                   'Format',
                   CartonCodeFormat.fromValue(carton.codeFormat).displayName,
                 ),
-                _buildDetailRow(
+                _dr(
                   context,
-                  'Generated At',
+                  'Generated',
                   carton.generatedAt.toLocal().toString().split('.')[0],
                 ),
                 if (carton.bundleCode.isNotEmpty)
-                  _buildDetailRow(context, 'Bundle Code', carton.bundleCode),
-                _buildDetailRow(
-                  context,
-                  'Packet Count',
-                  carton.packetCount.toString(),
-                ),
-                _buildDetailRow(
-                  context,
-                  'Total Units',
-                  carton.totalUnits.toString(),
-                ),
+                  _dr(context, 'Bundle Code', carton.bundleCode),
+                _dr(context, 'Packets', carton.packetCount.toString()),
+                _dr(context, 'Units', carton.totalUnits.toString()),
                 if (carton.weight != null)
-                  _buildDetailRow(context, 'Weight', '${carton.weight} kg'),
+                  _dr(context, 'Weight', '${carton.weight} kg'),
                 if (carton.dimensions != null)
-                  _buildDetailRow(context, 'Dimensions', carton.dimensions!),
+                  _dr(context, 'Dimensions', carton.dimensions!),
                 if (carton.cartonType != null)
-                  _buildDetailRow(context, 'Carton Type', carton.cartonType!),
-                _buildDetailRow(
-                  context,
-                  'Sealed',
-                  carton.isSealed ? 'Yes' : 'No',
-                ),
-                _buildDetailRow(context, 'Condition', carton.condition),
+                  _dr(context, 'Carton Type', carton.cartonType!),
+                _dr(context, 'Sealed', carton.isSealed ? 'Yes' : 'No'),
+                _dr(context, 'Condition', carton.condition),
                 SizedBox(height: 16.h),
               ],
             ),
@@ -1053,7 +1001,7 @@ class _CartonDetailsBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(BuildContext context, String label, String value) {
+  Widget _dr(BuildContext context, String label, String value) {
     return Padding(
       padding: EdgeInsets.only(bottom: 8.h),
       child: Row(
@@ -1080,7 +1028,6 @@ class _CartonDetailsBottomSheet extends StatelessWidget {
 
 class _CartonActionMenu extends StatelessWidget {
   final CartonCodeModel carton;
-
   const _CartonActionMenu({required this.carton});
 
   @override
@@ -1114,55 +1061,45 @@ class _CartonActionMenu extends StatelessWidget {
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 16.h),
-              _buildActionItem(
-                context,
-                icon: Icons.visibility,
-                label: 'View Details',
-                onTap: () {
-                  Navigator.pop(context);
-                  _showCartonDetailsPopup(context, carton);
-                },
-              ),
+              _action(context, Icons.visibility, 'View Details', () {
+                Navigator.pop(context);
+                _detailsPopup(context, carton);
+              }),
               if (carton.canPublish)
-                _buildActionItem(
-                  context,
-                  icon: Icons.publish,
-                  label: 'Publish Code',
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.read<CartonCodesBloc>().add(
-                      PublishCartonCode(carton.id),
-                    );
-                  },
-                ),
+                _action(context, Icons.publish, 'Publish Code', () {
+                  Navigator.pop(context);
+                  context.read<CartonCodesBloc>().add(
+                    PublishCartonCode(carton.id),
+                  );
+                }),
               if (carton.isSealed)
-                _buildActionItem(
+                _action(
                   context,
-                  icon: Icons.lock_open,
-                  label: 'Unseal Carton',
-                  onTap: () => _showSealDialog(context, carton),
+                  Icons.lock_open,
+                  'Unseal Carton',
+                  () => _sealDlg(context, carton),
                 ),
-              _buildActionItem(
+              _action(
                 context,
-                icon: Icons.inventory_2,
-                label: 'Inspect Carton',
-                onTap: () => _showInspectionDialog(context, carton),
+                Icons.inventory_2,
+                'Inspect Carton',
+                () => _inspDlg(context, carton),
               ),
               if (carton.canDelete)
-                _buildActionItem(
+                _action(
                   context,
-                  icon: Icons.delete,
-                  label: 'Delete Code',
+                  Icons.delete,
+                  'Delete Code',
+                  () => _delDlg(context, carton),
                   color: AppColors.error,
-                  onTap: () => _showDeleteDialog(context, carton),
                 ),
               if (carton.canDeactivate)
-                _buildActionItem(
+                _action(
                   context,
-                  icon: Icons.block,
-                  label: 'Deactivate Code',
+                  Icons.block,
+                  'Deactivate Code',
+                  () => _deactDlg(context, carton),
                   color: AppColors.warning,
-                  onTap: () => _showDeactivateDialog(context, carton),
                 ),
               SizedBox(height: 8.h),
             ],
@@ -1172,7 +1109,7 @@ class _CartonActionMenu extends StatelessWidget {
     );
   }
 
-  void _showCartonDetailsPopup(BuildContext context, CartonCodeModel code) {
+  void _detailsPopup(BuildContext context, CartonCodeModel code) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1180,24 +1117,21 @@ class _CartonActionMenu extends StatelessWidget {
     );
   }
 
-  void _showSealDialog(BuildContext context, CartonCodeModel carton) {
+  void _sealDlg(BuildContext context, CartonCodeModel carton) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Unseal Carton'),
         content: Text(
-          'Unseal carton code ${carton.code}?\n\nThis cannot be undone.',
+          'Unseal carton ${carton.code}?\n\nThis cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Dispatch unseal event
-            },
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Unseal'),
           ),
         ],
@@ -1205,11 +1139,11 @@ class _CartonActionMenu extends StatelessWidget {
     );
   }
 
-  void _showInspectionDialog(BuildContext context, CartonCodeModel carton) {
-    final notesController = TextEditingController();
+  void _inspDlg(BuildContext context, CartonCodeModel carton) {
+    final ctrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Inspect Carton'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1217,7 +1151,7 @@ class _CartonActionMenu extends StatelessWidget {
             Text('Inspect carton ${carton.code}'),
             SizedBox(height: 12.h),
             TextField(
-              controller: notesController,
+              controller: ctrl,
               decoration: InputDecoration(
                 hintText: 'Inspection notes...',
                 border: OutlineInputBorder(
@@ -1230,14 +1164,11 @@ class _CartonActionMenu extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Dispatch inspection event
-            },
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Save'),
           ),
         ],
@@ -1245,11 +1176,11 @@ class _CartonActionMenu extends StatelessWidget {
     );
   }
 
-  Widget _buildActionItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
+  Widget _action(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap, {
     Color? color,
   }) {
     return ListTile(
@@ -1260,14 +1191,14 @@ class _CartonActionMenu extends StatelessWidget {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, CartonCodeModel carton) {
+  void _delDlg(BuildContext context, CartonCodeModel carton) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: Text(
           'Delete Carton Code',
           style: Theme.of(
-            context,
+            ctx,
           ).textTheme.titleMedium?.copyWith(color: AppColors.error),
         ),
         content: Text(
@@ -1275,18 +1206,18 @@ class _CartonActionMenu extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               context.read<CartonCodesBloc>().add(DeleteCartonCode(carton.id));
             },
             child: Text(
               'Delete',
               style: Theme.of(
-                context,
+                ctx,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.error),
             ),
           ),
@@ -1295,25 +1226,25 @@ class _CartonActionMenu extends StatelessWidget {
     );
   }
 
-  void _showDeactivateDialog(BuildContext context, CartonCodeModel carton) {
-    final reasonController = TextEditingController();
+  void _deactDlg(BuildContext context, CartonCodeModel carton) {
+    final ctrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: Text(
           'Deactivate Carton Code',
           style: Theme.of(
-            context,
+            ctx,
           ).textTheme.titleMedium?.copyWith(color: AppColors.warning),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Please provide a reason for deactivating ${carton.code}:'),
+            Text('Reason for deactivating ${carton.code}:'),
             SizedBox(height: 16.h),
             TextField(
-              controller: reasonController,
+              controller: ctrl,
               decoration: InputDecoration(
                 hintText: 'e.g., Damaged, Returned, Expired',
                 border: OutlineInputBorder(
@@ -1326,22 +1257,22 @@ class _CartonActionMenu extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              if (reasonController.text.isNotEmpty) {
-                Navigator.pop(context);
+              if (ctrl.text.isNotEmpty) {
+                Navigator.pop(ctx);
                 context.read<CartonCodesBloc>().add(
-                  DeactivateCartonCode(carton.id, reasonController.text),
+                  DeactivateCartonCode(carton.id, ctrl.text),
                 );
               }
             },
             child: Text(
               'Deactivate',
               style: Theme.of(
-                context,
+                ctx,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.warning),
             ),
           ),
