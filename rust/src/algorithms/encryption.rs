@@ -20,7 +20,7 @@ use argon2::{
     Argon2, Params, Version,
 };
 use pbkdf2::pbkdf2_hmac;
-use sha2::{Sha256, Sha512};
+use sha2::{Digest, Sha256, Sha512};
 use hmac::{Hmac, Mac};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use rand::{RngCore, rngs::ThreadRng};
