@@ -14,15 +14,16 @@ use aes_gcm::{
 use chacha20poly1305::{ChaCha20Poly1305, Key as ChaChaKey, Nonce as ChaChaNonce};
 use argon2::{
     password_hash::{
-        PasswordHasher, SaltString,
+        rand_core::OsRng,
+        PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
     },
     Argon2, Params, Version,
 };
 use pbkdf2::pbkdf2_hmac;
-use sha2::{Digest, Sha256, Sha512};
+use sha2::{Sha256, Sha512};
 use hmac::{Hmac, Mac};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
-use rand::RngCore;
+use rand::{RngCore, rngs::ThreadRng};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Encryption algorithm types
@@ -268,7 +269,7 @@ pub fn verify_integrity(data: &[u8], hash: &str, algorithm: &str) -> Result<bool
 
 /// Generate message authentication code (MAC)
 pub fn generate_mac(data: &[u8], key: &[u8]) -> Result<String, String> {
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(key)
+    let mut mac = Hmac::<Sha256>::new_from_slice(key)
         .map_err(|e| format!("Failed to create HMAC: {}", e))?;
     mac.update(data);
     let result = mac.finalize().into_bytes();
@@ -286,7 +287,7 @@ fn encrypt_aes256_gcm(
     data: &[u8],
     key: &[u8],
     nonce: &[u8],
-    _config: &EncryptionConfig,
+    config: &EncryptionConfig,
 ) -> Result<Vec<u8>, String> {
     if key.len() != 32 {
         return Err("AES-256-GCM requires 32-byte key".to_string());
@@ -309,7 +310,7 @@ fn decrypt_aes256_gcm(
     ciphertext: &[u8],
     key: &[u8],
     nonce: &[u8],
-    _config: &EncryptionConfig,
+    config: &EncryptionConfig,
 ) -> Result<Vec<u8>, String> {
     if key.len() != 32 {
         return Err("AES-256-GCM requires 32-byte key".to_string());
@@ -332,7 +333,7 @@ fn encrypt_chacha20_poly1305(
     data: &[u8],
     key: &[u8],
     nonce: &[u8],
-    _config: &EncryptionConfig,
+    config: &EncryptionConfig,
 ) -> Result<Vec<u8>, String> {
     if key.len() != 32 {
         return Err("ChaCha20-Poly1305 requires 32-byte key".to_string());
@@ -355,7 +356,7 @@ fn decrypt_chacha20_poly1305(
     ciphertext: &[u8],
     key: &[u8],
     nonce: &[u8],
-    _config: &EncryptionConfig,
+    config: &EncryptionConfig,
 ) -> Result<Vec<u8>, String> {
     if key.len() != 32 {
         return Err("ChaCha20-Poly1305 requires 32-byte key".to_string());
@@ -426,9 +427,8 @@ fn derive_key(password: &str, salt: &[u8], config: &EncryptionConfig) -> Result<
                 .map_err(|e| format!("Failed to create Argon2 params: {}", e))?,
             );
 
-            let salt_string = SaltString::encode_b64(salt).map_err(|e| format!("Failed to encode salt: {}", e))?;
             let password_hash = argon2
-                .hash_password(password.as_bytes(), &salt_string)
+                .hash_password(password.as_bytes(), &SaltString::encode_b64(salt).map_err(|e| format!("Failed to encode salt: {}", e))?)
                 .map_err(|e| format!("Failed to hash password: {}", e))?;
 
             let hash_bytes = password_hash.hash.ok_or("Failed to get hash bytes")?;

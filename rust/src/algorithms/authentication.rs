@@ -7,7 +7,7 @@
 //! - Code format validation
 //! - Cryptographic security features
 
-use rand::Rng;
+use rand::{Rng, rngs::ThreadRng};
 use sha2::{Sha256, Digest};
 use hmac::{Hmac, Mac};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};

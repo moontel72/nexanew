@@ -9,7 +9,6 @@ import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
 import 'package:nexatrace_system/shared/models/code/carton_code_model.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/cards/code_card.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
 import 'package:nexatrace_system/shared/widgets/filters/filter_chip_row.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
@@ -73,9 +72,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    return _CartonCodesAppBar(
-      onShowFilterDialog: _showFilterDialog,
-    );
+    return _CartonCodesAppBar(onShowFilterDialog: _showFilterDialog);
   }
 
   List<_CartonBatchGroup> _groupBatches(List<CartonCodeModel> codes) {
@@ -90,6 +87,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
           codeCount: 1,
           generatedAt: c.generatedAt,
           isPushed: c.status == CodeStatus.published,
+          codes: [c],
         );
       } else {
         map[key] = existing.copyWith(
@@ -98,6 +96,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               ? c.generatedAt
               : existing.generatedAt,
           isPushed: existing.isPushed || c.status == CodeStatus.published,
+          codes: [...existing.codes, c],
         );
       }
     }
@@ -188,97 +187,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     );
   }
 
-  Widget _buildCartonCard(CartonCodeModel carton) {
-    return Column(
-      children: [
-        CodeCard(
-          code: carton.code,
-          codeType:
-              '${carton.type.name} (${CartonCodeFormat.fromValue(carton.codeFormat).displayName})',
-          status: carton.status.name,
-          batchNumber: carton.batchId,
-          generatedDate: carton.generatedAt,
-          onTap: () => _showCartonDetails(carton),
-          actions: [
-            OutlinedButton.icon(
-              onPressed: () => _showCartonDetails(carton),
-              icon: const Icon(Icons.visibility_outlined),
-              label: const Text('View Details'),
-            ),
-            OutlinedButton.icon(
-              onPressed: carton.status == CodeStatus.published
-                  ? () async {
-                      final format = await showModalBottomSheet<String>(
-                        context: context,
-                        builder: (context) {
-                          return SafeArea(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ListTile(
-                                  leading: const Icon(Icons.picture_as_pdf),
-                                  title: const Text('Download PDF'),
-                                  onTap: () => Navigator.pop(context, 'pdf'),
-                                ),
-                                ListTile(
-                                  leading: const Icon(Icons.table_chart),
-                                  title: const Text('Download CSV'),
-                                  onTap: () => Navigator.pop(context, 'csv'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                      if (format == null) return;
-                      context.read<CartonCodesBloc>().add(
-                        ExportCartonCodes([carton.id], format),
-                      );
-                    }
-                  : null,
-              icon: const Icon(Icons.download_outlined),
-              label: const Text('Download'),
-            ),
-            OutlinedButton.icon(
-              onPressed: carton.canPublish
-                  ? () {
-                      context.read<CartonCodesBloc>().add(
-                        PublishCartonCode(carton.id),
-                      );
-                    }
-                  : null,
-              icon: const Icon(Icons.publish_outlined),
-              label: const Text('Publish'),
-            ),
-          ],
-          isSelected:
-              _isSelectionMode &&
-              context
-                  .read<CartonCodesBloc>()
-                  .state
-                  .selectedCartonCodeIds
-                  .contains(carton.id),
-        ),
-        if (!_isSelectionMode)
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.more_vert,
-                    color: AppColors.textSecondary,
-                  ),
-                  onPressed: () => _showActionMenu(context, carton),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
   Widget _buildBatchCard(_CartonBatchGroup group) {
     final batchId = group.batchId.trim().isEmpty ? 'NO-BATCH' : group.batchId;
     final formatName = CartonCodeFormat.fromValue(group.codeFormat).displayName;
@@ -288,264 +196,345 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      child: Padding(
-        padding: EdgeInsets.all(12.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    '$formatName - Batch: $batchId',
-                    style: Theme.of(context).textTheme.titleSmall,
-                    overflow: TextOverflow.ellipsis,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _showBatchCodes(group),
+        child: Padding(
+          padding: EdgeInsets.all(12.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '$formatName - Batch: $batchId',
+                                style: Theme.of(context).textTheme.titleSmall,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (group.isPushed)
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w,
+                                  vertical: 4.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withAlpha(30),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'Finalized',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.success,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w,
+                                  vertical: 4.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.warning.withAlpha(30),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'Draft',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.warning,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          '${group.codeCount} Codes \u2022 Generated: $date',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: group.isPushed
-                        ? AppColors.success.withAlpha(30)
-                        : AppColors.warning.withAlpha(30),
-                    borderRadius: BorderRadius.circular(999),
+                  SizedBox(width: 8.w),
+                  Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textSecondary,
+                    size: 24.w,
                   ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              if (!isValidBatch)
+                Padding(
+                  padding: EdgeInsets.only(bottom: 8.h),
                   child: Text(
-                    group.isPushed ? 'Pushed' : 'Draft',
+                    'BatchId missing for these codes. Regenerate to enable Push/Delete/Download.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: group.isPushed ? AppColors.success : AppColors.warning,
-                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              '${group.codeCount} Codes • Generated: $date',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppColors.textSecondary),
-            ),
-            SizedBox(height: 12.h),
-            Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: (!group.isPushed && isValidBatch)
-                      ? () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: Text(
-                                'Delete Batch',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(color: AppColors.error),
-                              ),
-                              content: Text(
-                                'Delete this batch before push?\n\n$formatName • $batchId',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    context.read<CartonCodesBloc>().add(
+              // Action buttons row
+              Row(
+                children: [
+                  // DELETE: enabled only for Draft with valid batch
+                  if (!group.isPushed)
+                    OutlinedButton.icon(
+                      onPressed: isValidBatch
+                          ? () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: Text(
+                                    'Delete Batch',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(color: AppColors.error),
+                                  ),
+                                  content: Text(
+                                    'Delete this batch before push?\n\n$formatName \u2022 $batchId',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        context.read<CartonCodesBloc>().add(
                                           DeleteCartonBatchByGroup(
                                             batchId: group.batchId,
                                             codeFormat: group.codeFormat,
                                           ),
                                         );
-                                  },
-                                  child: Text(
-                                    'Delete',
-                                    style: Theme.of(context).textTheme.bodyMedium
-                                        ?.copyWith(color: AppColors.error),
+                                      },
+                                      child: Text(
+                                        'Delete',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(color: AppColors.error),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                          : null,
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Delete'),
+                    ),
+
+                  // PUSH: enabled only for Draft; for Pushed batches show finalized badge above
+                  if (!group.isPushed) SizedBox(width: 8.w),
+                  if (!group.isPushed)
+                    OutlinedButton.icon(
+                      onPressed: isValidBatch
+                          ? () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Push Batch'),
+                                  content: Text(
+                                    'Push this batch to finalize?\n\n$formatName \u2022 $batchId',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                      : null,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Delete'),
-                ),
-                SizedBox(width: 8.w),
-                OutlinedButton.icon(
-                  onPressed: (!group.isPushed && isValidBatch)
-                      ? () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Push Batch'),
-                              content: Text(
-                                'Push this batch to finalize?\n\n$formatName • $batchId',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    context.read<CartonCodesBloc>().add(
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        context.read<CartonCodesBloc>().add(
                                           PushCartonBatch(
                                             batchId: group.batchId,
                                             codeFormat: group.codeFormat,
                                           ),
                                         );
-                                  },
-                                  child: const Text('Push'),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                      : null,
-                  icon: const Icon(Icons.publish_outlined),
-                  label: const Text('Push'),
-                ),
-                SizedBox(width: 8.w),
-                OutlinedButton.icon(
-                  onPressed: (group.isPushed && isValidBatch)
-                      ? () async {
-                          final format = await showModalBottomSheet<String>(
-                            context: context,
-                            builder: (context) {
-                              return SafeArea(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ListTile(
-                                      leading: const Icon(Icons.picture_as_pdf),
-                                      title: const Text('Download PDF'),
-                                      onTap: () => Navigator.pop(context, 'pdf'),
-                                    ),
-                                    ListTile(
-                                      leading: const Icon(Icons.table_chart),
-                                      title: const Text('Download CSV'),
-                                      onTap: () => Navigator.pop(context, 'csv'),
+                                      },
+                                      child: const Text('Push'),
                                     ),
                                   ],
                                 ),
                               );
-                            },
-                          );
-                          if (format == null) return;
-                          context.read<CartonCodesBloc>().add(
+                            }
+                          : null,
+                      icon: const Icon(Icons.publish_outlined),
+                      label: const Text('Push'),
+                    ),
+
+                  // DOWNLOAD: enabled only for Pushed; show tooltip when disabled
+                  SizedBox(width: 8.w),
+                  Tooltip(
+                    message: group.isPushed
+                        ? 'Download batch'
+                        : 'Push batch to enable download',
+                    child: OutlinedButton.icon(
+                      onPressed: (group.isPushed && isValidBatch)
+                          ? () async {
+                              final format = await showModalBottomSheet<String>(
+                                context: context,
+                                builder: (context) {
+                                  return SafeArea(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        ListTile(
+                                          leading: const Icon(
+                                            Icons.picture_as_pdf,
+                                          ),
+                                          title: const Text('Download PDF'),
+                                          onTap: () =>
+                                              Navigator.pop(context, 'pdf'),
+                                        ),
+                                        ListTile(
+                                          leading: const Icon(
+                                            Icons.table_chart,
+                                          ),
+                                          title: const Text('Download CSV'),
+                                          onTap: () =>
+                                              Navigator.pop(context, 'csv'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                              if (format == null) return;
+                              context.read<CartonCodesBloc>().add(
                                 ExportCartonBatch(
                                   group.batchId,
                                   group.codeFormat,
                                   format,
                                 ),
                               );
-                        }
-                      : null,
-                  icon: const Icon(Icons.download_outlined),
-                  label: const Text('Download'),
-                ),
-              ],
-            ),
-            if (!isValidBatch)
-              Padding(
-                padding: EdgeInsets.only(top: 8.h),
-                child: Text(
-                  'BatchId missing for these codes. Regenerate to enable Push/Delete/Download.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppColors.textSecondary),
-                ),
+                            }
+                          : null,
+                      icon: const Icon(Icons.download_outlined),
+                      label: const Text('Download'),
+                    ),
+                  ),
+                ],
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStatistics() {
-    return BlocBuilder<CartonCodesBloc, CartonCodesState>(
-      builder: (context, state) {
-        final stats = state.statistics;
-        return Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  void _showBatchCodes(_CartonBatchGroup group) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _BatchCodesSheet(group: group),
+    );
+  }
+
+  Widget _buildStatistics(List<CartonCodeModel> codes) {
+    if (codes.isEmpty) return const SizedBox.shrink();
+    final totalCartons = codes.length;
+    final sealedCartons = codes.where((c) => c.isSealed).length;
+    final needInspection = codes.where((c) => c.needsInspection).length;
+    final totalPackets = codes.fold<int>(0, (sum, c) => sum + c.packetCount);
+    final totalUnits = codes.fold<int>(0, (sum, c) => sum + c.totalUnits);
+    final overweightCartons = codes.where((c) => c.isOverweight).length;
+    final sealedPercentage = totalCartons > 0
+        ? (sealedCartons * 100 ~/ totalCartons)
+        : 0;
+    final inspectionPercentage = totalCartons > 0
+        ? (needInspection * 100 ~/ totalCartons)
+        : 0;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Carton Statistics',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
+            ),
+            SizedBox(height: 12.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Carton Statistics',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
+                _buildStatItem(
+                  label: 'Total Cartons',
+                  value: totalCartons.toString(),
+                  icon: Icons.inventory_2,
+                  color: AppColors.primary,
                 ),
-                SizedBox(height: 12.h),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildStatItem(
-                      label: 'Total Cartons',
-                      value: stats['totalCartons'].toString(),
-                      icon: Icons.inventory_2,
-                      color: AppColors.primary,
-                    ),
-                    _buildStatItem(
-                      label: 'Sealed',
-                      value:
-                          '${stats['sealedCartons']} (${stats['sealedPercentage']}%)',
-                      icon: Icons.lock,
-                      color: AppColors.success,
-                    ),
-                    _buildStatItem(
-                      label: 'Need Inspection',
-                      value:
-                          '${stats['needInspection']} (${stats['inspectionPercentage']}%)',
-                      icon: Icons.warning,
-                      color: AppColors.warning,
-                    ),
-                  ],
+                _buildStatItem(
+                  label: 'Sealed',
+                  value: '$sealedCartons ($sealedPercentage%)',
+                  icon: Icons.lock,
+                  color: AppColors.success,
                 ),
-                SizedBox(height: 12.h),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildStatItem(
-                      label: 'Total Packets',
-                      value: stats['totalPackets'].toString(),
-                      icon: Icons.inventory_2,
-                      color: AppColors.info,
-                    ),
-                    _buildStatItem(
-                      label: 'Total Units',
-                      value: stats['totalUnits'].toString(),
-                      icon: Icons.shopping_bag,
-                      color: AppColors.secondary,
-                    ),
-                    _buildStatItem(
-                      label: 'Overweight',
-                      value: stats['overweightCartons'].toString(),
-                      icon: Icons.warning_amber,
-                      color: AppColors.error,
-                    ),
-                  ],
+                _buildStatItem(
+                  label: 'Need Inspection',
+                  value: '$needInspection ($inspectionPercentage%)',
+                  icon: Icons.warning,
+                  color: AppColors.warning,
                 ),
               ],
             ),
-          ),
-        );
-      },
+            SizedBox(height: 12.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildStatItem(
+                  label: 'Total Packets',
+                  value: totalPackets.toString(),
+                  icon: Icons.inventory_2,
+                  color: AppColors.info,
+                ),
+                _buildStatItem(
+                  label: 'Total Units',
+                  value: totalUnits.toString(),
+                  icon: Icons.shopping_bag,
+                  color: AppColors.secondary,
+                ),
+                _buildStatItem(
+                  label: 'Overweight',
+                  value: overweightCartons.toString(),
+                  icon: Icons.warning_amber,
+                  color: AppColors.error,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -662,8 +651,9 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                       child: _buildFormatFilter(state),
                     ),
+                    SizedBox(height: 48.h),
                     Padding(
-                      padding: EdgeInsets.all(16.w),
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
                       child: EmptyState(
                         icon: Icons.inventory_2,
                         title: 'No Carton Codes Found',
@@ -710,10 +700,9 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                           hintText: 'Search carton codes...',
                         ),
                         SizedBox(height: 12.h),
-                        // Format filter chips
                         _buildFormatFilter(state),
                         SizedBox(height: 12.h),
-                        _buildStatistics(),
+                        _buildStatistics(state.filteredCartonCodes),
                         SizedBox(height: 12.h),
                         FilterChipRow(
                           selectedValue: state.filterStatus?.name,
@@ -746,36 +735,49 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                       ],
                     ),
                   ),
+                  // Batch group list or empty state
                   Builder(
                     builder: (context) {
                       final groups = _groupBatches(state.filteredCartonCodes);
-                      return ListView.builder(
-                    padding: EdgeInsets.only(
-                      bottom: 80.h,
-                      left: 16.w,
-                      right: 16.w,
-                    ),
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount:
-                            groups.length + (state.isLoadingMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                          if (index >= groups.length) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Center(child: LoadingIndicator()),
-                            );
-                          }
-                          final group = groups[index];
-                          return Padding(
-                            padding: EdgeInsets.symmetric(vertical: 4.h),
-                            child: _buildBatchCard(group),
-                          );
-                        },
+                      if (groups.isEmpty) {
+                        return Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.w,
+                            vertical: 32.h,
+                          ),
+                          child: EmptyState(
+                            icon: Icons.inventory_2,
+                            title: 'No Batch Groups',
+                            description:
+                                'Codes exist but no batch groups could be formed.',
+                          ),
+                        );
+                      }
+                      return Padding(
+                        padding: EdgeInsets.only(left: 16.w, right: 16.w),
+                        child: Column(
+                          children: [
+                            Divider(
+                              height: 16.h,
+                              color: AppColors.border.withAlpha(60),
+                            ),
+                            ...groups.map(
+                              (group) => Padding(
+                                padding: EdgeInsets.symmetric(vertical: 6.h),
+                                child: _buildBatchCard(group),
+                              ),
+                            ),
+                            if (state.isLoadingMore)
+                              const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Center(child: LoadingIndicator()),
+                              ),
+                            SizedBox(height: 80.h),
+                          ],
+                        ),
                       );
                     },
                   ),
-                  SizedBox(height: 16.h),
                 ],
               ),
             ),
@@ -790,9 +792,7 @@ class _CartonCodesAppBar extends StatelessWidget
     implements PreferredSizeWidget {
   final VoidCallback onShowFilterDialog;
 
-  const _CartonCodesAppBar({
-    required this.onShowFilterDialog,
-  });
+  const _CartonCodesAppBar({required this.onShowFilterDialog});
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -824,6 +824,7 @@ class _CartonBatchGroup {
   final int codeCount;
   final DateTime generatedAt;
   final bool isPushed;
+  final List<CartonCodeModel> codes;
 
   const _CartonBatchGroup({
     required this.batchId,
@@ -831,12 +832,14 @@ class _CartonBatchGroup {
     required this.codeCount,
     required this.generatedAt,
     required this.isPushed,
+    required this.codes,
   });
 
   _CartonBatchGroup copyWith({
     int? codeCount,
     DateTime? generatedAt,
     bool? isPushed,
+    List<CartonCodeModel>? codes,
   }) {
     return _CartonBatchGroup(
       batchId: batchId,
@@ -844,6 +847,7 @@ class _CartonBatchGroup {
       codeCount: codeCount ?? this.codeCount,
       generatedAt: generatedAt ?? this.generatedAt,
       isPushed: isPushed ?? this.isPushed,
+      codes: codes ?? this.codes,
     );
   }
 }
@@ -1394,6 +1398,96 @@ class _CartonActionMenu extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _BatchCodesSheet extends StatelessWidget {
+  final _CartonBatchGroup group;
+
+  const _BatchCodesSheet({required this.group});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.3,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40.w,
+                  height: 4.h,
+                  margin: EdgeInsets.only(bottom: 16.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.textSecondary.withAlpha(60),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              Text(
+                'Codes in Batch',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4.h),
+              Text(
+                '${group.codeCount} codes',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              ),
+              SizedBox(height: 16.h),
+              Expanded(
+                child: ListView.separated(
+                  controller: scrollController,
+                  itemCount: group.codes.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final code = group.codes[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(code.code),
+                      subtitle: Text(
+                        'Status: ${code.statusDisplayName}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        size: 18.w,
+                        color: AppColors.textSecondary,
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showCartonDetailsFromCode(context, code);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCartonDetailsFromCode(BuildContext context, CartonCodeModel code) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _CartonDetailsBottomSheet(carton: code),
     );
   }
 }

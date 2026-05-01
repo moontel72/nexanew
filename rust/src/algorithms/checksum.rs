@@ -7,6 +7,7 @@
 //! - Error detection and correction
 //! - Support for different code types
 
+use std::collections::HashMap;
 
 /// Checksum algorithm types
 #[derive(Debug, Clone, Copy, PartialEq)]
