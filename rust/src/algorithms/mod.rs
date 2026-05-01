@@ -35,7 +35,7 @@ pub use encryption::{
 
 /// Algorithm utilities and helpers
 pub mod utils {
-    use rand::{Rng, rngs::ThreadRng};
+    use rand::Rng;
 
     /// Generate random number within range
     pub fn random_range(min: u32, max: u32) -> u32 {

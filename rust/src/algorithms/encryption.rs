@@ -11,7 +11,7 @@ use aes_gcm::{
     aead::{Aead, KeyInit, OsRng},
     Aes256Gcm, Key, Nonce,
 };
-use argon2::{password_hash::SaltString, Argon2, Params, Version};
+use argon2::{password_hash::SaltString, Argon2, Params, PasswordHasher, Version};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use chacha20poly1305::{ChaCha20Poly1305, Key as ChaChaKey, Nonce as ChaChaNonce};
 use hmac::{Hmac, Mac};
