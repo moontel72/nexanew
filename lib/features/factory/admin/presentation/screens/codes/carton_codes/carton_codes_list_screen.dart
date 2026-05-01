@@ -28,12 +28,12 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
   final ScrollController _scrollController = ScrollController();
 
   bool _isSelectionMode = false;
+  final Set<String> _expandedBatches = {};
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Load initial data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CartonCodesBloc>().add(const LoadCartonCodes());
     });
@@ -187,24 +187,42 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     );
   }
 
+  String _batchKey(_CartonBatchGroup group) =>
+      '${group.batchId}|${group.codeFormat}';
+
   Widget _buildBatchCard(_CartonBatchGroup group) {
     final batchId = group.batchId.trim().isEmpty ? 'NO-BATCH' : group.batchId;
     final formatName = CartonCodeFormat.fromValue(group.codeFormat).displayName;
     final date = group.generatedAt.toLocal().toString().split(' ').first;
     final isValidBatch = group.batchId.trim().isNotEmpty;
+    final key = _batchKey(group);
+    final isExpanded = _expandedBatches.contains(key);
+
+    // Sort codes by code string for consistent serial ordering
+    final sortedCodes = List<CartonCodeModel>.from(group.codes)
+      ..sort((a, b) => a.code.compareTo(b.code));
 
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _showBatchCodes(group),
-        child: Padding(
-          padding: EdgeInsets.all(12.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header row (always visible) ──
+          InkWell(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  _expandedBatches.remove(key);
+                } else {
+                  _expandedBatches.add(key);
+                }
+              });
+            },
+            child: Padding(
+              padding: EdgeInsets.all(12.w),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
@@ -212,7 +230,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
                               child: Text(
@@ -221,44 +238,31 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            if (group.isPushed)
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 10.w,
-                                  vertical: 4.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withAlpha(30),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  'Finalized',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.success,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                ),
-                              )
-                            else
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 10.w,
-                                  vertical: 4.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.warning.withAlpha(30),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  'Draft',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.warning,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                ),
+                            SizedBox(width: 8.w),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10.w,
+                                vertical: 4.h,
                               ),
+                              decoration: BoxDecoration(
+                                color: group.isPushed
+                                    ? AppColors.success.withAlpha(30)
+                                    : AppColors.warning.withAlpha(30),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                group.isPushed ? 'Finalized' : 'Draft',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: group.isPushed
+                                          ? AppColors.success
+                                          : AppColors.warning,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
                           ],
                         ),
                         SizedBox(height: 8.h),
@@ -271,188 +275,306 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                     ),
                   ),
                   SizedBox(width: 8.w),
-                  Icon(
-                    Icons.chevron_right,
-                    color: AppColors.textSecondary,
-                    size: 24.w,
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.25 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.chevron_right,
+                      color: AppColors.textSecondary,
+                      size: 24.w,
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: 12.h),
-              if (!isValidBatch)
-                Padding(
-                  padding: EdgeInsets.only(bottom: 8.h),
-                  child: Text(
-                    'BatchId missing for these codes. Regenerate to enable Push/Delete/Download.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+            ),
+          ),
+
+          // ── Expanded body ──
+          if (isExpanded) ...[
+            const Divider(height: 1, color: AppColors.borderColor),
+
+            if (!isValidBatch)
+              Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Text(
+                  'BatchId missing for these codes. Regenerate to enable Push/Delete/Download.',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.textSecondary),
                 ),
-              // Action buttons row
-              Row(
+              ),
+
+            // ── Bulk code table ──
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(0.15),
+                  1: FlexColumnWidth(0.40),
+                  2: FlexColumnWidth(0.20),
+                  3: FlexColumnWidth(0.25),
+                },
                 children: [
-                  // DELETE: enabled only for Draft with valid batch
-                  if (!group.isPushed)
-                    OutlinedButton.icon(
-                      onPressed: isValidBatch
-                          ? () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text(
-                                    'Delete Batch',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(color: AppColors.error),
-                                  ),
-                                  content: Text(
-                                    'Delete this batch before push?\n\n$formatName \u2022 $batchId',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium,
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        context.read<CartonCodesBloc>().add(
-                                          DeleteCartonBatchByGroup(
-                                            batchId: group.batchId,
-                                            codeFormat: group.codeFormat,
-                                          ),
-                                        );
-                                      },
-                                      child: Text(
-                                        'Delete',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(color: AppColors.error),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                          : null,
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Delete'),
+                  // Header row
+                  TableRow(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: AppColors.borderColor,
+                          width: 1,
+                        ),
+                      ),
                     ),
-
-                  // PUSH: enabled only for Draft; for Pushed batches show finalized badge above
-                  if (!group.isPushed) SizedBox(width: 8.w),
-                  if (!group.isPushed)
-                    OutlinedButton.icon(
-                      onPressed: isValidBatch
-                          ? () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Push Batch'),
-                                  content: Text(
-                                    'Push this batch to finalize?\n\n$formatName \u2022 $batchId',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium,
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        context.read<CartonCodesBloc>().add(
-                                          PushCartonBatch(
-                                            batchId: group.batchId,
-                                            codeFormat: group.codeFormat,
-                                          ),
-                                        );
-                                      },
-                                      child: const Text('Push'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                          : null,
-                      icon: const Icon(Icons.publish_outlined),
-                      label: const Text('Push'),
+                    children: [
+                      _tableHeader('#'),
+                      _tableHeader('Code Data'),
+                      _tableHeader('Format'),
+                      _tableHeader('Status'),
+                    ],
+                  ),
+                  // Data rows
+                  for (int i = 0; i < sortedCodes.length; i++)
+                    TableRow(
+                      decoration: BoxDecoration(
+                        color: i.isEven
+                            ? AppColors.surface.withAlpha(50)
+                            : Colors.transparent,
+                      ),
+                      children: [
+                        _tableCell(
+                          '${i + 1}',
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        _tableCell(
+                          sortedCodes[i].code,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        _tableCell(formatName),
+                        _tableCell(
+                          sortedCodes[i].statusDisplayName,
+                          color: _statusColor(sortedCodes[i].status),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ],
                     ),
+                ],
+              ),
+            ),
 
-                  // DOWNLOAD: enabled only for Pushed; show tooltip when disabled
-                  SizedBox(width: 8.w),
-                  Tooltip(
-                    message: group.isPushed
-                        ? 'Download batch'
-                        : 'Push batch to enable download',
+            SizedBox(height: 8.h),
+
+            // ── Unified Batch Action Buttons ──
+            Padding(
+              padding: EdgeInsets.fromLTRB(12.w, 0, 12.w, 12.h),
+              child: Row(
+                children: [
+                  if (!group.isPushed) ...[
+                    // DELETE - active only for Draft
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: isValidBatch
+                            ? () => _confirmDeleteBatch(
+                                  context, group, formatName, batchId)
+                            : null,
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        label: const Text('Delete'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.error,
+                          side: const BorderSide(color: AppColors.error),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    // PUSH - active only for Draft
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: isValidBatch
+                            ? () => _confirmPushBatch(
+                                  context, group, formatName, batchId)
+                            : null,
+                        icon: const Icon(Icons.publish_outlined, size: 18),
+                        label: const Text('Push'),
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                  ],
+                  // DOWNLOAD - active only after pushed
+                  Expanded(
                     child: OutlinedButton.icon(
                       onPressed: (group.isPushed && isValidBatch)
-                          ? () async {
-                              final format = await showModalBottomSheet<String>(
-                                context: context,
-                                builder: (context) {
-                                  return SafeArea(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        ListTile(
-                                          leading: const Icon(
-                                            Icons.picture_as_pdf,
-                                          ),
-                                          title: const Text('Download PDF'),
-                                          onTap: () =>
-                                              Navigator.pop(context, 'pdf'),
-                                        ),
-                                        ListTile(
-                                          leading: const Icon(
-                                            Icons.table_chart,
-                                          ),
-                                          title: const Text('Download CSV'),
-                                          onTap: () =>
-                                              Navigator.pop(context, 'csv'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              );
-                              if (format == null) return;
-                              context.read<CartonCodesBloc>().add(
-                                ExportCartonBatch(
-                                  group.batchId,
-                                  group.codeFormat,
-                                  format,
-                                ),
-                              );
-                            }
+                          ? () => _downloadBatch(context, group)
                           : null,
-                      icon: const Icon(Icons.download_outlined),
-                      label: const Text('Download'),
+                      icon: group.isPushed
+                          ? const Icon(Icons.download_outlined, size: 18)
+                          : const Icon(Icons.lock_outlined, size: 18),
+                      label: Text(group.isPushed ? 'Download' : 'Locked'),
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  void _showBatchCodes(_CartonBatchGroup group) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _BatchCodesSheet(group: group),
+  Widget _tableHeader(String text) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
+      ),
     );
+  }
+
+  Widget _tableCell(
+    String text, {
+    Color? color,
+    FontWeight? fontWeight,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: color ?? AppColors.textPrimary,
+              fontWeight: fontWeight ?? FontWeight.normal,
+            ),
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Color _statusColor(CodeStatus status) {
+    switch (status) {
+      case CodeStatus.generated:
+        return AppColors.warning;
+      case CodeStatus.linked:
+        return AppColors.info;
+      case CodeStatus.published:
+        return AppColors.success;
+      case CodeStatus.deactivated:
+        return AppColors.error;
+      case CodeStatus.expired:
+        return AppColors.textSecondary;
+    }
+  }
+
+  void _confirmDeleteBatch(BuildContext context, _CartonBatchGroup group,
+      String formatName, String batchId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Delete Batch',
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(color: AppColors.error),
+        ),
+        content: Text(
+          'Delete all ${group.codeCount} codes in this batch?\n\n$formatName \u2022 $batchId',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<CartonCodesBloc>().add(
+                    DeleteCartonBatchByGroup(
+                      batchId: group.batchId,
+                      codeFormat: group.codeFormat,
+                    ),
+                  );
+            },
+            child: Text(
+              'Delete All',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmPushBatch(BuildContext context, _CartonBatchGroup group,
+      String formatName, String batchId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Push Batch'),
+        content: Text(
+          'Finalize all ${group.codeCount} codes in this batch?\n\n$formatName \u2022 $batchId',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<CartonCodesBloc>().add(
+                    PushCartonBatch(
+                      batchId: group.batchId,
+                      codeFormat: group.codeFormat,
+                    ),
+                  );
+            },
+            child: const Text('Push All'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _downloadBatch(BuildContext context, _CartonBatchGroup group) async {
+    final format = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf),
+                title: const Text('Download PDF'),
+                onTap: () => Navigator.pop(context, 'pdf'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.table_chart),
+                title: const Text('Download CSV'),
+                onTap: () => Navigator.pop(context, 'csv'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (format == null) return;
+    if (!context.mounted) return;
+    context.read<CartonCodesBloc>().add(
+          ExportCartonBatch(
+            group.batchId,
+            group.codeFormat,
+            format,
+          ),
+        );
   }
 
   Widget _buildStatistics(List<CartonCodeModel> codes) {
@@ -735,7 +857,8 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                       ],
                     ),
                   ),
-                  // Batch group list or empty state
+
+                  // Batch groups
                   Builder(
                     builder: (context) {
                       final groups = _groupBatches(state.filteredCartonCodes);
@@ -754,16 +877,13 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                         );
                       }
                       return Padding(
-                        padding: EdgeInsets.only(left: 16.w, right: 16.w),
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
                         child: Column(
                           children: [
-                            Divider(
-                              height: 16.h,
-                              color: AppColors.border.withAlpha(60),
-                            ),
+                            SizedBox(height: 4.h),
                             ...groups.map(
                               (group) => Padding(
-                                padding: EdgeInsets.symmetric(vertical: 6.h),
+                                padding: EdgeInsets.only(bottom: 12.h),
                                 child: _buildBatchCard(group),
                               ),
                             ),
@@ -852,6 +972,10 @@ class _CartonBatchGroup {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// Bottom sheets for individual code actions (kept for context menu)
+// ═══════════════════════════════════════════════════════════
+
 class _CartonDetailsBottomSheet extends StatelessWidget {
   final CartonCodeModel carton;
 
@@ -863,166 +987,98 @@ class _CartonDetailsBottomSheet extends StatelessWidget {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Carton Details',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16.h),
-              _buildDetailRow(context, 'Code', carton.code),
-              _buildDetailRow(
-                context,
-                'Format',
-                CartonCodeFormat.fromValue(carton.codeFormat).displayName,
-              ),
-              _buildDetailRow(context, 'Bundle', carton.bundleCode),
-              _buildDetailRow(
-                context,
-                'Status',
-                carton.status.name.toUpperCase(),
-              ),
-              _buildDetailRow(
-                context,
-                'Sequence',
-                carton.sequenceNumber.toString(),
-              ),
-              _buildDetailRow(
-                context,
-                'Packets',
-                carton.packetCount.toString(),
-              ),
-              _buildDetailRow(
-                context,
-                'Total Units',
-                carton.totalUnits.toString(),
-              ),
-              if (carton.weight != null)
-                _buildDetailRow(context, 'Weight', '${carton.weight} kg'),
-              if (carton.dimensions != null)
-                _buildDetailRow(context, 'Dimensions', carton.dimensions!),
-              if (carton.cartonType != null)
-                _buildDetailRow(context, 'Carton Type', carton.cartonType!),
-              if (carton.grade != null)
-                _buildDetailRow(context, 'Grade', carton.grade!),
-              _buildDetailRow(context, 'Condition', carton.condition),
-              _buildDetailRow(
-                context,
-                'Sealing Status',
-                carton.isSealed ? 'Sealed' : 'Open',
-              ),
-              _buildDetailRow(
-                context,
-                'Inspection Status',
-                carton.lastInspectionDate != null ? 'Inspected' : 'Pending',
-              ),
-              if (carton.temperatureRequirements != null)
-                _buildDetailRow(
-                  context,
-                  'Temperature',
-                  carton.temperatureRequirements!,
-                ),
-              if (carton.handlingInstructions != null)
-                _buildDetailRow(
-                  context,
-                  'Handling',
-                  carton.handlingInstructions!,
-                ),
-              SizedBox(height: 16.h),
-              if (carton.productId != null)
-                Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Product Information',
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(color: AppColors.primary),
-                        ),
-                        SizedBox(height: 8.h),
-                        _buildDetailRow(
-                          context,
-                          'Product ID',
-                          carton.productId!,
-                        ),
-                        if (carton.productBatchNumber != null)
-                          _buildDetailRow(
-                            context,
-                            'Batch',
-                            carton.productBatchNumber!,
-                          ),
-                        if (carton.manufacturingDate != null)
-                          _buildDetailRow(
-                            context,
-                            'Manufacturing Date',
-                            carton.manufacturingDate!
-                                .toLocal()
-                                .toString()
-                                .split(' ')[0],
-                          ),
-                        if (carton.expiryDate != null)
-                          _buildDetailRow(
-                            context,
-                            'Expiry Date',
-                            carton.expiryDate!.toLocal().toString().split(
-                              ' ',
-                            )[0],
-                          ),
-                        if (carton.warrantyMonths != null)
-                          _buildDetailRow(
-                            context,
-                            'Warranty',
-                            '${carton.warrantyMonths} months',
-                          ),
-                      ],
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
                 ),
-              SizedBox(height: 16.h),
-              SizedBox(height: 16.h),
-            ],
+                SizedBox(height: 20.h),
+                Text(
+                  'Carton Code Details',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                SizedBox(height: 16.h),
+                _buildDetailRow(context, 'Code', carton.code),
+                _buildDetailRow(context, 'Type', carton.type.name),
+                _buildDetailRow(context, 'Status', carton.status.name),
+                _buildDetailRow(context, 'Batch ID', carton.batchId),
+                _buildDetailRow(context, 'Format',
+                    CartonCodeFormat.fromValue(carton.codeFormat).displayName),
+                _buildDetailRow(
+                  context,
+                  'Generated At',
+                  carton.generatedAt.toLocal().toString().split('.')[0],
+                ),
+                if (carton.bundleCode.isNotEmpty)
+                  _buildDetailRow(context, 'Bundle Code', carton.bundleCode),
+                _buildDetailRow(
+                    context, 'Packet Count', carton.packetCount.toString()),
+                _buildDetailRow(
+                    context, 'Total Units', carton.totalUnits.toString()),
+                if (carton.weight != null)
+                  _buildDetailRow(
+                      context, 'Weight', '${carton.weight} kg'),
+                if (carton.dimensions != null)
+                  _buildDetailRow(context, 'Dimensions', carton.dimensions!),
+                if (carton.cartonType != null)
+                  _buildDetailRow(context, 'Carton Type', carton.cartonType!),
+                _buildDetailRow(context, 'Sealed',
+                    carton.isSealed ? 'Yes' : 'No'),
+                _buildDetailRow(
+                    context, 'Condition', carton.condition),
+                SizedBox(height: 16.h),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(BuildContext context, String label, String value) {
+  Widget _buildDetailRow(
+    BuildContext context,
+    String label,
+    String value,
+  ) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.h),
+      padding: EdgeInsets.only(bottom: 8.h),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 2,
+          SizedBox(
+            width: 110.w,
             child: Text(
-              '$label:',
+              label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textSecondary,
-              ),
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ),
           Expanded(
-            flex: 3,
-            child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
         ],
       ),
@@ -1037,105 +1093,98 @@ class _CartonActionMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bloc = context.read<CartonCodesBloc>();
-
     return Container(
-      padding: EdgeInsets.all(16.w),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Actions for ${carton.code}',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          SizedBox(height: 16.h),
-          _buildActionItem(
-            context,
-            icon: Icons.remove_red_eye,
-            label: 'View Details',
-            onTap: () {
-              Navigator.pop(context);
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                builder: (context) => _CartonDetailsBottomSheet(carton: carton),
-              );
-            },
-          ),
-          if (carton.status == CodeStatus.generated ||
-              carton.status == CodeStatus.linked)
-            _buildActionItem(
-              context,
-              icon: Icons.publish,
-              label: 'Publish',
-              onTap: () {
-                Navigator.pop(context);
-                bloc.add(PublishCartonCode(carton.id));
-              },
-            ),
-          if (carton.status == CodeStatus.published)
-            _buildActionItem(
-              context,
-              icon: Icons.block,
-              label: 'Deactivate',
-              onTap: () {
-                Navigator.pop(context);
-                _showDeactivateDialog(context, carton);
-              },
-            ),
-          if (!carton.isSealed)
-            _buildActionItem(
-              context,
-              icon: Icons.lock,
-              label: 'Seal Carton',
-              onTap: () {
-                Navigator.pop(context);
-                _showSealDialog(context, carton);
-              },
-            ),
-          if (carton.lastInspectionDate == null)
-            _buildActionItem(
-              context,
-              icon: Icons.checklist,
-              label: 'Update Inspection',
-              onTap: () {
-                Navigator.pop(context);
-                _showInspectionDialog(context, carton);
-              },
-            ),
-          if (carton.status == CodeStatus.generated ||
-              carton.status == CodeStatus.linked)
-            _buildActionItem(
-              context,
-              icon: Icons.delete_outline,
-              label: 'Delete',
-              color: AppColors.error,
-              onTap: () {
-                Navigator.pop(context);
-                _showDeleteDialog(context, carton);
-              },
-            ),
-          _buildActionItem(
-            context,
-            icon: Icons.qr_code,
-            label: 'View QR Code',
-            onTap: () {
-              Navigator.pop(context);
-              // TODO: Implement QR code view
-            },
-          ),
-          _buildActionItem(
-            context,
-            icon: Icons.barcode_reader,
-            label: 'View Barcode',
-            onTap: () {
-              Navigator.pop(context);
-              // TODO: Implement barcode view
-            },
-          ),
-        ],
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(20.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Text(
+                'Actions for ${carton.code}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              SizedBox(height: 16.h),
+              _buildActionItem(
+                context,
+                icon: Icons.visibility,
+                label: 'View Details',
+                onTap: () {
+                  Navigator.pop(context);
+                  _showCartonDetailsPopup(context, carton);
+                },
+              ),
+              if (carton.canPublish)
+                _buildActionItem(
+                  context,
+                  icon: Icons.publish,
+                  label: 'Publish Code',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context
+                        .read<CartonCodesBloc>()
+                        .add(PublishCartonCode(carton.id));
+                  },
+                ),
+              if (carton.isSealed)
+                _buildActionItem(
+                  context,
+                  icon: Icons.lock_open,
+                  label: 'Unseal Carton',
+                  onTap: () => _showSealDialog(context, carton),
+                ),
+              _buildActionItem(
+                context,
+                icon: Icons.inventory_2,
+                label: 'Inspect Carton',
+                onTap: () => _showInspectionDialog(context, carton),
+              ),
+              if (carton.canDelete)
+                _buildActionItem(
+                  context,
+                  icon: Icons.delete,
+                  label: 'Delete Code',
+                  color: AppColors.error,
+                  onTap: () => _showDeleteDialog(context, carton),
+                ),
+              if (carton.canDeactivate)
+                _buildActionItem(
+                  context,
+                  icon: Icons.block,
+                  label: 'Deactivate Code',
+                  color: AppColors.warning,
+                  onTap: () => _showDeactivateDialog(context, carton),
+                ),
+              SizedBox(height: 8.h),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCartonDetailsPopup(BuildContext context, CartonCodeModel code) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _CartonDetailsBottomSheet(carton: code),
     );
   }
 
@@ -1143,36 +1192,20 @@ class _CartonActionMenu extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'Seal Carton',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        title: const Text('Unseal Carton'),
         content: Text(
-          'Are you sure you want to seal carton ${carton.code}?\n\nOnce sealed, the carton cannot be reopened without authorization.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
+            'Unseal carton code ${carton.code}?\n\nThis cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Get current user ID
-              context.read<CartonCodesBloc>().add(
-                SealCarton(carton.id, 'current_user_id'),
-              );
+              // TODO: Dispatch unseal event
             },
-            child: Text(
-              'Seal',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.primary),
-            ),
+            child: const Text('Unseal'),
           ),
         ],
       ),
@@ -1180,100 +1213,39 @@ class _CartonActionMenu extends StatelessWidget {
   }
 
   void _showInspectionDialog(BuildContext context, CartonCodeModel carton) {
-    final conditionController = TextEditingController(text: carton.condition);
-    final notesController = TextEditingController(
-      text: carton.inspectionNotes ?? '',
-    );
-
+    final notesController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'Update Carton Inspection',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Condition:',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8.h),
-              DropdownButtonFormField<String>(
-                initialValue: carton.condition,
-                items: const [
-                  DropdownMenuItem(value: 'New', child: Text('New')),
-                  DropdownMenuItem(value: 'Good', child: Text('Good')),
-                  DropdownMenuItem(value: 'Damaged', child: Text('Damaged')),
-                  DropdownMenuItem(
-                    value: 'Repair needed',
-                    child: Text('Repair needed'),
-                  ),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    conditionController.text = value;
-                  }
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
+        title: const Text('Inspect Carton'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Inspect carton ${carton.code}'),
+            SizedBox(height: 12.h),
+            TextField(
+              controller: notesController,
+              decoration: InputDecoration(
+                hintText: 'Inspection notes...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
               ),
-              SizedBox(height: 16.h),
-              Text(
-                'Inspection Notes:',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8.h),
-              TextField(
-                controller: notesController,
-                decoration: InputDecoration(
-                  hintText: 'Enter inspection notes...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                ),
-                maxLines: 3,
-              ),
-            ],
-          ),
+              maxLines: 3,
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              if (conditionController.text.isNotEmpty) {
-                Navigator.pop(context);
-                context.read<CartonCodesBloc>().add(
-                  UpdateCartonInspection(
-                    carton.id,
-                    conditionController.text,
-                    notesController.text,
-                  ),
-                );
-              }
+              Navigator.pop(context);
+              // TODO: Dispatch inspection event
             },
-            child: Text(
-              'Update',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.primary),
-            ),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -1288,15 +1260,10 @@ class _CartonActionMenu extends StatelessWidget {
     Color? color,
   }) {
     return ListTile(
-      leading: Icon(icon, color: color ?? AppColors.primary),
-      title: Text(
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: color ?? AppColors.textPrimary),
-      ),
-      onTap: onTap,
+      leading: Icon(icon, color: color ?? AppColors.textPrimary, size: 22.w),
+      title: Text(label),
       contentPadding: EdgeInsets.zero,
+      onTap: onTap,
     );
   }
 
@@ -1306,32 +1273,32 @@ class _CartonActionMenu extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: Text(
           'Delete Carton Code',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(color: AppColors.error),
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(color: AppColors.error),
         ),
         content: Text(
-          'Are you sure you want to delete carton code ${carton.code}?\n\nThis action cannot be undone.',
-          style: Theme.of(context).textTheme.bodyMedium,
+          'Delete carton code ${carton.code}?\n\nThis action cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              context.read<CartonCodesBloc>().add(DeleteCartonCode(carton.id));
+              context
+                  .read<CartonCodesBloc>()
+                  .add(DeleteCartonCode(carton.id));
             },
             child: Text(
               'Delete',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.error),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColors.error),
             ),
           ),
         ],
@@ -1341,24 +1308,21 @@ class _CartonActionMenu extends StatelessWidget {
 
   void _showDeactivateDialog(BuildContext context, CartonCodeModel carton) {
     final reasonController = TextEditingController();
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
           'Deactivate Carton Code',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(color: AppColors.warning),
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(color: AppColors.warning),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Please provide a reason for deactivating carton code ${carton.code}:',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            Text('Please provide a reason for deactivating ${carton.code}:'),
             SizedBox(height: 16.h),
             TextField(
               controller: reasonController,
@@ -1375,119 +1339,28 @@ class _CartonActionMenu extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               if (reasonController.text.isNotEmpty) {
                 Navigator.pop(context);
                 context.read<CartonCodesBloc>().add(
-                  DeactivateCartonCode(carton.id, reasonController.text),
-                );
+                      DeactivateCartonCode(
+                          carton.id, reasonController.text),
+                    );
               }
             },
             child: Text(
               'Deactivate',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.warning),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColors.warning),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _BatchCodesSheet extends StatelessWidget {
-  final _CartonBatchGroup group;
-
-  const _BatchCodesSheet({required this.group});
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.3,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (context, scrollController) {
-        return Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40.w,
-                  height: 4.h,
-                  margin: EdgeInsets.only(bottom: 16.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.textSecondary.withAlpha(60),
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-              ),
-              Text(
-                'Codes in Batch',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 4.h),
-              Text(
-                '${group.codeCount} codes',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              SizedBox(height: 16.h),
-              Expanded(
-                child: ListView.separated(
-                  controller: scrollController,
-                  itemCount: group.codes.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final code = group.codes[index];
-                    return ListTile(
-                      dense: true,
-                      title: Text(code.code),
-                      subtitle: Text(
-                        'Status: ${code.statusDisplayName}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      trailing: Icon(
-                        Icons.chevron_right,
-                        size: 18.w,
-                        color: AppColors.textSecondary,
-                      ),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showCartonDetailsFromCode(context, code);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showCartonDetailsFromCode(BuildContext context, CartonCodeModel code) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _CartonDetailsBottomSheet(carton: code),
     );
   }
 }
