@@ -7,10 +7,10 @@
 //! - Code format validation
 //! - Cryptographic security features
 
-use rand::{Rng, rngs::ThreadRng};
-use sha2::{Sha256, Digest};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use hmac::{Hmac, Mac};
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+use rand::Rng;
+use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Character sets for authentication codes
@@ -192,12 +192,7 @@ pub fn generate_hotp(secret: &[u8], counter: u64, digits: u32) -> Result<String,
     let truncated = &result[offset..offset + 4];
 
     // Convert to u32
-    let mut code = u32::from_be_bytes([
-        truncated[0],
-        truncated[1],
-        truncated[2],
-        truncated[3],
-    ]);
+    let mut code = u32::from_be_bytes([truncated[0], truncated[1], truncated[2], truncated[3]]);
 
     // Mask most significant bit
     code &= 0x7FFFFFFF;
@@ -258,7 +253,11 @@ pub fn generate_code_with_expiry(
 }
 
 /// Verify code with expiry
-pub fn verify_code_with_expiry(code: &str, expected_length: u32, expiry_time: u64) -> Result<bool, String> {
+pub fn verify_code_with_expiry(
+    code: &str,
+    expected_length: u32,
+    expiry_time: u64,
+) -> Result<bool, String> {
     if get_current_timestamp() > expiry_time {
         return Ok(false);
     }
@@ -349,9 +348,8 @@ fn has_suspicious_patterns(code: &str) -> bool {
 
     // Check for common patterns
     let common_patterns = [
-        "123456", "654321", "000000", "111111", "222222", "333333",
-        "444444", "555555", "666666", "777777", "888888", "999999",
-        "abcdef", "ABCDEF", "qwerty", "password", "admin123",
+        "123456", "654321", "000000", "111111", "222222", "333333", "444444", "555555", "666666",
+        "777777", "888888", "999999", "abcdef", "ABCDEF", "qwerty", "password", "admin123",
     ];
 
     for pattern in common_patterns.iter() {
@@ -389,10 +387,7 @@ fn has_repeated_characters(code: &str, threshold: usize) -> bool {
 }
 
 /// Generate batch of authentication codes
-pub fn generate_batch_codes(
-    config: &AuthCodeConfig,
-    count: u32,
-) -> Result<Vec<String>, String> {
+pub fn generate_batch_codes(config: &AuthCodeConfig, count: u32) -> Result<Vec<String>, String> {
     if count == 0 {
         return Err("Count must be greater than 0".to_string());
     }

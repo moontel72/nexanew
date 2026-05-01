@@ -80,7 +80,9 @@ pub fn calculate_with_config(code: &str, config: &ChecksumConfig) -> Result<Stri
         ChecksumAlgorithm::Modulus11 => calculate_modulus11(code),
         ChecksumAlgorithm::Modulus16 => calculate_modulus16(code),
         ChecksumAlgorithm::SimpleSum => calculate_simple_sum(code),
-        ChecksumAlgorithm::WeightedSum => calculate_weighted_sum(code, config.custom_weights.as_deref()),
+        ChecksumAlgorithm::WeightedSum => {
+            calculate_weighted_sum(code, config.custom_weights.as_deref())
+        }
     };
 
     if config.include_in_output {
@@ -125,7 +127,9 @@ pub fn verify(code: &str, config: &ChecksumConfig) -> Result<bool, String> {
         ChecksumAlgorithm::Modulus11 => calculate_modulus11(data_part),
         ChecksumAlgorithm::Modulus16 => calculate_modulus16(data_part),
         ChecksumAlgorithm::SimpleSum => calculate_simple_sum(data_part),
-        ChecksumAlgorithm::WeightedSum => calculate_weighted_sum(data_part, config.custom_weights.as_deref()),
+        ChecksumAlgorithm::WeightedSum => {
+            calculate_weighted_sum(data_part, config.custom_weights.as_deref())
+        }
     };
 
     Ok(checksum_part == expected_checksum)
@@ -133,10 +137,7 @@ pub fn verify(code: &str, config: &ChecksumConfig) -> Result<bool, String> {
 
 /// Calculate Luhn checksum (modulus 10)
 fn calculate_luhn(code: &str) -> String {
-    let digits: Vec<u32> = code
-        .chars()
-        .filter_map(|c| c.to_digit(10))
-        .collect();
+    let digits: Vec<u32> = code.chars().filter_map(|c| c.to_digit(10)).collect();
 
     if digits.is_empty() {
         return "0".to_string();
@@ -242,10 +243,7 @@ fn calculate_damm(code: &str) -> String {
 
 /// Calculate Modulus 11 checksum
 fn calculate_modulus11(code: &str) -> String {
-    let digits: Vec<u32> = code
-        .chars()
-        .filter_map(|c| c.to_digit(10))
-        .collect();
+    let digits: Vec<u32> = code.chars().filter_map(|c| c.to_digit(10)).collect();
 
     if digits.is_empty() {
         return "0".to_string();
@@ -286,10 +284,7 @@ fn calculate_modulus16(code: &str) -> String {
 
 /// Calculate simple sum checksum
 fn calculate_simple_sum(code: &str) -> String {
-    let sum: u32 = code
-        .chars()
-        .filter_map(|c| c.to_digit(10))
-        .sum();
+    let sum: u32 = code.chars().filter_map(|c| c.to_digit(10)).sum();
 
     let checksum = sum % 10;
     checksum.to_string()
@@ -297,10 +292,7 @@ fn calculate_simple_sum(code: &str) -> String {
 
 /// Calculate weighted sum checksum
 fn calculate_weighted_sum(code: &str, weights: Option<&[u32]>) -> String {
-    let digits: Vec<u32> = code
-        .chars()
-        .filter_map(|c| c.to_digit(10))
-        .collect();
+    let digits: Vec<u32> = code.chars().filter_map(|c| c.to_digit(10)).collect();
 
     if digits.is_empty() {
         return "0".to_string();
@@ -326,10 +318,7 @@ pub fn calculate_isbn13(code: &str) -> Result<String, String> {
         return Err("ISBN-13 code must be 12 digits long".to_string());
     }
 
-    let digits: Vec<u32> = code
-        .chars()
-        .filter_map(|c| c.to_digit(10))
-        .collect();
+    let digits: Vec<u32> = code.chars().filter_map(|c| c.to_digit(10)).collect();
 
     if digits.len() != 12 {
         return Err("ISBN-13 code must contain only digits".to_string());
@@ -357,10 +346,7 @@ pub fn calculate_upca(code: &str) -> Result<String, String> {
         return Err("UPC-A code must be 11 digits long".to_string());
     }
 
-    let digits: Vec<u32> = code
-        .chars()
-        .filter_map(|c| c.to_digit(10))
-        .collect();
+    let digits: Vec<u32> = code.chars().filter_map(|c| c.to_digit(10)).collect();
 
     if digits.len() != 11 {
         return Err("UPC-A code must contain only digits".to_string());
