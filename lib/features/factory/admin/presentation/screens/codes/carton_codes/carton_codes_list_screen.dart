@@ -28,6 +28,8 @@ class CartonCodesListScreen extends StatefulWidget {
 class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
   final ScrollController _scrollController = ScrollController();
 
+  bool _isSelectionMode = false;
+
   @override
   void initState() {
     super.initState();
