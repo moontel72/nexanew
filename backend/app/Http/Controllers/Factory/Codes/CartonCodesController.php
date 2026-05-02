@@ -605,7 +605,7 @@ class CartonCodesController extends Controller
         $invoice = null;
 
         DB::transaction(function () use ($companyId, $query, $subscription, $plan, $toPublish, $data, $now, &$invoice) {
-            $ids = (clone $query)->pluck('id')->map(fn ($v) => (string) $v)->all();
+            $ids = (clone $query)->pluck('base_codes.id')->map(fn ($v) => (string) $v)->all();
 
             DB::table('base_codes')
                 ->where('company_id', $companyId)
