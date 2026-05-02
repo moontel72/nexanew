@@ -538,6 +538,7 @@ class CartonCodesController extends Controller
             'code_ids.*' => ['uuid'],
             'batch_id' => ['nullable', 'string', 'max:100'],
             'code_format' => ['nullable', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
+            'count' => ['nullable', 'integer', 'min:1'],
             'product_batch_number' => ['nullable', 'string', 'max:100'],
             'manufacturing_date' => ['nullable', 'date'],
             'expiry_date' => ['nullable', 'date'],

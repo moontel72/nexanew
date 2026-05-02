@@ -21,6 +21,7 @@ abstract class CartonCodesEvent with _$CartonCodesEvent {
   const factory CartonCodesEvent.pushBatch({
     required String batchId,
     required String codeFormat,
+    required int count,
   }) = PushCartonBatch;
   const factory CartonCodesEvent.deleteBatchByGroup({
     required String batchId,

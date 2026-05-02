@@ -352,6 +352,7 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
       final publishedCount = await _codesRepository.publishCartonBatch(
         batchId: event.batchId,
         codeFormat: event.codeFormat,
+        count: event.count,
       );
 
       if (publishedCount <= 0) {
@@ -363,7 +364,8 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
       final updated = state.cartonCodes.map((c) {
         if (c.batchId == event.batchId &&
             c.codeFormat == event.codeFormat &&
-            (c.status == CodeStatus.generated || c.status == CodeStatus.linked)) {
+            (c.status == CodeStatus.generated ||
+                c.status == CodeStatus.linked)) {
           return c.copyWith(
             status: CodeStatus.published,
             publishedAt: now,
@@ -404,7 +406,9 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
 
       final updated = state.cartonCodes
           .where(
-            (c) => !(c.batchId == event.batchId && c.codeFormat == event.codeFormat),
+            (c) =>
+                !(c.batchId == event.batchId &&
+                    c.codeFormat == event.codeFormat),
           )
           .toList();
 

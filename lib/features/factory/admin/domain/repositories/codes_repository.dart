@@ -116,6 +116,7 @@ abstract class CodesRepository {
   Future<int> publishCartonBatch({
     required String batchId,
     required String codeFormat,
+    required int count,
   });
 
   Future<int> deleteCartonBatch({

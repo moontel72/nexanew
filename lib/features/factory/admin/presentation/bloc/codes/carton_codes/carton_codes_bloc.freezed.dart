@@ -176,7 +176,7 @@ return updateProperties(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String? codeFormat)?  load,TResult Function( CartonCodeGenerationRequest request)?  generate,TResult Function( String cartonCodeId)?  delete,TResult Function( List<String> cartonCodeIds)?  deleteBatch,TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult Function( String cartonCodeId)?  publish,TResult Function( String batchId,  String codeFormat)?  pushBatch,TResult Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult Function( String cartonCodeId,  String reason)?  deactivate,TResult Function( String query)?  search,TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult Function( String? codeFormat)?  filterByFormat,TResult Function( List<String> cartonCodeIds,  String format)?  export,TResult Function( String cartonCodeId,  bool isSelected)?  select,TResult Function()?  clearSelection,TResult Function()?  refresh,TResult Function( String cartonCodeId,  String sealedBy)?  seal,TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String? codeFormat)?  load,TResult Function( CartonCodeGenerationRequest request)?  generate,TResult Function( String cartonCodeId)?  delete,TResult Function( List<String> cartonCodeIds)?  deleteBatch,TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult Function( String cartonCodeId)?  publish,TResult Function( String batchId,  String codeFormat,  int count)?  pushBatch,TResult Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult Function( String cartonCodeId,  String reason)?  deactivate,TResult Function( String query)?  search,TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult Function( String? codeFormat)?  filterByFormat,TResult Function( List<String> cartonCodeIds,  String format)?  export,TResult Function( String cartonCodeId,  bool isSelected)?  select,TResult Function()?  clearSelection,TResult Function()?  refresh,TResult Function( String cartonCodeId,  String sealedBy)?  seal,TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case LoadCartonCodes() when load != null:
 return load(_that.codeFormat);case GenerateCartonCodes() when generate != null:
@@ -185,7 +185,7 @@ return delete(_that.cartonCodeId);case DeleteCartonCodeBatch() when deleteBatch 
 return deleteBatch(_that.cartonCodeIds);case LinkCartonCodeToProduct() when linkToProduct != null:
 return linkToProduct(_that.cartonCodeId,_that.productId,_that.productBatchNumber,_that.manufacturingDate,_that.expiryDate,_that.warrantyMonths);case PublishCartonCode() when publish != null:
 return publish(_that.cartonCodeId);case PushCartonBatch() when pushBatch != null:
-return pushBatch(_that.batchId,_that.codeFormat);case DeleteCartonBatchByGroup() when deleteBatchByGroup != null:
+return pushBatch(_that.batchId,_that.codeFormat,_that.count);case DeleteCartonBatchByGroup() when deleteBatchByGroup != null:
 return deleteBatchByGroup(_that.batchId,_that.codeFormat);case ExportCartonBatch() when exportBatch != null:
 return exportBatch(_that.batchId,_that.codeFormat,_that.format);case DeactivateCartonCode() when deactivate != null:
 return deactivate(_that.cartonCodeId,_that.reason);case SearchCartonCodes() when search != null:
@@ -216,7 +216,7 @@ return updateProperties(_that.cartonCodeId,_that.weight,_that.dimensions,_that.t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String? codeFormat)  load,required TResult Function( CartonCodeGenerationRequest request)  generate,required TResult Function( String cartonCodeId)  delete,required TResult Function( List<String> cartonCodeIds)  deleteBatch,required TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)  linkToProduct,required TResult Function( String cartonCodeId)  publish,required TResult Function( String batchId,  String codeFormat)  pushBatch,required TResult Function( String batchId,  String codeFormat)  deleteBatchByGroup,required TResult Function( String batchId,  String codeFormat,  String format)  exportBatch,required TResult Function( String cartonCodeId,  String reason)  deactivate,required TResult Function( String query)  search,required TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)  filter,required TResult Function( String? codeFormat)  filterByFormat,required TResult Function( List<String> cartonCodeIds,  String format)  export,required TResult Function( String cartonCodeId,  bool isSelected)  select,required TResult Function()  clearSelection,required TResult Function()  refresh,required TResult Function( String cartonCodeId,  String sealedBy)  seal,required TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)  updateInspection,required TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)  updateProperties,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String? codeFormat)  load,required TResult Function( CartonCodeGenerationRequest request)  generate,required TResult Function( String cartonCodeId)  delete,required TResult Function( List<String> cartonCodeIds)  deleteBatch,required TResult Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)  linkToProduct,required TResult Function( String cartonCodeId)  publish,required TResult Function( String batchId,  String codeFormat,  int count)  pushBatch,required TResult Function( String batchId,  String codeFormat)  deleteBatchByGroup,required TResult Function( String batchId,  String codeFormat,  String format)  exportBatch,required TResult Function( String cartonCodeId,  String reason)  deactivate,required TResult Function( String query)  search,required TResult Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)  filter,required TResult Function( String? codeFormat)  filterByFormat,required TResult Function( List<String> cartonCodeIds,  String format)  export,required TResult Function( String cartonCodeId,  bool isSelected)  select,required TResult Function()  clearSelection,required TResult Function()  refresh,required TResult Function( String cartonCodeId,  String sealedBy)  seal,required TResult Function( String cartonCodeId,  String condition,  String inspectionNotes)  updateInspection,required TResult Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)  updateProperties,}) {final _that = this;
 switch (_that) {
 case LoadCartonCodes():
 return load(_that.codeFormat);case GenerateCartonCodes():
@@ -225,7 +225,7 @@ return delete(_that.cartonCodeId);case DeleteCartonCodeBatch():
 return deleteBatch(_that.cartonCodeIds);case LinkCartonCodeToProduct():
 return linkToProduct(_that.cartonCodeId,_that.productId,_that.productBatchNumber,_that.manufacturingDate,_that.expiryDate,_that.warrantyMonths);case PublishCartonCode():
 return publish(_that.cartonCodeId);case PushCartonBatch():
-return pushBatch(_that.batchId,_that.codeFormat);case DeleteCartonBatchByGroup():
+return pushBatch(_that.batchId,_that.codeFormat,_that.count);case DeleteCartonBatchByGroup():
 return deleteBatchByGroup(_that.batchId,_that.codeFormat);case ExportCartonBatch():
 return exportBatch(_that.batchId,_that.codeFormat,_that.format);case DeactivateCartonCode():
 return deactivate(_that.cartonCodeId,_that.reason);case SearchCartonCodes():
@@ -255,7 +255,7 @@ return updateProperties(_that.cartonCodeId,_that.weight,_that.dimensions,_that.t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String? codeFormat)?  load,TResult? Function( CartonCodeGenerationRequest request)?  generate,TResult? Function( String cartonCodeId)?  delete,TResult? Function( List<String> cartonCodeIds)?  deleteBatch,TResult? Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult? Function( String cartonCodeId)?  publish,TResult? Function( String batchId,  String codeFormat)?  pushBatch,TResult? Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult? Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult? Function( String cartonCodeId,  String reason)?  deactivate,TResult? Function( String query)?  search,TResult? Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult? Function( String? codeFormat)?  filterByFormat,TResult? Function( List<String> cartonCodeIds,  String format)?  export,TResult? Function( String cartonCodeId,  bool isSelected)?  select,TResult? Function()?  clearSelection,TResult? Function()?  refresh,TResult? Function( String cartonCodeId,  String sealedBy)?  seal,TResult? Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult? Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String? codeFormat)?  load,TResult? Function( CartonCodeGenerationRequest request)?  generate,TResult? Function( String cartonCodeId)?  delete,TResult? Function( List<String> cartonCodeIds)?  deleteBatch,TResult? Function( String cartonCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult? Function( String cartonCodeId)?  publish,TResult? Function( String batchId,  String codeFormat,  int count)?  pushBatch,TResult? Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult? Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult? Function( String cartonCodeId,  String reason)?  deactivate,TResult? Function( String query)?  search,TResult? Function( CodeStatus? status,  String? bundleCode,  DateTime? startDate,  DateTime? endDate,  String? cartonType,  String? condition)?  filter,TResult? Function( String? codeFormat)?  filterByFormat,TResult? Function( List<String> cartonCodeIds,  String format)?  export,TResult? Function( String cartonCodeId,  bool isSelected)?  select,TResult? Function()?  clearSelection,TResult? Function()?  refresh,TResult? Function( String cartonCodeId,  String sealedBy)?  seal,TResult? Function( String cartonCodeId,  String condition,  String inspectionNotes)?  updateInspection,TResult? Function( String cartonCodeId,  double? weight,  String? dimensions,  String? temperatureRequirements,  String? handlingInstructions)?  updateProperties,}) {final _that = this;
 switch (_that) {
 case LoadCartonCodes() when load != null:
 return load(_that.codeFormat);case GenerateCartonCodes() when generate != null:
@@ -264,7 +264,7 @@ return delete(_that.cartonCodeId);case DeleteCartonCodeBatch() when deleteBatch 
 return deleteBatch(_that.cartonCodeIds);case LinkCartonCodeToProduct() when linkToProduct != null:
 return linkToProduct(_that.cartonCodeId,_that.productId,_that.productBatchNumber,_that.manufacturingDate,_that.expiryDate,_that.warrantyMonths);case PublishCartonCode() when publish != null:
 return publish(_that.cartonCodeId);case PushCartonBatch() when pushBatch != null:
-return pushBatch(_that.batchId,_that.codeFormat);case DeleteCartonBatchByGroup() when deleteBatchByGroup != null:
+return pushBatch(_that.batchId,_that.codeFormat,_that.count);case DeleteCartonBatchByGroup() when deleteBatchByGroup != null:
 return deleteBatchByGroup(_that.batchId,_that.codeFormat);case ExportCartonBatch() when exportBatch != null:
 return exportBatch(_that.batchId,_that.codeFormat,_that.format);case DeactivateCartonCode() when deactivate != null:
 return deactivate(_that.cartonCodeId,_that.reason);case SearchCartonCodes() when search != null:
@@ -710,11 +710,12 @@ as String,
 
 
 class PushCartonBatch implements CartonCodesEvent {
-  const PushCartonBatch({required this.batchId, required this.codeFormat});
+  const PushCartonBatch({required this.batchId, required this.codeFormat, required this.count});
   
 
  final  String batchId;
  final  String codeFormat;
+ final  int count;
 
 /// Create a copy of CartonCodesEvent
 /// with the given fields replaced by the non-null parameter values.
@@ -726,16 +727,16 @@ $PushCartonBatchCopyWith<PushCartonBatch> get copyWith => _$PushCartonBatchCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PushCartonBatch&&(identical(other.batchId, batchId) || other.batchId == batchId)&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PushCartonBatch&&(identical(other.batchId, batchId) || other.batchId == batchId)&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat)&&(identical(other.count, count) || other.count == count));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,batchId,codeFormat);
+int get hashCode => Object.hash(runtimeType,batchId,codeFormat,count);
 
 @override
 String toString() {
-  return 'CartonCodesEvent.pushBatch(batchId: $batchId, codeFormat: $codeFormat)';
+  return 'CartonCodesEvent.pushBatch(batchId: $batchId, codeFormat: $codeFormat, count: $count)';
 }
 
 
@@ -746,7 +747,7 @@ abstract mixin class $PushCartonBatchCopyWith<$Res> implements $CartonCodesEvent
   factory $PushCartonBatchCopyWith(PushCartonBatch value, $Res Function(PushCartonBatch) _then) = _$PushCartonBatchCopyWithImpl;
 @useResult
 $Res call({
- String batchId, String codeFormat
+ String batchId, String codeFormat, int count
 });
 
 
@@ -763,11 +764,12 @@ class _$PushCartonBatchCopyWithImpl<$Res>
 
 /// Create a copy of CartonCodesEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? batchId = null,Object? codeFormat = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? batchId = null,Object? codeFormat = null,Object? count = null,}) {
   return _then(PushCartonBatch(
 batchId: null == batchId ? _self.batchId : batchId // ignore: cast_nullable_to_non_nullable
 as String,codeFormat: null == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
-as String,
+as String,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 

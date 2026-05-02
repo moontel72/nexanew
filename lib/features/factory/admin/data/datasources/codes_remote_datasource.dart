@@ -84,7 +84,6 @@ class CodesRemoteDatasource {
     String? codeFormat,
     String? prefix,
   }) async {
-    // If a specific format is provided, use the format-specific endpoint
     if (codeFormat != null && codeFormat.isNotEmpty) {
       final res = await _api.post(
         ApiEndpoints.generateCartonCodesByFormat(codeFormat),
@@ -99,7 +98,6 @@ class CodesRemoteDatasource {
       );
       return (res as Map).cast<String, dynamic>();
     }
-    // Fallback to the generic endpoint
     final res = await _api.post(
       '${ApiEndpoints.cartonCodes}/generate',
       data: {
@@ -119,7 +117,6 @@ class CodesRemoteDatasource {
     int limit = 50,
     String? codeFormat,
   }) async {
-    // If a specific format is provided, use the format-specific endpoint
     if (codeFormat != null && codeFormat.isNotEmpty) {
       final res = await _api.get(
         ApiEndpoints.listCartonCodesByFormat(codeFormat),
@@ -127,7 +124,6 @@ class CodesRemoteDatasource {
       );
       return (res as Map).cast<String, dynamic>();
     }
-    // Fallback to the generic endpoint
     final res = await _api.get(
       '${ApiEndpoints.cartonCodes}/list',
       queryParameters: {'page': page.toString(), 'limit': limit.toString()},
@@ -177,10 +173,7 @@ class CodesRemoteDatasource {
         if (productBatchNumber != null && productBatchNumber.isNotEmpty)
           'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate
-              .toIso8601String()
-              .split('T')
-              .first,
+          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -209,10 +202,7 @@ class CodesRemoteDatasource {
         if (productBatchNumber != null && productBatchNumber.isNotEmpty)
           'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate
-              .toIso8601String()
-              .split('T')
-              .first,
+          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -239,10 +229,7 @@ class CodesRemoteDatasource {
         'product_id': productId,
         'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate
-              .toIso8601String()
-              .split('T')
-              .first,
+          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -265,10 +252,7 @@ class CodesRemoteDatasource {
         if (productBatchNumber != null && productBatchNumber.isNotEmpty)
           'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate
-              .toIso8601String()
-              .split('T')
-              .first,
+          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -322,10 +306,7 @@ class CodesRemoteDatasource {
         'product_id': productId,
         'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate
-              .toIso8601String()
-              .split('T')
-              .first,
+          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -348,10 +329,7 @@ class CodesRemoteDatasource {
         if (productBatchNumber != null && productBatchNumber.isNotEmpty)
           'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate
-              .toIso8601String()
-              .split('T')
-              .first,
+          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -373,12 +351,14 @@ class CodesRemoteDatasource {
   Future<Map<String, dynamic>> publishCartonCodesByBatchAndFormat({
     required String batchId,
     required String codeFormat,
+    required int count,
   }) async {
     final res = await _api.post(
       ApiEndpoints.publishCartonCodes,
       data: {
         'batch_id': batchId,
         'code_format': codeFormat,
+        'count': count,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -455,10 +435,7 @@ class CodesRemoteDatasource {
         'product_id': productId,
         'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate
-              .toIso8601String()
-              .split('T')
-              .first,
+          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -481,10 +458,7 @@ class CodesRemoteDatasource {
         if (productBatchNumber != null && productBatchNumber.isNotEmpty)
           'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate
-              .toIso8601String()
-              .split('T')
-              .first,
+          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,

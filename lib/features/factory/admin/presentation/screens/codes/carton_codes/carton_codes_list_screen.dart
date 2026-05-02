@@ -367,12 +367,26 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                     ),
                     SizedBox(width: 8.w),
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: isValidBatch
-                            ? () => _confirmPushBatch(context, group)
-                            : null,
-                        icon: const Icon(Icons.publish_outlined, size: 18),
-                        label: const Text('Push'),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: isValidBatch
+                                ? () => _confirmPushBatch(context, group)
+                                : null,
+                            icon: const Icon(Icons.publish_outlined, size: 18),
+                            label: const Text('Push'),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            '${group.codeCount} codes',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 10.sp,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
                     SizedBox(width: 8.w),
@@ -505,6 +519,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                 PushCartonBatch(
                   batchId: group.batchId,
                   codeFormat: group.codeFormat,
+                  count: group.codeCount,
                 ),
               );
             },
