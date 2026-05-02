@@ -577,7 +577,7 @@ class CartonCodesController extends Controller
             $query->whereIn('id', $data['code_ids']);
         }
 
-        $toPublish = (int) $query->count('id');
+        $toPublish = (int) $query->count('base_codes.id');
         if ($toPublish <= 0) {
             return response()->json([
                 'success' => true,
