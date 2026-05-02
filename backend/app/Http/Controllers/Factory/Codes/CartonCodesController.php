@@ -858,7 +858,7 @@ class CartonCodesController extends Controller
         $driver = DB::getDriverName();
         $jsonExpr = null;
         if ($driver === 'pgsql') {
-            $jsonExpr = DB::raw("jsonb_set(coalesce(metadata,'{}'::jsonb), '{publish_invoice_id}', '\"{$invoiceId}\"', true)");
+            $jsonExpr = DB::raw("coalesce(metadata,'{}'::jsonb) || '{\"publish_invoice_id\": \"{$invoiceId}\"}'::jsonb");
         } else {
             $jsonExpr = DB::raw("JSON_SET(COALESCE(metadata, JSON_OBJECT()), '$.publish_invoice_id', '{$invoiceId}')");
         }
