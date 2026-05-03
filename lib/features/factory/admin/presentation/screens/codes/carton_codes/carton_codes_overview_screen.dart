@@ -33,27 +33,8 @@ class _CartonCodesOverviewScreenState extends State<CartonCodesOverviewScreen> {
     });
   }
 
-  void _showFilterDialog() {}
-
   PreferredSizeWidget _buildAppBar() {
-    return BlocBuilder<CartonCodesBloc, CartonCodesState>(
-      builder: (context, state) {
-        return PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: CustomAppBar(
-            title: 'Carton Overview',
-            showBackButton: true,
-            actions: [
-              IconButton(
-                onPressed: _showFilterDialog,
-                icon: const Icon(Icons.filter_list, color: Colors.white),
-                tooltip: 'Filter',
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    return const _CartonOverviewAppBar();
   }
 
   Widget _buildFormatFilter(CartonCodesState state) {
@@ -335,6 +316,33 @@ class _CartonCodesOverviewScreenState extends State<CartonCodesOverviewScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+class _CartonOverviewAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
+  const _CartonOverviewAppBar();
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CartonCodesBloc, CartonCodesState>(
+      builder: (context, state) {
+        return CustomAppBar(
+          title: 'Carton Overview',
+          showBackButton: true,
+          actions: [
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.filter_list, color: Colors.white),
+              tooltip: 'Filter',
+            ),
+          ],
+        );
+      },
     );
   }
 }
