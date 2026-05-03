@@ -654,34 +654,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                         ),
                         SizedBox(height: 12.h),
                         _buildFormatFilter(state),
-                        FilterChipRow(
-                          selectedValue: state.filterStatus?.name,
-                          onSelectionChanged: (value) {
-                            final status = value != null
-                                ? CodeStatus.values.firstWhere(
-                                    (e) => e.name == value,
-                                  )
-                                : null;
-                            context.read<CartonCodesBloc>().add(
-                              FilterCartonCodes(status: status),
-                            );
-                          },
-                          chips: [
-                            const FilterChipData(label: 'All', value: 'all'),
-                            FilterChipData(
-                              label: 'Generated',
-                              value: CodeStatus.generated.name,
-                            ),
-                            FilterChipData(
-                              label: 'Linked',
-                              value: CodeStatus.linked.name,
-                            ),
-                            FilterChipData(
-                              label: 'Published',
-                              value: CodeStatus.published.name,
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                   ),
