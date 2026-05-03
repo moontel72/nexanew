@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/carton_codes/carton_codes_bloc.dart';
 import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
