@@ -560,20 +560,10 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     return Scaffold(
       appBar: _buildAppBar(),
       body: BlocConsumer<CartonCodesBloc, CartonCodesState>(
-        listener: (context, state) async {
-          if (state.status == CartonCodesStatus.exported &&
-              state.exportPath != null &&
-              state.exportPath!.trim().isNotEmpty) {
-            final raw = state.exportPath!.trim();
-            final uri = Uri.tryParse(raw);
-            final downloadUri = (uri != null && uri.hasScheme)
-                ? uri
-                : Uri.parse(ApiEndpoints.getFullUrl(raw.startsWith('"'"'/"'"') ? raw : '"'"'/'"'"' + raw));
-            await launchUrl(downloadUri, mode: LaunchMode.platformDefault);
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('"'"'Download started'"'"')));
-          }
-
+        listener: (context, state) {
+          _handleExportState(context, state);
+        },
+        builder: (context, state) {
           if (state.status == CartonCodesStatus.error &&
               state.cartonCodes.isEmpty) {
             return Center(
@@ -590,6 +580,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               ),
             );
           }
+
           if (state.filteredCartonCodes.isEmpty) {
             return Scrollbar(
               controller: _scrollController,
@@ -661,7 +652,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                         ),
                         SizedBox(height: 12.h),
                         _buildFormatFilter(state),
-
                         FilterChipRow(
                           selectedValue: state.filterStatus?.name,
                           onSelectionChanged: (value) {
@@ -737,6 +727,25 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
         },
       ),
     );
+  }
+
+  void _handleExportState(BuildContext context, CartonCodesState state) {
+    if (state.status == CartonCodesStatus.exported &&
+        state.exportPath != null &&
+        state.exportPath!.trim().isNotEmpty) {
+      final raw = state.exportPath!.trim();
+      final uri = Uri.tryParse(raw);
+      final downloadUri = (uri != null && uri.hasScheme)
+          ? uri
+          : Uri.parse(ApiEndpoints.getFullUrl(raw.startsWith('/') ? raw : '/$raw'));
+      launchUrl(downloadUri, mode: LaunchMode.platformDefault).then((_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Download started')),
+          );
+        }
+      });
+    }
   }
 }
 
