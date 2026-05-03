@@ -555,6 +555,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     if (format == null) return;
     bloc.add(ExportCartonBatch(group.batchId, group.codeFormat, format));
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -602,7 +603,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                       child: _buildFormatFilter(state),
                     ),
-                    SizedBox(height: 48.h),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                       child: EmptyState(
@@ -639,10 +639,12 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
             child: SingleChildScrollView(
               controller: _scrollController,
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Padding(
                     padding: EdgeInsets.fromLTRB(16.w, 16.w, 16.w, 0),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         custom.SearchBar(
                           onSearchChanged: (query) => context
@@ -737,12 +739,14 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
       final uri = Uri.tryParse(raw);
       final downloadUri = (uri != null && uri.hasScheme)
           ? uri
-          : Uri.parse(ApiEndpoints.getFullUrl(raw.startsWith('/') ? raw : '/$raw'));
+          : Uri.parse(
+              ApiEndpoints.getFullUrl(raw.startsWith('/') ? raw : '/$raw'),
+            );
       launchUrl(downloadUri, mode: LaunchMode.platformDefault).then((_) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Download started')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Download started')));
         }
       });
     }
