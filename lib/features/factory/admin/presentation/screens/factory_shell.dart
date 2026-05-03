@@ -27,8 +27,7 @@ class FactoryShell extends StatelessWidget {
     final crumbs = _breadcrumbsForLocation(location);
 
     return BlocListener<FactoryAuthBloc, FactoryAuthState>(
-      listenWhen: (previous, current) =>
-          current is FactoryAuthUnauthenticated,
+      listenWhen: (previous, current) => current is FactoryAuthUnauthenticated,
       listener: (context, state) {
         context.read<AppRouter>().goToFactoryLogin(context);
       },
@@ -53,9 +52,9 @@ class FactoryShell extends StatelessWidget {
                           }
                         },
                         onLogout: () {
-                          innerContext
-                              .read<FactoryAuthBloc>()
-                              .add(FactoryLogoutRequested());
+                          innerContext.read<FactoryAuthBloc>().add(
+                            FactoryLogoutRequested(),
+                          );
                         },
                       );
                     },
@@ -166,6 +165,11 @@ class FactoryShell extends StatelessWidget {
                 icon: Icons.list_alt,
                 route: '/factory/codes/carton',
               ),
+              AdminSidebarItem(
+                label: 'Carton Overview',
+                icon: Icons.bar_chart_outlined,
+                route: '/factory/codes/carton/overview',
+              ),
             ],
           ),
           AdminSidebarItem(
@@ -208,6 +212,9 @@ class FactoryShell extends StatelessWidget {
     if (location.startsWith('/factory/codes/carton/generate')) {
       return 'Generate Carton';
     }
+    if (location.startsWith('/factory/codes/carton/overview')) {
+      return 'Carton Overview';
+    }
     if (location.startsWith('/factory/codes/carton')) return 'View Carton List';
 
     if (location.startsWith('/factory/codes/bundle/generate')) {
@@ -230,8 +237,14 @@ class FactoryShell extends StatelessWidget {
     if (location.startsWith('/factory/codes/packet')) {
       return const ['Factory', 'Codes', 'Packet'];
     }
+    if (location.startsWith('/factory/codes/carton/generate')) {
+      return const ['Factory', 'Codes', 'Carton', 'Generate Carton'];
+    }
+    if (location.startsWith('/factory/codes/carton/overview')) {
+      return const ['Factory', 'Codes', 'Carton', 'Overview'];
+    }
     if (location.startsWith('/factory/codes/carton')) {
-      return const ['Factory', 'Codes', 'Carton'];
+      return const ['Factory', 'Codes', 'Carton', 'View Carton List'];
     }
     if (location.startsWith('/factory/codes/bundle')) {
       return const ['Factory', 'Codes', 'Bundle'];

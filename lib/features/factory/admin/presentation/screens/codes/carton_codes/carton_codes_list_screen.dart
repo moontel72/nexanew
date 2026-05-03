@@ -797,9 +797,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                         ),
                         SizedBox(height: 12.h),
                         _buildFormatFilter(state),
-                        SizedBox(height: 12.h),
-                        _buildStatistics(state.filteredCartonCodes),
-                        SizedBox(height: 12.h),
+
                         FilterChipRow(
                           selectedValue: state.filterStatus?.name,
                           onSelectionChanged: (value) {

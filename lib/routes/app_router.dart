@@ -26,6 +26,7 @@ import 'package:nexatrace_system/features/factory/admin/presentation/screens/fac
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_codes_list_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_code_generate_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/carton_codes/carton_codes_list_screen.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/carton_codes/carton_codes_overview_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/carton_codes/carton_code_generate_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/packet_codes/packet_codes_list_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/packet_codes/packet_code_generate_screen.dart';
@@ -297,17 +298,22 @@ class AppRouter {
               ],
             ),
             GoRoute(
-              path: '/factory/codes/carton',
-              name: 'factory_carton_codes',
-              builder: (context, state) => const CartonCodesListScreen(),
-              routes: [
-                GoRoute(
-                  path: 'generate',
-                  name: 'factory_carton_codes_generate',
-                  builder: (context, state) => const CartonCodeGenerateScreen(),
-                ),
-              ],
-            ),
+                          path: '/factory/codes/carton',
+                          name: 'factory_carton_codes',
+                          builder: (context, state) => const CartonCodesListScreen(),
+                          routes: [
+                            GoRoute(
+                              path: 'generate',
+                              name: 'factory_carton_codes_generate',
+                              builder: (context, state) => const CartonCodeGenerateScreen(),
+                            ),
+                            GoRoute(
+                              path: 'overview',
+                              name: 'factory_carton_codes_overview',
+                              builder: (context, state) => const CartonCodesOverviewScreen(),
+                            ),
+                          ],
+                        ),
             GoRoute(
               path: '/factory/codes/bundle',
               name: 'factory_bundle_codes',
