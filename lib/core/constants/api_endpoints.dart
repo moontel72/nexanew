@@ -159,6 +159,14 @@ class ApiEndpoints {
   static const String downloadPacketCodes = '/codes/packet/download';
   static const String linkPacketCodes = '/codes/packet/link';
   static const String publishPacketCodes = '/codes/packet/publish';
+  static const String packetBatches = '/codes/packet/batches';
+  static const String deletePacketBatch = '/codes/packet/batch/delete';
+
+  // Packet Code Format-specific endpoints
+  static String generatePacketCodesByFormat(String format) =>
+      '/codes/packet/$format/generate';
+  static String listPacketCodesByFormat(String format) =>
+      '/codes/packet/$format/list';
 
   // Unit Codes (Authentication Codes)
   static const String unitCodes = '/codes/unit';

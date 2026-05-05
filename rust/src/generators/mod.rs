@@ -56,6 +56,13 @@ pub use packet::{
     validate_code as validate_packet_code,
     parse_code as parse_packet_code,
     generate_random_code as generate_random_packet_code,
+    // Format-aware API
+    PacketGenerationParams,
+    generate_single_code_with_format as generate_packet_code_with_format,
+    generate_batch_with_format as generate_packet_batch_with_format,
+    generate_with_hierarchy_and_format as generate_packet_with_hierarchy_and_format,
+    validate_code_with_format as validate_packet_code_with_format,
+    generate_random_code_with_format as generate_random_packet_code_with_format,
 };
 
 pub use unit::{

@@ -32,9 +32,15 @@ abstract class CodesRepository {
     required int count,
     String? batchId,
     int? unitCount,
+    String? codeFormat,
+    String? prefix,
   });
 
-  Future<List<PacketCodeModel>> getPacketCodes({int page = 1, int limit = 50});
+  Future<List<PacketCodeModel>> getPacketCodes({
+    int page = 1,
+    int limit = 50,
+    String? codeFormat,
+  });
 
   Future<void> generateUnitCodes({required int count, String? batchId});
 
@@ -152,6 +158,26 @@ abstract class CodesRepository {
 
   Future<String> downloadPacketCodes({
     required List<String> codeIds,
+    required String format,
+    bool includeQrCodes = true,
+    bool includeBarcodes = true,
+    bool includeInternationalCodes = true,
+  });
+
+  Future<int> publishPacketBatch({
+    required String batchId,
+    required String codeFormat,
+    required int count,
+  });
+
+  Future<int> deletePacketBatch({
+    required String batchId,
+    required String codeFormat,
+  });
+
+  Future<String> downloadPacketBatch({
+    required String batchId,
+    required String codeFormat,
     required String format,
     bool includeQrCodes = true,
     bool includeBarcodes = true,

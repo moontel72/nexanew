@@ -139,6 +139,9 @@ abstract class PacketCodeModel with _$PacketCodeModel {
 
     /// QC notes
     @HiveField(50) String? qcNotes,
+
+    /// Packet code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label)
+    @HiveField(51) @Default('qr') String codeFormat,
   }) = _PacketCodeModel;
 
   factory PacketCodeModel.fromJson(Map<String, dynamic> json) =>

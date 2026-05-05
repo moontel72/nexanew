@@ -568,6 +568,14 @@ $registerRoutes = function (): void {
             });
 
             Route::prefix("packet")->group(function (): void {
+                Route::get("batches", [
+                    \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
+                    "listBatches",
+                ]);
+                Route::post("batch/delete", [
+                    \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
+                    "deleteBatch",
+                ]);
                 Route::post("generate", [
                     \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
                     "generate",
@@ -576,6 +584,14 @@ $registerRoutes = function (): void {
                     \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
                     "list",
                 ]);
+                Route::post("{format}/generate", [
+                    \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
+                    "generateForFormat",
+                ])->where(['format' => 'itf14|gs1_128|code128_industrial|qr|datamatrix|code128_label']);
+                Route::get("{format}/list", [
+                    \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
+                    "listForFormat",
+                ])->where(['format' => 'itf14|gs1_128|code128_industrial|qr|datamatrix|code128_label']);
                 Route::put("{id}", [
                     \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
                     "update",

@@ -40,6 +40,7 @@ abstract class PacketCodesState with _$PacketCodesState {
     DateTime? filterEndDate,
     String? filterPacketType,
     String? filterCondition,
+    @Default('') String filterCodeFormat,
     String? errorMessage,
     @Default(false) bool hasReachedMax,
     @Default(1) int currentPage,

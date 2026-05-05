@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/packet_codes/packet_codes_bloc.dart';
+import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
 import 'package:nexatrace_system/shared/models/code/code_generation_request.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
@@ -39,6 +40,8 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
   final TextEditingController _materialController = TextEditingController();
   final TextEditingController _sealingMethodController =
       TextEditingController();
+
+  CartonCodeFormat _selectedFormat = CartonCodeFormat.qr;
 
   bool _includeInternationalCodes = true;
   bool _generateQrCodes = true;
@@ -81,6 +84,10 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
         includeInstructions: true,
         generatePacketBarcode: true,
         generatePacketQrCode: true,
+        codeFormat: _selectedFormat.value,
+        batchName: _batchNameController.text.isNotEmpty
+            ? _batchNameController.text
+            : null,
       );
 
       context.read<PacketCodesBloc>().add(GeneratePacketCodes(request));
@@ -129,6 +136,120 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildFormatSelector() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Code Format',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              'Select ONE format type for this batch',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+            SizedBox(height: 12.h),
+            Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: CartonCodeFormat.values.map((format) {
+                final isSelected = _selectedFormat == format;
+                return ChoiceChip(
+                  label: Text(format.displayName),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _selectedFormat = format;
+                      });
+                    }
+                  },
+                  selectedColor: AppColors.primary.withAlpha(30),
+                  backgroundColor: AppColors.surface,
+                  side: BorderSide(
+                    color: isSelected ? AppColors.primary : AppColors.border,
+                    width: isSelected ? 2 : 1,
+                  ),
+                  labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.textPrimary,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                  avatar: isSelected
+                      ? Icon(
+                          Icons.check_circle,
+                          size: 18,
+                          color: AppColors.primary,
+                        )
+                      : Icon(
+                          _formatIcon(format.value),
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
+                );
+              }).toList(),
+            ),
+            SizedBox(height: 8.h),
+            Container(
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withAlpha(8),
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(color: AppColors.primary.withAlpha(25)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: AppColors.primary),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      _selectedFormat.description,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _formatIcon(String format) {
+    switch (format) {
+      case 'itf14':
+        return Icons.bar_chart;
+      case 'gs1_128':
+        return Icons.qr_code_scanner;
+      case 'code128_industrial':
+        return Icons.factory;
+      case 'qr':
+        return Icons.qr_code_2;
+      case 'datamatrix':
+        return Icons.grid_on;
+      case 'code128_label':
+        return Icons.label;
+      default:
+        return Icons.code;
+    }
   }
 
   Widget _buildBasicInfoSection() {
@@ -469,15 +590,50 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
                 controller: _scrollController,
                 padding: EdgeInsets.all(16.w),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildFormatSelector(),
+                    SizedBox(height: 24.h),
                     _buildBasicInfoSection(),
-                    SizedBox(height: 32.h),
+                    SizedBox(height: 24.h),
+                    _buildPacketSpecificationsSection(),
+                    SizedBox(height: 24.h),
+                    _buildSafetyFeaturesSection(),
+                    SizedBox(height: 24.h),
+                    _buildCodeOptionsSection(),
+                    SizedBox(height: 24.h),
                     PrimaryButton(
                       onPressed: _generateCodes,
-                      text: 'Generate Codes',
+                      text:
+                          'Generate ${_selectedFormat.displayName} Packet Codes',
                       isLoading: state.status == PacketCodesStatus.generating,
                     ),
-                    SizedBox(height: 32.h),
+                    SizedBox(height: 16.h),
+                    if (state.status == PacketCodesStatus.error)
+                      Container(
+                        padding: EdgeInsets.all(16.w),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withAlpha(25),
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: Border.all(color: AppColors.error, width: 1),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: AppColors.error,
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Text(
+                                state.errorMessage ?? 'An error occurred',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: AppColors.error),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),

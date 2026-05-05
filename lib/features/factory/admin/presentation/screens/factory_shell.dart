@@ -148,6 +148,11 @@ class FactoryShell extends StatelessWidget {
                 icon: Icons.list_alt,
                 route: '/factory/codes/packet',
               ),
+              AdminSidebarItem(
+                label: 'Packet Overview',
+                icon: Icons.bar_chart_outlined,
+                route: '/factory/codes/packet/overview',
+              ),
             ],
           ),
           AdminSidebarItem(
@@ -207,6 +212,9 @@ class FactoryShell extends StatelessWidget {
     if (location.startsWith('/factory/codes/packet/generate')) {
       return 'Generate Packet';
     }
+    if (location.startsWith('/factory/codes/packet/overview')) {
+      return 'Packet Overview';
+    }
     if (location.startsWith('/factory/codes/packet')) return 'View Packet List';
 
     if (location.startsWith('/factory/codes/carton/generate')) {
@@ -234,8 +242,14 @@ class FactoryShell extends StatelessWidget {
     if (location.startsWith('/factory/codes/unit')) {
       return const ['Factory', 'Codes', 'Unit'];
     }
+    if (location.startsWith('/factory/codes/packet/generate')) {
+      return const ['Factory', 'Codes', 'Packet', 'Generate Packet'];
+    }
+    if (location.startsWith('/factory/codes/packet/overview')) {
+      return const ['Factory', 'Codes', 'Packet', 'Overview'];
+    }
     if (location.startsWith('/factory/codes/packet')) {
-      return const ['Factory', 'Codes', 'Packet'];
+      return const ['Factory', 'Codes', 'Packet', 'View Packet List'];
     }
     if (location.startsWith('/factory/codes/carton/generate')) {
       return const ['Factory', 'Codes', 'Carton', 'Generate Carton'];

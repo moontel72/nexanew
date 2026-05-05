@@ -26,8 +26,12 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
     on<PublishPacketCode>(_onPublishPacketCode);
     on<DeactivatePacketCode>(_onDeactivatePacketCode);
     on<SearchPacketCodes>(_onSearchPacketCodes);
+    on<FilterPacketCodesByFormat>(_onFilterPacketCodesByFormat);
     on<FilterPacketCodes>(_onFilterPacketCodes);
     on<ExportPacketCodes>(_onExportPacketCodes);
+    on<PushPacketBatch>(_onPushPacketBatch);
+    on<DeletePacketBatchByGroup>(_onDeletePacketBatchByGroup);
+    on<ExportPacketBatch>(_onExportPacketBatch);
     on<SelectPacketCode>(_onSelectPacketCode);
     on<ClearSelection>(_onClearSelection);
     on<RefreshPacketCodes>(_onRefreshPacketCodes);
@@ -230,8 +234,11 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
         (p) => p.id == event.packetCodeId,
       );
 
-      if (packet.status != CodeStatus.generated && packet.status != CodeStatus.linked) {
-        throw Exception('Only generated or linked packet codes can be published');
+      if (packet.status != CodeStatus.generated &&
+          packet.status != CodeStatus.linked) {
+        throw Exception(
+          'Only generated or linked packet codes can be published',
+        );
       }
 
       await _codesRepository.publishPacketCodes(codeIds: [event.packetCodeId]);
@@ -332,6 +339,22 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
     }
   }
 
+  Future<void> _onFilterPacketCodesByFormat(
+    FilterPacketCodesByFormat event,
+    Emitter<PacketCodesState> emit,
+  ) async {
+    final format = event.codeFormat;
+    final filtered = format == null
+        ? state.packetCodes
+        : state.packetCodes.where((p) => p.codeFormat == format).toList();
+    emit(
+      state.copyWith(
+        filteredPacketCodes: filtered,
+        filterCodeFormat: format ?? '',
+      ),
+    );
+  }
+
   Future<void> _onFilterPacketCodes(
     FilterPacketCodes event,
     Emitter<PacketCodesState> emit,
@@ -429,6 +452,113 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
           status: PacketCodesStatus.error,
           isExporting: false,
           errorMessage: 'Export failed: ${e.toString()}',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onPushPacketBatch(
+    PushPacketBatch event,
+    Emitter<PacketCodesState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PacketCodesStatus.publishing));
+      final batchCodes = state.packetCodes
+          .where((p) => p.batchId == event.batchId)
+          .map((p) => p.id)
+          .toList();
+      await _codesRepository.publishPacketCodes(codeIds: batchCodes);
+      final updatedCodes = state.packetCodes.map((p) {
+        if (p.batchId == event.batchId) {
+          return p.copyWith(
+            status: CodeStatus.published,
+            publishedAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+        }
+        return p;
+      }).toList();
+      emit(
+        state.copyWith(
+          packetCodes: updatedCodes,
+          filteredPacketCodes: updatedCodes,
+          status: PacketCodesStatus.published,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PacketCodesStatus.error,
+          errorMessage: 'Batch push failed: ${e.toString()}',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onDeletePacketBatchByGroup(
+    DeletePacketBatchByGroup event,
+    Emitter<PacketCodesState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PacketCodesStatus.deleting));
+      final batchCodeIds = state.packetCodes
+          .where((p) => p.batchId == event.batchId)
+          .map((p) => p.id)
+          .toList();
+      await _codesRepository.deletePacketBatch(
+        batchId: event.batchId,
+        codeFormat: event.codeFormat,
+      );
+      final updatedCodes = state.packetCodes
+          .where((p) => p.batchId != event.batchId)
+          .toList();
+      emit(
+        state.copyWith(
+          packetCodes: updatedCodes,
+          filteredPacketCodes: updatedCodes,
+          status: PacketCodesStatus.deleted,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PacketCodesStatus.error,
+          errorMessage: 'Batch delete failed: ${e.toString()}',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportPacketBatch(
+    ExportPacketBatch event,
+    Emitter<PacketCodesState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(status: PacketCodesStatus.exporting, isExporting: true),
+      );
+      final batchCodeIds = state.packetCodes
+          .where((p) => p.batchId == event.batchId)
+          .map((p) => p.id)
+          .toList();
+      final format = (event.format == 'pdf') ? 'pdf' : 'csv';
+      final exportPath = await _codesRepository.downloadPacketCodes(
+        codeIds: batchCodeIds,
+        format: format,
+      );
+      emit(
+        state.copyWith(
+          status: PacketCodesStatus.exported,
+          isExporting: false,
+          exportPath: exportPath,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PacketCodesStatus.error,
+          isExporting: false,
+          errorMessage: 'Batch export failed: ${e.toString()}',
         ),
       );
     }

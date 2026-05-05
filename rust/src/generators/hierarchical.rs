@@ -121,6 +121,7 @@ pub fn generate_hierarchical(
                     carton_code: carton_code.clone(),
                     unit_codes,
                     total_units: units_per_packet,
+                    code_format: "qr".to_string(),
                 };
 
                 carton_packets.push(packet);

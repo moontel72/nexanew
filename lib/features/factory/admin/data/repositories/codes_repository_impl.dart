@@ -9,12 +9,9 @@ class CodesRepositoryImpl implements CodesRepository {
   final CodesRemoteDatasource _remote;
 
   CodesRepositoryImpl({required CodesRemoteDatasource remoteDatasource})
-      : _remote = remoteDatasource;
+    : _remote = remoteDatasource;
 
-  Future<void> deleteCode({
-    required String type,
-    required String id,
-  }) async {
+  Future<void> deleteCode({required String type, required String id}) async {
     await _remote.deleteCode(type: type, id: id);
   }
 
@@ -131,11 +128,15 @@ class CodesRepositoryImpl implements CodesRepository {
     required int count,
     String? batchId,
     int? unitCount,
+    String? codeFormat,
+    String? prefix,
   }) async {
     await _remote.generatePacketCodes(
       count: count,
       batchId: batchId,
       unitCount: unitCount,
+      codeFormat: codeFormat,
+      prefix: prefix,
     );
   }
 
@@ -143,8 +144,13 @@ class CodesRepositoryImpl implements CodesRepository {
   Future<List<PacketCodeModel>> getPacketCodes({
     int page = 1,
     int limit = 50,
+    String? codeFormat,
   }) async {
-    final res = await _remote.listPacketCodes(page: page, limit: limit);
+    final res = await _remote.listPacketCodes(
+      page: page,
+      limit: limit,
+      codeFormat: codeFormat,
+    );
     final data = _asMap(_asMap(res)['data']);
     final items = _asList(data['packet_codes']);
 
@@ -155,14 +161,8 @@ class CodesRepositoryImpl implements CodesRepository {
   }
 
   @override
-  Future<void> generateUnitCodes({
-    required int count,
-    String? batchId,
-  }) async {
-    await _remote.generateUnitCodes(
-      count: count,
-      batchId: batchId,
-    );
+  Future<void> generateUnitCodes({required int count, String? batchId}) async {
+    await _remote.generateUnitCodes(count: count, batchId: batchId);
   }
 
   @override
@@ -464,6 +464,58 @@ class CodesRepositoryImpl implements CodesRepository {
   }) async {
     final res = await _remote.downloadPacketCodes(
       codeIds: codeIds,
+      format: format,
+      includeQrCodes: includeQrCodes,
+      includeBarcodes: includeBarcodes,
+      includeInternationalCodes: includeInternationalCodes,
+    );
+
+    final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    final downloadUrl = (data['download_url'] ?? '').toString().trim();
+    if (downloadUrl.isNotEmpty) return downloadUrl;
+    return (data['file_path'] ?? '').toString();
+  }
+
+  @override
+  Future<int> publishPacketBatch({
+    required String batchId,
+    required String codeFormat,
+    required int count,
+  }) async {
+    final res = await _remote.publishPacketCodesByBatchAndFormat(
+      batchId: batchId,
+      codeFormat: codeFormat,
+      count: count,
+    );
+    final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    return int.tryParse((data['published_count'] ?? 0).toString()) ?? 0;
+  }
+
+  @override
+  Future<int> deletePacketBatch({
+    required String batchId,
+    required String codeFormat,
+  }) async {
+    final res = await _remote.deletePacketBatch(
+      batchId: batchId,
+      codeFormat: codeFormat,
+    );
+    final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    return int.tryParse((data['deleted'] ?? 0).toString()) ?? 0;
+  }
+
+  @override
+  Future<String> downloadPacketBatch({
+    required String batchId,
+    required String codeFormat,
+    required String format,
+    bool includeQrCodes = true,
+    bool includeBarcodes = true,
+    bool includeInternationalCodes = true,
+  }) async {
+    final res = await _remote.downloadPacketBatch(
+      batchId: batchId,
+      codeFormat: codeFormat,
       format: format,
       includeQrCodes: includeQrCodes,
       includeBarcodes: includeBarcodes,

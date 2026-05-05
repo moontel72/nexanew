@@ -12,11 +12,14 @@ use App\Services\Codes\CodeGenerator;
 use App\Services\Codes\CodeExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class PacketCodesController extends Controller
 {
+    private const CODE_FORMATS = ['itf14', 'gs1_128', 'code128_industrial', 'qr', 'datamatrix', 'code128_label'];
+
     public function __construct(private CodeGenerator $generator, private CodeExportService $exporter)
     {
     }
@@ -25,8 +28,16 @@ class PacketCodesController extends Controller
     {
         $user = $request->user();
 
+        if (!Schema::hasColumn('packet_codes', 'code_format')) {
+            return response()->json([
+                'success' => false,
+                'message' => "Database schema out of date: packet_codes.code_format is missing. Run migrations.",
+            ], 500);
+        }
+
         $data = $request->validate([
             'count' => ['required', 'integer', 'min:1', 'max:2000'],
+            'code_format' => ['required', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
             'batch_id' => ['nullable', 'string', 'max:100'],
             'prefix' => ['nullable', 'string', 'max:10'],
             'include_international_codes' => ['nullable', 'boolean'],
@@ -60,33 +71,31 @@ class PacketCodesController extends Controller
             $baseRows = $this->generator->generateBase($companyId, $planId, 'packet', $count, $baseOverrides);
 
             if ($includeInternational) {
-                $updates = [];
                 foreach ($baseRows as $r) {
-                    $updates[] = [
-                        'id' => (string) $r['id'],
-                        'international_code' => 'INT-PACKET-' . strtoupper((string) Str::ulid()),
-                        'updated_at' => now(),
-                    ];
+                    DB::table('base_codes')
+                        ->where('id', (string) $r['id'])
+                        ->update([
+                            'international_code' => 'INT-PACKET-' . strtoupper((string) Str::ulid()),
+                            'updated_at' => now(),
+                        ]);
                 }
-                DB::table('base_codes')->upsert($updates, ['id'], ['international_code', 'updated_at']);
             }
+
+            $codeFormat = (string) $data['code_format'];
 
             $rows = [];
             for ($i = 0; $i < $count; $i++) {
                 $id = $baseRows[$i]['id'];
                 $rows[] = [
                     'id' => $id,
+                    'code_format' => $codeFormat,
                     'carton_code_id' => null,
                     'unit_count' => 0,
                     'unit_codes' => '{}',
                     'sequence_number' => $nextSeq + $i,
                     'weight_grams' => null,
-                    'dimensions' => null,
                     'packet_type' => null,
                     'material' => null,
-                    'is_sealed' => false,
-                    'sealed_at' => null,
-                    'sealed_by' => null,
                     'sealing_method' => null,
                     'packet_barcode' => null,
                     'packet_qr_code' => null,
@@ -109,6 +118,13 @@ class PacketCodesController extends Controller
     {
         $user = $request->user();
         $companyId = (string) $user->company_id;
+
+        if (!Schema::hasColumn('packet_codes', 'code_format')) {
+            return response()->json([
+                'success' => false,
+                'message' => "Database schema out of date: packet_codes.code_format is missing. Run migrations.",
+            ], 500);
+        }
 
         $query = DB::table('packet_codes')
             ->join('base_codes', 'packet_codes.id', '=', 'base_codes.id')
@@ -143,6 +159,11 @@ class PacketCodesController extends Controller
             ->where('base_codes.code_type', 'packet')
             ->where('base_codes.is_deleted', false);
 
+        $codeFormat = $request->input('code_format');
+        if (!empty($codeFormat) && in_array((string) $codeFormat, self::CODE_FORMATS, true)) {
+            $query->where('packet_codes.code_format', (string) $codeFormat);
+        }
+
         $page = (int) $request->query('page', 1);
         $limit = (int) $request->query('limit', 50);
         $limit = max(1, min(200, $limit));
@@ -156,6 +177,7 @@ class PacketCodesController extends Controller
                 'id' => (string) $row->id,
                 'code' => (string) $row->code,
                 'type' => (string) $row->code_type,
+                'codeFormat' => (string) ($row->code_format ?? 'qr'),
                 'status' => (string) $row->status,
                 'factoryId' => (string) $row->company_id,
                 'subscriptionPlanId' => (string) $row->subscription_plan_id,
@@ -198,12 +220,6 @@ class PacketCodesController extends Controller
                 'hasInstructions' => (bool) ($row->has_instructions ?? false),
                 'packetBatchNumber' => $row->packet_batch_number,
                 'serialNumber' => $row->serial_number,
-                'color' => null,
-                'printingDetails' => null,
-                'qcPassed' => false,
-                'qcPassedDate' => null,
-                'qcPassedBy' => null,
-                'qcNotes' => null,
             ];
         })->all();
 
@@ -215,6 +231,168 @@ class PacketCodesController extends Controller
                 'page' => $paginator->currentPage(),
                 'limit' => $paginator->perPage(),
                 'total_pages' => $paginator->lastPage(),
+            ],
+        ]);
+    }
+
+    public function generateForFormat(Request $request, string $format)
+    {
+        $request->merge(['code_format' => $format]);
+        return $this->generate($request);
+    }
+
+    public function listForFormat(Request $request, string $format)
+    {
+        $request->merge(['code_format' => $format]);
+        return $this->list($request);
+    }
+
+    public function listBatches(Request $request)
+    {
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+
+        if (!Schema::hasColumn('packet_codes', 'code_format')) {
+            return response()->json([
+                'success' => false,
+                'message' => "Database schema out of date: packet_codes.code_format is missing. Run migrations.",
+            ], 500);
+        }
+
+        $data = $request->validate([
+            'code_format' => ['nullable', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+        ]);
+
+        $page = (int) ($data['page'] ?? $request->query('page', 1));
+        $limit = (int) ($data['limit'] ?? $request->query('limit', 50));
+        $limit = max(1, min(200, $limit));
+        $offset = ($page - 1) * $limit;
+
+        $driver = DB::getDriverName();
+        $isPushedExpr = $driver === 'pgsql'
+            ? DB::raw('bool_or(base_codes.published_at is not null) as is_pushed')
+            : DB::raw('MAX(CASE WHEN base_codes.published_at IS NOT NULL THEN 1 ELSE 0 END) as is_pushed');
+
+        $baseGroup = DB::table('packet_codes')
+            ->join('base_codes', 'packet_codes.id', '=', 'base_codes.id')
+            ->where('base_codes.company_id', $companyId)
+            ->where('base_codes.code_type', 'packet')
+            ->where('base_codes.is_deleted', false)
+            ->when(
+                !empty($data['code_format'] ?? null),
+                fn ($q) => $q->where('packet_codes.code_format', (string) $data['code_format']),
+            )
+            ->groupBy('base_codes.batch_id', 'packet_codes.code_format')
+            ->select([
+                'base_codes.batch_id',
+                'packet_codes.code_format',
+                DB::raw('COUNT(base_codes.id) as code_count'),
+                DB::raw('MAX(base_codes.generated_at) as generated_at'),
+                $isPushedExpr,
+            ]);
+
+        $total = DB::query()->fromSub(
+            DB::table('packet_codes')
+                ->join('base_codes', 'packet_codes.id', '=', 'base_codes.id')
+                ->where('base_codes.company_id', $companyId)
+                ->where('base_codes.code_type', 'packet')
+                ->where('base_codes.is_deleted', false)
+                ->when(
+                    !empty($data['code_format'] ?? null),
+                    fn ($q) => $q->where('packet_codes.code_format', (string) $data['code_format']),
+                )
+                ->groupBy('base_codes.batch_id', 'packet_codes.code_format')
+                ->select(['base_codes.batch_id', 'packet_codes.code_format']),
+            't',
+        )->count();
+
+        $rows = (clone $baseGroup)
+            ->orderByDesc(DB::raw('MAX(base_codes.generated_at)'))
+            ->offset($offset)
+            ->limit($limit)
+            ->get();
+
+        $dt = static fn ($v) => $v ? Carbon::parse($v)->toISOString() : null;
+
+        $items = collect($rows)->map(function ($row) use ($dt) {
+            $isPushed = (bool) ($row->is_pushed ?? false);
+            return [
+                'batchId' => (string) ($row->batch_id ?? ''),
+                'codeFormat' => (string) ($row->code_format ?? 'qr'),
+                'codeCount' => (int) ($row->code_count ?? 0),
+                'generatedAt' => $dt($row->generated_at),
+                'status' => $isPushed ? 'pushed' : 'draft',
+                'isPushed' => $isPushed,
+            ];
+        })->all();
+
+        $totalPages = (int) ceil(max(1, $total) / $limit);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'batches' => $items,
+                'total' => (int) $total,
+                'page' => $page,
+                'limit' => $limit,
+                'total_pages' => $totalPages,
+            ],
+        ]);
+    }
+
+    public function deleteBatch(Request $request)
+    {
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+
+        $data = $request->validate([
+            'batch_id' => ['required', 'string', 'max:100'],
+            'code_format' => ['nullable', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
+        ]);
+
+        $ids = DB::table('packet_codes')
+            ->join('base_codes', 'packet_codes.id', '=', 'base_codes.id')
+            ->where('base_codes.company_id', $companyId)
+            ->where('base_codes.code_type', 'packet')
+            ->where('base_codes.is_deleted', false)
+            ->whereNull('base_codes.published_at')
+            ->where('base_codes.batch_id', (string) $data['batch_id'])
+            ->when(
+                !empty($data['code_format'] ?? null),
+                fn ($q) => $q->where('packet_codes.code_format', (string) $data['code_format']),
+            )
+            ->pluck('base_codes.id')
+            ->map(fn ($v) => (string) $v)
+            ->all();
+
+        if (empty($ids)) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'deleted' => 0,
+                ],
+            ]);
+        }
+
+        $now = now();
+        $updated = DB::table('base_codes')
+            ->where('company_id', $companyId)
+            ->where('code_type', 'packet')
+            ->whereIn('id', $ids)
+            ->whereNull('published_at')
+            ->where('is_deleted', false)
+            ->update([
+                'is_deleted' => true,
+                'status' => 'deleted',
+                'updated_at' => $now,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'deleted' => (int) $updated,
             ],
         ]);
     }
@@ -273,6 +451,8 @@ class PacketCodesController extends Controller
             'code_ids' => ['nullable', 'array', 'min:1', 'max:5000'],
             'code_ids.*' => ['uuid'],
             'batch_id' => ['nullable', 'string', 'max:100'],
+            'code_format' => ['nullable', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
+            'count' => ['nullable', 'integer', 'min:1'],
             'product_batch_number' => ['nullable', 'string', 'max:100'],
             'manufacturing_date' => ['nullable', 'date'],
             'expiry_date' => ['nullable', 'date'],
@@ -303,11 +483,15 @@ class PacketCodesController extends Controller
             ->whereIn('status', ['generated', 'linked']);
         if (!empty($data['batch_id'])) {
             $query->where('batch_id', (string) $data['batch_id']);
+            if (!empty($data['code_format'] ?? null)) {
+                $query->join('packet_codes', 'packet_codes.id', '=', 'base_codes.id')
+                    ->where('packet_codes.code_format', (string) $data['code_format']);
+            }
         } else {
             $query->whereIn('id', $data['code_ids']);
         }
 
-        $toPublish = (int) $query->count('id');
+        $toPublish = (int) $query->count('base_codes.id');
         if ($toPublish <= 0) {
             return response()->json([
                 'success' => true,
@@ -335,7 +519,7 @@ class PacketCodesController extends Controller
         $invoice = null;
 
         DB::transaction(function () use ($companyId, $query, $subscription, $plan, $toPublish, $data, $now, &$invoice) {
-            $ids = (clone $query)->pluck('id')->map(fn ($v) => (string) $v)->all();
+            $ids = (clone $query)->pluck('base_codes.id')->map(fn ($v) => (string) $v)->all();
 
             DB::table('base_codes')
                 ->where('company_id', $companyId)
@@ -478,18 +662,47 @@ class PacketCodesController extends Controller
 
         $data = $request->validate([
             'format' => ['required', 'string'],
-            'code_ids' => ['required', 'array', 'min:1', 'max:5000'],
+            'code_ids' => ['nullable', 'array', 'min:1', 'max:5000'],
             'code_ids.*' => ['uuid'],
+            'batch_id' => ['nullable', 'string', 'max:100'],
+            'code_format' => ['nullable', 'string', 'in:' . implode(',', self::CODE_FORMATS)],
             'include_qr_codes' => ['nullable', 'boolean'],
             'include_barcodes' => ['nullable', 'boolean'],
             'include_international_codes' => ['nullable', 'boolean'],
         ]);
 
+        if (empty($data['code_ids']) && empty($data['batch_id'])) {
+            return response()->json(['message' => 'code_ids or batch_id is required'], 422);
+        }
+
+        $codeIds = $data['code_ids'] ?? [];
+        if (empty($codeIds) && !empty($data['batch_id'])) {
+            $codeIds = DB::table('packet_codes')
+                ->join('base_codes', 'packet_codes.id', '=', 'base_codes.id')
+                ->where('base_codes.company_id', $companyId)
+                ->where('base_codes.code_type', 'packet')
+                ->where('base_codes.is_deleted', false)
+                ->whereNotNull('base_codes.published_at')
+                ->where('base_codes.batch_id', (string) $data['batch_id'])
+                ->when(
+                    !empty($data['code_format'] ?? null),
+                    fn ($q) => $q->where('packet_codes.code_format', (string) $data['code_format']),
+                )
+                ->limit(5000)
+                ->pluck('base_codes.id')
+                ->map(fn ($v) => (string) $v)
+                ->all();
+        }
+
+        if (empty($codeIds)) {
+            return response()->json(['message' => 'No codes found for download'], 422);
+        }
+
         try {
             $res = $this->exporter->exportCodesToFile(
                 companyId: $companyId,
                 codeType: 'packet',
-                codeIds: $data['code_ids'],
+                codeIds: $codeIds,
                 format: (string) $data['format'],
                 options: $data,
             );
@@ -576,7 +789,7 @@ class PacketCodesController extends Controller
             ], $context),
         ];
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn('invoices', 'type')) {
+        if (Schema::hasColumn('invoices', 'type')) {
             $invoiceData['type'] = 'platform';
         }
 
@@ -634,7 +847,7 @@ class PacketCodesController extends Controller
         $driver = DB::getDriverName();
         $jsonExpr = null;
         if ($driver === 'pgsql') {
-            $jsonExpr = DB::raw("jsonb_set(coalesce(metadata,'{}'::jsonb), '{publish_invoice_id}', '\"{$invoiceId}\"', true)");
+            $jsonExpr = DB::raw("coalesce(metadata,'{}'::jsonb) || '{\"publish_invoice_id\": \"{$invoiceId}\"}'::jsonb");
         } else {
             $jsonExpr = DB::raw("JSON_SET(COALESCE(metadata, JSON_OBJECT()), '$.publish_invoice_id', '{$invoiceId}')");
         }

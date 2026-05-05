@@ -3,9 +3,11 @@ part of 'packet_codes_bloc.dart';
 @freezed
 abstract class PacketCodesEvent with _$PacketCodesEvent {
   const factory PacketCodesEvent.load() = LoadPacketCodes;
-  const factory PacketCodesEvent.generate(PacketCodeGenerationRequest request) = GeneratePacketCodes;
+  const factory PacketCodesEvent.generate(PacketCodeGenerationRequest request) =
+      GeneratePacketCodes;
   const factory PacketCodesEvent.delete(String packetCodeId) = DeletePacketCode;
-  const factory PacketCodesEvent.deleteBatch(List<String> packetCodeIds) = DeletePacketCodeBatch;
+  const factory PacketCodesEvent.deleteBatch(List<String> packetCodeIds) =
+      DeletePacketCodeBatch;
   const factory PacketCodesEvent.linkToProduct({
     required String packetCodeId,
     required String productId,
@@ -14,9 +16,29 @@ abstract class PacketCodesEvent with _$PacketCodesEvent {
     DateTime? expiryDate,
     int? warrantyMonths,
   }) = LinkPacketCodeToProduct;
-  const factory PacketCodesEvent.publish(String packetCodeId) = PublishPacketCode;
-  const factory PacketCodesEvent.deactivate(String packetCodeId, String reason) = DeactivatePacketCode;
+  const factory PacketCodesEvent.publish(String packetCodeId) =
+      PublishPacketCode;
+  const factory PacketCodesEvent.deactivate(
+    String packetCodeId,
+    String reason,
+  ) = DeactivatePacketCode;
   const factory PacketCodesEvent.search(String query) = SearchPacketCodes;
+  const factory PacketCodesEvent.pushBatch({
+    required String batchId,
+    required String codeFormat,
+    required int count,
+  }) = PushPacketBatch;
+  const factory PacketCodesEvent.deleteBatchByGroup({
+    required String batchId,
+    required String codeFormat,
+  }) = DeletePacketBatchByGroup;
+  const factory PacketCodesEvent.exportBatch(
+    String batchId,
+    String codeFormat,
+    String format,
+  ) = ExportPacketBatch;
+  const factory PacketCodesEvent.filterByFormat(String? codeFormat) =
+      FilterPacketCodesByFormat;
   const factory PacketCodesEvent.filter({
     CodeStatus? status,
     String? cartonCode,
@@ -25,11 +47,19 @@ abstract class PacketCodesEvent with _$PacketCodesEvent {
     String? packetType,
     String? condition,
   }) = FilterPacketCodes;
-  const factory PacketCodesEvent.export(List<String> packetCodeIds, String format) = ExportPacketCodes;
-  const factory PacketCodesEvent.select(String packetCodeId, bool isSelected) = SelectPacketCode;
+  const factory PacketCodesEvent.export(
+    List<String> packetCodeIds,
+    String format,
+  ) = ExportPacketCodes;
+  const factory PacketCodesEvent.select(String packetCodeId, bool isSelected) =
+      SelectPacketCode;
   const factory PacketCodesEvent.clearSelection() = ClearSelection;
   const factory PacketCodesEvent.refresh() = RefreshPacketCodes;
-  const factory PacketCodesEvent.seal(String packetCodeId, String sealedBy, {String? sealingMethod}) = SealPacket;
+  const factory PacketCodesEvent.seal(
+    String packetCodeId,
+    String sealedBy, {
+    String? sealingMethod,
+  }) = SealPacket;
   const factory PacketCodesEvent.updateInspection(
     String packetCodeId,
     String condition,
@@ -45,7 +75,10 @@ abstract class PacketCodesEvent with _$PacketCodesEvent {
     String? material,
     String? sealingMethod,
   }) = UpdatePacketProperties;
-  const factory PacketCodesEvent.addTamperEvidence(String packetCodeId) = AddTamperEvidence;
-  const factory PacketCodesEvent.addChildSafetyFeatures(String packetCodeId) = AddChildSafetyFeatures;
-  const factory PacketCodesEvent.addInstructions(String packetCodeId) = AddInstructions;
+  const factory PacketCodesEvent.addTamperEvidence(String packetCodeId) =
+      AddTamperEvidence;
+  const factory PacketCodesEvent.addChildSafetyFeatures(String packetCodeId) =
+      AddChildSafetyFeatures;
+  const factory PacketCodesEvent.addInstructions(String packetCodeId) =
+      AddInstructions;
 }

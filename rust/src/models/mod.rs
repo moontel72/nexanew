@@ -77,6 +77,13 @@ pub struct PacketCode {
     pub carton_code: String,
     pub unit_codes: Vec<String>,
     pub total_units: u32,
+    /// Code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label)
+    #[serde(default = "default_code_format")]
+    pub code_format: String,
+}
+
+fn default_code_format() -> String {
+    "qr".to_string()
 }
 
 /// Unit (authentication) code

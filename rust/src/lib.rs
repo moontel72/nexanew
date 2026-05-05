@@ -181,6 +181,86 @@ pub fn generate_packet_codes_batch(
         .map_err(|e| e.to_string())
 }
 
+/// Generate a single packet code with a specific format
+///
+/// Supported formats: "itf14", "gs1_128", "code128_industrial", "qr", "datamatrix", "code128_label"
+#[frb]
+pub fn generate_packet_code_with_format(
+    code_format: String,
+    prefix: String,
+    sequence: u32,
+    carton_code: String,
+    factory_id: String,
+    company_prefix: Option<String>,
+) -> Result<String, String> {
+    let format = generators::carton::CartonCodeFormat::from_str(&code_format)
+        .map_err(|e| e.to_string())?;
+    let params = generators::packet::PacketGenerationParams {
+        code_format: format,
+        prefix,
+        start_sequence: sequence,
+        count: 1,
+        carton_code,
+        factory_id,
+        company_prefix,
+        units_per_packet: None,
+        unit_prefix: None,
+    };
+    generators::packet::generate_single_code_with_format(&params)
+        .map_err(|e| e.to_string())
+}
+
+/// Generate multiple packet codes in batch with a specific format
+///
+/// Supported formats: "itf14", "gs1_128", "code128_industrial", "qr", "datamatrix", "code128_label"
+#[frb]
+pub fn generate_packet_codes_batch_with_format(
+    code_format: String,
+    prefix: String,
+    start_sequence: u32,
+    count: u32,
+    carton_code: String,
+    factory_id: String,
+    company_prefix: Option<String>,
+) -> Result<Vec<String>, String> {
+    let format = generators::carton::CartonCodeFormat::from_str(&code_format)
+        .map_err(|e| e.to_string())?;
+    let params = generators::packet::PacketGenerationParams {
+        code_format: format,
+        prefix,
+        start_sequence,
+        count,
+        carton_code,
+        factory_id,
+        company_prefix,
+        units_per_packet: None,
+        unit_prefix: None,
+    };
+    generators::packet::generate_batch_with_format(&params)
+        .map_err(|e| e.to_string())
+}
+
+/// Get all supported packet code format identifiers
+#[frb]
+pub fn get_packet_code_formats() -> Vec<String> {
+    generators::carton::CartonCodeFormat::all_formats()
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+/// Validate a packet code against a specific format
+#[frb]
+pub fn validate_packet_code_with_format(
+    code: String,
+    code_format: String,
+) -> Result<bool, String> {
+    let format = generators::carton::CartonCodeFormat::from_str(&code_format)
+        .map_err(|e| e.to_string())?;
+    generators::packet::validate_code_with_format(&code, format)
+        .map_err(|e| e.to_string())
+}
+
 /// Generate a single unit (authentication) code
 #[frb]
 pub fn generate_unit_code(

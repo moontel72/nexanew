@@ -52,13 +52,17 @@ class CodesRemoteDatasource {
     required int count,
     String? batchId,
     int? unitCount,
+    String? codeFormat,
+    String? prefix,
   }) async {
     final res = await _api.post(
       '${ApiEndpoints.packetCodes}/generate',
       data: {
         'count': count,
+        'code_format': codeFormat ?? 'qr',
         if (batchId != null && batchId.isNotEmpty) 'batch_id': batchId,
         if (unitCount != null) 'unit_count': unitCount,
+        if (prefix != null && prefix.isNotEmpty) 'prefix': prefix,
       },
     );
     return (res as Map).cast<String, dynamic>();
@@ -67,10 +71,15 @@ class CodesRemoteDatasource {
   Future<Map<String, dynamic>> listPacketCodes({
     int page = 1,
     int limit = 50,
+    String? codeFormat,
   }) async {
     final res = await _api.get(
       '${ApiEndpoints.packetCodes}/list',
-      queryParameters: {'page': page.toString(), 'limit': limit.toString()},
+      queryParameters: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+        if (codeFormat != null) 'code_format': codeFormat,
+      },
     );
     return (res as Map).cast<String, dynamic>();
   }
@@ -173,7 +182,10 @@ class CodesRemoteDatasource {
         if (productBatchNumber != null && productBatchNumber.isNotEmpty)
           'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
+          'manufacturing_date': manufacturingDate
+              .toIso8601String()
+              .split('T')
+              .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -202,7 +214,10 @@ class CodesRemoteDatasource {
         if (productBatchNumber != null && productBatchNumber.isNotEmpty)
           'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
+          'manufacturing_date': manufacturingDate
+              .toIso8601String()
+              .split('T')
+              .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -229,7 +244,10 @@ class CodesRemoteDatasource {
         'product_id': productId,
         'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
+          'manufacturing_date': manufacturingDate
+              .toIso8601String()
+              .split('T')
+              .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -252,7 +270,10 @@ class CodesRemoteDatasource {
         if (productBatchNumber != null && productBatchNumber.isNotEmpty)
           'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
+          'manufacturing_date': manufacturingDate
+              .toIso8601String()
+              .split('T')
+              .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -306,7 +327,10 @@ class CodesRemoteDatasource {
         'product_id': productId,
         'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
+          'manufacturing_date': manufacturingDate
+              .toIso8601String()
+              .split('T')
+              .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -329,7 +353,10 @@ class CodesRemoteDatasource {
         if (productBatchNumber != null && productBatchNumber.isNotEmpty)
           'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
+          'manufacturing_date': manufacturingDate
+              .toIso8601String()
+              .split('T')
+              .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -355,11 +382,7 @@ class CodesRemoteDatasource {
   }) async {
     final res = await _api.post(
       ApiEndpoints.publishCartonCodes,
-      data: {
-        'batch_id': batchId,
-        'code_format': codeFormat,
-        'count': count,
-      },
+      data: {'batch_id': batchId, 'code_format': codeFormat, 'count': count},
     );
     return (res as Map).cast<String, dynamic>();
   }
@@ -370,10 +393,7 @@ class CodesRemoteDatasource {
   }) async {
     final res = await _api.post(
       ApiEndpoints.deleteCartonBatch,
-      data: {
-        'batch_id': batchId,
-        'code_format': codeFormat,
-      },
+      data: {'batch_id': batchId, 'code_format': codeFormat},
     );
     return (res as Map).cast<String, dynamic>();
   }
@@ -435,7 +455,10 @@ class CodesRemoteDatasource {
         'product_id': productId,
         'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
+          'manufacturing_date': manufacturingDate
+              .toIso8601String()
+              .split('T')
+              .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -458,7 +481,10 @@ class CodesRemoteDatasource {
         if (productBatchNumber != null && productBatchNumber.isNotEmpty)
           'product_batch_number': productBatchNumber,
         if (manufacturingDate != null)
-          'manufacturing_date': manufacturingDate.toIso8601String().split('T').first,
+          'manufacturing_date': manufacturingDate
+              .toIso8601String()
+              .split('T')
+              .first,
         if (expiryDate != null)
           'expiry_date': expiryDate.toIso8601String().split('T').first,
         if (warrantyMonths != null) 'warranty_months': warrantyMonths,
@@ -477,6 +503,29 @@ class CodesRemoteDatasource {
     return (res as Map).cast<String, dynamic>();
   }
 
+  Future<Map<String, dynamic>> publishPacketCodesByBatchAndFormat({
+    required String batchId,
+    required String codeFormat,
+    required int count,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.publishPacketCodes,
+      data: {'batch_id': batchId, 'code_format': codeFormat, 'count': count},
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> deletePacketBatch({
+    required String batchId,
+    required String codeFormat,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.deletePacketBatch,
+      data: {'batch_id': batchId, 'code_format': codeFormat},
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
   Future<Map<String, dynamic>> downloadPacketCodes({
     required List<String> codeIds,
     required String format,
@@ -489,6 +538,28 @@ class CodesRemoteDatasource {
       data: {
         'format': format,
         'code_ids': codeIds,
+        'include_qr_codes': includeQrCodes,
+        'include_barcodes': includeBarcodes,
+        'include_international_codes': includeInternationalCodes,
+      },
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> downloadPacketBatch({
+    required String batchId,
+    required String codeFormat,
+    required String format,
+    bool includeQrCodes = true,
+    bool includeBarcodes = true,
+    bool includeInternationalCodes = true,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.downloadPacketCodes,
+      data: {
+        'format': format,
+        'batch_id': batchId,
+        'code_format': codeFormat,
         'include_qr_codes': includeQrCodes,
         'include_barcodes': includeBarcodes,
         'include_international_codes': includeInternationalCodes,
