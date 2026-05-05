@@ -78,6 +78,7 @@ _PacketCodeModel _$PacketCodeModelFromJson(
       : DateTime.parse(json['qcPassedDate'] as String),
   qcPassedBy: json['qcPassedBy'] as String?,
   qcNotes: json['qcNotes'] as String?,
+  codeFormat: json['codeFormat'] as String? ?? 'qr',
 );
 
 Map<String, dynamic> _$PacketCodeModelToJson(_PacketCodeModel instance) =>
@@ -133,6 +134,7 @@ Map<String, dynamic> _$PacketCodeModelToJson(_PacketCodeModel instance) =>
       'qcPassedDate': instance.qcPassedDate?.toIso8601String(),
       'qcPassedBy': instance.qcPassedBy,
       'qcNotes': instance.qcNotes,
+      'codeFormat': instance.codeFormat,
     };
 
 const _$CodeTypeEnumMap = {

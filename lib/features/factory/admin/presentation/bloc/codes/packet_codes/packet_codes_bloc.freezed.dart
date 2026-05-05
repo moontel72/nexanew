@@ -55,7 +55,7 @@ extension PacketCodesEventPatterns on PacketCodesEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( LoadPacketCodes value)?  load,TResult Function( GeneratePacketCodes value)?  generate,TResult Function( DeletePacketCode value)?  delete,TResult Function( DeletePacketCodeBatch value)?  deleteBatch,TResult Function( LinkPacketCodeToProduct value)?  linkToProduct,TResult Function( PublishPacketCode value)?  publish,TResult Function( DeactivatePacketCode value)?  deactivate,TResult Function( SearchPacketCodes value)?  search,TResult Function( FilterPacketCodes value)?  filter,TResult Function( ExportPacketCodes value)?  export,TResult Function( SelectPacketCode value)?  select,TResult Function( ClearSelection value)?  clearSelection,TResult Function( RefreshPacketCodes value)?  refresh,TResult Function( SealPacket value)?  seal,TResult Function( UpdatePacketInspection value)?  updateInspection,TResult Function( UpdatePacketProperties value)?  updateProperties,TResult Function( AddTamperEvidence value)?  addTamperEvidence,TResult Function( AddChildSafetyFeatures value)?  addChildSafetyFeatures,TResult Function( AddInstructions value)?  addInstructions,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( LoadPacketCodes value)?  load,TResult Function( GeneratePacketCodes value)?  generate,TResult Function( DeletePacketCode value)?  delete,TResult Function( DeletePacketCodeBatch value)?  deleteBatch,TResult Function( LinkPacketCodeToProduct value)?  linkToProduct,TResult Function( PublishPacketCode value)?  publish,TResult Function( DeactivatePacketCode value)?  deactivate,TResult Function( SearchPacketCodes value)?  search,TResult Function( PushPacketBatch value)?  pushBatch,TResult Function( DeletePacketBatchByGroup value)?  deleteBatchByGroup,TResult Function( ExportPacketBatch value)?  exportBatch,TResult Function( FilterPacketCodesByFormat value)?  filterByFormat,TResult Function( FilterPacketCodes value)?  filter,TResult Function( ExportPacketCodes value)?  export,TResult Function( SelectPacketCode value)?  select,TResult Function( ClearSelection value)?  clearSelection,TResult Function( RefreshPacketCodes value)?  refresh,TResult Function( SealPacket value)?  seal,TResult Function( UpdatePacketInspection value)?  updateInspection,TResult Function( UpdatePacketProperties value)?  updateProperties,TResult Function( AddTamperEvidence value)?  addTamperEvidence,TResult Function( AddChildSafetyFeatures value)?  addChildSafetyFeatures,TResult Function( AddInstructions value)?  addInstructions,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case LoadPacketCodes() when load != null:
@@ -66,7 +66,11 @@ return deleteBatch(_that);case LinkPacketCodeToProduct() when linkToProduct != n
 return linkToProduct(_that);case PublishPacketCode() when publish != null:
 return publish(_that);case DeactivatePacketCode() when deactivate != null:
 return deactivate(_that);case SearchPacketCodes() when search != null:
-return search(_that);case FilterPacketCodes() when filter != null:
+return search(_that);case PushPacketBatch() when pushBatch != null:
+return pushBatch(_that);case DeletePacketBatchByGroup() when deleteBatchByGroup != null:
+return deleteBatchByGroup(_that);case ExportPacketBatch() when exportBatch != null:
+return exportBatch(_that);case FilterPacketCodesByFormat() when filterByFormat != null:
+return filterByFormat(_that);case FilterPacketCodes() when filter != null:
 return filter(_that);case ExportPacketCodes() when export != null:
 return export(_that);case SelectPacketCode() when select != null:
 return select(_that);case ClearSelection() when clearSelection != null:
@@ -95,7 +99,7 @@ return addInstructions(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( LoadPacketCodes value)  load,required TResult Function( GeneratePacketCodes value)  generate,required TResult Function( DeletePacketCode value)  delete,required TResult Function( DeletePacketCodeBatch value)  deleteBatch,required TResult Function( LinkPacketCodeToProduct value)  linkToProduct,required TResult Function( PublishPacketCode value)  publish,required TResult Function( DeactivatePacketCode value)  deactivate,required TResult Function( SearchPacketCodes value)  search,required TResult Function( FilterPacketCodes value)  filter,required TResult Function( ExportPacketCodes value)  export,required TResult Function( SelectPacketCode value)  select,required TResult Function( ClearSelection value)  clearSelection,required TResult Function( RefreshPacketCodes value)  refresh,required TResult Function( SealPacket value)  seal,required TResult Function( UpdatePacketInspection value)  updateInspection,required TResult Function( UpdatePacketProperties value)  updateProperties,required TResult Function( AddTamperEvidence value)  addTamperEvidence,required TResult Function( AddChildSafetyFeatures value)  addChildSafetyFeatures,required TResult Function( AddInstructions value)  addInstructions,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( LoadPacketCodes value)  load,required TResult Function( GeneratePacketCodes value)  generate,required TResult Function( DeletePacketCode value)  delete,required TResult Function( DeletePacketCodeBatch value)  deleteBatch,required TResult Function( LinkPacketCodeToProduct value)  linkToProduct,required TResult Function( PublishPacketCode value)  publish,required TResult Function( DeactivatePacketCode value)  deactivate,required TResult Function( SearchPacketCodes value)  search,required TResult Function( PushPacketBatch value)  pushBatch,required TResult Function( DeletePacketBatchByGroup value)  deleteBatchByGroup,required TResult Function( ExportPacketBatch value)  exportBatch,required TResult Function( FilterPacketCodesByFormat value)  filterByFormat,required TResult Function( FilterPacketCodes value)  filter,required TResult Function( ExportPacketCodes value)  export,required TResult Function( SelectPacketCode value)  select,required TResult Function( ClearSelection value)  clearSelection,required TResult Function( RefreshPacketCodes value)  refresh,required TResult Function( SealPacket value)  seal,required TResult Function( UpdatePacketInspection value)  updateInspection,required TResult Function( UpdatePacketProperties value)  updateProperties,required TResult Function( AddTamperEvidence value)  addTamperEvidence,required TResult Function( AddChildSafetyFeatures value)  addChildSafetyFeatures,required TResult Function( AddInstructions value)  addInstructions,}){
 final _that = this;
 switch (_that) {
 case LoadPacketCodes():
@@ -106,7 +110,11 @@ return deleteBatch(_that);case LinkPacketCodeToProduct():
 return linkToProduct(_that);case PublishPacketCode():
 return publish(_that);case DeactivatePacketCode():
 return deactivate(_that);case SearchPacketCodes():
-return search(_that);case FilterPacketCodes():
+return search(_that);case PushPacketBatch():
+return pushBatch(_that);case DeletePacketBatchByGroup():
+return deleteBatchByGroup(_that);case ExportPacketBatch():
+return exportBatch(_that);case FilterPacketCodesByFormat():
+return filterByFormat(_that);case FilterPacketCodes():
 return filter(_that);case ExportPacketCodes():
 return export(_that);case SelectPacketCode():
 return select(_that);case ClearSelection():
@@ -134,7 +142,7 @@ return addInstructions(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( LoadPacketCodes value)?  load,TResult? Function( GeneratePacketCodes value)?  generate,TResult? Function( DeletePacketCode value)?  delete,TResult? Function( DeletePacketCodeBatch value)?  deleteBatch,TResult? Function( LinkPacketCodeToProduct value)?  linkToProduct,TResult? Function( PublishPacketCode value)?  publish,TResult? Function( DeactivatePacketCode value)?  deactivate,TResult? Function( SearchPacketCodes value)?  search,TResult? Function( FilterPacketCodes value)?  filter,TResult? Function( ExportPacketCodes value)?  export,TResult? Function( SelectPacketCode value)?  select,TResult? Function( ClearSelection value)?  clearSelection,TResult? Function( RefreshPacketCodes value)?  refresh,TResult? Function( SealPacket value)?  seal,TResult? Function( UpdatePacketInspection value)?  updateInspection,TResult? Function( UpdatePacketProperties value)?  updateProperties,TResult? Function( AddTamperEvidence value)?  addTamperEvidence,TResult? Function( AddChildSafetyFeatures value)?  addChildSafetyFeatures,TResult? Function( AddInstructions value)?  addInstructions,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( LoadPacketCodes value)?  load,TResult? Function( GeneratePacketCodes value)?  generate,TResult? Function( DeletePacketCode value)?  delete,TResult? Function( DeletePacketCodeBatch value)?  deleteBatch,TResult? Function( LinkPacketCodeToProduct value)?  linkToProduct,TResult? Function( PublishPacketCode value)?  publish,TResult? Function( DeactivatePacketCode value)?  deactivate,TResult? Function( SearchPacketCodes value)?  search,TResult? Function( PushPacketBatch value)?  pushBatch,TResult? Function( DeletePacketBatchByGroup value)?  deleteBatchByGroup,TResult? Function( ExportPacketBatch value)?  exportBatch,TResult? Function( FilterPacketCodesByFormat value)?  filterByFormat,TResult? Function( FilterPacketCodes value)?  filter,TResult? Function( ExportPacketCodes value)?  export,TResult? Function( SelectPacketCode value)?  select,TResult? Function( ClearSelection value)?  clearSelection,TResult? Function( RefreshPacketCodes value)?  refresh,TResult? Function( SealPacket value)?  seal,TResult? Function( UpdatePacketInspection value)?  updateInspection,TResult? Function( UpdatePacketProperties value)?  updateProperties,TResult? Function( AddTamperEvidence value)?  addTamperEvidence,TResult? Function( AddChildSafetyFeatures value)?  addChildSafetyFeatures,TResult? Function( AddInstructions value)?  addInstructions,}){
 final _that = this;
 switch (_that) {
 case LoadPacketCodes() when load != null:
@@ -145,7 +153,11 @@ return deleteBatch(_that);case LinkPacketCodeToProduct() when linkToProduct != n
 return linkToProduct(_that);case PublishPacketCode() when publish != null:
 return publish(_that);case DeactivatePacketCode() when deactivate != null:
 return deactivate(_that);case SearchPacketCodes() when search != null:
-return search(_that);case FilterPacketCodes() when filter != null:
+return search(_that);case PushPacketBatch() when pushBatch != null:
+return pushBatch(_that);case DeletePacketBatchByGroup() when deleteBatchByGroup != null:
+return deleteBatchByGroup(_that);case ExportPacketBatch() when exportBatch != null:
+return exportBatch(_that);case FilterPacketCodesByFormat() when filterByFormat != null:
+return filterByFormat(_that);case FilterPacketCodes() when filter != null:
 return filter(_that);case ExportPacketCodes() when export != null:
 return export(_that);case SelectPacketCode() when select != null:
 return select(_that);case ClearSelection() when clearSelection != null:
@@ -173,7 +185,7 @@ return addInstructions(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  load,TResult Function( PacketCodeGenerationRequest request)?  generate,TResult Function( String packetCodeId)?  delete,TResult Function( List<String> packetCodeIds)?  deleteBatch,TResult Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult Function( String packetCodeId)?  publish,TResult Function( String packetCodeId,  String reason)?  deactivate,TResult Function( String query)?  search,TResult Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)?  filter,TResult Function( List<String> packetCodeIds,  String format)?  export,TResult Function( String packetCodeId,  bool isSelected)?  select,TResult Function()?  clearSelection,TResult Function()?  refresh,TResult Function( String packetCodeId,  String sealedBy,  String? sealingMethod)?  seal,TResult Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)?  updateInspection,TResult Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)?  updateProperties,TResult Function( String packetCodeId)?  addTamperEvidence,TResult Function( String packetCodeId)?  addChildSafetyFeatures,TResult Function( String packetCodeId)?  addInstructions,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  load,TResult Function( PacketCodeGenerationRequest request)?  generate,TResult Function( String packetCodeId)?  delete,TResult Function( List<String> packetCodeIds)?  deleteBatch,TResult Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult Function( String packetCodeId)?  publish,TResult Function( String packetCodeId,  String reason)?  deactivate,TResult Function( String query)?  search,TResult Function( String batchId,  String codeFormat,  int count)?  pushBatch,TResult Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult Function( String? codeFormat)?  filterByFormat,TResult Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)?  filter,TResult Function( List<String> packetCodeIds,  String format)?  export,TResult Function( String packetCodeId,  bool isSelected)?  select,TResult Function()?  clearSelection,TResult Function()?  refresh,TResult Function( String packetCodeId,  String sealedBy,  String? sealingMethod)?  seal,TResult Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)?  updateInspection,TResult Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)?  updateProperties,TResult Function( String packetCodeId)?  addTamperEvidence,TResult Function( String packetCodeId)?  addChildSafetyFeatures,TResult Function( String packetCodeId)?  addInstructions,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case LoadPacketCodes() when load != null:
 return load();case GeneratePacketCodes() when generate != null:
@@ -183,7 +195,11 @@ return deleteBatch(_that.packetCodeIds);case LinkPacketCodeToProduct() when link
 return linkToProduct(_that.packetCodeId,_that.productId,_that.productBatchNumber,_that.manufacturingDate,_that.expiryDate,_that.warrantyMonths);case PublishPacketCode() when publish != null:
 return publish(_that.packetCodeId);case DeactivatePacketCode() when deactivate != null:
 return deactivate(_that.packetCodeId,_that.reason);case SearchPacketCodes() when search != null:
-return search(_that.query);case FilterPacketCodes() when filter != null:
+return search(_that.query);case PushPacketBatch() when pushBatch != null:
+return pushBatch(_that.batchId,_that.codeFormat,_that.count);case DeletePacketBatchByGroup() when deleteBatchByGroup != null:
+return deleteBatchByGroup(_that.batchId,_that.codeFormat);case ExportPacketBatch() when exportBatch != null:
+return exportBatch(_that.batchId,_that.codeFormat,_that.format);case FilterPacketCodesByFormat() when filterByFormat != null:
+return filterByFormat(_that.codeFormat);case FilterPacketCodes() when filter != null:
 return filter(_that.status,_that.cartonCode,_that.startDate,_that.endDate,_that.packetType,_that.condition);case ExportPacketCodes() when export != null:
 return export(_that.packetCodeIds,_that.format);case SelectPacketCode() when select != null:
 return select(_that.packetCodeId,_that.isSelected);case ClearSelection() when clearSelection != null:
@@ -212,7 +228,7 @@ return addInstructions(_that.packetCodeId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  load,required TResult Function( PacketCodeGenerationRequest request)  generate,required TResult Function( String packetCodeId)  delete,required TResult Function( List<String> packetCodeIds)  deleteBatch,required TResult Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)  linkToProduct,required TResult Function( String packetCodeId)  publish,required TResult Function( String packetCodeId,  String reason)  deactivate,required TResult Function( String query)  search,required TResult Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)  filter,required TResult Function( List<String> packetCodeIds,  String format)  export,required TResult Function( String packetCodeId,  bool isSelected)  select,required TResult Function()  clearSelection,required TResult Function()  refresh,required TResult Function( String packetCodeId,  String sealedBy,  String? sealingMethod)  seal,required TResult Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)  updateInspection,required TResult Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)  updateProperties,required TResult Function( String packetCodeId)  addTamperEvidence,required TResult Function( String packetCodeId)  addChildSafetyFeatures,required TResult Function( String packetCodeId)  addInstructions,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  load,required TResult Function( PacketCodeGenerationRequest request)  generate,required TResult Function( String packetCodeId)  delete,required TResult Function( List<String> packetCodeIds)  deleteBatch,required TResult Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)  linkToProduct,required TResult Function( String packetCodeId)  publish,required TResult Function( String packetCodeId,  String reason)  deactivate,required TResult Function( String query)  search,required TResult Function( String batchId,  String codeFormat,  int count)  pushBatch,required TResult Function( String batchId,  String codeFormat)  deleteBatchByGroup,required TResult Function( String batchId,  String codeFormat,  String format)  exportBatch,required TResult Function( String? codeFormat)  filterByFormat,required TResult Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)  filter,required TResult Function( List<String> packetCodeIds,  String format)  export,required TResult Function( String packetCodeId,  bool isSelected)  select,required TResult Function()  clearSelection,required TResult Function()  refresh,required TResult Function( String packetCodeId,  String sealedBy,  String? sealingMethod)  seal,required TResult Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)  updateInspection,required TResult Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)  updateProperties,required TResult Function( String packetCodeId)  addTamperEvidence,required TResult Function( String packetCodeId)  addChildSafetyFeatures,required TResult Function( String packetCodeId)  addInstructions,}) {final _that = this;
 switch (_that) {
 case LoadPacketCodes():
 return load();case GeneratePacketCodes():
@@ -222,7 +238,11 @@ return deleteBatch(_that.packetCodeIds);case LinkPacketCodeToProduct():
 return linkToProduct(_that.packetCodeId,_that.productId,_that.productBatchNumber,_that.manufacturingDate,_that.expiryDate,_that.warrantyMonths);case PublishPacketCode():
 return publish(_that.packetCodeId);case DeactivatePacketCode():
 return deactivate(_that.packetCodeId,_that.reason);case SearchPacketCodes():
-return search(_that.query);case FilterPacketCodes():
+return search(_that.query);case PushPacketBatch():
+return pushBatch(_that.batchId,_that.codeFormat,_that.count);case DeletePacketBatchByGroup():
+return deleteBatchByGroup(_that.batchId,_that.codeFormat);case ExportPacketBatch():
+return exportBatch(_that.batchId,_that.codeFormat,_that.format);case FilterPacketCodesByFormat():
+return filterByFormat(_that.codeFormat);case FilterPacketCodes():
 return filter(_that.status,_that.cartonCode,_that.startDate,_that.endDate,_that.packetType,_that.condition);case ExportPacketCodes():
 return export(_that.packetCodeIds,_that.format);case SelectPacketCode():
 return select(_that.packetCodeId,_that.isSelected);case ClearSelection():
@@ -250,7 +270,7 @@ return addInstructions(_that.packetCodeId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  load,TResult? Function( PacketCodeGenerationRequest request)?  generate,TResult? Function( String packetCodeId)?  delete,TResult? Function( List<String> packetCodeIds)?  deleteBatch,TResult? Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult? Function( String packetCodeId)?  publish,TResult? Function( String packetCodeId,  String reason)?  deactivate,TResult? Function( String query)?  search,TResult? Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)?  filter,TResult? Function( List<String> packetCodeIds,  String format)?  export,TResult? Function( String packetCodeId,  bool isSelected)?  select,TResult? Function()?  clearSelection,TResult? Function()?  refresh,TResult? Function( String packetCodeId,  String sealedBy,  String? sealingMethod)?  seal,TResult? Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)?  updateInspection,TResult? Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)?  updateProperties,TResult? Function( String packetCodeId)?  addTamperEvidence,TResult? Function( String packetCodeId)?  addChildSafetyFeatures,TResult? Function( String packetCodeId)?  addInstructions,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  load,TResult? Function( PacketCodeGenerationRequest request)?  generate,TResult? Function( String packetCodeId)?  delete,TResult? Function( List<String> packetCodeIds)?  deleteBatch,TResult? Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult? Function( String packetCodeId)?  publish,TResult? Function( String packetCodeId,  String reason)?  deactivate,TResult? Function( String query)?  search,TResult? Function( String batchId,  String codeFormat,  int count)?  pushBatch,TResult? Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult? Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult? Function( String? codeFormat)?  filterByFormat,TResult? Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)?  filter,TResult? Function( List<String> packetCodeIds,  String format)?  export,TResult? Function( String packetCodeId,  bool isSelected)?  select,TResult? Function()?  clearSelection,TResult? Function()?  refresh,TResult? Function( String packetCodeId,  String sealedBy,  String? sealingMethod)?  seal,TResult? Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)?  updateInspection,TResult? Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)?  updateProperties,TResult? Function( String packetCodeId)?  addTamperEvidence,TResult? Function( String packetCodeId)?  addChildSafetyFeatures,TResult? Function( String packetCodeId)?  addInstructions,}) {final _that = this;
 switch (_that) {
 case LoadPacketCodes() when load != null:
 return load();case GeneratePacketCodes() when generate != null:
@@ -260,7 +280,11 @@ return deleteBatch(_that.packetCodeIds);case LinkPacketCodeToProduct() when link
 return linkToProduct(_that.packetCodeId,_that.productId,_that.productBatchNumber,_that.manufacturingDate,_that.expiryDate,_that.warrantyMonths);case PublishPacketCode() when publish != null:
 return publish(_that.packetCodeId);case DeactivatePacketCode() when deactivate != null:
 return deactivate(_that.packetCodeId,_that.reason);case SearchPacketCodes() when search != null:
-return search(_that.query);case FilterPacketCodes() when filter != null:
+return search(_that.query);case PushPacketBatch() when pushBatch != null:
+return pushBatch(_that.batchId,_that.codeFormat,_that.count);case DeletePacketBatchByGroup() when deleteBatchByGroup != null:
+return deleteBatchByGroup(_that.batchId,_that.codeFormat);case ExportPacketBatch() when exportBatch != null:
+return exportBatch(_that.batchId,_that.codeFormat,_that.format);case FilterPacketCodesByFormat() when filterByFormat != null:
+return filterByFormat(_that.codeFormat);case FilterPacketCodes() when filter != null:
 return filter(_that.status,_that.cartonCode,_that.startDate,_that.endDate,_that.packetType,_that.condition);case ExportPacketCodes() when export != null:
 return export(_that.packetCodeIds,_that.format);case SelectPacketCode() when select != null:
 return select(_that.packetCodeId,_that.isSelected);case ClearSelection() when clearSelection != null:
@@ -794,6 +818,280 @@ class _$SearchPacketCodesCopyWithImpl<$Res>
   return _then(SearchPacketCodes(
 null == query ? _self.query : query // ignore: cast_nullable_to_non_nullable
 as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class PushPacketBatch implements PacketCodesEvent {
+  const PushPacketBatch({required this.batchId, required this.codeFormat, required this.count});
+  
+
+ final  String batchId;
+ final  String codeFormat;
+ final  int count;
+
+/// Create a copy of PacketCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$PushPacketBatchCopyWith<PushPacketBatch> get copyWith => _$PushPacketBatchCopyWithImpl<PushPacketBatch>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PushPacketBatch&&(identical(other.batchId, batchId) || other.batchId == batchId)&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat)&&(identical(other.count, count) || other.count == count));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,batchId,codeFormat,count);
+
+@override
+String toString() {
+  return 'PacketCodesEvent.pushBatch(batchId: $batchId, codeFormat: $codeFormat, count: $count)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $PushPacketBatchCopyWith<$Res> implements $PacketCodesEventCopyWith<$Res> {
+  factory $PushPacketBatchCopyWith(PushPacketBatch value, $Res Function(PushPacketBatch) _then) = _$PushPacketBatchCopyWithImpl;
+@useResult
+$Res call({
+ String batchId, String codeFormat, int count
+});
+
+
+
+
+}
+/// @nodoc
+class _$PushPacketBatchCopyWithImpl<$Res>
+    implements $PushPacketBatchCopyWith<$Res> {
+  _$PushPacketBatchCopyWithImpl(this._self, this._then);
+
+  final PushPacketBatch _self;
+  final $Res Function(PushPacketBatch) _then;
+
+/// Create a copy of PacketCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? batchId = null,Object? codeFormat = null,Object? count = null,}) {
+  return _then(PushPacketBatch(
+batchId: null == batchId ? _self.batchId : batchId // ignore: cast_nullable_to_non_nullable
+as String,codeFormat: null == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class DeletePacketBatchByGroup implements PacketCodesEvent {
+  const DeletePacketBatchByGroup({required this.batchId, required this.codeFormat});
+  
+
+ final  String batchId;
+ final  String codeFormat;
+
+/// Create a copy of PacketCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DeletePacketBatchByGroupCopyWith<DeletePacketBatchByGroup> get copyWith => _$DeletePacketBatchByGroupCopyWithImpl<DeletePacketBatchByGroup>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DeletePacketBatchByGroup&&(identical(other.batchId, batchId) || other.batchId == batchId)&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,batchId,codeFormat);
+
+@override
+String toString() {
+  return 'PacketCodesEvent.deleteBatchByGroup(batchId: $batchId, codeFormat: $codeFormat)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DeletePacketBatchByGroupCopyWith<$Res> implements $PacketCodesEventCopyWith<$Res> {
+  factory $DeletePacketBatchByGroupCopyWith(DeletePacketBatchByGroup value, $Res Function(DeletePacketBatchByGroup) _then) = _$DeletePacketBatchByGroupCopyWithImpl;
+@useResult
+$Res call({
+ String batchId, String codeFormat
+});
+
+
+
+
+}
+/// @nodoc
+class _$DeletePacketBatchByGroupCopyWithImpl<$Res>
+    implements $DeletePacketBatchByGroupCopyWith<$Res> {
+  _$DeletePacketBatchByGroupCopyWithImpl(this._self, this._then);
+
+  final DeletePacketBatchByGroup _self;
+  final $Res Function(DeletePacketBatchByGroup) _then;
+
+/// Create a copy of PacketCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? batchId = null,Object? codeFormat = null,}) {
+  return _then(DeletePacketBatchByGroup(
+batchId: null == batchId ? _self.batchId : batchId // ignore: cast_nullable_to_non_nullable
+as String,codeFormat: null == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class ExportPacketBatch implements PacketCodesEvent {
+  const ExportPacketBatch(this.batchId, this.codeFormat, this.format);
+  
+
+ final  String batchId;
+ final  String codeFormat;
+ final  String format;
+
+/// Create a copy of PacketCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ExportPacketBatchCopyWith<ExportPacketBatch> get copyWith => _$ExportPacketBatchCopyWithImpl<ExportPacketBatch>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExportPacketBatch&&(identical(other.batchId, batchId) || other.batchId == batchId)&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat)&&(identical(other.format, format) || other.format == format));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,batchId,codeFormat,format);
+
+@override
+String toString() {
+  return 'PacketCodesEvent.exportBatch(batchId: $batchId, codeFormat: $codeFormat, format: $format)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ExportPacketBatchCopyWith<$Res> implements $PacketCodesEventCopyWith<$Res> {
+  factory $ExportPacketBatchCopyWith(ExportPacketBatch value, $Res Function(ExportPacketBatch) _then) = _$ExportPacketBatchCopyWithImpl;
+@useResult
+$Res call({
+ String batchId, String codeFormat, String format
+});
+
+
+
+
+}
+/// @nodoc
+class _$ExportPacketBatchCopyWithImpl<$Res>
+    implements $ExportPacketBatchCopyWith<$Res> {
+  _$ExportPacketBatchCopyWithImpl(this._self, this._then);
+
+  final ExportPacketBatch _self;
+  final $Res Function(ExportPacketBatch) _then;
+
+/// Create a copy of PacketCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? batchId = null,Object? codeFormat = null,Object? format = null,}) {
+  return _then(ExportPacketBatch(
+null == batchId ? _self.batchId : batchId // ignore: cast_nullable_to_non_nullable
+as String,null == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String,null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class FilterPacketCodesByFormat implements PacketCodesEvent {
+  const FilterPacketCodesByFormat(this.codeFormat);
+  
+
+ final  String? codeFormat;
+
+/// Create a copy of PacketCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FilterPacketCodesByFormatCopyWith<FilterPacketCodesByFormat> get copyWith => _$FilterPacketCodesByFormatCopyWithImpl<FilterPacketCodesByFormat>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FilterPacketCodesByFormat&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,codeFormat);
+
+@override
+String toString() {
+  return 'PacketCodesEvent.filterByFormat(codeFormat: $codeFormat)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FilterPacketCodesByFormatCopyWith<$Res> implements $PacketCodesEventCopyWith<$Res> {
+  factory $FilterPacketCodesByFormatCopyWith(FilterPacketCodesByFormat value, $Res Function(FilterPacketCodesByFormat) _then) = _$FilterPacketCodesByFormatCopyWithImpl;
+@useResult
+$Res call({
+ String? codeFormat
+});
+
+
+
+
+}
+/// @nodoc
+class _$FilterPacketCodesByFormatCopyWithImpl<$Res>
+    implements $FilterPacketCodesByFormatCopyWith<$Res> {
+  _$FilterPacketCodesByFormatCopyWithImpl(this._self, this._then);
+
+  final FilterPacketCodesByFormat _self;
+  final $Res Function(FilterPacketCodesByFormat) _then;
+
+/// Create a copy of PacketCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? codeFormat = freezed,}) {
+  return _then(FilterPacketCodesByFormat(
+freezed == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -1503,7 +1801,7 @@ as String,
 /// @nodoc
 mixin _$PacketCodesState {
 
- PacketCodesStatus get status; List<PacketCodeModel> get packetCodes; List<PacketCodeModel> get filteredPacketCodes; Set<String> get selectedPacketCodeIds; String get searchQuery; CodeStatus? get filterStatus; String? get filterCartonCode; DateTime? get filterStartDate; DateTime? get filterEndDate; String? get filterPacketType; String? get filterCondition; String? get errorMessage; bool get hasReachedMax; int get currentPage; int get totalCount; bool get isLoadingMore; int get generatedCount; DateTime? get lastGeneratedAt; String? get exportPath; bool get isExporting;
+ PacketCodesStatus get status; List<PacketCodeModel> get packetCodes; List<PacketCodeModel> get filteredPacketCodes; Set<String> get selectedPacketCodeIds; String get searchQuery; CodeStatus? get filterStatus; String? get filterCartonCode; DateTime? get filterStartDate; DateTime? get filterEndDate; String? get filterPacketType; String? get filterCondition; String get filterCodeFormat; String? get errorMessage; bool get hasReachedMax; int get currentPage; int get totalCount; bool get isLoadingMore; int get generatedCount; DateTime? get lastGeneratedAt; String? get exportPath; bool get isExporting;
 /// Create a copy of PacketCodesState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1514,16 +1812,16 @@ $PacketCodesStateCopyWith<PacketCodesState> get copyWith => _$PacketCodesStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PacketCodesState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.packetCodes, packetCodes)&&const DeepCollectionEquality().equals(other.filteredPacketCodes, filteredPacketCodes)&&const DeepCollectionEquality().equals(other.selectedPacketCodeIds, selectedPacketCodeIds)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&(identical(other.filterStatus, filterStatus) || other.filterStatus == filterStatus)&&(identical(other.filterCartonCode, filterCartonCode) || other.filterCartonCode == filterCartonCode)&&(identical(other.filterStartDate, filterStartDate) || other.filterStartDate == filterStartDate)&&(identical(other.filterEndDate, filterEndDate) || other.filterEndDate == filterEndDate)&&(identical(other.filterPacketType, filterPacketType) || other.filterPacketType == filterPacketType)&&(identical(other.filterCondition, filterCondition) || other.filterCondition == filterCondition)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.currentPage, currentPage) || other.currentPage == currentPage)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.isLoadingMore, isLoadingMore) || other.isLoadingMore == isLoadingMore)&&(identical(other.generatedCount, generatedCount) || other.generatedCount == generatedCount)&&(identical(other.lastGeneratedAt, lastGeneratedAt) || other.lastGeneratedAt == lastGeneratedAt)&&(identical(other.exportPath, exportPath) || other.exportPath == exportPath)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PacketCodesState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.packetCodes, packetCodes)&&const DeepCollectionEquality().equals(other.filteredPacketCodes, filteredPacketCodes)&&const DeepCollectionEquality().equals(other.selectedPacketCodeIds, selectedPacketCodeIds)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&(identical(other.filterStatus, filterStatus) || other.filterStatus == filterStatus)&&(identical(other.filterCartonCode, filterCartonCode) || other.filterCartonCode == filterCartonCode)&&(identical(other.filterStartDate, filterStartDate) || other.filterStartDate == filterStartDate)&&(identical(other.filterEndDate, filterEndDate) || other.filterEndDate == filterEndDate)&&(identical(other.filterPacketType, filterPacketType) || other.filterPacketType == filterPacketType)&&(identical(other.filterCondition, filterCondition) || other.filterCondition == filterCondition)&&(identical(other.filterCodeFormat, filterCodeFormat) || other.filterCodeFormat == filterCodeFormat)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.currentPage, currentPage) || other.currentPage == currentPage)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.isLoadingMore, isLoadingMore) || other.isLoadingMore == isLoadingMore)&&(identical(other.generatedCount, generatedCount) || other.generatedCount == generatedCount)&&(identical(other.lastGeneratedAt, lastGeneratedAt) || other.lastGeneratedAt == lastGeneratedAt)&&(identical(other.exportPath, exportPath) || other.exportPath == exportPath)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting));
 }
 
 
 @override
-int get hashCode => Object.hashAll([runtimeType,status,const DeepCollectionEquality().hash(packetCodes),const DeepCollectionEquality().hash(filteredPacketCodes),const DeepCollectionEquality().hash(selectedPacketCodeIds),searchQuery,filterStatus,filterCartonCode,filterStartDate,filterEndDate,filterPacketType,filterCondition,errorMessage,hasReachedMax,currentPage,totalCount,isLoadingMore,generatedCount,lastGeneratedAt,exportPath,isExporting]);
+int get hashCode => Object.hashAll([runtimeType,status,const DeepCollectionEquality().hash(packetCodes),const DeepCollectionEquality().hash(filteredPacketCodes),const DeepCollectionEquality().hash(selectedPacketCodeIds),searchQuery,filterStatus,filterCartonCode,filterStartDate,filterEndDate,filterPacketType,filterCondition,filterCodeFormat,errorMessage,hasReachedMax,currentPage,totalCount,isLoadingMore,generatedCount,lastGeneratedAt,exportPath,isExporting]);
 
 @override
 String toString() {
-  return 'PacketCodesState(status: $status, packetCodes: $packetCodes, filteredPacketCodes: $filteredPacketCodes, selectedPacketCodeIds: $selectedPacketCodeIds, searchQuery: $searchQuery, filterStatus: $filterStatus, filterCartonCode: $filterCartonCode, filterStartDate: $filterStartDate, filterEndDate: $filterEndDate, filterPacketType: $filterPacketType, filterCondition: $filterCondition, errorMessage: $errorMessage, hasReachedMax: $hasReachedMax, currentPage: $currentPage, totalCount: $totalCount, isLoadingMore: $isLoadingMore, generatedCount: $generatedCount, lastGeneratedAt: $lastGeneratedAt, exportPath: $exportPath, isExporting: $isExporting)';
+  return 'PacketCodesState(status: $status, packetCodes: $packetCodes, filteredPacketCodes: $filteredPacketCodes, selectedPacketCodeIds: $selectedPacketCodeIds, searchQuery: $searchQuery, filterStatus: $filterStatus, filterCartonCode: $filterCartonCode, filterStartDate: $filterStartDate, filterEndDate: $filterEndDate, filterPacketType: $filterPacketType, filterCondition: $filterCondition, filterCodeFormat: $filterCodeFormat, errorMessage: $errorMessage, hasReachedMax: $hasReachedMax, currentPage: $currentPage, totalCount: $totalCount, isLoadingMore: $isLoadingMore, generatedCount: $generatedCount, lastGeneratedAt: $lastGeneratedAt, exportPath: $exportPath, isExporting: $isExporting)';
 }
 
 
@@ -1534,7 +1832,7 @@ abstract mixin class $PacketCodesStateCopyWith<$Res>  {
   factory $PacketCodesStateCopyWith(PacketCodesState value, $Res Function(PacketCodesState) _then) = _$PacketCodesStateCopyWithImpl;
 @useResult
 $Res call({
- PacketCodesStatus status, List<PacketCodeModel> packetCodes, List<PacketCodeModel> filteredPacketCodes, Set<String> selectedPacketCodeIds, String searchQuery, CodeStatus? filterStatus, String? filterCartonCode, DateTime? filterStartDate, DateTime? filterEndDate, String? filterPacketType, String? filterCondition, String? errorMessage, bool hasReachedMax, int currentPage, int totalCount, bool isLoadingMore, int generatedCount, DateTime? lastGeneratedAt, String? exportPath, bool isExporting
+ PacketCodesStatus status, List<PacketCodeModel> packetCodes, List<PacketCodeModel> filteredPacketCodes, Set<String> selectedPacketCodeIds, String searchQuery, CodeStatus? filterStatus, String? filterCartonCode, DateTime? filterStartDate, DateTime? filterEndDate, String? filterPacketType, String? filterCondition, String filterCodeFormat, String? errorMessage, bool hasReachedMax, int currentPage, int totalCount, bool isLoadingMore, int generatedCount, DateTime? lastGeneratedAt, String? exportPath, bool isExporting
 });
 
 
@@ -1551,7 +1849,7 @@ class _$PacketCodesStateCopyWithImpl<$Res>
 
 /// Create a copy of PacketCodesState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? packetCodes = null,Object? filteredPacketCodes = null,Object? selectedPacketCodeIds = null,Object? searchQuery = null,Object? filterStatus = freezed,Object? filterCartonCode = freezed,Object? filterStartDate = freezed,Object? filterEndDate = freezed,Object? filterPacketType = freezed,Object? filterCondition = freezed,Object? errorMessage = freezed,Object? hasReachedMax = null,Object? currentPage = null,Object? totalCount = null,Object? isLoadingMore = null,Object? generatedCount = null,Object? lastGeneratedAt = freezed,Object? exportPath = freezed,Object? isExporting = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? packetCodes = null,Object? filteredPacketCodes = null,Object? selectedPacketCodeIds = null,Object? searchQuery = null,Object? filterStatus = freezed,Object? filterCartonCode = freezed,Object? filterStartDate = freezed,Object? filterEndDate = freezed,Object? filterPacketType = freezed,Object? filterCondition = freezed,Object? filterCodeFormat = null,Object? errorMessage = freezed,Object? hasReachedMax = null,Object? currentPage = null,Object? totalCount = null,Object? isLoadingMore = null,Object? generatedCount = null,Object? lastGeneratedAt = freezed,Object? exportPath = freezed,Object? isExporting = null,}) {
   return _then(_self.copyWith(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as PacketCodesStatus,packetCodes: null == packetCodes ? _self.packetCodes : packetCodes // ignore: cast_nullable_to_non_nullable
@@ -1564,7 +1862,8 @@ as String?,filterStartDate: freezed == filterStartDate ? _self.filterStartDate :
 as DateTime?,filterEndDate: freezed == filterEndDate ? _self.filterEndDate : filterEndDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,filterPacketType: freezed == filterPacketType ? _self.filterPacketType : filterPacketType // ignore: cast_nullable_to_non_nullable
 as String?,filterCondition: freezed == filterCondition ? _self.filterCondition : filterCondition // ignore: cast_nullable_to_non_nullable
-as String?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
+as String?,filterCodeFormat: null == filterCodeFormat ? _self.filterCodeFormat : filterCodeFormat // ignore: cast_nullable_to_non_nullable
+as String,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,hasReachedMax: null == hasReachedMax ? _self.hasReachedMax : hasReachedMax // ignore: cast_nullable_to_non_nullable
 as bool,currentPage: null == currentPage ? _self.currentPage : currentPage // ignore: cast_nullable_to_non_nullable
 as int,totalCount: null == totalCount ? _self.totalCount : totalCount // ignore: cast_nullable_to_non_nullable
@@ -1658,10 +1957,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PacketCodesStatus status,  List<PacketCodeModel> packetCodes,  List<PacketCodeModel> filteredPacketCodes,  Set<String> selectedPacketCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterCartonCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterPacketType,  String? filterCondition,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PacketCodesStatus status,  List<PacketCodeModel> packetCodes,  List<PacketCodeModel> filteredPacketCodes,  Set<String> selectedPacketCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterCartonCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterPacketType,  String? filterCondition,  String filterCodeFormat,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PacketCodesState() when $default != null:
-return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.selectedPacketCodeIds,_that.searchQuery,_that.filterStatus,_that.filterCartonCode,_that.filterStartDate,_that.filterEndDate,_that.filterPacketType,_that.filterCondition,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
+return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.selectedPacketCodeIds,_that.searchQuery,_that.filterStatus,_that.filterCartonCode,_that.filterStartDate,_that.filterEndDate,_that.filterPacketType,_that.filterCondition,_that.filterCodeFormat,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
   return orElse();
 
 }
@@ -1679,10 +1978,10 @@ return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.s
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PacketCodesStatus status,  List<PacketCodeModel> packetCodes,  List<PacketCodeModel> filteredPacketCodes,  Set<String> selectedPacketCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterCartonCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterPacketType,  String? filterCondition,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PacketCodesStatus status,  List<PacketCodeModel> packetCodes,  List<PacketCodeModel> filteredPacketCodes,  Set<String> selectedPacketCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterCartonCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterPacketType,  String? filterCondition,  String filterCodeFormat,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)  $default,) {final _that = this;
 switch (_that) {
 case _PacketCodesState():
-return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.selectedPacketCodeIds,_that.searchQuery,_that.filterStatus,_that.filterCartonCode,_that.filterStartDate,_that.filterEndDate,_that.filterPacketType,_that.filterCondition,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
+return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.selectedPacketCodeIds,_that.searchQuery,_that.filterStatus,_that.filterCartonCode,_that.filterStartDate,_that.filterEndDate,_that.filterPacketType,_that.filterCondition,_that.filterCodeFormat,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1699,10 +1998,10 @@ return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.s
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PacketCodesStatus status,  List<PacketCodeModel> packetCodes,  List<PacketCodeModel> filteredPacketCodes,  Set<String> selectedPacketCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterCartonCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterPacketType,  String? filterCondition,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PacketCodesStatus status,  List<PacketCodeModel> packetCodes,  List<PacketCodeModel> filteredPacketCodes,  Set<String> selectedPacketCodeIds,  String searchQuery,  CodeStatus? filterStatus,  String? filterCartonCode,  DateTime? filterStartDate,  DateTime? filterEndDate,  String? filterPacketType,  String? filterCondition,  String filterCodeFormat,  String? errorMessage,  bool hasReachedMax,  int currentPage,  int totalCount,  bool isLoadingMore,  int generatedCount,  DateTime? lastGeneratedAt,  String? exportPath,  bool isExporting)?  $default,) {final _that = this;
 switch (_that) {
 case _PacketCodesState() when $default != null:
-return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.selectedPacketCodeIds,_that.searchQuery,_that.filterStatus,_that.filterCartonCode,_that.filterStartDate,_that.filterEndDate,_that.filterPacketType,_that.filterCondition,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
+return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.selectedPacketCodeIds,_that.searchQuery,_that.filterStatus,_that.filterCartonCode,_that.filterStartDate,_that.filterEndDate,_that.filterPacketType,_that.filterCondition,_that.filterCodeFormat,_that.errorMessage,_that.hasReachedMax,_that.currentPage,_that.totalCount,_that.isLoadingMore,_that.generatedCount,_that.lastGeneratedAt,_that.exportPath,_that.isExporting);case _:
   return null;
 
 }
@@ -1714,7 +2013,7 @@ return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.s
 
 
 class _PacketCodesState extends PacketCodesState {
-  const _PacketCodesState({this.status = PacketCodesStatus.initial, final  List<PacketCodeModel> packetCodes = const [], final  List<PacketCodeModel> filteredPacketCodes = const [], final  Set<String> selectedPacketCodeIds = const {}, this.searchQuery = '', this.filterStatus, this.filterCartonCode, this.filterStartDate, this.filterEndDate, this.filterPacketType, this.filterCondition, this.errorMessage, this.hasReachedMax = false, this.currentPage = 1, this.totalCount = 0, this.isLoadingMore = false, this.generatedCount = 0, this.lastGeneratedAt, this.exportPath, this.isExporting = false}): _packetCodes = packetCodes,_filteredPacketCodes = filteredPacketCodes,_selectedPacketCodeIds = selectedPacketCodeIds,super._();
+  const _PacketCodesState({this.status = PacketCodesStatus.initial, final  List<PacketCodeModel> packetCodes = const [], final  List<PacketCodeModel> filteredPacketCodes = const [], final  Set<String> selectedPacketCodeIds = const {}, this.searchQuery = '', this.filterStatus, this.filterCartonCode, this.filterStartDate, this.filterEndDate, this.filterPacketType, this.filterCondition, this.filterCodeFormat = '', this.errorMessage, this.hasReachedMax = false, this.currentPage = 1, this.totalCount = 0, this.isLoadingMore = false, this.generatedCount = 0, this.lastGeneratedAt, this.exportPath, this.isExporting = false}): _packetCodes = packetCodes,_filteredPacketCodes = filteredPacketCodes,_selectedPacketCodeIds = selectedPacketCodeIds,super._();
   
 
 @override@JsonKey() final  PacketCodesStatus status;
@@ -1746,6 +2045,7 @@ class _PacketCodesState extends PacketCodesState {
 @override final  DateTime? filterEndDate;
 @override final  String? filterPacketType;
 @override final  String? filterCondition;
+@override@JsonKey() final  String filterCodeFormat;
 @override final  String? errorMessage;
 @override@JsonKey() final  bool hasReachedMax;
 @override@JsonKey() final  int currentPage;
@@ -1766,16 +2066,16 @@ _$PacketCodesStateCopyWith<_PacketCodesState> get copyWith => __$PacketCodesStat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PacketCodesState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._packetCodes, _packetCodes)&&const DeepCollectionEquality().equals(other._filteredPacketCodes, _filteredPacketCodes)&&const DeepCollectionEquality().equals(other._selectedPacketCodeIds, _selectedPacketCodeIds)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&(identical(other.filterStatus, filterStatus) || other.filterStatus == filterStatus)&&(identical(other.filterCartonCode, filterCartonCode) || other.filterCartonCode == filterCartonCode)&&(identical(other.filterStartDate, filterStartDate) || other.filterStartDate == filterStartDate)&&(identical(other.filterEndDate, filterEndDate) || other.filterEndDate == filterEndDate)&&(identical(other.filterPacketType, filterPacketType) || other.filterPacketType == filterPacketType)&&(identical(other.filterCondition, filterCondition) || other.filterCondition == filterCondition)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.currentPage, currentPage) || other.currentPage == currentPage)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.isLoadingMore, isLoadingMore) || other.isLoadingMore == isLoadingMore)&&(identical(other.generatedCount, generatedCount) || other.generatedCount == generatedCount)&&(identical(other.lastGeneratedAt, lastGeneratedAt) || other.lastGeneratedAt == lastGeneratedAt)&&(identical(other.exportPath, exportPath) || other.exportPath == exportPath)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PacketCodesState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._packetCodes, _packetCodes)&&const DeepCollectionEquality().equals(other._filteredPacketCodes, _filteredPacketCodes)&&const DeepCollectionEquality().equals(other._selectedPacketCodeIds, _selectedPacketCodeIds)&&(identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery)&&(identical(other.filterStatus, filterStatus) || other.filterStatus == filterStatus)&&(identical(other.filterCartonCode, filterCartonCode) || other.filterCartonCode == filterCartonCode)&&(identical(other.filterStartDate, filterStartDate) || other.filterStartDate == filterStartDate)&&(identical(other.filterEndDate, filterEndDate) || other.filterEndDate == filterEndDate)&&(identical(other.filterPacketType, filterPacketType) || other.filterPacketType == filterPacketType)&&(identical(other.filterCondition, filterCondition) || other.filterCondition == filterCondition)&&(identical(other.filterCodeFormat, filterCodeFormat) || other.filterCodeFormat == filterCodeFormat)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.hasReachedMax, hasReachedMax) || other.hasReachedMax == hasReachedMax)&&(identical(other.currentPage, currentPage) || other.currentPage == currentPage)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.isLoadingMore, isLoadingMore) || other.isLoadingMore == isLoadingMore)&&(identical(other.generatedCount, generatedCount) || other.generatedCount == generatedCount)&&(identical(other.lastGeneratedAt, lastGeneratedAt) || other.lastGeneratedAt == lastGeneratedAt)&&(identical(other.exportPath, exportPath) || other.exportPath == exportPath)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting));
 }
 
 
 @override
-int get hashCode => Object.hashAll([runtimeType,status,const DeepCollectionEquality().hash(_packetCodes),const DeepCollectionEquality().hash(_filteredPacketCodes),const DeepCollectionEquality().hash(_selectedPacketCodeIds),searchQuery,filterStatus,filterCartonCode,filterStartDate,filterEndDate,filterPacketType,filterCondition,errorMessage,hasReachedMax,currentPage,totalCount,isLoadingMore,generatedCount,lastGeneratedAt,exportPath,isExporting]);
+int get hashCode => Object.hashAll([runtimeType,status,const DeepCollectionEquality().hash(_packetCodes),const DeepCollectionEquality().hash(_filteredPacketCodes),const DeepCollectionEquality().hash(_selectedPacketCodeIds),searchQuery,filterStatus,filterCartonCode,filterStartDate,filterEndDate,filterPacketType,filterCondition,filterCodeFormat,errorMessage,hasReachedMax,currentPage,totalCount,isLoadingMore,generatedCount,lastGeneratedAt,exportPath,isExporting]);
 
 @override
 String toString() {
-  return 'PacketCodesState(status: $status, packetCodes: $packetCodes, filteredPacketCodes: $filteredPacketCodes, selectedPacketCodeIds: $selectedPacketCodeIds, searchQuery: $searchQuery, filterStatus: $filterStatus, filterCartonCode: $filterCartonCode, filterStartDate: $filterStartDate, filterEndDate: $filterEndDate, filterPacketType: $filterPacketType, filterCondition: $filterCondition, errorMessage: $errorMessage, hasReachedMax: $hasReachedMax, currentPage: $currentPage, totalCount: $totalCount, isLoadingMore: $isLoadingMore, generatedCount: $generatedCount, lastGeneratedAt: $lastGeneratedAt, exportPath: $exportPath, isExporting: $isExporting)';
+  return 'PacketCodesState(status: $status, packetCodes: $packetCodes, filteredPacketCodes: $filteredPacketCodes, selectedPacketCodeIds: $selectedPacketCodeIds, searchQuery: $searchQuery, filterStatus: $filterStatus, filterCartonCode: $filterCartonCode, filterStartDate: $filterStartDate, filterEndDate: $filterEndDate, filterPacketType: $filterPacketType, filterCondition: $filterCondition, filterCodeFormat: $filterCodeFormat, errorMessage: $errorMessage, hasReachedMax: $hasReachedMax, currentPage: $currentPage, totalCount: $totalCount, isLoadingMore: $isLoadingMore, generatedCount: $generatedCount, lastGeneratedAt: $lastGeneratedAt, exportPath: $exportPath, isExporting: $isExporting)';
 }
 
 
@@ -1786,7 +2086,7 @@ abstract mixin class _$PacketCodesStateCopyWith<$Res> implements $PacketCodesSta
   factory _$PacketCodesStateCopyWith(_PacketCodesState value, $Res Function(_PacketCodesState) _then) = __$PacketCodesStateCopyWithImpl;
 @override @useResult
 $Res call({
- PacketCodesStatus status, List<PacketCodeModel> packetCodes, List<PacketCodeModel> filteredPacketCodes, Set<String> selectedPacketCodeIds, String searchQuery, CodeStatus? filterStatus, String? filterCartonCode, DateTime? filterStartDate, DateTime? filterEndDate, String? filterPacketType, String? filterCondition, String? errorMessage, bool hasReachedMax, int currentPage, int totalCount, bool isLoadingMore, int generatedCount, DateTime? lastGeneratedAt, String? exportPath, bool isExporting
+ PacketCodesStatus status, List<PacketCodeModel> packetCodes, List<PacketCodeModel> filteredPacketCodes, Set<String> selectedPacketCodeIds, String searchQuery, CodeStatus? filterStatus, String? filterCartonCode, DateTime? filterStartDate, DateTime? filterEndDate, String? filterPacketType, String? filterCondition, String filterCodeFormat, String? errorMessage, bool hasReachedMax, int currentPage, int totalCount, bool isLoadingMore, int generatedCount, DateTime? lastGeneratedAt, String? exportPath, bool isExporting
 });
 
 
@@ -1803,7 +2103,7 @@ class __$PacketCodesStateCopyWithImpl<$Res>
 
 /// Create a copy of PacketCodesState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? packetCodes = null,Object? filteredPacketCodes = null,Object? selectedPacketCodeIds = null,Object? searchQuery = null,Object? filterStatus = freezed,Object? filterCartonCode = freezed,Object? filterStartDate = freezed,Object? filterEndDate = freezed,Object? filterPacketType = freezed,Object? filterCondition = freezed,Object? errorMessage = freezed,Object? hasReachedMax = null,Object? currentPage = null,Object? totalCount = null,Object? isLoadingMore = null,Object? generatedCount = null,Object? lastGeneratedAt = freezed,Object? exportPath = freezed,Object? isExporting = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? packetCodes = null,Object? filteredPacketCodes = null,Object? selectedPacketCodeIds = null,Object? searchQuery = null,Object? filterStatus = freezed,Object? filterCartonCode = freezed,Object? filterStartDate = freezed,Object? filterEndDate = freezed,Object? filterPacketType = freezed,Object? filterCondition = freezed,Object? filterCodeFormat = null,Object? errorMessage = freezed,Object? hasReachedMax = null,Object? currentPage = null,Object? totalCount = null,Object? isLoadingMore = null,Object? generatedCount = null,Object? lastGeneratedAt = freezed,Object? exportPath = freezed,Object? isExporting = null,}) {
   return _then(_PacketCodesState(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as PacketCodesStatus,packetCodes: null == packetCodes ? _self._packetCodes : packetCodes // ignore: cast_nullable_to_non_nullable
@@ -1816,7 +2116,8 @@ as String?,filterStartDate: freezed == filterStartDate ? _self.filterStartDate :
 as DateTime?,filterEndDate: freezed == filterEndDate ? _self.filterEndDate : filterEndDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,filterPacketType: freezed == filterPacketType ? _self.filterPacketType : filterPacketType // ignore: cast_nullable_to_non_nullable
 as String?,filterCondition: freezed == filterCondition ? _self.filterCondition : filterCondition // ignore: cast_nullable_to_non_nullable
-as String?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
+as String?,filterCodeFormat: null == filterCodeFormat ? _self.filterCodeFormat : filterCodeFormat // ignore: cast_nullable_to_non_nullable
+as String,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,hasReachedMax: null == hasReachedMax ? _self.hasReachedMax : hasReachedMax // ignore: cast_nullable_to_non_nullable
 as bool,currentPage: null == currentPage ? _self.currentPage : currentPage // ignore: cast_nullable_to_non_nullable
 as int,totalCount: null == totalCount ? _self.totalCount : totalCount // ignore: cast_nullable_to_non_nullable
