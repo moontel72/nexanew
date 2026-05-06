@@ -50,7 +50,11 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
     try {
       emit(state.copyWith(status: PacketCodesStatus.loading));
 
-      final codes = await _codesRepository.getPacketCodes(page: 1, limit: 200);
+      final codes = await _codesRepository.getPacketCodes(
+        page: 1,
+        limit: 500,
+        codeFormat: event.codeFormat,
+      );
 
       emit(
         state.copyWith(
@@ -82,6 +86,8 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
         count: request.count,
         batchId: request.batchName,
         unitCount: null,
+        codeFormat: request.codeFormat,
+        prefix: request.prefix,
       );
 
       final updatedCodes = await _codesRepository.getPacketCodes(
@@ -344,19 +350,43 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
     Emitter<PacketCodesState> emit,
   ) async {
     final format = event.codeFormat;
-    final filtered = format == null
-        ? state.packetCodes
-        : state.packetCodes.where((p) => p.codeFormat == format).toList();
-    emit(
-      state.copyWith(
-        filteredPacketCodes: filtered,
-        filterCodeFormat: format ?? '',
-        // Clear any pending export state to prevent ghost download popups
-        exportPath: null,
-        isExporting: false,
-        status: PacketCodesStatus.loaded,
-      ),
-    );
+
+    // Reload from API with the format filter — same as Carton architecture
+    try {
+      emit(
+        state.copyWith(
+          status: PacketCodesStatus.loading,
+          filterCodeFormat: format ?? '',
+          // Clear any pending export state to prevent ghost download popups
+          exportPath: null,
+          isExporting: false,
+        ),
+      );
+
+      final codes = await _codesRepository.getPacketCodes(
+        page: 1,
+        limit: 500,
+        codeFormat: format,
+      );
+
+      emit(
+        state.copyWith(
+          status: PacketCodesStatus.loaded,
+          packetCodes: codes,
+          filteredPacketCodes: codes,
+          filterCodeFormat: format ?? '',
+          exportPath: null,
+          isExporting: false,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PacketCodesStatus.error,
+          errorMessage: 'Format filter failed: ${e.toString()}',
+        ),
+      );
+    }
   }
 
   Future<void> _onFilterPacketCodes(

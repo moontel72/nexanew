@@ -2,7 +2,7 @@ part of 'packet_codes_bloc.dart';
 
 @freezed
 abstract class PacketCodesEvent with _$PacketCodesEvent {
-  const factory PacketCodesEvent.load() = LoadPacketCodes;
+  const factory PacketCodesEvent.load({String? codeFormat}) = LoadPacketCodes;
   const factory PacketCodesEvent.generate(PacketCodeGenerationRequest request) =
       GeneratePacketCodes;
   const factory PacketCodesEvent.delete(String packetCodeId) = DeletePacketCode;

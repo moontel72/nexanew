@@ -307,26 +307,21 @@ return addInstructions(_that.packetCodeId);case _:
 
 
 class LoadPacketCodes implements PacketCodesEvent {
-  const LoadPacketCodes();
-  
+  const LoadPacketCodes({this.codeFormat});
 
-
-
-
-
+  final String? codeFormat;
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoadPacketCodes);
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoadPacketCodes&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
 }
 
-
 @override
-int get hashCode => runtimeType.hashCode;
+int get hashCode => Object.hash(runtimeType, codeFormat);
 
 @override
 String toString() {
-  return 'PacketCodesEvent.load()';
+  return 'PacketCodesEvent.load(codeFormat: $codeFormat)';
 }
 
 
@@ -340,7 +335,7 @@ String toString() {
 
 class GeneratePacketCodes implements PacketCodesEvent {
   const GeneratePacketCodes(this.request);
-  
+
 
  final  PacketCodeGenerationRequest request;
 
@@ -403,7 +398,7 @@ as PacketCodeGenerationRequest,
 @override
 @pragma('vm:prefer-inline')
 $PacketCodeGenerationRequestCopyWith<$Res> get request {
-  
+
   return $PacketCodeGenerationRequestCopyWith<$Res>(_self.request, (value) {
     return _then(_self.copyWith(request: value));
   });
@@ -415,7 +410,7 @@ $PacketCodeGenerationRequestCopyWith<$Res> get request {
 
 class DeletePacketCode implements PacketCodesEvent {
   const DeletePacketCode(this.packetCodeId);
-  
+
 
  final  String packetCodeId;
 
@@ -481,7 +476,7 @@ as String,
 
 class DeletePacketCodeBatch implements PacketCodesEvent {
   const DeletePacketCodeBatch(final  List<String> packetCodeIds): _packetCodeIds = packetCodeIds;
-  
+
 
  final  List<String> _packetCodeIds;
  List<String> get packetCodeIds {
@@ -553,7 +548,7 @@ as List<String>,
 
 class LinkPacketCodeToProduct implements PacketCodesEvent {
   const LinkPacketCodeToProduct({required this.packetCodeId, required this.productId, required this.productBatchNumber, this.manufacturingDate, this.expiryDate, this.warrantyMonths});
-  
+
 
  final  String packetCodeId;
  final  String productId;
@@ -629,7 +624,7 @@ as int?,
 
 class PublishPacketCode implements PacketCodesEvent {
   const PublishPacketCode(this.packetCodeId);
-  
+
 
  final  String packetCodeId;
 
@@ -695,7 +690,7 @@ as String,
 
 class DeactivatePacketCode implements PacketCodesEvent {
   const DeactivatePacketCode(this.packetCodeId, this.reason);
-  
+
 
  final  String packetCodeId;
  final  String reason;
@@ -763,7 +758,7 @@ as String,
 
 class SearchPacketCodes implements PacketCodesEvent {
   const SearchPacketCodes(this.query);
-  
+
 
  final  String query;
 
@@ -829,7 +824,7 @@ as String,
 
 class PushPacketBatch implements PacketCodesEvent {
   const PushPacketBatch({required this.batchId, required this.codeFormat, required this.count});
-  
+
 
  final  String batchId;
  final  String codeFormat;
@@ -899,7 +894,7 @@ as int,
 
 class DeletePacketBatchByGroup implements PacketCodesEvent {
   const DeletePacketBatchByGroup({required this.batchId, required this.codeFormat});
-  
+
 
  final  String batchId;
  final  String codeFormat;
@@ -967,7 +962,7 @@ as String,
 
 class ExportPacketBatch implements PacketCodesEvent {
   const ExportPacketBatch(this.batchId, this.codeFormat, this.format);
-  
+
 
  final  String batchId;
  final  String codeFormat;
@@ -1037,7 +1032,7 @@ as String,
 
 class FilterPacketCodesByFormat implements PacketCodesEvent {
   const FilterPacketCodesByFormat(this.codeFormat);
-  
+
 
  final  String? codeFormat;
 
@@ -1103,7 +1098,7 @@ as String?,
 
 class FilterPacketCodes implements PacketCodesEvent {
   const FilterPacketCodes({this.status, this.cartonCode, this.startDate, this.endDate, this.packetType, this.condition});
-  
+
 
  final  CodeStatus? status;
  final  String? cartonCode;
@@ -1179,7 +1174,7 @@ as String?,
 
 class ExportPacketCodes implements PacketCodesEvent {
   const ExportPacketCodes(final  List<String> packetCodeIds, this.format): _packetCodeIds = packetCodeIds;
-  
+
 
  final  List<String> _packetCodeIds;
  List<String> get packetCodeIds {
@@ -1253,7 +1248,7 @@ as String,
 
 class SelectPacketCode implements PacketCodesEvent {
   const SelectPacketCode(this.packetCodeId, this.isSelected);
-  
+
 
  final  String packetCodeId;
  final  bool isSelected;
@@ -1321,7 +1316,7 @@ as bool,
 
 class ClearSelection implements PacketCodesEvent {
   const ClearSelection();
-  
+
 
 
 
@@ -1353,7 +1348,7 @@ String toString() {
 
 class RefreshPacketCodes implements PacketCodesEvent {
   const RefreshPacketCodes();
-  
+
 
 
 
@@ -1385,7 +1380,7 @@ String toString() {
 
 class SealPacket implements PacketCodesEvent {
   const SealPacket(this.packetCodeId, this.sealedBy, {this.sealingMethod});
-  
+
 
  final  String packetCodeId;
  final  String sealedBy;
@@ -1455,7 +1450,7 @@ as String?,
 
 class UpdatePacketInspection implements PacketCodesEvent {
   const UpdatePacketInspection(this.packetCodeId, this.condition, this.inspectionNotes, this.hasTamperEvidence, this.hasChildSafety);
-  
+
 
  final  String packetCodeId;
  final  String condition;
@@ -1529,7 +1524,7 @@ as bool,
 
 class UpdatePacketProperties implements PacketCodesEvent {
   const UpdatePacketProperties({required this.packetCodeId, this.weight, this.dimensions, this.packetType, this.material, this.sealingMethod});
-  
+
 
  final  String packetCodeId;
  final  double? weight;
@@ -1605,7 +1600,7 @@ as String?,
 
 class AddTamperEvidence implements PacketCodesEvent {
   const AddTamperEvidence(this.packetCodeId);
-  
+
 
  final  String packetCodeId;
 
@@ -1671,7 +1666,7 @@ as String,
 
 class AddChildSafetyFeatures implements PacketCodesEvent {
   const AddChildSafetyFeatures(this.packetCodeId);
-  
+
 
  final  String packetCodeId;
 
@@ -1737,7 +1732,7 @@ as String,
 
 class AddInstructions implements PacketCodesEvent {
   const AddInstructions(this.packetCodeId);
-  
+
 
  final  String packetCodeId;
 
@@ -2014,7 +2009,7 @@ return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.s
 
 class _PacketCodesState extends PacketCodesState {
   const _PacketCodesState({this.status = PacketCodesStatus.initial, final  List<PacketCodeModel> packetCodes = const [], final  List<PacketCodeModel> filteredPacketCodes = const [], final  Set<String> selectedPacketCodeIds = const {}, this.searchQuery = '', this.filterStatus, this.filterCartonCode, this.filterStartDate, this.filterEndDate, this.filterPacketType, this.filterCondition, this.filterCodeFormat = '', this.errorMessage, this.hasReachedMax = false, this.currentPage = 1, this.totalCount = 0, this.isLoadingMore = false, this.generatedCount = 0, this.lastGeneratedAt, this.exportPath, this.isExporting = false}): _packetCodes = packetCodes,_filteredPacketCodes = filteredPacketCodes,_selectedPacketCodeIds = selectedPacketCodeIds,super._();
-  
+
 
 @override@JsonKey() final  PacketCodesStatus status;
  final  List<PacketCodeModel> _packetCodes;
