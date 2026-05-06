@@ -26,7 +26,18 @@ class CodeExportsController extends Controller
             abort(404);
         }
 
-        return response()->download($absPath, $safeFile);
+        // Build a clean display filename from the stored filename.
+        // Stored:  ITF-14_Packet_Batch_Hero_2026-05-06_143025.csv
+        // Display: ITF-14_Packet_Batch_Hero_2026-05-06.csv
+        $ext = pathinfo($safeFile, PATHINFO_EXTENSION);
+        $nameWithoutExt = pathinfo($safeFile, PATHINFO_FILENAME);
+        $cleanName = preg_replace('/_\d{6}$/', '', $nameWithoutExt);
+        $displayName = $cleanName . '.' . $ext;
+
+        $headers = [
+            'Content-Disposition' => 'attachment; filename="' . $displayName . '"',
+        ];
+
+        return response()->download($absPath, $displayName, $headers);
     }
 }
-
