@@ -50,7 +50,27 @@ class CodeExportService
         }
 
         $ext = $format === 'pdf' ? 'pdf' : 'csv';
-        $fileName = 'codes_' . $codeType . '_' . now()->format('Ymd_His') . '.' . $ext;
+
+        // Dynamic filename: [CodeFormat]_[Type]_[BatchID]_[Date].csv
+        $codeFormat = $options['code_format'] ?? '';
+        $batchId = $options['batch_id'] ?? '';
+        $dateStr = now()->format('Y-m-d');
+
+        $parts = [];
+        if (!empty($codeFormat)) {
+            $parts[] = str_replace('_', '-', strtoupper((string) $codeFormat));
+        }
+        $parts[] = ucfirst($codeType);
+        if (!empty($batchId)) {
+            $sanitizedBatch = preg_replace('/[^A-Za-z0-9_-]/', '', (string) $batchId);
+            if (!empty($sanitizedBatch)) {
+                $parts[] = $sanitizedBatch;
+            }
+        }
+        $parts[] = $dateStr;
+        $baseName = implode('_', $parts);
+        $fileName = $baseName . '_' . now()->format('His') . '.' . $ext;
+
         $dir = storage_path('app/public/exports/' . $companyId);
         File::ensureDirectoryExists($dir);
         $absPath = $dir . DIRECTORY_SEPARATOR . $fileName;

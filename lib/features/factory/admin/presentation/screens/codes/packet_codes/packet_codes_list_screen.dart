@@ -719,6 +719,8 @@ class _PacketCodesListScreenState extends State<PacketCodesListScreen> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('Download started')));
+          // Reset export state immediately to prevent ghost download popups
+          context.read<PacketCodesBloc>().add(const ClearSelection());
         }
       });
     }

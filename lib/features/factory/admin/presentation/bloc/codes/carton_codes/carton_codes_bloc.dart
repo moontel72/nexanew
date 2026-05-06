@@ -652,7 +652,14 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
     ClearSelection event,
     Emitter<CartonCodesState> emit,
   ) async {
-    emit(state.copyWith(selectedCartonCodeIds: const {}));
+    emit(
+      state.copyWith(
+        selectedCartonCodeIds: const {},
+        // Also reset export state to prevent ghost download popups
+        exportPath: null,
+        isExporting: false,
+      ),
+    );
   }
 
   Future<void> _onRefreshCartonCodes(

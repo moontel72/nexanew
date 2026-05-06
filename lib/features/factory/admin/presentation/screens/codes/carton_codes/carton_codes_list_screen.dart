@@ -719,6 +719,8 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('Download started')));
+          // Reset export state immediately to prevent ghost download popups
+          context.read<CartonCodesBloc>().add(const ClearSelection());
         }
       });
     }

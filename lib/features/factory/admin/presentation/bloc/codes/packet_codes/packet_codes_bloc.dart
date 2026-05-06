@@ -351,6 +351,10 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
       state.copyWith(
         filteredPacketCodes: filtered,
         filterCodeFormat: format ?? '',
+        // Clear any pending export state to prevent ghost download popups
+        exportPath: null,
+        isExporting: false,
+        status: PacketCodesStatus.loaded,
       ),
     );
   }
@@ -587,7 +591,14 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
     Emitter<PacketCodesState> emit,
   ) async {
     try {
-      emit(state.copyWith(selectedPacketCodeIds: const {}));
+      emit(
+        state.copyWith(
+          selectedPacketCodeIds: const {},
+          // Also reset export state to prevent ghost download popups
+          exportPath: null,
+          isExporting: false,
+        ),
+      );
     } catch (e) {
       emit(
         state.copyWith(errorMessage: 'Clear selection failed: ${e.toString()}'),
