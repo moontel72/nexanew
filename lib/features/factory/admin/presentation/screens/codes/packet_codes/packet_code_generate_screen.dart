@@ -35,6 +35,24 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
   CartonCodeFormat _selectedFormat = CartonCodeFormat.qr;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final router = GoRouter.of(context);
+      final formatParam = router.state?.uri.queryParameters['format'];
+      if (formatParam != null && formatParam.isNotEmpty) {
+        final format = CartonCodeFormat.values.firstWhere(
+          (f) => f.value == formatParam,
+          orElse: () => CartonCodeFormat.qr,
+        );
+        setState(() {
+          _selectedFormat = format;
+        });
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     _countController.dispose();

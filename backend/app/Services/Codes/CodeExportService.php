@@ -51,20 +51,30 @@ class CodeExportService
 
         $ext = $format === 'pdf' ? 'pdf' : 'csv';
 
-        // Dynamic filename: [CodeFormat]_[Type]_[BatchID]_[Date].csv
+        // Dynamic filename: [CodeFormat]_[Type]_Batch_[BatchID]_[Date].csv
+        // Example: ITF-14_Packet_Batch_Hero_2026-05-06.csv
         $codeFormat = $options['code_format'] ?? '';
         $batchId = $options['batch_id'] ?? '';
         $dateStr = now()->format('Y-m-d');
 
+        $formatDisplayNames = [
+            'itf14' => 'ITF-14',
+            'gs1_128' => 'GS1-128',
+            'code128_industrial' => 'CODE128-INDUSTRIAL',
+            'qr' => 'QR',
+            'datamatrix' => 'DATAMATRIX',
+            'code128_label' => 'CODE128-LABEL',
+        ];
+
         $parts = [];
         if (!empty($codeFormat)) {
-            $parts[] = str_replace('_', '-', strtoupper((string) $codeFormat));
+            $parts[] = $formatDisplayNames[(string) $codeFormat] ?? strtoupper((string) $codeFormat);
         }
         $parts[] = ucfirst($codeType);
         if (!empty($batchId)) {
             $sanitizedBatch = preg_replace('/[^A-Za-z0-9_-]/', '', (string) $batchId);
             if (!empty($sanitizedBatch)) {
-                $parts[] = $sanitizedBatch;
+                $parts[] = 'Batch_' . $sanitizedBatch;
             }
         }
         $parts[] = $dateStr;

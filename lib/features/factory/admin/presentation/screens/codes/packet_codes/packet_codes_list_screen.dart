@@ -621,7 +621,16 @@ class _PacketCodesListScreenState extends State<PacketCodesListScreen> {
                                 const SearchPacketCodes(''),
                               );
                             } else {
-                              context.go('/factory/codes/packet/generate');
+                              final fmt = state.filterCodeFormat.isNotEmpty
+                                  ? state.filterCodeFormat
+                                  : null;
+                              if (fmt != null) {
+                                context.go(
+                                  '/factory/codes/packet/generate?format=$fmt',
+                                );
+                              } else {
+                                context.go('/factory/codes/packet/generate');
+                              }
                             }
                           },
                         ),
