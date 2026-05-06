@@ -10,6 +10,7 @@ import 'package:nexatrace_system/shared/models/code/code_generation_request.dart
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 import 'package:nexatrace_system/shared/widgets/inputs/custom_text_field.dart';
+import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 
 import 'package:nexatrace_system/shared/widgets/dialogs/code_generation_success_dialog.dart';
 import 'package:nexatrace_system/shared/widgets/dialogs/help_dialog.dart';
@@ -28,42 +29,17 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
   final TextEditingController _countController = TextEditingController(
     text: '1',
   );
-  final TextEditingController _prefixController = TextEditingController(
-    text: 'P',
-  );
   final TextEditingController _batchNameController = TextEditingController();
-  final TextEditingController _batchNotesController = TextEditingController();
-  final TextEditingController _packetWeightController = TextEditingController();
-  final TextEditingController _packetDimensionsController =
-      TextEditingController();
-  final TextEditingController _packetTypeController = TextEditingController();
-  final TextEditingController _materialController = TextEditingController();
-  final TextEditingController _sealingMethodController =
-      TextEditingController();
+  final TextEditingController _prefixController = TextEditingController();
 
   CartonCodeFormat _selectedFormat = CartonCodeFormat.qr;
-
-  bool _includeInternationalCodes = true;
-  bool _generateQrCodes = true;
-  bool _generateBarcodes = true;
-  bool _generatePacketBarcode = true;
-  bool _generatePacketQrCode = true;
-  bool _includeTamperEvidence = false;
-  bool _includeChildSafety = false;
-  bool _includeInstructions = true;
 
   @override
   void dispose() {
     _scrollController.dispose();
     _countController.dispose();
-    _prefixController.dispose();
     _batchNameController.dispose();
-    _batchNotesController.dispose();
-    _packetWeightController.dispose();
-    _packetDimensionsController.dispose();
-    _packetTypeController.dispose();
-    _materialController.dispose();
-    _sealingMethodController.dispose();
+    _prefixController.dispose();
     super.dispose();
   }
 
@@ -73,7 +49,9 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
         factoryId: 'factory_123', // TODO: Get from auth state
         subscriptionPlanId: 'plan_premium', // TODO: Get from subscription state
         count: int.parse(_countController.text),
-        prefix: 'P',
+        prefix: _prefixController.text.isNotEmpty
+            ? _prefixController.text
+            : 'P',
         cartonCode: '',
         unitsPerPacket: 0,
         includeInternationalCodes: true,
@@ -84,10 +62,10 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
         includeInstructions: true,
         generatePacketBarcode: true,
         generatePacketQrCode: true,
-        codeFormat: _selectedFormat.value,
         batchName: _batchNameController.text.isNotEmpty
             ? _batchNameController.text
             : null,
+        codeFormat: _selectedFormat.value,
       );
 
       context.read<PacketCodesBloc>().add(GeneratePacketCodes(request));
@@ -100,7 +78,7 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
       builder: (context) => CodeGenerationSuccessDialog(
         title: 'Packet Codes Generated',
         content:
-            'Successfully generated $count packet codes.\n\nYou can now publish and download this list for printing. Linking to cartons/bundles happens later in the Storekeeper app during scanning.',
+            'Successfully generated $count ${_selectedFormat.displayName} packet codes.\n\nYou can now publish and download this list for printing. Linking to cartons happens later in the Storekeeper app during scanning.',
         onOk: () => Navigator.pop(context),
         onViewCodes: () {
           Navigator.pop(context);
@@ -116,22 +94,27 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
       builder: (context) => const HelpDialog(
         title: 'Packet Code Generation Help',
         description:
-            'Packet Codes are generated as standalone codes in the Factory Panel. They are linked to cartons/bundles later in the Storekeeper app during scanning.',
+            'Packet Codes are generated as standalone codes in the Factory Panel. They are linked to cartons later in the Storekeeper app during scanning.',
         items: [
           HelpItem(
-            title: 'Packet Specifications',
+            title: 'Code Format',
             description:
-                'Weight, dimensions, type, and material help in product identification and handling.',
+                'Select the barcode/QR format type. Each format is optimized for specific use cases (e.g., ITF-14 for industrial, DataMatrix for pharma).',
           ),
           HelpItem(
-            title: 'Safety Features',
+            title: 'Quantity',
             description:
-                'Tamper evidence and child safety features for regulated products.',
+                'Number of packet codes to generate in this batch (1-1000).',
           ),
           HelpItem(
-            title: 'Packet Barcode/QR Code',
+            title: 'Batch Name',
             description:
-                'Separate codes for packet tracking independent of product codes.',
+                'Optional identifier for grouping codes generated together.',
+          ),
+          HelpItem(
+            title: 'Prefix',
+            description:
+                'Optional code prefix for easy identification of this batch.',
           ),
         ],
       ),
@@ -262,7 +245,7 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Basic Information',
+              'Generation Details',
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
@@ -281,79 +264,23 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
                 if (count == null || count <= 0) {
                   return 'Please enter a valid number';
                 }
-                if (count > 5000) {
-                  return 'Maximum 5000 packets per batch';
+                if (count > 2000) {
+                  return 'Maximum 2000 packets per batch';
                 }
                 return null;
               },
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPacketSpecificationsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Packet Specifications',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
-            ),
             SizedBox(height: 16.h),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    controller: _packetWeightController,
-                    labelText: 'Weight (grams)',
-                    hintText: 'e.g., 50.0',
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: CustomTextField(
-                    controller: _packetDimensionsController,
-                    labelText: 'Dimensions (LxWxH cm)',
-                    hintText: 'e.g., 10x8x2',
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    controller: _packetTypeController,
-                    labelText: 'Packet Type',
-                    hintText: 'e.g., Blister, Box, Pouch, Bottle',
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: CustomTextField(
-                    controller: _materialController,
-                    labelText: 'Material',
-                    hintText: 'e.g., Plastic, Paper, Aluminum',
-                  ),
-                ),
-              ],
+            CustomTextField(
+              controller: _batchNameController,
+              labelText: 'Batch Name / ID (Optional)',
+              hintText: 'e.g., BATCH-2024-001',
             ),
             SizedBox(height: 16.h),
             CustomTextField(
-              controller: _sealingMethodController,
-              labelText: 'Sealing Method (Optional)',
-              hintText: 'e.g., Heat Seal, Adhesive, Clip',
+              controller: _prefixController,
+              labelText: 'Prefix (Optional)',
+              hintText: 'e.g., P, PKT',
             ),
           ],
         ),
@@ -361,7 +288,28 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
     );
   }
 
-  Widget _buildSafetyFeaturesSection() {
+  Widget _buildGenerateButton() {
+    return BlocConsumer<PacketCodesBloc, PacketCodesState>(
+      listener: (context, state) {
+        if (state.status == PacketCodesStatus.generated) {
+          _showSuccessDialog(state.generatedCount);
+        }
+      },
+      builder: (context, state) {
+        if (state.status == PacketCodesStatus.generating) {
+          return const LoadingIndicator();
+        }
+
+        return PrimaryButton(
+          onPressed: _generateCodes,
+          text: 'Generate ${_selectedFormat.displayName} Packet Codes',
+          icon: Icons.qr_code,
+        );
+      },
+    );
+  }
+
+  Widget _buildCodePreview() {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
@@ -371,183 +319,54 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Safety Features',
+              'Code Preview',
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
             ),
             SizedBox(height: 16.h),
-            SwitchListTile(
-              title: Text(
-                'Include Tamper Evidence',
-                style: Theme.of(context).textTheme.bodyMedium,
+            Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(8.r),
               ),
-              subtitle: Text(
-                'Add tamper-evident seals to packets',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sample Packet Code:',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    '${_prefixController.text.isNotEmpty ? _prefixController.text : "P"}-001',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.primary,
+                      fontFamily: 'Monospace',
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    'Format: ${_selectedFormat.displayName}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  Text(
+                    'Carton: Linked later via Storekeeper app',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  if (_batchNameController.text.isNotEmpty)
+                    Text(
+                      'Batch: ${_batchNameController.text}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                ],
               ),
-              value: _includeTamperEvidence,
-              onChanged: (value) {
-                setState(() {
-                  _includeTamperEvidence = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-            SwitchListTile(
-              title: Text(
-                'Include Child Safety Features',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Add child-resistant packaging features',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _includeChildSafety,
-              onChanged: (value) {
-                setState(() {
-                  _includeChildSafety = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-            SwitchListTile(
-              title: Text(
-                'Include Instructions',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Include usage instructions with packets',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _includeInstructions,
-              onChanged: (value) {
-                setState(() {
-                  _includeInstructions = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCodeOptionsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Code Options',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
-            ),
-            SizedBox(height: 16.h),
-            SwitchListTile(
-              title: Text(
-                'Include International Codes (GS1)',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Add GS1-compliant international codes',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _includeInternationalCodes,
-              onChanged: (value) {
-                setState(() {
-                  _includeInternationalCodes = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-            SwitchListTile(
-              title: Text(
-                'Generate QR Codes',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Generate QR codes for product verification',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _generateQrCodes,
-              onChanged: (value) {
-                setState(() {
-                  _generateQrCodes = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-            SwitchListTile(
-              title: Text(
-                'Generate Barcodes',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Generate barcodes for scanning',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _generateBarcodes,
-              onChanged: (value) {
-                setState(() {
-                  _generateBarcodes = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-            SwitchListTile(
-              title: Text(
-                'Generate Packet Barcode',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Separate barcode for packet tracking',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              value: _generatePacketBarcode,
-              onChanged: (value) {
-                setState(() {
-                  _generatePacketBarcode = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
-            ),
-            SwitchListTile(
-              title: Text(
-                'Generate Packet QR Code',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                'Separate QR code for packet tracking',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              value: _generatePacketQrCode,
-              onChanged: (value) {
-                setState(() {
-                  _generatePacketQrCode = value;
-                });
-              },
-              activeThumbColor: AppColors.primary,
             ),
           ],
         ),
@@ -557,38 +376,38 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<PacketCodesBloc, PacketCodesState>(
-      listener: (context, state) {
-        if (state.status == PacketCodesStatus.generated) {
-          _showSuccessDialog(state.generatedCount);
-        } else if (state.status == PacketCodesStatus.error) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage ?? 'An error occurred'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
-      },
-      builder: (context, state) {
-        return Scaffold(
-          appBar: CustomAppBar(
-            title: 'Generate Packet Codes',
-            actions: [
-              IconButton(
-                onPressed: _showHelpDialog,
-                icon: const Icon(Icons.help_outline, color: Colors.white),
-              ),
-            ],
+    return Scaffold(
+      appBar: CustomAppBar(
+        title: 'Generate Packet Codes',
+        showBackButton: true,
+        actions: [
+          IconButton(
+            onPressed: _showHelpDialog,
+            icon: const Icon(Icons.help_outline, color: Colors.white),
           ),
-          body: Form(
-            key: _formKey,
-            child: Scrollbar(
+        ],
+      ),
+      body: BlocBuilder<PacketCodesBloc, PacketCodesState>(
+        builder: (context, state) {
+          if (state.status == PacketCodesStatus.error) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.errorMessage ?? 'An error occurred'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            });
+          }
+
+          return Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: true,
+            child: SingleChildScrollView(
               controller: _scrollController,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: EdgeInsets.all(16.w),
+              padding: EdgeInsets.all(16.w),
+              child: Form(
+                key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -596,18 +415,9 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
                     SizedBox(height: 24.h),
                     _buildBasicInfoSection(),
                     SizedBox(height: 24.h),
-                    _buildPacketSpecificationsSection(),
+                    _buildCodePreview(),
                     SizedBox(height: 24.h),
-                    _buildSafetyFeaturesSection(),
-                    SizedBox(height: 24.h),
-                    _buildCodeOptionsSection(),
-                    SizedBox(height: 24.h),
-                    PrimaryButton(
-                      onPressed: _generateCodes,
-                      text:
-                          'Generate ${_selectedFormat.displayName} Packet Codes',
-                      isLoading: state.status == PacketCodesStatus.generating,
-                    ),
+                    _buildGenerateButton(),
                     SizedBox(height: 16.h),
                     if (state.status == PacketCodesStatus.error)
                       Container(
@@ -638,9 +448,9 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
