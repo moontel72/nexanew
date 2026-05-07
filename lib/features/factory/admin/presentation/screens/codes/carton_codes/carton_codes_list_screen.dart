@@ -10,7 +10,6 @@ import 'package:nexatrace_system/shared/models/code/carton_code_model.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/filters/filter_chip_row.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 import 'package:nexatrace_system/shared/widgets/search/search_bar.dart'
     as custom;

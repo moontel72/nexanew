@@ -342,6 +342,7 @@ class CodesRepositoryImpl implements CodesRepository {
   Future<String> downloadCartonCodes({
     required List<String> codeIds,
     required String format,
+    String? codeFormat,
     bool includeQrCodes = true,
     bool includeBarcodes = true,
     bool includeInternationalCodes = true,
@@ -349,6 +350,7 @@ class CodesRepositoryImpl implements CodesRepository {
     final res = await _remote.downloadCartonCodes(
       codeIds: codeIds,
       format: format,
+      codeFormat: codeFormat,
       includeQrCodes: includeQrCodes,
       includeBarcodes: includeBarcodes,
       includeInternationalCodes: includeInternationalCodes,
@@ -458,6 +460,7 @@ class CodesRepositoryImpl implements CodesRepository {
   Future<String> downloadPacketCodes({
     required List<String> codeIds,
     required String format,
+    String? codeFormat,
     bool includeQrCodes = true,
     bool includeBarcodes = true,
     bool includeInternationalCodes = true,
@@ -465,6 +468,7 @@ class CodesRepositoryImpl implements CodesRepository {
     final res = await _remote.downloadPacketCodes(
       codeIds: codeIds,
       format: format,
+      codeFormat: codeFormat,
       includeQrCodes: includeQrCodes,
       includeBarcodes: includeBarcodes,
       includeInternationalCodes: includeInternationalCodes,

@@ -114,6 +114,7 @@ abstract class CodesRepository {
   Future<String> downloadCartonCodes({
     required List<String> codeIds,
     required String format,
+    String? codeFormat,
     bool includeQrCodes = true,
     bool includeBarcodes = true,
     bool includeInternationalCodes = true,
@@ -159,6 +160,7 @@ abstract class CodesRepository {
   Future<String> downloadPacketCodes({
     required List<String> codeIds,
     required String format,
+    String? codeFormat,
     bool includeQrCodes = true,
     bool includeBarcodes = true,
     bool includeInternationalCodes = true,

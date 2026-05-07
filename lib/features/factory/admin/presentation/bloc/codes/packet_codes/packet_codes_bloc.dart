@@ -461,6 +461,9 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
       final exportPath = await _codesRepository.downloadPacketCodes(
         codeIds: ids,
         format: format,
+        codeFormat: state.filterCodeFormat.isNotEmpty
+            ? state.filterCodeFormat
+            : null,
       );
 
       emit(
@@ -579,6 +582,9 @@ class PacketCodesBloc extends Bloc<PacketCodesEvent, PacketCodesState> {
       final exportPath = await _codesRepository.downloadPacketCodes(
         codeIds: batchCodeIds,
         format: format,
+        codeFormat: state.filterCodeFormat.isNotEmpty
+            ? state.filterCodeFormat
+            : null,
       );
       emit(
         state.copyWith(

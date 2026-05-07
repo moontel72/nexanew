@@ -698,6 +698,26 @@ class PacketCodesController extends Controller
             return response()->json(['message' => 'No codes found for download'], 422);
         }
 
+        // Infer code_format from DB when not provided in request
+        if (empty($data['code_format']) && !empty($codeIds)) {
+            $inferredFormat = DB::table('packet_codes')
+                ->whereIn('id', array_slice($codeIds, 0, 1))
+                ->value('code_format');
+            if ($inferredFormat) {
+                $data['code_format'] = $inferredFormat;
+            }
+        }
+
+        // Infer batch_id from base_codes when not provided in request
+        if (empty($data['batch_id']) && !empty($codeIds)) {
+            $inferredBatch = DB::table('base_codes')
+                ->whereIn('id', array_slice($codeIds, 0, 1))
+                ->value('batch_id');
+            if ($inferredBatch) {
+                $data['batch_id'] = $inferredBatch;
+            }
+        }
+
         try {
             $res = $this->exporter->exportCodesToFile(
                 companyId: $companyId,

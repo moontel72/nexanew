@@ -39,7 +39,7 @@ class _PacketCodeGenerateScreenState extends State<PacketCodeGenerateScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final router = GoRouter.of(context);
-      final formatParam = router.state?.uri.queryParameters['format'];
+      final formatParam = router.state.uri.queryParameters['format'];
       if (formatParam != null && formatParam.isNotEmpty) {
         final format = CartonCodeFormat.values.firstWhere(
           (f) => f.value == formatParam,

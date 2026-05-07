@@ -401,6 +401,7 @@ class CodesRemoteDatasource {
   Future<Map<String, dynamic>> downloadCartonCodes({
     required List<String> codeIds,
     required String format,
+    String? codeFormat,
     bool includeQrCodes = true,
     bool includeBarcodes = true,
     bool includeInternationalCodes = true,
@@ -410,6 +411,8 @@ class CodesRemoteDatasource {
       data: {
         'format': format,
         'code_ids': codeIds,
+        if (codeFormat != null && codeFormat.isNotEmpty)
+          'code_format': codeFormat,
         'include_qr_codes': includeQrCodes,
         'include_barcodes': includeBarcodes,
         'include_international_codes': includeInternationalCodes,
@@ -529,6 +532,7 @@ class CodesRemoteDatasource {
   Future<Map<String, dynamic>> downloadPacketCodes({
     required List<String> codeIds,
     required String format,
+    String? codeFormat,
     bool includeQrCodes = true,
     bool includeBarcodes = true,
     bool includeInternationalCodes = true,
@@ -538,6 +542,8 @@ class CodesRemoteDatasource {
       data: {
         'format': format,
         'code_ids': codeIds,
+        if (codeFormat != null && codeFormat.isNotEmpty)
+          'code_format': codeFormat,
         'include_qr_codes': includeQrCodes,
         'include_barcodes': includeBarcodes,
         'include_international_codes': includeInternationalCodes,

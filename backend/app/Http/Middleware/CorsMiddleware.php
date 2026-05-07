@@ -113,7 +113,7 @@ class CorsMiddleware
         $response->headers->set("Access-Control-Max-Age", "86400"); // 24 hours
         $response->headers->set(
             "Access-Control-Expose-Headers",
-            "Authorization, Content-Type, X-Total-Count, X-RateLimit-Limit, X-RateLimit-Remaining",
+            "Authorization, Content-Type, X-Total-Count, X-RateLimit-Limit, X-RateLimit-Remaining, Content-Disposition"
         );
 
         // Log preflight response headers for debugging
@@ -145,7 +145,7 @@ class CorsMiddleware
 
         $response->headers->set(
             "Access-Control-Expose-Headers",
-            "Authorization, Content-Type, X-Total-Count, X-RateLimit-Limit, X-RateLimit-Remaining",
+            "Authorization, Content-Type, X-Total-Count, X-RateLimit-Limit, X-RateLimit-Remaining, Content-Disposition"
         );
         $response->headers->set(
             "Access-Control-Allow-Methods",

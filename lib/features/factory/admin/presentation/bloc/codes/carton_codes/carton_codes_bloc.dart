@@ -603,6 +603,9 @@ class CartonCodesBloc extends Bloc<CartonCodesEvent, CartonCodesState> {
       final exportPath = await _codesRepository.downloadCartonCodes(
         codeIds: ids,
         format: format,
+        codeFormat: state.filterCodeFormat.isNotEmpty
+            ? state.filterCodeFormat
+            : null,
       );
 
       emit(
