@@ -24,6 +24,7 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
   final _storeCtrl = TextEditingController();
   final _shelfCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
+  bool _dialogShown = false;
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     final state = context.read<BundlePackingBloc>().state;
+    _dialogShown = false; // reset flag before submit
     context.read<BundleBloc>().add(
       CreateBundle(
         orderReference: _orderRefCtrl.text.trim(),
@@ -93,8 +95,6 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
               ),
             ),
             SizedBox(height: 12.h),
-
-            // Level 1: Format
             DropdownButtonFormField<String?>(
               value: selectedFormat,
               decoration: const InputDecoration(
@@ -116,8 +116,6 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
               onChanged: onFormatChanged,
             ),
             SizedBox(height: 12.h),
-
-            // Level 2: Batch
             if (selectedFormat != null) ...[
               DropdownButtonFormField<BatchOption?>(
                 value: selectedBatch,
@@ -141,8 +139,6 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
               ),
               SizedBox(height: 12.h),
             ],
-
-            // Level 3: Multi-select serials
             if (selectedBatch != null && codes.isNotEmpty) ...[
               Text(
                 '$chipsLabel (${selectedIds.length} selected):',
@@ -177,21 +173,38 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bundleBloc = context.read<BundleBloc>();
+
     return BlocListener<BundleBloc, BundleState>(
-      listener: (context, state) {
+      listener: (ctx, state) {
         if (state.status == BundleStatus.created &&
-            state.selectedBundle != null) {
+            state.selectedBundle != null &&
+            !_dialogShown) {
+          _dialogShown = true;
           showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text('Bundle Created'),
+            context: ctx,
+            barrierDismissible: false,
+            builder: (dialogCtx) => AlertDialog(
+              title: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: AppColors.success,
+                    size: 24.w,
+                  ),
+                  SizedBox(width: 8.w),
+                  const Text('Bundle Created'),
+                ],
+              ),
               content: Text(
                 'Bundle: ${state.selectedBundle!.bundleCode}\n${state.selectedBundle!.totalCartons} cartons, ${state.selectedBundle!.totalPackets} packets',
               ),
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.pop(context);
+                    Navigator.of(dialogCtx).pop();
+                    // Reset creation state to prevent dialog re-show
+                    bundleBloc.add(const LoadBundles());
                     context.go('/factory/codes/bundles');
                   },
                   child: const Text('OK'),
@@ -200,10 +213,10 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
             ),
           );
         }
-        if (state.status == BundleStatus.error) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        if (state.status == BundleStatus.error && state.errorMessage != null) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
             SnackBar(
-              content: Text(state.errorMessage ?? 'Error'),
+              content: Text(state.errorMessage!),
               backgroundColor: AppColors.error,
             ),
           );
@@ -220,7 +233,6 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
               child: ListView(
                 padding: EdgeInsets.all(16.w),
                 children: [
-                  // Order info
                   CustomTextField(
                     controller: _orderRefCtrl,
                     labelText: 'Order Reference *',
@@ -230,7 +242,6 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
                   ),
                   SizedBox(height: 24.h),
 
-                  // Carton cascade
                   _cascadeSection(
                     title: '📦 Carton Codes',
                     formats: packState.cartonFormats,
@@ -251,7 +262,6 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
                     chipsLabel: 'Select Cartons',
                   ),
 
-                  // Packet cascade
                   _cascadeSection(
                     title: '📁 Packet Codes',
                     formats: packState.packetFormats,
@@ -272,7 +282,6 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
                     chipsLabel: 'Select Packets',
                   ),
 
-                  // Location
                   Row(
                     children: [
                       Expanded(
@@ -301,7 +310,6 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
                   ),
                   SizedBox(height: 32.h),
 
-                  // Submit
                   BlocBuilder<BundleBloc, BundleState>(
                     builder: (_, bundleState) {
                       if (bundleState.status == BundleStatus.creating)
