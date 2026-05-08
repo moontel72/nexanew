@@ -178,36 +178,31 @@ class FactoryShell extends StatelessWidget {
             ],
           ),
           AdminSidebarItem(
-            label: 'Bundle',
-            icon: Icons.layers_outlined,
-            route: '/factory/codes/bundle',
-            children: [
-              AdminSidebarItem(
-                label: 'Generate Bundle',
-                icon: Icons.add_circle_outline,
-                route: '/factory/codes/bundle/generate',
-              ),
-              AdminSidebarItem(
-                label: 'View Bundle List',
-                icon: Icons.list_alt,
-                route: '/factory/codes/bundle',
-              ),
-            ],
-          ),
-          AdminSidebarItem(
-            label: 'New Bundle (Order)',
+            label: 'Bundles (Orders)',
             icon: Icons.layers_outlined,
             route: '/factory/codes/bundles',
             children: [
+              AdminSidebarItem(
+                label: 'Create Bundle',
+                icon: Icons.add_circle_outline,
+                route: '/factory/codes/bundles/pack',
+              ),
               AdminSidebarItem(
                 label: 'View Bundles',
                 icon: Icons.list_alt,
                 route: '/factory/codes/bundles',
               ),
+            ],
+          ),
+          AdminSidebarItem(
+            label: 'Smart Codes',
+            icon: Icons.qr_code_scanner,
+            route: '/factory/codes/smart-codes',
+            children: [
               AdminSidebarItem(
-                label: 'Create Bundle',
-                icon: Icons.add_circle_outline,
-                route: '/factory/codes/bundles/pack',
+                label: 'Smart Code List',
+                icon: Icons.list_alt,
+                route: '/factory/codes/smart-codes',
               ),
             ],
           ),
@@ -245,10 +240,6 @@ class FactoryShell extends StatelessWidget {
     if (location.startsWith('/factory/codes/bundles/pack'))
       return 'Create Bundle';
     if (location.startsWith('/factory/codes/bundles')) return 'View Bundles';
-    if (location.startsWith('/factory/codes/bundle/generate')) {
-      return 'Generate Bundle';
-    }
-    if (location.startsWith('/factory/codes/bundle')) return 'View Bundle List';
     return 'Factory Admin';
   }
 
@@ -282,9 +273,6 @@ class FactoryShell extends StatelessWidget {
     }
     if (location.startsWith('/factory/codes/bundles')) {
       return const ['Factory', 'Codes', 'Bundles'];
-    }
-    if (location.startsWith('/factory/codes/bundle')) {
-      return const ['Factory', 'Codes', 'Bundle'];
     }
     return const ['Factory', 'Dashboard'];
   }
