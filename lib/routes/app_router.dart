@@ -25,6 +25,8 @@ import 'package:nexatrace_system/features/factory/admin/presentation/screens/fac
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/factory_shell.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_codes_list_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_code_generate_screen.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_list_screen.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_packing_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/carton_codes/carton_codes_list_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/carton_codes/carton_codes_overview_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/carton_codes/carton_code_generate_screen.dart';
@@ -328,6 +330,18 @@ class AppRouter {
               path: 'generate',
               name: 'factory_bundle_codes_generate',
               builder: (context, state) => const BundleCodeGenerateScreen(),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/factory/codes/bundles',
+          name: 'factory_bundles',
+          builder: (context, state) => const BundleListScreen(),
+          routes: [
+            GoRoute(
+              path: 'pack',
+              name: 'factory_bundles_pack',
+              builder: (context, state) => const BundlePackingScreen(),
             ),
           ],
         ),
