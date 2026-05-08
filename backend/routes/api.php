@@ -691,6 +691,28 @@ $registerRoutes = function (): void {
                     "download",
                 ]);
             });
+
+            // ─── New Bundle System (Order-Level) ──────────────────
+            Route::prefix("bundles")->group(function (): void {
+                Route::get("list", [\App\Http\Controllers\Factory\BundleController::class, "index"]);
+                Route::post("generate", [\App\Http\Controllers\Factory\BundleController::class, "store"]);
+                Route::get("{id}", [\App\Http\Controllers\Factory\BundleController::class, "show"]);
+                Route::put("{id}", [\App\Http\Controllers\Factory\BundleController::class, "update"]);
+                Route::delete("{id}", [\App\Http\Controllers\Factory\BundleController::class, "destroy"]);
+                Route::get("{id}/scan", [\App\Http\Controllers\Factory\BundleController::class, "scan"]);
+            });
+
+            // ─── Smart Codes (OCR-Friendly, Delivery-Level) ───────
+            Route::prefix("smart-codes")->group(function (): void {
+                Route::get("districts", [\App\Http\Controllers\Factory\SmartCodeController::class, "indexDistricts"]);
+                Route::post("districts", [\App\Http\Controllers\Factory\SmartCodeController::class, "storeDistrict"]);
+                Route::get("districts/{districtId}/zones", [\App\Http\Controllers\Factory\SmartCodeController::class, "indexZones"]);
+                Route::post("districts/{districtId}/zones", [\App\Http\Controllers\Factory\SmartCodeController::class, "storeZone"]);
+                Route::get("list", [\App\Http\Controllers\Factory\SmartCodeController::class, "index"]);
+                Route::post("generate", [\App\Http\Controllers\Factory\SmartCodeController::class, "store"]);
+                Route::get("{id}", [\App\Http\Controllers\Factory\SmartCodeController::class, "show"]);
+                Route::post("scan", [\App\Http\Controllers\Factory\SmartCodeController::class, "scan"]);
+            });
             });
         });
 
