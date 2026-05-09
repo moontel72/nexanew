@@ -264,7 +264,7 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                         ),
                         _c(sortedCodes[i].serialNumber, null, null),
                         _c(
-                          sortedCodes[i].statusDisplayName,
+                          _statusLabel(sortedCodes[i].status),
                           _statusColor(sortedCodes[i].status),
                           FontWeight.w500,
                         ),
@@ -306,6 +306,14 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
     CodeStatus.published => AppColors.success,
     CodeStatus.deactivated => AppColors.error,
     CodeStatus.expired => AppColors.textSecondary,
+  };
+
+  String _statusLabel(CodeStatus s) => switch (s) {
+    CodeStatus.generated => 'Generated',
+    CodeStatus.linked => 'Linked',
+    CodeStatus.published => 'Published',
+    CodeStatus.deactivated => 'Deactivated',
+    CodeStatus.expired => 'Expired',
   };
 
   @override
