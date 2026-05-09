@@ -14,8 +14,8 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
   final CodesRepository _codesRepository;
 
   UnitCodesBloc({required CodesRepository codesRepository})
-      : _codesRepository = codesRepository,
-        super(const UnitCodesState()) {
+    : _codesRepository = codesRepository,
+      super(const UnitCodesState()) {
     on<LoadUnitCodes>(_onLoadUnitCodes);
     on<GenerateUnitCodes>(_onGenerateUnitCodes);
     on<DeleteUnitCode>(_onDeleteUnitCode);
@@ -39,10 +39,7 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     try {
       emit(state.copyWith(status: UnitCodesStatus.loading));
 
-      final codes = await _codesRepository.getUnitCodes(
-        page: 1,
-        limit: 200,
-      );
+      final codes = await _codesRepository.getUnitCodes(page: 1, limit: 200);
 
       emit(
         state.copyWith(
@@ -73,20 +70,27 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
       await _codesRepository.generateUnitCodes(
         count: event.request.count,
         batchId: event.request.batchName,
+        codeFormat: event.request.codeFormat,
+        productId: null,
+        prefix: event.request.prefix,
       );
 
-      emit(state.copyWith(
-        status: UnitCodesStatus.generated,
-        generatedCount: event.request.count,
-        lastGeneratedAt: DateTime.now(),
-      ));
-      
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.generated,
+          generatedCount: event.request.count,
+          lastGeneratedAt: DateTime.now(),
+        ),
+      );
+
       add(const LoadUnitCodes());
     } catch (error) {
-      emit(state.copyWith(
-        status: UnitCodesStatus.error,
-        errorMessage: 'Failed to generate unit codes: $error',
-      ));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: 'Failed to generate unit codes: $error',
+        ),
+      );
     }
   }
 
@@ -97,15 +101,24 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     try {
       emit(state.copyWith(status: UnitCodesStatus.deleting));
       await Future.delayed(const Duration(milliseconds: 300));
-      
-      final updatedCodes = state.unitCodes.where((c) => c.id != event.unitCodeId).toList();
-      emit(state.copyWith(
-        status: UnitCodesStatus.deleted,
-        unitCodes: updatedCodes,
-        filteredUnitCodes: updatedCodes,
-      ));
+
+      final updatedCodes = state.unitCodes
+          .where((c) => c.id != event.unitCodeId)
+          .toList();
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.deleted,
+          unitCodes: updatedCodes,
+          filteredUnitCodes: updatedCodes,
+        ),
+      );
     } catch (error) {
-      emit(state.copyWith(status: UnitCodesStatus.error, errorMessage: error.toString()));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: error.toString(),
+        ),
+      );
     }
   }
 
@@ -116,16 +129,25 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     try {
       emit(state.copyWith(status: UnitCodesStatus.deleting));
       await Future.delayed(const Duration(milliseconds: 500));
-      
-      final updatedCodes = state.unitCodes.where((c) => !event.unitCodeIds.contains(c.id)).toList();
-      emit(state.copyWith(
-        status: UnitCodesStatus.deleted,
-        unitCodes: updatedCodes,
-        filteredUnitCodes: updatedCodes,
-        selectedUnitCodeIds: {},
-      ));
+
+      final updatedCodes = state.unitCodes
+          .where((c) => !event.unitCodeIds.contains(c.id))
+          .toList();
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.deleted,
+          unitCodes: updatedCodes,
+          filteredUnitCodes: updatedCodes,
+          selectedUnitCodeIds: {},
+        ),
+      );
     } catch (error) {
-      emit(state.copyWith(status: UnitCodesStatus.error, errorMessage: error.toString()));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: error.toString(),
+        ),
+      );
     }
   }
 
@@ -147,7 +169,12 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
       emit(state.copyWith(status: UnitCodesStatus.linked));
       add(const LoadUnitCodes());
     } catch (error) {
-      emit(state.copyWith(status: UnitCodesStatus.error, errorMessage: error.toString()));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: error.toString(),
+        ),
+      );
     }
   }
 
@@ -157,12 +184,20 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
   ) async {
     try {
       emit(state.copyWith(status: UnitCodesStatus.publishing));
-      emit(state.copyWith(
-        status: UnitCodesStatus.error,
-        errorMessage: 'Select a product and publish from the Unit Codes list.',
-      ));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage:
+              'Select a product and publish from the Unit Codes list.',
+        ),
+      );
     } catch (error) {
-      emit(state.copyWith(status: UnitCodesStatus.error, errorMessage: error.toString()));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: error.toString(),
+        ),
+      );
     }
   }
 
@@ -193,16 +228,20 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
         warrantyMonths: event.warrantyMonths,
       );
 
-      emit(state.copyWith(
-        status: UnitCodesStatus.published,
-        selectedUnitCodeIds: {},
-      ));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.published,
+          selectedUnitCodeIds: {},
+        ),
+      );
       add(const LoadUnitCodes());
     } catch (error) {
-      emit(state.copyWith(
-        status: UnitCodesStatus.error,
-        errorMessage: error.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: error.toString(),
+        ),
+      );
     }
   }
 
@@ -213,11 +252,16 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     try {
       emit(state.copyWith(status: UnitCodesStatus.deactivating));
       await Future.delayed(const Duration(milliseconds: 300));
-      
+
       emit(state.copyWith(status: UnitCodesStatus.deactivated));
       add(const LoadUnitCodes());
     } catch (error) {
-      emit(state.copyWith(status: UnitCodesStatus.error, errorMessage: error.toString()));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: error.toString(),
+        ),
+      );
     }
   }
 
@@ -232,15 +276,19 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     FilterUnitCodes event,
     Emitter<UnitCodesState> emit,
   ) async {
-    emit(state.copyWith(
-      filterStatus: event.status,
-      filterPacketCode: event.packetCode,
-      filterStartDate: event.startDate,
-      filterEndDate: event.endDate,
-      filterIsMasterCode: event.isMasterCode,
-      filterIsReportedFake: event.isReportedFake,
-      filterIsBlocked: event.isBlocked,
-    ).applyFilters());
+    emit(
+      state
+          .copyWith(
+            filterStatus: event.status,
+            filterPacketCode: event.packetCode,
+            filterStartDate: event.startDate,
+            filterEndDate: event.endDate,
+            filterIsMasterCode: event.isMasterCode,
+            filterIsReportedFake: event.isReportedFake,
+            filterIsBlocked: event.isBlocked,
+          )
+          .applyFilters(),
+    );
   }
 
   Future<void> _onExportUnitCodes(
@@ -248,18 +296,22 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     Emitter<UnitCodesState> emit,
   ) async {
     try {
-      emit(state.copyWith(status: UnitCodesStatus.exporting, isExporting: true));
+      emit(
+        state.copyWith(status: UnitCodesStatus.exporting, isExporting: true),
+      );
       final format = (event.format == 'pdf') ? 'pdf' : 'csv';
       final path = await _codesRepository.downloadUnitCodes(
         codeIds: event.unitCodeIds,
         format: format,
       );
 
-      emit(state.copyWith(
-        status: UnitCodesStatus.exported,
-        isExporting: false,
-        exportPath: path,
-      ));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.exported,
+          isExporting: false,
+          exportPath: path,
+        ),
+      );
     } catch (error) {
       if (error is ServerException && error.statusCode == 423) {
         String invoiceNumber = '';
@@ -268,27 +320,32 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
           final root = Map<String, dynamic>.from(data.cast<String, dynamic>());
           final nested = root['data'];
           if (nested is Map) {
-            final nestedMap =
-                Map<String, dynamic>.from(nested.cast<String, dynamic>());
+            final nestedMap = Map<String, dynamic>.from(
+              nested.cast<String, dynamic>(),
+            );
             invoiceNumber = (nestedMap['invoice_number'] ?? '').toString();
           }
         }
 
-        emit(state.copyWith(
-          status: UnitCodesStatus.error,
-          errorMessage: invoiceNumber.trim().isEmpty
-              ? 'DOWNLOAD_LOCKED'
-              : 'DOWNLOAD_LOCKED|$invoiceNumber',
-          isExporting: false,
-        ));
+        emit(
+          state.copyWith(
+            status: UnitCodesStatus.error,
+            errorMessage: invoiceNumber.trim().isEmpty
+                ? 'DOWNLOAD_LOCKED'
+                : 'DOWNLOAD_LOCKED|$invoiceNumber',
+            isExporting: false,
+          ),
+        );
         return;
       }
 
-      emit(state.copyWith(
-        status: UnitCodesStatus.error,
-        errorMessage: error.toString(),
-        isExporting: false,
-      ));
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: error.toString(),
+          isExporting: false,
+        ),
+      );
     }
   }
 

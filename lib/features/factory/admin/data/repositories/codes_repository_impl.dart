@@ -161,8 +161,20 @@ class CodesRepositoryImpl implements CodesRepository {
   }
 
   @override
-  Future<void> generateUnitCodes({required int count, String? batchId}) async {
-    await _remote.generateUnitCodes(count: count, batchId: batchId);
+  Future<void> generateUnitCodes({
+    required int count,
+    String? batchId,
+    String? codeFormat,
+    String? productId,
+    String? prefix,
+  }) async {
+    await _remote.generateUnitCodes(
+      count: count,
+      batchId: batchId,
+      codeFormat: codeFormat,
+      productId: productId,
+      prefix: prefix,
+    );
   }
 
   @override

@@ -14,12 +14,18 @@ class CodesRemoteDatasource {
   Future<Map<String, dynamic>> generateUnitCodes({
     required int count,
     String? batchId,
+    String? codeFormat,
+    String? productId,
+    String? prefix,
   }) async {
     final res = await _api.post(
       '${ApiEndpoints.unitCodes}/generate',
       data: {
         'count': count,
+        'code_format': codeFormat ?? 'qr',
+        if (productId != null && productId.isNotEmpty) 'product_id': productId,
         if (batchId != null && batchId.isNotEmpty) 'batch_id': batchId,
+        if (prefix != null && prefix.isNotEmpty) 'prefix': prefix,
       },
     );
     return (res as Map).cast<String, dynamic>();

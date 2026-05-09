@@ -42,7 +42,13 @@ abstract class CodesRepository {
     String? codeFormat,
   });
 
-  Future<void> generateUnitCodes({required int count, String? batchId});
+  Future<void> generateUnitCodes({
+    required int count,
+    String? batchId,
+    String? codeFormat,
+    String? productId,
+    String? prefix,
+  });
 
   Future<List<UnitCodeModel>> getUnitCodes({
     int page = 1,

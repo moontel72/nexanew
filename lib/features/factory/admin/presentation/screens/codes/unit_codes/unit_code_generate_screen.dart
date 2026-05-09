@@ -114,7 +114,7 @@ class _UnitCodeGenerateScreenState extends State<UnitCodeGenerateScreen> {
             ),
             SizedBox(height: 12.h),
             DropdownButtonFormField<ProductModel>(
-              value: _selectedProduct,
+              initialValue: _selectedProduct,
               decoration: const InputDecoration(
                 labelText: 'Select Product',
                 border: OutlineInputBorder(),

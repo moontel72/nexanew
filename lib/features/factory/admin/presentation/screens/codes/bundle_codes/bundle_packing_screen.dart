@@ -96,7 +96,7 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
             ),
             SizedBox(height: 12.h),
             DropdownButtonFormField<String?>(
-              value: selectedFormat,
+              initialValue: selectedFormat,
               decoration: const InputDecoration(
                 labelText: 'Code Format',
                 border: OutlineInputBorder(),
@@ -118,7 +118,7 @@ class _BundlePackingScreenState extends State<BundlePackingScreen> {
             SizedBox(height: 12.h),
             if (selectedFormat != null) ...[
               DropdownButtonFormField<BatchOption?>(
-                value: selectedBatch,
+                initialValue: selectedBatch,
                 decoration: InputDecoration(
                   labelText: 'Batch (${batches.length} finalized)',
                   border: const OutlineInputBorder(),
