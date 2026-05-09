@@ -178,6 +178,9 @@ abstract class UnitCodeModel with _$UnitCodeModel {
 
     /// Activation location
     @HiveField(63) String? activationLocation,
+
+    /// Unit code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label)
+    @HiveField(64) @Default('qr') String codeFormat,
   }) = _UnitCodeModel;
 
   factory UnitCodeModel.fromJson(Map<String, dynamic> json) =>

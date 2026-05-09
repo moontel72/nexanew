@@ -1713,7 +1713,7 @@ class _UnitCodeGenerationRequest implements UnitCodeGenerationRequest {
 @override final  String? safetyCertifications;
 /// Compliance standards (JSON string)
 @override final  String? complianceStandards;
-/// Code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label)
+/// Code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label, auth_code)
 @override@JsonKey() final  String codeFormat;
 
 /// Create a copy of UnitCodeGenerationRequest

@@ -26,6 +26,7 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     on<DeactivateUnitCode>(_onDeactivateUnitCode);
     on<SearchUnitCodes>(_onSearchUnitCodes);
     on<FilterUnitCodes>(_onFilterUnitCodes);
+    on<FilterUnitCodesByFormat>(_onFilterUnitCodesByFormat);
     on<ExportUnitCodes>(_onExportUnitCodes);
     on<SelectUnitCode>(_onSelectUnitCode);
     on<ClearSelection>(_onClearSelection);
@@ -39,7 +40,7 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     try {
       emit(state.copyWith(status: UnitCodesStatus.loading));
 
-      final codes = await _codesRepository.getUnitCodes(page: 1, limit: 200);
+      final codes = await _codesRepository.getUnitCodes(page: 1, limit: 500);
 
       emit(
         state.copyWith(
@@ -292,6 +293,44 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
           )
           .applyFilters(),
     );
+  }
+
+  Future<void> _onFilterUnitCodesByFormat(
+    FilterUnitCodesByFormat event,
+    Emitter<UnitCodesState> emit,
+  ) async {
+    final format = event.codeFormat;
+    emit(
+      state.copyWith(
+        status: UnitCodesStatus.loading,
+        filterCodeFormat: format ?? '',
+        exportPath: null,
+        isExporting: false,
+      ),
+    );
+    try {
+      final codes = await _codesRepository.getUnitCodes(page: 1, limit: 500);
+      final filtered = format == null
+          ? codes
+          : codes.where((c) => c.codeFormat == format).toList();
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.loaded,
+          unitCodes: codes,
+          filteredUnitCodes: filtered,
+          filterCodeFormat: format ?? '',
+          exportPath: null,
+          isExporting: false,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
   }
 
   Future<void> _onExportUnitCodes(

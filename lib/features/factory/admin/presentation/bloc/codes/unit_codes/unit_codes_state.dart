@@ -37,6 +37,7 @@ class UnitCodesState extends Equatable {
   final List<UnitCodeModel> filteredUnitCodes;
   final Set<String> selectedUnitCodeIds;
   final String searchQuery;
+  final String filterCodeFormat;
   final CodeStatus? filterStatus;
   final String? filterPacketCode;
   final DateTime? filterStartDate;
@@ -61,6 +62,7 @@ class UnitCodesState extends Equatable {
     this.filteredUnitCodes = const [],
     this.selectedUnitCodeIds = const {},
     this.searchQuery = '',
+    this.filterCodeFormat = '',
     this.filterStatus,
     this.filterPacketCode,
     this.filterStartDate,
@@ -87,6 +89,7 @@ class UnitCodesState extends Equatable {
     List<UnitCodeModel>? filteredUnitCodes,
     Set<String>? selectedUnitCodeIds,
     String? searchQuery,
+    String? filterCodeFormat,
     CodeStatus? filterStatus,
     String? filterPacketCode,
     DateTime? filterStartDate,
@@ -111,6 +114,7 @@ class UnitCodesState extends Equatable {
       filteredUnitCodes: filteredUnitCodes ?? this.filteredUnitCodes,
       selectedUnitCodeIds: selectedUnitCodeIds ?? this.selectedUnitCodeIds,
       searchQuery: searchQuery ?? this.searchQuery,
+      filterCodeFormat: filterCodeFormat ?? this.filterCodeFormat,
       filterStatus: filterStatus ?? this.filterStatus,
       filterPacketCode: filterPacketCode ?? this.filterPacketCode,
       filterStartDate: filterStartDate ?? this.filterStartDate,
@@ -270,6 +274,13 @@ class UnitCodesState extends Equatable {
       }).toList();
     }
 
+    // Apply code format filter
+    if (filterCodeFormat.isNotEmpty) {
+      filtered = filtered
+          .where((unit) => unit.codeFormat == filterCodeFormat)
+          .toList();
+    }
+
     // Apply status filter
     if (filterStatus != null) {
       filtered = filtered.where((unit) => unit.status == filterStatus).toList();
@@ -327,6 +338,7 @@ class UnitCodesState extends Equatable {
   UnitCodesState clearFilters() {
     return copyWith(
       searchQuery: '',
+      filterCodeFormat: '',
       filterStatus: null,
       filterPacketCode: null,
       filterStartDate: null,
@@ -367,6 +379,7 @@ class UnitCodesState extends Equatable {
     filteredUnitCodes,
     selectedUnitCodeIds,
     searchQuery,
+    filterCodeFormat,
     filterStatus,
     filterPacketCode,
     filterStartDate,
@@ -394,6 +407,7 @@ class UnitCodesState extends Equatable {
       filteredUnitCodes: ${filteredUnitCodes.length} items,
       selectedUnitCodeIds: ${selectedUnitCodeIds.length} items,
       searchQuery: $searchQuery,
+      filterCodeFormat: $filterCodeFormat,
       filterStatus: $filterStatus,
       filterPacketCode: $filterPacketCode,
       filterStartDate: $filterStartDate,

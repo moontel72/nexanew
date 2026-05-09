@@ -179,6 +179,14 @@ class FilterUnitCodes extends UnitCodesEvent {
   ];
 }
 
+/// Filter unit codes by format event
+class FilterUnitCodesByFormat extends UnitCodesEvent {
+  final String? codeFormat;
+  const FilterUnitCodesByFormat(this.codeFormat);
+  @override
+  List<Object?> get props => [codeFormat];
+}
+
 /// Export unit codes event
 class ExportUnitCodes extends UnitCodesEvent {
   final List<String> unitCodeIds;
