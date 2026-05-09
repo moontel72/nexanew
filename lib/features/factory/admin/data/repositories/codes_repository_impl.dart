@@ -167,6 +167,9 @@ class CodesRepositoryImpl implements CodesRepository {
     String? codeFormat,
     String? productId,
     String? prefix,
+    String? manufacturingDate,
+    String? expiryDate,
+    int? warrantyMonths,
   }) async {
     await _remote.generateUnitCodes(
       count: count,
@@ -174,6 +177,9 @@ class CodesRepositoryImpl implements CodesRepository {
       codeFormat: codeFormat,
       productId: productId,
       prefix: prefix,
+      manufacturingDate: manufacturingDate,
+      expiryDate: expiryDate,
+      warrantyMonths: warrantyMonths,
     );
   }
 

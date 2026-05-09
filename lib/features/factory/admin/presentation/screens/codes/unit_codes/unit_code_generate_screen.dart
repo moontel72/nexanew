@@ -78,7 +78,21 @@ class _UnitCodeGenerateScreenState extends State<UnitCodeGenerateScreen> {
           : _batchNameCtrl.text.trim(),
       codeFormat: _selectedFormat.value,
     );
-    context.read<UnitCodesBloc>().add(GenerateUnitCodes(request));
+    context.read<UnitCodesBloc>().add(
+      GenerateUnitCodes(
+        request,
+        productId: _selectedProduct?.id,
+        manufacturingDate: _showFoodFields
+            ? _mfgDate?.toIso8601String().split('T').first
+            : null,
+        expiryDate: _showFoodFields
+            ? _expDate?.toIso8601String().split('T').first
+            : null,
+        warrantyMonths: _showWarrantyField
+            ? int.tryParse(_warrantyCtrl.text)
+            : null,
+      ),
+    );
   }
 
   void _showSuccess(int count) {

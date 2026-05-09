@@ -17,15 +17,21 @@ class CodesRemoteDatasource {
     String? codeFormat,
     String? productId,
     String? prefix,
+    String? manufacturingDate,
+    String? expiryDate,
+    int? warrantyMonths,
   }) async {
     final res = await _api.post(
       '${ApiEndpoints.unitCodes}/generate',
       data: {
         'count': count,
         'code_format': codeFormat ?? 'qr',
-        if (productId != null && productId.isNotEmpty) 'product_id': productId,
+        'product_id': productId ?? '',
         if (batchId != null && batchId.isNotEmpty) 'batch_id': batchId,
         if (prefix != null && prefix.isNotEmpty) 'prefix': prefix,
+        if (manufacturingDate != null) 'manufacturing_date': manufacturingDate,
+        if (expiryDate != null) 'expiry_date': expiryDate,
+        if (warrantyMonths != null) 'warranty_months': warrantyMonths,
       },
     );
     return (res as Map).cast<String, dynamic>();

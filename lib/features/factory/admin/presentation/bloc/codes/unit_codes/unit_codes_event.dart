@@ -16,11 +16,27 @@ class LoadUnitCodes extends UnitCodesEvent {
 /// Generate unit codes event
 class GenerateUnitCodes extends UnitCodesEvent {
   final UnitCodeGenerationRequest request;
+  final String? productId;
+  final String? manufacturingDate;
+  final String? expiryDate;
+  final int? warrantyMonths;
 
-  const GenerateUnitCodes(this.request);
+  const GenerateUnitCodes(
+    this.request, {
+    this.productId,
+    this.manufacturingDate,
+    this.expiryDate,
+    this.warrantyMonths,
+  });
 
   @override
-  List<Object?> get props => [request];
+  List<Object?> get props => [
+    request,
+    productId,
+    manufacturingDate,
+    expiryDate,
+    warrantyMonths,
+  ];
 }
 
 /// Delete single unit code event

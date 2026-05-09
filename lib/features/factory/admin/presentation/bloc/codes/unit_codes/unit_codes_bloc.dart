@@ -71,8 +71,11 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
         count: event.request.count,
         batchId: event.request.batchName,
         codeFormat: event.request.codeFormat,
-        productId: null,
+        productId: event.productId,
         prefix: event.request.prefix,
+        manufacturingDate: event.manufacturingDate,
+        expiryDate: event.expiryDate,
+        warrantyMonths: event.warrantyMonths,
       );
 
       emit(

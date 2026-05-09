@@ -48,6 +48,9 @@ abstract class CodesRepository {
     String? codeFormat,
     String? productId,
     String? prefix,
+    String? manufacturingDate,
+    String? expiryDate,
+    int? warrantyMonths,
   });
 
   Future<List<UnitCodeModel>> getUnitCodes({
