@@ -303,6 +303,9 @@ abstract class UnitCodeGenerationRequest with _$UnitCodeGenerationRequest {
 
     /// Compliance standards (JSON string)
     String? complianceStandards,
+
+    /// Code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label, auth_code)
+    @Default('qr') String codeFormat,
   }) = _UnitCodeGenerationRequest;
 
   factory UnitCodeGenerationRequest.fromJson(Map<String, dynamic> json) =>
