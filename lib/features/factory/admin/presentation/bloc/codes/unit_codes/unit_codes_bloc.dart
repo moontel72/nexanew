@@ -31,6 +31,9 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     on<SelectUnitCode>(_onSelectUnitCode);
     on<ClearSelection>(_onClearSelection);
     on<RefreshUnitCodes>(_onRefreshUnitCodes);
+    on<DeleteUnitBatchByGroup>(_onDeleteUnitBatchByGroup);
+    on<PushUnitBatch>(_onPushUnitBatch);
+    on<ExportUnitBatch>(_onExportUnitBatch);
   }
 
   Future<void> _onLoadUnitCodes(
@@ -416,5 +419,133 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     Emitter<UnitCodesState> emit,
   ) async {
     add(const LoadUnitCodes());
+  }
+
+  Future<void> _onDeleteUnitBatchByGroup(
+    DeleteUnitBatchByGroup event,
+    Emitter<UnitCodesState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: UnitCodesStatus.deleting));
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final updatedCodes = state.unitCodes
+          .where(
+            (c) =>
+                !(c.batchId == event.batchId &&
+                    c.codeFormat == event.codeFormat),
+          )
+          .toList();
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.deleted,
+          unitCodes: updatedCodes,
+          filteredUnitCodes: updatedCodes,
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onPushUnitBatch(
+    PushUnitBatch event,
+    Emitter<UnitCodesState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: UnitCodesStatus.publishing));
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final updatedCodes = state.unitCodes.map((c) {
+        if (c.batchId == event.batchId && c.codeFormat == event.codeFormat) {
+          return c.copyWith(status: CodeStatus.published);
+        }
+        return c;
+      }).toList();
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.published,
+          unitCodes: updatedCodes,
+          filteredUnitCodes: updatedCodes,
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportUnitBatch(
+    ExportUnitBatch event,
+    Emitter<UnitCodesState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(status: UnitCodesStatus.exporting, isExporting: true),
+      );
+      final format = (event.format == 'pdf') ? 'pdf' : 'csv';
+      final codesToExport = state.unitCodes
+          .where(
+            (c) =>
+                c.batchId == event.batchId && c.codeFormat == event.codeFormat,
+          )
+          .toList();
+      final codeIds = codesToExport.map((c) => c.id).toList();
+      final path = await _codesRepository.downloadUnitCodes(
+        codeIds: codeIds,
+        format: format,
+      );
+
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.exported,
+          isExporting: false,
+          exportPath: path,
+        ),
+      );
+    } catch (error) {
+      if (error is ServerException && error.statusCode == 423) {
+        String invoiceNumber = '';
+        final data = error.responseData;
+        if (data is Map) {
+          final root = Map<String, dynamic>.from(data.cast<String, dynamic>());
+          final nested = root['data'];
+          if (nested is Map) {
+            final nestedMap = Map<String, dynamic>.from(
+              nested.cast<String, dynamic>(),
+            );
+            invoiceNumber = (nestedMap['invoice_number'] ?? '').toString();
+          }
+        }
+
+        emit(
+          state.copyWith(
+            status: UnitCodesStatus.error,
+            errorMessage: invoiceNumber.trim().isEmpty
+                ? 'DOWNLOAD_LOCKED'
+                : 'DOWNLOAD_LOCKED|$invoiceNumber',
+            isExporting: false,
+          ),
+        );
+        return;
+      }
+
+      emit(
+        state.copyWith(
+          status: UnitCodesStatus.error,
+          errorMessage: error.toString(),
+          isExporting: false,
+        ),
+      );
+    }
   }
 }

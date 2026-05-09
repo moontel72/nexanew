@@ -300,6 +300,48 @@ class GenerateMasterAuthenticationCode extends UnitCodesEvent {
   List<Object?> get props => [unitCodeId, length];
 }
 
+/// Delete unit batch by group event
+class DeleteUnitBatchByGroup extends UnitCodesEvent {
+  final String batchId;
+  final String codeFormat;
+
+  const DeleteUnitBatchByGroup({
+    required this.batchId,
+    required this.codeFormat,
+  });
+
+  @override
+  List<Object?> get props => [batchId, codeFormat];
+}
+
+/// Push unit batch event
+class PushUnitBatch extends UnitCodesEvent {
+  final String batchId;
+  final String codeFormat;
+  final int count;
+
+  const PushUnitBatch({
+    required this.batchId,
+    required this.codeFormat,
+    required this.count,
+  });
+
+  @override
+  List<Object?> get props => [batchId, codeFormat, count];
+}
+
+/// Export unit batch event
+class ExportUnitBatch extends UnitCodesEvent {
+  final String batchId;
+  final String codeFormat;
+  final String format;
+
+  const ExportUnitBatch(this.batchId, this.codeFormat, this.format);
+
+  @override
+  List<Object?> get props => [batchId, codeFormat, format];
+}
+
 /// Reset verification count event
 class ResetVerificationCount extends UnitCodesEvent {
   final String unitCodeId;

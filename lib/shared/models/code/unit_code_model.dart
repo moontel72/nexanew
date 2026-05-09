@@ -188,6 +188,32 @@ abstract class UnitCodeModel with _$UnitCodeModel {
 
   const UnitCodeModel._();
 
+  /// Check if code can be deleted
+  bool get canDelete => status == CodeStatus.generated;
+
+  /// Check if code can be published
+  bool get canPublish =>
+      status == CodeStatus.generated || status == CodeStatus.linked;
+
+  /// Check if code can be deactivated
+  bool get canDeactivate => status == CodeStatus.published;
+
+  /// Get display name for code status
+  String get statusDisplayName {
+    switch (status) {
+      case CodeStatus.generated:
+        return 'Generated';
+      case CodeStatus.linked:
+        return 'Linked';
+      case CodeStatus.published:
+        return 'Published';
+      case CodeStatus.deactivated:
+        return 'Deactivated';
+      case CodeStatus.expired:
+        return 'Expired';
+    }
+  }
+
   /// Create a UnitCodeModel from BaseCodeModel
   factory UnitCodeModel.fromBaseCodeModel(
     BaseCodeModel baseCode, {
