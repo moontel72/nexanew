@@ -553,13 +553,15 @@ $registerRoutes = function (): void {
 
             Route::middleware("auth:factory")->group(function (): void {
             Route::prefix("unit")->group(function (): void {
-                Route::get("batches", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "listBatches"]);
-                Route::post("generate", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "generate"]);
-                Route::get("list", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "list"]);
-                Route::post("{format}/generate", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "generateForFormat"])->where(['format' => 'itf14|gs1_128|code128_industrial|qr|datamatrix|code128_label|auth_code']);
-                Route::get("{format}/list", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "listForFormat"])->where(['format' => 'itf14|gs1_128|code128_industrial|qr|datamatrix|code128_label|auth_code']);
-                Route::post("download", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "download"]);
-            });
+                            Route::get("batches", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "listBatches"]);
+                            Route::post("batch/delete", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "deleteBatch"]);
+                            Route::post("generate", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "generate"]);
+                            Route::get("list", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "list"]);
+                            Route::post("{format}/generate", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "generateForFormat"])->where(['format' => 'itf14|gs1_128|code128_industrial|qr|datamatrix|code128_label|auth_code']);
+                            Route::get("{format}/list", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "listForFormat"])->where(['format' => 'itf14|gs1_128|code128_industrial|qr|datamatrix|code128_label|auth_code']);
+                            Route::post("publish", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "publish"]);
+                            Route::post("download", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "download"]);
+                        });
 
             Route::prefix("packet")->group(function (): void {
                 Route::get("batches", [

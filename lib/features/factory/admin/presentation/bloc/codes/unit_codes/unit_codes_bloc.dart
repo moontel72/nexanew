@@ -427,7 +427,11 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
   ) async {
     try {
       emit(state.copyWith(status: UnitCodesStatus.deleting));
-      await Future.delayed(const Duration(milliseconds: 500));
+
+      await _codesRepository.deleteUnitBatch(
+        batchId: event.batchId,
+        codeFormat: event.codeFormat,
+      );
 
       final updatedCodes = state.unitCodes
           .where(
@@ -447,7 +451,7 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
       emit(
         state.copyWith(
           status: UnitCodesStatus.error,
-          errorMessage: error.toString(),
+          errorMessage: 'Failed to delete batch: $error',
         ),
       );
     }
@@ -461,9 +465,28 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     try {
       emit(state.copyWith(status: UnitCodesStatus.publishing));
 
+      final publishedCount = await _codesRepository.publishUnitBatch(
+        batchId: event.batchId,
+        codeFormat: event.codeFormat,
+        count: event.count,
+      );
+
+      if (publishedCount <= 0) {
+        emit(state.copyWith(status: UnitCodesStatus.published));
+        return;
+      }
+
+      final now = DateTime.now();
       final updated = state.unitCodes.map((c) {
-        if (c.batchId == event.batchId && c.codeFormat == event.codeFormat) {
-          return c.copyWith(status: CodeStatus.published);
+        if (c.batchId == event.batchId &&
+            c.codeFormat == event.codeFormat &&
+            (c.status == CodeStatus.generated ||
+                c.status == CodeStatus.linked)) {
+          return c.copyWith(
+            status: CodeStatus.published,
+            publishedAt: now,
+            updatedAt: now,
+          );
         }
         return c;
       }).toList();
@@ -486,7 +509,7 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
       emit(
         state.copyWith(
           status: UnitCodesStatus.error,
-          errorMessage: error.toString(),
+          errorMessage: 'Failed to push batch: $error',
         ),
       );
     }
@@ -501,7 +524,7 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
         state.copyWith(status: UnitCodesStatus.exporting, isExporting: true),
       );
       final path = await _codesRepository.downloadUnitCodes(
-        codeIds: [], // download by batch via API
+        codeIds: [],
         format: event.format,
         batchId: event.batchId,
         codeFormat: event.codeFormat,
@@ -514,11 +537,37 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
         ),
       );
     } catch (e) {
+      if (e is ServerException && e.statusCode == 423) {
+        String invoiceNumber = '';
+        final data = e.responseData;
+        if (data is Map) {
+          final root = Map<String, dynamic>.from(data.cast<String, dynamic>());
+          final nested = root['data'];
+          if (nested is Map) {
+            final nestedMap = Map<String, dynamic>.from(
+              nested.cast<String, dynamic>(),
+            );
+            invoiceNumber = (nestedMap['invoice_number'] ?? '').toString();
+          }
+        }
+
+        emit(
+          state.copyWith(
+            status: UnitCodesStatus.error,
+            errorMessage: invoiceNumber.trim().isEmpty
+                ? 'DOWNLOAD_LOCKED'
+                : 'DOWNLOAD_LOCKED|$invoiceNumber',
+            isExporting: false,
+          ),
+        );
+        return;
+      }
+
       emit(
         state.copyWith(
           status: UnitCodesStatus.error,
           isExporting: false,
-          errorMessage: e.toString(),
+          errorMessage: 'Download failed: $e',
         ),
       );
     }

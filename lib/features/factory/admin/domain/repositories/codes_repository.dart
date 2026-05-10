@@ -195,6 +195,17 @@ abstract class CodesRepository {
     bool includeInternationalCodes = true,
   });
 
+  Future<int> publishUnitBatch({
+    required String batchId,
+    required String codeFormat,
+    required int count,
+  });
+
+  Future<int> deleteUnitBatch({
+    required String batchId,
+    required String codeFormat,
+  });
+
   Future<String> downloadUnitCodes({
     required List<String> codeIds,
     required String format,

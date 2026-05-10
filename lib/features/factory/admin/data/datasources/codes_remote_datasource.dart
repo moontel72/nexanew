@@ -586,6 +586,29 @@ class CodesRemoteDatasource {
     return (res as Map).cast<String, dynamic>();
   }
 
+  Future<Map<String, dynamic>> publishUnitCodesByBatchAndFormat({
+    required String batchId,
+    required String codeFormat,
+    required int count,
+  }) async {
+    final res = await _api.post(
+      '${ApiEndpoints.unitCodes}/publish',
+      data: {'batch_id': batchId, 'code_format': codeFormat, 'count': count},
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> deleteUnitBatch({
+    required String batchId,
+    required String codeFormat,
+  }) async {
+    final res = await _api.post(
+      '${ApiEndpoints.unitCodes}/batch/delete',
+      data: {'batch_id': batchId, 'code_format': codeFormat},
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
   Future<Map<String, dynamic>> downloadUnitCodes({
     required List<String> codeIds,
     required String format,

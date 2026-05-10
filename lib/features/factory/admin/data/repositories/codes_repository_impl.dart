@@ -551,6 +551,34 @@ class CodesRepositoryImpl implements CodesRepository {
   }
 
   @override
+  Future<int> publishUnitBatch({
+    required String batchId,
+    required String codeFormat,
+    required int count,
+  }) async {
+    final res = await _remote.publishUnitCodesByBatchAndFormat(
+      batchId: batchId,
+      codeFormat: codeFormat,
+      count: count,
+    );
+    final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    return int.tryParse((data['published_count'] ?? 0).toString()) ?? 0;
+  }
+
+  @override
+  Future<int> deleteUnitBatch({
+    required String batchId,
+    required String codeFormat,
+  }) async {
+    final res = await _remote.deleteUnitBatch(
+      batchId: batchId,
+      codeFormat: codeFormat,
+    );
+    final data = (res['data'] as Map?)?.cast<String, dynamic>() ?? {};
+    return int.tryParse((data['deleted'] ?? 0).toString()) ?? 0;
+  }
+
+  @override
   Future<String> downloadUnitCodes({
     required List<String> codeIds,
     required String format,
