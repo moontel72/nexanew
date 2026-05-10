@@ -589,20 +589,23 @@ class CodesRemoteDatasource {
   Future<Map<String, dynamic>> downloadUnitCodes({
     required List<String> codeIds,
     required String format,
+    String? batchId,
+    String? codeFormat,
     bool includeQrCodes = true,
     bool includeBarcodes = true,
     bool includeInternationalCodes = true,
   }) async {
-    final res = await _api.post(
-      ApiEndpoints.downloadUnitCodes,
-      data: {
-        'format': format,
-        'code_ids': codeIds,
-        'include_qr_codes': includeQrCodes,
-        'include_barcodes': includeBarcodes,
-        'include_international_codes': includeInternationalCodes,
-      },
-    );
+    final body = <String, dynamic>{
+      'format': format,
+      if (codeIds.isNotEmpty) 'code_ids': codeIds,
+      if (batchId != null && batchId.isNotEmpty) 'batch_id': batchId,
+      if (codeFormat != null && codeFormat.isNotEmpty)
+        'code_format': codeFormat,
+      'include_qr_codes': includeQrCodes,
+      'include_barcodes': includeBarcodes,
+      'include_international_codes': includeInternationalCodes,
+    };
+    final res = await _api.post(ApiEndpoints.downloadUnitCodes, data: body);
     return (res as Map).cast<String, dynamic>();
   }
 }

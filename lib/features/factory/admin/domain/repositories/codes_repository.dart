@@ -198,6 +198,8 @@ abstract class CodesRepository {
   Future<String> downloadUnitCodes({
     required List<String> codeIds,
     required String format,
+    String? batchId,
+    String? codeFormat,
     bool includeQrCodes = true,
     bool includeBarcodes = true,
     bool includeInternationalCodes = true,

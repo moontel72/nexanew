@@ -457,21 +457,29 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
     PushUnitBatch event,
     Emitter<UnitCodesState> emit,
   ) async {
+    final currentFilter = state.filterCodeFormat;
     try {
       emit(state.copyWith(status: UnitCodesStatus.publishing));
-      await Future.delayed(const Duration(milliseconds: 500));
 
-      final updatedCodes = state.unitCodes.map((c) {
+      final updated = state.unitCodes.map((c) {
         if (c.batchId == event.batchId && c.codeFormat == event.codeFormat) {
           return c.copyWith(status: CodeStatus.published);
         }
         return c;
       }).toList();
+
+      final filtered = currentFilter.isEmpty
+          ? updated
+          : updated.where((c) => c.codeFormat == currentFilter).toList();
+
       emit(
         state.copyWith(
           status: UnitCodesStatus.published,
-          unitCodes: updatedCodes,
-          filteredUnitCodes: updatedCodes,
+          unitCodes: updated,
+          filteredUnitCodes: filtered,
+          filterCodeFormat: currentFilter,
+          exportPath: null,
+          isExporting: false,
         ),
       );
     } catch (error) {
@@ -492,19 +500,12 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
       emit(
         state.copyWith(status: UnitCodesStatus.exporting, isExporting: true),
       );
-      final format = (event.format == 'pdf') ? 'pdf' : 'csv';
-      final codesToExport = state.unitCodes
-          .where(
-            (c) =>
-                c.batchId == event.batchId && c.codeFormat == event.codeFormat,
-          )
-          .toList();
-      final codeIds = codesToExport.map((c) => c.id).toList();
       final path = await _codesRepository.downloadUnitCodes(
-        codeIds: codeIds,
-        format: format,
+        codeIds: [], // download by batch via API
+        format: event.format,
+        batchId: event.batchId,
+        codeFormat: event.codeFormat,
       );
-
       emit(
         state.copyWith(
           status: UnitCodesStatus.exported,
@@ -512,38 +513,12 @@ class UnitCodesBloc extends Bloc<UnitCodesEvent, UnitCodesState> {
           exportPath: path,
         ),
       );
-    } catch (error) {
-      if (error is ServerException && error.statusCode == 423) {
-        String invoiceNumber = '';
-        final data = error.responseData;
-        if (data is Map) {
-          final root = Map<String, dynamic>.from(data.cast<String, dynamic>());
-          final nested = root['data'];
-          if (nested is Map) {
-            final nestedMap = Map<String, dynamic>.from(
-              nested.cast<String, dynamic>(),
-            );
-            invoiceNumber = (nestedMap['invoice_number'] ?? '').toString();
-          }
-        }
-
-        emit(
-          state.copyWith(
-            status: UnitCodesStatus.error,
-            errorMessage: invoiceNumber.trim().isEmpty
-                ? 'DOWNLOAD_LOCKED'
-                : 'DOWNLOAD_LOCKED|$invoiceNumber',
-            isExporting: false,
-          ),
-        );
-        return;
-      }
-
+    } catch (e) {
       emit(
         state.copyWith(
           status: UnitCodesStatus.error,
-          errorMessage: error.toString(),
           isExporting: false,
+          errorMessage: e.toString(),
         ),
       );
     }

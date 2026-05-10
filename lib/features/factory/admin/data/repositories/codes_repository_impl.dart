@@ -554,6 +554,8 @@ class CodesRepositoryImpl implements CodesRepository {
   Future<String> downloadUnitCodes({
     required List<String> codeIds,
     required String format,
+    String? batchId,
+    String? codeFormat,
     bool includeQrCodes = true,
     bool includeBarcodes = true,
     bool includeInternationalCodes = true,
@@ -561,6 +563,8 @@ class CodesRepositoryImpl implements CodesRepository {
     final res = await _remote.downloadUnitCodes(
       codeIds: codeIds,
       format: format,
+      batchId: batchId,
+      codeFormat: codeFormat,
       includeQrCodes: includeQrCodes,
       includeBarcodes: includeBarcodes,
       includeInternationalCodes: includeInternationalCodes,
