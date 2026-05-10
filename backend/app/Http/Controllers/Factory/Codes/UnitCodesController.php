@@ -10,6 +10,7 @@ use App\Services\Codes\CodeGenerator;
 use App\Services\Codes\CodeExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
@@ -45,6 +46,8 @@ class UnitCodesController extends Controller
             'expiry_date' => ['nullable', 'date'],
             'warranty_months' => ['nullable', 'integer', 'min:0', 'max:240'],
         ]);
+
+        Log::info('UNIT_GENERATE_REQUEST', ['code_format' => $data['code_format'] ?? 'MISSING', 'count' => $data['count'] ?? 0]);
 
         $companyId = (string) $user->company_id;
 
@@ -100,6 +103,8 @@ class UnitCodesController extends Controller
 
             $codeFormat = (string) $data['code_format'];
 
+            Log::info('UNIT_GENERATE_INSERT', ['code_format' => $codeFormat, 'count' => $count]);
+
             $unitRows = [];
             for ($i = 0; $i < $count; $i++) {
                 $id = $baseRows[$i]['id'];
@@ -146,6 +151,7 @@ class UnitCodesController extends Controller
                 'code_format' => $data['code_format'],
                 'product_id' => $data['product_id'],
                 'product_name' => $product->name,
+                '_debug_format' => $data['code_format'] ?? 'NOT_RECEIVED',
             ],
         ]);
     }
