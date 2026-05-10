@@ -12,6 +12,10 @@ readme = "README.md"
 crate-type = ["cdylib", "staticlib"]
 name = "nexatrace_rust"
 
+[[bin]]
+name = "nexatrace_rust"
+path = "src/main.rs"
+
 [dependencies]
 rand = "0.8.5"
 uuid = { version = "1.6.0", features = ["v4", "serde"] }

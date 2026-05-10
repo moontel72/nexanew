@@ -5,7 +5,7 @@ on:
     branches:
       - mainnew
     paths:
-      - "backend/**"  # Sirf backend ki tabdeeli par chalega
+      - "backend/**"
       - "rust/**"
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
       - name: Install PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: "8.2"
 
       - name: Install PHP dependencies
         run: |
@@ -29,10 +29,14 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Rust library
+      - name: Build Rust binary (CLI)
         run: |
           cd rust
           cargo build --release
+          # Verify binary exists
+          ls -la target/release/nexatrace_rust
+          # Make executable
+          chmod +x target/release/nexatrace_rust
 
       # 🔥 SSH Setup
       - name: Setup SSH
@@ -51,9 +55,18 @@ jobs:
         run: |
           rsync -avz --delete --exclude='.env' backend/ root@135.181.46.27:/var/www/nexatrace/admin-panel/
 
-      - name: Deploy Rust library to server
+      # 🔥 Deploy Rust source + compiled binary to server
+      #    This copies the entire rust/ directory so RustCodeGenerator.php
+      #    can find the binary at rust/target/release/nexatrace_rust
+      - name: Deploy Rust directory to server
         run: |
-          rsync -avz rust/target/release/*.so root@135.181.46.27:/var/www/nexatrace/rust-lib/
+          rsync -avz --delete rust/ root@135.181.46.27:/var/www/nexatrace/admin-panel/rust/
+
+      # 🔥 Also deploy shared libs to rust-lib for FFI consumers
+      - name: Deploy Rust shared libraries
+        run: |
+          ssh root@135.181.46.27 "mkdir -p /var/www/nexatrace/rust-lib"
+          rsync -avz rust/target/release/*.so root@135.181.46.27:/var/www/nexatrace/rust-lib/ 2>/dev/null || true
 
       # 🔥 Laravel optimize, Fix Permissions and Reload Nginx
       - name: Server Post-Deployment Tasks
@@ -61,27 +74,33 @@ jobs:
           ssh root@135.181.46.27 "
             cd /var/www/nexatrace/admin-panel
 
-            # 0. Ensure Rust library directory and permissions
-            mkdir -p /var/www/nexatrace/rust-lib
+            # 0. Ensure Rust binary permissions
+            if [ -f rust/target/release/nexatrace_rust ]; then
+              chmod +x rust/target/release/nexatrace_rust
+              echo 'Rust binary OK: ' \$(rust/target/release/nexatrace_rust --version)
+            else
+              echo 'WARNING: Rust binary not found at rust/target/release/nexatrace_rust'
+            fi
             chmod 755 /var/www/nexatrace/rust-lib/*.so 2>/dev/null || true
             chown -R www-data:www-data /var/www/nexatrace/rust-lib
+            chown -R www-data:www-data /var/www/nexatrace/admin-panel/rust
 
             # 1. Clear and cache Laravel config/routes
             php artisan optimize:clear
             php artisan optimize
-            
-            # 2. Fix Ownership (Change from 1001 to www-data)
+
+            # 2. Fix Ownership
             chown -R www-data:www-data /var/www/nexatrace/admin-panel
             chown -R www-data:www-data /var/www/nexatrace/frontend
-            
+
             # 3. Set standard permissions
             find /var/www/nexatrace/admin-panel -type d -exec chmod 755 {} \;
             find /var/www/nexatrace/admin-panel -type f -exec chmod 644 {} \;
-            
+
             # 4. Special permissions for storage and cache
             chmod -R 775 /var/www/nexatrace/admin-panel/storage
             chmod -R 775 /var/www/nexatrace/admin-panel/bootstrap/cache
-            
-            # 5. Reload Nginx to apply any changes
+
+            # 5. Reload Nginx
             systemctl reload nginx
           "
