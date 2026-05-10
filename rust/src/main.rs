@@ -62,13 +62,11 @@ struct GenerationStats {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
-    // Handle --version / -V
     if args.len() >= 2 && (args[1] == "--version" || args[1] == "-V") {
         println!("nexatrace_rust {}", env!("CARGO_PKG_VERSION"));
         return;
     }
 
-    // Require a subcommand
     if args.len() < 2 {
         eprintln!("Usage: nexatrace_rust <generate|--version>");
         std::process::exit(1);
@@ -94,15 +92,12 @@ fn main() {
 }
 
 fn handle_generate() -> Result<(), Box<dyn std::error::Error>> {
-    // Read JSON from stdin
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
 
     let request: GenerateRequest = serde_json::from_str(&input)?;
-
     let start = std::time::Instant::now();
 
-    // Generate codes based on type
     let codes: Vec<CodeOutput> = match request.code_type.as_str() {
         "bundle" => generate_bundle_output(&request)?,
         "carton" => generate_carton_output(&request)?,
@@ -133,25 +128,28 @@ fn handle_generate() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// ─── Per-type generators with sensible defaults ──────────────────
+
 fn generate_bundle_output(req: &GenerateRequest) -> Result<Vec<CodeOutput>, String> {
-    let codes = generators::bundle::generate_batch(
-        req.prefix.clone(),
-        1,
-        req.count,
-        req.company_id.clone(),
-    )
-    .map_err(|e| e.to_string())?;
+    let prefix = sanitize_prefix(&req.prefix, "BNDL");
+    let factory_id = sanitize_factory_id(&req.company_id);
+
+    let codes = generators::bundle::generate_batch(prefix, 1, req.count, factory_id)
+        .map_err(|e| e.to_string())?;
 
     Ok(map_to_output(codes, &req.prefix))
 }
 
 fn generate_carton_output(req: &GenerateRequest) -> Result<Vec<CodeOutput>, String> {
+    let prefix = sanitize_prefix(&req.prefix, "CART");
+    let factory_id = sanitize_factory_id(&req.company_id);
+
     let codes = generators::carton::generate_batch(
-        req.prefix.clone(),
+        prefix,
         1,
         req.count,
-        String::new(), // bundle_code — not used for standalone
-        req.company_id.clone(),
+        "BUNDLE-STANDALONE-001-ABC-DEF".to_string(),
+        factory_id,
     )
     .map_err(|e| e.to_string())?;
 
@@ -159,12 +157,15 @@ fn generate_carton_output(req: &GenerateRequest) -> Result<Vec<CodeOutput>, Stri
 }
 
 fn generate_packet_output(req: &GenerateRequest) -> Result<Vec<CodeOutput>, String> {
+    let prefix = sanitize_prefix(&req.prefix, "PKTZ");
+    let factory_id = sanitize_factory_id(&req.company_id);
+
     let codes = generators::packet::generate_batch(
-        req.prefix.clone(),
+        prefix,
         1,
         req.count,
-        String::new(), // carton_code — not used for standalone
-        req.company_id.clone(),
+        "CARTON-STANDALONE-001-ABC-DEF".to_string(),
+        factory_id,
     )
     .map_err(|e| e.to_string())?;
 
@@ -172,16 +173,41 @@ fn generate_packet_output(req: &GenerateRequest) -> Result<Vec<CodeOutput>, Stri
 }
 
 fn generate_unit_output(req: &GenerateRequest) -> Result<Vec<CodeOutput>, String> {
+    let prefix = sanitize_prefix(&req.prefix, "TSFG");
+    let factory_id = sanitize_factory_id(&req.company_id);
+
     let codes = generators::unit::generate_batch(
-        req.prefix.clone(),
+        prefix,
         1,
         req.count,
-        String::new(), // packet_code — not used for standalone
-        req.company_id.clone(),
+        "PACKET-STANDALONE-001-ABC-DEF".to_string(),
+        factory_id,
     )
     .map_err(|e| e.to_string())?;
 
     Ok(map_to_output(codes, &req.prefix))
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────
+
+/// Ensure prefix is 4 uppercase letters. Falls back to default if invalid.
+fn sanitize_prefix(input: &str, default: &str) -> String {
+    let trimmed = input.trim().to_uppercase();
+    if trimmed.len() == 4 && trimmed.chars().all(|c| c.is_ascii_uppercase()) {
+        trimmed
+    } else {
+        default.to_string()
+    }
+}
+
+/// Ensure factory_id is non-empty.
+fn sanitize_factory_id(input: &str) -> String {
+    let trimmed = input.trim().to_string();
+    if trimmed.is_empty() {
+        "DEFAULT-FACTORY".to_string()
+    } else {
+        trimmed
+    }
 }
 
 /// Map generated code strings to structured output

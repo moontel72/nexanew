@@ -22,7 +22,15 @@ class RustCodeGenerator
 {
     private ?string $binaryPath = null;
 
-    private const MIN_COUNT_FOR_RUST = 500; // Use Rust for batches >= 500 codes
+    /** Default 4-char prefixes per code type (Rust validates these). */
+    private const DEFAULT_PREFIXES = [
+        'bundle' => 'BNDL',
+        'carton' => 'CART',
+        'packet' => 'PKTZ',
+        'unit'   => 'TSFG',
+    ];
+
+    private const MIN_COUNT_FOR_RUST = 500;
 
     public function __construct(
         private CodeGenerator $phpFallback,
@@ -32,8 +40,6 @@ class RustCodeGenerator
 
     /**
      * Generate base codes using Rust (or PHP fallback).
-     *
-     * @return array Array of base code rows
      */
     public function generateBase(
         string $companyId,
@@ -42,7 +48,6 @@ class RustCodeGenerator
         int $count,
         array $baseOverrides = [],
     ): array {
-        // For small batches or when Rust is unavailable, use PHP fallback
         if ($count < self::MIN_COUNT_FOR_RUST || !$this->isAvailable()) {
             return $this->phpFallback->generateBase($companyId, $planId, $type, $count, $baseOverrides);
         }
@@ -59,25 +64,16 @@ class RustCodeGenerator
         }
     }
 
-    /**
-     * Check if the Rust binary is available and executable.
-     */
     public function isAvailable(): bool
     {
         return $this->binaryPath !== null && file_exists($this->binaryPath) && is_executable($this->binaryPath);
     }
 
-    /**
-     * Get the Rust binary path.
-     */
     public function binaryPath(): ?string
     {
         return $this->binaryPath;
     }
 
-    /**
-     * Get the module version from Rust binary.
-     */
     public function version(): string
     {
         if (!$this->isAvailable()) {
@@ -107,7 +103,7 @@ class RustCodeGenerator
             }
         }
 
-        Log::info('Rust binary not found. Code generation will use PHP fallback. Build with: cd rust && cargo build --release');
+        Log::info('Rust binary not found. Build with: cd rust && cargo build --release');
     }
 
     private function generateViaRust(
@@ -117,8 +113,13 @@ class RustCodeGenerator
         int $count,
         array $baseOverrides,
     ): array {
-        $batchId = $baseOverrides['batch_id'] ?? ('BATCH-' . now()->format('YmdHis') . '-' . \Illuminate\Support\Str::random(6));
-        $storeKeeperPrefix = $baseOverrides['store_keeper_prefix'] ?? strtoupper(substr($type, 0, 1));
+        $batchId = $baseOverrides['batch_id']
+            ?? ('BATCH-' . now()->format('YmdHis') . '-' . \Illuminate\Support\Str::random(6));
+
+        // Use 4-char prefix: explicit override > type default > first 4 chars of type
+        $storeKeeperPrefix = $baseOverrides['store_keeper_prefix']
+            ?? self::DEFAULT_PREFIXES[$type]
+            ?? strtoupper(str_pad(substr($type, 0, 4), 4, 'X'));
 
         $input = json_encode([
             'company_id' => $companyId,
@@ -134,7 +135,6 @@ class RustCodeGenerator
             throw new RuntimeException('Failed to encode Rust input JSON');
         }
 
-        // Call Rust binary via stdin/stdout pipe
         $process = Process::input($input)->run($this->binaryPath . ' generate');
 
         if (!$process->successful()) {
@@ -143,15 +143,25 @@ class RustCodeGenerator
 
         $output = json_decode($process->output(), true);
 
-        if (!is_array($output) || !isset($output['codes'])) {
-            throw new RuntimeException('Invalid Rust output: ' . $process->output());
+        if (!is_array($output)) {
+            throw new RuntimeException('Invalid Rust output (not JSON): ' . substr($process->output(), 0, 200));
+        }
+
+        // Rust returned an error
+        if (empty($output['success'])) {
+            throw new RuntimeException('Rust generation error: ' . ($output['error'] ?? 'unknown'));
+        }
+
+        $rustCodes = $output['codes'] ?? [];
+        if (empty($rustCodes)) {
+            throw new RuntimeException('Rust returned zero codes');
         }
 
         // Map Rust output to base_codes rows
         $rows = [];
-        foreach ($output['codes'] as $i => $codeData) {
+        foreach ($rustCodes as $codeData) {
             $id = $codeData['id'] ?? (string) \Illuminate\Support\Str::uuid();
-            $code = $codeData['code'] ?? (strtoupper($storeKeeperPrefix) . '-' . strtoupper(\Illuminate\Support\Str::random(10)));
+            $code = $codeData['code'] ?? ($storeKeeperPrefix . '-' . strtoupper(\Illuminate\Support\Str::random(10)));
             $storeKeeperCode = $codeData['store_keeper_code'] ?? ('SK-' . strtoupper(\Illuminate\Support\Str::random(10)));
 
             $rows[] = [
