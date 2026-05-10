@@ -97,6 +97,7 @@ _UnitCodeModel _$UnitCodeModelFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['activatedAt'] as String),
       activatedBy: json['activatedBy'] as String?,
       activationLocation: json['activationLocation'] as String?,
+      codeFormat: json['codeFormat'] as String? ?? 'qr',
     );
 
 Map<String, dynamic> _$UnitCodeModelToJson(_UnitCodeModel instance) =>
@@ -165,6 +166,7 @@ Map<String, dynamic> _$UnitCodeModelToJson(_UnitCodeModel instance) =>
       'activatedAt': instance.activatedAt?.toIso8601String(),
       'activatedBy': instance.activatedBy,
       'activationLocation': instance.activationLocation,
+      'codeFormat': instance.codeFormat,
     };
 
 const _$CodeTypeEnumMap = {
