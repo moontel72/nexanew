@@ -92,6 +92,7 @@ class BundleInsightsState extends Equatable {
   List<Object?> get props => [
     status,
     insightsData,
+    availableProducts,
     availableBatches,
     linkResult,
     errorMessage,
