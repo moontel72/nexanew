@@ -240,6 +240,49 @@ class AggregationController extends Controller
         ]);
     }
 
+    // ─── Available Products (for dropdown) ──────────────────────
+
+    /**
+     * List products that have available (unlinked) unit codes.
+     *
+     * GET /codes/aggregation/available-products
+     */
+    public function availableProducts(Request $request)
+    {
+        $user = $request->user();
+        $companyId = (string) $user->company_id;
+
+        $products = DB::table('products')
+            ->where('company_id', $companyId)
+            ->whereIn('id', function ($query) use ($companyId) {
+                $query->select('base_codes.product_id')
+                    ->from('base_codes')
+                    ->join('unit_codes', 'unit_codes.id', '=', 'base_codes.id')
+                    ->where('base_codes.company_id', $companyId)
+                    ->where('base_codes.status', 'published')
+                    ->where('base_codes.is_deleted', false)
+                    ->whereNull('unit_codes.packet_code_id')
+                    ->whereNotNull('base_codes.product_id')
+                    ->distinct();
+            })
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get()
+            ->map(fn($p) => [
+                'id' => (string) $p->id,
+                'name' => $p->name ?? '',
+            ])
+            ->values()
+            ->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'products' => $products,
+            ],
+        ]);
+    }
+
     // ─── Available Batches (for dropdown) ────────────────────────
 
     /**

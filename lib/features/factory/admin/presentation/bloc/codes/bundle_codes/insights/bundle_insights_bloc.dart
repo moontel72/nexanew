@@ -34,6 +34,10 @@ class LinkUnitsToPacketRequested extends BundleInsightsEvent {
   List<Object?> get props => [packetId, productId, batchId, quantity];
 }
 
+class LoadAvailableProducts extends BundleInsightsEvent {
+  const LoadAvailableProducts();
+}
+
 class FetchAvailableBatchesRequested extends BundleInsightsEvent {
   final String productId;
   const FetchAvailableBatchesRequested(this.productId);
@@ -52,6 +56,7 @@ enum BundleInsightsStatus { initial, loading, loaded, linking, linked, error }
 class BundleInsightsState extends Equatable {
   final BundleInsightsStatus status;
   final Map<String, dynamic>? insightsData;
+  final List<Map<String, dynamic>> availableProducts;
   final List<Map<String, dynamic>> availableBatches;
   final Map<String, dynamic>? linkResult;
   final String? errorMessage;
@@ -59,6 +64,7 @@ class BundleInsightsState extends Equatable {
   const BundleInsightsState({
     this.status = BundleInsightsStatus.initial,
     this.insightsData,
+    this.availableProducts = const [],
     this.availableBatches = const [],
     this.linkResult,
     this.errorMessage,
@@ -67,6 +73,7 @@ class BundleInsightsState extends Equatable {
   BundleInsightsState copyWith({
     BundleInsightsStatus? status,
     Map<String, dynamic>? insightsData,
+    List<Map<String, dynamic>>? availableProducts,
     List<Map<String, dynamic>>? availableBatches,
     Map<String, dynamic>? linkResult,
     String? errorMessage,
@@ -74,6 +81,7 @@ class BundleInsightsState extends Equatable {
     return BundleInsightsState(
       status: status ?? this.status,
       insightsData: insightsData ?? this.insightsData,
+      availableProducts: availableProducts ?? this.availableProducts,
       availableBatches: availableBatches ?? this.availableBatches,
       linkResult: linkResult ?? this.linkResult,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -99,6 +107,7 @@ class BundleInsightsBloc
   BundleInsightsBloc() : super(const BundleInsightsState()) {
     on<LoadBundleInsights>(_onLoad);
     on<LinkUnitsToPacketRequested>(_onLinkUnits);
+    on<LoadAvailableProducts>(_onLoadAvailableProducts);
     on<FetchAvailableBatchesRequested>(_onFetchBatches);
     on<ClearLinkResult>(_onClearResult);
   }
@@ -154,6 +163,24 @@ class BundleInsightsBloc
           errorMessage: e.toString(),
         ),
       );
+    }
+  }
+
+  Future<void> _onLoadAvailableProducts(
+    LoadAvailableProducts event,
+    Emitter<BundleInsightsState> emit,
+  ) async {
+    try {
+      final res = await _api.get(ApiEndpoints.aggregationAvailableProducts);
+      final data = res['data'] as Map<String, dynamic>?;
+      final products =
+          (data?['products'] as List<dynamic>?)
+              ?.map((p) => p as Map<String, dynamic>)
+              .toList() ??
+          [];
+      emit(state.copyWith(availableProducts: products));
+    } catch (_) {
+      emit(state.copyWith(availableProducts: []));
     }
   }
 

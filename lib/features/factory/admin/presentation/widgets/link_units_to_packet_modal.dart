@@ -5,18 +5,16 @@ import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/
 /// Modal for manually linking Units to a Packet.
 ///
 /// Flow:
-/// 1. Select Product → 2. Select Batch → 3. Enter Quantity → 4. Link Units
+/// 1. Products load automatically → 2. Select Product → 3. Select Batch → 4. Enter Quantity → 5. Link
 class LinkUnitsToPacketModal extends StatefulWidget {
   final String packetId;
   final String packetCode;
-  final List<Map<String, dynamic>> products;
   final BundleInsightsBloc bloc;
 
   const LinkUnitsToPacketModal({
     super.key,
     required this.packetId,
     required this.packetCode,
-    required this.products,
     required this.bloc,
   });
 
@@ -28,6 +26,13 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
   String? _selectedProductId;
   String? _selectedBatchId;
   final _quantityController = TextEditingController(text: '10');
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch products as soon as modal opens
+    widget.bloc.add(const LoadAvailableProducts());
+  }
 
   @override
   void dispose() {
@@ -64,9 +69,10 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
           }
         },
         builder: (context, state) {
+          final products = state.availableProducts;
           final batches = state.availableBatches;
           final isLoading = state.status == BundleInsightsStatus.linking;
-          final hasProducts = widget.products.isNotEmpty;
+          final hasProducts = products.isNotEmpty;
 
           return AlertDialog(
             title: const Text('Link Units to Packet'),
@@ -88,7 +94,7 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
                     const Padding(
                       padding: EdgeInsets.all(8),
                       child: Text(
-                        'No products available. Generate unit codes linked to a product first.',
+                        'No products with available unit codes found.\nGenerate unit codes linked to a product first.',
                         style: TextStyle(color: Colors.orange, fontSize: 13),
                       ),
                     )
@@ -103,7 +109,7 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
                           vertical: 10,
                         ),
                       ),
-                      items: widget.products.map((p) {
+                      items: products.map((p) {
                         return DropdownMenuItem<String>(
                           value: p['id'] as String,
                           child: Text(

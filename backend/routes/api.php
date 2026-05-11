@@ -568,7 +568,8 @@ $registerRoutes = function (): void {
                                             Route::post("link-units", [\App\Http\Controllers\Factory\Codes\AggregationController::class, "linkUnitsToPacket"]);
                                             Route::post("unlink-units", [\App\Http\Controllers\Factory\Codes\AggregationController::class, "unlinkUnitsFromPacket"]);
                                             Route::get("available-units", [\App\Http\Controllers\Factory\Codes\AggregationController::class, "availableUnits"]);
-                                            Route::get("available-batches", [\App\Http\Controllers\Factory\Codes\AggregationController::class, "availableBatches"]);
+                                            Route::get("available-products", [\App\Http\Controllers\Factory\Codes\AggregationController::class, "availableProducts"]);
+                Route::get("available-batches", [\App\Http\Controllers\Factory\Codes\AggregationController::class, "availableBatches"]);
                                         });
 
                                         Route::prefix("packet")->group(function (): void {

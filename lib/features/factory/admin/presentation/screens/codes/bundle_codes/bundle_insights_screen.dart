@@ -340,7 +340,6 @@ class _BundleInsightsScreenState extends State<BundleInsightsScreen> {
                   builder: (_) => LinkUnitsToPacketModal(
                     packetId: packet['id'] as String,
                     packetCode: packet['code'] as String? ?? '-',
-                    products: products,
                     bloc: bloc,
                   ),
                 ).then((didLink) {
