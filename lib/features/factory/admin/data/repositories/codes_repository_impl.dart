@@ -603,4 +603,49 @@ class CodesRepositoryImpl implements CodesRepository {
     if (downloadUrl.isNotEmpty) return downloadUrl;
     return (data['file_path'] ?? '').toString();
   }
+
+  @override
+  Future<Map<String, dynamic>> linkUnitsToPacket({
+    required String packetId,
+    required String productId,
+    required String batchId,
+    required int quantity,
+  }) async {
+    return await _remote.linkUnitsToPacket(
+      packetId: packetId,
+      productId: productId,
+      batchId: batchId,
+      quantity: quantity,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> unlinkUnitsFromPacket({
+    required String packetId,
+  }) async {
+    return await _remote.unlinkUnitsFromPacket(packetId: packetId);
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchAvailableUnits({
+    required String productId,
+    required String batchId,
+  }) async {
+    return await _remote.fetchAvailableUnits(
+      productId: productId,
+      batchId: batchId,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchAvailableBatches({
+    required String productId,
+  }) async {
+    return await _remote.fetchAvailableBatches(productId: productId);
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchBundleInsights(String bundleId) async {
+    return await _remote.fetchBundleInsights(bundleId);
+  }
 }

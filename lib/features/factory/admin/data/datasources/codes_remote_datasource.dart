@@ -631,4 +631,58 @@ class CodesRemoteDatasource {
     final res = await _api.post(ApiEndpoints.downloadUnitCodes, data: body);
     return (res as Map).cast<String, dynamic>();
   }
+
+  Future<Map<String, dynamic>> linkUnitsToPacket({
+    required String packetId,
+    required String productId,
+    required String batchId,
+    required int quantity,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.aggregationLinkUnits,
+      data: {
+        'packet_id': packetId,
+        'product_id': productId,
+        'batch_id': batchId,
+        'quantity': quantity,
+      },
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> unlinkUnitsFromPacket({
+    required String packetId,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.aggregationUnlinkUnits,
+      data: {'packet_id': packetId},
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> fetchAvailableUnits({
+    required String productId,
+    required String batchId,
+  }) async {
+    final res = await _api.get(
+      ApiEndpoints.aggregationAvailableUnits,
+      queryParameters: {'product_id': productId, 'batch_id': batchId},
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> fetchAvailableBatches({
+    required String productId,
+  }) async {
+    final res = await _api.get(
+      ApiEndpoints.aggregationAvailableBatches,
+      queryParameters: {'product_id': productId},
+    );
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> fetchBundleInsights(String bundleId) async {
+    final res = await _api.get(ApiEndpoints.bundleInsights(bundleId));
+    return (res as Map).cast<String, dynamic>();
+  }
 }

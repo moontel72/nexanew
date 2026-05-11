@@ -561,9 +561,17 @@ $registerRoutes = function (): void {
                             Route::get("{format}/list", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "listForFormat"])->where(['format' => 'itf14|gs1_128|code128_industrial|qr|datamatrix|code128_label|auth_code']);
                             Route::post("publish", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "publish"]);
                             Route::post("download", [\App\Http\Controllers\Factory\Codes\UnitCodesController::class, "download"]);
-                        });
+                                                    });
 
-            Route::prefix("packet")->group(function (): void {
+                                        // ─── Aggregation (Packet ↔ Unit linking) ────────────
+                                        Route::prefix("aggregation")->group(function (): void {
+                                            Route::post("link-units", [\App\Http\Controllers\Factory\Codes\AggregationController::class, "linkUnitsToPacket"]);
+                                            Route::post("unlink-units", [\App\Http\Controllers\Factory\Codes\AggregationController::class, "unlinkUnitsFromPacket"]);
+                                            Route::get("available-units", [\App\Http\Controllers\Factory\Codes\AggregationController::class, "availableUnits"]);
+                                            Route::get("available-batches", [\App\Http\Controllers\Factory\Codes\AggregationController::class, "availableBatches"]);
+                                        });
+
+                                        Route::prefix("packet")->group(function (): void {
                 Route::get("batches", [
                     \App\Http\Controllers\Factory\Codes\PacketCodesController::class,
                     "listBatches",
@@ -696,6 +704,7 @@ $registerRoutes = function (): void {
                 Route::put("{id}", [\App\Http\Controllers\Factory\BundleController::class, "update"]);
                 Route::delete("{id}", [\App\Http\Controllers\Factory\BundleController::class, "destroy"]);
                 Route::get("{id}/scan", [\App\Http\Controllers\Factory\BundleController::class, "scan"]);
+                Route::get("{id}/insights", [\App\Http\Controllers\Factory\Codes\BundleInsightsController::class, "show"]);
             });
 
             // ─── Smart Codes (OCR-Friendly, Delivery-Level) ───────

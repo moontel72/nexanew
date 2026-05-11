@@ -3,12 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * Thin Eloquent model for the carton_codes table.
- * Used only for relationship bindings — core logic stays in CartonCodesController.
- */
 class CartonCode extends Model
 {
     protected $table = 'carton_codes';
@@ -21,6 +19,8 @@ class CartonCode extends Model
         'packet_codes', 'sequence_number', 'total_units',
     ];
 
+    // ─── Relationships ──────────────────────────────────────────
+
     public function bundles(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -31,5 +31,15 @@ class CartonCode extends Model
             'id',
             'id'
         );
+    }
+
+    public function baseCode(): BelongsTo
+    {
+        return $this->belongsTo(BaseCode::class, 'id', 'id');
+    }
+
+    public function packets(): HasMany
+    {
+        return $this->hasMany(PacketCode::class, 'carton_code_id');
     }
 }

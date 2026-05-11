@@ -215,4 +215,26 @@ abstract class CodesRepository {
     bool includeBarcodes = true,
     bool includeInternationalCodes = true,
   });
+
+  Future<Map<String, dynamic>> linkUnitsToPacket({
+    required String packetId,
+    required String productId,
+    required String batchId,
+    required int quantity,
+  });
+
+  Future<Map<String, dynamic>> unlinkUnitsFromPacket({
+    required String packetId,
+  });
+
+  Future<Map<String, dynamic>> fetchAvailableUnits({
+    required String productId,
+    required String batchId,
+  });
+
+  Future<Map<String, dynamic>> fetchAvailableBatches({
+    required String productId,
+  });
+
+  Future<Map<String, dynamic>> fetchBundleInsights(String bundleId);
 }

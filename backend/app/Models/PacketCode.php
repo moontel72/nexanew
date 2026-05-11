@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Thin Eloquent model for the packet_codes table.
- * Used only for relationship bindings — core logic stays in PacketCodesController.
  */
 class PacketCode extends Model
 {
@@ -21,6 +22,8 @@ class PacketCode extends Model
         'unit_codes', 'sequence_number',
     ];
 
+    // ─── Relationships ──────────────────────────────────────────
+
     public function bundles(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -31,5 +34,20 @@ class PacketCode extends Model
             'id',
             'id'
         );
+    }
+
+    public function baseCode(): BelongsTo
+    {
+        return $this->belongsTo(BaseCode::class, 'id', 'id');
+    }
+
+    public function carton(): BelongsTo
+    {
+        return $this->belongsTo(CartonCode::class, 'carton_code_id');
+    }
+
+    public function units(): HasMany
+    {
+        return $this->hasMany(UnitCode::class, 'packet_code_id');
     }
 }
