@@ -144,7 +144,7 @@ class BundleInsightsBloc
     try {
       final result = await _api.post(
         ApiEndpoints.aggregationLinkUnits,
-        data: {
+        body: {
           'packet_id': event.packetId,
           'product_id': event.productId,
           'batch_id': event.batchId,
