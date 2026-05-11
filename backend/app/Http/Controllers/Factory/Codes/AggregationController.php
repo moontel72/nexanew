@@ -80,32 +80,55 @@ class AggregationController extends Controller
             ->map(fn ($v) => (string) $v)
             ->all();
 
-        DB::transaction(function () use ($unitIds, $packetId, $packet, $quantity, $currentUnitCount) {
-            // Link units to packet
-            UnitCode::whereIn('id', $unitIds)->update([
-                'packet_code_id' => $packetId,
+        try {
+            DB::transaction(function () use ($unitIds, $packetId, $packet, $quantity, $currentUnitCount) {
+                // Link units to packet
+                UnitCode::whereIn('id', $unitIds)->update([
+                    'packet_code_id' => $packetId,
+                ]);
+
+                // Update packet's unit_count and unit_codes array
+                $newCount = $currentUnitCount + $quantity;
+
+                // Update unit_codes array (PostgreSQL UUID[])
+                $existingRaw = DB::table('packet_codes')
+                    ->where('id', $packetId)
+                    ->value('unit_codes');
+
+                // Parse PostgreSQL array string → PHP array
+                $existing = [];
+                if ($existingRaw && $existingRaw !== '{}') {
+                    // Strip the outer braces and split
+                    $inner = trim($existingRaw, '{}');
+                    if ($inner !== '') {
+                        $existing = array_map('trim', explode(',', $inner));
+                    }
+                }
+
+                $merged = array_merge($existing, $unitIds);
+                $merged = array_unique($merged);
+
+                // Format as PostgreSQL UUID array literal
+                $pgArray = '{' . implode(',', $merged) . '}';
+
+                DB::table('packet_codes')
+                    ->where('id', $packetId)
+                    ->update([
+                        'unit_count' => $newCount,
+                        'unit_codes' => $pgArray,
+                    ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Failed to link units to packet', [
+                'packet_id' => $packetId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            // Update packet's unit_count and unit_codes array
-            $newCount = $currentUnitCount + $quantity;
-
-            // Update unit_codes array (PostgreSQL UUID[])
-            $existingArray = DB::table('packet_codes')
-                ->where('id', $packetId)
-                ->value('unit_codes');
-
-            $merged = array_merge(
-                is_array($existingArray) ? $existingArray : [],
-                $unitIds
-            );
-
-            DB::table('packet_codes')
-                ->where('id', $packetId)
-                ->update([
-                    'unit_count' => $newCount,
-                    'unit_codes' => '{' . implode(',', $merged) . '}',
-                ]);
-        });
+            return response()->json([
+                'message' => 'Failed to link units: ' . $e->getMessage(),
+            ], 500);
+        }
 
         // 5. Load linked units for response
         $linkedUnits = UnitCode::with('baseCode')
