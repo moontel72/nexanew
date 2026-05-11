@@ -151,10 +151,14 @@ class BundleInsightsBloc
           'quantity': event.quantity,
         },
       );
+      // Store the raw result — listener will extract what it needs
+      final Map<String, dynamic> safeResult = result is Map<String, dynamic>
+          ? result
+          : <String, dynamic>{};
       emit(
         state.copyWith(
           status: BundleInsightsStatus.linked,
-          linkResult: result as Map<String, dynamic>?,
+          linkResult: safeResult,
         ),
       );
     } catch (e) {

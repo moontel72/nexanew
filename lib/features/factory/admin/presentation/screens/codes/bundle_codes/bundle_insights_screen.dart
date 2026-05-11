@@ -343,7 +343,7 @@ class _BundleInsightsScreenState extends State<BundleInsightsScreen> {
                     bloc: bloc,
                   ),
                 ).then((didLink) {
-                  if (didLink == true) {
+                  if (didLink == true && mounted) {
                     // Refresh insights
                     context.read<BundleInsightsBloc>().add(
                       LoadBundleInsights(widget.bundleId),

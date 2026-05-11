@@ -48,14 +48,17 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
         listener: (context, state) {
           if (state.status == BundleInsightsStatus.linked &&
               state.linkResult != null) {
-            final data = state.linkResult!['data'] as Map<String, dynamic>?;
-            final count = data?['linked_count'] ?? 0;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('$count units linked to packet!'),
-                backgroundColor: Colors.green,
-              ),
-            );
+            final result = state.linkResult!;
+            final data = result['data'];
+            final count = (data is Map) ? (data['linked_count'] ?? 0) : 0;
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('$count units linked to packet!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
             Navigator.pop(context, true);
           }
           if (state.status == BundleInsightsStatus.error &&
