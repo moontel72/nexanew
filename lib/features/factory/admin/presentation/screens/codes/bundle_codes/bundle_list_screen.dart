@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/insights/bundle_insights_bloc.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_insights_screen.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
@@ -37,6 +39,18 @@ class _BundleListScreenState extends State<BundleListScreen> {
     }
   }
 
+  void _openInsights(String bundleId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => BundleInsightsBloc(),
+          child: BundleInsightsScreen(bundleId: bundleId),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,34 +77,99 @@ class _BundleListScreenState extends State<BundleListScreen> {
               final b = state.bundles[i];
               return Card(
                 margin: EdgeInsets.only(bottom: 12.h),
-                child: ListTile(
-                  leading: Icon(Icons.layers, color: _statusColor(b.status)),
-                  title: Text(
-                    b.bundleCode,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    '${b.orderReference} \u2022 Cartons: ${b.totalCartons} \u2022 Packets: ${b.totalPackets}',
-                  ),
-                  trailing: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 4.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _statusColor(b.status).withAlpha(30),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      b.status,
-                      style: TextStyle(
-                        color: _statusColor(b.status),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12.sp,
+                child: Padding(
+                  padding: EdgeInsets.all(12.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Top row: icon, title, status badge ──
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.layers,
+                            color: _statusColor(b.status),
+                            size: 28.w,
+                          ),
+                          SizedBox(width: 12.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  b.bundleCode,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                SizedBox(height: 2.h),
+                                Text(
+                                  '${b.orderReference} \u2022 Cartons: ${b.totalCartons} \u2022 Packets: ${b.totalPackets}',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10.w,
+                              vertical: 4.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _statusColor(b.status).withAlpha(30),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              b.status,
+                              style: TextStyle(
+                                color: _statusColor(b.status),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12.sp,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
+
+                      SizedBox(height: 10.h),
+
+                      // ── Action buttons ──
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openInsights(b.id),
+                              icon: const Icon(Icons.link, size: 18),
+                              label: const Text('Manage Units'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                side: const BorderSide(
+                                  color: AppColors.primary,
+                                ),
+                                padding: EdgeInsets.symmetric(vertical: 8.h),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          OutlinedButton(
+                            onPressed: () => context.read<BundleBloc>().add(
+                              ShowBundle(b.id),
+                            ),
+                            child: const Text('Details'),
+                            style: OutlinedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16.w,
+                                vertical: 8.h,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  onTap: () => context.read<BundleBloc>().add(ShowBundle(b.id)),
                 ),
               );
             },

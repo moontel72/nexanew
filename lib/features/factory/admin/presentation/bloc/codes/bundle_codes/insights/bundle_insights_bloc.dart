@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/features/factory/admin/domain/repositories/codes_repository.dart';
+import 'package:nexatrace_system/core/constants/api_endpoints.dart';
+import 'package:nexatrace_system/core/services/api_service.dart';
 
 // ─── Events ─────────────────────────────────────────────────────
 
@@ -93,11 +94,9 @@ class BundleInsightsState extends Equatable {
 
 class BundleInsightsBloc
     extends Bloc<BundleInsightsEvent, BundleInsightsState> {
-  final CodesRepository _repository;
+  final ApiService _api = ApiService();
 
-  BundleInsightsBloc({required CodesRepository repository})
-    : _repository = repository,
-      super(const BundleInsightsState()) {
+  BundleInsightsBloc() : super(const BundleInsightsState()) {
     on<LoadBundleInsights>(_onLoad);
     on<LinkUnitsToPacketRequested>(_onLinkUnits);
     on<FetchAvailableBatchesRequested>(_onFetchBatches);
@@ -110,11 +109,11 @@ class BundleInsightsBloc
   ) async {
     emit(state.copyWith(status: BundleInsightsStatus.loading));
     try {
-      final data = await _repository.fetchBundleInsights(event.bundleId);
+      final res = await _api.get(ApiEndpoints.bundleInsights(event.bundleId));
       emit(
         state.copyWith(
           status: BundleInsightsStatus.loaded,
-          insightsData: data['data'] as Map<String, dynamic>?,
+          insightsData: res['data'] as Map<String, dynamic>?,
         ),
       );
     } catch (e) {
@@ -133,14 +132,20 @@ class BundleInsightsBloc
   ) async {
     emit(state.copyWith(status: BundleInsightsStatus.linking));
     try {
-      final result = await _repository.linkUnitsToPacket(
-        packetId: event.packetId,
-        productId: event.productId,
-        batchId: event.batchId,
-        quantity: event.quantity,
+      final result = await _api.post(
+        ApiEndpoints.aggregationLinkUnits,
+        data: {
+          'packet_id': event.packetId,
+          'product_id': event.productId,
+          'batch_id': event.batchId,
+          'quantity': event.quantity,
+        },
       );
       emit(
-        state.copyWith(status: BundleInsightsStatus.linked, linkResult: result),
+        state.copyWith(
+          status: BundleInsightsStatus.linked,
+          linkResult: result as Map<String, dynamic>?,
+        ),
       );
     } catch (e) {
       emit(
@@ -157,8 +162,9 @@ class BundleInsightsBloc
     Emitter<BundleInsightsState> emit,
   ) async {
     try {
-      final res = await _repository.fetchAvailableBatches(
-        productId: event.productId,
+      final res = await _api.get(
+        ApiEndpoints.aggregationAvailableBatches,
+        queryParameters: {'product_id': event.productId},
       );
       final data = res['data'] as Map<String, dynamic>?;
       final batches =
