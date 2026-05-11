@@ -334,12 +334,14 @@ class _BundleInsightsScreenState extends State<BundleInsightsScreen> {
               icon: const Icon(Icons.link, size: 20, color: Colors.blue),
               tooltip: 'Link Units to this Packet',
               onPressed: () {
+                final bloc = context.read<BundleInsightsBloc>();
                 showDialog(
                   context: context,
                   builder: (_) => LinkUnitsToPacketModal(
                     packetId: packet['id'] as String,
                     packetCode: packet['code'] as String? ?? '-',
                     products: products,
+                    bloc: bloc,
                   ),
                 ).then((didLink) {
                   if (didLink == true) {

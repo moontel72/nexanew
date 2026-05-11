@@ -5,21 +5,19 @@ import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/
 /// Modal for manually linking Units to a Packet.
 ///
 /// Flow:
-/// 1. Select Product (from available products dropdown)
-/// 2. Select Batch (filtered by selected product)
-/// 3. Enter Quantity (manual input)
-/// 4. Tap "Link Units" — the system fetches that many available units
-///    and links them to the packet.
+/// 1. Select Product → 2. Select Batch → 3. Enter Quantity → 4. Link Units
 class LinkUnitsToPacketModal extends StatefulWidget {
   final String packetId;
   final String packetCode;
   final List<Map<String, dynamic>> products;
+  final BundleInsightsBloc bloc;
 
   const LinkUnitsToPacketModal({
     super.key,
     required this.packetId,
     required this.packetCode,
     required this.products,
+    required this.bloc,
   });
 
   @override
@@ -40,7 +38,7 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
-      value: context.read<BundleInsightsBloc>(),
+      value: widget.bloc,
       child: BlocConsumer<BundleInsightsBloc, BundleInsightsState>(
         listener: (context, state) {
           if (state.status == BundleInsightsStatus.linked &&
@@ -68,9 +66,10 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
         builder: (context, state) {
           final batches = state.availableBatches;
           final isLoading = state.status == BundleInsightsStatus.linking;
+          final hasProducts = widget.products.isNotEmpty;
 
           return AlertDialog(
-            title: Text('Link Units to Packet'),
+            title: const Text('Link Units to Packet'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -85,41 +84,58 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
                   const SizedBox(height: 16),
 
                   // ── Product Dropdown ──
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedProductId,
-                    decoration: const InputDecoration(
-                      labelText: 'Select Product',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: widget.products.map((p) {
-                      return DropdownMenuItem<String>(
-                        value: p['id'] as String,
-                        child: Text(
-                          p['name'] as String? ?? p['id'] as String,
-                          overflow: TextOverflow.ellipsis,
+                  if (!hasProducts)
+                    const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'No products available. Generate unit codes linked to a product first.',
+                        style: TextStyle(color: Colors.orange, fontSize: 13),
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      value: _selectedProductId,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Product',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedProductId = value;
-                        _selectedBatchId = null;
-                      });
-                      if (value != null) {
-                        context.read<BundleInsightsBloc>().add(
-                          FetchAvailableBatchesRequested(value),
+                      ),
+                      items: widget.products.map((p) {
+                        return DropdownMenuItem<String>(
+                          value: p['id'] as String,
+                          child: Text(
+                            p['name'] as String? ?? p['id'] as String,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
-                      }
-                    },
-                  ),
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedProductId = value;
+                          _selectedBatchId = null;
+                        });
+                        if (value != null) {
+                          widget.bloc.add(
+                            FetchAvailableBatchesRequested(value),
+                          );
+                        }
+                      },
+                    ),
                   const SizedBox(height: 12),
 
                   // ── Batch Dropdown ──
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedBatchId,
+                    value: _selectedBatchId,
                     decoration: const InputDecoration(
                       labelText: 'Select Batch',
                       border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                     ),
                     items: batches.map((b) {
                       final batchId = b['batch_id'] as String;
@@ -129,16 +145,14 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
                         child: Text('$batchId ($count available)'),
                       );
                     }).toList(),
-                    onChanged: _selectedProductId == null
+                    onChanged: _selectedProductId == null || !hasProducts
                         ? null
-                        : (value) {
-                            setState(() => _selectedBatchId = value);
-                          },
+                        : (value) => setState(() => _selectedBatchId = value),
                     hint: Text(
                       _selectedProductId == null
                           ? 'Select a product first'
                           : batches.isEmpty
-                          ? 'No batches available'
+                          ? 'No batches with available units'
                           : 'Choose batch',
                     ),
                   ),
@@ -152,6 +166,10 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
                       labelText: 'Quantity (units to link)',
                       border: OutlineInputBorder(),
                       hintText: 'e.g. 6, 10, 12',
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                     ),
                   ),
                 ],
@@ -177,11 +195,12 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Please enter a valid quantity'),
+                              backgroundColor: Colors.red,
                             ),
                           );
                           return;
                         }
-                        context.read<BundleInsightsBloc>().add(
+                        widget.bloc.add(
                           LinkUnitsToPacketRequested(
                             packetId: widget.packetId,
                             productId: _selectedProductId!,
