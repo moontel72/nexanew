@@ -46,29 +46,13 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
       value: widget.bloc,
       child: BlocConsumer<BundleInsightsBloc, BundleInsightsState>(
         listener: (context, state) {
-          if (state.status == BundleInsightsStatus.linked &&
-              state.linkResult != null) {
-            final result = state.linkResult!;
-            final data = result['data'];
-            final count = (data is Map) ? (data['linked_count'] ?? 0) : 0;
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('$count units linked to packet!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
+          if (state.status == BundleInsightsStatus.linked) {
+            // Success — just close the modal
             Navigator.pop(context, true);
           }
           if (state.status == BundleInsightsStatus.error &&
               state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: Colors.red,
-              ),
-            );
+            // Show error in the UI instead of SnackBar
           }
         },
         builder: (context, state) {
@@ -84,6 +68,22 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Show error if any
+                  if (state.errorMessage != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Text(
+                        state.errorMessage!,
+                        style: TextStyle(color: Colors.red.shade800, fontSize: 13),
+                      ),
+                    ),
                   Text(
                     'Packet: ${widget.packetCode}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
