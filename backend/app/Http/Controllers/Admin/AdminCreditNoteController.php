@@ -465,3 +465,14 @@ class AdminCreditNoteController extends Controller
                         'applied_at' => now()->toISOString(),
                     ],
                     'invoice' => $result['invoice'] ?? null,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'APPLY_FAILED', 'message' => $e->getMessage()],
+            ], 500);
+        }
+    }
+}
