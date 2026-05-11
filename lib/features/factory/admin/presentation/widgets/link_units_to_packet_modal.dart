@@ -86,7 +86,7 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
 
                   // ── Product Dropdown ──
                   DropdownButtonFormField<String>(
-                    value: _selectedProductId,
+                    initialValue: _selectedProductId,
                     decoration: const InputDecoration(
                       labelText: 'Select Product',
                       border: OutlineInputBorder(),
@@ -116,7 +116,7 @@ class _LinkUnitsToPacketModalState extends State<LinkUnitsToPacketModal> {
 
                   // ── Batch Dropdown ──
                   DropdownButtonFormField<String>(
-                    value: _selectedBatchId,
+                    initialValue: _selectedBatchId,
                     decoration: const InputDecoration(
                       labelText: 'Select Batch',
                       border: OutlineInputBorder(),

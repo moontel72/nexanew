@@ -77,99 +77,55 @@ class _BundleListScreenState extends State<BundleListScreen> {
               final b = state.bundles[i];
               return Card(
                 margin: EdgeInsets.only(bottom: 12.h),
-                child: Padding(
-                  padding: EdgeInsets.all(12.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                child: ListTile(
+                  leading: Icon(Icons.layers, color: _statusColor(b.status)),
+                  title: Text(
+                    b.bundleCode,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    '${b.orderReference} \u2022 Cartons: ${b.totalCartons} \u2022 Packets: ${b.totalPackets}',
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // ── Top row: icon, title, status badge ──
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.layers,
-                            color: _statusColor(b.status),
-                            size: 28.w,
-                          ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  b.bundleCode,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                SizedBox(height: 2.h),
-                                Text(
-                                  '${b.orderReference} \u2022 Cartons: ${b.totalCartons} \u2022 Packets: ${b.totalPackets}',
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 10.w,
-                              vertical: 4.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _statusColor(b.status).withAlpha(30),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              b.status,
-                              style: TextStyle(
-                                color: _statusColor(b.status),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12.sp,
-                              ),
-                            ),
-                          ),
-                        ],
+                      // Link Units chip
+                      ActionChip(
+                        avatar: const Icon(Icons.link, size: 16),
+                        label: const Text(
+                          'Link Units',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                        backgroundColor: AppColors.primary.withAlpha(20),
+                        side: const BorderSide(color: AppColors.primary),
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => _openInsights(b.id),
                       ),
-
-                      SizedBox(height: 10.h),
-
-                      // ── Action buttons ──
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _openInsights(b.id),
-                              icon: const Icon(Icons.link, size: 18),
-                              label: const Text('Manage Units'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.primary,
-                                side: const BorderSide(
-                                  color: AppColors.primary,
-                                ),
-                                padding: EdgeInsets.symmetric(vertical: 8.h),
-                              ),
-                            ),
+                      SizedBox(width: 6.w),
+                      // Draft badge
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10.w,
+                          vertical: 4.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _statusColor(b.status).withAlpha(30),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          b.status,
+                          style: TextStyle(
+                            color: _statusColor(b.status),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12.sp,
                           ),
-                          SizedBox(width: 8.w),
-                          OutlinedButton(
-                            onPressed: () => context.read<BundleBloc>().add(
-                              ShowBundle(b.id),
-                            ),
-                            child: const Text('Details'),
-                            style: OutlinedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 16.w,
-                                vertical: 8.h,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
+                  // Tap the whole row to open insights
+                  onTap: () => _openInsights(b.id),
                 ),
               );
             },
