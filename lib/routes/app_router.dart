@@ -40,6 +40,13 @@ import 'package:nexatrace_system/features/factory/admin/presentation/screens/pro
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/store_keepers/store_keepers_list_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/store_keepers/create_store_keeper_screen.dart';
 import 'package:nexatrace_system/core/utils/auth_state.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/store_keeper_login_screen.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/store_keeper_dashboard.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/scanner_screen.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/linking_screen.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/rack_allocation_screen.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/inventory_screen.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/shift_summary_screen.dart';
 
 class AppRouter {
   late final GoRouter router;
@@ -360,6 +367,34 @@ class AppRouter {
           ],
         ),
       ],
+    ),
+    GoRoute(
+      path: '/factory/store-keeper/login',
+      builder: (context, state) => const StoreKeeperLoginScreen(),
+    ),
+    GoRoute(
+      path: '/factory/store-keeper/dashboard',
+      builder: (context, state) => const StoreKeeperDashboard(),
+    ),
+    GoRoute(
+      path: '/factory/store-keeper/scanner',
+      builder: (context, state) => const ScannerScreen(),
+    ),
+    GoRoute(
+      path: '/factory/store-keeper/linking',
+      builder: (context, state) => const LinkingScreen(),
+    ),
+    GoRoute(
+      path: '/factory/store-keeper/rack',
+      builder: (context, state) => const RackAllocationScreen(),
+    ),
+    GoRoute(
+      path: '/factory/store-keeper/inventory',
+      builder: (context, state) => const InventoryScreen(),
+    ),
+    GoRoute(
+      path: '/factory/store-keeper/shift-summary',
+      builder: (context, state) => const ShiftSummaryScreen(),
     ),
   ];
 
