@@ -112,6 +112,7 @@ class AppRouter {
 
     final isFactoryRoute = path.startsWith('/factory');
     final isFactoryLogin = path == '/factory/login';
+    final isStoreKeeperLogin = path == '/factory/store-keeper/login';
 
     if (kDebugMode) {
       debugPrint(
@@ -121,6 +122,7 @@ class AppRouter {
 
     if (isFactoryRoute) {
       if (!isFactoryAuthenticatedCache && !isFactoryLogin) {
+        if (isStoreKeeperLogin) return null;
         if (kDebugMode) {
           debugPrint(
             'ROUTER_REDIRECT: Not factory authenticated, redirecting to factory login',

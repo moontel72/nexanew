@@ -54,7 +54,7 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [AppColors.secondary.withOpacity(0.1), Colors.white],
+              colors: [Colors.amber.shade50, Colors.white],
             ),
           ),
           child: SafeArea(
@@ -68,7 +68,7 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
                       width: 80.w,
                       height: 80.w,
                       decoration: BoxDecoration(
-                        color: AppColors.accent,
+                        color: Colors.amber.shade700,
                         borderRadius: BorderRadius.circular(20.r),
                       ),
                       child: Icon(
@@ -83,7 +83,7 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: AppColors.accent,
+                            color: Colors.amber.shade700,
                           ),
                     ),
                     Gap(8.h),
@@ -182,7 +182,7 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
                       child: PrimaryButton(
                         onPressed: _login,
                         text: 'Sign In to Store Portal',
-                        backgroundColor: AppColors.accent,
+                        backgroundColor: Colors.amber.shade700,
                         textColor: Colors.white,
                         icon: Icons.login,
                       ),
@@ -210,7 +210,7 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
                           Text(
                             'Offline mode available',
                             style: Theme.of(context).textTheme.bodySmall
-                                                            ?.copyWith(color: AppColors.textSecondary),
+                                ?.copyWith(color: AppColors.textSecondary),
                           ),
                         ],
                       ),
