@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/data/datasources/local_database.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/data/repositories/store_keeper_repository.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/domain/entities/scan_record.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/domain/usecases/sync_data_usecase.dart';

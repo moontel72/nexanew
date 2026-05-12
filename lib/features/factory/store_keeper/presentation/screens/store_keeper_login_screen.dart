@@ -209,8 +209,8 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
                           Gap(8.w),
                           Text(
                             'Offline mode available',
-                            style: Theme.of(context).textTheme.caption
-                                ?.copyWith(color: AppColors.textSecondary),
+                            style: Theme.of(context).textTheme.bodySmall
+                                                            ?.copyWith(color: AppColors.textSecondary),
                           ),
                         ],
                       ),

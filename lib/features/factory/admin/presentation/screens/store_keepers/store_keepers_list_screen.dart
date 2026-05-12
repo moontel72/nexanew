@@ -134,7 +134,7 @@ class _StoreKeepersListScreenState extends State<StoreKeepersListScreen> {
         value: context.read<StoreKeepersBloc>(),
         child: BlocBuilder<StoreKeepersBloc, StoreKeepersState>(
           builder: (context, state) => AlertDialog(
-            title: Text('Audit — $name'),
+            title: Text('Audit - $name'),
             content: SizedBox(
               width: double.maxFinite,
               child: state.status == StoreKeepersStatus.auditLoading
@@ -147,7 +147,11 @@ class _StoreKeepersListScreenState extends State<StoreKeepersListScreen> {
                           separatorBuilder: (_, _) => const Divider(),
                           itemBuilder: (_, i) {
                             final e = state.auditEntries[i];
-                            return ListTile(dense: true, title: Text(e.action, style: const TextStyle(fontWeight: FontWeight.w600)), subtitle: Text('${e.type}: ${e.code}\n${e.timestamp ?? ''}'));
+                            return ListTile(
+                              dense: true,
+                              title: Text(e.action, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              subtitle: Text('${e.type}: ${e.code}\n${e.timestamp ?? ''}'),
+                            );
                           },
                         ),
             ),
@@ -168,72 +172,196 @@ class _StoreKeepersListScreenState extends State<StoreKeepersListScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: PrimaryButton(onPressed: _goToCreate, text: 'Create', icon: Icons.add, backgroundColor: AppColors.secondary, textColor: Colors.white, height: 38),
+            child: PrimaryButton(
+              onPressed: _goToCreate,
+              text: 'Create',
+              icon: Icons.add,
+              backgroundColor: AppColors.secondary,
+              textColor: Colors.white,
+              height: 38,
+            ),
           ),
         ],
       ),
       body: BlocConsumer<StoreKeepersBloc, StoreKeepersState>(
         listenWhen: (prev, curr) => curr.status == StoreKeepersStatus.deleted || curr.status == StoreKeepersStatus.error,
         listener: (context, state) {
-          if (state.status == StoreKeepersStatus.deleted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted')));
-          if (state.status == StoreKeepersStatus.error && state.errorMessage != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.errorMessage!), backgroundColor: AppColors.error));
+          if (state.status == StoreKeepersStatus.deleted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted')));
+          }
+          if (state.status == StoreKeepersStatus.error && state.errorMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.errorMessage!), backgroundColor: AppColors.error));
+          }
         },
         builder: (context, state) {
           final busy = state.status == StoreKeepersStatus.loading || state.status == StoreKeepersStatus.deleting;
-          return Column(children: [
-            Padding(padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 8.h), child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(hintText: 'Search by name, email, or employee ID…', prefixIcon: const Icon(Icons.search), suffixIcon: _searchController.text.trim().isEmpty ? null : IconButton(onPressed: () { _searchController.clear(); _loadData(); setState(() {}); }, icon: const Icon(Icons.clear)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r))),
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (_) => _loadData(),
-            )),
-            Padding(padding: EdgeInsets.symmetric(horizontal: 16.w), child: Row(children: [
-              _chip('All', _statusFilter == null, null, () { setState(() => _statusFilter = null); _loadData(); }),
-              SizedBox(width: 8.w),
-              _chip('Active', _statusFilter == 'active', AppColors.success, () { setState(() => _statusFilter = _statusFilter == 'active' ? null : 'active'); _loadData(); }),
-              SizedBox(width: 8.w),
-              _chip('Inactive', _statusFilter == 'inactive', AppColors.error, () { setState(() => _statusFilter = _statusFilter == 'inactive' ? null : 'inactive'); _loadData(); }),
-            ])),
+          return Column(children: <Widget>[
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 8.h),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search by name, email, or employee ID...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.trim().isEmpty
+                      ? null
+                      : IconButton(
+                          onPressed: () {
+                            _searchController.clear();
+                            _loadData();
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.clear),
+                        ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
+                ),
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => _loadData(),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(children: <Widget>[
+                _chip('All', _statusFilter == null, null, () {
+                  setState(() => _statusFilter = null);
+                  _loadData();
+                }),
+                SizedBox(width: 8.w),
+                _chip('Active', _statusFilter == 'active', AppColors.success, () {
+                  setState(() => _statusFilter = _statusFilter == 'active' ? null : 'active');
+                  _loadData();
+                }),
+                SizedBox(width: 8.w),
+                _chip('Inactive', _statusFilter == 'inactive', AppColors.error, () {
+                  setState(() => _statusFilter = _statusFilter == 'inactive' ? null : 'inactive');
+                  _loadData();
+                }),
+              ]),
+            ),
             SizedBox(height: 8.h),
-            Expanded(child: busy
-              ? const Center(child: LoadingIndicator())
-              : state.storeKeepers.isEmpty
-                ? SingleChildScrollView(child: Padding(padding: EdgeInsets.all(16.w), child: EmptyState(title: 'No store keepers', description: 'Add a store keeper to manage inventory.', icon: Icons.people_outline, iconColor: AppColors.secondary, actionButton: PrimaryButton(text: 'Add Store Keeper', icon: Icons.add, backgroundColor: AppColors.secondary, textColor: Colors.white, onPressed: _goToCreate))))
-                : ListView.separated(padding: EdgeInsets.all(16.w), itemCount: state.storeKeepers.length, separatorBuilder: (_, _) => SizedBox(height: 12.h), itemBuilder: (_, i) {
-                    final k = state.storeKeepers[i];
-                    final active = k.status.toLowerCase() == 'active';
-                    return Card(elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: BorderSide(color: AppColors.border)), child: Padding(padding: EdgeInsets.all(16.w), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        Expanded(child: Text(k.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
-                        Container(padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h), decoration: BoxDecoration(color: (active ? AppColors.success : AppColors.error).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999), border: Border.all(color: active ? AppColors.success : AppColors.error)), child: Text(k.status.toUpperCase(), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: active ? AppColors.success : AppColors.error, fontWeight: FontWeight.w700))),
-                      ]),
-                      SizedBox(height: 8.h),
-                      if (k.employeeId?.isNotEmpty == true) _row(Icons.badge_outlined, 'ID', k.employeeId!),
-                      _row(Icons.email_outlined, 'Email', k.email),
-                      if (k.phone?.isNotEmpty == true) _row(Icons.phone_outlined, 'Phone', k.phone!),
-                      if (k.dutyShift?.isNotEmpty == true) _row(Icons.schedule_outlined, 'Shift', k.dutyShift!),
-                      SizedBox(height: 6.h),
-                      Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                        IconButton(onPressed: () => _showAudit(k.id, k.name), icon: const Icon(Icons.history), tooltip: 'Audit', iconSize: 20, color: AppColors.info),
-                        IconButton(onPressed: () => _showEditDialog(k), icon: const Icon(Icons.edit_outlined), tooltip: 'Edit', iconSize: 20, color: AppColors.primary),
-                        IconButton(onPressed: () => _confirmDelete(k), icon: const Icon(Icons.delete_outline), tooltip: 'Delete', iconSize: 20, color: AppColors.error),
-                      ]),
-                    ])));
-                  }),
-            )),
+            Expanded(
+              child: busy
+                  ? const Center(child: LoadingIndicator())
+                  : state.storeKeepers.isEmpty
+                      ? SingleChildScrollView(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.w),
+                            child: EmptyState(
+                              title: 'No store keepers',
+                              description: 'Add a store keeper to manage inventory.',
+                              icon: Icons.people_outline,
+                              iconColor: AppColors.secondary,
+                              actionButton: PrimaryButton(
+                                text: 'Add Store Keeper',
+                                icon: Icons.add,
+                                backgroundColor: AppColors.secondary,
+                                textColor: Colors.white,
+                                onPressed: _goToCreate,
+                              ),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: EdgeInsets.all(16.w),
+                          itemCount: state.storeKeepers.length,
+                          separatorBuilder: (_, _) => SizedBox(height: 12.h),
+                          itemBuilder: (_, i) => _buildCard(state.storeKeepers[i]),
+                        ),
+            ),
           ]);
         },
       ),
     );
   }
 
-  Widget _row(IconData icon, String label, String value) => Padding(padding: EdgeInsets.only(bottom: 4.h), child: Row(children: [Icon(icon, size: 16, color: AppColors.textSecondary), SizedBox(width: 6.w), Text('$label: ', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600)), Expanded(child: Text(value, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis))]));
+  Widget _buildCard(StoreKeeper k) {
+    final active = k.status.toLowerCase() == 'active';
+    final badgeColor = active ? AppColors.success : AppColors.error;
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: BorderSide(color: AppColors.border)),
+      child: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(children: <Widget>[
+              Expanded(
+                child: Text(
+                  k.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: badgeColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: badgeColor),
+                ),
+                child: Text(
+                  k.status.toUpperCase(),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(color: badgeColor, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ]),
+            SizedBox(height: 8.h),
+            if (k.employeeId?.isNotEmpty == true) _row(Icons.badge_outlined, 'ID', k.employeeId!),
+            _row(Icons.email_outlined, 'Email', k.email),
+            if (k.phone?.isNotEmpty == true) _row(Icons.phone_outlined, 'Phone', k.phone!),
+            if (k.dutyShift?.isNotEmpty == true) _row(Icons.schedule_outlined, 'Shift', k.dutyShift!),
+            SizedBox(height: 6.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                IconButton(onPressed: () => _showAudit(k.id, k.name), icon: const Icon(Icons.history), tooltip: 'Audit', iconSize: 20, color: AppColors.info),
+                IconButton(onPressed: () => _showEditDialog(k), icon: const Icon(Icons.edit_outlined), tooltip: 'Edit', iconSize: 20, color: AppColors.primary),
+                IconButton(onPressed: () => _confirmDelete(k), icon: const Icon(Icons.delete_outline), tooltip: 'Delete', iconSize: 20, color: AppColors.error),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _row(IconData icon, String label, String value) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 4.h),
+      child: Row(children: <Widget>[
+        Icon(icon, size: 16, color: AppColors.textSecondary),
+        SizedBox(width: 6.w),
+        Text(
+          '$label: ',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+        ),
+        Expanded(
+          child: Text(value, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
+        ),
+      ]),
+    );
+  }
 
   Widget _chip(String label, bool selected, Color? color, VoidCallback onTap) {
     final c = color ?? AppColors.primary;
     return GestureDetector(
       onTap: onTap,
-      child: Container(padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 7.h), decoration: BoxDecoration(color: selected ? c.withValues(alpha: 0.12) : Colors.transparent, borderRadius: BorderRadius.circular(999), border: Border.all(color: selected ? c : AppColors.border)), child: Text(label, style: TextStyle(color: selected ? c : AppColors.textSecondary, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, fontSize: 13))),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 7.h),
+        decoration: BoxDecoration(
+          color: selected ? c.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? c : AppColors.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? c : AppColors.textSecondary,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 13,
+          ),
+        ),
+      ),
     );
   }
 }
