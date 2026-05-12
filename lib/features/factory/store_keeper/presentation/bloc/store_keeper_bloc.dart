@@ -7,6 +7,7 @@ import 'package:nexatrace_system/features/factory/store_keeper/data/repositories
 import 'package:nexatrace_system/features/factory/store_keeper/domain/entities/scan_record.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/domain/usecases/sync_data_usecase.dart';
 
+// ─── Events ─────────────────────────────────────────────
 abstract class StoreKeeperEvent extends Equatable {
   const StoreKeeperEvent();
   @override
@@ -91,8 +92,14 @@ class LoadHierarchy extends StoreKeeperEvent {
 
 class RefreshDashboardStats extends StoreKeeperEvent {}
 
-class CheckConnectivity extends StoreKeeperEvent {}
+class ConnectivityChanged extends StoreKeeperEvent {
+  final bool isOnline;
+  const ConnectivityChanged({required this.isOnline});
+  @override
+  List<Object?> get props => [isOnline];
+}
 
+// ─── States ─────────────────────────────────────────────
 abstract class StoreKeeperState extends Equatable {
   const StoreKeeperState();
   @override
@@ -111,6 +118,7 @@ class StoreKeeperAuthenticated extends StoreKeeperState {
   final int linkedItems;
   final String? lastScannedCode;
   final String? lastScannedType;
+
   const StoreKeeperAuthenticated({
     required this.storeKeeperName,
     required this.storeKeeperEmail,
@@ -122,6 +130,7 @@ class StoreKeeperAuthenticated extends StoreKeeperState {
     this.lastScannedCode,
     this.lastScannedType,
   });
+
   StoreKeeperAuthenticated copyWith({
     String? storeKeeperName,
     String? storeKeeperEmail,
@@ -132,17 +141,20 @@ class StoreKeeperAuthenticated extends StoreKeeperState {
     int? linkedItems,
     String? lastScannedCode,
     String? lastScannedType,
-  }) => StoreKeeperAuthenticated(
-    storeKeeperName: storeKeeperName ?? this.storeKeeperName,
-    storeKeeperEmail: storeKeeperEmail ?? this.storeKeeperEmail,
-    sessionId: sessionId ?? this.sessionId,
-    isOnline: isOnline ?? this.isOnline,
-    todayScans: todayScans ?? this.todayScans,
-    pendingSyncs: pendingSyncs ?? this.pendingSyncs,
-    linkedItems: linkedItems ?? this.linkedItems,
-    lastScannedCode: lastScannedCode ?? this.lastScannedCode,
-    lastScannedType: lastScannedType ?? this.lastScannedType,
-  );
+  }) {
+    return StoreKeeperAuthenticated(
+      storeKeeperName: storeKeeperName ?? this.storeKeeperName,
+      storeKeeperEmail: storeKeeperEmail ?? this.storeKeeperEmail,
+      sessionId: sessionId ?? this.sessionId,
+      isOnline: isOnline ?? this.isOnline,
+      todayScans: todayScans ?? this.todayScans,
+      pendingSyncs: pendingSyncs ?? this.pendingSyncs,
+      linkedItems: linkedItems ?? this.linkedItems,
+      lastScannedCode: lastScannedCode ?? this.lastScannedCode,
+      lastScannedType: lastScannedType ?? this.lastScannedType,
+    );
+  }
+
   @override
   List<Object?> get props => [
     storeKeeperName,
@@ -170,6 +182,7 @@ class LinkingState extends StoreKeeperState {
   final String? currentPacketId;
   final String linkingStep;
   final bool isProcessing;
+
   const LinkingState({
     this.currentBundleId,
     this.currentCartonId,
@@ -177,19 +190,23 @@ class LinkingState extends StoreKeeperState {
     this.linkingStep = 'bundle',
     this.isProcessing = false,
   });
+
   LinkingState copyWith({
     String? currentBundleId,
     String? currentCartonId,
     String? currentPacketId,
     String? linkingStep,
     bool? isProcessing,
-  }) => LinkingState(
-    currentBundleId: currentBundleId ?? this.currentBundleId,
-    currentCartonId: currentCartonId ?? this.currentCartonId,
-    currentPacketId: currentPacketId ?? this.currentPacketId,
-    linkingStep: linkingStep ?? this.linkingStep,
-    isProcessing: isProcessing ?? this.isProcessing,
-  );
+  }) {
+    return LinkingState(
+      currentBundleId: currentBundleId ?? this.currentBundleId,
+      currentCartonId: currentCartonId ?? this.currentCartonId,
+      currentPacketId: currentPacketId ?? this.currentPacketId,
+      linkingStep: linkingStep ?? this.linkingStep,
+      isProcessing: isProcessing ?? this.isProcessing,
+    );
+  }
+
   @override
   List<Object?> get props => [
     currentBundleId,
@@ -234,6 +251,7 @@ class ErrorState extends StoreKeeperState {
   List<Object?> get props => [message, isNetworkError];
 }
 
+// ─── BLoC ───────────────────────────────────────────────
 class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
   final StoreKeeperRepository _repository;
   StreamSubscription? _connectivitySubscription;
@@ -252,13 +270,13 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
     on<SyncNow>(_onSyncNow);
     on<LoadHierarchy>(_onLoadHierarchy);
     on<RefreshDashboardStats>(_onRefreshDashboard);
-    on<CheckConnectivity>(_onCheckConnectivity);
+    on<ConnectivityChanged>(_onConnectivityChanged);
+
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
       results,
     ) {
       final online = !results.contains(ConnectivityResult.none);
-      if (state is StoreKeeperAuthenticated)
-        emit((state as StoreKeeperAuthenticated).copyWith(isOnline: online));
+      add(ConnectivityChanged(isOnline: online));
       if (online) add(SyncNow());
     });
   }
@@ -299,8 +317,9 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
     StoreKeeperLogout event,
     Emitter<StoreKeeperState> emit,
   ) async {
-    if (_currentSessionId != null)
+    if (_currentSessionId != null) {
       await LocalDatabase().closeSession(_currentSessionId!);
+    }
     _currentSessionId = null;
     emit(const StoreKeeperUnauthenticated());
   }
@@ -441,7 +460,6 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
       }
     } catch (e) {
       emit(ErrorState(message: 'Sync failed: $e', isNetworkError: true));
-      if (state is StoreKeeperAuthenticated) emit(state);
     }
   }
 
@@ -474,15 +492,14 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
     }
   }
 
-  Future<void> _onCheckConnectivity(
-    CheckConnectivity event,
+  void _onConnectivityChanged(
+    ConnectivityChanged event,
     Emitter<StoreKeeperState> emit,
-  ) async {
-    if (state is StoreKeeperAuthenticated)
+  ) {
+    if (state is StoreKeeperAuthenticated) {
       emit(
-        (state as StoreKeeperAuthenticated).copyWith(
-          isOnline: await _repository.isOnline,
-        ),
+        (state as StoreKeeperAuthenticated).copyWith(isOnline: event.isOnline),
       );
+    }
   }
 }
