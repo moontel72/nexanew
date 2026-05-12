@@ -12,6 +12,7 @@ import 'package:nexatrace_system/features/factory/admin/data/datasources/codes_r
 import 'package:nexatrace_system/features/factory/admin/data/repositories/codes_repository_impl.dart';
 import 'package:nexatrace_system/features/factory/admin/domain/repositories/codes_repository.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/bloc/store_keepers/store_keepers_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_codes_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_bloc.dart';
@@ -224,6 +225,7 @@ class AppProviders {
       ),
       BlocProvider<BundleBloc>(create: (context) => BundleBloc()),
       BlocProvider<BundlePackingBloc>(create: (context) => BundlePackingBloc()),
+      BlocProvider<StoreKeepersBloc>(create: (context) => StoreKeepersBloc()),
       // Billing Bloc
       BlocProvider<BillingBloc>(
         create: (context) =>
