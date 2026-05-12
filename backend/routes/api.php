@@ -719,6 +719,16 @@ $registerRoutes = function (): void {
                 Route::get("{id}", [\App\Http\Controllers\Factory\SmartCodeController::class, "show"]);
                 Route::post("scan", [\App\Http\Controllers\Factory\SmartCodeController::class, "scan"]);
             });
+
+            // ─── Store Keeper Management ──────────────────
+            Route::prefix("store-keepers")->group(function (): void {
+                Route::get("list", [\App\Http\Controllers\Factory\StoreKeeperController::class, "index"]);
+                Route::post("create", [\App\Http\Controllers\Factory\StoreKeeperController::class, "store"]);
+                Route::get("{id}", [\App\Http\Controllers\Factory\StoreKeeperController::class, "show"]);
+                Route::put("{id}", [\App\Http\Controllers\Factory\StoreKeeperController::class, "update"]);
+                Route::delete("{id}", [\App\Http\Controllers\Factory\StoreKeeperController::class, "destroy"]);
+                Route::get("{id}/audit-trail", [\App\Http\Controllers\Factory\StoreKeeperController::class, "auditTrail"]);
+            });
             });
         });
 

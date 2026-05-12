@@ -114,6 +114,28 @@ class FactoryShell extends StatelessWidget {
         ],
       ),
       AdminSidebarSection(
+        title: 'People',
+        items: [
+          AdminSidebarItem(
+            label: 'Store Keepers',
+            icon: Icons.people_outline,
+            route: '/factory/store-keepers',
+            children: [
+              AdminSidebarItem(
+                label: 'Add Store Keeper',
+                icon: Icons.person_add_outlined,
+                route: '/factory/store-keepers/create',
+              ),
+              AdminSidebarItem(
+                label: 'View Store Keepers',
+                icon: Icons.list_alt,
+                route: '/factory/store-keepers',
+              ),
+            ],
+          ),
+        ],
+      ),
+      AdminSidebarSection(
         title: 'Codes',
         items: [
           AdminSidebarItem(
@@ -216,6 +238,9 @@ class FactoryShell extends StatelessWidget {
       return 'Create Product';
     }
     if (location.startsWith('/factory/products')) return 'Product List';
+    if (location.startsWith('/factory/store-keepers/create'))
+      return 'Add Store Keeper';
+    if (location.startsWith('/factory/store-keepers')) return 'Store Keepers';
     if (location.startsWith('/factory/codes/unit/generate')) {
       return 'Generate Unit';
     }
@@ -249,6 +274,12 @@ class FactoryShell extends StatelessWidget {
     }
     if (location.startsWith('/factory/products')) {
       return const ['Factory', 'Products', 'Product List'];
+    }
+    if (location.startsWith('/factory/store-keepers/create')) {
+      return const ['Factory', 'People', 'Store Keepers', 'Add Store Keeper'];
+    }
+    if (location.startsWith('/factory/store-keepers')) {
+      return const ['Factory', 'People', 'Store Keepers'];
     }
     if (location.startsWith('/factory/codes/unit')) {
       return const ['Factory', 'Codes', 'Unit'];
