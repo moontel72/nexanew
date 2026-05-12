@@ -248,7 +248,7 @@ class StoreKeepersBloc extends Bloc<StoreKeepersEvent, StoreKeepersState> {
         qp['status'] = event.statusFilter;
 
       final response = await _api.get(
-        '/api/factory/store-keepers/list',
+        '/factory/store-keepers/list',
         queryParams: qp,
       );
       final data = response is Map ? (response['data'] ?? response) : {};
@@ -297,7 +297,7 @@ class StoreKeepersBloc extends Bloc<StoreKeepersEvent, StoreKeepersState> {
         body['duty_shift'] = event.dutyShift;
 
       final response = await _api.post(
-        '/api/factory/store-keepers/create',
+        '/factory/store-keepers/create',
         body: body,
       );
       final created = StoreKeeper.fromJson(
@@ -338,7 +338,7 @@ class StoreKeepersBloc extends Bloc<StoreKeepersEvent, StoreKeepersState> {
       if (event.status?.isNotEmpty == true) body['status'] = event.status;
 
       final response = await _api.put(
-        '/api/factory/store-keepers/${event.id}',
+        '/factory/store-keepers/${event.id}',
         body: body,
       );
       final updated = StoreKeeper.fromJson(
@@ -371,7 +371,7 @@ class StoreKeepersBloc extends Bloc<StoreKeepersEvent, StoreKeepersState> {
       emit(
         state.copyWith(status: StoreKeepersStatus.deleting, errorMessage: null),
       );
-      await _api.delete('/api/factory/store-keepers/${event.id}');
+      await _api.delete('/factory/store-keepers/${event.id}');
       emit(
         state.copyWith(
           status: StoreKeepersStatus.deleted,
@@ -404,7 +404,7 @@ class StoreKeepersBloc extends Bloc<StoreKeepersEvent, StoreKeepersState> {
         ),
       );
       final response = await _api.get(
-        '/api/factory/store-keepers/${event.id}/audit-trail',
+        '/factory/store-keepers/${event.id}/audit-trail',
       );
       final data = response is Map ? (response['data'] ?? response) : {};
       final entries =
