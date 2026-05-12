@@ -145,7 +145,7 @@ class AppRouter {
 
     // Root path redirects based on auth state
     if (isRoot) {
-      return isAuthenticatedCache ? '/dashboard' : '/login';
+      if (!kIsWeb) return '/factory/store-keeper/login'; return isAuthenticatedCache ? '/dashboard' : '/login';
     }
 
     // Protected routes - require authentication
