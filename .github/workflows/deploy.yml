@@ -85,7 +85,10 @@ jobs:
             chown -R www-data:www-data /var/www/nexatrace/rust-lib
             chown -R www-data:www-data /var/www/nexatrace/admin-panel/rust
 
-            # 1. Clear and cache Laravel config/routes
+            # 1. Run database migrations
+            php artisan migrate --force
+
+            # 2. Clear and cache Laravel config/routes
             php artisan optimize:clear
             php artisan optimize
 
