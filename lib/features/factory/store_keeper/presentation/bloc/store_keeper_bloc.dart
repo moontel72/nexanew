@@ -311,22 +311,19 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
   ) async {
     emit(StoreKeeperLoggingIn());
     try {
-      // Try to init local DB; fail gracefully on platforms where
-      // Hive / IndexedDB is not available (e.g. web).
       String sessionId;
+      bool dbOk = false;
       try {
         await LocalDatabase().init();
         sessionId = await LocalDatabase().createSession(
           storeKeeperId: event.email,
         );
         _currentSessionId = sessionId;
+        dbOk = true;
       } catch (_) {
-        // DB init failed — proceed with a fallback session id
-        sessionId = 'offline-session';
+        sessionId = 'web-session';
       }
 
-      // Online check with a 5-second timeout so a slow network
-      // doesn't block login forever.
       final online = await Future.any<bool>([
         _repository.isOnline,
         Future<bool>.delayed(const Duration(seconds: 5), () => false),
@@ -338,13 +335,13 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
           storeKeeperEmail: event.email,
           sessionId: sessionId,
           isOnline: online,
-          todayScans: _repository.getTodayScanCount(),
-          pendingSyncs: _repository.getPendingSyncCount(),
-          linkedItems: _repository.getLinkedItemsCount(),
+          todayScans: dbOk ? _repository.getTodayScanCount() : 0,
+          pendingSyncs: dbOk ? _repository.getPendingSyncCount() : 0,
+          linkedItems: dbOk ? _repository.getLinkedItemsCount() : 0,
         ),
       );
     } catch (e) {
-      emit(ErrorState(message: 'Login failed: $e'));
+      emit(ErrorState(message: 'Login failed: ' + e.toString()));
     }
   }
 
@@ -554,7 +551,12 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
       } else if (response is List) {
         data = response;
       } else if (response is Map<String, dynamic>) {
-        data = (response['data'] as List<dynamic>?) ?? [];
+        final d = response['data'];
+        if (d is Map<String, dynamic>) {
+          data = (d['orders'] as List<dynamic>?) ?? [];
+        } else {
+          data = (d as List<dynamic>?) ?? [];
+        }
       } else {
         data = [];
       }
@@ -574,9 +576,7 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
       // Silently set empty orders instead of showing a red error —
       // an empty list is a normal, non-error state.
       if (state is StoreKeeperAuthenticated) {
-        emit(
-          (state as StoreKeeperAuthenticated).copyWith(pendingOrders: []),
-        );
+        emit((state as StoreKeeperAuthenticated).copyWith(pendingOrders: []));
       }
     }
   }
