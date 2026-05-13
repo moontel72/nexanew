@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/data/datasources/local_database.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/data/repositories/store_keeper_repository.dart';
@@ -311,18 +312,45 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
   ) async {
     emit(StoreKeeperLoggingIn());
     try {
-      // Authenticate with server
-      await _apiService.post('/auth/login', body: {
-        'email': event.email,
-        'password': event.password,
-      });
+      // Authenticate against the FACTORY guard (not admin).
+      // The factory auth endpoint returns: { success, data: { user: {...}, token } }
+      final response = await _apiService.post(
+        '/factory/auth/login',
+        body: {'email': event.email, 'password': event.password},
+      );
+
+      // Extract token from factory auth response
+      final data = (response is Map<String, dynamic>)
+          ? (response['data'] as Map<String, dynamic>?)
+          : null;
+      final token = data?['token']?.toString();
+
+      if (token == null || token.isEmpty) {
+        emit(
+          const ErrorState(
+            message: 'Login failed: No authentication token received',
+          ),
+        );
+        return;
+      }
+
+      // Persist token so _initializeHeaders picks it up for /factory/* routes.
+      // _initializeHeaders looks for 'factory_auth_token' first for factory endpoints.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('factory_auth_token', token);
+
+      // Also store user info if available
+      final user = data?['user'] as Map<String, dynamic>?;
+      final storeKeeperName =
+          user?['full_name']?.toString() ?? event.email.split('@').first;
+      final storeKeeperEmail = user?['email']?.toString() ?? event.email;
 
       String sessionId;
       bool dbOk = false;
       try {
         await LocalDatabase().init();
         sessionId = await LocalDatabase().createSession(
-          storeKeeperId: event.email,
+          storeKeeperId: storeKeeperEmail,
         );
         _currentSessionId = sessionId;
         dbOk = true;
@@ -337,8 +365,8 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
 
       emit(
         StoreKeeperAuthenticated(
-          storeKeeperName: event.email.split('@').first,
-          storeKeeperEmail: event.email,
+          storeKeeperName: storeKeeperName,
+          storeKeeperEmail: storeKeeperEmail,
           sessionId: sessionId,
           isOnline: online,
           todayScans: dbOk ? _repository.getTodayScanCount() : 0,
@@ -359,6 +387,11 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
       await LocalDatabase().closeSession(_currentSessionId!);
     }
     _currentSessionId = null;
+    // Clear the factory auth token so subsequent logins start fresh.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('factory_auth_token');
+    } catch (_) {}
     emit(const StoreKeeperUnauthenticated());
   }
 
@@ -578,12 +611,14 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
           (state as StoreKeeperAuthenticated).copyWith(pendingOrders: orders),
         );
       }
-    } catch (_) {
-      // Silently set empty orders instead of showing a red error —
-      // an empty list is a normal, non-error state.
-      if (state is StoreKeeperAuthenticated) {
-        emit((state as StoreKeeperAuthenticated).copyWith(pendingOrders: []));
-      }
+    } catch (e) {
+      // Surface errors so auth / network issues aren't hidden.
+      // The OrderSelectionScreen listener shows ErrorState in a SnackBar.
+      final message = 'Failed to load pending orders: ${e.toString()}';
+      final isNetErr =
+          e.toString().contains('SocketException') ||
+          e.toString().contains('HttpException');
+      emit(ErrorState(message: message, isNetworkError: isNetErr));
     }
   }
 }
