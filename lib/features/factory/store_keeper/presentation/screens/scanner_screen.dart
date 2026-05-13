@@ -225,6 +225,7 @@ class _ScannerScreenState extends State<ScannerScreen>
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.home, color: Colors.white), onPressed: () => context.go('/factory/store-keeper/dashboard')),
         actions: [
           if (_totalScanAttempts > 0)
             IconButton(

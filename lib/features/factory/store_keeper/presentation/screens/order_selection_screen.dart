@@ -44,6 +44,7 @@ class _OrderSelectionScreenState extends State<OrderSelectionScreen> {
         title: const Text('Orders - Pending Linking'),
         backgroundColor: AppColors.accent,
         foregroundColor: Colors.white,
+        leading: IconButton(icon: const Icon(Icons.home), onPressed: () => context.go('/factory/store-keeper/dashboard')),
       ),
       body: BlocConsumer<StoreKeeperBloc, StoreKeeperState>(
         listener: (context, state) {

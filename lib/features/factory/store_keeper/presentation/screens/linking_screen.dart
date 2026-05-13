@@ -50,6 +50,7 @@ class _LinkingScreenState extends State<LinkingScreen> {
           title: const Text('Link Items'),
           backgroundColor: AppColors.accent,
           foregroundColor: Colors.white,
+        leading: IconButton(icon: const Icon(Icons.home), onPressed: () => context.go('/factory/store-keeper/dashboard')),
         ),
         body: SingleChildScrollView(
           padding: EdgeInsets.all(16.w),

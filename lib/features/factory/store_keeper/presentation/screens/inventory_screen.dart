@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gap/gap.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/bloc/store_keeper_bloc.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/widgets/hierarchy_tree.dart';
@@ -27,6 +28,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
       title: const Text('Inventory'),
       backgroundColor: AppColors.accent,
       foregroundColor: Colors.white,
+      leading: IconButton(
+        icon: const Icon(Icons.home),
+        onPressed: () => GoRouter.of(context).go('/factory/store-keeper/dashboard'),
+      ),
     ),
     body: BlocBuilder<StoreKeeperBloc, StoreKeeperState>(
       builder: (context, state) => Column(

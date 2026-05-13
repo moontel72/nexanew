@@ -242,6 +242,7 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
         title: Text('Bundle: $bundleCode'),
         backgroundColor: AppColors.accent,
         foregroundColor: Colors.white,
+        leading: IconButton(icon: const Icon(Icons.home), onPressed: () => context.go('/factory/store-keeper/dashboard')),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

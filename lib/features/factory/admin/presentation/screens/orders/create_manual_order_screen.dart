@@ -65,7 +65,7 @@ class _CreateManualOrderScreenState extends State<CreateManualOrderScreen> {
 
     try {
       await ApiService().post(
-        '/codes/bundles/generate',
+        '/factory/store-keeper-bundles/create-dummy',
         body: {
           'order_reference': _orderRefCtrl.text.trim(),
           if (_notesCtrl.text.trim().isNotEmpty)

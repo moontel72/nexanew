@@ -18,6 +18,51 @@ class StoreKeeperBundleController extends Controller
     // ─── Pending Orders ──────────────────────────────────────────
 
     /**
+    /**
+     * Create a dummy/placeholder order for testing.
+     * No carton/packet codes required.
+     */
+    public function createDummyOrder(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $companyId = (string) $user->company_id;
+            $data = $request->validate([
+                'order_reference' => ['required', 'string', 'max:200'],
+                'notes' => ['nullable', 'string', 'max:2000'],
+            ]);
+            $bundleId = (string) Str::uuid();
+            $now = now();
+            $bundleCode = 'BUN-' . $now->format('Ymd') . '-' . strtoupper(Str::random(6));
+            DB::table('bundles')->insert([
+                'id' => $bundleId,
+                'bundle_code' => $bundleCode,
+                'order_reference' => $data['order_reference'],
+                'company_id' => $companyId,
+                'status' => 'draft',
+                'linking_status' => 'admin_linked',
+                'total_cartons' => 0,
+                'total_packets' => 0,
+                'notes' => $data['notes'] ?? null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $bundleId,
+                    'bundleCode' => $bundleCode,
+                    'orderReference' => $data['order_reference'],
+                    'status' => 'draft',
+                    'createdAt' => $now->toISOString(),
+                ],
+            ], 201);
+        } catch (Exception $e) {
+            Log::error('createDummyOrder failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
      * List orders with linking_status = 'pending_store_linking' for the
      * authenticated user's company.
      */

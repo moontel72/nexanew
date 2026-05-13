@@ -28,6 +28,7 @@ class _ShiftSummaryScreenState extends State<ShiftSummaryScreen> {
       title: const Text('Shift Summary'),
       backgroundColor: AppColors.accent,
       foregroundColor: Colors.white,
+        leading: IconButton(icon: const Icon(Icons.home), onPressed: () => context.go('/factory/store-keeper/dashboard')),
     ),
     body: BlocBuilder<StoreKeeperBloc, StoreKeeperState>(
       builder: (context, state) {
