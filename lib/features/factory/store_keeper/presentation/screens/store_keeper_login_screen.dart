@@ -24,8 +24,8 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
   @override
   void initState() {
     super.initState();
-    _emailC.text = 'storekeeper@nexatrace.local';
-    _passC.text = 'keeper12345';
+    _emailC.text = 'fasail@gmail.com';
+    _passC.text = 'admin12345';
   }
 
   @override

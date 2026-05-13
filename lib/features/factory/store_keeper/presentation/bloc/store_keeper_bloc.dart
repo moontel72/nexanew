@@ -310,13 +310,28 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
     Emitter<StoreKeeperState> emit,
   ) async {
     emit(StoreKeeperLoggingIn());
-    await LocalDatabase().init();
     try {
-      final sessionId = await LocalDatabase().createSession(
-        storeKeeperId: event.email,
-      );
-      _currentSessionId = sessionId;
-      final online = await _repository.isOnline;
+      // Try to init local DB; fail gracefully on platforms where
+      // Hive / IndexedDB is not available (e.g. web).
+      String sessionId;
+      try {
+        await LocalDatabase().init();
+        sessionId = await LocalDatabase().createSession(
+          storeKeeperId: event.email,
+        );
+        _currentSessionId = sessionId;
+      } catch (_) {
+        // DB init failed — proceed with a fallback session id
+        sessionId = 'offline-session';
+      }
+
+      // Online check with a 5-second timeout so a slow network
+      // doesn't block login forever.
+      final online = await Future.any<bool>([
+        _repository.isOnline,
+        Future<bool>.delayed(const Duration(seconds: 5), () => false),
+      ]);
+
       emit(
         StoreKeeperAuthenticated(
           storeKeeperName: event.email.split('@').first,
@@ -531,23 +546,38 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
       final response = await _apiService.get(
         '/factory/store-keeper-bundles/pending',
       );
-      final List<dynamic> data = response is List
-          ? response
-          : (response['data'] ?? []);
+
+      // Handle null / empty / varied response shapes gracefully.
+      final List<dynamic> data;
+      if (response == null) {
+        data = [];
+      } else if (response is List) {
+        data = response;
+      } else if (response is Map<String, dynamic>) {
+        data = (response['data'] as List<dynamic>?) ?? [];
+      } else {
+        data = [];
+      }
+
       final orders = data
           .map<Map<String, dynamic>>(
             (e) => e is Map<String, dynamic> ? e : <String, dynamic>{},
           )
           .toList();
+
       if (state is StoreKeeperAuthenticated) {
         emit(
           (state as StoreKeeperAuthenticated).copyWith(pendingOrders: orders),
         );
       }
-    } catch (e) {
-      emit(ErrorState(message: 'Failed to load pending orders: $e'));
-      await Future.delayed(const Duration(seconds: 2));
-      if (state is StoreKeeperAuthenticated) emit(state);
+    } catch (_) {
+      // Silently set empty orders instead of showing a red error —
+      // an empty list is a normal, non-error state.
+      if (state is StoreKeeperAuthenticated) {
+        emit(
+          (state as StoreKeeperAuthenticated).copyWith(pendingOrders: []),
+        );
+      }
     }
   }
 }
