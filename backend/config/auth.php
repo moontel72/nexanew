@@ -2,6 +2,7 @@
 
 use App\Models\AdminUser;
 use App\Models\FactoryUser;
+use App\Models\StoreKeeper;
 use App\Models\User;
 
 return [
@@ -56,6 +57,10 @@ return [
             'driver' => 'sanctum',
             'provider' => 'factory_users',
         ],
+        'store_keeper' => [
+            'driver' => 'sanctum',
+            'provider' => 'store_keepers',
+        ],
     ],
 
     /*
@@ -87,6 +92,10 @@ return [
         'factory_users' => [
             'driver' => 'eloquent',
             'model' => FactoryUser::class,
+        ],
+        'store_keepers' => [
+            'driver' => 'eloquent',
+            'model' => StoreKeeper::class,
         ],
 
         // 'users' => [

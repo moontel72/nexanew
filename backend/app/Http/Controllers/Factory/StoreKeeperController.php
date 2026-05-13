@@ -12,6 +12,35 @@ use Illuminate\Support\Str;
 
 class StoreKeeperController extends Controller
 {
+    public function login(Request $request)
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
+        $keeper = StoreKeeper::where('email', $data['email'])->first();
+        if (!$keeper || !Hash::check($data['password'], $keeper->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+        if ($keeper->status !== 'active') {
+            return response()->json(['message' => 'Account is not active'], 403);
+        }
+        $keeper->forceFill(['last_login_at' => now()])->save();
+        $token = $keeper->createToken('store-keeper')->plainTextToken;
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'token' => $token,
+                'user' => [
+                    'id' => $keeper->id,
+                    'name' => $keeper->name,
+                    'email' => $keeper->email,
+                    'company_id' => $keeper->company_id,
+                ],
+            ],
+        ]);
+    }
+
     public function index(Request $request)
     {
         try {

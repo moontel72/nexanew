@@ -315,7 +315,7 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
       // Authenticate against the FACTORY guard (not admin).
       // The factory auth endpoint returns: { success, data: { user: {...}, token } }
       final response = await _apiService.post(
-        '/factory/auth/login',
+        '/factory/auth/store-keeper-login',
         body: {'email': event.email, 'password': event.password},
       );
 
