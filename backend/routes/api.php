@@ -561,15 +561,11 @@ $registerRoutes = function (): void {
                 Route::get("{id}/audit-trail", [\App\Http\Controllers\Factory\StoreKeeperController::class, "auditTrail"]);
             });
 
-            // Allow factory admin to create orders and update bundle linking status
-            Route::post("store-keeper-bundles/create-dummy", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "createDummyOrder"]);
-            Route::put("store-keeper-bundles/{bundleId}/linking-status", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "updateLinkingStatus"]);
-
         });
 
-        // Store Keeper Bundle Linking — protected by auth:store_keeper (NOT auth:factory)
-        // These endpoints are called by the StoreKeeper mobile app after store-keeper login.
-        Route::middleware("auth:store_keeper")->group(function (): void {
+        // Store Keeper Bundle Linking — accessible by BOTH factory admin and store keeper.
+        // Uses multi-guard: tries auth:factory first, falls back to auth:store_keeper.
+        Route::middleware("auth:factory,store_keeper")->group(function (): void {
             Route::prefix("store-keeper-bundles")->group(function (): void {
                 Route::get("pending", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "pendingOrders"]);
                 Route::post("create-dummy", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "createDummyOrder"]);
