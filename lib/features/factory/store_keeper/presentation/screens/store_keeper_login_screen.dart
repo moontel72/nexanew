@@ -20,6 +20,7 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
   final _passC = TextEditingController();
   bool _obscure = true;
   bool _remember = false;
+
   @override
   void initState() {
     super.initState();
@@ -38,15 +39,17 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
   Widget build(BuildContext context) {
     return BlocListener<StoreKeeperBloc, StoreKeeperState>(
       listener: (context, state) {
-        if (state is StoreKeeperAuthenticated)
+        if (state is StoreKeeperAuthenticated) {
           context.go('/factory/store-keeper/dashboard');
-        if (state is ErrorState)
+        }
+        if (state is ErrorState) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
               backgroundColor: AppColors.error,
             ),
           );
+        }
       },
       child: Scaffold(
         body: Container(
@@ -177,15 +180,23 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
                       ),
                     ),
                     Gap(24.h),
-                    SizedBox(
-                      width: double.infinity,
-                      child: PrimaryButton(
-                        onPressed: _login,
-                        text: 'Sign In to Store Portal',
-                        backgroundColor: Colors.amber.shade700,
-                        textColor: Colors.white,
-                        icon: Icons.login,
-                      ),
+                    BlocBuilder<StoreKeeperBloc, StoreKeeperState>(
+                      builder: (context, state) {
+                        final isLoading = state is StoreKeeperLoggingIn;
+                        return SizedBox(
+                          width: double.infinity,
+                          child: PrimaryButton(
+                            onPressed: _login,
+                            isEnabled: !isLoading,
+                            text: isLoading
+                                ? 'Signing in...'
+                                : 'Sign In to Store Portal',
+                            backgroundColor: Colors.amber.shade700,
+                            textColor: Colors.white,
+                            icon: isLoading ? Icons.lock : Icons.login,
+                          ),
+                        );
+                      },
                     ),
                     Gap(16.h),
                     Container(
@@ -226,7 +237,7 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
   }
 
   void _login() {
-    if (_formKey.currentState?.validate() ?? false)
+    if (_formKey.currentState?.validate() ?? false) {
       context.read<StoreKeeperBloc>().add(
         StoreKeeperLogin(
           email: _emailC.text.trim(),
@@ -234,5 +245,6 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
           rememberMe: _remember,
         ),
       );
+    }
   }
 }

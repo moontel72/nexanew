@@ -169,6 +169,8 @@ class StoreKeeperAuthenticated extends StoreKeeperState {
   ];
 }
 
+class StoreKeeperLoggingIn extends StoreKeeperState {}
+
 class StoreKeeperUnauthenticated extends StoreKeeperState {
   final String? message;
   const StoreKeeperUnauthenticated({this.message});
@@ -291,6 +293,8 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
     StoreKeeperLogin event,
     Emitter<StoreKeeperState> emit,
   ) async {
+    emit(StoreKeeperLoggingIn());
+    await LocalDatabase().init();
     try {
       final sessionId = await LocalDatabase().createSession(
         storeKeeperId: event.email,
