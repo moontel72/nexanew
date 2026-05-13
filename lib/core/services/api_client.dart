@@ -439,9 +439,11 @@ class ApiClient {
           requiresAuth &&
           retryCount == 0 &&
           endpoint != ApiEndpoints.refreshToken &&
-          endpoint != ApiEndpoints.login) {
+          endpoint != '/factory/auth/refresh' &&
+          endpoint != ApiEndpoints.login &&
+          endpoint != '/factory/auth/login') {
         try {
-          await refreshToken();
+          await refreshToken(originalEndpoint: endpoint);
           await _initializeHeaders(endpoint: endpoint);
           return await _makeRequest(
             method,
@@ -575,7 +577,9 @@ class ApiClient {
             ? (data['invoice'] as Map).cast<String, dynamic>()
             : <String, dynamic>{};
         final invoiceId =
-            (invoice['id'] ?? data['invoice_id'] ?? errorResponse?['invoice_id'])
+            (invoice['id'] ??
+                    data['invoice_id'] ??
+                    errorResponse?['invoice_id'])
                 ?.toString()
                 .trim();
         throw LockedException(
@@ -640,17 +644,43 @@ class ApiClient {
     }
   }
 
-  // Refresh token
-  Future<void> refreshToken() async {
-    final response = await post(ApiEndpoints.refreshToken, requiresAuth: false);
+  // Refresh token — uses factory refresh for /factory/* calls, admin refresh otherwise
+  Future<void> refreshToken({String? originalEndpoint}) async {
+    final isFactory =
+        originalEndpoint != null &&
+        (originalEndpoint.contains('/factory/') ||
+            originalEndpoint.contains('/codes/'));
 
-    final token = response is Map
-        ? (response['token'] ??
-              (response['data'] is Map ? response['data']['token'] : null))
-        : null;
+    final refreshEndpoint = isFactory
+        ? '/factory/auth/refresh'
+        : ApiEndpoints.refreshToken;
 
-    if (token != null) {
-      await _setAuthToken(token.toString());
+    try {
+      // For factory refresh, we need to send the existing factory token
+      final response = await post(refreshEndpoint, requiresAuth: isFactory);
+
+      final token = response is Map
+          ? (response['token'] ??
+                (response['data'] is Map ? response['data']['token'] : null))
+          : null;
+
+      if (token != null) {
+        if (isFactory) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('factory_auth_token', token.toString());
+        } else {
+          await _setAuthToken(token.toString());
+        }
+      }
+    } catch (_) {
+      // If refresh fails, clear tokens so user can re-login
+      if (isFactory) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('factory_auth_token');
+      } else {
+        await _clearAuthToken();
+      }
+      rethrow;
     }
   }
 

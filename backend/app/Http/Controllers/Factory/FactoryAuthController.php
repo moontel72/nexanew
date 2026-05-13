@@ -53,6 +53,33 @@ class FactoryAuthController extends Controller
     }
 
 
+    public function refresh(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Revoke current token and issue a new one
+        $request->user()->currentAccessToken()->delete();
+        $token = $user->createToken('factory')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'token' => $token,
+                'user' => [
+                    'id' => (string) $user->id,
+                    'company_id' => (string) $user->company_id,
+                    'email' => (string) $user->email,
+                    'full_name' => (string) $user->full_name,
+                    'position' => (string) $user->position,
+                    'permissions' => $user->permissions ?? [],
+                ],
+            ],
+        ]);
+    }
+
     public function logout(Request $request)
     {
         $request->user()?->currentAccessToken()?->delete();

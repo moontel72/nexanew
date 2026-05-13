@@ -443,9 +443,18 @@ $registerRoutes = function (): void {
                 \App\Http\Controllers\Factory\FactoryAuthController::class,
                 "login",
             ]);
+            // Dedicated store-keeper login (uses StoreKeeper model + Sanctum)
+            Route::post("store-keeper-login", [
+                \App\Http\Controllers\Factory\StoreKeeperController::class,
+                "login",
+            ]);
             Route::post("logout", [
                 \App\Http\Controllers\Factory\FactoryAuthController::class,
                 "logout",
+            ])->middleware("auth:factory");
+            Route::post("refresh", [
+                \App\Http\Controllers\Factory\FactoryAuthController::class,
+                "refresh",
             ])->middleware("auth:factory");
             Route::get("profile", [
                 \App\Http\Controllers\Factory\FactoryAuthController::class,
@@ -552,7 +561,11 @@ $registerRoutes = function (): void {
                 Route::get("{id}/audit-trail", [\App\Http\Controllers\Factory\StoreKeeperController::class, "auditTrail"]);
             });
 
-            // Store Keeper Bundle Linking
+        });
+
+        // Store Keeper Bundle Linking — protected by auth:store_keeper (NOT auth:factory)
+        // These endpoints are called by the StoreKeeper mobile app after store-keeper login.
+        Route::middleware("auth:store_keeper")->group(function (): void {
             Route::prefix("store-keeper-bundles")->group(function (): void {
                 Route::get("pending", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "pendingOrders"]);
                 Route::post("create-dummy", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "createDummyOrder"]);

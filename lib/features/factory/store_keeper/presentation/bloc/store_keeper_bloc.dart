@@ -342,7 +342,9 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
       // Also store user info if available
       final user = data?['user'] as Map<String, dynamic>?;
       final storeKeeperName =
-          user?['full_name']?.toString() ?? event.email.split('@').first;
+          user?['name']?.toString() ??
+          user?['full_name']?.toString() ??
+          event.email.split('@').first;
       final storeKeeperEmail = user?['email']?.toString() ?? event.email;
 
       String sessionId;
