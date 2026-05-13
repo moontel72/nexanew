@@ -44,7 +44,10 @@ class _OrderSelectionScreenState extends State<OrderSelectionScreen> {
         title: const Text('Orders - Pending Linking'),
         backgroundColor: AppColors.accent,
         foregroundColor: Colors.white,
-        leading: IconButton(icon: const Icon(Icons.home), onPressed: () => context.go('/factory/store-keeper/dashboard')),
+        leading: IconButton(
+          icon: const Icon(Icons.home),
+          onPressed: () => context.go('/factory/store-keeper/dashboard'),
+        ),
       ),
       body: BlocConsumer<StoreKeeperBloc, StoreKeeperState>(
         listener: (context, state) {
@@ -109,12 +112,18 @@ class _OrderSelectionScreenState extends State<OrderSelectionScreen> {
                 itemCount: orders.length,
                 itemBuilder: (context, index) {
                   final order = orders[index];
-                  final orderRef = order['order_reference']?.toString() ?? '---';
-                  final bundleCode = order['bundle_code']?.toString() ?? '---';
-                  final createdAt = order['created_at']?.toString();
-                  final totalCartons = order['total_cartons']?.toString() ?? '0';
-                  final totalPackets = order['total_packets']?.toString() ?? '0';
-                  final bundleId = order['bundle_id']?.toString() ?? order['id']?.toString() ?? '';
+                  final orderRef =
+                      order['orderReference']?.toString() ?? '---';
+                  final bundleCode = order['bundleCode']?.toString() ?? '---';
+                  final createdAt = order['createdAt']?.toString();
+                  final totalCartons =
+                      order['totalCartons']?.toString() ?? '0';
+                  final totalPackets =
+                      order['totalPackets']?.toString() ?? '0';
+                  final bundleId =
+                      order['bundle_id']?.toString() ??
+                      order['id']?.toString() ??
+                      '';
 
                   return Card(
                     elevation: 2,
@@ -125,7 +134,9 @@ class _OrderSelectionScreenState extends State<OrderSelectionScreen> {
                     child: InkWell(
                       onTap: () {
                         if (bundleId.isNotEmpty) {
-                          context.push('/factory/store-keeper/bundle/$bundleId');
+                          context.push(
+                            '/factory/store-keeper/bundle/$bundleId',
+                          );
                         }
                       },
                       borderRadius: BorderRadius.circular(12.r),
