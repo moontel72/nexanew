@@ -311,6 +311,12 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
   ) async {
     emit(StoreKeeperLoggingIn());
     try {
+      // Authenticate with server
+      await _apiService.post(/auth/login, body: {
+        'email': event.email,
+        'password': event.password,
+      });
+
       String sessionId;
       bool dbOk = false;
       try {

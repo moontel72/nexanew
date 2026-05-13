@@ -61,6 +61,9 @@ class _OrderSelectionScreenState extends State<OrderSelectionScreen> {
           }
         },
         builder: (context, state) {
+          if (state is! StoreKeeperAuthenticated) {
+            return const Center(child: CircularProgressIndicator(color: Colors.amber));
+          }
           if (state is StoreKeeperAuthenticated) {
             final orders = state.pendingOrders;
 
@@ -112,14 +115,11 @@ class _OrderSelectionScreenState extends State<OrderSelectionScreen> {
                 itemCount: orders.length,
                 itemBuilder: (context, index) {
                   final order = orders[index];
-                  final orderRef =
-                      order['orderReference']?.toString() ?? '---';
+                  final orderRef = order['orderReference']?.toString() ?? '---';
                   final bundleCode = order['bundleCode']?.toString() ?? '---';
                   final createdAt = order['createdAt']?.toString();
-                  final totalCartons =
-                      order['totalCartons']?.toString() ?? '0';
-                  final totalPackets =
-                      order['totalPackets']?.toString() ?? '0';
+                  final totalCartons = order['totalCartons']?.toString() ?? '0';
+                  final totalPackets = order['totalPackets']?.toString() ?? '0';
                   final bundleId =
                       order['bundle_id']?.toString() ??
                       order['id']?.toString() ??
