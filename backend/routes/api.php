@@ -561,6 +561,9 @@ $registerRoutes = function (): void {
                 Route::get("{id}/audit-trail", [\App\Http\Controllers\Factory\StoreKeeperController::class, "auditTrail"]);
             });
 
+            // Allow factory admin to update bundle linking status (e.g., refer order to store keeper)
+            Route::put("store-keeper-bundles/{bundleId}/linking-status", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "updateLinkingStatus"]);
+
         });
 
         // Store Keeper Bundle Linking — protected by auth:store_keeper (NOT auth:factory)

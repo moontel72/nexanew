@@ -163,7 +163,7 @@ class _CreateStoreKeeperScreenState extends State<CreateStoreKeeperScreen> {
                           ),
                           SizedBox(height: 12.h),
                           DropdownButtonFormField<String>(
-                            value: _dutyShift,
+                            initialValue: _dutyShift,
                             decoration: InputDecoration(
                               labelText: 'Duty Shift',
                               prefixIcon: const Icon(Icons.schedule_outlined),

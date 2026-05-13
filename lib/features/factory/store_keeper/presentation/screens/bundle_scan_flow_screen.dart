@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/presentation/bloc/store_keeper_bloc.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/theme/text_styles.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
@@ -67,9 +65,7 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
 
     setState(() => _isProcessing = true);
 
-    final result = await context.push<String>(
-      '/factory/store-keeper/scanner',
-    );
+    final result = await context.push<String>('/factory/store-keeper/scanner');
 
     if (result == null || result.isEmpty) {
       if (mounted) setState(() => _isProcessing = false);
@@ -113,11 +109,9 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
   Future<void> _handleBundleScan(String code) async {
     setState(() {
       _bundleCode = code;
-      _completedSteps.add(_ScanStepEntry(
-        step: ScanFlowStep.bundle,
-        code: code,
-        label: 'Bundle',
-      ));
+      _completedSteps.add(
+        _ScanStepEntry(step: ScanFlowStep.bundle, code: code, label: 'Bundle'),
+      );
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -138,19 +132,14 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
     // Link carton to bundle via API
     await _apiService.post(
       '/api/factory/codes/carton/link',
-      body: {
-        'bundle_id': widget.bundleId,
-        'carton_id': code,
-      },
+      body: {'bundle_id': widget.bundleId, 'carton_id': code},
     );
 
     setState(() {
       _cartonCode = code;
-      _completedSteps.add(_ScanStepEntry(
-        step: ScanFlowStep.carton,
-        code: code,
-        label: 'Carton',
-      ));
+      _completedSteps.add(
+        _ScanStepEntry(step: ScanFlowStep.carton, code: code, label: 'Carton'),
+      );
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -171,19 +160,14 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
     // Link packet to carton via API
     await _apiService.post(
       '/api/factory/codes/packet/link',
-      body: {
-        'carton_id': _cartonCode ?? code,
-        'packet_id': code,
-      },
+      body: {'carton_id': _cartonCode ?? code, 'packet_id': code},
     );
 
     setState(() {
       _packetCode = code;
-      _completedSteps.add(_ScanStepEntry(
-        step: ScanFlowStep.packet,
-        code: code,
-        label: 'Packet',
-      ));
+      _completedSteps.add(
+        _ScanStepEntry(step: ScanFlowStep.packet, code: code, label: 'Packet'),
+      );
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -214,11 +198,9 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
 
     setState(() {
       _unitCode = code;
-      _completedSteps.add(_ScanStepEntry(
-        step: ScanFlowStep.unit,
-        code: code,
-        label: 'Unit',
-      ));
+      _completedSteps.add(
+        _ScanStepEntry(step: ScanFlowStep.unit, code: code, label: 'Unit'),
+      );
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -245,7 +227,10 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
         ),
         backgroundColor: AppColors.accent,
         foregroundColor: Colors.white,
-        leading: IconButton(icon: const Icon(Icons.home), onPressed: () => context.go('/factory/store-keeper/dashboard')),
+        leading: IconButton(
+          icon: const Icon(Icons.home),
+          onPressed: () => context.go('/factory/store-keeper/dashboard'),
+        ),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.w),
@@ -286,17 +271,15 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: Padding(
         padding: EdgeInsets.all(16.w),
         child: Column(
           children: [
             Row(
               children: List.generate(steps.length, (i) {
-                final done = i < currentIdx ||
-                    (currentIdx < 0 && i < steps.length);
+                final done =
+                    i < currentIdx || (currentIdx < 0 && i < steps.length);
                 final cur = i == currentIdx;
                 return Expanded(
                   child: Row(
@@ -309,8 +292,8 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
                           color: done
                               ? AppColors.success
                               : cur
-                                  ? AppColors.accent
-                                  : AppColors.gray300,
+                              ? AppColors.accent
+                              : AppColors.gray300,
                         ),
                         child: Center(
                           child: done
@@ -333,9 +316,7 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
                         Expanded(
                           child: Container(
                             height: 2,
-                            color: done
-                                ? AppColors.success
-                                : AppColors.gray300,
+                            color: done ? AppColors.success : AppColors.gray300,
                           ),
                         ),
                     ],
@@ -392,9 +373,7 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
               Gap(16.h),
               Text(
                 'All Steps Complete!',
-                style: TextStyles.heading5.copyWith(
-                  color: AppColors.success,
-                ),
+                style: TextStyles.heading5.copyWith(color: AppColors.success),
               ),
               Gap(8.h),
               Text(
@@ -429,9 +408,7 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: Padding(
         padding: EdgeInsets.all(16.w),
         child: Column(
@@ -454,7 +431,9 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
             PrimaryButton(
               text: _isProcessing ? 'Scanning...' : label,
               isEnabled: !_isProcessing,
-              onPressed: () { _openScannerForCurrentStep(); },
+              onPressed: () {
+                _openScannerForCurrentStep();
+              },
               backgroundColor: AppColors.accent,
               icon: Icons.qr_code_scanner,
             ),
@@ -467,9 +446,7 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
   Widget _buildCompletedStepsCard() {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: Padding(
         padding: EdgeInsets.all(16.w),
         child: Column(

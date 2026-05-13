@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/presentation/bloc/store_keeper_bloc.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/theme/text_styles.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
@@ -242,7 +240,10 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
         title: Text('Bundle: $bundleCode'),
         backgroundColor: AppColors.accent,
         foregroundColor: Colors.white,
-        leading: IconButton(icon: const Icon(Icons.home), onPressed: () => context.go('/factory/store-keeper/dashboard')),
+        leading: IconButton(
+          icon: const Icon(Icons.home),
+          onPressed: () => context.go('/factory/store-keeper/dashboard'),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -365,7 +366,9 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
             Gap(12.h),
             PrimaryButton(
               text: _isGeneratingQr ? 'Generating...' : 'Generate Bundle QR',
-              onPressed: () { _generateQr(); },
+              onPressed: () {
+                _generateQr();
+              },
               isEnabled: !_isGeneratingQr,
               backgroundColor: AppColors.accent,
             ),

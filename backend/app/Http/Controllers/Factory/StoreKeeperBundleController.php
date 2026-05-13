@@ -63,6 +63,7 @@ class StoreKeeperBundleController extends Controller
         }
     }
 
+    /**
      * List orders with linking_status = 'pending_store_linking' for the
      * authenticated user's company.
      */
