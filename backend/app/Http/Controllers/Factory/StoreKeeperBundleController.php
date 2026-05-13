@@ -18,7 +18,7 @@ class StoreKeeperBundleController extends Controller
     // ─── Pending Orders ──────────────────────────────────────────
 
     /**
-    /**
+     * No carton/packet codes required.
      * Create a dummy/placeholder order for testing.
      * No carton/packet codes required.
      */
@@ -57,7 +57,7 @@ class StoreKeeperBundleController extends Controller
                     'createdAt' => $now->toISOString(),
                 ],
             ], 201);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('createDummyOrder failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
