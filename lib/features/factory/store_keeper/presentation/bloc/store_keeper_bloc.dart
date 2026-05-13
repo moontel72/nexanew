@@ -271,10 +271,12 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
   StreamSubscription? _connectivitySubscription;
   String? _currentSessionId;
 
-  StoreKeeperBloc({required StoreKeeperRepository repository, ApiService? apiService})
-    : _repository = repository,
-      _apiService = apiService ?? ApiService(),
-      super(StoreKeeperInitial()) {
+  StoreKeeperBloc({
+    required StoreKeeperRepository repository,
+    ApiService? apiService,
+  }) : _repository = repository,
+       _apiService = apiService ?? ApiService(),
+       super(StoreKeeperInitial()) {
     on<StoreKeeperLogin>(_onLogin);
     on<StoreKeeperLogout>(_onLogout);
     on<ScanCode>(_onScanCode);
@@ -527,17 +529,20 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
   ) async {
     try {
       final response = await _apiService.get(
-        '/api/factory/store-keeper-bundles/pending',
+        '/factory/store-keeper-bundles/pending',
       );
-      final List<dynamic> data =
-          response is List ? response : (response['data'] ?? []);
+      final List<dynamic> data = response is List
+          ? response
+          : (response['data'] ?? []);
       final orders = data
           .map<Map<String, dynamic>>(
             (e) => e is Map<String, dynamic> ? e : <String, dynamic>{},
           )
           .toList();
       if (state is StoreKeeperAuthenticated) {
-        emit((state as StoreKeeperAuthenticated).copyWith(pendingOrders: orders));
+        emit(
+          (state as StoreKeeperAuthenticated).copyWith(pendingOrders: orders),
+        );
       }
     } catch (e) {
       emit(ErrorState(message: 'Failed to load pending orders: $e'));

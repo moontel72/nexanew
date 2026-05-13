@@ -111,6 +111,11 @@ class FactoryShell extends StatelessWidget {
               ),
             ],
           ),
+          AdminSidebarItem(
+            label: 'Orders',
+            icon: Icons.receipt_long_outlined,
+            route: '/factory/orders',
+          ),
         ],
       ),
       AdminSidebarSection(
@@ -234,6 +239,10 @@ class FactoryShell extends StatelessWidget {
   }
 
   String _titleForLocation(String location) {
+    if (location.startsWith('/factory/orders/create')) {
+      return 'Create Order';
+    }
+    if (location.startsWith('/factory/orders')) return 'Orders';
     if (location.startsWith('/factory/products/create')) {
       return 'Create Product';
     }
@@ -269,6 +278,12 @@ class FactoryShell extends StatelessWidget {
   }
 
   List<String> _breadcrumbsForLocation(String location) {
+    if (location.startsWith('/factory/orders/create')) {
+      return const ['Factory', 'Orders', 'Create Order'];
+    }
+    if (location.startsWith('/factory/orders')) {
+      return const ['Factory', 'Orders'];
+    }
     if (location.startsWith('/factory/products/create')) {
       return const ['Factory', 'Products', 'Create Product'];
     }
