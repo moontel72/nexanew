@@ -551,6 +551,17 @@ $registerRoutes = function (): void {
                 Route::delete("{id}", [\App\Http\Controllers\Factory\StoreKeeperController::class, "destroy"]);
                 Route::get("{id}/audit-trail", [\App\Http\Controllers\Factory\StoreKeeperController::class, "auditTrail"]);
             });
+
+            // Store Keeper Bundle Linking
+            Route::prefix("store-keeper-bundles")->group(function (): void {
+                Route::get("pending", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "pendingOrders"]);
+                Route::post("{bundleId}/generate-qr", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "generateBundleQR"]);
+                Route::post("{bundleId}/link-carton", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "linkCartonToBundle"]);
+                Route::post("{bundleId}/link-packet", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "linkPacketToBundle"]);
+                Route::post("{bundleId}/link-unit", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "linkUnitToBundle"]);
+                Route::get("{bundleId}/summary", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "bundleSummary"]);
+                Route::put("{bundleId}/linking-status", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "updateLinkingStatus"]);
+            });
         });
     });
 

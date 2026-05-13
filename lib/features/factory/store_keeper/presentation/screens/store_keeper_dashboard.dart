@@ -287,7 +287,7 @@ class _StoreKeeperDashboardState extends State<StoreKeeperDashboard> {
                           'Link Items',
                           Icons.link,
                           AppColors.secondaryDark,
-                          '/factory/store-keeper/linking',
+                          '/factory/store-keeper/orders',
                         ),
                         Gap(12.w),
                         _qa(

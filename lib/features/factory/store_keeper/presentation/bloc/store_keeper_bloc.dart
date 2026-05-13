@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/data/datasources/local_database.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/data/repositories/store_keeper_repository.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/domain/entities/scan_record.dart';
@@ -99,6 +101,10 @@ class ConnectivityChanged extends StoreKeeperEvent {
   List<Object?> get props => [isOnline];
 }
 
+class LoadPendingOrders extends StoreKeeperEvent {
+  const LoadPendingOrders();
+}
+
 // ─── States ─────────────────────────────────────────────
 abstract class StoreKeeperState extends Equatable {
   const StoreKeeperState();
@@ -118,6 +124,7 @@ class StoreKeeperAuthenticated extends StoreKeeperState {
   final int linkedItems;
   final String? lastScannedCode;
   final String? lastScannedType;
+  final List<Map<String, dynamic>> pendingOrders;
 
   const StoreKeeperAuthenticated({
     required this.storeKeeperName,
@@ -129,6 +136,7 @@ class StoreKeeperAuthenticated extends StoreKeeperState {
     this.linkedItems = 0,
     this.lastScannedCode,
     this.lastScannedType,
+    this.pendingOrders = const [],
   });
 
   StoreKeeperAuthenticated copyWith({
@@ -141,6 +149,7 @@ class StoreKeeperAuthenticated extends StoreKeeperState {
     int? linkedItems,
     String? lastScannedCode,
     String? lastScannedType,
+    List<Map<String, dynamic>>? pendingOrders,
   }) {
     return StoreKeeperAuthenticated(
       storeKeeperName: storeKeeperName ?? this.storeKeeperName,
@@ -152,6 +161,7 @@ class StoreKeeperAuthenticated extends StoreKeeperState {
       linkedItems: linkedItems ?? this.linkedItems,
       lastScannedCode: lastScannedCode ?? this.lastScannedCode,
       lastScannedType: lastScannedType ?? this.lastScannedType,
+      pendingOrders: pendingOrders ?? this.pendingOrders,
     );
   }
 
@@ -166,6 +176,7 @@ class StoreKeeperAuthenticated extends StoreKeeperState {
     linkedItems,
     lastScannedCode,
     lastScannedType,
+    pendingOrders,
   ];
 }
 
@@ -256,11 +267,13 @@ class ErrorState extends StoreKeeperState {
 // ─── BLoC ───────────────────────────────────────────────
 class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
   final StoreKeeperRepository _repository;
+  final ApiService _apiService;
   StreamSubscription? _connectivitySubscription;
   String? _currentSessionId;
 
-  StoreKeeperBloc({required StoreKeeperRepository repository})
+  StoreKeeperBloc({required StoreKeeperRepository repository, ApiService? apiService})
     : _repository = repository,
+      _apiService = apiService ?? ApiService(),
       super(StoreKeeperInitial()) {
     on<StoreKeeperLogin>(_onLogin);
     on<StoreKeeperLogout>(_onLogout);
@@ -273,6 +286,7 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
     on<LoadHierarchy>(_onLoadHierarchy);
     on<RefreshDashboardStats>(_onRefreshDashboard);
     on<ConnectivityChanged>(_onConnectivityChanged);
+    on<LoadPendingOrders>(_onLoadPendingOrders);
 
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
       results,
@@ -504,6 +518,31 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
       emit(
         (state as StoreKeeperAuthenticated).copyWith(isOnline: event.isOnline),
       );
+    }
+  }
+
+  Future<void> _onLoadPendingOrders(
+    LoadPendingOrders event,
+    Emitter<StoreKeeperState> emit,
+  ) async {
+    try {
+      final response = await _apiService.get(
+        '/api/factory/store-keeper-bundles/pending',
+      );
+      final List<dynamic> data =
+          response is List ? response : (response['data'] ?? []);
+      final orders = data
+          .map<Map<String, dynamic>>(
+            (e) => e is Map<String, dynamic> ? e : <String, dynamic>{},
+          )
+          .toList();
+      if (state is StoreKeeperAuthenticated) {
+        emit((state as StoreKeeperAuthenticated).copyWith(pendingOrders: orders));
+      }
+    } catch (e) {
+      emit(ErrorState(message: 'Failed to load pending orders: $e'));
+      await Future.delayed(const Duration(seconds: 2));
+      if (state is StoreKeeperAuthenticated) emit(state);
     }
   }
 }

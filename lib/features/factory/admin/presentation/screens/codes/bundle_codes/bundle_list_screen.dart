@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/insights/bundle_insights_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_insights_screen.dart';
+import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
@@ -51,6 +52,33 @@ class _BundleListScreenState extends State<BundleListScreen> {
     );
   }
 
+  Future<void> _sendToStoreKeeper(String bundleId, String orderRef) async {
+    try {
+      await ApiService().put(
+        '/factory/store-keeper-bundles/$bundleId/linking-status',
+        body: {'linking_status': 'pending_store_linking'},
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$orderRef sent to Store Keeper'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        context.read<BundleBloc>().add(const LoadBundles());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -89,7 +117,6 @@ class _BundleListScreenState extends State<BundleListScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Link Units chip
                       ActionChip(
                         avatar: const Icon(Icons.link, size: 16),
                         label: const Text(
@@ -102,8 +129,21 @@ class _BundleListScreenState extends State<BundleListScreen> {
                         visualDensity: VisualDensity.compact,
                         onPressed: () => _openInsights(b.id),
                       ),
+                      SizedBox(width: 4.w),
+                      ActionChip(
+                        avatar: const Icon(Icons.person_add, size: 16),
+                        label: const Text(
+                          'Send to Store',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                        backgroundColor: Colors.amber.withAlpha(20),
+                        side: const BorderSide(color: Colors.amber),
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () =>
+                            _sendToStoreKeeper(b.id, b.orderReference),
+                      ),
                       SizedBox(width: 6.w),
-                      // Draft badge
                       Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: 10.w,
@@ -124,7 +164,6 @@ class _BundleListScreenState extends State<BundleListScreen> {
                       ),
                     ],
                   ),
-                  // Tap the whole row to open insights
                   onTap: () => _openInsights(b.id),
                 ),
               );

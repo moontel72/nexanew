@@ -47,6 +47,9 @@ import 'package:nexatrace_system/features/factory/store_keeper/presentation/scre
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/rack_allocation_screen.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/inventory_screen.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/shift_summary_screen.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/order_selection_screen.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/bundle_linking_screen.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/bundle_scan_flow_screen.dart';
 
 class AppRouter {
   late final GoRouter router;
@@ -398,6 +401,26 @@ class AppRouter {
     GoRoute(
       path: '/factory/store-keeper/shift-summary',
       builder: (context, state) => const ShiftSummaryScreen(),
+    ),
+    GoRoute(
+      path: '/factory/store-keeper/orders',
+      builder: (context, state) => const OrderSelectionScreen(),
+    ),
+    GoRoute(
+      path: '/factory/store-keeper/bundle/:bundleId',
+      builder: (context, state) {
+        final bundleId = state.pathParameters['bundleId'] ?? '';
+        return BundleLinkingScreen(bundleId: bundleId);
+      },
+      routes: [
+        GoRoute(
+          path: 'scan',
+          builder: (context, state) {
+            final bundleId = state.pathParameters['bundleId'] ?? '';
+            return BundleScanFlowScreen(bundleId: bundleId);
+          },
+        ),
+      ],
     ),
   ];
 
