@@ -48,6 +48,7 @@ import 'package:nexatrace_system/features/factory/store_keeper/presentation/scre
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/inventory_screen.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/shift_summary_screen.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/order_selection_screen.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/qr_test_panel_screen.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/bundle_linking_screen.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/bundle_scan_flow_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/orders/orders_hub_screen.dart';
@@ -428,6 +429,10 @@ class AppRouter {
     GoRoute(
       path: '/factory/store-keeper/orders',
       builder: (context, state) => const OrderSelectionScreen(),
+    ),
+    GoRoute(
+      path: '/factory/store-keeper/qr-test-panel',
+      builder: (context, state) => const QrTestPanelScreen(),
     ),
     GoRoute(
       path: '/factory/store-keeper/bundle/:bundleId',

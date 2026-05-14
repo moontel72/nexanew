@@ -307,6 +307,18 @@ class _StoreKeeperDashboardState extends State<StoreKeeperDashboard> {
                         ),
                       ],
                     ),
+                    Gap(12.h),
+                    Row(
+                      children: [
+                        _qa(
+                          context,
+                          'QR Test Panel',
+                          Icons.qr_code_2,
+                          Colors.amber.shade700,
+                          '/factory/store-keeper/qr-test-panel',
+                        ),
+                      ],
+                    ),
                     Gap(24.h),
                     if (state.pendingSyncs > 0)
                       Container(

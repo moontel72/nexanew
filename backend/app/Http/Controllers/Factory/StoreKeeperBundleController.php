@@ -583,6 +583,82 @@ class StoreKeeperBundleController extends Controller
         }
     }
 
+
+    // --- Test QR Codes -------------------------------------------------
+
+    /**
+     * Return available carton / packet / unit codes for QR test panel.
+     */
+    public function testCodes(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $companyId = (string) $user->company_id;
+            $type = $request->query('type', 'all');
+
+            $cartons = [];
+            $packets = [];
+            $units = [];
+
+            if ($type === 'all' || $type === 'carton') {
+                $cartons = DB::table('carton_codes')
+                    ->where('company_id', $companyId)
+                    ->orderByDesc('created_at')
+                    ->limit(20)
+                    ->get()
+                    ->map(fn($c) => [
+                        'id' => $c->id,
+                        'code' => $c->carton_code ?? $c->id,
+                        'label' => $c->carton_code ?? ('Carton-' . substr($c->id, 0, 8)),
+                        'type' => 'carton',
+                    ])
+                    ->values();
+            }
+
+            if ($type === 'all' || $type === 'packet') {
+                $packets = DB::table('packet_codes')
+                    ->where('company_id', $companyId)
+                    ->orderByDesc('created_at')
+                    ->limit(20)
+                    ->get()
+                    ->map(fn($p) => [
+                        'id' => $p->id,
+                        'code' => $p->packet_code ?? $p->id,
+                        'label' => $p->packet_code ?? ('Packet-' . substr($p->id, 0, 8)),
+                        'type' => 'packet',
+                    ])
+                    ->values();
+            }
+
+            if ($type === 'all' || $type === 'unit') {
+                $units = DB::table('unit_codes')
+                    ->where('company_id', $companyId)
+                    ->orderByDesc('created_at')
+                    ->limit(20)
+                    ->get()
+                    ->map(fn($u) => [
+                        'id' => $u->id,
+                        'code' => $u->unit_code ?? $u->id,
+                        'label' => $u->unit_code ?? ('Unit-' . substr($u->id, 0, 8)),
+                        'type' => 'unit',
+                    ])
+                    ->values();
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'cartons' => $cartons,
+                    'packets' => $packets,
+                    'units' => $units,
+                    'total' => count($cartons) + count($packets) + count($units),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('StoreKeeperBundle testCodes failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
     // ─── Helpers ─────────────────────────────────────────────────
 
     /**

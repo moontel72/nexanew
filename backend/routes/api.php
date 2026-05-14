@@ -567,6 +567,7 @@ $registerRoutes = function (): void {
         // Uses multi-guard: tries auth:factory first, falls back to auth:store_keeper.
         Route::middleware("auth:factory,store_keeper")->group(function (): void {
             Route::prefix("store-keeper-bundles")->group(function (): void {
+                Route::get("test-codes", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "testCodes"]);
                 Route::get("pending", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "pendingOrders"]);
                 Route::post("create-dummy", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "createDummyOrder"]);
                 Route::post("{bundleId}/generate-qr", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "generateBundleQR"]);
