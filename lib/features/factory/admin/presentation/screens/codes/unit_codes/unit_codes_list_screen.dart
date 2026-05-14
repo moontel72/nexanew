@@ -333,7 +333,10 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                         Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+                          padding: EdgeInsets.symmetric(
+                            vertical: 8.h,
+                            horizontal: 4.w,
+                          ),
                           child: InkWell(
                             onTap: () => _showUnitDetails(sortedCodes[i]),
                             child: Row(
@@ -342,15 +345,20 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                                 Flexible(
                                   child: Text(
                                     sortedCodes[i].code,
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 SizedBox(width: 6.w),
-                                Icon(Icons.qr_code_2, size: 18.w, color: AppColors.accent),
+                                Icon(
+                                  Icons.qr_code_2,
+                                  size: 18.w,
+                                  color: AppColors.accent,
+                                ),
                               ],
                             ),
                           ),
@@ -830,15 +838,32 @@ class _UnitDetailsBottomSheet extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 40.w,
-                    height: 4.h,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2.r),
+                // Drag handle + Close button row
+                Row(
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: Container(
+                          width: 40.w,
+                          height: 4.h,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2.r),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 22),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Close',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: 20.h),
                 Text(
@@ -877,10 +902,11 @@ class _UnitDetailsBottomSheet extends StatelessWidget {
                         SizedBox(height: 8.h),
                         Text(
                           'Scan with Store Keeper App',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: 10.sp,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 10.sp,
+                              ),
                         ),
                         SizedBox(height: 4.h),
                         GestureDetector(
@@ -896,11 +922,18 @@ class _UnitDetailsBottomSheet extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.copy, size: 14.w, color: AppColors.accent),
+                              Icon(
+                                Icons.copy,
+                                size: 14.w,
+                                color: AppColors.accent,
+                              ),
                               SizedBox(width: 4.w),
                               Text(
                                 'Copy UUID',
-                                style: TextStyle(fontSize: 10.sp, color: AppColors.accent),
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  color: AppColors.accent,
+                                ),
                               ),
                             ],
                           ),

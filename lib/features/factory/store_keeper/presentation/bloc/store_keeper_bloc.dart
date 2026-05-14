@@ -295,7 +295,10 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
     ) {
       final online = !results.contains(ConnectivityResult.none);
       add(ConnectivityChanged(isOnline: online));
-      if (online) add(SyncNow());
+      // Only trigger sync if database is already initialized (avoid race with login)
+      if (online && LocalDatabase().isInitialized) {
+        add(SyncNow());
+      }
     });
   }
 
@@ -400,6 +403,15 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
     ScanCode event,
     Emitter<StoreKeeperState> emit,
   ) async {
+    // Guard: database must be initialized before scanning
+    if (!LocalDatabase().isInitialized) {
+      emit(const ErrorState(
+        message: 'LocalDatabase not initialized. Call init() first.',
+      ));
+      await Future.delayed(const Duration(seconds: 2));
+      if (state is StoreKeeperAuthenticated) emit(state);
+      return;
+    }
     try {
       await _repository.scanCode(
         event.code,
@@ -504,6 +516,11 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
   }
 
   Future<void> _onSyncNow(SyncNow event, Emitter<StoreKeeperState> emit) async {
+    // Guard: database must be initialized before syncing
+    if (!LocalDatabase().isInitialized) {
+      // Silently skip — sync will retry when connectivity next changes after init
+      return;
+    }
     final online = await _repository.isOnline;
     if (!online) {
       if (state is StoreKeeperAuthenticated)

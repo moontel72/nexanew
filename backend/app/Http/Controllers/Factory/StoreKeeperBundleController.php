@@ -149,7 +149,9 @@ class StoreKeeperBundleController extends Controller
                 ->where('id', $bundleId)
                 ->update([
                     'bundle_qr_data' => json_encode($qrPayload),
-                    'linking_status' => 'store_linked',
+                    // Keep as pending_store_linking — only mark store_linked
+                    // when ALL cartons/packets/units have been scanned and linked.
+                    'linking_status' => 'pending_store_linking',
                     'store_keeper_id' => $user->id,
                     'updated_at' => now(),
                 ]);
@@ -549,6 +551,9 @@ class StoreKeeperBundleController extends Controller
 
             $updates = [
                 'linking_status' => $data['linking_status'],
+                // Also sync the 'status' column so Admin Panel tab filtering works correctly.
+                // This ensures orders move from "Draft" → "Pending" → "Linked" tabs.
+                'status' => $data['linking_status'],
                 'updated_at' => now(),
             ];
 
@@ -602,7 +607,7 @@ class StoreKeeperBundleController extends Controller
 
             if ($type === 'all' || $type === 'carton') {
                 $cartons = DB::table('carton_codes')
-                    
+
                     ->orderByDesc('created_at')
                     ->limit(20)
                     ->get()
@@ -617,7 +622,7 @@ class StoreKeeperBundleController extends Controller
 
             if ($type === 'all' || $type === 'packet') {
                 $packets = DB::table('packet_codes')
-                    
+
                     ->orderByDesc('created_at')
                     ->limit(20)
                     ->get()
@@ -632,7 +637,7 @@ class StoreKeeperBundleController extends Controller
 
             if ($type === 'all' || $type === 'unit') {
                 $units = DB::table('unit_codes')
-                    
+
                     ->orderByDesc('created_at')
                     ->limit(20)
                     ->get()

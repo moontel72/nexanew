@@ -177,12 +177,30 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
           }
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${linkType.toUpperCase()} linked successfully'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+        // Check if all items are now linked — transition to store_linked
+        if (!_hasMissingItems) {
+          await _apiService.put(
+            '/factory/store-keeper-bundles/${widget.bundleId}/linking-status',
+            body: {'linking_status': 'store_linked'},
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  'All items linked! Bundle is now complete.',
+                ),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${linkType.toUpperCase()} linked successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
