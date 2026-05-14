@@ -408,7 +408,9 @@ class AppRouter {
     ),
     GoRoute(
       path: '/factory/store-keeper/scanner',
-      builder: (context, state) => const ScannerScreen(),
+      // returnResult: true → scanner pops with the scanned code so
+      // BundleLinkingScreen / BundleScanFlowScreen can receive it.
+      builder: (context, state) => const ScannerScreen(returnResult: true),
     ),
     GoRoute(
       path: '/factory/store-keeper/linking',

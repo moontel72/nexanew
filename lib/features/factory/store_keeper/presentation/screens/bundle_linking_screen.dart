@@ -76,12 +76,17 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
               _parseInt(_bundleInfo?['total_units']) ??
               _parseInt(_bundleInfo?['expected_units']) ??
               0;
+          // QR is generated when the server has stored bundleQrData
           _qrGenerated =
               _bundleInfo?['qr_generated'] == true ||
-              _bundleInfo?['qr_code'] != null;
+              _bundleInfo?['qr_code'] != null ||
+              _bundleInfo?['bundleQrData'] != null;
           _qrData =
               _bundleInfo?['qr_code']?.toString() ??
-              _bundleInfo?['qr_data']?.toString();
+              _bundleInfo?['qr_data']?.toString() ??
+              (_bundleInfo?['bundleQrData'] is Map
+                  ? (_bundleInfo!['bundleQrData'] as Map).values.join('-')
+                  : _bundleInfo?['bundleQrData']?.toString());
           _isLoading = false;
         });
       }

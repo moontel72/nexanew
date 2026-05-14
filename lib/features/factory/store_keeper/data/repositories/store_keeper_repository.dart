@@ -319,21 +319,31 @@ class StoreKeeperRepository {
     metadata: m.metadata,
   );
   String _inferCodeType(String code) {
-    final upper = code.toUpperCase();
+    final original = code.toUpperCase();
 
-    // 1. Explicit prefix checks
-    if (upper.startsWith('BND') || upper.startsWith('BUN')) return 'bundle';
-    if (upper.startsWith('CTN') || upper.startsWith('CAR')) return 'carton';
-    if (upper.startsWith('PKT') || upper.startsWith('PAC')) return 'packet';
-    if (upper.startsWith('UNT') || upper.startsWith('UNI')) return 'unit';
+    final stripped = original.replaceAll(RegExp(r'[^A-Z0-9]'), '');
 
-    // 2. UUID detection (32 hex chars after stripping non-alnum)
-    final stripped = upper.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    // 0. Check ORIGINAL for single-letter prefixes (C-, P-, U-, B-)
+    if (original.startsWith('C-')) return 'carton';
+    if (original.startsWith('P-')) return 'packet';
+    if (original.startsWith('U-')) return 'unit';
+    if (original.startsWith('B-')) return 'bundle';
+
+    // 1. Explicit prefix checks on stripped version
+    if (stripped.startsWith('BND') || stripped.startsWith('BUN'))
+      return 'bundle';
+    if (stripped.startsWith('CTN') || stripped.startsWith('CAR'))
+      return 'carton';
+    if (stripped.startsWith('PKT') || stripped.startsWith('PAC'))
+      return 'packet';
+    if (stripped.startsWith('UNT') || stripped.startsWith('UNI')) return 'unit';
+
+    // 2. UUID detection (32 hex chars)
     if (stripped.length == 32 && RegExp(r'^[0-9A-F]{32}$').hasMatch(stripped)) {
       return 'code';
     }
 
-    // 3. Default — 'code' is safer than guessing 'unit'
+    // 3. Default
     return 'code';
   }
 

@@ -73,6 +73,7 @@ class _ScannerScreenState extends State<ScannerScreen>
 
   void _handleBarcode(BarcodeCapture capture) {
     final now = DateTime.now();
+    // Time-based debounce: ignore scans within 1.5 seconds of each other
     if (_lastScanTime != null &&
         now.difference(_lastScanTime!) < const Duration(milliseconds: 1500)) {
       return;
@@ -85,7 +86,13 @@ class _ScannerScreenState extends State<ScannerScreen>
     if (rawValue == null || rawValue.trim().isEmpty) return;
     final code = rawValue.trim();
 
-    // ── Haptic + Visual feedback on successful capture ──
+    // Same-code dedup: ignore if the identical code was just scanned.
+    // Prevents the "dead loop" where the same QR in frame fires 22+ times.
+    if (code == _lastScannedCode && _lastScanTime != null) {
+      return;
+    }
+
+    // ── Haptic feedback on successful capture ──
     HapticFeedback.lightImpact();
 
     _totalScanAttempts++;
@@ -166,9 +173,17 @@ class _ScannerScreenState extends State<ScannerScreen>
   }
 
   String _inferCodeType(String code) {
-    final upper = code.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final original = code.toUpperCase();
+    final upper = original.replaceAll(RegExp(r'[^A-Z0-9]'), '');
 
-    // 1. Explicit prefix checks — most reliable
+    // 0. Check ORIGINAL for single-letter prefixes (C-, P-, U-, B-)
+    //    These are lost after stripping, so check first.
+    if (original.startsWith('C-')) return 'carton';
+    if (original.startsWith('P-')) return 'packet';
+    if (original.startsWith('U-')) return 'unit';
+    if (original.startsWith('B-')) return 'bundle';
+
+    // 1. Explicit prefix checks on stripped version
     if (upper.startsWith('BND') || upper.startsWith('BUN')) return 'bundle';
     if (upper.startsWith('CTN') || upper.startsWith('CAR')) return 'carton';
     if (upper.startsWith('PKT') || upper.startsWith('PAC')) return 'packet';
