@@ -319,11 +319,22 @@ class StoreKeeperRepository {
     metadata: m.metadata,
   );
   String _inferCodeType(String code) {
-    final u = code.toUpperCase();
-    if (u.startsWith('BND') || u.startsWith('BUN')) return 'bundle';
-    if (u.startsWith('CTN') || u.startsWith('CAR')) return 'carton';
-    if (u.startsWith('PKT') || u.startsWith('PAC')) return 'packet';
-    return 'unit';
+    final upper = code.toUpperCase();
+
+    // 1. Explicit prefix checks
+    if (upper.startsWith('BND') || upper.startsWith('BUN')) return 'bundle';
+    if (upper.startsWith('CTN') || upper.startsWith('CAR')) return 'carton';
+    if (upper.startsWith('PKT') || upper.startsWith('PAC')) return 'packet';
+    if (upper.startsWith('UNT') || upper.startsWith('UNI')) return 'unit';
+
+    // 2. UUID detection (32 hex chars after stripping non-alnum)
+    final stripped = upper.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (stripped.length == 32 && RegExp(r'^[0-9A-F]{32}$').hasMatch(stripped)) {
+      return 'code';
+    }
+
+    // 3. Default — 'code' is safer than guessing 'unit'
+    return 'code';
   }
 
   String _endpointForOperation(String op) {

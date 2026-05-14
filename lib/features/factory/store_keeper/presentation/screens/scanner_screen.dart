@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
@@ -83,6 +84,10 @@ class _ScannerScreenState extends State<ScannerScreen>
     final rawValue = barcode.rawValue;
     if (rawValue == null || rawValue.trim().isEmpty) return;
     final code = rawValue.trim();
+
+    // ── Haptic + Visual feedback on successful capture ──
+    HapticFeedback.lightImpact();
+
     _totalScanAttempts++;
     if (_isTorchOn) _toggleTorch(automatic: true);
     _processScan(code);
@@ -106,8 +111,32 @@ class _ScannerScreenState extends State<ScannerScreen>
       });
       return;
     }
+    // Reset processing spinner after short delay
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) setState(() => _isProcessing = false);
+    });
+    // Safety timeout: force-clear if BLoC stalls
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && _isProcessing) {
+        setState(() => _isProcessing = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Scan is taking longer than expected...'),
+              duration: Duration(seconds: 2),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+        }
+      }
+    });
+    // Auto-dismiss the "last scanned" banner after 4 seconds
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted)
+        setState(() {
+          _lastScannedCode = null;
+          _lastScannedType = null;
+        });
     });
   }
 
@@ -128,6 +157,7 @@ class _ScannerScreenState extends State<ScannerScreen>
   void _submitManualEntry() {
     final code = _manualEntryController.text.trim();
     if (code.isEmpty) return;
+    HapticFeedback.lightImpact();
     _totalScanAttempts++;
     _processScan(code);
     _manualEntryController.clear();
@@ -137,12 +167,31 @@ class _ScannerScreenState extends State<ScannerScreen>
 
   String _inferCodeType(String code) {
     final upper = code.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+
+    // 1. Explicit prefix checks — most reliable
     if (upper.startsWith('BND') || upper.startsWith('BUN')) return 'bundle';
     if (upper.startsWith('CTN') || upper.startsWith('CAR')) return 'carton';
     if (upper.startsWith('PKT') || upper.startsWith('PAC')) return 'packet';
     if (upper.startsWith('UNT') || upper.startsWith('UNI')) return 'unit';
+
+    // 2. UUID detection — Admin Panel QR codes encode UUIDs.
+    //    UUIDs are 32 hex chars (optionally with dashes). After stripping
+    //    non-alphanumeric chars we get pure hex.
+    if (_looksLikeUuid(upper)) return 'code';
+
+    // 3. Known pattern: 2-3 letters + 3+ digits (e.g. AB123, XYZ9999)
+    //    These are likely product-like codes — default to unit in linking
+    //    context (the caller overrides when it knows the real type).
     if (RegExp(r'^[A-Z]{2,3}\d{3,}$').hasMatch(upper)) return 'unit';
-    return 'unit';
+
+    // 4. Fallback — label as generic 'code' so the UI doesn't lie about UNIT
+    return 'code';
+  }
+
+  /// True when [stripped] looks like a UUID (32 hex characters).
+  bool _looksLikeUuid(String stripped) {
+    return stripped.length == 32 &&
+        RegExp(r'^[0-9A-F]{32}$').hasMatch(stripped);
   }
 
   double get _successRate =>
@@ -225,7 +274,10 @@ class _ScannerScreenState extends State<ScannerScreen>
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.home, color: Colors.white), onPressed: () => context.go('/factory/store-keeper/dashboard')),
+        leading: IconButton(
+          icon: const Icon(Icons.home, color: Colors.white),
+          onPressed: () => context.go('/factory/store-keeper/dashboard'),
+        ),
         actions: [
           if (_totalScanAttempts > 0)
             IconButton(
@@ -283,6 +335,14 @@ class _ScannerScreenState extends State<ScannerScreen>
   }
 
   Widget _buildLastScanned() {
+    final typeLabel = _lastScannedType?.toUpperCase() ?? 'UNKNOWN';
+    final typeColor = switch (typeLabel) {
+      'CARTON' => AppColors.info,
+      'PACKET' => AppColors.accent,
+      'BUNDLE' => AppColors.secondary,
+      'UNIT' => AppColors.warning,
+      _ => AppColors.success,
+    };
     return Positioned(
       top: 8.h,
       left: 16.w,
@@ -291,17 +351,23 @@ class _ScannerScreenState extends State<ScannerScreen>
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.75),
+            color: Colors.black.withOpacity(0.85),
             borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: AppColors.success.withOpacity(0.5)),
+            border: Border.all(color: typeColor.withOpacity(0.6)),
           ),
           child: Row(
             children: [
-              const Icon(
-                Icons.check_circle,
-                color: AppColors.success,
-                size: 20,
-              ),
+              if (_isProcessing)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              else
+                Icon(Icons.check_circle, color: typeColor, size: 20),
               Gap(8.w),
               Expanded(
                 child: Column(
@@ -317,21 +383,12 @@ class _ScannerScreenState extends State<ScannerScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      'Type: ${_lastScannedType?.toUpperCase() ?? 'unknown'}',
-                      style: TextStyles.caption.copyWith(color: Colors.white70),
+                      'Type: $typeLabel',
+                      style: TextStyles.caption.copyWith(color: typeColor),
                     ),
                   ],
                 ),
               ),
-              if (_isProcessing)
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                ),
             ],
           ),
         ),
