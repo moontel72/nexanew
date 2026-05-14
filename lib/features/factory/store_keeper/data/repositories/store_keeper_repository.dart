@@ -38,7 +38,7 @@ class StoreKeeperRepository {
     if (online) {
       try {
         await _apiService.post(
-          '/api/factory/store-keepers/scan',
+          '/factory/store-keepers/scan',
           body: {
             'code': code,
             'code_type': localRecord.codeType,
@@ -193,7 +193,7 @@ class StoreKeeperRepository {
     for (final record in unsynced) {
       try {
         await _apiService.post(
-          '/api/factory/store-keepers/scan',
+          '/factory/store-keepers/scan',
           body: {
             'code': record.code,
             'code_type': record.codeType,
@@ -329,17 +329,17 @@ class StoreKeeperRepository {
   String _endpointForOperation(String op) {
     switch (op) {
       case 'scan':
-        return '/api/factory/store-keepers/scan';
+        return '/factory/store-keepers/scan';
       case 'link_bundle_carton':
-        return '/api/factory/codes/carton/link';
+        return '/factory/store-keeper-bundles/{bundleId}/link-carton';
       case 'link_carton_packet':
-        return '/api/factory/codes/packet/link';
+        return '/factory/store-keeper-bundles/{bundleId}/link-packet';
       case 'link_unit_packet':
-        return '/api/factory/codes/aggregation/link-units';
+        return '/factory/store-keeper-bundles/{bundleId}/link-unit';
       case 'allocate_rack':
-        return '/api/factory/store-keepers/allocate';
+        return '/factory/store-keepers/allocate';
       default:
-        return '/api/factory/store-keepers/scan';
+        return '/factory/store-keepers/scan';
     }
   }
 }

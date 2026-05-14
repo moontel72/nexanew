@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/theme/text_styles.dart';
@@ -41,7 +43,7 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
     setState(() => _isLoading = true);
     try {
       final response = await _apiService.get(
-        '/api/factory/store-keeper-bundles/${widget.bundleId}',
+        '/factory/store-keeper-bundles/${widget.bundleId}/summary',
       );
       if (mounted) {
         setState(() {
@@ -106,7 +108,7 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
     setState(() => _isGeneratingQr = true);
     try {
       final response = await _apiService.post(
-        '/api/factory/store-keeper-bundles/${widget.bundleId}/generate-qr',
+        '/factory/store-keeper-bundles/${widget.bundleId}/generate-qr',
       );
       if (mounted) {
         final data = response is Map<String, dynamic>
@@ -197,31 +199,26 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
   String _endpointForType(String linkType) {
     switch (linkType) {
       case 'carton':
-        return '/api/factory/codes/carton/link';
+        return '/factory/store-keeper-bundles/${widget.bundleId}/link-carton';
       case 'packet':
-        return '/api/factory/codes/packet/link';
+        return '/factory/store-keeper-bundles/${widget.bundleId}/link-packet';
       case 'unit':
-        return '/api/factory/codes/aggregation/link-units';
+        return '/factory/store-keeper-bundles/${widget.bundleId}/link-unit';
       default:
-        return '/api/factory/store-keepers/scan';
+        return '/factory/store-keeper-bundles/${widget.bundleId}/link-carton';
     }
   }
 
   Map<String, dynamic> _bodyForType(String linkType, String code) {
     switch (linkType) {
       case 'carton':
-        return {'bundle_id': widget.bundleId, 'carton_id': code};
+        return {'carton_code_id': code};
       case 'packet':
-        return {'carton_id': code, 'packet_id': code};
+        return {'packet_code_id': code};
       case 'unit':
-        return {
-          'packet_id': widget.bundleId,
-          'unit_id': code,
-          'product_id': '',
-          'quantity': 1,
-        };
+        return {'unit_code_id': code};
       default:
-        return {'code': code};
+        return {'carton_code_id': code};
     }
   }
 
@@ -378,7 +375,20 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
     );
   }
 
+  void _copyToClipboard(String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$label copied!'),
+        duration: const Duration(seconds: 1),
+        backgroundColor: AppColors.success,
+      ),
+    );
+  }
+
   Widget _buildQrDataSection() {
+    final qrValue = _qrData ?? 'QR data not available';
+    final hasQr = _qrData != null && _qrData!.isNotEmpty;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
@@ -392,26 +402,78 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
                 Icon(Icons.qr_code_2, color: AppColors.success, size: 24.w),
                 Gap(8.w),
                 Text('Bundle QR Code', style: TextStyles.heading6),
+                const Spacer(),
+                if (hasQr)
+                  IconButton(
+                    icon: Icon(Icons.copy, size: 20.w, color: AppColors.accent),
+                    tooltip: 'Copy QR data',
+                    onPressed: () => _copyToClipboard(qrValue, 'QR data'),
+                  ),
               ],
             ),
             Gap(12.h),
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(12.w),
-              decoration: BoxDecoration(
-                color: AppColors.codeBackground,
-                borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Text(
-                _qrData ?? 'QR data not available',
-                style: TextStyles.bodySmall.copyWith(
-                  fontFamily: 'monospace',
-                  color: AppColors.textPrimary,
+            if (hasQr)
+              Center(
+                child: Container(
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: QrImageView(
+                    data: qrValue,
+                    version: QrVersions.auto,
+                    size: 180.w,
+                    gapless: false,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Color(0xFF1A237E),
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Color(0xFF1A237E),
+                    ),
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
-            ),
+            if (hasQr) ...[
+              Gap(12.h),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12.w),
+                decoration: BoxDecoration(
+                  color: AppColors.codeBackground,
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        qrValue,
+                        style: TextStyles.bodySmall.copyWith(
+                          fontFamily: 'monospace',
+                          color: AppColors.textPrimary,
+                          fontSize: 11.sp,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Gap(8.w),
+                    GestureDetector(
+                      onTap: () => _copyToClipboard(qrValue, 'QR data'),
+                      child: Icon(
+                        Icons.copy,
+                        size: 18.w,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             Gap(8.h),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,

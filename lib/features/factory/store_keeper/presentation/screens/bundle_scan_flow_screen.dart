@@ -131,8 +131,8 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
   Future<void> _handleCartonScan(String code) async {
     // Link carton to bundle via API
     await _apiService.post(
-      '/api/factory/codes/carton/link',
-      body: {'bundle_id': widget.bundleId, 'carton_id': code},
+      '/factory/store-keeper-bundles/${widget.bundleId}/link-carton',
+      body: {'carton_code_id': code},
     );
 
     setState(() {
@@ -157,10 +157,10 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
   }
 
   Future<void> _handlePacketScan(String code) async {
-    // Link packet to carton via API
+    // Link packet to bundle via API
     await _apiService.post(
-      '/api/factory/codes/packet/link',
-      body: {'carton_id': _cartonCode ?? code, 'packet_id': code},
+      '/factory/store-keeper-bundles/${widget.bundleId}/link-packet',
+      body: {'packet_code_id': code},
     );
 
     setState(() {
@@ -185,15 +185,10 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
   }
 
   Future<void> _handleUnitScan(String code) async {
-    // Link unit to packet via API
+    // Link unit to bundle via API
     await _apiService.post(
-      '/api/factory/codes/aggregation/link-units',
-      body: {
-        'packet_id': _packetCode ?? widget.bundleId,
-        'unit_id': code,
-        'product_id': '',
-        'quantity': 1,
-      },
+      '/factory/store-keeper-bundles/${widget.bundleId}/link-unit',
+      body: {'unit_code_id': code},
     );
 
     setState(() {
