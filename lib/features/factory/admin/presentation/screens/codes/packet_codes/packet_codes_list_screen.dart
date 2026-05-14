@@ -1,5 +1,7 @@
 //lib/features/factory/admin/presentation/screens/codes/packet_codes/packet_codes_list_screen.dart
 import 'package:flutter/material.dart' hide SearchBar;
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -839,6 +841,67 @@ class _PacketDetailsBottomSheet extends StatelessWidget {
                 ),
                 SizedBox(height: 16.h),
                 _dr(context, 'Code', packet.code),
+                // ── QR Code for Store Keeper Scanning ──
+                Center(
+                  child: Container(
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        QrImageView(
+                          data: packet.id,
+                          version: QrVersions.auto,
+                          size: 150.w,
+                          eyeStyle: const QrEyeStyle(
+                            eyeShape: QrEyeShape.square,
+                            color: Color(0xFFE65100),
+                          ),
+                          dataModuleStyle: const QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.square,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Scan with Store Keeper App',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 10.sp,
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        GestureDetector(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: packet.id));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Packet ID copied!'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.copy, size: 14.w, color: AppColors.accent),
+                              SizedBox(width: 4.w),
+                              Text(
+                                'Copy UUID',
+                                style: TextStyle(fontSize: 10.sp, color: AppColors.accent),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16.h),
                 _dr(context, 'Type', packet.type.name),
                 _dr(context, 'Status', packet.status.name),
                 _dr(context, 'Batch ID', packet.batchId),

@@ -602,7 +602,7 @@ class StoreKeeperBundleController extends Controller
 
             if ($type === 'all' || $type === 'carton') {
                 $cartons = DB::table('carton_codes')
-                    ->where('company_id', $companyId)
+                    
                     ->orderByDesc('created_at')
                     ->limit(20)
                     ->get()
@@ -617,7 +617,7 @@ class StoreKeeperBundleController extends Controller
 
             if ($type === 'all' || $type === 'packet') {
                 $packets = DB::table('packet_codes')
-                    ->where('company_id', $companyId)
+                    
                     ->orderByDesc('created_at')
                     ->limit(20)
                     ->get()
@@ -632,7 +632,7 @@ class StoreKeeperBundleController extends Controller
 
             if ($type === 'all' || $type === 'unit') {
                 $units = DB::table('unit_codes')
-                    ->where('company_id', $companyId)
+                    
                     ->orderByDesc('created_at')
                     ->limit(20)
                     ->get()
