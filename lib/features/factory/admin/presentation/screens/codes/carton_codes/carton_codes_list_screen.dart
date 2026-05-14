@@ -332,10 +332,28 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                           color: AppColors.textSecondary,
                           fontWeight: FontWeight.w500,
                         ),
-                        _tableCell(
-                          sortedCodes[i].code,
-                          fontWeight: FontWeight.w600,
-                          onTap: () => _showCartonDetails(sortedCodes[i]),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+                          child: InkWell(
+                            onTap: () => _showCartonDetails(sortedCodes[i]),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    sortedCodes[i].code,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                SizedBox(width: 6.w),
+                                Icon(Icons.qr_code_2, size: 18.w, color: AppColors.accent),
+                              ],
+                            ),
+                          ),
                         ),
                         _tableCell(formatName),
                         _tableCell(
@@ -426,8 +444,8 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     );
   }
 
-  Widget _tableCell(String text, {Color? color, FontWeight? fontWeight, VoidCallback? onTap}) {
-    final child = Padding(
+  Widget _tableCell(String text, {Color? color, FontWeight? fontWeight}) {
+    return Padding(
       padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
       child: Text(
         text,
@@ -438,10 +456,6 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
         overflow: TextOverflow.ellipsis,
       ),
     );
-    if (onTap != null) {
-      return InkWell(onTap: onTap, child: child);
-    }
-    return child;
   }
 
   Color _statusColor(CodeStatus status) {
