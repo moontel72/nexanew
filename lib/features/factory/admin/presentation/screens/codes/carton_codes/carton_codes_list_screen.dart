@@ -332,12 +332,10 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                           color: AppColors.textSecondary,
                           fontWeight: FontWeight.w500,
                         ),
-                        GestureDetector(
+                        _tableCell(
+                          sortedCodes[i].code,
+                          fontWeight: FontWeight.w600,
                           onTap: () => _showCartonDetails(sortedCodes[i]),
-                          child: _tableCell(
-                            sortedCodes[i].code,
-                            fontWeight: FontWeight.w600,
-                          ),
                         ),
                         _tableCell(formatName),
                         _tableCell(
@@ -428,8 +426,8 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
     );
   }
 
-  Widget _tableCell(String text, {Color? color, FontWeight? fontWeight}) {
-    return Padding(
+  Widget _tableCell(String text, {Color? color, FontWeight? fontWeight, VoidCallback? onTap}) {
+    final child = Padding(
       padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
       child: Text(
         text,
@@ -440,6 +438,10 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
         overflow: TextOverflow.ellipsis,
       ),
     );
+    if (onTap != null) {
+      return InkWell(onTap: onTap, child: child);
+    }
+    return child;
   }
 
   Color _statusColor(CodeStatus status) {
@@ -863,10 +865,11 @@ class _CartonDetailsBottomSheet extends StatelessWidget {
                         SizedBox(height: 8.h),
                         Text(
                           'Scan with Store Keeper App',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: 10.sp,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 10.sp,
+                              ),
                         ),
                         SizedBox(height: 4.h),
                         GestureDetector(
@@ -882,11 +885,18 @@ class _CartonDetailsBottomSheet extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.copy, size: 14.w, color: AppColors.accent),
+                              Icon(
+                                Icons.copy,
+                                size: 14.w,
+                                color: AppColors.accent,
+                              ),
                               SizedBox(width: 4.w),
                               Text(
                                 'Copy UUID',
-                                style: TextStyle(fontSize: 10.sp, color: AppColors.accent),
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  color: AppColors.accent,
+                                ),
                               ),
                             ],
                           ),
