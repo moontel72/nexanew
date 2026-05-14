@@ -332,9 +332,12 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                           color: AppColors.textSecondary,
                           fontWeight: FontWeight.w500,
                         ),
-                        _tableCell(
-                          sortedCodes[i].code,
-                          fontWeight: FontWeight.w600,
+                        GestureDetector(
+                          onTap: () => _showCartonDetails(sortedCodes[i]),
+                          child: _tableCell(
+                            sortedCodes[i].code,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         _tableCell(formatName),
                         _tableCell(
