@@ -537,6 +537,7 @@ class StoreKeeperBundleController extends Controller
                     'linkingStatus' => $bundle->linking_status,
                     'status' => $bundle->status,
                     'storeKeeperId' => $bundle->store_keeper_id,
+                    'storeKeeperName' => $bundle->store_keeper_name ?? null,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -580,6 +581,8 @@ class StoreKeeperBundleController extends Controller
             // If moving to store_linked, record the store keeper
             if ($data['linking_status'] === 'store_linked') {
                 $updates['store_keeper_id'] = $user->id;
+                // Also store the name for Admin accountability display
+                $updates['store_keeper_name'] = $user->name ?? $user->full_name ?? $user->email ?? 'Unknown';
             }
 
             DB::table('bundles')->where('id', $bundleId)->update($updates);
@@ -682,6 +685,83 @@ class StoreKeeperBundleController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('unlinkPacket failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ─── Store Keeper History ──────────────────────────────────
+
+    /**
+     * Return orders processed by the current store keeper.
+     * GET /factory/store-keeper-bundles/history?period=today|yesterday|earlier
+     */
+    public function history(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $companyId = (string) $user->company_id;
+            $period = $request->query('period', 'today');
+
+            $query = DB::table('bundles')
+                ->where('company_id', $companyId)
+                ->where('linking_status', 'store_linked')
+                ->where('store_keeper_id', $user->id);
+
+            $todayStart = now()->startOfDay();
+            $yesterdayStart = now()->subDay()->startOfDay();
+
+            switch ($period) {
+                case 'today':
+                    $query->where('updated_at', '>=', $todayStart);
+                    break;
+                case 'yesterday':
+                    $query->whereBetween('updated_at', [$yesterdayStart, $todayStart]);
+                    break;
+                case 'earlier':
+                    $query->where('updated_at', '<', $yesterdayStart);
+                    break;
+                default:
+                    // all — no date filter
+            }
+
+            $orders = $query->orderByDesc('updated_at')
+                ->get()
+                ->map(function ($b) {
+                    return [
+                        'id' => $b->id,
+                        'bundleCode' => $b->bundle_code,
+                        'orderReference' => $b->order_reference,
+                        'totalCartons' => (int) $b->total_cartons,
+                        'totalPackets' => (int) $b->total_packets,
+                        'linkingStatus' => $b->linking_status,
+                        'status' => $b->status,
+                        'finalizedAt' => $b->updated_at,
+                    ];
+                })
+                ->values();
+
+            // Also count units per bundle
+            $orders = $orders->map(function ($order) {
+                $packetIds = DB::table('bundle_items')
+                    ->where('bundle_id', $order['id'])
+                    ->whereNotNull('packet_code_id')
+                    ->pluck('packet_code_id')->toArray();
+                $order['totalUnits'] = !empty($packetIds)
+                    ? UnitCode::whereIn('packet_code_id', $packetIds)->count()
+                    : 0;
+                return $order;
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'orders' => $orders,
+                    'total' => $orders->count(),
+                    'period' => $period,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('StoreKeeperBundle history failed: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
     }

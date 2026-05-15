@@ -569,6 +569,7 @@ $registerRoutes = function (): void {
             Route::prefix("store-keeper-bundles")->group(function (): void {
                 Route::get("test-codes", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "testCodes"]);
                 Route::get("pending", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "pendingOrders"]);
+                Route::get("history", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "history"]);
                 Route::post("create-dummy", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "createDummyOrder"]);
                 Route::post("{bundleId}/generate-qr", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "generateBundleQR"]);
                 Route::post("{bundleId}/link-carton", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "linkCartonToBundle"]);

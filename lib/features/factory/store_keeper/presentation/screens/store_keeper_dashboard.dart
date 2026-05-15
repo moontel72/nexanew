@@ -270,6 +270,14 @@ class _StoreKeeperDashboardState extends State<StoreKeeperDashboard> {
                         Gap(12.w),
                         _qa(
                           context,
+                          'History',
+                          Icons.history,
+                          AppColors.accentDark,
+                          '/factory/store-keeper/history',
+                        ),
+                        Gap(12.w),
+                        _qa(
+                          context,
                           'Sync',
                           Icons.sync,
                           AppColors.accent,
