@@ -510,6 +510,16 @@ class StoreKeeperBundleController extends Controller
                 'packets' => max(0, $totalPackets - $linkedPacketsCount),
             ];
 
+            // Also collect linked IDs for the Flutter packet-selector UI
+            $linkedCartonIds = DB::table('bundle_items')
+                ->where('bundle_id', $bundleId)
+                ->whereNotNull('carton_code_id')
+                ->pluck('carton_code_id')->toArray();
+            $linkedPacketIds = DB::table('bundle_items')
+                ->where('bundle_id', $bundleId)
+                ->whereNotNull('packet_code_id')
+                ->pluck('packet_code_id')->toArray();
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -518,6 +528,8 @@ class StoreKeeperBundleController extends Controller
                     'linkedCartonsCount' => $linkedCartonsCount,
                     'linkedPacketsCount' => $linkedPacketsCount,
                     'linkedUnitsCount' => $linkedUnitsCount,
+                    'linkedCartonIds' => $linkedCartonIds,
+                    'linkedPacketIds' => $linkedPacketIds,
                     'totalCartons' => $totalCartons,
                     'totalPackets' => $totalPackets,
                     'bundleQrData' => $qrData,
@@ -596,6 +608,83 @@ class StoreKeeperBundleController extends Controller
         }
     }
 
+    // ─── Unlink Carton from Bundle ─────────────────────────────
+
+    public function unlinkCartonFromBundle(Request $request, string $bundleId, string $cartonId)
+    {
+        try {
+            $user = $request->user();
+            $companyId = (string) $user->company_id;
+
+            $bundle = DB::table('bundles')
+                ->where('id', $bundleId)
+                ->where('company_id', $companyId)
+                ->first();
+
+            if (!$bundle) {
+                return response()->json(['success' => false, 'message' => 'Bundle not found'], 404);
+            }
+
+            $deleted = DB::table('bundle_items')
+                ->where('bundle_id', $bundleId)
+                ->where('carton_code_id', $cartonId)
+                ->delete();
+
+            if ($deleted === 0) {
+                return response()->json(['success' => false, 'message' => 'Carton not found in this bundle'], 404);
+            }
+
+            $this->recalculateBundleTotals($bundleId);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['bundleId' => $bundleId, 'cartonCodeId' => $cartonId, 'unlinked' => true],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('unlinkCarton failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ─── Unlink Packet from Bundle ─────────────────────────────
+
+    public function unlinkPacketFromBundle(Request $request, string $bundleId, string $packetId)
+    {
+        try {
+            $user = $request->user();
+            $companyId = (string) $user->company_id;
+
+            $bundle = DB::table('bundles')
+                ->where('id', $bundleId)
+                ->where('company_id', $companyId)
+                ->first();
+
+            if (!$bundle) {
+                return response()->json(['success' => false, 'message' => 'Bundle not found'], 404);
+            }
+
+            UnitCode::where('packet_code_id', $packetId)->update(['packet_code_id' => null]);
+
+            $deleted = DB::table('bundle_items')
+                ->where('bundle_id', $bundleId)
+                ->where('packet_code_id', $packetId)
+                ->delete();
+
+            if ($deleted === 0) {
+                return response()->json(['success' => false, 'message' => 'Packet not found in this bundle'], 404);
+            }
+
+            $this->recalculateBundleTotals($bundleId);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['bundleId' => $bundleId, 'packetCodeId' => $packetId, 'unlinked' => true],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('unlinkPacket failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
 
     // --- Test QR Codes -------------------------------------------------
 

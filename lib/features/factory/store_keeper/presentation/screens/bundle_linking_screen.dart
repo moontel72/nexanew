@@ -42,9 +42,13 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
   int _totalCartons = 0;
   int _totalPackets = 0;
   int _totalUnits = 0;
-  /// Last successfully linked packet ID — needed when linking units
-  /// because the backend requires packet_code_id for unit linking.
-  String? _lastLinkedPacketId;
+
+  /// IDs of linked cartons/packets (populated from API)
+  List<String> _linkedCartonIds = [];
+  List<String> _linkedPacketIds = [];
+
+  /// Currently selected packet for unit linking
+  String? _selectedPacketId;
 
   @override
   void initState() {
@@ -105,6 +109,13 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
               _parseInt(data['total_units']) ??
               _parseInt(data['expected_units']) ??
               0;
+          // Parse linked IDs for packet selection & delete UI
+          _linkedCartonIds = _parseStringList(data['linkedCartonIds']);
+          _linkedPacketIds = _parseStringList(data['linkedPacketIds']);
+          // Auto-select first packet if only one is linked
+          if (_linkedPacketIds.length == 1) {
+            _selectedPacketId = _linkedPacketIds.first;
+          }
           // QR is generated when the server has stored bundleQrData
           _qrGenerated =
               data['qr_generated'] == true ||
@@ -136,6 +147,11 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
     if (value == null) return null;
     if (value is int) return value;
     return int.tryParse(value.toString());
+  }
+
+  List<String> _parseStringList(dynamic value) {
+    if (value is List) return value.map((e) => e.toString()).toList();
+    return [];
   }
 
   Future<void> _generateQr() async {
@@ -201,11 +217,17 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
           switch (linkType) {
             case 'carton':
               _linkedCartons++;
+              if (!_linkedCartonIds.contains(code)) {
+                _linkedCartonIds.add(code);
+              }
               break;
             case 'packet':
               _linkedPackets++;
-              // Remember this packet's ID so unit linking can reference it
-              _lastLinkedPacketId = code;
+              if (!_linkedPacketIds.contains(code)) {
+                _linkedPacketIds.add(code);
+              }
+              // Auto-select this packet for unit linking
+              _selectedPacketId = code;
               break;
             case 'unit':
               _linkedUnits++;
@@ -266,6 +288,72 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
     }
   }
 
+  /// Unlink (remove) a previously linked carton or packet.
+  Future<void> _unlinkItem(String code, String linkType) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Unlink Item'),
+        content: Text(
+          'Are you sure you want to unlink this $linkType?\n\nCode: $code',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Unlink'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final unlinkPath = linkType == 'carton'
+          ? '/factory/store-keeper-bundles/${widget.bundleId}/unlink-carton/$code'
+          : '/factory/store-keeper-bundles/${widget.bundleId}/unlink-packet/$code';
+
+      await _apiService.delete(unlinkPath);
+
+      if (mounted) {
+        setState(() {
+          if (linkType == 'carton') {
+            _linkedCartons = (_linkedCartons - 1).clamp(0, 999999);
+            _linkedCartonIds.remove(code);
+          } else {
+            _linkedPackets = (_linkedPackets - 1).clamp(0, 999999);
+            _linkedPacketIds.remove(code);
+            if (_selectedPacketId == code) {
+              _selectedPacketId = _linkedPacketIds.isNotEmpty
+                  ? _linkedPacketIds.first
+                  : null;
+            }
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${linkType.toUpperCase()} unlinked'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to unlink: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   String _endpointForType(String linkType) {
     switch (linkType) {
       case 'carton':
@@ -286,13 +374,11 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
       case 'packet':
         return {'packet_code_id': code};
       case 'unit':
-        // Backend linkUnitToBundle requires packet_code_id and product_id.
-        // We pass the last linked packet ID; product_id is auto-detected
-        // by the backend from the unit_code itself.
+        // Backend linkUnitToBundle requires packet_code_id.
+        // Use the user-selected packet ID from the dropdown.
         return {
           'unit_code_id': code,
-          if (_lastLinkedPacketId != null)
-            'packet_code_id': _lastLinkedPacketId,
+          if (_selectedPacketId != null) 'packet_code_id': _selectedPacketId,
         };
       default:
         return {'carton_code_id': code};
@@ -623,13 +709,87 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
               icon: Icons.archive,
             ),
             Gap(8.h),
+            // ── Packet Selector ──
+            if (_linkedPacketIds.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(bottom: 8.h),
+                child: Container(
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select Packet for Units',
+                        style: TextStyles.captionBold.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Gap(8.h),
+                      DropdownButtonFormField<String>(
+                        value: _selectedPacketId,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12.w,
+                            vertical: 8.h,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                        ),
+                        hint: Text(
+                          'Choose a packet...',
+                          style: TextStyles.caption.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                        items: _linkedPacketIds.map((id) {
+                          final label = id.length > 12
+                              ? 'Packet: ${id.substring(0, 12)}...'
+                              : 'Packet: $id';
+                          return DropdownMenuItem(
+                            value: id,
+                            child: Text(
+                              label,
+                              style: TextStyles.caption.copyWith(
+                                fontFamily: 'monospace',
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (v) => setState(() => _selectedPacketId = v),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             PrimaryButton(
               text: 'Scan Unit',
-              onPressed: () =>
-                  _openScanner(label: 'Scan Unit QR', linkType: 'unit'),
+              onPressed:
+                  (_selectedPacketId != null && _selectedPacketId!.isNotEmpty)
+                  ? () => _openScanner(label: 'Scan Unit QR', linkType: 'unit')
+                  : () {},
               backgroundColor: AppColors.accentDark,
               icon: Icons.circle,
+              isEnabled:
+                  _selectedPacketId != null && _selectedPacketId!.isNotEmpty,
             ),
+            if (_selectedPacketId == null || _selectedPacketId!.isEmpty)
+              Padding(
+                padding: EdgeInsets.only(top: 4.h),
+                child: Text(
+                  _linkedPacketIds.isEmpty
+                      ? 'Link a Packet first, then select it above.'
+                      : 'Please select a Packet first.',
+                  style: TextStyles.caption.copyWith(color: AppColors.warning),
+                ),
+              ),
             Gap(12.h),
             OutlinedButton.icon(
               onPressed: () => context.push(
@@ -671,7 +831,13 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
             ),
             Gap(12.h),
             _summaryTile('Cartons', _linkedCartons, _totalCartons, cartonDiff),
+            // Show linked carton IDs with delete button
+            if (_linkedCartonIds.isNotEmpty)
+              ..._linkedCartonIds.map((id) => _linkedIdTile(id, 'carton')),
             _summaryTile('Packets', _linkedPackets, _totalPackets, packetDiff),
+            // Show linked packet IDs with delete button
+            if (_linkedPacketIds.isNotEmpty)
+              ..._linkedPacketIds.map((id) => _linkedIdTile(id, 'packet')),
             _summaryTile('Units', _linkedUnits, _totalUnits, unitDiff),
             const Divider(),
             Row(
@@ -752,6 +918,49 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
             )
           else
             Icon(Icons.check_circle, color: AppColors.success, size: 20.w),
+        ],
+      ),
+    );
+  }
+
+  /// A tile showing a linked item ID with a delete button.
+  Widget _linkedIdTile(String id, String type) {
+    final shortId = id.length > 16 ? '${id.substring(0, 16)}...' : id;
+    return Padding(
+      padding: EdgeInsets.only(bottom: 4.h, left: 48.w),
+      child: Row(
+        children: [
+          Icon(
+            type == 'carton' ? Icons.inventory : Icons.archive,
+            size: 14.w,
+            color: AppColors.textTertiary,
+          ),
+          Gap(6.w),
+          Expanded(
+            child: Text(
+              shortId,
+              style: TextStyles.caption.copyWith(
+                fontFamily: 'monospace',
+                color: AppColors.textSecondary,
+                fontSize: 10.sp,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(
+            width: 28.w,
+            height: 28.w,
+            child: IconButton(
+              icon: Icon(
+                Icons.delete_outline,
+                size: 16.w,
+                color: AppColors.error,
+              ),
+              padding: EdgeInsets.zero,
+              tooltip: 'Unlink $type',
+              onPressed: () => _unlinkItem(id, type),
+            ),
+          ),
         ],
       ),
     );

@@ -574,6 +574,8 @@ $registerRoutes = function (): void {
                 Route::post("{bundleId}/link-carton", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "linkCartonToBundle"]);
                 Route::post("{bundleId}/link-packet", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "linkPacketToBundle"]);
                 Route::post("{bundleId}/link-unit", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "linkUnitToBundle"]);
+                Route::delete("{bundleId}/unlink-carton/{cartonId}", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "unlinkCartonFromBundle"]);
+                Route::delete("{bundleId}/unlink-packet/{packetId}", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "unlinkPacketFromBundle"]);
                 Route::get("{bundleId}/summary", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "bundleSummary"]);
                 Route::put("{bundleId}/linking-status", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "updateLinkingStatus"]);
             });
