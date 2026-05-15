@@ -40,7 +40,7 @@ Map<String, dynamic> _$BundleModelToJson(_BundleModel instance) =>
       'packedAt': instance.packedAt?.toIso8601String(),
       'notes': instance.notes,
       'createdAt': _dateTimeToJson(instance.createdAt),
-      'items': instance.items.map((e) => e.toJson()).toList(),
+      'items': instance.items,
     };
 
 _BundleItemModel _$BundleItemModelFromJson(Map<String, dynamic> json) =>

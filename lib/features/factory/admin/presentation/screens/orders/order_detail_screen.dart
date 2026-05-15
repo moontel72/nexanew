@@ -30,6 +30,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool _isLoading = false;
   bool _isReferring = false;
   String? _error;
+  // Fetched separately from bundleSummary for unit counts
+  int _linkedUnits = 0;
+  int _linkedCartons = 0;
+  int _linkedPackets = 0;
+  String? _storeKeeperName;
 
   @override
   void initState() {
@@ -46,9 +51,37 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     try {
       final res = await ApiService().get('/codes/bundles/${widget.bundleId}');
       final data = res['data'] as Map<String, dynamic>;
+
+      // Also fetch linked unit count from store-keeper summary
+      int units = 0, cartons = 0, packets = 0;
+      String? skName;
+      try {
+        final sumRes = await ApiService().get(
+          '/factory/store-keeper-bundles/${widget.bundleId}/summary',
+        );
+        final sumData =
+            (sumRes is Map<String, dynamic> &&
+                sumRes['data'] is Map<String, dynamic>)
+            ? sumRes['data'] as Map<String, dynamic>
+            : <String, dynamic>{};
+        units =
+            int.tryParse(sumData['linkedUnitsCount']?.toString() ?? '') ?? 0;
+        cartons =
+            int.tryParse(sumData['linkedCartonsCount']?.toString() ?? '') ?? 0;
+        packets =
+            int.tryParse(sumData['linkedPacketsCount']?.toString() ?? '') ?? 0;
+        skName = sumData['storeKeeperName']?.toString();
+      } catch (_) {
+        // Summary fetch is best-effort
+      }
+
       if (mounted) {
         setState(() {
           _bundle = BundleModel.fromJson(data);
+          _linkedUnits = units;
+          _linkedCartons = cartons;
+          _linkedPackets = packets;
+          _storeKeeperName = skName;
           _isLoading = false;
         });
       }
@@ -243,19 +276,31 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               children: [
                 _statCard(
                   'Cartons',
-                  b.totalCartons,
+                  _linkedCartons,
                   Icons.all_inbox_outlined,
                   AppColors.info,
                 ),
                 SizedBox(width: 12.w),
                 _statCard(
                   'Packets',
-                  b.totalPackets,
+                  _linkedPackets,
                   Icons.inventory_2_outlined,
                   AppColors.accent,
                 ),
+                SizedBox(width: 12.w),
+                _statCard(
+                  'Units',
+                  _linkedUnits,
+                  Icons.circle,
+                  AppColors.success,
+                ),
               ],
             ),
+            if (_storeKeeperName != null && _storeKeeperName!.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(top: 8.h),
+                child: _infoRow('Processed By', _storeKeeperName!),
+              ),
             SizedBox(height: 16.h),
 
             // ── Linked Items Detail ──

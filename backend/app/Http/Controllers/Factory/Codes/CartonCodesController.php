@@ -133,6 +133,10 @@ class CartonCodesController extends Controller
 
         $query = DB::table('carton_codes')
             ->join('base_codes', 'carton_codes.id', '=', 'base_codes.id')
+            ->leftJoin('bundle_items', function ($join) {
+                $join->on('carton_codes.id', '=', 'bundle_items.carton_code_id');
+            })
+            ->leftJoin('bundles', 'bundle_items.bundle_id', '=', 'bundles.id')
             ->select([
                 'carton_codes.*',
                 'base_codes.code',
@@ -159,6 +163,8 @@ class CartonCodesController extends Controller
                 'base_codes.is_deleted',
                 'base_codes.created_at',
                 'base_codes.updated_at',
+                'bundles.order_reference as linked_order_reference',
+                'bundles.bundle_code as linked_bundle_code',
             ])
             ->where('base_codes.company_id', $companyId)
             ->where('base_codes.code_type', 'carton')
@@ -205,7 +211,8 @@ class CartonCodesController extends Controller
                 'createdAt' => $dt($row->created_at),
                 'updatedAt' => $dt($row->updated_at),
                 'isDeleted' => (bool) ($row->is_deleted ?? false),
-                'bundleCode' => '',
+                'bundleCode' => (string) ($row->linked_bundle_code ?? ''),
+                'linkedOrderReference' => (string) ($row->linked_order_reference ?? ''),
                 'packetCount' => (int) ($row->packet_count ?? 0),
                 'packetCodes' => [],
                 'weight' => $row->weight_kg,

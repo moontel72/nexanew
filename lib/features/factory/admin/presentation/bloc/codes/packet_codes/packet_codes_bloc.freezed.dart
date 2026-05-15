@@ -185,10 +185,10 @@ return addInstructions(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  load,TResult Function( PacketCodeGenerationRequest request)?  generate,TResult Function( String packetCodeId)?  delete,TResult Function( List<String> packetCodeIds)?  deleteBatch,TResult Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult Function( String packetCodeId)?  publish,TResult Function( String packetCodeId,  String reason)?  deactivate,TResult Function( String query)?  search,TResult Function( String batchId,  String codeFormat,  int count)?  pushBatch,TResult Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult Function( String? codeFormat)?  filterByFormat,TResult Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)?  filter,TResult Function( List<String> packetCodeIds,  String format)?  export,TResult Function( String packetCodeId,  bool isSelected)?  select,TResult Function()?  clearSelection,TResult Function()?  refresh,TResult Function( String packetCodeId,  String sealedBy,  String? sealingMethod)?  seal,TResult Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)?  updateInspection,TResult Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)?  updateProperties,TResult Function( String packetCodeId)?  addTamperEvidence,TResult Function( String packetCodeId)?  addChildSafetyFeatures,TResult Function( String packetCodeId)?  addInstructions,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String? codeFormat)?  load,TResult Function( PacketCodeGenerationRequest request)?  generate,TResult Function( String packetCodeId)?  delete,TResult Function( List<String> packetCodeIds)?  deleteBatch,TResult Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult Function( String packetCodeId)?  publish,TResult Function( String packetCodeId,  String reason)?  deactivate,TResult Function( String query)?  search,TResult Function( String batchId,  String codeFormat,  int count)?  pushBatch,TResult Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult Function( String? codeFormat)?  filterByFormat,TResult Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)?  filter,TResult Function( List<String> packetCodeIds,  String format)?  export,TResult Function( String packetCodeId,  bool isSelected)?  select,TResult Function()?  clearSelection,TResult Function()?  refresh,TResult Function( String packetCodeId,  String sealedBy,  String? sealingMethod)?  seal,TResult Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)?  updateInspection,TResult Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)?  updateProperties,TResult Function( String packetCodeId)?  addTamperEvidence,TResult Function( String packetCodeId)?  addChildSafetyFeatures,TResult Function( String packetCodeId)?  addInstructions,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case LoadPacketCodes() when load != null:
-return load();case GeneratePacketCodes() when generate != null:
+return load(_that.codeFormat);case GeneratePacketCodes() when generate != null:
 return generate(_that.request);case DeletePacketCode() when delete != null:
 return delete(_that.packetCodeId);case DeletePacketCodeBatch() when deleteBatch != null:
 return deleteBatch(_that.packetCodeIds);case LinkPacketCodeToProduct() when linkToProduct != null:
@@ -228,10 +228,10 @@ return addInstructions(_that.packetCodeId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  load,required TResult Function( PacketCodeGenerationRequest request)  generate,required TResult Function( String packetCodeId)  delete,required TResult Function( List<String> packetCodeIds)  deleteBatch,required TResult Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)  linkToProduct,required TResult Function( String packetCodeId)  publish,required TResult Function( String packetCodeId,  String reason)  deactivate,required TResult Function( String query)  search,required TResult Function( String batchId,  String codeFormat,  int count)  pushBatch,required TResult Function( String batchId,  String codeFormat)  deleteBatchByGroup,required TResult Function( String batchId,  String codeFormat,  String format)  exportBatch,required TResult Function( String? codeFormat)  filterByFormat,required TResult Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)  filter,required TResult Function( List<String> packetCodeIds,  String format)  export,required TResult Function( String packetCodeId,  bool isSelected)  select,required TResult Function()  clearSelection,required TResult Function()  refresh,required TResult Function( String packetCodeId,  String sealedBy,  String? sealingMethod)  seal,required TResult Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)  updateInspection,required TResult Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)  updateProperties,required TResult Function( String packetCodeId)  addTamperEvidence,required TResult Function( String packetCodeId)  addChildSafetyFeatures,required TResult Function( String packetCodeId)  addInstructions,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String? codeFormat)  load,required TResult Function( PacketCodeGenerationRequest request)  generate,required TResult Function( String packetCodeId)  delete,required TResult Function( List<String> packetCodeIds)  deleteBatch,required TResult Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)  linkToProduct,required TResult Function( String packetCodeId)  publish,required TResult Function( String packetCodeId,  String reason)  deactivate,required TResult Function( String query)  search,required TResult Function( String batchId,  String codeFormat,  int count)  pushBatch,required TResult Function( String batchId,  String codeFormat)  deleteBatchByGroup,required TResult Function( String batchId,  String codeFormat,  String format)  exportBatch,required TResult Function( String? codeFormat)  filterByFormat,required TResult Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)  filter,required TResult Function( List<String> packetCodeIds,  String format)  export,required TResult Function( String packetCodeId,  bool isSelected)  select,required TResult Function()  clearSelection,required TResult Function()  refresh,required TResult Function( String packetCodeId,  String sealedBy,  String? sealingMethod)  seal,required TResult Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)  updateInspection,required TResult Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)  updateProperties,required TResult Function( String packetCodeId)  addTamperEvidence,required TResult Function( String packetCodeId)  addChildSafetyFeatures,required TResult Function( String packetCodeId)  addInstructions,}) {final _that = this;
 switch (_that) {
 case LoadPacketCodes():
-return load();case GeneratePacketCodes():
+return load(_that.codeFormat);case GeneratePacketCodes():
 return generate(_that.request);case DeletePacketCode():
 return delete(_that.packetCodeId);case DeletePacketCodeBatch():
 return deleteBatch(_that.packetCodeIds);case LinkPacketCodeToProduct():
@@ -270,10 +270,10 @@ return addInstructions(_that.packetCodeId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  load,TResult? Function( PacketCodeGenerationRequest request)?  generate,TResult? Function( String packetCodeId)?  delete,TResult? Function( List<String> packetCodeIds)?  deleteBatch,TResult? Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult? Function( String packetCodeId)?  publish,TResult? Function( String packetCodeId,  String reason)?  deactivate,TResult? Function( String query)?  search,TResult? Function( String batchId,  String codeFormat,  int count)?  pushBatch,TResult? Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult? Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult? Function( String? codeFormat)?  filterByFormat,TResult? Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)?  filter,TResult? Function( List<String> packetCodeIds,  String format)?  export,TResult? Function( String packetCodeId,  bool isSelected)?  select,TResult? Function()?  clearSelection,TResult? Function()?  refresh,TResult? Function( String packetCodeId,  String sealedBy,  String? sealingMethod)?  seal,TResult? Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)?  updateInspection,TResult? Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)?  updateProperties,TResult? Function( String packetCodeId)?  addTamperEvidence,TResult? Function( String packetCodeId)?  addChildSafetyFeatures,TResult? Function( String packetCodeId)?  addInstructions,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String? codeFormat)?  load,TResult? Function( PacketCodeGenerationRequest request)?  generate,TResult? Function( String packetCodeId)?  delete,TResult? Function( List<String> packetCodeIds)?  deleteBatch,TResult? Function( String packetCodeId,  String productId,  String productBatchNumber,  DateTime? manufacturingDate,  DateTime? expiryDate,  int? warrantyMonths)?  linkToProduct,TResult? Function( String packetCodeId)?  publish,TResult? Function( String packetCodeId,  String reason)?  deactivate,TResult? Function( String query)?  search,TResult? Function( String batchId,  String codeFormat,  int count)?  pushBatch,TResult? Function( String batchId,  String codeFormat)?  deleteBatchByGroup,TResult? Function( String batchId,  String codeFormat,  String format)?  exportBatch,TResult? Function( String? codeFormat)?  filterByFormat,TResult? Function( CodeStatus? status,  String? cartonCode,  DateTime? startDate,  DateTime? endDate,  String? packetType,  String? condition)?  filter,TResult? Function( List<String> packetCodeIds,  String format)?  export,TResult? Function( String packetCodeId,  bool isSelected)?  select,TResult? Function()?  clearSelection,TResult? Function()?  refresh,TResult? Function( String packetCodeId,  String sealedBy,  String? sealingMethod)?  seal,TResult? Function( String packetCodeId,  String condition,  String inspectionNotes,  bool hasTamperEvidence,  bool hasChildSafety)?  updateInspection,TResult? Function( String packetCodeId,  double? weight,  String? dimensions,  String? packetType,  String? material,  String? sealingMethod)?  updateProperties,TResult? Function( String packetCodeId)?  addTamperEvidence,TResult? Function( String packetCodeId)?  addChildSafetyFeatures,TResult? Function( String packetCodeId)?  addInstructions,}) {final _that = this;
 switch (_that) {
 case LoadPacketCodes() when load != null:
-return load();case GeneratePacketCodes() when generate != null:
+return load(_that.codeFormat);case GeneratePacketCodes() when generate != null:
 return generate(_that.request);case DeletePacketCode() when delete != null:
 return delete(_that.packetCodeId);case DeletePacketCodeBatch() when deleteBatch != null:
 return deleteBatch(_that.packetCodeIds);case LinkPacketCodeToProduct() when linkToProduct != null:
@@ -308,16 +308,26 @@ return addInstructions(_that.packetCodeId);case _:
 
 class LoadPacketCodes implements PacketCodesEvent {
   const LoadPacketCodes({this.codeFormat});
+  
 
-  final String? codeFormat;
+ final  String? codeFormat;
+
+/// Create a copy of PacketCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$LoadPacketCodesCopyWith<LoadPacketCodes> get copyWith => _$LoadPacketCodesCopyWithImpl<LoadPacketCodes>(this, _$identity);
+
+
 
 @override
 bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is LoadPacketCodes&&(identical(other.codeFormat, codeFormat) || other.codeFormat == codeFormat));
 }
 
+
 @override
-int get hashCode => Object.hash(runtimeType, codeFormat);
+int get hashCode => Object.hash(runtimeType,codeFormat);
 
 @override
 String toString() {
@@ -327,15 +337,44 @@ String toString() {
 
 }
 
+/// @nodoc
+abstract mixin class $LoadPacketCodesCopyWith<$Res> implements $PacketCodesEventCopyWith<$Res> {
+  factory $LoadPacketCodesCopyWith(LoadPacketCodes value, $Res Function(LoadPacketCodes) _then) = _$LoadPacketCodesCopyWithImpl;
+@useResult
+$Res call({
+ String? codeFormat
+});
 
 
+
+
+}
+/// @nodoc
+class _$LoadPacketCodesCopyWithImpl<$Res>
+    implements $LoadPacketCodesCopyWith<$Res> {
+  _$LoadPacketCodesCopyWithImpl(this._self, this._then);
+
+  final LoadPacketCodes _self;
+  final $Res Function(LoadPacketCodes) _then;
+
+/// Create a copy of PacketCodesEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? codeFormat = freezed,}) {
+  return _then(LoadPacketCodes(
+codeFormat: freezed == codeFormat ? _self.codeFormat : codeFormat // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
 
 /// @nodoc
 
 
 class GeneratePacketCodes implements PacketCodesEvent {
   const GeneratePacketCodes(this.request);
-
+  
 
  final  PacketCodeGenerationRequest request;
 
@@ -398,7 +437,7 @@ as PacketCodeGenerationRequest,
 @override
 @pragma('vm:prefer-inline')
 $PacketCodeGenerationRequestCopyWith<$Res> get request {
-
+  
   return $PacketCodeGenerationRequestCopyWith<$Res>(_self.request, (value) {
     return _then(_self.copyWith(request: value));
   });
@@ -410,7 +449,7 @@ $PacketCodeGenerationRequestCopyWith<$Res> get request {
 
 class DeletePacketCode implements PacketCodesEvent {
   const DeletePacketCode(this.packetCodeId);
-
+  
 
  final  String packetCodeId;
 
@@ -476,7 +515,7 @@ as String,
 
 class DeletePacketCodeBatch implements PacketCodesEvent {
   const DeletePacketCodeBatch(final  List<String> packetCodeIds): _packetCodeIds = packetCodeIds;
-
+  
 
  final  List<String> _packetCodeIds;
  List<String> get packetCodeIds {
@@ -548,7 +587,7 @@ as List<String>,
 
 class LinkPacketCodeToProduct implements PacketCodesEvent {
   const LinkPacketCodeToProduct({required this.packetCodeId, required this.productId, required this.productBatchNumber, this.manufacturingDate, this.expiryDate, this.warrantyMonths});
-
+  
 
  final  String packetCodeId;
  final  String productId;
@@ -624,7 +663,7 @@ as int?,
 
 class PublishPacketCode implements PacketCodesEvent {
   const PublishPacketCode(this.packetCodeId);
-
+  
 
  final  String packetCodeId;
 
@@ -690,7 +729,7 @@ as String,
 
 class DeactivatePacketCode implements PacketCodesEvent {
   const DeactivatePacketCode(this.packetCodeId, this.reason);
-
+  
 
  final  String packetCodeId;
  final  String reason;
@@ -758,7 +797,7 @@ as String,
 
 class SearchPacketCodes implements PacketCodesEvent {
   const SearchPacketCodes(this.query);
-
+  
 
  final  String query;
 
@@ -824,7 +863,7 @@ as String,
 
 class PushPacketBatch implements PacketCodesEvent {
   const PushPacketBatch({required this.batchId, required this.codeFormat, required this.count});
-
+  
 
  final  String batchId;
  final  String codeFormat;
@@ -894,7 +933,7 @@ as int,
 
 class DeletePacketBatchByGroup implements PacketCodesEvent {
   const DeletePacketBatchByGroup({required this.batchId, required this.codeFormat});
-
+  
 
  final  String batchId;
  final  String codeFormat;
@@ -962,7 +1001,7 @@ as String,
 
 class ExportPacketBatch implements PacketCodesEvent {
   const ExportPacketBatch(this.batchId, this.codeFormat, this.format);
-
+  
 
  final  String batchId;
  final  String codeFormat;
@@ -1032,7 +1071,7 @@ as String,
 
 class FilterPacketCodesByFormat implements PacketCodesEvent {
   const FilterPacketCodesByFormat(this.codeFormat);
-
+  
 
  final  String? codeFormat;
 
@@ -1098,7 +1137,7 @@ as String?,
 
 class FilterPacketCodes implements PacketCodesEvent {
   const FilterPacketCodes({this.status, this.cartonCode, this.startDate, this.endDate, this.packetType, this.condition});
-
+  
 
  final  CodeStatus? status;
  final  String? cartonCode;
@@ -1174,7 +1213,7 @@ as String?,
 
 class ExportPacketCodes implements PacketCodesEvent {
   const ExportPacketCodes(final  List<String> packetCodeIds, this.format): _packetCodeIds = packetCodeIds;
-
+  
 
  final  List<String> _packetCodeIds;
  List<String> get packetCodeIds {
@@ -1248,7 +1287,7 @@ as String,
 
 class SelectPacketCode implements PacketCodesEvent {
   const SelectPacketCode(this.packetCodeId, this.isSelected);
-
+  
 
  final  String packetCodeId;
  final  bool isSelected;
@@ -1316,7 +1355,7 @@ as bool,
 
 class ClearSelection implements PacketCodesEvent {
   const ClearSelection();
-
+  
 
 
 
@@ -1348,7 +1387,7 @@ String toString() {
 
 class RefreshPacketCodes implements PacketCodesEvent {
   const RefreshPacketCodes();
-
+  
 
 
 
@@ -1380,7 +1419,7 @@ String toString() {
 
 class SealPacket implements PacketCodesEvent {
   const SealPacket(this.packetCodeId, this.sealedBy, {this.sealingMethod});
-
+  
 
  final  String packetCodeId;
  final  String sealedBy;
@@ -1450,7 +1489,7 @@ as String?,
 
 class UpdatePacketInspection implements PacketCodesEvent {
   const UpdatePacketInspection(this.packetCodeId, this.condition, this.inspectionNotes, this.hasTamperEvidence, this.hasChildSafety);
-
+  
 
  final  String packetCodeId;
  final  String condition;
@@ -1524,7 +1563,7 @@ as bool,
 
 class UpdatePacketProperties implements PacketCodesEvent {
   const UpdatePacketProperties({required this.packetCodeId, this.weight, this.dimensions, this.packetType, this.material, this.sealingMethod});
-
+  
 
  final  String packetCodeId;
  final  double? weight;
@@ -1600,7 +1639,7 @@ as String?,
 
 class AddTamperEvidence implements PacketCodesEvent {
   const AddTamperEvidence(this.packetCodeId);
-
+  
 
  final  String packetCodeId;
 
@@ -1666,7 +1705,7 @@ as String,
 
 class AddChildSafetyFeatures implements PacketCodesEvent {
   const AddChildSafetyFeatures(this.packetCodeId);
-
+  
 
  final  String packetCodeId;
 
@@ -1732,7 +1771,7 @@ as String,
 
 class AddInstructions implements PacketCodesEvent {
   const AddInstructions(this.packetCodeId);
-
+  
 
  final  String packetCodeId;
 
@@ -2009,7 +2048,7 @@ return $default(_that.status,_that.packetCodes,_that.filteredPacketCodes,_that.s
 
 class _PacketCodesState extends PacketCodesState {
   const _PacketCodesState({this.status = PacketCodesStatus.initial, final  List<PacketCodeModel> packetCodes = const [], final  List<PacketCodeModel> filteredPacketCodes = const [], final  Set<String> selectedPacketCodeIds = const {}, this.searchQuery = '', this.filterStatus, this.filterCartonCode, this.filterStartDate, this.filterEndDate, this.filterPacketType, this.filterCondition, this.filterCodeFormat = '', this.errorMessage, this.hasReachedMax = false, this.currentPage = 1, this.totalCount = 0, this.isLoadingMore = false, this.generatedCount = 0, this.lastGeneratedAt, this.exportPath, this.isExporting = false}): _packetCodes = packetCodes,_filteredPacketCodes = filteredPacketCodes,_selectedPacketCodeIds = selectedPacketCodeIds,super._();
-
+  
 
 @override@JsonKey() final  PacketCodesStatus status;
  final  List<PacketCodeModel> _packetCodes;

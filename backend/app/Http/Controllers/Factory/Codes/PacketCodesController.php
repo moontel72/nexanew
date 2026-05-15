@@ -128,6 +128,10 @@ class PacketCodesController extends Controller
 
         $query = DB::table('packet_codes')
             ->join('base_codes', 'packet_codes.id', '=', 'base_codes.id')
+            ->leftJoin('bundle_items', function ($join) {
+                $join->on('packet_codes.id', '=', 'bundle_items.packet_code_id');
+            })
+            ->leftJoin('bundles', 'bundle_items.bundle_id', '=', 'bundles.id')
             ->select([
                 'packet_codes.*',
                 'base_codes.code',
@@ -154,6 +158,8 @@ class PacketCodesController extends Controller
                 'base_codes.is_deleted',
                 'base_codes.created_at',
                 'base_codes.updated_at',
+                'bundles.order_reference as linked_order_reference',
+                'bundles.bundle_code as linked_bundle_code',
             ])
             ->where('base_codes.company_id', $companyId)
             ->where('base_codes.code_type', 'packet')
@@ -200,7 +206,8 @@ class PacketCodesController extends Controller
                 'createdAt' => $dt($row->created_at),
                 'updatedAt' => $dt($row->updated_at),
                 'isDeleted' => (bool) ($row->is_deleted ?? false),
-                'cartonCode' => '',
+                'cartonCode' => (string) ($row->linked_bundle_code ?? ''),
+                'linkedOrderReference' => (string) ($row->linked_order_reference ?? ''),
                 'unitCount' => (int) ($row->unit_count ?? 0),
                 'unitCodes' => [],
                 'sequenceNumber' => (int) ($row->sequence_number ?? 0),
