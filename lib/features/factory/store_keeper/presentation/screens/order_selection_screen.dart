@@ -135,7 +135,15 @@ class _OrderSelectionScreenState extends State<OrderSelectionScreen> {
                   child: InkWell(
                     onTap: () {
                       if (bundleId.isNotEmpty) {
-                        context.push('/factory/store-keeper/bundle/$bundleId');
+                        // Pass known data as extras so the detail screen can
+                        // display orderRef / bundleCode immediately.
+                        context.push(
+                          '/factory/store-keeper/bundle/$bundleId',
+                          extra: <String, String>{
+                            'orderRef': orderRef,
+                            'bundleCode': bundleCode,
+                          },
+                        );
                       }
                     },
                     borderRadius: BorderRadius.circular(12.r),

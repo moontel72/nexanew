@@ -350,12 +350,15 @@ class StoreKeeperBundleController extends Controller
             $data = $request->validate([
                 'unit_code_id' => ['required', 'uuid', 'exists:unit_codes,id'],
                 'packet_code_id' => ['required', 'uuid', 'exists:packet_codes,id'],
-                'product_id' => ['required', 'uuid', 'exists:products,id'],
+                'product_id' => ['nullable', 'uuid', 'exists:products,id'],
             ]);
 
             $unitCodeId = (string) $data['unit_code_id'];
             $packetCodeId = (string) $data['packet_code_id'];
-            $productId = (string) $data['product_id'];
+            // product_id is optional — if omitted we auto-detect from the unit
+            $productId = isset($data['product_id'])
+                ? (string) $data['product_id']
+                : null;
 
             // Verify the packet is actually part of this bundle
             $packetInBundle = DB::table('bundle_items')
@@ -382,6 +385,11 @@ class StoreKeeperBundleController extends Controller
                     'success' => false,
                     'message' => 'This unit is already linked to a packet',
                 ], 422);
+            }
+
+            // Auto-detect product_id from the unit if not provided by client
+            if ($productId === null) {
+                $productId = $unit->baseCode->product_id;
             }
 
             // Verify product match

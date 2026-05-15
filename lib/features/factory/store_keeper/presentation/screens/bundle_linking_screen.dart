@@ -11,8 +11,15 @@ import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 
 class BundleLinkingScreen extends StatefulWidget {
   final String bundleId;
+  final String? initialOrderRef;
+  final String? initialBundleCode;
 
-  const BundleLinkingScreen({super.key, required this.bundleId});
+  const BundleLinkingScreen({
+    super.key,
+    required this.bundleId,
+    this.initialOrderRef,
+    this.initialBundleCode,
+  });
 
   @override
   State<BundleLinkingScreen> createState() => _BundleLinkingScreenState();
@@ -23,6 +30,9 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
 
   bool _isLoading = true;
   Map<String, dynamic>? _bundleInfo;
+  // Fallback values shown while the API loads
+  late String _orderRefFallback;
+  late String _bundleCodeFallback;
   bool _qrGenerated = false;
   String? _qrData;
   bool _isGeneratingQr = false;
@@ -32,10 +42,15 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
   int _totalCartons = 0;
   int _totalPackets = 0;
   int _totalUnits = 0;
+  /// Last successfully linked packet ID — needed when linking units
+  /// because the backend requires packet_code_id for unit linking.
+  String? _lastLinkedPacketId;
 
   @override
   void initState() {
     super.initState();
+    _orderRefFallback = widget.initialOrderRef ?? '---';
+    _bundleCodeFallback = widget.initialBundleCode ?? 'Loading...';
     _fetchBundleInfo();
   }
 
@@ -46,47 +61,61 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
         '/factory/store-keeper-bundles/${widget.bundleId}/summary',
       );
       if (mounted) {
+        // Extract the inner 'data' map — backend wraps responses in
+        // { success: true, data: { bundleCode, orderReference, ... } }
+        final Map<String, dynamic> data;
+        if (response is Map<String, dynamic>) {
+          data = (response['data'] is Map<String, dynamic>)
+              ? response['data'] as Map<String, dynamic>
+              : response;
+        } else {
+          data = <String, dynamic>{};
+        }
         setState(() {
-          _bundleInfo = response is Map<String, dynamic>
-              ? response
-              : (response['data'] is Map<String, dynamic>
-                    ? response['data']
-                    : <String, dynamic>{});
+          _bundleInfo = data;
+          // Backend returns camelCase keys; Flutter code accesses both
+          // camelCase and snake_case for backward compatibility.
           _linkedCartons =
-              _parseInt(_bundleInfo?['linked_cartons']) ??
-              _parseInt(_bundleInfo?['linked_cartons_count']) ??
+              _parseInt(data['linkedCartonsCount']) ??
+              _parseInt(data['linked_cartons_count']) ??
+              _parseInt(data['linked_cartons']) ??
               0;
           _linkedPackets =
-              _parseInt(_bundleInfo?['linked_packets']) ??
-              _parseInt(_bundleInfo?['linked_packets_count']) ??
+              _parseInt(data['linkedPacketsCount']) ??
+              _parseInt(data['linked_packets_count']) ??
+              _parseInt(data['linked_packets']) ??
               0;
           _linkedUnits =
-              _parseInt(_bundleInfo?['linked_units']) ??
-              _parseInt(_bundleInfo?['linked_units_count']) ??
+              _parseInt(data['linkedUnitsCount']) ??
+              _parseInt(data['linked_units_count']) ??
+              _parseInt(data['linked_units']) ??
               0;
           _totalCartons =
-              _parseInt(_bundleInfo?['total_cartons']) ??
-              _parseInt(_bundleInfo?['expected_cartons']) ??
+              _parseInt(data['totalCartons']) ??
+              _parseInt(data['total_cartons']) ??
+              _parseInt(data['expected_cartons']) ??
               0;
           _totalPackets =
-              _parseInt(_bundleInfo?['total_packets']) ??
-              _parseInt(_bundleInfo?['expected_packets']) ??
+              _parseInt(data['totalPackets']) ??
+              _parseInt(data['total_packets']) ??
+              _parseInt(data['expected_packets']) ??
               0;
           _totalUnits =
-              _parseInt(_bundleInfo?['total_units']) ??
-              _parseInt(_bundleInfo?['expected_units']) ??
+              _parseInt(data['totalUnits']) ??
+              _parseInt(data['total_units']) ??
+              _parseInt(data['expected_units']) ??
               0;
           // QR is generated when the server has stored bundleQrData
           _qrGenerated =
-              _bundleInfo?['qr_generated'] == true ||
-              _bundleInfo?['qr_code'] != null ||
-              _bundleInfo?['bundleQrData'] != null;
+              data['qr_generated'] == true ||
+              data['qr_code'] != null ||
+              data['bundleQrData'] != null;
           _qrData =
-              _bundleInfo?['qr_code']?.toString() ??
-              _bundleInfo?['qr_data']?.toString() ??
-              (_bundleInfo?['bundleQrData'] is Map
-                  ? (_bundleInfo!['bundleQrData'] as Map).values.join('-')
-                  : _bundleInfo?['bundleQrData']?.toString());
+              data['qr_code']?.toString() ??
+              data['qr_data']?.toString() ??
+              (data['bundleQrData'] is Map
+                  ? (data['bundleQrData'] as Map).values.join('-')
+                  : data['bundleQrData']?.toString());
           _isLoading = false;
         });
       }
@@ -175,6 +204,8 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
               break;
             case 'packet':
               _linkedPackets++;
+              // Remember this packet's ID so unit linking can reference it
+              _lastLinkedPacketId = code;
               break;
             case 'unit':
               _linkedUnits++;
@@ -184,19 +215,35 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
 
         // Check if all items are now linked — transition to store_linked
         if (!_hasMissingItems) {
-          await _apiService.put(
-            '/factory/store-keeper-bundles/${widget.bundleId}/linking-status',
-            body: {'linking_status': 'store_linked'},
-          );
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text(
-                  'All items linked! Bundle is now complete.',
-                ),
-                backgroundColor: AppColors.success,
-              ),
+          try {
+            await _apiService.put(
+              '/factory/store-keeper-bundles/${widget.bundleId}/linking-status',
+              body: {'linking_status': 'store_linked'},
             );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text(
+                    'All items linked! Bundle is now complete.',
+                  ),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            }
+          } catch (statusErr) {
+            // Linking succeeded but status update failed — order stays
+            // in pending_store_linking so the user can retry.
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '${linkType.toUpperCase()} linked, but status update failed. Pull to retry.',
+                  ),
+                  backgroundColor: AppColors.warning,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -239,21 +286,45 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
       case 'packet':
         return {'packet_code_id': code};
       case 'unit':
-        return {'unit_code_id': code};
+        // Backend linkUnitToBundle requires packet_code_id and product_id.
+        // We pass the last linked packet ID; product_id is auto-detected
+        // by the backend from the unit_code itself.
+        return {
+          'unit_code_id': code,
+          if (_lastLinkedPacketId != null)
+            'packet_code_id': _lastLinkedPacketId,
+        };
       default:
         return {'carton_code_id': code};
     }
   }
 
-  bool get _hasMissingItems =>
-      _linkedCartons < _totalCartons ||
-      _linkedPackets < _totalPackets ||
-      _linkedUnits < _totalUnits;
+  /// Returns true when there are still items to link.
+  /// Treats a zero total as "not configured" — the order must have at least
+  /// one expected carton/packet/unit before it can be considered complete.
+  bool get _hasMissingItems {
+    final needCartons = _totalCartons > 0 && _linkedCartons < _totalCartons;
+    final needPackets = _totalPackets > 0 && _linkedPackets < _totalPackets;
+    final needUnits = _totalUnits > 0 && _linkedUnits < _totalUnits;
+    // If totals are all 0 (data not loaded yet), treat as missing.
+    if (_totalCartons == 0 && _totalPackets == 0 && _totalUnits == 0) {
+      return true;
+    }
+    return needCartons || needPackets || needUnits;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final bundleCode = _bundleInfo?['bundle_code']?.toString() ?? 'Loading...';
-    final orderRef = _bundleInfo?['order_reference']?.toString() ?? '---';
+    // After _fetchBundleInfo fix, _bundleInfo holds the inner 'data' map
+    // with camelCase keys from the backend: bundleCode, orderReference, etc.
+    final bundleCode =
+        _bundleInfo?['bundleCode']?.toString() ??
+        _bundleInfo?['bundle_code']?.toString() ??
+        _bundleCodeFallback;
+    final orderRef =
+        _bundleInfo?['orderReference']?.toString() ??
+        _bundleInfo?['order_reference']?.toString() ??
+        _orderRefFallback;
 
     return Scaffold(
       appBar: AppBar(

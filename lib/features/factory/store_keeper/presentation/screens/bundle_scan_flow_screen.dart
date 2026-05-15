@@ -185,10 +185,14 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
   }
 
   Future<void> _handleUnitScan(String code) async {
-    // Link unit to bundle via API
+    // Link unit to bundle via API — include packet_code_id from previous step
+    final unitBody = <String, dynamic>{'unit_code_id': code};
+    if (_packetCode != null && _packetCode!.isNotEmpty) {
+      unitBody['packet_code_id'] = _packetCode;
+    }
     await _apiService.post(
       '/factory/store-keeper-bundles/${widget.bundleId}/link-unit',
-      body: {'unit_code_id': code},
+      body: unitBody,
     );
 
     setState(() {

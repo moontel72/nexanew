@@ -440,7 +440,18 @@ class AppRouter {
       path: '/factory/store-keeper/bundle/:bundleId',
       builder: (context, state) {
         final bundleId = state.pathParameters['bundleId'] ?? '';
-        return BundleLinkingScreen(bundleId: bundleId);
+        final extra = state.extra;
+        String? orderRef;
+        String? bundleCode;
+        if (extra is Map<String, String>) {
+          orderRef = extra['orderRef'];
+          bundleCode = extra['bundleCode'];
+        }
+        return BundleLinkingScreen(
+          bundleId: bundleId,
+          initialOrderRef: orderRef,
+          initialBundleCode: bundleCode,
+        );
       },
       routes: [
         GoRoute(
