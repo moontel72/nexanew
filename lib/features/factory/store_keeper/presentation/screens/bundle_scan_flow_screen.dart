@@ -202,15 +202,12 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
       );
     });
 
-    // Mark the bundle as complete
-    await _apiService.put(
-      '/factory/store-keeper-bundles/${widget.bundleId}/linking-status',
-      body: {'linking_status': 'store_linked'},
-    );
+    // Do NOT auto-complete — the user must explicitly tap "Finalize"
+    // on the BundleLinkingScreen to move the order to store_linked.
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Unit linked: $code — Bundle complete!'),
+        content: Text('Unit linked: $code — All steps complete!'),
         backgroundColor: AppColors.success,
       ),
     );

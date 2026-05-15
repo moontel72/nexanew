@@ -405,9 +405,11 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
   ) async {
     // Guard: database must be initialized before scanning
     if (!LocalDatabase().isInitialized) {
-      emit(const ErrorState(
-        message: 'LocalDatabase not initialized. Call init() first.',
-      ));
+      emit(
+        const ErrorState(
+          message: 'LocalDatabase not initialized. Call init() first.',
+        ),
+      );
       await Future.delayed(const Duration(seconds: 2));
       if (state is StoreKeeperAuthenticated) emit(state);
       return;
@@ -558,7 +560,54 @@ class StoreKeeperBloc extends Bloc<StoreKeeperEvent, StoreKeeperState> {
   ) async {
     emit(InventoryState(isLoading: true));
     try {
-      emit(InventoryState(hierarchy: _repository.getHierarchy(event.bundleId)));
+      // Try local DB first
+      var hierarchy = _repository.getHierarchy(event.bundleId);
+      // If local DB has no children, fetch from server as fallback
+      if (hierarchy.children.isEmpty) {
+        try {
+          final response = await _apiService.get(
+            '/factory/store-keeper-bundles/${event.bundleId}/summary',
+          );
+          final data = response is Map<String, dynamic>
+              ? (response['data'] is Map<String, dynamic>
+                    ? response['data'] as Map<String, dynamic>
+                    : response)
+              : <String, dynamic>{};
+          // Build hierarchy from API response
+          final linkedCartonIds =
+              (data['linkedCartonIds'] as List<dynamic>?)?.cast<String>() ?? [];
+          final linkedPacketIds =
+              (data['linkedPacketIds'] as List<dynamic>?)?.cast<String>() ?? [];
+          hierarchy = HierarchyNode(
+            id: event.bundleId,
+            code: data['bundleCode']?.toString() ?? event.bundleId,
+            codeType: 'bundle',
+            label: 'Bundle: ${data['bundleCode'] ?? event.bundleId}',
+            children: [
+              if (linkedCartonIds.isNotEmpty)
+                HierarchyNode(
+                  id: 'cartons',
+                  code: '${linkedCartonIds.length} cartons',
+                  codeType: 'carton',
+                  label: 'Cartons (${linkedCartonIds.length})',
+                  children: linkedPacketIds.isNotEmpty
+                      ? [
+                          HierarchyNode(
+                            id: 'packets',
+                            code: '${linkedPacketIds.length} packets',
+                            codeType: 'packet',
+                            label: 'Packets (${linkedPacketIds.length})',
+                          ),
+                        ]
+                      : [],
+                ),
+            ],
+          );
+        } catch (_) {
+          // Server fetch failed — keep the (possibly empty) local result
+        }
+      }
+      emit(InventoryState(hierarchy: hierarchy));
     } catch (e) {
       emit(ErrorState(message: 'Failed to load hierarchy: $e'));
     }

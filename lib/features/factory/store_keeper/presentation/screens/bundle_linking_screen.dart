@@ -5,6 +5,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
+import 'package:nexatrace_system/features/factory/store_keeper/data/datasources/local_database.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/theme/text_styles.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
@@ -212,6 +213,9 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
 
       await _apiService.post(endpoint, body: body);
 
+      // Also persist to local DB so counts survive app restart
+      await _saveLinkToLocalDb(code, linkType);
+
       if (mounted) {
         setState(() {
           switch (linkType) {
@@ -235,46 +239,15 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
           }
         });
 
-        // Check if all items are now linked — transition to store_linked
-        if (!_hasMissingItems) {
-          try {
-            await _apiService.put(
-              '/factory/store-keeper-bundles/${widget.bundleId}/linking-status',
-              body: {'linking_status': 'store_linked'},
-            );
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text(
-                    'All items linked! Bundle is now complete.',
-                  ),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            }
-          } catch (statusErr) {
-            // Linking succeeded but status update failed — order stays
-            // in pending_store_linking so the user can retry.
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '${linkType.toUpperCase()} linked, but status update failed. Pull to retry.',
-                  ),
-                  backgroundColor: AppColors.warning,
-                  duration: const Duration(seconds: 4),
-                ),
-              );
-            }
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${linkType.toUpperCase()} linked successfully'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        }
+        // Show success — no longer auto-completes the order.
+        // The user must explicitly tap "Finalize & Submit" to move
+        // the bundle to store_linked.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${linkType.toUpperCase()} linked successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -285,6 +258,81 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
           ),
         );
       }
+    }
+  }
+
+  /// Finalize the bundle — explicitly mark it as store_linked.
+  /// Only callable when no items are missing.
+  Future<void> _finalizeBundle() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Finalize Bundle'),
+        content: Text(
+          'Submit this bundle as complete?\n\n'
+          'Cartons: $_linkedCartons / $_totalCartons\n'
+          'Packets: $_linkedPackets / $_totalPackets\n'
+          'Units: $_linkedUnits / $_totalUnits\n\n'
+          'This will move the order to the Admin Panel.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+            child: const Text(
+              'Finalize & Submit',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _apiService.put(
+        '/factory/store-keeper-bundles/${widget.bundleId}/linking-status',
+        body: {'linking_status': 'store_linked'},
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bundle finalized! Moving to Admin Panel.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        // Refresh to show updated state
+        _fetchBundleInfo();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to finalize: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Persist a successful link to the local database so counts survive
+  /// app restart and appear in the Inventory hierarchy view.
+  Future<void> _saveLinkToLocalDb(String code, String linkType) async {
+    try {
+      if (!LocalDatabase().isInitialized) return;
+      await LocalDatabase().createRecord(
+        code: code,
+        codeType: linkType,
+        bundleId: widget.bundleId,
+      );
+    } catch (_) {
+      // Local DB save is best-effort; API already succeeded.
     }
   }
 
@@ -451,6 +499,9 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
                     // ── Section 4: Summary Card ──
                     _buildSummaryCard(),
                     Gap(16.h),
+
+                    // ── Finalize Button ──
+                    if (!_hasMissingItems) _buildFinalizeButton(),
 
                     // ── Missing Items Alert ──
                     if (_hasMissingItems) _buildMissingAlert(),
@@ -985,6 +1036,58 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFinalizeButton() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  color: AppColors.success,
+                  size: 24.w,
+                ),
+                Gap(8.w),
+                Expanded(
+                  child: Text(
+                    'All items linked! Ready to finalize.',
+                    style: TextStyles.bodySmall.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Gap(12.h),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _finalizeBundle,
+                icon: const Icon(Icons.task_alt, color: Colors.white),
+                label: const Text(
+                  'Finalize & Submit',
+                  style: TextStyle(color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
