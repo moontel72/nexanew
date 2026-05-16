@@ -15,9 +15,13 @@ import 'package:nexatrace_system/shared/theme/app_theme.dart';
 import 'package:nexatrace_system/features/reseller/data/repositories/reseller_session_repository.dart';
 import 'package:nexatrace_system/features/reseller/data/datasources/reseller_marketplace_remote_datasource.dart';
 import 'package:nexatrace_system/features/reseller/data/repositories/reseller_marketplace_repository.dart';
+import 'package:nexatrace_system/features/reseller/data/datasources/reseller_order_remote_datasource.dart';
+import 'package:nexatrace_system/features/reseller/data/repositories/reseller_order_repository.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/auth/reseller_auth_bloc.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/dashboard/reseller_dashboard_bloc.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
+import 'package:nexatrace_system/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
+import 'package:nexatrace_system/features/reseller/presentation/bloc/order/reseller_order_bloc.dart';
 import 'package:nexatrace_system/features/reseller/routes/reseller_router.dart';
 
 class ResellerAppInitializer extends StatefulWidget {
@@ -81,6 +85,16 @@ class _ResellerAppInitializerState extends State<ResellerAppInitializer> {
             remote: context.read(),
           ),
         ),
+        RepositoryProvider<ResellerOrderRemoteDatasource>(
+          create: (context) => ResellerOrderRemoteDatasource(
+            apiService: context.read(),
+          ),
+        ),
+        RepositoryProvider<ResellerOrderRepository>(
+          create: (context) => ResellerOrderRepository(
+            remote: context.read(),
+          ),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -97,6 +111,14 @@ class _ResellerAppInitializerState extends State<ResellerAppInitializer> {
           BlocProvider<ResellerMarketplaceBloc>(
             create: (context) => ResellerMarketplaceBloc(
               repo: context.read<ResellerMarketplaceRepository>(),
+            ),
+          ),
+          BlocProvider<ResellerCartBloc>(
+            create: (_) => ResellerCartBloc(),
+          ),
+          BlocProvider<ResellerOrderBloc>(
+            create: (context) => ResellerOrderBloc(
+              repo: context.read<ResellerOrderRepository>(),
             ),
           ),
         ],

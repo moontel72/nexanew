@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/auth/reseller_auth_bloc.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/dashboard/reseller_dashboard_bloc.dart';
 import 'package:nexatrace_system/shared/models/reseller/reseller_employee_model.dart';
@@ -14,7 +15,8 @@ class ResellerDashboardScreen extends StatefulWidget {
   const ResellerDashboardScreen({super.key});
 
   @override
-  State<ResellerDashboardScreen> createState() => _ResellerDashboardScreenState();
+  State<ResellerDashboardScreen> createState() =>
+      _ResellerDashboardScreenState();
 }
 
 class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
@@ -22,7 +24,9 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ResellerDashboardBloc>().add(ResellerDashboardLoadRequested());
+      context.read<ResellerDashboardBloc>().add(
+        ResellerDashboardLoadRequested(),
+      );
     });
   }
 
@@ -56,7 +60,11 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.error_outline, size: 64.w, color: AppColors.error),
+                    Icon(
+                      Icons.error_outline,
+                      size: 64.w,
+                      color: AppColors.error,
+                    ),
                     SizedBox(height: 12.h),
                     Text(
                       state.message,
@@ -82,6 +90,10 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _marketplaceCard(),
+                SizedBox(height: 12.h),
+                _orderHistoryCard(),
+                SizedBox(height: 12.h),
                 _walletCard(loaded),
                 SizedBox(height: 12.h),
                 _shopsCard(loaded),
@@ -105,10 +117,9 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
           children: [
             Text(
               'Wallet',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(color: AppColors.primary),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
             ),
             SizedBox(height: 8.h),
             Text(
@@ -122,9 +133,9 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
                   child: PrimaryButton(
                     text: 'Cancel Bit (Fee 10)',
                     onPressed: () {
-                      context
-                          .read<ResellerDashboardBloc>()
-                          .add(ResellerCancelBitRequested(fee: 10));
+                      context.read<ResellerDashboardBloc>().add(
+                        ResellerCancelBitRequested(fee: 10),
+                      );
                     },
                   ),
                 ),
@@ -133,10 +144,9 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
             SizedBox(height: 6.h),
             Text(
               'Anti-fraud micro-fee is deducted on Bit cancellation (Phase 1: 6M).',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -157,10 +167,9 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
               children: [
                 Text(
                   'Shops',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(color: AppColors.primary),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
                 ),
                 IconButton(
                   onPressed: () => _createShopDialog(),
@@ -173,15 +182,12 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
             if (state.shops.isEmpty)
               Text(
                 'No shops yet.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.textSecondary),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
               )
             else
-              Column(
-                children: state.shops.map((s) => _shopRow(s)).toList(),
-              ),
+              Column(children: state.shops.map((s) => _shopRow(s)).toList()),
           ],
         ),
       ),
@@ -201,13 +207,14 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
               children: [
                 Text(
                   'Employees',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(color: AppColors.primary),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(color: AppColors.primary),
                 ),
                 IconButton(
-                  onPressed: state.shops.isEmpty ? null : () => _createEmployeeDialog(state.shops),
+                  onPressed: state.shops.isEmpty
+                      ? null
+                      : () => _createEmployeeDialog(state.shops),
                   icon: const Icon(Icons.person_add_alt_1),
                   tooltip: 'Add Employee',
                 ),
@@ -217,10 +224,9 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
             if (state.employees.isEmpty)
               Text(
                 'No employees yet.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.textSecondary),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
               )
             else
               Column(
@@ -241,7 +247,9 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
         icon: const Icon(Icons.delete_outline, color: AppColors.error),
         tooltip: 'Delete Shop',
         onPressed: () {
-          context.read<ResellerDashboardBloc>().add(ResellerDeleteShopRequested(shop.id));
+          context.read<ResellerDashboardBloc>().add(
+            ResellerDeleteShopRequested(shop.id),
+          );
         },
       ),
     );
@@ -261,7 +269,9 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
         icon: const Icon(Icons.delete_outline, color: AppColors.error),
         tooltip: 'Delete Employee',
         onPressed: () {
-          context.read<ResellerDashboardBloc>().add(ResellerDeleteEmployeeRequested(employee.id));
+          context.read<ResellerDashboardBloc>().add(
+            ResellerDeleteEmployeeRequested(employee.id),
+          );
         },
       ),
     );
@@ -294,7 +304,9 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
     );
     controller.dispose();
     if (name == null || name.trim().isEmpty) return;
-    context.read<ResellerDashboardBloc>().add(ResellerCreateShopRequested(name));
+    context.read<ResellerDashboardBloc>().add(
+      ResellerCreateShopRequested(name),
+    );
   }
 
   Future<void> _createEmployeeDialog(List<ResellerShopModel> shops) async {
@@ -314,10 +326,7 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
                 value: shopId,
                 items: shops
                     .map(
-                      (s) => DropdownMenuItem(
-                        value: s.id,
-                        child: Text(s.name),
-                      ),
+                      (s) => DropdownMenuItem(value: s.id, child: Text(s.name)),
                     )
                     .toList(),
                 onChanged: (v) {
@@ -336,11 +345,11 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
                       (r) => DropdownMenuItem(
                         value: r,
                         child: Text(
-                          switch (r) {
-                            ResellerEmployeeRole.shopManager => 'Shop Manager',
-                            ResellerEmployeeRole.cashier => 'Cashier',
-                            ResellerEmployeeRole.stockKeeper => 'Stock Keeper',
-                          },
+                          r == ResellerEmployeeRole.shopManager
+                              ? 'Shop Manager'
+                              : r == ResellerEmployeeRole.cashier
+                              ? 'Cashier'
+                              : 'Stock Keeper',
                         ),
                       ),
                     )
@@ -383,12 +392,130 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
     if (name.trim().isEmpty) return;
 
     context.read<ResellerDashboardBloc>().add(
-          ResellerCreateEmployeeRequested(
-            shopId: shopId,
-            name: name,
-            role: role,
+      ResellerCreateEmployeeRequested(shopId: shopId, name: name, role: role),
+    );
+  }
+
+  Widget _marketplaceCard() {
+    return Card(
+      elevation: 2,
+      color: AppColors.primary.withValues(alpha: 0.06),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.r),
+        side: BorderSide(
+          color: AppColors.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: InkWell(
+        onTap: () => context.go('/reseller/marketplace'),
+        borderRadius: BorderRadius.circular(12.r),
+        child: Padding(
+          padding: EdgeInsets.all(14.w),
+          child: Row(
+            children: [
+              Container(
+                width: 44.w,
+                height: 44.h,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(
+                  Icons.shopping_bag_outlined,
+                  color: AppColors.primary,
+                  size: 22.sp,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Visit Marketplace',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Browse products from multiple factories',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColors.gray600),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16.sp,
+                color: AppColors.primary,
+              ),
+            ],
           ),
-        );
+        ),
+      ),
+    );
+  }
+
+  Widget _orderHistoryCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: InkWell(
+        onTap: () => context.go('/reseller/marketplace/orders'),
+        borderRadius: BorderRadius.circular(12.r),
+        child: Padding(
+          padding: EdgeInsets.all(14.w),
+          child: Row(
+            children: [
+              Container(
+                width: 44.w,
+                height: 44.h,
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(
+                  Icons.receipt_long_outlined,
+                  color: AppColors.success,
+                  size: 22.sp,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Purchase History',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Track your orders and delivery status',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColors.gray600),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16.sp,
+                color: AppColors.gray400,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
-
