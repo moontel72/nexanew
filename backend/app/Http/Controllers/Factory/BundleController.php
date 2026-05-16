@@ -34,6 +34,7 @@ class BundleController extends Controller
                 'id' => $b->id,
                 'bundleCode' => $b->bundle_code,
                 'orderReference' => $b->order_reference,
+                'storeKeeperName' => $b->store_keeper_name ?? null,
                 'totalCartons' => (int) ($b->cartons_count ?? $b->total_cartons),
                 'totalPackets' => (int) ($b->packets_count ?? $b->total_packets),
                 'locationStore' => $b->location_store,
@@ -129,6 +130,49 @@ class BundleController extends Controller
             $bundle = DB::table('bundles')->where('id', $bundleId)->first();
             $items = DB::table('bundle_items')->where('bundle_id', $bundleId)->get();
 
+            // Batch-resolve product names, code strings, and units
+            $cartonIds = $items->whereNotNull('carton_code_id')->pluck('carton_code_id')->unique()->values()->toArray();
+            $packetIds = $items->whereNotNull('packet_code_id')->pluck('packet_code_id')->unique()->values()->toArray();
+
+            $cartonData = [];
+            if (!empty($cartonIds)) {
+                $cartonData = DB::table('carton_codes')
+                    ->join('base_codes', 'carton_codes.id', '=', 'base_codes.id')
+                    ->leftJoin('products', 'base_codes.product_id', '=', 'products.id')
+                    ->whereIn('carton_codes.id', $cartonIds)
+                    ->select('carton_codes.id', 'base_codes.code as code_display', 'products.name as product_name')
+                    ->get()
+                    ->keyBy('id');
+            }
+
+            $packetData = [];
+            if (!empty($packetIds)) {
+                $packetData = DB::table('packet_codes')
+                    ->join('base_codes', 'packet_codes.id', '=', 'base_codes.id')
+                    ->leftJoin('products', 'base_codes.product_id', '=', 'products.id')
+                    ->whereIn('packet_codes.id', $packetIds)
+                    ->select('packet_codes.id', 'base_codes.code as code_display', 'products.name as product_name')
+                    ->get()
+                    ->keyBy('id');
+            }
+
+            $unitsByPacket = [];
+            if (!empty($packetIds)) {
+                $unitRows = DB::table('unit_codes')
+                    ->join('base_codes', 'unit_codes.id', '=', 'base_codes.id')
+                    ->leftJoin('products', 'base_codes.product_id', '=', 'products.id')
+                    ->whereIn('unit_codes.packet_code_id', $packetIds)
+                    ->select('unit_codes.id', 'unit_codes.packet_code_id', 'unit_codes.unit_code', 'products.name as product_name')
+                    ->get();
+                foreach ($unitRows as $u) {
+                    $unitsByPacket[$u->packet_code_id][] = [
+                        'id' => $u->id,
+                        'unitCode' => $u->unit_code ?? null,
+                        'productName' => $u->product_name,
+                    ];
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -143,7 +187,23 @@ class BundleController extends Controller
                     'packedAt' => $bundle->packed_at,
                     'notes' => $bundle->notes,
                     'createdAt' => $bundle->created_at,
-                    'items' => $items->map(fn($i) => ['id' => $i->id, 'type' => $i->carton_code_id ? 'carton' : 'packet', 'cartonCodeId' => $i->carton_code_id, 'packetCodeId' => $i->packet_code_id])->values(),
+                    'items' => $items->map(function ($i) use ($cartonData, $packetData, $unitsByPacket) {
+                        $result = [
+                            'id' => $i->id,
+                            'type' => $i->carton_code_id ? 'carton' : 'packet',
+                            'cartonCodeId' => $i->carton_code_id,
+                            'packetCodeId' => $i->packet_code_id,
+                        ];
+                        if ($i->carton_code_id && isset($cartonData[$i->carton_code_id])) {
+                            $result['productName'] = $cartonData[$i->carton_code_id]->product_name;
+                            $result['codeDisplay'] = $cartonData[$i->carton_code_id]->code_display;
+                        } elseif ($i->packet_code_id && isset($packetData[$i->packet_code_id])) {
+                            $result['productName'] = $packetData[$i->packet_code_id]->product_name;
+                            $result['codeDisplay'] = $packetData[$i->packet_code_id]->code_display;
+                            $result['units'] = $unitsByPacket[$i->packet_code_id] ?? [];
+                        }
+                        return $result;
+                    })->values(),
                 ],
             ], 201);
 
@@ -160,6 +220,49 @@ class BundleController extends Controller
 
         $items = DB::table('bundle_items')->where('bundle_id', $id)->get();
 
+        // Batch-resolve product names, code strings, and units
+        $cartonIds = $items->whereNotNull('carton_code_id')->pluck('carton_code_id')->unique()->values()->toArray();
+        $packetIds = $items->whereNotNull('packet_code_id')->pluck('packet_code_id')->unique()->values()->toArray();
+
+        $cartonData = [];
+        if (!empty($cartonIds)) {
+            $cartonData = DB::table('carton_codes')
+                ->join('base_codes', 'carton_codes.id', '=', 'base_codes.id')
+                ->leftJoin('products', 'base_codes.product_id', '=', 'products.id')
+                ->whereIn('carton_codes.id', $cartonIds)
+                ->select('carton_codes.id', 'base_codes.code as code_display', 'products.name as product_name')
+                ->get()
+                ->keyBy('id');
+        }
+
+        $packetData = [];
+        if (!empty($packetIds)) {
+            $packetData = DB::table('packet_codes')
+                ->join('base_codes', 'packet_codes.id', '=', 'base_codes.id')
+                ->leftJoin('products', 'base_codes.product_id', '=', 'products.id')
+                ->whereIn('packet_codes.id', $packetIds)
+                ->select('packet_codes.id', 'base_codes.code as code_display', 'products.name as product_name')
+                ->get()
+                ->keyBy('id');
+        }
+
+        $unitsByPacket = [];
+        if (!empty($packetIds)) {
+            $unitRows = DB::table('unit_codes')
+                ->join('base_codes', 'unit_codes.id', '=', 'base_codes.id')
+                ->leftJoin('products', 'base_codes.product_id', '=', 'products.id')
+                ->whereIn('unit_codes.packet_code_id', $packetIds)
+                ->select('unit_codes.id', 'unit_codes.packet_code_id', 'unit_codes.unit_code', 'products.name as product_name')
+                ->get();
+            foreach ($unitRows as $u) {
+                $unitsByPacket[$u->packet_code_id][] = [
+                    'id' => $u->id,
+                    'unitCode' => $u->unit_code ?? null,
+                    'productName' => $u->product_name,
+                ];
+            }
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -174,7 +277,23 @@ class BundleController extends Controller
                 'packedAt' => $bundle->packed_at,
                 'notes' => $bundle->notes,
                 'createdAt' => $bundle->created_at,
-                'items' => $items->map(fn($i) => ['id' => $i->id, 'type' => $i->carton_code_id ? 'carton' : 'packet', 'cartonCodeId' => $i->carton_code_id, 'packetCodeId' => $i->packet_code_id])->values(),
+                'items' => $items->map(function ($i) use ($cartonData, $packetData, $unitsByPacket) {
+                    $result = [
+                        'id' => $i->id,
+                        'type' => $i->carton_code_id ? 'carton' : 'packet',
+                        'cartonCodeId' => $i->carton_code_id,
+                        'packetCodeId' => $i->packet_code_id,
+                    ];
+                    if ($i->carton_code_id && isset($cartonData[$i->carton_code_id])) {
+                        $result['productName'] = $cartonData[$i->carton_code_id]->product_name;
+                        $result['codeDisplay'] = $cartonData[$i->carton_code_id]->code_display;
+                    } elseif ($i->packet_code_id && isset($packetData[$i->packet_code_id])) {
+                        $result['productName'] = $packetData[$i->packet_code_id]->product_name;
+                        $result['codeDisplay'] = $packetData[$i->packet_code_id]->code_display;
+                        $result['units'] = $unitsByPacket[$i->packet_code_id] ?? [];
+                    }
+                    return $result;
+                })->values(),
             ],
         ]);
     }

@@ -43,12 +43,35 @@ Map<String, dynamic> _$BundleModelToJson(_BundleModel instance) =>
       'items': instance.items,
     };
 
+_UnitItemModel _$UnitItemModelFromJson(Map<String, dynamic> json) =>
+    _UnitItemModel(
+      id: json['id'] as String,
+      unitCode: json['unitCode'] as String?,
+      productName: json['productName'] as String?,
+      packetCodeId: json['packetCodeId'] as String?,
+    );
+
+Map<String, dynamic> _$UnitItemModelToJson(_UnitItemModel instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'unitCode': instance.unitCode,
+      'productName': instance.productName,
+      'packetCodeId': instance.packetCodeId,
+    };
+
 _BundleItemModel _$BundleItemModelFromJson(Map<String, dynamic> json) =>
     _BundleItemModel(
       id: json['id'] as String,
       type: json['type'] as String? ?? '',
       cartonCodeId: json['cartonCodeId'] as String?,
       packetCodeId: json['packetCodeId'] as String?,
+      productName: json['productName'] as String?,
+      codeDisplay: json['codeDisplay'] as String?,
+      units:
+          (json['units'] as List<dynamic>?)
+              ?.map((e) => UnitItemModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$BundleItemModelToJson(_BundleItemModel instance) =>
@@ -57,4 +80,7 @@ Map<String, dynamic> _$BundleItemModelToJson(_BundleItemModel instance) =>
       'type': instance.type,
       'cartonCodeId': instance.cartonCodeId,
       'packetCodeId': instance.packetCodeId,
+      'productName': instance.productName,
+      'codeDisplay': instance.codeDisplay,
+      'units': instance.units,
     };

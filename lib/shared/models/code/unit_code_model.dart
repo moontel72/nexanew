@@ -181,6 +181,12 @@ abstract class UnitCodeModel with _$UnitCodeModel {
 
     /// Unit code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label)
     @HiveField(64) @Default('qr') String codeFormat,
+
+    /// Linked order reference (from bundles table)
+    @HiveField(65) @Default('') String linkedOrderReference,
+
+    /// Linked bundle code (from bundles table)
+    @HiveField(66) @Default('') String linkedBundleCode,
   }) = _UnitCodeModel;
 
   factory UnitCodeModel.fromJson(Map<String, dynamic> json) =>

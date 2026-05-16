@@ -330,17 +330,26 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         size: 20.sp,
                       ),
                       title: Text(
-                        isCarton
-                            ? 'Carton: ${item.cartonCodeId ?? '-'}'
-                            : 'Packet: ${item.packetCodeId ?? '-'}',
+                        item.codeDisplay ?? (isCarton ? 'Carton: ${item.cartonCodeId ?? '-'}' : 'Packet: ${item.packetCodeId ?? '-'}'),
                         style: TextStyle(fontSize: 13.sp),
                       ),
-                      subtitle: Text(
-                        item.type,
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          color: AppColors.textTertiary,
-                        ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.productName ?? 'No product linked',
+                            style: TextStyle(fontSize: 11.sp, color: item.productName != null ? AppColors.success : AppColors.textTertiary),
+                          ),
+                          if (item.units.isNotEmpty) ...[
+                            SizedBox(height: 4.h),
+                            ...item.units.take(5).map((u) => Text(
+                              '  • ${u.unitCode ?? u.id.substring(0,8)} — ${u.productName ?? 'Unknown'}',
+                              style: TextStyle(fontSize: 10.sp, color: AppColors.textSecondary),
+                            )),
+                            if (item.units.length > 5)
+                              Text('  ... +${item.units.length - 5} more units', style: TextStyle(fontSize: 10.sp, color: AppColors.textTertiary)),
+                          ],
+                        ],
                       ),
                     );
                   },

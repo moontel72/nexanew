@@ -47,6 +47,22 @@ abstract class BundleModel with _$BundleModel {
       _$BundleModelFromJson(json);
 }
 
+/// Unit Item Model
+/// Represents a single unit within a packet
+@freezed
+@HiveType(typeId: 108)
+abstract class UnitItemModel with _$UnitItemModel {
+  const factory UnitItemModel({
+    @HiveField(0) required String id,
+    @HiveField(1) String? unitCode,
+    @HiveField(2) String? productName,
+    @HiveField(3) String? packetCodeId,
+  }) = _UnitItemModel;
+
+  factory UnitItemModel.fromJson(Map<String, dynamic> json) =>
+      _$UnitItemModelFromJson(json);
+}
+
 /// Bundle Item Model
 /// Represents a single carton or packet within a bundle
 @freezed
@@ -57,6 +73,9 @@ abstract class BundleItemModel with _$BundleItemModel {
     @HiveField(1) @Default('') String type, // 'carton' or 'packet'
     @HiveField(2) String? cartonCodeId,
     @HiveField(3) String? packetCodeId,
+    @HiveField(4) String? productName,
+    @HiveField(5) String? codeDisplay,
+    @HiveField(6) @Default([]) List<UnitItemModel> units,
   }) = _BundleItemModel;
 
   factory BundleItemModel.fromJson(Map<String, dynamic> json) =>

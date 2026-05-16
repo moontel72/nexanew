@@ -79,6 +79,7 @@ _PacketCodeModel _$PacketCodeModelFromJson(
   qcPassedBy: json['qcPassedBy'] as String?,
   qcNotes: json['qcNotes'] as String?,
   codeFormat: json['codeFormat'] as String? ?? 'qr',
+  linkedOrderReference: json['linkedOrderReference'] as String? ?? '',
 );
 
 Map<String, dynamic> _$PacketCodeModelToJson(_PacketCodeModel instance) =>
@@ -135,6 +136,7 @@ Map<String, dynamic> _$PacketCodeModelToJson(_PacketCodeModel instance) =>
       'qcPassedBy': instance.qcPassedBy,
       'qcNotes': instance.qcNotes,
       'codeFormat': instance.codeFormat,
+      'linkedOrderReference': instance.linkedOrderReference,
     };
 
 const _$CodeTypeEnumMap = {

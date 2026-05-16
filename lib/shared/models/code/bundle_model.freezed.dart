@@ -315,10 +315,282 @@ as List<BundleItemModel>,
 
 
 /// @nodoc
+mixin _$UnitItemModel {
+
+@HiveField(0) String get id;@HiveField(1) String? get unitCode;@HiveField(2) String? get productName;@HiveField(3) String? get packetCodeId;
+/// Create a copy of UnitItemModel
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$UnitItemModelCopyWith<UnitItemModel> get copyWith => _$UnitItemModelCopyWithImpl<UnitItemModel>(this as UnitItemModel, _$identity);
+
+  /// Serializes this UnitItemModel to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UnitItemModel&&(identical(other.id, id) || other.id == id)&&(identical(other.unitCode, unitCode) || other.unitCode == unitCode)&&(identical(other.productName, productName) || other.productName == productName)&&(identical(other.packetCodeId, packetCodeId) || other.packetCodeId == packetCodeId));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,unitCode,productName,packetCodeId);
+
+@override
+String toString() {
+  return 'UnitItemModel(id: $id, unitCode: $unitCode, productName: $productName, packetCodeId: $packetCodeId)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $UnitItemModelCopyWith<$Res>  {
+  factory $UnitItemModelCopyWith(UnitItemModel value, $Res Function(UnitItemModel) _then) = _$UnitItemModelCopyWithImpl;
+@useResult
+$Res call({
+@HiveField(0) String id,@HiveField(1) String? unitCode,@HiveField(2) String? productName,@HiveField(3) String? packetCodeId
+});
+
+
+
+
+}
+/// @nodoc
+class _$UnitItemModelCopyWithImpl<$Res>
+    implements $UnitItemModelCopyWith<$Res> {
+  _$UnitItemModelCopyWithImpl(this._self, this._then);
+
+  final UnitItemModel _self;
+  final $Res Function(UnitItemModel) _then;
+
+/// Create a copy of UnitItemModel
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? unitCode = freezed,Object? productName = freezed,Object? packetCodeId = freezed,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,unitCode: freezed == unitCode ? _self.unitCode : unitCode // ignore: cast_nullable_to_non_nullable
+as String?,productName: freezed == productName ? _self.productName : productName // ignore: cast_nullable_to_non_nullable
+as String?,packetCodeId: freezed == packetCodeId ? _self.packetCodeId : packetCodeId // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [UnitItemModel].
+extension UnitItemModelPatterns on UnitItemModel {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _UnitItemModel value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _UnitItemModel() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _UnitItemModel value)  $default,){
+final _that = this;
+switch (_that) {
+case _UnitItemModel():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _UnitItemModel value)?  $default,){
+final _that = this;
+switch (_that) {
+case _UnitItemModel() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@HiveField(0)  String id, @HiveField(1)  String? unitCode, @HiveField(2)  String? productName, @HiveField(3)  String? packetCodeId)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _UnitItemModel() when $default != null:
+return $default(_that.id,_that.unitCode,_that.productName,_that.packetCodeId);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@HiveField(0)  String id, @HiveField(1)  String? unitCode, @HiveField(2)  String? productName, @HiveField(3)  String? packetCodeId)  $default,) {final _that = this;
+switch (_that) {
+case _UnitItemModel():
+return $default(_that.id,_that.unitCode,_that.productName,_that.packetCodeId);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@HiveField(0)  String id, @HiveField(1)  String? unitCode, @HiveField(2)  String? productName, @HiveField(3)  String? packetCodeId)?  $default,) {final _that = this;
+switch (_that) {
+case _UnitItemModel() when $default != null:
+return $default(_that.id,_that.unitCode,_that.productName,_that.packetCodeId);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _UnitItemModel implements UnitItemModel {
+  const _UnitItemModel({@HiveField(0) required this.id, @HiveField(1) this.unitCode, @HiveField(2) this.productName, @HiveField(3) this.packetCodeId});
+  factory _UnitItemModel.fromJson(Map<String, dynamic> json) => _$UnitItemModelFromJson(json);
+
+@override@HiveField(0) final  String id;
+@override@HiveField(1) final  String? unitCode;
+@override@HiveField(2) final  String? productName;
+@override@HiveField(3) final  String? packetCodeId;
+
+/// Create a copy of UnitItemModel
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$UnitItemModelCopyWith<_UnitItemModel> get copyWith => __$UnitItemModelCopyWithImpl<_UnitItemModel>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$UnitItemModelToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UnitItemModel&&(identical(other.id, id) || other.id == id)&&(identical(other.unitCode, unitCode) || other.unitCode == unitCode)&&(identical(other.productName, productName) || other.productName == productName)&&(identical(other.packetCodeId, packetCodeId) || other.packetCodeId == packetCodeId));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,unitCode,productName,packetCodeId);
+
+@override
+String toString() {
+  return 'UnitItemModel(id: $id, unitCode: $unitCode, productName: $productName, packetCodeId: $packetCodeId)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$UnitItemModelCopyWith<$Res> implements $UnitItemModelCopyWith<$Res> {
+  factory _$UnitItemModelCopyWith(_UnitItemModel value, $Res Function(_UnitItemModel) _then) = __$UnitItemModelCopyWithImpl;
+@override @useResult
+$Res call({
+@HiveField(0) String id,@HiveField(1) String? unitCode,@HiveField(2) String? productName,@HiveField(3) String? packetCodeId
+});
+
+
+
+
+}
+/// @nodoc
+class __$UnitItemModelCopyWithImpl<$Res>
+    implements _$UnitItemModelCopyWith<$Res> {
+  __$UnitItemModelCopyWithImpl(this._self, this._then);
+
+  final _UnitItemModel _self;
+  final $Res Function(_UnitItemModel) _then;
+
+/// Create a copy of UnitItemModel
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? unitCode = freezed,Object? productName = freezed,Object? packetCodeId = freezed,}) {
+  return _then(_UnitItemModel(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,unitCode: freezed == unitCode ? _self.unitCode : unitCode // ignore: cast_nullable_to_non_nullable
+as String?,productName: freezed == productName ? _self.productName : productName // ignore: cast_nullable_to_non_nullable
+as String?,packetCodeId: freezed == packetCodeId ? _self.packetCodeId : packetCodeId // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$BundleItemModel {
 
 @HiveField(0) String get id;@HiveField(1) String get type;// 'carton' or 'packet'
-@HiveField(2) String? get cartonCodeId;@HiveField(3) String? get packetCodeId;
+@HiveField(2) String? get cartonCodeId;@HiveField(3) String? get packetCodeId;@HiveField(4) String? get productName;@HiveField(5) String? get codeDisplay;@HiveField(6) List<UnitItemModel> get units;
 /// Create a copy of BundleItemModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -331,16 +603,16 @@ $BundleItemModelCopyWith<BundleItemModel> get copyWith => _$BundleItemModelCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BundleItemModel&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.cartonCodeId, cartonCodeId) || other.cartonCodeId == cartonCodeId)&&(identical(other.packetCodeId, packetCodeId) || other.packetCodeId == packetCodeId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BundleItemModel&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.cartonCodeId, cartonCodeId) || other.cartonCodeId == cartonCodeId)&&(identical(other.packetCodeId, packetCodeId) || other.packetCodeId == packetCodeId)&&(identical(other.productName, productName) || other.productName == productName)&&(identical(other.codeDisplay, codeDisplay) || other.codeDisplay == codeDisplay)&&const DeepCollectionEquality().equals(other.units, units));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,type,cartonCodeId,packetCodeId);
+int get hashCode => Object.hash(runtimeType,id,type,cartonCodeId,packetCodeId,productName,codeDisplay,const DeepCollectionEquality().hash(units));
 
 @override
 String toString() {
-  return 'BundleItemModel(id: $id, type: $type, cartonCodeId: $cartonCodeId, packetCodeId: $packetCodeId)';
+  return 'BundleItemModel(id: $id, type: $type, cartonCodeId: $cartonCodeId, packetCodeId: $packetCodeId, productName: $productName, codeDisplay: $codeDisplay, units: $units)';
 }
 
 
@@ -351,7 +623,7 @@ abstract mixin class $BundleItemModelCopyWith<$Res>  {
   factory $BundleItemModelCopyWith(BundleItemModel value, $Res Function(BundleItemModel) _then) = _$BundleItemModelCopyWithImpl;
 @useResult
 $Res call({
-@HiveField(0) String id,@HiveField(1) String type,@HiveField(2) String? cartonCodeId,@HiveField(3) String? packetCodeId
+@HiveField(0) String id,@HiveField(1) String type,@HiveField(2) String? cartonCodeId,@HiveField(3) String? packetCodeId,@HiveField(4) String? productName,@HiveField(5) String? codeDisplay,@HiveField(6) List<UnitItemModel> units
 });
 
 
@@ -368,13 +640,16 @@ class _$BundleItemModelCopyWithImpl<$Res>
 
 /// Create a copy of BundleItemModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? cartonCodeId = freezed,Object? packetCodeId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? cartonCodeId = freezed,Object? packetCodeId = freezed,Object? productName = freezed,Object? codeDisplay = freezed,Object? units = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,cartonCodeId: freezed == cartonCodeId ? _self.cartonCodeId : cartonCodeId // ignore: cast_nullable_to_non_nullable
 as String?,packetCodeId: freezed == packetCodeId ? _self.packetCodeId : packetCodeId // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,productName: freezed == productName ? _self.productName : productName // ignore: cast_nullable_to_non_nullable
+as String?,codeDisplay: freezed == codeDisplay ? _self.codeDisplay : codeDisplay // ignore: cast_nullable_to_non_nullable
+as String?,units: null == units ? _self.units : units // ignore: cast_nullable_to_non_nullable
+as List<UnitItemModel>,
   ));
 }
 
@@ -459,10 +734,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@HiveField(0)  String id, @HiveField(1)  String type, @HiveField(2)  String? cartonCodeId, @HiveField(3)  String? packetCodeId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@HiveField(0)  String id, @HiveField(1)  String type, @HiveField(2)  String? cartonCodeId, @HiveField(3)  String? packetCodeId, @HiveField(4)  String? productName, @HiveField(5)  String? codeDisplay, @HiveField(6)  List<UnitItemModel> units)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BundleItemModel() when $default != null:
-return $default(_that.id,_that.type,_that.cartonCodeId,_that.packetCodeId);case _:
+return $default(_that.id,_that.type,_that.cartonCodeId,_that.packetCodeId,_that.productName,_that.codeDisplay,_that.units);case _:
   return orElse();
 
 }
@@ -480,10 +755,10 @@ return $default(_that.id,_that.type,_that.cartonCodeId,_that.packetCodeId);case 
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@HiveField(0)  String id, @HiveField(1)  String type, @HiveField(2)  String? cartonCodeId, @HiveField(3)  String? packetCodeId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@HiveField(0)  String id, @HiveField(1)  String type, @HiveField(2)  String? cartonCodeId, @HiveField(3)  String? packetCodeId, @HiveField(4)  String? productName, @HiveField(5)  String? codeDisplay, @HiveField(6)  List<UnitItemModel> units)  $default,) {final _that = this;
 switch (_that) {
 case _BundleItemModel():
-return $default(_that.id,_that.type,_that.cartonCodeId,_that.packetCodeId);case _:
+return $default(_that.id,_that.type,_that.cartonCodeId,_that.packetCodeId,_that.productName,_that.codeDisplay,_that.units);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -500,10 +775,10 @@ return $default(_that.id,_that.type,_that.cartonCodeId,_that.packetCodeId);case 
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@HiveField(0)  String id, @HiveField(1)  String type, @HiveField(2)  String? cartonCodeId, @HiveField(3)  String? packetCodeId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@HiveField(0)  String id, @HiveField(1)  String type, @HiveField(2)  String? cartonCodeId, @HiveField(3)  String? packetCodeId, @HiveField(4)  String? productName, @HiveField(5)  String? codeDisplay, @HiveField(6)  List<UnitItemModel> units)?  $default,) {final _that = this;
 switch (_that) {
 case _BundleItemModel() when $default != null:
-return $default(_that.id,_that.type,_that.cartonCodeId,_that.packetCodeId);case _:
+return $default(_that.id,_that.type,_that.cartonCodeId,_that.packetCodeId,_that.productName,_that.codeDisplay,_that.units);case _:
   return null;
 
 }
@@ -515,7 +790,7 @@ return $default(_that.id,_that.type,_that.cartonCodeId,_that.packetCodeId);case 
 @JsonSerializable()
 
 class _BundleItemModel implements BundleItemModel {
-  const _BundleItemModel({@HiveField(0) required this.id, @HiveField(1) this.type = '', @HiveField(2) this.cartonCodeId, @HiveField(3) this.packetCodeId});
+  const _BundleItemModel({@HiveField(0) required this.id, @HiveField(1) this.type = '', @HiveField(2) this.cartonCodeId, @HiveField(3) this.packetCodeId, @HiveField(4) this.productName, @HiveField(5) this.codeDisplay, @HiveField(6) final  List<UnitItemModel> units = const []}): _units = units;
   factory _BundleItemModel.fromJson(Map<String, dynamic> json) => _$BundleItemModelFromJson(json);
 
 @override@HiveField(0) final  String id;
@@ -523,6 +798,15 @@ class _BundleItemModel implements BundleItemModel {
 // 'carton' or 'packet'
 @override@HiveField(2) final  String? cartonCodeId;
 @override@HiveField(3) final  String? packetCodeId;
+@override@HiveField(4) final  String? productName;
+@override@HiveField(5) final  String? codeDisplay;
+ final  List<UnitItemModel> _units;
+@override@JsonKey()@HiveField(6) List<UnitItemModel> get units {
+  if (_units is EqualUnmodifiableListView) return _units;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_units);
+}
+
 
 /// Create a copy of BundleItemModel
 /// with the given fields replaced by the non-null parameter values.
@@ -537,16 +821,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BundleItemModel&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.cartonCodeId, cartonCodeId) || other.cartonCodeId == cartonCodeId)&&(identical(other.packetCodeId, packetCodeId) || other.packetCodeId == packetCodeId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BundleItemModel&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.cartonCodeId, cartonCodeId) || other.cartonCodeId == cartonCodeId)&&(identical(other.packetCodeId, packetCodeId) || other.packetCodeId == packetCodeId)&&(identical(other.productName, productName) || other.productName == productName)&&(identical(other.codeDisplay, codeDisplay) || other.codeDisplay == codeDisplay)&&const DeepCollectionEquality().equals(other._units, _units));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,type,cartonCodeId,packetCodeId);
+int get hashCode => Object.hash(runtimeType,id,type,cartonCodeId,packetCodeId,productName,codeDisplay,const DeepCollectionEquality().hash(_units));
 
 @override
 String toString() {
-  return 'BundleItemModel(id: $id, type: $type, cartonCodeId: $cartonCodeId, packetCodeId: $packetCodeId)';
+  return 'BundleItemModel(id: $id, type: $type, cartonCodeId: $cartonCodeId, packetCodeId: $packetCodeId, productName: $productName, codeDisplay: $codeDisplay, units: $units)';
 }
 
 
@@ -557,7 +841,7 @@ abstract mixin class _$BundleItemModelCopyWith<$Res> implements $BundleItemModel
   factory _$BundleItemModelCopyWith(_BundleItemModel value, $Res Function(_BundleItemModel) _then) = __$BundleItemModelCopyWithImpl;
 @override @useResult
 $Res call({
-@HiveField(0) String id,@HiveField(1) String type,@HiveField(2) String? cartonCodeId,@HiveField(3) String? packetCodeId
+@HiveField(0) String id,@HiveField(1) String type,@HiveField(2) String? cartonCodeId,@HiveField(3) String? packetCodeId,@HiveField(4) String? productName,@HiveField(5) String? codeDisplay,@HiveField(6) List<UnitItemModel> units
 });
 
 
@@ -574,13 +858,16 @@ class __$BundleItemModelCopyWithImpl<$Res>
 
 /// Create a copy of BundleItemModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? cartonCodeId = freezed,Object? packetCodeId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? cartonCodeId = freezed,Object? packetCodeId = freezed,Object? productName = freezed,Object? codeDisplay = freezed,Object? units = null,}) {
   return _then(_BundleItemModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,cartonCodeId: freezed == cartonCodeId ? _self.cartonCodeId : cartonCodeId // ignore: cast_nullable_to_non_nullable
 as String?,packetCodeId: freezed == packetCodeId ? _self.packetCodeId : packetCodeId // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,productName: freezed == productName ? _self.productName : productName // ignore: cast_nullable_to_non_nullable
+as String?,codeDisplay: freezed == codeDisplay ? _self.codeDisplay : codeDisplay // ignore: cast_nullable_to_non_nullable
+as String?,units: null == units ? _self._units : units // ignore: cast_nullable_to_non_nullable
+as List<UnitItemModel>,
   ));
 }
 

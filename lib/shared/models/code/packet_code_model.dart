@@ -142,6 +142,9 @@ abstract class PacketCodeModel with _$PacketCodeModel {
 
     /// Packet code format type (itf14, gs1_128, code128_industrial, qr, datamatrix, code128_label)
     @HiveField(51) @Default('qr') String codeFormat,
+
+    /// Linked order reference (from bundles table)
+    @HiveField(52) @Default('') String linkedOrderReference,
   }) = _PacketCodeModel;
 
   factory PacketCodeModel.fromJson(Map<String, dynamic> json) =>

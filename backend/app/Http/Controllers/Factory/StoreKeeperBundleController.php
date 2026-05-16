@@ -520,6 +520,25 @@ class StoreKeeperBundleController extends Controller
                 ->whereNotNull('packet_code_id')
                 ->pluck('packet_code_id')->toArray();
 
+            // Resolve linked units with product names
+            $linkedUnits = [];
+            if (!empty($packetIdsInBundle)) {
+                $unitRows = DB::table('unit_codes')
+                    ->join('base_codes', 'unit_codes.id', '=', 'base_codes.id')
+                    ->leftJoin('products', 'base_codes.product_id', '=', 'products.id')
+                    ->whereIn('unit_codes.packet_code_id', $packetIdsInBundle)
+                    ->select('unit_codes.id', 'unit_codes.packet_code_id', 'unit_codes.unit_code', 'products.name as product_name')
+                    ->get();
+                foreach ($unitRows as $u) {
+                    $linkedUnits[] = [
+                        'id' => $u->id,
+                        'packetCodeId' => $u->packet_code_id,
+                        'unitCode' => $u->unit_code ?? null,
+                        'productName' => $u->product_name,
+                    ];
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -530,6 +549,7 @@ class StoreKeeperBundleController extends Controller
                     'linkedUnitsCount' => $linkedUnitsCount,
                     'linkedCartonIds' => $linkedCartonIds,
                     'linkedPacketIds' => $linkedPacketIds,
+                    'linkedUnits' => $linkedUnits,
                     'totalCartons' => $totalCartons,
                     'totalPackets' => $totalPackets,
                     'bundleQrData' => $qrData,

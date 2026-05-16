@@ -124,6 +124,9 @@ abstract class CartonCodeModel with _$CartonCodeModel {
 
     /// Inspection notes
     @HiveField(44) String? inspectionNotes,
+
+    /// Linked order reference (from bundles table)
+    @HiveField(46) @Default('') String linkedOrderReference,
   }) = _CartonCodeModel;
 
   factory CartonCodeModel.fromJson(Map<String, dynamic> json) =>
@@ -302,8 +305,9 @@ abstract class CartonCodeModel with _$CartonCodeModel {
     if (lastInspectionDate == null) return true;
 
     // If last inspection was more than 30 days ago
-    final daysSinceInspection =
-        DateTime.now().difference(lastInspectionDate!).inDays;
+    final daysSinceInspection = DateTime.now()
+        .difference(lastInspectionDate!)
+        .inDays;
     return daysSinceInspection > 30;
   }
 

@@ -98,6 +98,8 @@ _UnitCodeModel _$UnitCodeModelFromJson(Map<String, dynamic> json) =>
       activatedBy: json['activatedBy'] as String?,
       activationLocation: json['activationLocation'] as String?,
       codeFormat: json['codeFormat'] as String? ?? 'qr',
+      linkedOrderReference: json['linkedOrderReference'] as String? ?? '',
+      linkedBundleCode: json['linkedBundleCode'] as String? ?? '',
     );
 
 Map<String, dynamic> _$UnitCodeModelToJson(_UnitCodeModel instance) =>
@@ -167,6 +169,8 @@ Map<String, dynamic> _$UnitCodeModelToJson(_UnitCodeModel instance) =>
       'activatedBy': instance.activatedBy,
       'activationLocation': instance.activationLocation,
       'codeFormat': instance.codeFormat,
+      'linkedOrderReference': instance.linkedOrderReference,
+      'linkedBundleCode': instance.linkedBundleCode,
     };
 
 const _$CodeTypeEnumMap = {

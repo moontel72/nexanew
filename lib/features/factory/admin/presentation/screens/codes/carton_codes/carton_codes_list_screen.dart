@@ -297,10 +297,11 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
               child: Table(
                 columnWidths: const {
-                  0: FlexColumnWidth(0.15),
-                  1: FlexColumnWidth(0.40),
-                  2: FlexColumnWidth(0.20),
-                  3: FlexColumnWidth(0.25),
+                  0: FlexColumnWidth(0.10),
+                  1: FlexColumnWidth(0.32),
+                  2: FlexColumnWidth(0.14),
+                  3: FlexColumnWidth(0.16),
+                  4: FlexColumnWidth(0.28),
                 },
                 children: [
                   TableRow(
@@ -317,6 +318,7 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                       _tableHeader('Code Data'),
                       _tableHeader('Format'),
                       _tableHeader('Status'),
+                      _tableHeader('Linked To'),
                     ],
                   ),
                   for (int i = 0; i < sortedCodes.length; i++)
@@ -360,6 +362,15 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                           sortedCodes[i].statusDisplayName,
                           color: _statusColor(sortedCodes[i].status),
                           fontWeight: FontWeight.w500,
+                        ),
+                        _tableCell(
+                          sortedCodes[i].bundleCode.isNotEmpty
+                              ? sortedCodes[i].bundleCode
+                              : '—',
+                          color: sortedCodes[i].bundleCode.isNotEmpty
+                              ? AppColors.info
+                              : AppColors.textTertiary,
+                          fontWeight: FontWeight.w400,
                         ),
                       ],
                     ),

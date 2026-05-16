@@ -75,6 +75,7 @@ _CartonCodeModel _$CartonCodeModelFromJson(
       ? null
       : DateTime.parse(json['lastInspectionDate'] as String),
   inspectionNotes: json['inspectionNotes'] as String?,
+  linkedOrderReference: json['linkedOrderReference'] as String? ?? '',
 );
 
 Map<String, dynamic> _$CartonCodeModelToJson(_CartonCodeModel instance) =>
@@ -125,6 +126,7 @@ Map<String, dynamic> _$CartonCodeModelToJson(_CartonCodeModel instance) =>
       'condition': instance.condition,
       'lastInspectionDate': instance.lastInspectionDate?.toIso8601String(),
       'inspectionNotes': instance.inspectionNotes,
+      'linkedOrderReference': instance.linkedOrderReference,
     };
 
 const _$CodeTypeEnumMap = {

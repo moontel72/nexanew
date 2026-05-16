@@ -180,6 +180,9 @@ class UnitCodesController extends Controller
 
         $query = DB::table('unit_codes')
             ->join('base_codes', 'unit_codes.id', '=', 'base_codes.id')
+            ->leftJoin('packet_codes', 'unit_codes.packet_code_id', '=', 'packet_codes.id')
+            ->leftJoin('bundle_items', 'packet_codes.id', '=', 'bundle_items.packet_code_id')
+            ->leftJoin('bundles', 'bundle_items.bundle_id', '=', 'bundles.id')
             ->select([
                 'unit_codes.*',
                 'base_codes.code',
@@ -206,6 +209,8 @@ class UnitCodesController extends Controller
                 'base_codes.is_deleted',
                 'base_codes.created_at',
                 'base_codes.updated_at',
+                'bundles.order_reference as linked_order_reference',
+                'bundles.bundle_code as linked_bundle_code',
             ])
             ->where('base_codes.company_id', $companyId)
             ->where('base_codes.code_type', 'unit')
@@ -255,6 +260,8 @@ class UnitCodesController extends Controller
                 'isReportedFake' => (bool) ($row->is_reported_fake ?? false),
                 'isBlocked' => (bool) ($row->is_blocked ?? false),
                 'model' => $row->model,
+                'linkedOrderReference' => (string) ($row->linked_order_reference ?? ''),
+                'linkedBundleCode' => (string) ($row->linked_bundle_code ?? ''),
                 'createdAt' => $dt($row->created_at),
                 'updatedAt' => $dt($row->updated_at),
             ];

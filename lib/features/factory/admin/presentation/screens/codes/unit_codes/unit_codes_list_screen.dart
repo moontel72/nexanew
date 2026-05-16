@@ -297,10 +297,11 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
               child: Table(
                 columnWidths: const {
-                  0: FlexColumnWidth(0.15),
-                  1: FlexColumnWidth(0.40),
-                  2: FlexColumnWidth(0.20),
-                  3: FlexColumnWidth(0.25),
+                  0: FlexColumnWidth(0.10),
+                  1: FlexColumnWidth(0.32),
+                  2: FlexColumnWidth(0.14),
+                  3: FlexColumnWidth(0.16),
+                  4: FlexColumnWidth(0.28),
                 },
                 children: [
                   TableRow(
@@ -317,6 +318,7 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                       _tableHeader('Code Data'),
                       _tableHeader('Format'),
                       _tableHeader('Status'),
+                      _tableHeader('Linked To'),
                     ],
                   ),
                   for (int i = 0; i < sortedCodes.length; i++)
@@ -369,6 +371,7 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                           color: _statusColor(sortedCodes[i].status),
                           fontWeight: FontWeight.w500,
                         ),
+                        _tableCell('—', color: AppColors.textTertiary),
                       ],
                     ),
                 ],
