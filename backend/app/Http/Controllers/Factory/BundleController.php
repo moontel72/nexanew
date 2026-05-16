@@ -215,6 +215,7 @@ class BundleController extends Controller
 
     public function show(Request $request, string $id)
     {
+        try {
         $bundle = DB::table('bundles')->find($id);
         if (!$bundle) { return response()->json(['message' => 'Bundle not found'], 404); }
 
@@ -296,6 +297,10 @@ class BundleController extends Controller
                 })->values(),
             ],
         ]);
+        } catch (\Exception $e) {
+            Log::error('BundleController::show failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString(), 'id' => $id]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
     }
 
     public function update(Request $request, string $id)

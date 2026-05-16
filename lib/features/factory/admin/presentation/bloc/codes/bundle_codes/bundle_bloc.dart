@@ -26,7 +26,7 @@ class BundleBloc extends Bloc<BundleEvent, BundleState> {
   ) async {
     try {
       emit(state.copyWith(status: BundleStatus.loading));
-      final res = await _api.get('/factory/bundles/list');
+      final res = await _api.get('/codes/bundles/list');
       final data = res['data'] as Map<String, dynamic>;
       final list = (data['bundles'] as List)
           .map((e) => BundleModel.fromJson(e as Map<String, dynamic>))
@@ -52,7 +52,7 @@ class BundleBloc extends Bloc<BundleEvent, BundleState> {
     try {
       emit(state.copyWith(status: BundleStatus.creating));
       final res = await _api.post(
-        '/factory/bundles/generate',
+        '/codes/bundles/generate',
         body: {
           'order_reference': event.orderReference,
           if (event.cartonCodeIds != null && event.cartonCodeIds!.isNotEmpty)
@@ -82,7 +82,7 @@ class BundleBloc extends Bloc<BundleEvent, BundleState> {
     Emitter<BundleState> emit,
   ) async {
     try {
-      final res = await _api.get('/factory/bundles/${event.bundleId}');
+      final res = await _api.get('/codes/bundles/${event.bundleId}');
       final bundle = BundleModel.fromJson(res['data'] as Map<String, dynamic>);
       emit(state.copyWith(selectedBundle: bundle));
     } catch (e) {
@@ -102,7 +102,7 @@ class BundleBloc extends Bloc<BundleEvent, BundleState> {
       if (event.locationShelf != null)
         body['location_shelf'] = event.locationShelf;
       if (event.notes != null) body['notes'] = event.notes;
-      await _api.put('/factory/bundles/${event.bundleId}', body: body);
+      await _api.put('/codes/bundles/${event.bundleId}', body: body);
       add(const LoadBundles());
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
@@ -115,7 +115,7 @@ class BundleBloc extends Bloc<BundleEvent, BundleState> {
   ) async {
     try {
       emit(state.copyWith(status: BundleStatus.deleting));
-      await _api.delete('/factory/bundles/${event.bundleId}');
+      await _api.delete('/codes/bundles/${event.bundleId}');
       emit(state.copyWith(status: BundleStatus.deleted));
       add(const LoadBundles());
     } catch (e) {
@@ -131,7 +131,7 @@ class BundleBloc extends Bloc<BundleEvent, BundleState> {
   ) async {
     try {
       emit(state.copyWith(status: BundleStatus.scanning));
-      final res = await _api.get('/factory/bundles/${event.bundleId}/scan');
+      final res = await _api.get('/codes/bundles/${event.bundleId}/scan');
       final data = res['data'] as Map<String, dynamic>;
       emit(
         state.copyWith(

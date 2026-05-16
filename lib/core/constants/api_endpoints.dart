@@ -180,13 +180,18 @@ class ApiEndpoints {
 
   // Aggregation (Packet <-> Unit Linking)
   static const String aggregationLinkUnits = '/codes/aggregation/link-units';
-  static const String aggregationUnlinkUnits = '/codes/aggregation/unlink-units';
-  static const String aggregationAvailableUnits = '/codes/aggregation/available-units';
-  static const String aggregationAvailableProducts = '/codes/aggregation/available-products';
-  static const String aggregationAvailableBatches = '/codes/aggregation/available-batches';
+  static const String aggregationUnlinkUnits =
+      '/codes/aggregation/unlink-units';
+  static const String aggregationAvailableUnits =
+      '/codes/aggregation/available-units';
+  static const String aggregationAvailableProducts =
+      '/codes/aggregation/available-products';
+  static const String aggregationAvailableBatches =
+      '/codes/aggregation/available-batches';
 
   // Bundle Insights
-  static String bundleInsights(String bundleId) => '/factory/bundles/$bundleId/insights';
+  static String bundleInsights(String bundleId) =>
+      '/codes/bundles/$bundleId/insights';
 
   // ==================== PRODUCT ENDPOINTS ====================
   static const String factoryAuth = '/factory/auth';
