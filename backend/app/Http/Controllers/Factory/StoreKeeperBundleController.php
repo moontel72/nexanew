@@ -468,8 +468,10 @@ class StoreKeeperBundleController extends Controller
             $companyId = (string) $user->company_id;
 
             $bundle = DB::table('bundles')
-                ->where('id', $bundleId)
-                ->where('company_id', $companyId)
+                ->leftJoin('store_keepers', 'bundles.store_keeper_id', '=', 'store_keepers.id')
+                ->where('bundles.id', $bundleId)
+                ->where('bundles.company_id', $companyId)
+                ->select('bundles.*', 'store_keepers.name as store_keeper_name')
                 ->first();
 
             if (!$bundle) {
@@ -601,8 +603,6 @@ class StoreKeeperBundleController extends Controller
             // If moving to store_linked, record the store keeper
             if ($data['linking_status'] === 'store_linked') {
                 $updates['store_keeper_id'] = $user->id;
-                // Also store the name for Admin accountability display
-                $updates['store_keeper_name'] = $user->name ?? $user->full_name ?? $user->email ?? 'Unknown';
             }
 
             DB::table('bundles')->where('id', $bundleId)->update($updates);

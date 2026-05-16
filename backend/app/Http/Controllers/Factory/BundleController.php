@@ -17,8 +17,9 @@ class BundleController extends Controller
         $companyId = (string) $user->company_id;
 
         $query = DB::table('bundles')
-            ->where('company_id', $companyId)
-            ->selectRaw('bundles.*, (SELECT COUNT(*) FROM bundle_items WHERE bundle_items.bundle_id = bundles.id AND bundle_items.carton_code_id IS NOT NULL) as cartons_count, (SELECT COUNT(*) FROM bundle_items WHERE bundle_items.bundle_id = bundles.id AND bundle_items.packet_code_id IS NOT NULL) as packets_count');
+            ->leftJoin('store_keepers', 'bundles.store_keeper_id', '=', 'store_keepers.id')
+            ->where('bundles.company_id', $companyId)
+            ->selectRaw('bundles.*, store_keepers.name as store_keeper_name, (SELECT COUNT(*) FROM bundle_items WHERE bundle_items.bundle_id = bundles.id AND bundle_items.carton_code_id IS NOT NULL) as cartons_count, (SELECT COUNT(*) FROM bundle_items WHERE bundle_items.bundle_id = bundles.id AND bundle_items.packet_code_id IS NOT NULL) as packets_count');
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
