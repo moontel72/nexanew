@@ -20,6 +20,8 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/transport_marketplace_admin_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/fraud_prevention_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/drivers_admin_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/reseller_management/reseller_management_list_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/reseller_management/register_reseller_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/factory_login_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/factory_dashboard.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/factory_shell.dart';
@@ -268,6 +270,18 @@ class AppRouter {
           path: '/transport/fraud',
           name: 'transport_fraud',
           builder: (context, state) => const FraudPreventionAdminScreen(),
+        ),
+        GoRoute(
+          path: '/resellers',
+          name: 'resellers',
+          builder: (context, state) => const ResellerManagementListScreen(inShell: true),
+          routes: [
+            GoRoute(
+              path: 'add',
+              name: 'reseller_add',
+              builder: (context, state) => const RegisterResellerScreen(inShell: true),
+            ),
+          ],
         ),
       ],
     ),
