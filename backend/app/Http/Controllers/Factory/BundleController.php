@@ -162,7 +162,7 @@ class BundleController extends Controller
                     ->join('base_codes', 'unit_codes.id', '=', 'base_codes.id')
                     ->leftJoin('products', 'base_codes.product_id', '=', 'products.id')
                     ->whereIn('unit_codes.packet_code_id', $packetIds)
-                    ->select('unit_codes.id', 'unit_codes.packet_code_id', 'unit_codes.unit_code', 'products.name as product_name')
+                    ->select('unit_codes.id', 'unit_codes.packet_code_id', 'base_codes.code as unit_code', 'products.name as product_name')
                     ->get();
                 foreach ($unitRows as $u) {
                     $unitsByPacket[$u->packet_code_id][] = [
@@ -253,7 +253,7 @@ class BundleController extends Controller
                 ->join('base_codes', 'unit_codes.id', '=', 'base_codes.id')
                 ->leftJoin('products', 'base_codes.product_id', '=', 'products.id')
                 ->whereIn('unit_codes.packet_code_id', $packetIds)
-                ->select('unit_codes.id', 'unit_codes.packet_code_id', 'unit_codes.unit_code', 'products.name as product_name')
+                ->select('unit_codes.id', 'unit_codes.packet_code_id', 'base_codes.code as unit_code', 'products.name as product_name')
                 ->get();
             foreach ($unitRows as $u) {
                 $unitsByPacket[$u->packet_code_id][] = [
