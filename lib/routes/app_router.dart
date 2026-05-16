@@ -501,6 +501,9 @@ class AppRouter {
     // TODO: Navigate to edit company screen when implemented
     // context.go('/companies/$companyId/edit', extra: companyData);
   }
+  void goToResellers(BuildContext context) => context.go("/resellers");
+  void goToAddReseller(BuildContext context) => context.go("/resellers/add");
+
   void goToInvoices(BuildContext context) => context.go('/billing/invoices');
   void goToTransportWallet(BuildContext context) =>
       context.go('/transport/wallet');

@@ -81,6 +81,15 @@ class ApiEndpoints {
   static const String adminCreateUser = '/admin/users';
   static const String adminUpdateUser = '/admin/users/{id}';
 
+  // Reseller Management
+  static const String adminResellers = '/admin/resellers';
+  static String adminResellerDetail(String id) => '/admin/resellers/$id';
+  static const String adminCreateReseller = '/admin/resellers';
+  static String adminUpdateReseller(String id) => '/admin/resellers/$id';
+  static String adminDeleteReseller(String id) => '/admin/resellers/$id';
+  static String adminUpdateResellerStatus(String id) => '/admin/resellers/$id/status';
+  static String adminSuspendReseller(String id) => '/admin/resellers/$id/suspend';
+
   // Subscription Management
   static const String adminSubscriptions = '/admin/subscriptions';
   static const String adminSubscriptionDetails = '/admin/subscriptions/{id}';

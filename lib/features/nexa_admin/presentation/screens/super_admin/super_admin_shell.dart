@@ -12,10 +12,7 @@ import 'package:nexatrace_system/shared/widgets/navigation/admin_sidebar.dart';
 class SuperAdminShell extends StatelessWidget {
   final Widget child;
 
-  const SuperAdminShell({
-    super.key,
-    required this.child,
-  });
+  const SuperAdminShell({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -61,9 +58,9 @@ class SuperAdminShell extends StatelessWidget {
                                   .toggleSidebar();
                             },
                             onLogout: () {
-                              innerContext
-                                  .read<AdminAuthBloc>()
-                                  .add(AdminLogoutRequested());
+                              innerContext.read<AdminAuthBloc>().add(
+                                AdminLogoutRequested(),
+                              );
                             },
                           );
                         },
@@ -143,6 +140,21 @@ class SuperAdminShell extends StatelessWidget {
         ],
       ),
       AdminSidebarSection(
+        title: 'Resellers',
+        items: [
+          AdminSidebarItem(
+            label: 'View All Resellers',
+            icon: Icons.storefront,
+            route: '/resellers',
+          ),
+          AdminSidebarItem(
+            label: 'Register Reseller',
+            icon: Icons.person_add_alt,
+            route: '/resellers/add',
+          ),
+        ],
+      ),
+      AdminSidebarSection(
         title: 'Transport',
         items: [
           AdminSidebarItem(
@@ -171,6 +183,8 @@ class SuperAdminShell extends StatelessWidget {
   }
 
   String _titleForLocation(String location) {
+    if (location.startsWith('/resellers/add')) return 'Register Reseller';
+    if (location.startsWith('/resellers')) return 'Reseller Management';
     if (location.startsWith('/companies/register')) return 'Create New Company';
     if (location.startsWith('/companies')) return 'Company Management';
     if (location.startsWith('/plans/create')) return 'Create New Plan';
@@ -186,6 +200,12 @@ class SuperAdminShell extends StatelessWidget {
   }
 
   List<String> _breadcrumbsForLocation(String location) {
+    if (location.startsWith('/resellers/add')) {
+      return const ['Resellers', 'Register Reseller'];
+    }
+    if (location.startsWith('/resellers')) {
+      return const ['Resellers', 'View All Resellers'];
+    }
     if (location.startsWith('/companies/register')) {
       return const ['Companies', 'Create New Company'];
     }
@@ -216,4 +236,3 @@ class SuperAdminShell extends StatelessWidget {
     return const ['Overview'];
   }
 }
-

@@ -34,7 +34,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Flutter Web
+      # ──────────────────────────────────────────────────────────────
+      # STEP A: Build & Deploy Admin Panel (main.dart)
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Admin Panel (main.dart)
         run: flutter build web --release
 
       - name: Setup SSH
@@ -44,15 +48,30 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts
 
-      - name: Deploy to Hetzner (Flutter Web)
+      - name: Deploy Admin Panel to /frontend/
         run: |
-          # --chown use karne se owner upload ke waqt hi set ho jata hai
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/nexatrace/frontend/
+
+      # ──────────────────────────────────────────────────────────────
+      # STEP B: Build & Deploy Reseller App (main_reseller.dart)
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Reseller App (main_reseller.dart)
+        run: flutter build web --release --target=lib/main_reseller.dart --base-href "/reseller/"
+
+      - name: Deploy Reseller App to /reseller/
+        run: |
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/nexatrace/reseller/
+
+      # ──────────────────────────────────────────────────────────────
+      # Post-Deployment: Fix permissions for both apps
+      # ──────────────────────────────────────────────────────────────
 
       - name: Post-Deployment Permissions Fix
         run: |
-          # Yeh step confirm karega ke owner www-data hi rahe (1001 khatam ho jaye)
           ssh root@135.181.46.27 "
             chown -R www-data:www-data /var/www/nexatrace/frontend && \
-            chmod -R 755 /var/www/nexatrace/frontend
+            chmod -R 755 /var/www/nexatrace/frontend && \
+            chown -R www-data:www-data /var/www/nexatrace/reseller && \
+            chmod -R 755 /var/www/nexatrace/reseller
           "

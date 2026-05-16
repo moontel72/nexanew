@@ -32,6 +32,9 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/dashboard
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/datasources/reseller_management_remote_datasource.dart';
+import 'package:nexatrace_system/features/nexa_admin/data/repositories/reseller_management_repository.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/reseller_management/reseller_management_bloc.dart';
 import 'package:nexatrace_system/core/interfaces/secure_storage_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -108,6 +111,13 @@ class AppProviders {
         create: (context) => admin_billing_repo.BillingRepositoryImpl(
           context.read<admin_billing_ds.BillingDataSource>(),
         ),
+      ),
+
+      RepositoryProvider<ResellerManagementRemoteDatasource>(
+        create: (context) => ResellerManagementRemoteDatasource(apiService: context.read<ApiService>()),
+      ),
+      RepositoryProvider<ResellerManagementRepository>(
+        create: (context) => ResellerManagementRepository(remote: context.read<ResellerManagementRemoteDatasource>()),
       ),
 
       // Factory Admin Repositories
@@ -193,6 +203,9 @@ class AppProviders {
           billingRepository: context
               .read<admin_billing_repo.BillingRepository>(),
         ),
+      ),
+      BlocProvider<ResellerManagementBloc>(
+        create: (context) => ResellerManagementBloc(repo: context.read<ResellerManagementRepository>()),
       ),
     ];
   }
