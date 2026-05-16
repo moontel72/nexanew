@@ -49,7 +49,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     });
 
     try {
-      final res = await ApiService().get('/codes/bundles/${widget.bundleId}');
+      final res = await ApiService().get('/factory/bundles/${widget.bundleId}');
       final data = res['data'] as Map<String, dynamic>;
 
       // Also fetch linked unit count from store-keeper summary
