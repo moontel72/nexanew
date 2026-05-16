@@ -335,7 +335,10 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                         Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+                          padding: EdgeInsets.symmetric(
+                            vertical: 8.h,
+                            horizontal: 4.w,
+                          ),
                           child: InkWell(
                             onTap: () => _showCartonDetails(sortedCodes[i]),
                             child: Row(
@@ -344,15 +347,20 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                                 Flexible(
                                   child: Text(
                                     sortedCodes[i].code,
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 SizedBox(width: 6.w),
-                                Icon(Icons.qr_code_2, size: 18.w, color: AppColors.accent),
+                                Icon(
+                                  Icons.qr_code_2,
+                                  size: 18.w,
+                                  color: AppColors.accent,
+                                ),
                               ],
                             ),
                           ),
@@ -364,12 +372,16 @@ class _CartonCodesListScreenState extends State<CartonCodesListScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                         _tableCell(
-                          sortedCodes[i].bundleCode.isNotEmpty
-                              ? sortedCodes[i].bundleCode
-                              : '—',
-                          color: sortedCodes[i].bundleCode.isNotEmpty
+                          sortedCodes[i].linkedOrderReference.isNotEmpty
+                              ? sortedCodes[i].linkedOrderReference
+                              : (sortedCodes[i].bundleCode.isNotEmpty
+                                    ? sortedCodes[i].bundleCode
+                                    : '—'),
+                          color: sortedCodes[i].linkedOrderReference.isNotEmpty
                               ? AppColors.info
-                              : AppColors.textTertiary,
+                              : (sortedCodes[i].bundleCode.isNotEmpty
+                                    ? AppColors.info
+                                    : AppColors.textTertiary),
                           fontWeight: FontWeight.w400,
                         ),
                       ],

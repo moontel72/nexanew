@@ -41,6 +41,9 @@ abstract class BundleModel with _$BundleModel {
     @JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)
     required DateTime createdAt,
     @HiveField(11) @Default([]) List<BundleItemModel> items,
+
+    /// Store Keeper who processed this order
+    @HiveField(12) String? storeKeeperName,
   }) = _BundleModel;
 
   factory BundleModel.fromJson(Map<String, dynamic> json) =>

@@ -314,6 +314,28 @@ class _BundleCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (bundle.storeKeeperName != null &&
+                        bundle.storeKeeperName!.isNotEmpty) ...[
+                      SizedBox(height: 4.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            size: 13.sp,
+                            color: AppColors.accent,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            bundle.storeKeeperName!,
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

@@ -371,7 +371,14 @@ class _UnitCodesListScreenState extends State<UnitCodesListScreen> {
                           color: _statusColor(sortedCodes[i].status),
                           fontWeight: FontWeight.w500,
                         ),
-                        _tableCell('—', color: AppColors.textTertiary),
+                        _tableCell(
+                          sortedCodes[i].linkedOrderReference.isNotEmpty
+                              ? sortedCodes[i].linkedOrderReference
+                              : '—',
+                          color: sortedCodes[i].linkedOrderReference.isNotEmpty
+                              ? AppColors.info
+                              : AppColors.textTertiary,
+                        ),
                       ],
                     ),
                 ],

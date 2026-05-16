@@ -15,7 +15,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$BundleModel {
 
-@HiveField(0) String get id;@HiveField(1) String get bundleCode;@HiveField(2) String get orderReference;@HiveField(3) int get totalCartons;@HiveField(4) int get totalPackets;@HiveField(5) String? get locationStore;@HiveField(6) String? get locationShelf;@HiveField(7) String get status;@HiveField(8) DateTime? get packedAt;@HiveField(9) String? get notes;@HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson) DateTime get createdAt;@HiveField(11) List<BundleItemModel> get items;
+@HiveField(0) String get id;@HiveField(1) String get bundleCode;@HiveField(2) String get orderReference;@HiveField(3) int get totalCartons;@HiveField(4) int get totalPackets;@HiveField(5) String? get locationStore;@HiveField(6) String? get locationShelf;@HiveField(7) String get status;@HiveField(8) DateTime? get packedAt;@HiveField(9) String? get notes;@HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson) DateTime get createdAt;@HiveField(11) List<BundleItemModel> get items;/// Store Keeper who processed this order
+@HiveField(12) String? get storeKeeperName;
 /// Create a copy of BundleModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +29,16 @@ $BundleModelCopyWith<BundleModel> get copyWith => _$BundleModelCopyWithImpl<Bund
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BundleModel&&(identical(other.id, id) || other.id == id)&&(identical(other.bundleCode, bundleCode) || other.bundleCode == bundleCode)&&(identical(other.orderReference, orderReference) || other.orderReference == orderReference)&&(identical(other.totalCartons, totalCartons) || other.totalCartons == totalCartons)&&(identical(other.totalPackets, totalPackets) || other.totalPackets == totalPackets)&&(identical(other.locationStore, locationStore) || other.locationStore == locationStore)&&(identical(other.locationShelf, locationShelf) || other.locationShelf == locationShelf)&&(identical(other.status, status) || other.status == status)&&(identical(other.packedAt, packedAt) || other.packedAt == packedAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&const DeepCollectionEquality().equals(other.items, items));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BundleModel&&(identical(other.id, id) || other.id == id)&&(identical(other.bundleCode, bundleCode) || other.bundleCode == bundleCode)&&(identical(other.orderReference, orderReference) || other.orderReference == orderReference)&&(identical(other.totalCartons, totalCartons) || other.totalCartons == totalCartons)&&(identical(other.totalPackets, totalPackets) || other.totalPackets == totalPackets)&&(identical(other.locationStore, locationStore) || other.locationStore == locationStore)&&(identical(other.locationShelf, locationShelf) || other.locationShelf == locationShelf)&&(identical(other.status, status) || other.status == status)&&(identical(other.packedAt, packedAt) || other.packedAt == packedAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.storeKeeperName, storeKeeperName) || other.storeKeeperName == storeKeeperName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,bundleCode,orderReference,totalCartons,totalPackets,locationStore,locationShelf,status,packedAt,notes,createdAt,const DeepCollectionEquality().hash(items));
+int get hashCode => Object.hash(runtimeType,id,bundleCode,orderReference,totalCartons,totalPackets,locationStore,locationShelf,status,packedAt,notes,createdAt,const DeepCollectionEquality().hash(items),storeKeeperName);
 
 @override
 String toString() {
-  return 'BundleModel(id: $id, bundleCode: $bundleCode, orderReference: $orderReference, totalCartons: $totalCartons, totalPackets: $totalPackets, locationStore: $locationStore, locationShelf: $locationShelf, status: $status, packedAt: $packedAt, notes: $notes, createdAt: $createdAt, items: $items)';
+  return 'BundleModel(id: $id, bundleCode: $bundleCode, orderReference: $orderReference, totalCartons: $totalCartons, totalPackets: $totalPackets, locationStore: $locationStore, locationShelf: $locationShelf, status: $status, packedAt: $packedAt, notes: $notes, createdAt: $createdAt, items: $items, storeKeeperName: $storeKeeperName)';
 }
 
 
@@ -48,7 +49,7 @@ abstract mixin class $BundleModelCopyWith<$Res>  {
   factory $BundleModelCopyWith(BundleModel value, $Res Function(BundleModel) _then) = _$BundleModelCopyWithImpl;
 @useResult
 $Res call({
-@HiveField(0) String id,@HiveField(1) String bundleCode,@HiveField(2) String orderReference,@HiveField(3) int totalCartons,@HiveField(4) int totalPackets,@HiveField(5) String? locationStore,@HiveField(6) String? locationShelf,@HiveField(7) String status,@HiveField(8) DateTime? packedAt,@HiveField(9) String? notes,@HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson) DateTime createdAt,@HiveField(11) List<BundleItemModel> items
+@HiveField(0) String id,@HiveField(1) String bundleCode,@HiveField(2) String orderReference,@HiveField(3) int totalCartons,@HiveField(4) int totalPackets,@HiveField(5) String? locationStore,@HiveField(6) String? locationShelf,@HiveField(7) String status,@HiveField(8) DateTime? packedAt,@HiveField(9) String? notes,@HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson) DateTime createdAt,@HiveField(11) List<BundleItemModel> items,@HiveField(12) String? storeKeeperName
 });
 
 
@@ -65,7 +66,7 @@ class _$BundleModelCopyWithImpl<$Res>
 
 /// Create a copy of BundleModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? bundleCode = null,Object? orderReference = null,Object? totalCartons = null,Object? totalPackets = null,Object? locationStore = freezed,Object? locationShelf = freezed,Object? status = null,Object? packedAt = freezed,Object? notes = freezed,Object? createdAt = null,Object? items = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? bundleCode = null,Object? orderReference = null,Object? totalCartons = null,Object? totalPackets = null,Object? locationStore = freezed,Object? locationShelf = freezed,Object? status = null,Object? packedAt = freezed,Object? notes = freezed,Object? createdAt = null,Object? items = null,Object? storeKeeperName = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,bundleCode: null == bundleCode ? _self.bundleCode : bundleCode // ignore: cast_nullable_to_non_nullable
@@ -79,7 +80,8 @@ as String,packedAt: freezed == packedAt ? _self.packedAt : packedAt // ignore: c
 as DateTime?,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
-as List<BundleItemModel>,
+as List<BundleItemModel>,storeKeeperName: freezed == storeKeeperName ? _self.storeKeeperName : storeKeeperName // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -164,10 +166,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@HiveField(0)  String id, @HiveField(1)  String bundleCode, @HiveField(2)  String orderReference, @HiveField(3)  int totalCartons, @HiveField(4)  int totalPackets, @HiveField(5)  String? locationStore, @HiveField(6)  String? locationShelf, @HiveField(7)  String status, @HiveField(8)  DateTime? packedAt, @HiveField(9)  String? notes, @HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)  DateTime createdAt, @HiveField(11)  List<BundleItemModel> items)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@HiveField(0)  String id, @HiveField(1)  String bundleCode, @HiveField(2)  String orderReference, @HiveField(3)  int totalCartons, @HiveField(4)  int totalPackets, @HiveField(5)  String? locationStore, @HiveField(6)  String? locationShelf, @HiveField(7)  String status, @HiveField(8)  DateTime? packedAt, @HiveField(9)  String? notes, @HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)  DateTime createdAt, @HiveField(11)  List<BundleItemModel> items, @HiveField(12)  String? storeKeeperName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BundleModel() when $default != null:
-return $default(_that.id,_that.bundleCode,_that.orderReference,_that.totalCartons,_that.totalPackets,_that.locationStore,_that.locationShelf,_that.status,_that.packedAt,_that.notes,_that.createdAt,_that.items);case _:
+return $default(_that.id,_that.bundleCode,_that.orderReference,_that.totalCartons,_that.totalPackets,_that.locationStore,_that.locationShelf,_that.status,_that.packedAt,_that.notes,_that.createdAt,_that.items,_that.storeKeeperName);case _:
   return orElse();
 
 }
@@ -185,10 +187,10 @@ return $default(_that.id,_that.bundleCode,_that.orderReference,_that.totalCarton
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@HiveField(0)  String id, @HiveField(1)  String bundleCode, @HiveField(2)  String orderReference, @HiveField(3)  int totalCartons, @HiveField(4)  int totalPackets, @HiveField(5)  String? locationStore, @HiveField(6)  String? locationShelf, @HiveField(7)  String status, @HiveField(8)  DateTime? packedAt, @HiveField(9)  String? notes, @HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)  DateTime createdAt, @HiveField(11)  List<BundleItemModel> items)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@HiveField(0)  String id, @HiveField(1)  String bundleCode, @HiveField(2)  String orderReference, @HiveField(3)  int totalCartons, @HiveField(4)  int totalPackets, @HiveField(5)  String? locationStore, @HiveField(6)  String? locationShelf, @HiveField(7)  String status, @HiveField(8)  DateTime? packedAt, @HiveField(9)  String? notes, @HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)  DateTime createdAt, @HiveField(11)  List<BundleItemModel> items, @HiveField(12)  String? storeKeeperName)  $default,) {final _that = this;
 switch (_that) {
 case _BundleModel():
-return $default(_that.id,_that.bundleCode,_that.orderReference,_that.totalCartons,_that.totalPackets,_that.locationStore,_that.locationShelf,_that.status,_that.packedAt,_that.notes,_that.createdAt,_that.items);case _:
+return $default(_that.id,_that.bundleCode,_that.orderReference,_that.totalCartons,_that.totalPackets,_that.locationStore,_that.locationShelf,_that.status,_that.packedAt,_that.notes,_that.createdAt,_that.items,_that.storeKeeperName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +207,10 @@ return $default(_that.id,_that.bundleCode,_that.orderReference,_that.totalCarton
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@HiveField(0)  String id, @HiveField(1)  String bundleCode, @HiveField(2)  String orderReference, @HiveField(3)  int totalCartons, @HiveField(4)  int totalPackets, @HiveField(5)  String? locationStore, @HiveField(6)  String? locationShelf, @HiveField(7)  String status, @HiveField(8)  DateTime? packedAt, @HiveField(9)  String? notes, @HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)  DateTime createdAt, @HiveField(11)  List<BundleItemModel> items)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@HiveField(0)  String id, @HiveField(1)  String bundleCode, @HiveField(2)  String orderReference, @HiveField(3)  int totalCartons, @HiveField(4)  int totalPackets, @HiveField(5)  String? locationStore, @HiveField(6)  String? locationShelf, @HiveField(7)  String status, @HiveField(8)  DateTime? packedAt, @HiveField(9)  String? notes, @HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)  DateTime createdAt, @HiveField(11)  List<BundleItemModel> items, @HiveField(12)  String? storeKeeperName)?  $default,) {final _that = this;
 switch (_that) {
 case _BundleModel() when $default != null:
-return $default(_that.id,_that.bundleCode,_that.orderReference,_that.totalCartons,_that.totalPackets,_that.locationStore,_that.locationShelf,_that.status,_that.packedAt,_that.notes,_that.createdAt,_that.items);case _:
+return $default(_that.id,_that.bundleCode,_that.orderReference,_that.totalCartons,_that.totalPackets,_that.locationStore,_that.locationShelf,_that.status,_that.packedAt,_that.notes,_that.createdAt,_that.items,_that.storeKeeperName);case _:
   return null;
 
 }
@@ -220,7 +222,7 @@ return $default(_that.id,_that.bundleCode,_that.orderReference,_that.totalCarton
 @JsonSerializable()
 
 class _BundleModel implements BundleModel {
-  const _BundleModel({@HiveField(0) required this.id, @HiveField(1) required this.bundleCode, @HiveField(2) this.orderReference = '', @HiveField(3) this.totalCartons = 0, @HiveField(4) this.totalPackets = 0, @HiveField(5) this.locationStore, @HiveField(6) this.locationShelf, @HiveField(7) this.status = 'draft', @HiveField(8) this.packedAt, @HiveField(9) this.notes, @HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson) required this.createdAt, @HiveField(11) final  List<BundleItemModel> items = const []}): _items = items;
+  const _BundleModel({@HiveField(0) required this.id, @HiveField(1) required this.bundleCode, @HiveField(2) this.orderReference = '', @HiveField(3) this.totalCartons = 0, @HiveField(4) this.totalPackets = 0, @HiveField(5) this.locationStore, @HiveField(6) this.locationShelf, @HiveField(7) this.status = 'draft', @HiveField(8) this.packedAt, @HiveField(9) this.notes, @HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson) required this.createdAt, @HiveField(11) final  List<BundleItemModel> items = const [], @HiveField(12) this.storeKeeperName}): _items = items;
   factory _BundleModel.fromJson(Map<String, dynamic> json) => _$BundleModelFromJson(json);
 
 @override@HiveField(0) final  String id;
@@ -241,6 +243,8 @@ class _BundleModel implements BundleModel {
   return EqualUnmodifiableListView(_items);
 }
 
+/// Store Keeper who processed this order
+@override@HiveField(12) final  String? storeKeeperName;
 
 /// Create a copy of BundleModel
 /// with the given fields replaced by the non-null parameter values.
@@ -255,16 +259,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BundleModel&&(identical(other.id, id) || other.id == id)&&(identical(other.bundleCode, bundleCode) || other.bundleCode == bundleCode)&&(identical(other.orderReference, orderReference) || other.orderReference == orderReference)&&(identical(other.totalCartons, totalCartons) || other.totalCartons == totalCartons)&&(identical(other.totalPackets, totalPackets) || other.totalPackets == totalPackets)&&(identical(other.locationStore, locationStore) || other.locationStore == locationStore)&&(identical(other.locationShelf, locationShelf) || other.locationShelf == locationShelf)&&(identical(other.status, status) || other.status == status)&&(identical(other.packedAt, packedAt) || other.packedAt == packedAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&const DeepCollectionEquality().equals(other._items, _items));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BundleModel&&(identical(other.id, id) || other.id == id)&&(identical(other.bundleCode, bundleCode) || other.bundleCode == bundleCode)&&(identical(other.orderReference, orderReference) || other.orderReference == orderReference)&&(identical(other.totalCartons, totalCartons) || other.totalCartons == totalCartons)&&(identical(other.totalPackets, totalPackets) || other.totalPackets == totalPackets)&&(identical(other.locationStore, locationStore) || other.locationStore == locationStore)&&(identical(other.locationShelf, locationShelf) || other.locationShelf == locationShelf)&&(identical(other.status, status) || other.status == status)&&(identical(other.packedAt, packedAt) || other.packedAt == packedAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.storeKeeperName, storeKeeperName) || other.storeKeeperName == storeKeeperName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,bundleCode,orderReference,totalCartons,totalPackets,locationStore,locationShelf,status,packedAt,notes,createdAt,const DeepCollectionEquality().hash(_items));
+int get hashCode => Object.hash(runtimeType,id,bundleCode,orderReference,totalCartons,totalPackets,locationStore,locationShelf,status,packedAt,notes,createdAt,const DeepCollectionEquality().hash(_items),storeKeeperName);
 
 @override
 String toString() {
-  return 'BundleModel(id: $id, bundleCode: $bundleCode, orderReference: $orderReference, totalCartons: $totalCartons, totalPackets: $totalPackets, locationStore: $locationStore, locationShelf: $locationShelf, status: $status, packedAt: $packedAt, notes: $notes, createdAt: $createdAt, items: $items)';
+  return 'BundleModel(id: $id, bundleCode: $bundleCode, orderReference: $orderReference, totalCartons: $totalCartons, totalPackets: $totalPackets, locationStore: $locationStore, locationShelf: $locationShelf, status: $status, packedAt: $packedAt, notes: $notes, createdAt: $createdAt, items: $items, storeKeeperName: $storeKeeperName)';
 }
 
 
@@ -275,7 +279,7 @@ abstract mixin class _$BundleModelCopyWith<$Res> implements $BundleModelCopyWith
   factory _$BundleModelCopyWith(_BundleModel value, $Res Function(_BundleModel) _then) = __$BundleModelCopyWithImpl;
 @override @useResult
 $Res call({
-@HiveField(0) String id,@HiveField(1) String bundleCode,@HiveField(2) String orderReference,@HiveField(3) int totalCartons,@HiveField(4) int totalPackets,@HiveField(5) String? locationStore,@HiveField(6) String? locationShelf,@HiveField(7) String status,@HiveField(8) DateTime? packedAt,@HiveField(9) String? notes,@HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson) DateTime createdAt,@HiveField(11) List<BundleItemModel> items
+@HiveField(0) String id,@HiveField(1) String bundleCode,@HiveField(2) String orderReference,@HiveField(3) int totalCartons,@HiveField(4) int totalPackets,@HiveField(5) String? locationStore,@HiveField(6) String? locationShelf,@HiveField(7) String status,@HiveField(8) DateTime? packedAt,@HiveField(9) String? notes,@HiveField(10)@JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson) DateTime createdAt,@HiveField(11) List<BundleItemModel> items,@HiveField(12) String? storeKeeperName
 });
 
 
@@ -292,7 +296,7 @@ class __$BundleModelCopyWithImpl<$Res>
 
 /// Create a copy of BundleModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? bundleCode = null,Object? orderReference = null,Object? totalCartons = null,Object? totalPackets = null,Object? locationStore = freezed,Object? locationShelf = freezed,Object? status = null,Object? packedAt = freezed,Object? notes = freezed,Object? createdAt = null,Object? items = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? bundleCode = null,Object? orderReference = null,Object? totalCartons = null,Object? totalPackets = null,Object? locationStore = freezed,Object? locationShelf = freezed,Object? status = null,Object? packedAt = freezed,Object? notes = freezed,Object? createdAt = null,Object? items = null,Object? storeKeeperName = freezed,}) {
   return _then(_BundleModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,bundleCode: null == bundleCode ? _self.bundleCode : bundleCode // ignore: cast_nullable_to_non_nullable
@@ -306,7 +310,8 @@ as String,packedAt: freezed == packedAt ? _self.packedAt : packedAt // ignore: c
 as DateTime?,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
-as List<BundleItemModel>,
+as List<BundleItemModel>,storeKeeperName: freezed == storeKeeperName ? _self.storeKeeperName : storeKeeperName // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

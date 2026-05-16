@@ -25,6 +25,7 @@ _BundleModel _$BundleModelFromJson(Map<String, dynamic> json) => _BundleModel(
           ?.map((e) => BundleItemModel.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
+  storeKeeperName: json['storeKeeperName'] as String?,
 );
 
 Map<String, dynamic> _$BundleModelToJson(_BundleModel instance) =>
@@ -41,6 +42,7 @@ Map<String, dynamic> _$BundleModelToJson(_BundleModel instance) =>
       'notes': instance.notes,
       'createdAt': _dateTimeToJson(instance.createdAt),
       'items': instance.items,
+      'storeKeeperName': instance.storeKeeperName,
     };
 
 _UnitItemModel _$UnitItemModelFromJson(Map<String, dynamic> json) =>
