@@ -842,7 +842,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: PrimaryButton(
-                      onPressed: isBusy ? null : _saveChanges,
+                      onPressed: isBusy ? () {} : _saveChanges,
                       text: 'Save Changes',
                       icon: Icons.save,
                       backgroundColor: AppColors.secondary,
@@ -859,7 +859,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: isBusy ? null : _confirmDelete,
+                      onPressed: isBusy ? () {} : _confirmDelete,
                       icon: _isDeleting
                           ? const SizedBox(
                               width: 18,
