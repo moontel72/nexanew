@@ -157,7 +157,7 @@ class AppRouter {
     // Root path redirects based on auth state
     // IMPORTANT: Only redirect the EXACT root path '/'
     // Never redirect explicit paths like /factory/store-keeper/login
-    if (isRoot) {
+    if (isRoot || path.isEmpty) {
       if (!kIsWeb) return '/factory/store-keeper/login';
       return isAuthenticatedCache ? '/dashboard' : '/login';
     }
