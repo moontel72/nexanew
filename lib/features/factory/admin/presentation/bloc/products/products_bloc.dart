@@ -227,6 +227,14 @@ final class ToggleMarketplace extends ProductsEvent {
   List<Object?> get props => [productId, enabled];
 }
 
+final class DeleteProduct extends ProductsEvent {
+  final String id;
+  DeleteProduct(this.id);
+
+  @override
+  List<Object?> get props => [id];
+}
+
 class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
   final FactoryProductsRepository _repo;
 
@@ -237,6 +245,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
     on<CreateProduct>(_onCreateProduct);
     on<UpdateProduct>(_onUpdateProduct);
     on<ToggleMarketplace>(_onToggleMarketplace);
+    on<DeleteProduct>(_onDeleteProduct);
   }
 
   Future<void> _onLoadProducts(
@@ -375,6 +384,27 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
         );
         emit(state.copyWith(status: ProductsStatus.loaded, products: products));
       }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ProductsStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onDeleteProduct(
+    DeleteProduct event,
+    Emitter<ProductsState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: ProductsStatus.updating, errorMessage: null));
+      await _repo.deleteProduct(event.id);
+
+      final list = state.products.where((p) => p.id != event.id).toList();
+      emit(state.copyWith(status: ProductsStatus.updated, products: list));
+      emit(state.copyWith(status: ProductsStatus.loaded, products: list));
     } catch (e) {
       emit(
         state.copyWith(

@@ -183,23 +183,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                           ),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12.r),
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: Text('Edit ${p.name}'),
-                                  content: const Text(
-                                    'Edit screen is coming soon.',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('OK'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
+                            onTap: () => context.go('/factory/products/edit/${p.id}'),
                             child: Padding(
                               padding: EdgeInsets.all(16.w),
                               child: Column(

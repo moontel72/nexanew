@@ -39,6 +39,7 @@ import 'package:nexatrace_system/features/factory/admin/presentation/screens/cod
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/unit_codes/unit_code_generate_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/products/products_list_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/products/create_product_screen.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/screens/products/edit_product_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/store_keepers/store_keepers_list_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/store_keepers/create_store_keeper_screen.dart';
 import 'package:nexatrace_system/core/utils/auth_state.dart';
@@ -330,6 +331,14 @@ class AppRouter {
               path: 'create',
               name: 'factory_products_create',
               builder: (context, state) => const CreateProductScreen(),
+            ),
+            GoRoute(
+              path: 'edit/:productId',
+              name: 'factory_products_edit',
+              builder: (context, state) {
+                final productId = state.pathParameters['productId'] ?? '';
+                return EditProductScreen(productId: productId);
+              },
             ),
           ],
         ),

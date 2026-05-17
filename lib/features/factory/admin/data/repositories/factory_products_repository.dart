@@ -193,6 +193,12 @@ class FactoryProductsRepository {
     return ProductModel.fromJson(data);
   }
 
+  Future<void> deleteProduct(String id) async {
+    await _api.delete(
+      ApiEndpoints.deleteProduct.replaceFirst('{id}', id),
+    );
+  }
+
   Future<int> linkUnitCodesToProduct({
     required String productId,
     required List<String> unitCodeIds,
