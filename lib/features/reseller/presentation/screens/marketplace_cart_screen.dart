@@ -203,7 +203,7 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context); // close dialog
-              context.go('/reseller/marketplace/orders');
+              context.go('/marketplace/orders');
             },
             child: const Text('View Orders'),
           ),
@@ -211,7 +211,7 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
             text: 'Continue Shopping',
             onPressed: () {
               Navigator.pop(context); // close dialog
-              context.go('/reseller/marketplace');
+              context.go('/marketplace');
             },
           ),
         ],
@@ -235,7 +235,7 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
                 icon: Icons.shopping_cart_outlined,
                 actionButton: PrimaryButton(
                   text: 'Go Back to Shopping',
-                  onPressed: () => context.go('/reseller/marketplace'),
+                  onPressed: () => context.go('/marketplace'),
                 ),
               );
             }

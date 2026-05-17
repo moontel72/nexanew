@@ -30,7 +30,7 @@ class _ResellerLoginScreenState extends State<ResellerLoginScreen> {
       body: BlocListener<ResellerAuthBloc, ResellerAuthState>(
         listener: (context, state) {
           if (state is ResellerAuthenticated) {
-            context.go('/reseller/dashboard');
+            context.go('/dashboard');
           }
         },
         child: Center(
@@ -71,8 +71,9 @@ class _ResellerLoginScreenState extends State<ResellerLoginScreen> {
                       BlocBuilder<ResellerAuthBloc, ResellerAuthState>(
                         builder: (context, state) {
                           final isLoading = state is ResellerAuthLoading;
-                          final error =
-                              state is ResellerAuthError ? state.message : null;
+                          final error = state is ResellerAuthError
+                              ? state.message
+                              : null;
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -82,11 +83,11 @@ class _ResellerLoginScreenState extends State<ResellerLoginScreen> {
                                 isEnabled: !isLoading,
                                 onPressed: () {
                                   context.read<ResellerAuthBloc>().add(
-                                        ResellerLoginRequested(
-                                          email: _emailController.text,
-                                          password: _passwordController.text,
-                                        ),
-                                      );
+                                    ResellerLoginRequested(
+                                      email: _emailController.text,
+                                      password: _passwordController.text,
+                                    ),
+                                  );
                                 },
                               ),
                               if (error != null && error.trim().isNotEmpty)
@@ -94,9 +95,7 @@ class _ResellerLoginScreenState extends State<ResellerLoginScreen> {
                                   padding: EdgeInsets.only(top: 12.h),
                                   child: Text(
                                     error,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
+                                    style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(color: AppColors.error),
                                   ),
                                 ),
@@ -104,10 +103,10 @@ class _ResellerLoginScreenState extends State<ResellerLoginScreen> {
                                 padding: EdgeInsets.only(top: 10.h),
                                 child: Text(
                                   'Medical Companies Agent App is a separate project and is not part of Reseller App.',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(color: AppColors.textSecondary),
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
                                 ),
                               ),
                             ],

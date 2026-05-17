@@ -31,7 +31,6 @@ class _ResellerManagementListScreenState
   String? _statusFilter;
   String? _cityFilter;
   bool _initialised = false;
-  bool _actionInProgress = false;
 
   @override
   void initState() {
@@ -142,7 +141,6 @@ class _ResellerManagementListScreenState
                       ? 'The reseller will lose access to place new orders.'
                       : 'The reseller will regain full marketplace access.',
                   onConfirm: () {
-                    setState(() => _actionInProgress = true);
                     context.read<ResellerManagementBloc>().add(
                       UpdateResellerStatus(
                         id: id,
@@ -170,7 +168,6 @@ class _ResellerManagementListScreenState
                       : 'The reseller will be restricted to viewing history only.',
                   isDestructive: status != 'suspended',
                   onConfirm: () {
-                    setState(() => _actionInProgress = true);
                     context.read<ResellerManagementBloc>().add(
                       ToggleSuspendReseller(
                         id: id,
@@ -203,7 +200,6 @@ class _ResellerManagementListScreenState
                       'This will soft-delete the reseller. They will no longer appear in the active list.',
                   isDestructive: true,
                   onConfirm: () {
-                    setState(() => _actionInProgress = true);
                     context.read<ResellerManagementBloc>().add(
                       DeleteReseller(id),
                     );
@@ -318,7 +314,6 @@ class _ResellerManagementListScreenState
             text: 'Save',
             onPressed: () {
               Navigator.pop(context);
-              setState(() => _actionInProgress = true);
               context.read<ResellerManagementBloc>().add(
                 UpdateReseller(
                   id: id,
@@ -381,7 +376,6 @@ class _ResellerManagementListScreenState
         listener: (_, state) {
           // ── Success feedback ──────────────────────────────────
           if (state.status == ResellerLoadStatus.actionSuccess) {
-            _actionInProgress = false;
             if (state.message != null) {
               ScaffoldMessenger.of(context)
                 ..clearSnackBars()
@@ -402,7 +396,6 @@ class _ResellerManagementListScreenState
           // ── Error feedback ───────────────────────────────────
           if (state.status == ResellerLoadStatus.error &&
               state.errorMessage != null) {
-            _actionInProgress = false;
             ScaffoldMessenger.of(context)
               ..clearSnackBars()
               ..showSnackBar(
@@ -413,11 +406,6 @@ class _ResellerManagementListScreenState
                   duration: const Duration(seconds: 4),
                 ),
               );
-          }
-
-          // ── List refreshed after action → stop loading overlay ──
-          if (state.status == ResellerLoadStatus.loaded) {
-            _actionInProgress = false;
           }
         },
         child: Stack(
@@ -535,25 +523,34 @@ class _ResellerManagementListScreenState
             ),
 
             // ── Loading overlay during action ────────────────────
-            if (_actionInProgress)
-              Container(
-                color: Colors.black.withValues(alpha: 0.35),
-                child: const Center(
-                  child: Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text('Processing…'),
-                        ],
+            BlocBuilder<ResellerManagementBloc, ResellerManagementState>(
+              builder: (_, state) {
+                final showOverlay =
+                    _initialised &&
+                    state.resellers.isNotEmpty &&
+                    (state.status == ResellerLoadStatus.loading ||
+                        state.status == ResellerLoadStatus.actionSuccess);
+                if (!showOverlay) return const SizedBox.shrink();
+                return Container(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  child: const Center(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('Processing…'),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
           ],
         ),
       ),

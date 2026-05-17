@@ -13,24 +13,24 @@ class ResellerRouter {
 
   ResellerRouter({required bool isAuthed})
     : config = GoRouter(
-        initialLocation: isAuthed ? '/reseller/dashboard' : '/reseller/login',
+        initialLocation: isAuthed ? '/dashboard' : '/login',
         routes: [
           GoRoute(
-            path: '/reseller/login',
+            path: '/login',
             builder: (context, state) => const ResellerLoginScreen(),
           ),
           GoRoute(
-            path: '/reseller/dashboard',
+            path: '/dashboard',
             builder: (context, state) => const ResellerDashboardScreen(),
           ),
 
           // ── Marketplace ──────────────────────────────────────────
           GoRoute(
-            path: '/reseller/marketplace',
+            path: '/marketplace',
             builder: (context, state) => const MarketplaceHomeScreen(),
           ),
           GoRoute(
-            path: '/reseller/marketplace/catalog',
+            path: '/marketplace/catalog',
             builder: (context, state) {
               final factoryId = state.uri.queryParameters['factoryId'] ?? '';
               final factoryName =
@@ -42,15 +42,15 @@ class ResellerRouter {
             },
           ),
           GoRoute(
-            path: '/reseller/marketplace/cart',
+            path: '/marketplace/cart',
             builder: (context, state) => const MarketplaceCartScreen(),
           ),
           GoRoute(
-            path: '/reseller/marketplace/orders',
+            path: '/marketplace/orders',
             builder: (context, state) => const MarketplaceOrderHistoryScreen(),
           ),
           GoRoute(
-            path: '/reseller/marketplace/orders/:orderId',
+            path: '/marketplace/orders/:orderId',
             builder: (context, state) => MarketplaceOrderDetailScreen(
               orderId: state.pathParameters['orderId']!,
             ),
@@ -73,13 +73,13 @@ class ResellerRouter {
                   const SizedBox(height: 8),
                   Text(
                     state.uri.path,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
-                    onPressed: () => context.go('/reseller/login'),
+                    onPressed: () => context.go('/login'),
                     icon: const Icon(Icons.login),
                     label: const Text('Go to Login'),
                   ),

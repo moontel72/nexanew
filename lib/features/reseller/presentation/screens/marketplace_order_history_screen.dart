@@ -131,7 +131,7 @@ class _MarketplaceOrderHistoryScreenState
               icon: Icons.receipt_long_outlined,
               actionButton: PrimaryButton(
                 text: 'Go to Marketplace',
-                onPressed: () => context.go('/reseller/marketplace'),
+                onPressed: () => context.go('/marketplace'),
               ),
             );
           }
@@ -176,7 +176,7 @@ class _MarketplaceOrderHistoryScreenState
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
       child: InkWell(
-        onTap: () => context.go('/reseller/marketplace/orders/${order.id}'),
+        onTap: () => context.go('/marketplace/orders/${order.id}'),
         borderRadius: BorderRadius.circular(10.r),
         child: Padding(
           padding: EdgeInsets.all(14.w),

@@ -121,7 +121,7 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
                     color: Colors.white,
                   ),
                   tooltip: 'Cart',
-                  onPressed: () => context.go('/reseller/marketplace/cart'),
+                  onPressed: () => context.go('/marketplace/cart'),
                 ),
                 if (cart.itemCount > 0)
                   Positioned(

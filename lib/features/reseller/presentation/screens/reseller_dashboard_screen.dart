@@ -408,7 +408,7 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
         ),
       ),
       child: InkWell(
-        onTap: () => context.go('/reseller/marketplace'),
+        onTap: () => context.go('/marketplace'),
         borderRadius: BorderRadius.circular(12.r),
         child: Padding(
           padding: EdgeInsets.all(14.w),
@@ -466,7 +466,7 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: InkWell(
-        onTap: () => context.go('/reseller/marketplace/orders'),
+        onTap: () => context.go('/marketplace/orders'),
         borderRadius: BorderRadius.circular(12.r),
         child: Padding(
           padding: EdgeInsets.all(14.w),

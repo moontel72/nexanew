@@ -68,7 +68,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                     color: Colors.white,
                   ),
                   tooltip: 'Cart',
-                  onPressed: () => context.go('/reseller/marketplace/cart'),
+                  onPressed: () => context.go('/marketplace/cart'),
                 ),
                 if (cart.itemCount > 0)
                   Positioned(
@@ -218,7 +218,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: InkWell(
         onTap: () => context.go(
-          '/reseller/marketplace/catalog'
+          '/marketplace/catalog'
           '?factoryId=$id'
           '&factoryName=${Uri.encodeComponent(name)}',
         ),
