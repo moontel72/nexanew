@@ -17,28 +17,22 @@ _ResellerMarketplaceProductModel _$ResellerMarketplaceProductModelFromJson(
   category: json['category'] as String? ?? '',
   productType: json['product_type'] as String? ?? '',
   status: json['status'] as String? ?? 'active',
-  price: ResellerMarketplaceProductModel._fromJsonDouble(json['price']) ?? 0.0,
+  price: json['price'] == null ? 0.0 : _safeParseDoubleNN(json['price']),
   currency: json['currency'] as String? ?? 'PKR',
   volumeDiscounts: (json['volume_discounts'] as List<dynamic>?)
       ?.map((e) => VolumeDiscountTier.fromJson(e as Map<String, dynamic>))
       .toList(),
-  promoDiscount: ResellerMarketplaceProductModel._fromJsonDouble(
-    json['promo_discount'],
-  ),
+  promoDiscount: _safeParseDouble(json['promo_discount']),
   metadata: json['metadata'] as Map<String, dynamic>?,
   factoryName: json['factory_name'] as String?,
   factoryCity: json['factory_city'] as String?,
   factoryLogo: json['factory_logo'] as String?,
   factoryStatus: json['factory_status'] as String?,
-  cartonPrice: ResellerMarketplaceProductModel._fromJsonDouble(
-    json['carton_price'],
-  ),
-  wholesalePrice: ResellerMarketplaceProductModel._fromJsonDouble(
-    json['wholesale_price'],
-  ),
-  moq: json['moq'] as int?,
-  bonusQuantity: json['bonus_quantity'] as int?,
-  bonusThreshold: json['bonus_threshold'] as int?,
+  cartonPrice: _safeParseDouble(json['carton_price']),
+  wholesalePrice: _safeParseDouble(json['wholesale_price']),
+  moq: (json['moq'] as num?)?.toInt(),
+  bonusQuantity: (json['bonus_quantity'] as num?)?.toInt(),
+  bonusThreshold: (json['bonus_threshold'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$ResellerMarketplaceProductModelToJson(

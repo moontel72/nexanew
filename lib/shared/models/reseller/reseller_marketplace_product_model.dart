@@ -4,6 +4,19 @@ import '../product/product_model.dart'; // for VolumeDiscountTier
 part 'reseller_marketplace_product_model.freezed.dart';
 part 'reseller_marketplace_product_model.g.dart';
 
+/// Safe double parser that handles String, int, double, and null values.
+double? _safeParseDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value.trim());
+  return null;
+}
+
+/// Non-nullable version — returns 0.0 on failure.
+double _safeParseDoubleNN(dynamic value) => _safeParseDouble(value) ?? 0.0;
+
 @Freezed(fromJson: true, toJson: true)
 abstract class ResellerMarketplaceProductModel
     with _$ResellerMarketplaceProductModel {
@@ -16,54 +29,35 @@ abstract class ResellerMarketplaceProductModel
     @Default('') String category,
     @Default('') String productType,
     @Default('active') String status,
-    @JsonKey(fromJson: _fromJsonDouble, toJson: _toJsonDouble)
-    @Default(0.0)
-    double price,
+    @JsonKey(fromJson: _safeParseDoubleNN) @Default(0.0) double price,
     @Default('PKR') String currency,
     List<VolumeDiscountTier>? volumeDiscounts,
-    @JsonKey(fromJson: _fromJsonDouble, toJson: _toJsonDouble)
-    double? promoDiscount,
+    @JsonKey(fromJson: _safeParseDouble) double? promoDiscount,
     Map<String, dynamic>? metadata,
     String? factoryName,
     String? factoryCity,
     String? factoryLogo,
     String? factoryStatus,
-    @JsonKey(fromJson: _fromJsonDouble, toJson: _toJsonDouble)
-    double? cartonPrice,
-    @JsonKey(fromJson: _fromJsonDouble, toJson: _toJsonDouble)
-    double? wholesalePrice,
+    @JsonKey(fromJson: _safeParseDouble) double? cartonPrice,
+    @JsonKey(fromJson: _safeParseDouble) double? wholesalePrice,
     int? moq,
     int? bonusQuantity,
     int? bonusThreshold,
   }) = _ResellerMarketplaceProductModel;
 
-  factory ResellerMarketplaceProductModel.fromJson(Map<String, dynamic> json) =>
-      _$ResellerMarketplaceProductModelFromJson(json);
-
-  static double? _fromJsonDouble(dynamic value) {
-    if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is num) return value.toDouble();
-    if (value is String) {
-      final parsed = double.tryParse(value.trim());
-      return parsed;
-    }
-    return null;
+  factory ResellerMarketplaceProductModel.fromJson(Map<String, dynamic> json) {
+    final product = _$ResellerMarketplaceProductModelFromJson(json);
+    return product;
   }
-
-  static dynamic _toJsonDouble(double? value) => value;
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Extension getters for computed / display convenience
+// Extension getters
 // ─────────────────────────────────────────────────────────────────────
 extension ResellerMarketplaceProductModelExt
     on ResellerMarketplaceProductModel {
-  /// Product image URL (from metadata if not a top-level field).
   String? get imageUrl => metadata?['image_url']?.toString();
 
-  /// Price per single unit (defaults to [price] if not set).
   double get unitPrice {
     final v = metadata?['unit_price'];
     if (v is num) return v.toDouble();
@@ -71,7 +65,6 @@ extension ResellerMarketplaceProductModelExt
     return price;
   }
 
-  /// Whether this product has any active offer (bonus, promo, or volume discount).
   bool get hasOffer =>
       (bonusQuantity != null && bonusThreshold != null) ||
       (promoDiscount != null && promoDiscount! > 0) ||

@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ResellerMarketplaceProductModel {
 
- String get id; String get tenantId; String get factoryId; String get name; String get sku; String get category; String get productType; String get status; double get price; String get currency; List<VolumeDiscountTier>? get volumeDiscounts; double? get promoDiscount; Map<String, dynamic>? get metadata; String? get factoryName; String? get factoryCity; String? get factoryLogo; String? get factoryStatus; double? get cartonPrice; double? get wholesalePrice; int? get moq; int? get bonusQuantity; int? get bonusThreshold;
+ String get id; String get tenantId; String get factoryId; String get name; String get sku; String get category; String get productType; String get status;@JsonKey(fromJson: _safeParseDoubleNN) double get price; String get currency; List<VolumeDiscountTier>? get volumeDiscounts;@JsonKey(fromJson: _safeParseDouble) double? get promoDiscount; Map<String, dynamic>? get metadata; String? get factoryName; String? get factoryCity; String? get factoryLogo; String? get factoryStatus;@JsonKey(fromJson: _safeParseDouble) double? get cartonPrice;@JsonKey(fromJson: _safeParseDouble) double? get wholesalePrice; int? get moq; int? get bonusQuantity; int? get bonusThreshold;
 /// Create a copy of ResellerMarketplaceProductModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -33,7 +33,7 @@ bool operator ==(Object other) {
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,tenantId,factoryId,name,sku,category,productType,status,price,currency,const DeepCollectionEquality().hash(volumeDiscounts),promoDiscount,const DeepCollectionEquality().hash(metadata),factoryName,factoryCity,factoryLogo,factoryStatus,cartonPrice,wholesalePrice,moq,bonusQuantity,bonusThreshold);
+int get hashCode => Object.hashAll([runtimeType,id,tenantId,factoryId,name,sku,category,productType,status,price,currency,const DeepCollectionEquality().hash(volumeDiscounts),promoDiscount,const DeepCollectionEquality().hash(metadata),factoryName,factoryCity,factoryLogo,factoryStatus,cartonPrice,wholesalePrice,moq,bonusQuantity,bonusThreshold]);
 
 @override
 String toString() {
@@ -48,7 +48,7 @@ abstract mixin class $ResellerMarketplaceProductModelCopyWith<$Res>  {
   factory $ResellerMarketplaceProductModelCopyWith(ResellerMarketplaceProductModel value, $Res Function(ResellerMarketplaceProductModel) _then) = _$ResellerMarketplaceProductModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String tenantId, String factoryId, String name, String sku, String category, String productType, String status, double price, String currency, List<VolumeDiscountTier>? volumeDiscounts, double? promoDiscount, Map<String, dynamic>? metadata, String? factoryName, String? factoryCity, String? factoryLogo, String? factoryStatus, double? cartonPrice, double? wholesalePrice, int? moq, int? bonusQuantity, int? bonusThreshold
+ String id, String tenantId, String factoryId, String name, String sku, String category, String productType, String status,@JsonKey(fromJson: _safeParseDoubleNN) double price, String currency, List<VolumeDiscountTier>? volumeDiscounts,@JsonKey(fromJson: _safeParseDouble) double? promoDiscount, Map<String, dynamic>? metadata, String? factoryName, String? factoryCity, String? factoryLogo, String? factoryStatus,@JsonKey(fromJson: _safeParseDouble) double? cartonPrice,@JsonKey(fromJson: _safeParseDouble) double? wholesalePrice, int? moq, int? bonusQuantity, int? bonusThreshold
 });
 
 
@@ -174,7 +174,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status,  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts,  double? promoDiscount,  Map<String, dynamic>? metadata,  String? factoryName,  String? factoryCity,  String? factoryLogo,  String? factoryStatus,  double? cartonPrice,  double? wholesalePrice,  int? moq,  int? bonusQuantity,  int? bonusThreshold)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status, @JsonKey(fromJson: _safeParseDoubleNN)  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts, @JsonKey(fromJson: _safeParseDouble)  double? promoDiscount,  Map<String, dynamic>? metadata,  String? factoryName,  String? factoryCity,  String? factoryLogo,  String? factoryStatus, @JsonKey(fromJson: _safeParseDouble)  double? cartonPrice, @JsonKey(fromJson: _safeParseDouble)  double? wholesalePrice,  int? moq,  int? bonusQuantity,  int? bonusThreshold)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ResellerMarketplaceProductModel() when $default != null:
 return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_that.category,_that.productType,_that.status,_that.price,_that.currency,_that.volumeDiscounts,_that.promoDiscount,_that.metadata,_that.factoryName,_that.factoryCity,_that.factoryLogo,_that.factoryStatus,_that.cartonPrice,_that.wholesalePrice,_that.moq,_that.bonusQuantity,_that.bonusThreshold);case _:
@@ -195,7 +195,7 @@ return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status,  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts,  double? promoDiscount,  Map<String, dynamic>? metadata,  String? factoryName,  String? factoryCity,  String? factoryLogo,  String? factoryStatus,  double? cartonPrice,  double? wholesalePrice,  int? moq,  int? bonusQuantity,  int? bonusThreshold)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status, @JsonKey(fromJson: _safeParseDoubleNN)  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts, @JsonKey(fromJson: _safeParseDouble)  double? promoDiscount,  Map<String, dynamic>? metadata,  String? factoryName,  String? factoryCity,  String? factoryLogo,  String? factoryStatus, @JsonKey(fromJson: _safeParseDouble)  double? cartonPrice, @JsonKey(fromJson: _safeParseDouble)  double? wholesalePrice,  int? moq,  int? bonusQuantity,  int? bonusThreshold)  $default,) {final _that = this;
 switch (_that) {
 case _ResellerMarketplaceProductModel():
 return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_that.category,_that.productType,_that.status,_that.price,_that.currency,_that.volumeDiscounts,_that.promoDiscount,_that.metadata,_that.factoryName,_that.factoryCity,_that.factoryLogo,_that.factoryStatus,_that.cartonPrice,_that.wholesalePrice,_that.moq,_that.bonusQuantity,_that.bonusThreshold);case _:
@@ -215,7 +215,7 @@ return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status,  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts,  double? promoDiscount,  Map<String, dynamic>? metadata,  String? factoryName,  String? factoryCity,  String? factoryLogo,  String? factoryStatus,  double? cartonPrice,  double? wholesalePrice,  int? moq,  int? bonusQuantity,  int? bonusThreshold)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status, @JsonKey(fromJson: _safeParseDoubleNN)  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts, @JsonKey(fromJson: _safeParseDouble)  double? promoDiscount,  Map<String, dynamic>? metadata,  String? factoryName,  String? factoryCity,  String? factoryLogo,  String? factoryStatus, @JsonKey(fromJson: _safeParseDouble)  double? cartonPrice, @JsonKey(fromJson: _safeParseDouble)  double? wholesalePrice,  int? moq,  int? bonusQuantity,  int? bonusThreshold)?  $default,) {final _that = this;
 switch (_that) {
 case _ResellerMarketplaceProductModel() when $default != null:
 return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_that.category,_that.productType,_that.status,_that.price,_that.currency,_that.volumeDiscounts,_that.promoDiscount,_that.metadata,_that.factoryName,_that.factoryCity,_that.factoryLogo,_that.factoryStatus,_that.cartonPrice,_that.wholesalePrice,_that.moq,_that.bonusQuantity,_that.bonusThreshold);case _:
@@ -226,12 +226,11 @@ return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_th
 
 }
 
-
 /// @nodoc
 @JsonSerializable()
 
 class _ResellerMarketplaceProductModel implements ResellerMarketplaceProductModel {
-  const _ResellerMarketplaceProductModel({required this.id, required this.tenantId, required this.factoryId, required this.name, this.sku = '', this.category = '', this.productType = '', this.status = 'active', this.price = 0.0, this.currency = 'PKR', final  List<VolumeDiscountTier>? volumeDiscounts, this.promoDiscount, final  Map<String, dynamic>? metadata, this.factoryName, this.factoryCity, this.factoryLogo, this.factoryStatus, this.cartonPrice, this.wholesalePrice, this.moq, this.bonusQuantity, this.bonusThreshold}): _volumeDiscounts = volumeDiscounts,_metadata = metadata;
+  const _ResellerMarketplaceProductModel({required this.id, required this.tenantId, required this.factoryId, required this.name, this.sku = '', this.category = '', this.productType = '', this.status = 'active', @JsonKey(fromJson: _safeParseDoubleNN) this.price = 0.0, this.currency = 'PKR', final  List<VolumeDiscountTier>? volumeDiscounts, @JsonKey(fromJson: _safeParseDouble) this.promoDiscount, final  Map<String, dynamic>? metadata, this.factoryName, this.factoryCity, this.factoryLogo, this.factoryStatus, @JsonKey(fromJson: _safeParseDouble) this.cartonPrice, @JsonKey(fromJson: _safeParseDouble) this.wholesalePrice, this.moq, this.bonusQuantity, this.bonusThreshold}): _volumeDiscounts = volumeDiscounts,_metadata = metadata;
   factory _ResellerMarketplaceProductModel.fromJson(Map<String, dynamic> json) => _$ResellerMarketplaceProductModelFromJson(json);
 
 @override final  String id;
@@ -242,7 +241,7 @@ class _ResellerMarketplaceProductModel implements ResellerMarketplaceProductMode
 @override@JsonKey() final  String category;
 @override@JsonKey() final  String productType;
 @override@JsonKey() final  String status;
-@override@JsonKey() final  double price;
+@override@JsonKey(fromJson: _safeParseDoubleNN) final  double price;
 @override@JsonKey() final  String currency;
  final  List<VolumeDiscountTier>? _volumeDiscounts;
 @override List<VolumeDiscountTier>? get volumeDiscounts {
@@ -253,7 +252,7 @@ class _ResellerMarketplaceProductModel implements ResellerMarketplaceProductMode
   return EqualUnmodifiableListView(value);
 }
 
-@override final  double? promoDiscount;
+@override@JsonKey(fromJson: _safeParseDouble) final  double? promoDiscount;
  final  Map<String, dynamic>? _metadata;
 @override Map<String, dynamic>? get metadata {
   final value = _metadata;
@@ -267,8 +266,8 @@ class _ResellerMarketplaceProductModel implements ResellerMarketplaceProductMode
 @override final  String? factoryCity;
 @override final  String? factoryLogo;
 @override final  String? factoryStatus;
-@override final  double? cartonPrice;
-@override final  double? wholesalePrice;
+@override@JsonKey(fromJson: _safeParseDouble) final  double? cartonPrice;
+@override@JsonKey(fromJson: _safeParseDouble) final  double? wholesalePrice;
 @override final  int? moq;
 @override final  int? bonusQuantity;
 @override final  int? bonusThreshold;
@@ -291,7 +290,7 @@ bool operator ==(Object other) {
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,tenantId,factoryId,name,sku,category,productType,status,price,currency,const DeepCollectionEquality().hash(_volumeDiscounts),promoDiscount,const DeepCollectionEquality().hash(_metadata),factoryName,factoryCity,factoryLogo,factoryStatus,cartonPrice,wholesalePrice,moq,bonusQuantity,bonusThreshold);
+int get hashCode => Object.hashAll([runtimeType,id,tenantId,factoryId,name,sku,category,productType,status,price,currency,const DeepCollectionEquality().hash(_volumeDiscounts),promoDiscount,const DeepCollectionEquality().hash(_metadata),factoryName,factoryCity,factoryLogo,factoryStatus,cartonPrice,wholesalePrice,moq,bonusQuantity,bonusThreshold]);
 
 @override
 String toString() {
@@ -306,7 +305,7 @@ abstract mixin class _$ResellerMarketplaceProductModelCopyWith<$Res> implements 
   factory _$ResellerMarketplaceProductModelCopyWith(_ResellerMarketplaceProductModel value, $Res Function(_ResellerMarketplaceProductModel) _then) = __$ResellerMarketplaceProductModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String tenantId, String factoryId, String name, String sku, String category, String productType, String status, double price, String currency, List<VolumeDiscountTier>? volumeDiscounts, double? promoDiscount, Map<String, dynamic>? metadata, String? factoryName, String? factoryCity, String? factoryLogo, String? factoryStatus, double? cartonPrice, double? wholesalePrice, int? moq, int? bonusQuantity, int? bonusThreshold
+ String id, String tenantId, String factoryId, String name, String sku, String category, String productType, String status,@JsonKey(fromJson: _safeParseDoubleNN) double price, String currency, List<VolumeDiscountTier>? volumeDiscounts,@JsonKey(fromJson: _safeParseDouble) double? promoDiscount, Map<String, dynamic>? metadata, String? factoryName, String? factoryCity, String? factoryLogo, String? factoryStatus,@JsonKey(fromJson: _safeParseDouble) double? cartonPrice,@JsonKey(fromJson: _safeParseDouble) double? wholesalePrice, int? moq, int? bonusQuantity, int? bonusThreshold
 });
 
 
@@ -353,3 +352,5 @@ as int?,
 
 
 }
+
+// dart format on
