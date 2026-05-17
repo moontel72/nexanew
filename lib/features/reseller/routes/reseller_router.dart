@@ -57,8 +57,35 @@ class ResellerRouter {
           ),
         ],
         errorBuilder: (context, state) => Scaffold(
+          appBar: AppBar(title: const Text('NexaTrace Reseller')),
           body: Center(
-            child: Text(state.error?.toString() ?? 'Unknown routing error'),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Page not found',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    state.uri.path,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => context.go('/reseller/login'),
+                    icon: const Icon(Icons.login),
+                    label: const Text('Go to Login'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       );

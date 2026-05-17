@@ -31,6 +31,7 @@ class _ResellerManagementListScreenState
   String? _statusFilter;
   String? _cityFilter;
   bool _initialised = false;
+  bool _actionInProgress = false;
 
   @override
   void initState() {
@@ -91,33 +92,22 @@ class _ResellerManagementListScreenState
     };
   }
 
-  // ── Quick Actions — compact bottom sheet ────────────────────────
+  // ── Quick Actions — center-aligned dialog ───────────────────────
   void _showQuickActions(Map<String, dynamic> reseller) {
     final id = reseller['id']?.toString() ?? '';
     final name = reseller['name']?.toString() ?? 'Reseller';
     final status = reseller['status']?.toString() ?? 'active';
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
-      ),
-      builder: (_) => Padding(
-        padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 16.h),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14.r),
+        ),
+        titlePadding: EdgeInsets.fromLTRB(20.w, 18.h, 20.w, 0),
+        contentPadding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 8.h),
+        title: Column(
           children: [
-            // Drag handle
-            Container(
-              width: 36.w,
-              height: 4.h,
-              margin: EdgeInsets.only(bottom: 10.h),
-              decoration: BoxDecoration(
-                color: AppColors.gray300,
-                borderRadius: BorderRadius.circular(2.r),
-              ),
-            ),
             Text(
               name,
               style: Theme.of(
@@ -131,8 +121,11 @@ class _ResellerManagementListScreenState
                 context,
               ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
             ),
-            SizedBox(height: 10.h),
-
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             _actionTile(
               icon: status == 'active'
                   ? Icons.toggle_off_outlined
@@ -140,7 +133,7 @@ class _ResellerManagementListScreenState
               color: AppColors.primary,
               label: status == 'active' ? 'Deactivate' : 'Activate',
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(ctx);
                 _confirmAction(
                   title: status == 'active'
                       ? 'Deactivate $name?'
@@ -148,16 +141,18 @@ class _ResellerManagementListScreenState
                   message: status == 'active'
                       ? 'The reseller will lose access to place new orders.'
                       : 'The reseller will regain full marketplace access.',
-                  onConfirm: () => context.read<ResellerManagementBloc>().add(
-                    UpdateResellerStatus(
-                      id: id,
-                      status: status == 'active' ? 'inactive' : 'active',
-                    ),
-                  ),
+                  onConfirm: () {
+                    setState(() => _actionInProgress = true);
+                    context.read<ResellerManagementBloc>().add(
+                      UpdateResellerStatus(
+                        id: id,
+                        status: status == 'active' ? 'inactive' : 'active',
+                      ),
+                    );
+                  },
                 );
               },
             ),
-
             _actionTile(
               icon: status == 'suspended'
                   ? Icons.play_circle_outline
@@ -165,7 +160,7 @@ class _ResellerManagementListScreenState
               color: AppColors.warning,
               label: status == 'suspended' ? 'Reinstate' : 'Suspend',
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(ctx);
                 _confirmAction(
                   title: status == 'suspended'
                       ? 'Reinstate $name?'
@@ -174,41 +169,45 @@ class _ResellerManagementListScreenState
                       ? 'The reseller will be able to place orders again.'
                       : 'The reseller will be restricted to viewing history only.',
                   isDestructive: status != 'suspended',
-                  onConfirm: () => context.read<ResellerManagementBloc>().add(
-                    ToggleSuspendReseller(
-                      id: id,
-                      suspend: status != 'suspended',
-                    ),
-                  ),
+                  onConfirm: () {
+                    setState(() => _actionInProgress = true);
+                    context.read<ResellerManagementBloc>().add(
+                      ToggleSuspendReseller(
+                        id: id,
+                        suspend: status != 'suspended',
+                      ),
+                    );
+                  },
                 );
               },
             ),
-
             _actionTile(
               icon: Icons.edit_outlined,
               color: AppColors.info,
               label: 'Edit Reseller',
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(ctx);
                 _showEditDialog(reseller);
               },
             ),
-
             _actionTile(
               icon: Icons.delete_outline,
               color: AppColors.error,
               label: 'Delete Reseller',
               textColor: AppColors.error,
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(ctx);
                 _confirmAction(
                   title: 'Delete $name?',
                   message:
                       'This will soft-delete the reseller. They will no longer appear in the active list.',
                   isDestructive: true,
-                  onConfirm: () => context.read<ResellerManagementBloc>().add(
-                    DeleteReseller(id),
-                  ),
+                  onConfirm: () {
+                    setState(() => _actionInProgress = true);
+                    context.read<ResellerManagementBloc>().add(
+                      DeleteReseller(id),
+                    );
+                  },
                 );
               },
             ),
@@ -246,7 +245,7 @@ class _ResellerManagementListScreenState
   }) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14.r),
         ),
@@ -254,13 +253,13 @@ class _ResellerManagementListScreenState
         content: Text(message),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           PrimaryButton(
             text: 'Confirm',
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               onConfirm();
             },
           ),
@@ -319,6 +318,7 @@ class _ResellerManagementListScreenState
             text: 'Save',
             onPressed: () {
               Navigator.pop(context);
+              setState(() => _actionInProgress = true);
               context.read<ResellerManagementBloc>().add(
                 UpdateReseller(
                   id: id,
@@ -379,20 +379,30 @@ class _ResellerManagementListScreenState
       ),
       body: BlocListener<ResellerManagementBloc, ResellerManagementState>(
         listener: (_, state) {
-          if (state.message != null) {
-            ScaffoldMessenger.of(context)
-              ..clearSnackBars()
-              ..showSnackBar(
-                SnackBar(
-                  content: Text(state.message!),
-                  backgroundColor: AppColors.success,
-                  behavior: SnackBarBehavior.floating,
-                ),
+          // ── Success feedback ──────────────────────────────────
+          if (state.status == ResellerLoadStatus.actionSuccess) {
+            _actionInProgress = false;
+            if (state.message != null) {
+              ScaffoldMessenger.of(context)
+                ..clearSnackBars()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text(state.message!),
+                    backgroundColor: AppColors.success,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              context.read<ResellerManagementBloc>().add(
+                ClearResellerMessage(),
               );
-            context.read<ResellerManagementBloc>().add(ClearResellerMessage());
+            }
           }
-          if (state.errorMessage != null &&
-              state.status == ResellerLoadStatus.error) {
+
+          // ── Error feedback ───────────────────────────────────
+          if (state.status == ResellerLoadStatus.error &&
+              state.errorMessage != null) {
+            _actionInProgress = false;
             ScaffoldMessenger.of(context)
               ..clearSnackBars()
               ..showSnackBar(
@@ -400,104 +410,150 @@ class _ResellerManagementListScreenState
                   content: Text(state.errorMessage!),
                   backgroundColor: AppColors.error,
                   behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 4),
                 ),
               );
           }
+
+          // ── List refreshed after action → stop loading overlay ──
+          if (state.status == ResellerLoadStatus.loaded) {
+            _actionInProgress = false;
+          }
         },
-        child: Column(
+        child: Stack(
           children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 0),
-              child: SearchField(
-                controller: _searchController,
-                hintText: 'Search by name, email, or city...',
-                onChanged: _onSearch,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                children: [
-                  _filterChip('All', null, _statusFilter),
-                  _filterChip('Active', 'active', _statusFilter),
-                  _filterChip('Inactive', 'inactive', _statusFilter),
-                  _filterChip('Suspended', 'suspended', _statusFilter),
-                ],
-              ),
-            ),
-            SizedBox(height: 4.h),
-            const Divider(),
-            SizedBox(height: 4.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                children: [
-                  Text(
-                    'Total: ',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+            Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 0),
+                  child: SearchField(
+                    controller: _searchController,
+                    hintText: 'Search by name, email, or city...',
+                    onChanged: _onSearch,
                   ),
-                  BlocBuilder<ResellerManagementBloc, ResellerManagementState>(
-                    builder: (_, s) => Text(
-                      '${s.total} resellers',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: BlocBuilder<ResellerManagementBloc, ResellerManagementState>(
-                builder: (context, state) {
-                  // First load — show full spinner
-                  if (!_initialised && state.resellers.isEmpty) {
-                    return const Center(child: LoadingIndicator());
-                  }
-
-                  // Error on empty data
-                  if (state.status == ResellerLoadStatus.error &&
-                      state.resellers.isEmpty) {
-                    return ErrorState(
-                      title: 'Error',
-                      message: state.errorMessage ?? 'Failed to load',
-                      onRetry: () => _load(),
-                    );
-                  }
-
-                  // Empty
-                  if (state.resellers.isEmpty &&
-                      state.status != ResellerLoadStatus.loading) {
-                    return const EmptyState(
-                      title: 'No Resellers',
-                      description: 'No resellers match your filters.',
-                      icon: Icons.people_outline,
-                    );
-                  }
-
-                  return Column(
+                ),
+                SizedBox(height: 8.h),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Row(
                     children: [
-                      // Subtle loading bar when refreshing with existing data
-                      if (state.status == ResellerLoadStatus.loading)
-                        const LinearProgressIndicator(minHeight: 2),
-                      Expanded(
-                        child: ListView.separated(
-                          padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 80.h),
-                          itemCount: state.resellers.length,
-                          separatorBuilder: (_, __) => SizedBox(height: 6.h),
-                          itemBuilder: (_, i) =>
-                              _resellerCard(state.resellers[i]),
+                      _filterChip('All', null, _statusFilter),
+                      _filterChip('Active', 'active', _statusFilter),
+                      _filterChip('Inactive', 'inactive', _statusFilter),
+                      _filterChip('Suspended', 'suspended', _statusFilter),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                const Divider(),
+                SizedBox(height: 4.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Total: ',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                      BlocBuilder<
+                        ResellerManagementBloc,
+                        ResellerManagementState
+                      >(
+                        builder: (_, s) => Text(
+                          '${s.total} resellers',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                       ),
                     ],
-                  );
-                },
-              ),
+                  ),
+                ),
+                Expanded(
+                  child:
+                      BlocBuilder<
+                        ResellerManagementBloc,
+                        ResellerManagementState
+                      >(
+                        builder: (context, state) {
+                          // ── First load — full-screen spinner ────────
+                          if (!_initialised &&
+                              state.status == ResellerLoadStatus.loading &&
+                              state.resellers.isEmpty) {
+                            return const Center(child: LoadingIndicator());
+                          }
+
+                          // ── Error with no data ─────────────────────
+                          if (state.status == ResellerLoadStatus.error &&
+                              state.resellers.isEmpty) {
+                            return ErrorState(
+                              title: 'Error',
+                              message: state.errorMessage ?? 'Failed to load',
+                              onRetry: () => _load(),
+                            );
+                          }
+
+                          // ── Empty (only when truly no data, not during loading) ──
+                          if (_initialised &&
+                              state.resellers.isEmpty &&
+                              state.status != ResellerLoadStatus.loading) {
+                            return const EmptyState(
+                              title: 'No Resellers',
+                              description: 'No resellers match your filters.',
+                              icon: Icons.people_outline,
+                            );
+                          }
+
+                          // ── Data present ──────────────────────────
+                          return Column(
+                            children: [
+                              if (state.status == ResellerLoadStatus.loading)
+                                const LinearProgressIndicator(minHeight: 2),
+                              Expanded(
+                                child: ListView.separated(
+                                  padding: EdgeInsets.fromLTRB(
+                                    16.w,
+                                    6.h,
+                                    16.w,
+                                    80.h,
+                                  ),
+                                  itemCount: state.resellers.length,
+                                  separatorBuilder: (_, __) =>
+                                      SizedBox(height: 6.h),
+                                  itemBuilder: (_, i) =>
+                                      _resellerCard(state.resellers[i]),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                ),
+              ],
             ),
+
+            // ── Loading overlay during action ────────────────────
+            if (_actionInProgress)
+              Container(
+                color: Colors.black.withValues(alpha: 0.35),
+                child: const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Processing…'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
