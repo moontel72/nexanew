@@ -569,6 +569,12 @@ $registerRoutes = function (): void {
                 "publishCodes",
             ]);
 
+            // Marketplace toggle
+            Route::post("products/{product}/marketplace-toggle", [
+                \App\Http\Controllers\Factory\ProductController::class,
+                "toggleMarketplace",
+            ]);
+
             // Store Keeper Management
             Route::prefix("store-keepers")->group(function (): void {
                 Route::get("list", [\App\Http\Controllers\Factory\StoreKeeperController::class, "index"]);

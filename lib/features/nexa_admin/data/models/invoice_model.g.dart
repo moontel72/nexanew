@@ -9,19 +9,19 @@ part of 'invoice_model.dart';
 _AdminInvoice _$AdminInvoiceFromJson(Map<String, dynamic> json) =>
     _AdminInvoice(
       id: json['id'] as String,
-      invoiceNumber: json['invoiceNumber'] as String,
-      companyId: json['companyId'] as String,
-      companyName: json['companyName'] as String,
-      subscriptionId: json['subscriptionId'] as String,
-      subscriptionName: json['subscriptionName'] as String,
-      periodStart: DateTime.parse(json['periodStart'] as String),
-      periodEnd: DateTime.parse(json['periodEnd'] as String),
-      issueDate: DateTime.parse(json['issueDate'] as String),
-      dueDate: DateTime.parse(json['dueDate'] as String),
+      invoiceNumber: json['invoice_number'] as String,
+      companyId: json['company_id'] as String,
+      companyName: json['company_name'] as String,
+      subscriptionId: json['subscription_id'] as String,
+      subscriptionName: json['subscription_name'] as String,
+      periodStart: DateTime.parse(json['period_start'] as String),
+      periodEnd: DateTime.parse(json['period_end'] as String),
+      issueDate: DateTime.parse(json['issue_date'] as String),
+      dueDate: DateTime.parse(json['due_date'] as String),
       subtotal: (json['subtotal'] as num).toDouble(),
-      taxAmount: (json['taxAmount'] as num).toDouble(),
-      discountAmount: (json['discountAmount'] as num).toDouble(),
-      totalAmount: (json['totalAmount'] as num).toDouble(),
+      taxAmount: (json['tax_amount'] as num).toDouble(),
+      discountAmount: (json['discount_amount'] as num).toDouble(),
+      totalAmount: (json['total_amount'] as num).toDouble(),
       currency: json['currency'] as String? ?? 'USD',
       items: (json['items'] as List<dynamic>)
           .map((e) => AdminInvoiceItem.fromJson(e as Map<String, dynamic>))
@@ -29,64 +29,64 @@ _AdminInvoice _$AdminInvoiceFromJson(Map<String, dynamic> json) =>
       status:
           $enumDecodeNullable(_$InvoiceStatusEnumMap, json['status']) ??
           InvoiceStatus.pending,
-      paymentDate: json['paymentDate'] == null
+      paymentDate: json['payment_date'] == null
           ? null
-          : DateTime.parse(json['paymentDate'] as String),
+          : DateTime.parse(json['payment_date'] as String),
       paymentMethod: $enumDecodeNullable(
         _$PaymentMethodEnumMap,
-        json['paymentMethod'],
+        json['payment_method'],
       ),
-      paymentReference: json['paymentReference'] as String?,
+      paymentReference: json['payment_reference'] as String?,
       notes: json['notes'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
-      createdAt: json['createdAt'] == null
+      createdAt: json['created_at'] == null
           ? null
-          : DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] == null
+          : DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] == null
           ? null
-          : DateTime.parse(json['updatedAt'] as String),
-      adminNotes: json['adminNotes'] as String?,
-      requiresFollowUp: json['requiresFollowUp'] as bool?,
-      followUpReason: json['followUpReason'] as String?,
-      followUpDate: json['followUpDate'] == null
+          : DateTime.parse(json['updated_at'] as String),
+      adminNotes: json['admin_notes'] as String?,
+      requiresFollowUp: json['requires_follow_up'] as bool?,
+      followUpReason: json['follow_up_reason'] as String?,
+      followUpDate: json['follow_up_date'] == null
           ? null
-          : DateTime.parse(json['followUpDate'] as String),
-      assignedToAdminId: json['assignedToAdminId'] as String?,
-      assignedToAdminName: json['assignedToAdminName'] as String?,
+          : DateTime.parse(json['follow_up_date'] as String),
+      assignedToAdminId: json['assigned_to_admin_id'] as String?,
+      assignedToAdminName: json['assigned_to_admin_name'] as String?,
     );
 
 Map<String, dynamic> _$AdminInvoiceToJson(_AdminInvoice instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'invoiceNumber': instance.invoiceNumber,
-      'companyId': instance.companyId,
-      'companyName': instance.companyName,
-      'subscriptionId': instance.subscriptionId,
-      'subscriptionName': instance.subscriptionName,
-      'periodStart': instance.periodStart.toIso8601String(),
-      'periodEnd': instance.periodEnd.toIso8601String(),
-      'issueDate': instance.issueDate.toIso8601String(),
-      'dueDate': instance.dueDate.toIso8601String(),
+      'invoice_number': instance.invoiceNumber,
+      'company_id': instance.companyId,
+      'company_name': instance.companyName,
+      'subscription_id': instance.subscriptionId,
+      'subscription_name': instance.subscriptionName,
+      'period_start': instance.periodStart.toIso8601String(),
+      'period_end': instance.periodEnd.toIso8601String(),
+      'issue_date': instance.issueDate.toIso8601String(),
+      'due_date': instance.dueDate.toIso8601String(),
       'subtotal': instance.subtotal,
-      'taxAmount': instance.taxAmount,
-      'discountAmount': instance.discountAmount,
-      'totalAmount': instance.totalAmount,
+      'tax_amount': instance.taxAmount,
+      'discount_amount': instance.discountAmount,
+      'total_amount': instance.totalAmount,
       'currency': instance.currency,
-      'items': instance.items,
+      'items': instance.items.map((e) => e.toJson()).toList(),
       'status': _$InvoiceStatusEnumMap[instance.status]!,
-      'paymentDate': instance.paymentDate?.toIso8601String(),
-      'paymentMethod': _$PaymentMethodEnumMap[instance.paymentMethod],
-      'paymentReference': instance.paymentReference,
+      'payment_date': instance.paymentDate?.toIso8601String(),
+      'payment_method': _$PaymentMethodEnumMap[instance.paymentMethod],
+      'payment_reference': instance.paymentReference,
       'notes': instance.notes,
       'metadata': instance.metadata,
-      'createdAt': instance.createdAt?.toIso8601String(),
-      'updatedAt': instance.updatedAt?.toIso8601String(),
-      'adminNotes': instance.adminNotes,
-      'requiresFollowUp': instance.requiresFollowUp,
-      'followUpReason': instance.followUpReason,
-      'followUpDate': instance.followUpDate?.toIso8601String(),
-      'assignedToAdminId': instance.assignedToAdminId,
-      'assignedToAdminName': instance.assignedToAdminName,
+      'created_at': instance.createdAt?.toIso8601String(),
+      'updated_at': instance.updatedAt?.toIso8601String(),
+      'admin_notes': instance.adminNotes,
+      'requires_follow_up': instance.requiresFollowUp,
+      'follow_up_reason': instance.followUpReason,
+      'follow_up_date': instance.followUpDate?.toIso8601String(),
+      'assigned_to_admin_id': instance.assignedToAdminId,
+      'assigned_to_admin_name': instance.assignedToAdminName,
     };
 
 const _$InvoiceStatusEnumMap = {
@@ -111,23 +111,23 @@ _AdminInvoiceItem _$AdminInvoiceItemFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       description: json['description'] as String,
       quantity: (json['quantity'] as num).toDouble(),
-      unitPrice: (json['unitPrice'] as num).toDouble(),
+      unitPrice: (json['unit_price'] as num).toDouble(),
       total: (json['total'] as num).toDouble(),
       currency: json['currency'] as String,
-      codeType: json['codeType'] as String?,
-      codeCount: (json['codeCount'] as num?)?.toInt(),
-      periodStart: json['periodStart'] == null
+      codeType: json['code_type'] as String?,
+      codeCount: (json['code_count'] as num?)?.toInt(),
+      periodStart: json['period_start'] == null
           ? null
-          : DateTime.parse(json['periodStart'] as String),
-      periodEnd: json['periodEnd'] == null
+          : DateTime.parse(json['period_start'] as String),
+      periodEnd: json['period_end'] == null
           ? null
-          : DateTime.parse(json['periodEnd'] as String),
+          : DateTime.parse(json['period_end'] as String),
       metadata: json['metadata'] as Map<String, dynamic>?,
-      planFeatureId: json['planFeatureId'] as String?,
-      planFeatureName: json['planFeatureName'] as String?,
-      usageAmount: (json['usageAmount'] as num?)?.toDouble(),
-      overageAmount: (json['overageAmount'] as num?)?.toDouble(),
-      isOverageCharge: json['isOverageCharge'] as bool?,
+      planFeatureId: json['plan_feature_id'] as String?,
+      planFeatureName: json['plan_feature_name'] as String?,
+      usageAmount: (json['usage_amount'] as num?)?.toDouble(),
+      overageAmount: (json['overage_amount'] as num?)?.toDouble(),
+      isOverageCharge: json['is_overage_charge'] as bool?,
     );
 
 Map<String, dynamic> _$AdminInvoiceItemToJson(_AdminInvoiceItem instance) =>
@@ -135,46 +135,48 @@ Map<String, dynamic> _$AdminInvoiceItemToJson(_AdminInvoiceItem instance) =>
       'id': instance.id,
       'description': instance.description,
       'quantity': instance.quantity,
-      'unitPrice': instance.unitPrice,
+      'unit_price': instance.unitPrice,
       'total': instance.total,
       'currency': instance.currency,
-      'codeType': instance.codeType,
-      'codeCount': instance.codeCount,
-      'periodStart': instance.periodStart?.toIso8601String(),
-      'periodEnd': instance.periodEnd?.toIso8601String(),
+      'code_type': instance.codeType,
+      'code_count': instance.codeCount,
+      'period_start': instance.periodStart?.toIso8601String(),
+      'period_end': instance.periodEnd?.toIso8601String(),
       'metadata': instance.metadata,
-      'planFeatureId': instance.planFeatureId,
-      'planFeatureName': instance.planFeatureName,
-      'usageAmount': instance.usageAmount,
-      'overageAmount': instance.overageAmount,
-      'isOverageCharge': instance.isOverageCharge,
+      'plan_feature_id': instance.planFeatureId,
+      'plan_feature_name': instance.planFeatureName,
+      'usage_amount': instance.usageAmount,
+      'overage_amount': instance.overageAmount,
+      'is_overage_charge': instance.isOverageCharge,
     };
 
 _PlatformRevenueSummary _$PlatformRevenueSummaryFromJson(
   Map<String, dynamic> json,
 ) => _PlatformRevenueSummary(
-  totalRevenue: (json['totalRevenue'] as num?)?.toDouble() ?? 0.0,
-  collectedRevenue: (json['collectedRevenue'] as num?)?.toDouble() ?? 0.0,
-  pendingRevenue: (json['pendingRevenue'] as num?)?.toDouble() ?? 0.0,
-  overdueRevenue: (json['overdueRevenue'] as num?)?.toDouble() ?? 0.0,
-  totalInvoices: (json['totalInvoices'] as num?)?.toInt() ?? 0,
-  paidInvoices: (json['paidInvoices'] as num?)?.toInt() ?? 0,
-  pendingInvoices: (json['pendingInvoices'] as num?)?.toInt() ?? 0,
-  overdueInvoices: (json['overdueInvoices'] as num?)?.toInt() ?? 0,
-  draftInvoices: (json['draftInvoices'] as num?)?.toInt() ?? 0,
-  cancelledInvoices: (json['cancelledInvoices'] as num?)?.toInt() ?? 0,
-  periodStart: json['periodStart'] == null
+  totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0.0,
+  collectedRevenue: (json['collected_revenue'] as num?)?.toDouble() ?? 0.0,
+  pendingRevenue: (json['pending_revenue'] as num?)?.toDouble() ?? 0.0,
+  overdueRevenue: (json['overdue_revenue'] as num?)?.toDouble() ?? 0.0,
+  totalInvoices: (json['total_invoices'] as num?)?.toInt() ?? 0,
+  paidInvoices: (json['paid_invoices'] as num?)?.toInt() ?? 0,
+  pendingInvoices: (json['pending_invoices'] as num?)?.toInt() ?? 0,
+  overdueInvoices: (json['overdue_invoices'] as num?)?.toInt() ?? 0,
+  draftInvoices: (json['draft_invoices'] as num?)?.toInt() ?? 0,
+  cancelledInvoices: (json['cancelled_invoices'] as num?)?.toInt() ?? 0,
+  periodStart: json['period_start'] == null
       ? null
-      : DateTime.parse(json['periodStart'] as String),
-  periodEnd: json['periodEnd'] == null
+      : DateTime.parse(json['period_start'] as String),
+  periodEnd: json['period_end'] == null
       ? null
-      : DateTime.parse(json['periodEnd'] as String),
-  revenueByPlan: (json['revenueByPlan'] as Map<String, dynamic>?)?.map(
+      : DateTime.parse(json['period_end'] as String),
+  revenueByPlan: (json['revenue_by_plan'] as Map<String, dynamic>?)?.map(
     (k, e) => MapEntry(k, (e as num).toDouble()),
   ),
-  revenueByCompanyType: (json['revenueByCompanyType'] as Map<String, dynamic>?)
-      ?.map((k, e) => MapEntry(k, (e as num).toDouble())),
-  revenueTrend: (json['revenueTrend'] as List<dynamic>?)
+  revenueByCompanyType:
+      (json['revenue_by_company_type'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toDouble()),
+      ),
+  revenueTrend: (json['revenue_trend'] as List<dynamic>?)
       ?.map((e) => RevenueTrendData.fromJson(e as Map<String, dynamic>))
       .toList(),
 );
@@ -182,137 +184,137 @@ _PlatformRevenueSummary _$PlatformRevenueSummaryFromJson(
 Map<String, dynamic> _$PlatformRevenueSummaryToJson(
   _PlatformRevenueSummary instance,
 ) => <String, dynamic>{
-  'totalRevenue': instance.totalRevenue,
-  'collectedRevenue': instance.collectedRevenue,
-  'pendingRevenue': instance.pendingRevenue,
-  'overdueRevenue': instance.overdueRevenue,
-  'totalInvoices': instance.totalInvoices,
-  'paidInvoices': instance.paidInvoices,
-  'pendingInvoices': instance.pendingInvoices,
-  'overdueInvoices': instance.overdueInvoices,
-  'draftInvoices': instance.draftInvoices,
-  'cancelledInvoices': instance.cancelledInvoices,
-  'periodStart': instance.periodStart?.toIso8601String(),
-  'periodEnd': instance.periodEnd?.toIso8601String(),
-  'revenueByPlan': instance.revenueByPlan,
-  'revenueByCompanyType': instance.revenueByCompanyType,
-  'revenueTrend': instance.revenueTrend,
+  'total_revenue': instance.totalRevenue,
+  'collected_revenue': instance.collectedRevenue,
+  'pending_revenue': instance.pendingRevenue,
+  'overdue_revenue': instance.overdueRevenue,
+  'total_invoices': instance.totalInvoices,
+  'paid_invoices': instance.paidInvoices,
+  'pending_invoices': instance.pendingInvoices,
+  'overdue_invoices': instance.overdueInvoices,
+  'draft_invoices': instance.draftInvoices,
+  'cancelled_invoices': instance.cancelledInvoices,
+  'period_start': instance.periodStart?.toIso8601String(),
+  'period_end': instance.periodEnd?.toIso8601String(),
+  'revenue_by_plan': instance.revenueByPlan,
+  'revenue_by_company_type': instance.revenueByCompanyType,
+  'revenue_trend': instance.revenueTrend?.map((e) => e.toJson()).toList(),
 };
 
 _RevenueTrendData _$RevenueTrendDataFromJson(Map<String, dynamic> json) =>
     _RevenueTrendData(
       date: DateTime.parse(json['date'] as String),
       revenue: (json['revenue'] as num).toDouble(),
-      invoiceCount: (json['invoiceCount'] as num).toInt(),
-      paidCount: (json['paidCount'] as num).toInt(),
+      invoiceCount: (json['invoice_count'] as num).toInt(),
+      paidCount: (json['paid_count'] as num).toInt(),
     );
 
 Map<String, dynamic> _$RevenueTrendDataToJson(_RevenueTrendData instance) =>
     <String, dynamic>{
       'date': instance.date.toIso8601String(),
       'revenue': instance.revenue,
-      'invoiceCount': instance.invoiceCount,
-      'paidCount': instance.paidCount,
+      'invoice_count': instance.invoiceCount,
+      'paid_count': instance.paidCount,
     };
 
 _CompanyRevenueSummary _$CompanyRevenueSummaryFromJson(
   Map<String, dynamic> json,
 ) => _CompanyRevenueSummary(
-  companyId: json['companyId'] as String,
-  companyName: json['companyName'] as String,
-  companyType: json['companyType'] as String,
-  totalRevenue: (json['totalRevenue'] as num).toDouble(),
-  paidAmount: (json['paidAmount'] as num).toDouble(),
-  pendingAmount: (json['pendingAmount'] as num).toDouble(),
-  overdueAmount: (json['overdueAmount'] as num).toDouble(),
-  totalInvoices: (json['totalInvoices'] as num).toInt(),
-  paidInvoices: (json['paidInvoices'] as num).toInt(),
-  pendingInvoices: (json['pendingInvoices'] as num).toInt(),
-  overdueInvoices: (json['overdueInvoices'] as num).toInt(),
-  lastPaymentDate: json['lastPaymentDate'] == null
+  companyId: json['company_id'] as String,
+  companyName: json['company_name'] as String,
+  companyType: json['company_type'] as String,
+  totalRevenue: (json['total_revenue'] as num).toDouble(),
+  paidAmount: (json['paid_amount'] as num).toDouble(),
+  pendingAmount: (json['pending_amount'] as num).toDouble(),
+  overdueAmount: (json['overdue_amount'] as num).toDouble(),
+  totalInvoices: (json['total_invoices'] as num).toInt(),
+  paidInvoices: (json['paid_invoices'] as num).toInt(),
+  pendingInvoices: (json['pending_invoices'] as num).toInt(),
+  overdueInvoices: (json['overdue_invoices'] as num).toInt(),
+  lastPaymentDate: json['last_payment_date'] == null
       ? null
-      : DateTime.parse(json['lastPaymentDate'] as String),
-  averagePaymentDays: (json['averagePaymentDays'] as num?)?.toDouble(),
-  currentPlan: json['currentPlan'] as String?,
-  subscriptionStartDate: json['subscriptionStartDate'] == null
+      : DateTime.parse(json['last_payment_date'] as String),
+  averagePaymentDays: (json['average_payment_days'] as num?)?.toDouble(),
+  currentPlan: json['current_plan'] as String?,
+  subscriptionStartDate: json['subscription_start_date'] == null
       ? null
-      : DateTime.parse(json['subscriptionStartDate'] as String),
-  subscriptionEndDate: json['subscriptionEndDate'] == null
+      : DateTime.parse(json['subscription_start_date'] as String),
+  subscriptionEndDate: json['subscription_end_date'] == null
       ? null
-      : DateTime.parse(json['subscriptionEndDate'] as String),
+      : DateTime.parse(json['subscription_end_date'] as String),
 );
 
 Map<String, dynamic> _$CompanyRevenueSummaryToJson(
   _CompanyRevenueSummary instance,
 ) => <String, dynamic>{
-  'companyId': instance.companyId,
-  'companyName': instance.companyName,
-  'companyType': instance.companyType,
-  'totalRevenue': instance.totalRevenue,
-  'paidAmount': instance.paidAmount,
-  'pendingAmount': instance.pendingAmount,
-  'overdueAmount': instance.overdueAmount,
-  'totalInvoices': instance.totalInvoices,
-  'paidInvoices': instance.paidInvoices,
-  'pendingInvoices': instance.pendingInvoices,
-  'overdueInvoices': instance.overdueInvoices,
-  'lastPaymentDate': instance.lastPaymentDate?.toIso8601String(),
-  'averagePaymentDays': instance.averagePaymentDays,
-  'currentPlan': instance.currentPlan,
-  'subscriptionStartDate': instance.subscriptionStartDate?.toIso8601String(),
-  'subscriptionEndDate': instance.subscriptionEndDate?.toIso8601String(),
+  'company_id': instance.companyId,
+  'company_name': instance.companyName,
+  'company_type': instance.companyType,
+  'total_revenue': instance.totalRevenue,
+  'paid_amount': instance.paidAmount,
+  'pending_amount': instance.pendingAmount,
+  'overdue_amount': instance.overdueAmount,
+  'total_invoices': instance.totalInvoices,
+  'paid_invoices': instance.paidInvoices,
+  'pending_invoices': instance.pendingInvoices,
+  'overdue_invoices': instance.overdueInvoices,
+  'last_payment_date': instance.lastPaymentDate?.toIso8601String(),
+  'average_payment_days': instance.averagePaymentDays,
+  'current_plan': instance.currentPlan,
+  'subscription_start_date': instance.subscriptionStartDate?.toIso8601String(),
+  'subscription_end_date': instance.subscriptionEndDate?.toIso8601String(),
 };
 
 _PaymentReconciliation _$PaymentReconciliationFromJson(
   Map<String, dynamic> json,
 ) => _PaymentReconciliation(
   id: json['id'] as String,
-  reconciliationDate: DateTime.parse(json['reconciliationDate'] as String),
-  periodStart: DateTime.parse(json['periodStart'] as String),
-  periodEnd: DateTime.parse(json['periodEnd'] as String),
-  expectedAmount: (json['expectedAmount'] as num).toDouble(),
-  actualAmount: (json['actualAmount'] as num).toDouble(),
-  discrepancyAmount: (json['discrepancyAmount'] as num).toDouble(),
-  totalTransactions: (json['totalTransactions'] as num).toInt(),
-  matchedTransactions: (json['matchedTransactions'] as num).toInt(),
-  unmatchedTransactions: (json['unmatchedTransactions'] as num).toInt(),
+  reconciliationDate: DateTime.parse(json['reconciliation_date'] as String),
+  periodStart: DateTime.parse(json['period_start'] as String),
+  periodEnd: DateTime.parse(json['period_end'] as String),
+  expectedAmount: (json['expected_amount'] as num).toDouble(),
+  actualAmount: (json['actual_amount'] as num).toDouble(),
+  discrepancyAmount: (json['discrepancy_amount'] as num).toDouble(),
+  totalTransactions: (json['total_transactions'] as num).toInt(),
+  matchedTransactions: (json['matched_transactions'] as num).toInt(),
+  unmatchedTransactions: (json['unmatched_transactions'] as num).toInt(),
   status: $enumDecode(_$ReconciliationStatusEnumMap, json['status']),
   notes: json['notes'] as String?,
-  performedByAdminId: json['performedByAdminId'] as String?,
-  performedByAdminName: json['performedByAdminName'] as String?,
+  performedByAdminId: json['performed_by_admin_id'] as String?,
+  performedByAdminName: json['performed_by_admin_name'] as String?,
   items: (json['items'] as List<dynamic>?)
       ?.map((e) => ReconciliationItem.fromJson(e as Map<String, dynamic>))
       .toList(),
   metadata: json['metadata'] as Map<String, dynamic>?,
-  createdAt: json['createdAt'] == null
+  createdAt: json['created_at'] == null
       ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
+      : DateTime.parse(json['created_at'] as String),
+  updatedAt: json['updated_at'] == null
       ? null
-      : DateTime.parse(json['updatedAt'] as String),
+      : DateTime.parse(json['updated_at'] as String),
 );
 
 Map<String, dynamic> _$PaymentReconciliationToJson(
   _PaymentReconciliation instance,
 ) => <String, dynamic>{
   'id': instance.id,
-  'reconciliationDate': instance.reconciliationDate.toIso8601String(),
-  'periodStart': instance.periodStart.toIso8601String(),
-  'periodEnd': instance.periodEnd.toIso8601String(),
-  'expectedAmount': instance.expectedAmount,
-  'actualAmount': instance.actualAmount,
-  'discrepancyAmount': instance.discrepancyAmount,
-  'totalTransactions': instance.totalTransactions,
-  'matchedTransactions': instance.matchedTransactions,
-  'unmatchedTransactions': instance.unmatchedTransactions,
+  'reconciliation_date': instance.reconciliationDate.toIso8601String(),
+  'period_start': instance.periodStart.toIso8601String(),
+  'period_end': instance.periodEnd.toIso8601String(),
+  'expected_amount': instance.expectedAmount,
+  'actual_amount': instance.actualAmount,
+  'discrepancy_amount': instance.discrepancyAmount,
+  'total_transactions': instance.totalTransactions,
+  'matched_transactions': instance.matchedTransactions,
+  'unmatched_transactions': instance.unmatchedTransactions,
   'status': _$ReconciliationStatusEnumMap[instance.status]!,
   'notes': instance.notes,
-  'performedByAdminId': instance.performedByAdminId,
-  'performedByAdminName': instance.performedByAdminName,
-  'items': instance.items,
+  'performed_by_admin_id': instance.performedByAdminId,
+  'performed_by_admin_name': instance.performedByAdminName,
+  'items': instance.items?.map((e) => e.toJson()).toList(),
   'metadata': instance.metadata,
-  'createdAt': instance.createdAt?.toIso8601String(),
-  'updatedAt': instance.updatedAt?.toIso8601String(),
+  'created_at': instance.createdAt?.toIso8601String(),
+  'updated_at': instance.updatedAt?.toIso8601String(),
 };
 
 const _$ReconciliationStatusEnumMap = {
@@ -326,34 +328,34 @@ const _$ReconciliationStatusEnumMap = {
 _ReconciliationItem _$ReconciliationItemFromJson(Map<String, dynamic> json) =>
     _ReconciliationItem(
       id: json['id'] as String,
-      transactionId: json['transactionId'] as String,
-      invoiceId: json['invoiceId'] as String,
-      invoiceNumber: json['invoiceNumber'] as String,
-      expectedAmount: (json['expectedAmount'] as num).toDouble(),
-      actualAmount: (json['actualAmount'] as num).toDouble(),
+      transactionId: json['transaction_id'] as String,
+      invoiceId: json['invoice_id'] as String,
+      invoiceNumber: json['invoice_number'] as String,
+      expectedAmount: (json['expected_amount'] as num).toDouble(),
+      actualAmount: (json['actual_amount'] as num).toDouble(),
       discrepancy: (json['discrepancy'] as num).toDouble(),
       status: $enumDecode(_$ReconciliationItemStatusEnumMap, json['status']),
       notes: json['notes'] as String?,
-      matchedAt: json['matchedAt'] == null
+      matchedAt: json['matched_at'] == null
           ? null
-          : DateTime.parse(json['matchedAt'] as String),
-      matchedByAdminId: json['matchedByAdminId'] as String?,
+          : DateTime.parse(json['matched_at'] as String),
+      matchedByAdminId: json['matched_by_admin_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$ReconciliationItemToJson(_ReconciliationItem instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'transactionId': instance.transactionId,
-      'invoiceId': instance.invoiceId,
-      'invoiceNumber': instance.invoiceNumber,
-      'expectedAmount': instance.expectedAmount,
-      'actualAmount': instance.actualAmount,
+      'transaction_id': instance.transactionId,
+      'invoice_id': instance.invoiceId,
+      'invoice_number': instance.invoiceNumber,
+      'expected_amount': instance.expectedAmount,
+      'actual_amount': instance.actualAmount,
       'discrepancy': instance.discrepancy,
       'status': _$ReconciliationItemStatusEnumMap[instance.status]!,
       'notes': instance.notes,
-      'matchedAt': instance.matchedAt?.toIso8601String(),
-      'matchedByAdminId': instance.matchedByAdminId,
+      'matched_at': instance.matchedAt?.toIso8601String(),
+      'matched_by_admin_id': instance.matchedByAdminId,
       'metadata': instance.metadata,
     };
 

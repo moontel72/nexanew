@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\CompanySubscription;
 use App\Models\Invoice;
 use App\Models\SubscriptionPlan;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +76,21 @@ class ProductController extends Controller
             'image_urls' => ['nullable', 'array'],
             'status' => ['nullable', Rule::in(['active', 'inactive', 'archived'])],
             'metadata' => ['nullable', 'array'],
+            'unit_price' => 'nullable|numeric|min:0',
+            'carton_price' => 'nullable|numeric|min:0',
+            'wholesale_price' => 'nullable|numeric|min:0',
+            'currency' => 'nullable|string|size:3',
+            'discount_type' => 'nullable|string|in:percentage,fixed',
+            'discount_value' => 'nullable|numeric|min:0',
+            'moq' => 'nullable|integer|min:1',
+            'marketplace_enabled' => 'nullable|boolean',
+            'bonus_quantity' => 'nullable|integer|min:1',
+            'bonus_threshold' => 'nullable|integer|min:1',
+            'wallet_credit' => 'nullable|numeric|min:0',
+            'promo_code' => 'nullable|string|max:50',
+            'promo_discount' => 'nullable|numeric|min:0|max:100',
+            'tags' => 'nullable|array',
+            'volume_discounts' => 'nullable|array',
         ]);
 
         $product = Product::query()->create(array_merge(
@@ -105,6 +121,21 @@ class ProductController extends Controller
             'image_urls' => ['sometimes', 'array'],
             'status' => ['sometimes', Rule::in(['active', 'inactive', 'archived'])],
             'metadata' => ['sometimes', 'array'],
+            'unit_price' => 'nullable|numeric|min:0',
+            'carton_price' => 'nullable|numeric|min:0',
+            'wholesale_price' => 'nullable|numeric|min:0',
+            'currency' => 'nullable|string|size:3',
+            'discount_type' => 'nullable|string|in:percentage,fixed',
+            'discount_value' => 'nullable|numeric|min:0',
+            'moq' => 'nullable|integer|min:1',
+            'marketplace_enabled' => 'nullable|boolean',
+            'bonus_quantity' => 'nullable|integer|min:1',
+            'bonus_threshold' => 'nullable|integer|min:1',
+            'wallet_credit' => 'nullable|numeric|min:0',
+            'promo_code' => 'nullable|string|max:50',
+            'promo_discount' => 'nullable|numeric|min:0|max:100',
+            'tags' => 'nullable|array',
+            'volume_discounts' => 'nullable|array',
         ]);
 
         $product->fill($data)->save();
@@ -129,9 +160,71 @@ class ProductController extends Controller
         ]]);
     }
 
-    public function categories()
+    public function categories(): JsonResponse
     {
-        return response()->json(['success' => true, 'data' => []]);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'pharmaceutical',
+                'food_beverage',
+                'textile',
+                'electronics',
+                'medical_devices',
+                'cosmetics',
+                'agriculture',
+                'automotive',
+                'construction',
+                'other',
+            ],
+        ]);
+    }
+
+    /**
+     * Toggle marketplace visibility for a product.
+     */
+    public function toggleMarketplace(Request $request, string $id): JsonResponse
+    {
+        $companyId = $request->header('X-Company-Id')
+            ?? $request->query('company_id');
+
+        if (!$companyId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Company ID is required.',
+            ], 400);
+        }
+
+        $product = Product::where('id', $id)
+            ->where('company_id', $companyId)
+            ->first();
+
+        if (!$product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found.',
+            ], 404);
+        }
+
+        // Validation: cannot publish without a price
+        $enabled = $request->boolean('marketplace_enabled', !$product->marketplace_enabled);
+
+        if ($enabled && !$product->unit_price && !$product->carton_price && !$product->wholesale_price) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot publish to marketplace: product has no price set. Please set at least one price (unit, carton, or wholesale).',
+            ], 422);
+        }
+
+        $product->marketplace_enabled = $enabled;
+        $product->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $enabled
+                ? 'Product listed on marketplace.'
+                : 'Product removed from marketplace.',
+            'data' => $product->fresh(),
+        ]);
     }
 
     public function linkCodes(Request $request, Product $product)

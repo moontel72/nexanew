@@ -54,6 +54,21 @@ class FactoryProductsRepository {
     int? defaultWarrantyMonths,
     DateTime? defaultManufacturingDate,
     DateTime? defaultExpiryDate,
+    double? unitPrice,
+    double? cartonPrice,
+    double? wholesalePrice,
+    String? currency,
+    String? discountType,
+    double? discountValue,
+    int? moq,
+    bool? marketplaceEnabled,
+    int? bonusQuantity,
+    int? bonusThreshold,
+    double? walletCredit,
+    String? promoCode,
+    double? promoDiscount,
+    List<String>? tags,
+    List<Map<String, dynamic>>? volumeDiscounts,
   }) async {
     final res = await _api.post(
       ApiEndpoints.createProduct,
@@ -67,8 +82,27 @@ class FactoryProductsRepository {
         'requires_manufacturing_date': requiresManufacturingDate,
         'requires_expiry_date': requiresExpiryDate,
         'requires_warranty': requiresWarranty,
-        'default_warranty_months': ?defaultWarrantyMonths,
+        if (defaultWarrantyMonths != null)
+          'default_warranty_months': defaultWarrantyMonths,
         'status': 'active',
+        // Commercial pricing
+        if (unitPrice != null) 'unit_price': unitPrice,
+        if (cartonPrice != null) 'carton_price': cartonPrice,
+        if (wholesalePrice != null) 'wholesale_price': wholesalePrice,
+        if (currency != null && currency.isNotEmpty) 'currency': currency,
+        if (discountType != null && discountType.isNotEmpty)
+          'discount_type': discountType,
+        if (discountValue != null) 'discount_value': discountValue,
+        if (moq != null) 'moq': moq,
+        if (marketplaceEnabled != null)
+          'marketplace_enabled': marketplaceEnabled,
+        if (bonusQuantity != null) 'bonus_quantity': bonusQuantity,
+        if (bonusThreshold != null) 'bonus_threshold': bonusThreshold,
+        if (walletCredit != null) 'wallet_credit': walletCredit,
+        if (promoCode != null && promoCode.isNotEmpty) 'promo_code': promoCode,
+        if (promoDiscount != null) 'promo_discount': promoDiscount,
+        if (tags != null) 'tags': tags,
+        if (volumeDiscounts != null) 'volume_discounts': volumeDiscounts,
         'metadata': {
           if (defaultManufacturingDate != null)
             'default_manufacturing_date': defaultManufacturingDate
@@ -82,6 +116,76 @@ class FactoryProductsRepository {
                 .first,
         },
       },
+    );
+
+    final map = _asMap(res);
+    final data = _asMap(map['data']);
+    return ProductModel.fromJson(data);
+  }
+
+  Future<ProductModel> updateProduct({
+    required String id,
+    String? name,
+    String? sku,
+    String? description,
+    String? category,
+    String? productType,
+    double? unitPrice,
+    double? cartonPrice,
+    double? wholesalePrice,
+    String? currency,
+    String? discountType,
+    double? discountValue,
+    int? moq,
+    bool? marketplaceEnabled,
+    int? bonusQuantity,
+    int? bonusThreshold,
+    double? walletCredit,
+    String? promoCode,
+    double? promoDiscount,
+    List<String>? tags,
+    List<Map<String, dynamic>>? volumeDiscounts,
+  }) async {
+    final Map<String, dynamic> payload = {};
+
+    if (name != null) payload['name'] = name;
+    if (sku != null) payload['sku'] = sku;
+    if (description != null) payload['description'] = description;
+    if (category != null) payload['category'] = category;
+    if (productType != null) payload['product_type'] = productType;
+    if (unitPrice != null) payload['unit_price'] = unitPrice;
+    if (cartonPrice != null) payload['carton_price'] = cartonPrice;
+    if (wholesalePrice != null) payload['wholesale_price'] = wholesalePrice;
+    if (currency != null && currency.isNotEmpty) payload['currency'] = currency;
+    if (discountType != null && discountType.isNotEmpty)
+      payload['discount_type'] = discountType;
+    if (discountValue != null) payload['discount_value'] = discountValue;
+    if (moq != null) payload['moq'] = moq;
+    if (marketplaceEnabled != null)
+      payload['marketplace_enabled'] = marketplaceEnabled;
+    if (bonusQuantity != null) payload['bonus_quantity'] = bonusQuantity;
+    if (bonusThreshold != null) payload['bonus_threshold'] = bonusThreshold;
+    if (walletCredit != null) payload['wallet_credit'] = walletCredit;
+    if (promoCode != null && promoCode.isNotEmpty)
+      payload['promo_code'] = promoCode;
+    if (promoDiscount != null) payload['promo_discount'] = promoDiscount;
+    if (tags != null) payload['tags'] = tags;
+    if (volumeDiscounts != null) payload['volume_discounts'] = volumeDiscounts;
+
+    final res = await _api.patch(
+      ApiEndpoints.productDetails.replaceFirst('{id}', id),
+      data: payload,
+    );
+
+    final map = _asMap(res);
+    final data = _asMap(map['data']);
+    return ProductModel.fromJson(data);
+  }
+
+  Future<ProductModel> toggleMarketplace(String productId, bool enabled) async {
+    final res = await _api.post(
+      ApiEndpoints.productToggleMarketplace.replaceFirst('{id}', productId),
+      data: {'enabled': enabled},
     );
 
     final map = _asMap(res);

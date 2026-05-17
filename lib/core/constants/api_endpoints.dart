@@ -87,8 +87,10 @@ class ApiEndpoints {
   static const String adminCreateReseller = '/admin/resellers';
   static String adminUpdateReseller(String id) => '/admin/resellers/$id';
   static String adminDeleteReseller(String id) => '/admin/resellers/$id';
-  static String adminUpdateResellerStatus(String id) => '/admin/resellers/$id/status';
-  static String adminSuspendReseller(String id) => '/admin/resellers/$id/suspend';
+  static String adminUpdateResellerStatus(String id) =>
+      '/admin/resellers/$id/status';
+  static String adminSuspendReseller(String id) =>
+      '/admin/resellers/$id/suspend';
 
   // Subscription Management
   static const String adminSubscriptions = '/admin/subscriptions';
@@ -219,6 +221,8 @@ class ApiEndpoints {
   static const String productCodes = '/factory/products/{id}/codes';
   static const String publishProductCodes =
       '/factory/products/{id}/publish-codes';
+  static const String productToggleMarketplace =
+      '/factory/products/{id}/marketplace-toggle';
 
   // ==================== STORE KEEPER ENDPOINTS ====================
   static const String storeKeeperDashboard = '/store/dashboard';

@@ -10,72 +10,72 @@ _PaymentReconciliation _$PaymentReconciliationFromJson(
   Map<String, dynamic> json,
 ) => _PaymentReconciliation(
   id: json['id'] as String,
-  reconciliationNumber: json['reconciliationNumber'] as String,
-  reconciliationDate: DateTime.parse(json['reconciliationDate'] as String),
-  periodStart: DateTime.parse(json['periodStart'] as String),
-  periodEnd: DateTime.parse(json['periodEnd'] as String),
+  reconciliationNumber: json['reconciliation_number'] as String,
+  reconciliationDate: DateTime.parse(json['reconciliation_date'] as String),
+  periodStart: DateTime.parse(json['period_start'] as String),
+  periodEnd: DateTime.parse(json['period_end'] as String),
   status: $enumDecode(_$ReconciliationStatusEnumMap, json['status']),
-  expectedAmount: (json['expectedAmount'] as num).toDouble(),
-  actualAmount: (json['actualAmount'] as num).toDouble(),
-  discrepancyAmount: (json['discrepancyAmount'] as num).toDouble(),
-  totalTransactions: (json['totalTransactions'] as num).toInt(),
-  matchedTransactions: (json['matchedTransactions'] as num).toInt(),
-  unmatchedTransactions: (json['unmatchedTransactions'] as num).toInt(),
-  partialMatchTransactions: (json['partialMatchTransactions'] as num).toInt(),
+  expectedAmount: (json['expected_amount'] as num).toDouble(),
+  actualAmount: (json['actual_amount'] as num).toDouble(),
+  discrepancyAmount: (json['discrepancy_amount'] as num).toDouble(),
+  totalTransactions: (json['total_transactions'] as num).toInt(),
+  matchedTransactions: (json['matched_transactions'] as num).toInt(),
+  unmatchedTransactions: (json['unmatched_transactions'] as num).toInt(),
+  partialMatchTransactions: (json['partial_match_transactions'] as num).toInt(),
   currency: json['currency'] as String,
   notes: json['notes'] as String?,
-  performedByAdminId: json['performedByAdminId'] as String?,
-  performedByAdminName: json['performedByAdminName'] as String?,
-  completedAt: json['completedAt'] == null
+  performedByAdminId: json['performed_by_admin_id'] as String?,
+  performedByAdminName: json['performed_by_admin_name'] as String?,
+  completedAt: json['completed_at'] == null
       ? null
-      : DateTime.parse(json['completedAt'] as String),
-  reviewedAt: json['reviewedAt'] == null
+      : DateTime.parse(json['completed_at'] as String),
+  reviewedAt: json['reviewed_at'] == null
       ? null
-      : DateTime.parse(json['reviewedAt'] as String),
-  reviewedByAdminId: json['reviewedByAdminId'] as String?,
-  reviewedByAdminName: json['reviewedByAdminName'] as String?,
+      : DateTime.parse(json['reviewed_at'] as String),
+  reviewedByAdminId: json['reviewed_by_admin_id'] as String?,
+  reviewedByAdminName: json['reviewed_by_admin_name'] as String?,
   transactions: (json['transactions'] as List<dynamic>?)
       ?.map(
         (e) => ReconciliationTransaction.fromJson(e as Map<String, dynamic>),
       )
       .toList(),
   metadata: json['metadata'] as Map<String, dynamic>?,
-  createdAt: json['createdAt'] == null
+  createdAt: json['created_at'] == null
       ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
+      : DateTime.parse(json['created_at'] as String),
+  updatedAt: json['updated_at'] == null
       ? null
-      : DateTime.parse(json['updatedAt'] as String),
+      : DateTime.parse(json['updated_at'] as String),
 );
 
 Map<String, dynamic> _$PaymentReconciliationToJson(
   _PaymentReconciliation instance,
 ) => <String, dynamic>{
   'id': instance.id,
-  'reconciliationNumber': instance.reconciliationNumber,
-  'reconciliationDate': instance.reconciliationDate.toIso8601String(),
-  'periodStart': instance.periodStart.toIso8601String(),
-  'periodEnd': instance.periodEnd.toIso8601String(),
+  'reconciliation_number': instance.reconciliationNumber,
+  'reconciliation_date': instance.reconciliationDate.toIso8601String(),
+  'period_start': instance.periodStart.toIso8601String(),
+  'period_end': instance.periodEnd.toIso8601String(),
   'status': _$ReconciliationStatusEnumMap[instance.status]!,
-  'expectedAmount': instance.expectedAmount,
-  'actualAmount': instance.actualAmount,
-  'discrepancyAmount': instance.discrepancyAmount,
-  'totalTransactions': instance.totalTransactions,
-  'matchedTransactions': instance.matchedTransactions,
-  'unmatchedTransactions': instance.unmatchedTransactions,
-  'partialMatchTransactions': instance.partialMatchTransactions,
+  'expected_amount': instance.expectedAmount,
+  'actual_amount': instance.actualAmount,
+  'discrepancy_amount': instance.discrepancyAmount,
+  'total_transactions': instance.totalTransactions,
+  'matched_transactions': instance.matchedTransactions,
+  'unmatched_transactions': instance.unmatchedTransactions,
+  'partial_match_transactions': instance.partialMatchTransactions,
   'currency': instance.currency,
   'notes': instance.notes,
-  'performedByAdminId': instance.performedByAdminId,
-  'performedByAdminName': instance.performedByAdminName,
-  'completedAt': instance.completedAt?.toIso8601String(),
-  'reviewedAt': instance.reviewedAt?.toIso8601String(),
-  'reviewedByAdminId': instance.reviewedByAdminId,
-  'reviewedByAdminName': instance.reviewedByAdminName,
-  'transactions': instance.transactions,
+  'performed_by_admin_id': instance.performedByAdminId,
+  'performed_by_admin_name': instance.performedByAdminName,
+  'completed_at': instance.completedAt?.toIso8601String(),
+  'reviewed_at': instance.reviewedAt?.toIso8601String(),
+  'reviewed_by_admin_id': instance.reviewedByAdminId,
+  'reviewed_by_admin_name': instance.reviewedByAdminName,
+  'transactions': instance.transactions?.map((e) => e.toJson()).toList(),
   'metadata': instance.metadata,
-  'createdAt': instance.createdAt?.toIso8601String(),
-  'updatedAt': instance.updatedAt?.toIso8601String(),
+  'created_at': instance.createdAt?.toIso8601String(),
+  'updated_at': instance.updatedAt?.toIso8601String(),
 };
 
 const _$ReconciliationStatusEnumMap = {
@@ -90,73 +90,73 @@ _ReconciliationTransaction _$ReconciliationTransactionFromJson(
   Map<String, dynamic> json,
 ) => _ReconciliationTransaction(
   id: json['id'] as String,
-  transactionId: json['transactionId'] as String,
-  transactionReference: json['transactionReference'] as String,
-  transactionDate: DateTime.parse(json['transactionDate'] as String),
-  transactionAmount: (json['transactionAmount'] as num).toDouble(),
-  transactionCurrency: json['transactionCurrency'] as String,
+  transactionId: json['transaction_id'] as String,
+  transactionReference: json['transaction_reference'] as String,
+  transactionDate: DateTime.parse(json['transaction_date'] as String),
+  transactionAmount: (json['transaction_amount'] as num).toDouble(),
+  transactionCurrency: json['transaction_currency'] as String,
   source: $enumDecode(_$TransactionSourceEnumMap, json['source']),
   status: $enumDecode(_$TransactionStatusEnumMap, json['status']),
-  invoiceId: json['invoiceId'] as String?,
-  invoiceNumber: json['invoiceNumber'] as String?,
-  invoiceAmount: (json['invoiceAmount'] as num?)?.toDouble(),
-  invoiceCurrency: json['invoiceCurrency'] as String?,
-  invoiceDate: json['invoiceDate'] == null
+  invoiceId: json['invoice_id'] as String?,
+  invoiceNumber: json['invoice_number'] as String?,
+  invoiceAmount: (json['invoice_amount'] as num?)?.toDouble(),
+  invoiceCurrency: json['invoice_currency'] as String?,
+  invoiceDate: json['invoice_date'] == null
       ? null
-      : DateTime.parse(json['invoiceDate'] as String),
-  companyId: json['companyId'] as String?,
-  companyName: json['companyName'] as String?,
-  matchedAmount: (json['matchedAmount'] as num?)?.toDouble(),
-  discrepancyAmount: (json['discrepancyAmount'] as num?)?.toDouble(),
+      : DateTime.parse(json['invoice_date'] as String),
+  companyId: json['company_id'] as String?,
+  companyName: json['company_name'] as String?,
+  matchedAmount: (json['matched_amount'] as num?)?.toDouble(),
+  discrepancyAmount: (json['discrepancy_amount'] as num?)?.toDouble(),
   matchStatus: $enumDecodeNullable(
     _$ReconciliationMatchStatusEnumMap,
-    json['matchStatus'],
+    json['match_status'],
   ),
-  matchNotes: json['matchNotes'] as String?,
-  matchedAt: json['matchedAt'] == null
+  matchNotes: json['match_notes'] as String?,
+  matchedAt: json['matched_at'] == null
       ? null
-      : DateTime.parse(json['matchedAt'] as String),
-  matchedByAdminId: json['matchedByAdminId'] as String?,
-  matchedByAdminName: json['matchedByAdminName'] as String?,
-  transactionMetadata: json['transactionMetadata'] as Map<String, dynamic>?,
-  matchMetadata: json['matchMetadata'] as Map<String, dynamic>?,
-  createdAt: json['createdAt'] == null
+      : DateTime.parse(json['matched_at'] as String),
+  matchedByAdminId: json['matched_by_admin_id'] as String?,
+  matchedByAdminName: json['matched_by_admin_name'] as String?,
+  transactionMetadata: json['transaction_metadata'] as Map<String, dynamic>?,
+  matchMetadata: json['match_metadata'] as Map<String, dynamic>?,
+  createdAt: json['created_at'] == null
       ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
+      : DateTime.parse(json['created_at'] as String),
+  updatedAt: json['updated_at'] == null
       ? null
-      : DateTime.parse(json['updatedAt'] as String),
+      : DateTime.parse(json['updated_at'] as String),
 );
 
 Map<String, dynamic> _$ReconciliationTransactionToJson(
   _ReconciliationTransaction instance,
 ) => <String, dynamic>{
   'id': instance.id,
-  'transactionId': instance.transactionId,
-  'transactionReference': instance.transactionReference,
-  'transactionDate': instance.transactionDate.toIso8601String(),
-  'transactionAmount': instance.transactionAmount,
-  'transactionCurrency': instance.transactionCurrency,
+  'transaction_id': instance.transactionId,
+  'transaction_reference': instance.transactionReference,
+  'transaction_date': instance.transactionDate.toIso8601String(),
+  'transaction_amount': instance.transactionAmount,
+  'transaction_currency': instance.transactionCurrency,
   'source': _$TransactionSourceEnumMap[instance.source]!,
   'status': _$TransactionStatusEnumMap[instance.status]!,
-  'invoiceId': instance.invoiceId,
-  'invoiceNumber': instance.invoiceNumber,
-  'invoiceAmount': instance.invoiceAmount,
-  'invoiceCurrency': instance.invoiceCurrency,
-  'invoiceDate': instance.invoiceDate?.toIso8601String(),
-  'companyId': instance.companyId,
-  'companyName': instance.companyName,
-  'matchedAmount': instance.matchedAmount,
-  'discrepancyAmount': instance.discrepancyAmount,
-  'matchStatus': _$ReconciliationMatchStatusEnumMap[instance.matchStatus],
-  'matchNotes': instance.matchNotes,
-  'matchedAt': instance.matchedAt?.toIso8601String(),
-  'matchedByAdminId': instance.matchedByAdminId,
-  'matchedByAdminName': instance.matchedByAdminName,
-  'transactionMetadata': instance.transactionMetadata,
-  'matchMetadata': instance.matchMetadata,
-  'createdAt': instance.createdAt?.toIso8601String(),
-  'updatedAt': instance.updatedAt?.toIso8601String(),
+  'invoice_id': instance.invoiceId,
+  'invoice_number': instance.invoiceNumber,
+  'invoice_amount': instance.invoiceAmount,
+  'invoice_currency': instance.invoiceCurrency,
+  'invoice_date': instance.invoiceDate?.toIso8601String(),
+  'company_id': instance.companyId,
+  'company_name': instance.companyName,
+  'matched_amount': instance.matchedAmount,
+  'discrepancy_amount': instance.discrepancyAmount,
+  'match_status': _$ReconciliationMatchStatusEnumMap[instance.matchStatus],
+  'match_notes': instance.matchNotes,
+  'matched_at': instance.matchedAt?.toIso8601String(),
+  'matched_by_admin_id': instance.matchedByAdminId,
+  'matched_by_admin_name': instance.matchedByAdminName,
+  'transaction_metadata': instance.transactionMetadata,
+  'match_metadata': instance.matchMetadata,
+  'created_at': instance.createdAt?.toIso8601String(),
+  'updated_at': instance.updatedAt?.toIso8601String(),
 };
 
 const _$TransactionSourceEnumMap = {
@@ -186,40 +186,40 @@ const _$ReconciliationMatchStatusEnumMap = {
 _ReconciliationSummary _$ReconciliationSummaryFromJson(
   Map<String, dynamic> json,
 ) => _ReconciliationSummary(
-  totalExpected: (json['totalExpected'] as num?)?.toDouble() ?? 0.0,
-  totalActual: (json['totalActual'] as num?)?.toDouble() ?? 0.0,
-  totalDiscrepancy: (json['totalDiscrepancy'] as num?)?.toDouble() ?? 0.0,
-  totalReconciliations: (json['totalReconciliations'] as num?)?.toInt() ?? 0,
+  totalExpected: (json['total_expected'] as num?)?.toDouble() ?? 0.0,
+  totalActual: (json['total_actual'] as num?)?.toDouble() ?? 0.0,
+  totalDiscrepancy: (json['total_discrepancy'] as num?)?.toDouble() ?? 0.0,
+  totalReconciliations: (json['total_reconciliations'] as num?)?.toInt() ?? 0,
   pendingReconciliations:
-      (json['pendingReconciliations'] as num?)?.toInt() ?? 0,
+      (json['pending_reconciliations'] as num?)?.toInt() ?? 0,
   completedReconciliations:
-      (json['completedReconciliations'] as num?)?.toInt() ?? 0,
+      (json['completed_reconciliations'] as num?)?.toInt() ?? 0,
   requiresReviewReconciliations:
-      (json['requiresReviewReconciliations'] as num?)?.toInt() ?? 0,
-  totalTransactions: (json['totalTransactions'] as num?)?.toInt() ?? 0,
-  matchedTransactions: (json['matchedTransactions'] as num?)?.toInt() ?? 0,
-  unmatchedTransactions: (json['unmatchedTransactions'] as num?)?.toInt() ?? 0,
+      (json['requires_review_reconciliations'] as num?)?.toInt() ?? 0,
+  totalTransactions: (json['total_transactions'] as num?)?.toInt() ?? 0,
+  matchedTransactions: (json['matched_transactions'] as num?)?.toInt() ?? 0,
+  unmatchedTransactions: (json['unmatched_transactions'] as num?)?.toInt() ?? 0,
   partialMatchTransactions:
-      (json['partialMatchTransactions'] as num?)?.toInt() ?? 0,
-  periodStart: json['periodStart'] == null
+      (json['partial_match_transactions'] as num?)?.toInt() ?? 0,
+  periodStart: json['period_start'] == null
       ? null
-      : DateTime.parse(json['periodStart'] as String),
-  periodEnd: json['periodEnd'] == null
+      : DateTime.parse(json['period_start'] as String),
+  periodEnd: json['period_end'] == null
       ? null
-      : DateTime.parse(json['periodEnd'] as String),
-  amountBySource: (json['amountBySource'] as Map<String, dynamic>?)?.map(
+      : DateTime.parse(json['period_end'] as String),
+  amountBySource: (json['amount_by_source'] as Map<String, dynamic>?)?.map(
     (k, e) => MapEntry(
       $enumDecode(_$TransactionSourceEnumMap, k),
       (e as num).toDouble(),
     ),
   ),
-  countBySource: (json['countBySource'] as Map<String, dynamic>?)?.map(
+  countBySource: (json['count_by_source'] as Map<String, dynamic>?)?.map(
     (k, e) => MapEntry(
       $enumDecode(_$TransactionSourceEnumMap, k),
       (e as num).toInt(),
     ),
   ),
-  trendData: (json['trendData'] as List<dynamic>?)
+  trendData: (json['trend_data'] as List<dynamic>?)
       ?.map((e) => ReconciliationTrendData.fromJson(e as Map<String, dynamic>))
       .toList(),
 );
@@ -227,115 +227,115 @@ _ReconciliationSummary _$ReconciliationSummaryFromJson(
 Map<String, dynamic> _$ReconciliationSummaryToJson(
   _ReconciliationSummary instance,
 ) => <String, dynamic>{
-  'totalExpected': instance.totalExpected,
-  'totalActual': instance.totalActual,
-  'totalDiscrepancy': instance.totalDiscrepancy,
-  'totalReconciliations': instance.totalReconciliations,
-  'pendingReconciliations': instance.pendingReconciliations,
-  'completedReconciliations': instance.completedReconciliations,
-  'requiresReviewReconciliations': instance.requiresReviewReconciliations,
-  'totalTransactions': instance.totalTransactions,
-  'matchedTransactions': instance.matchedTransactions,
-  'unmatchedTransactions': instance.unmatchedTransactions,
-  'partialMatchTransactions': instance.partialMatchTransactions,
-  'periodStart': instance.periodStart?.toIso8601String(),
-  'periodEnd': instance.periodEnd?.toIso8601String(),
-  'amountBySource': instance.amountBySource?.map(
+  'total_expected': instance.totalExpected,
+  'total_actual': instance.totalActual,
+  'total_discrepancy': instance.totalDiscrepancy,
+  'total_reconciliations': instance.totalReconciliations,
+  'pending_reconciliations': instance.pendingReconciliations,
+  'completed_reconciliations': instance.completedReconciliations,
+  'requires_review_reconciliations': instance.requiresReviewReconciliations,
+  'total_transactions': instance.totalTransactions,
+  'matched_transactions': instance.matchedTransactions,
+  'unmatched_transactions': instance.unmatchedTransactions,
+  'partial_match_transactions': instance.partialMatchTransactions,
+  'period_start': instance.periodStart?.toIso8601String(),
+  'period_end': instance.periodEnd?.toIso8601String(),
+  'amount_by_source': instance.amountBySource?.map(
     (k, e) => MapEntry(_$TransactionSourceEnumMap[k]!, e),
   ),
-  'countBySource': instance.countBySource?.map(
+  'count_by_source': instance.countBySource?.map(
     (k, e) => MapEntry(_$TransactionSourceEnumMap[k]!, e),
   ),
-  'trendData': instance.trendData,
+  'trend_data': instance.trendData?.map((e) => e.toJson()).toList(),
 };
 
 _ReconciliationTrendData _$ReconciliationTrendDataFromJson(
   Map<String, dynamic> json,
 ) => _ReconciliationTrendData(
   date: DateTime.parse(json['date'] as String),
-  expectedAmount: (json['expectedAmount'] as num).toDouble(),
-  actualAmount: (json['actualAmount'] as num).toDouble(),
-  discrepancyAmount: (json['discrepancyAmount'] as num).toDouble(),
-  transactionCount: (json['transactionCount'] as num).toInt(),
-  matchedCount: (json['matchedCount'] as num).toInt(),
-  unmatchedCount: (json['unmatchedCount'] as num).toInt(),
+  expectedAmount: (json['expected_amount'] as num).toDouble(),
+  actualAmount: (json['actual_amount'] as num).toDouble(),
+  discrepancyAmount: (json['discrepancy_amount'] as num).toDouble(),
+  transactionCount: (json['transaction_count'] as num).toInt(),
+  matchedCount: (json['matched_count'] as num).toInt(),
+  unmatchedCount: (json['unmatched_count'] as num).toInt(),
 );
 
 Map<String, dynamic> _$ReconciliationTrendDataToJson(
   _ReconciliationTrendData instance,
 ) => <String, dynamic>{
   'date': instance.date.toIso8601String(),
-  'expectedAmount': instance.expectedAmount,
-  'actualAmount': instance.actualAmount,
-  'discrepancyAmount': instance.discrepancyAmount,
-  'transactionCount': instance.transactionCount,
-  'matchedCount': instance.matchedCount,
-  'unmatchedCount': instance.unmatchedCount,
+  'expected_amount': instance.expectedAmount,
+  'actual_amount': instance.actualAmount,
+  'discrepancy_amount': instance.discrepancyAmount,
+  'transaction_count': instance.transactionCount,
+  'matched_count': instance.matchedCount,
+  'unmatched_count': instance.unmatchedCount,
 };
 
 _ReconciliationDiscrepancy _$ReconciliationDiscrepancyFromJson(
   Map<String, dynamic> json,
 ) => _ReconciliationDiscrepancy(
   id: json['id'] as String,
-  reconciliationId: json['reconciliationId'] as String,
-  transactionId: json['transactionId'] as String,
-  transactionReference: json['transactionReference'] as String,
-  transactionDate: DateTime.parse(json['transactionDate'] as String),
-  transactionAmount: (json['transactionAmount'] as num).toDouble(),
-  expectedAmount: (json['expectedAmount'] as num).toDouble(),
-  discrepancyAmount: (json['discrepancyAmount'] as num).toDouble(),
+  reconciliationId: json['reconciliation_id'] as String,
+  transactionId: json['transaction_id'] as String,
+  transactionReference: json['transaction_reference'] as String,
+  transactionDate: DateTime.parse(json['transaction_date'] as String),
+  transactionAmount: (json['transaction_amount'] as num).toDouble(),
+  expectedAmount: (json['expected_amount'] as num).toDouble(),
+  discrepancyAmount: (json['discrepancy_amount'] as num).toDouble(),
   type: $enumDecode(_$DiscrepancyTypeEnumMap, json['type']),
   severity: $enumDecode(_$DiscrepancySeverityEnumMap, json['severity']),
-  invoiceId: json['invoiceId'] as String?,
-  invoiceNumber: json['invoiceNumber'] as String?,
-  companyId: json['companyId'] as String?,
-  companyName: json['companyName'] as String?,
+  invoiceId: json['invoice_id'] as String?,
+  invoiceNumber: json['invoice_number'] as String?,
+  companyId: json['company_id'] as String?,
+  companyName: json['company_name'] as String?,
   notes: json['notes'] as String?,
-  resolvedByAdminId: json['resolvedByAdminId'] as String?,
-  resolvedByAdminName: json['resolvedByAdminName'] as String?,
-  resolvedAt: json['resolvedAt'] == null
+  resolvedByAdminId: json['resolved_by_admin_id'] as String?,
+  resolvedByAdminName: json['resolved_by_admin_name'] as String?,
+  resolvedAt: json['resolved_at'] == null
       ? null
-      : DateTime.parse(json['resolvedAt'] as String),
+      : DateTime.parse(json['resolved_at'] as String),
   resolution: $enumDecodeNullable(
     _$DiscrepancyResolutionEnumMap,
     json['resolution'],
   ),
-  resolutionNotes: json['resolutionNotes'] as String?,
+  resolutionNotes: json['resolution_notes'] as String?,
   metadata: json['metadata'] as Map<String, dynamic>?,
-  createdAt: json['createdAt'] == null
+  createdAt: json['created_at'] == null
       ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
+      : DateTime.parse(json['created_at'] as String),
+  updatedAt: json['updated_at'] == null
       ? null
-      : DateTime.parse(json['updatedAt'] as String),
+      : DateTime.parse(json['updated_at'] as String),
 );
 
 Map<String, dynamic> _$ReconciliationDiscrepancyToJson(
   _ReconciliationDiscrepancy instance,
 ) => <String, dynamic>{
   'id': instance.id,
-  'reconciliationId': instance.reconciliationId,
-  'transactionId': instance.transactionId,
-  'transactionReference': instance.transactionReference,
-  'transactionDate': instance.transactionDate.toIso8601String(),
-  'transactionAmount': instance.transactionAmount,
-  'expectedAmount': instance.expectedAmount,
-  'discrepancyAmount': instance.discrepancyAmount,
+  'reconciliation_id': instance.reconciliationId,
+  'transaction_id': instance.transactionId,
+  'transaction_reference': instance.transactionReference,
+  'transaction_date': instance.transactionDate.toIso8601String(),
+  'transaction_amount': instance.transactionAmount,
+  'expected_amount': instance.expectedAmount,
+  'discrepancy_amount': instance.discrepancyAmount,
   'type': _$DiscrepancyTypeEnumMap[instance.type]!,
   'severity': _$DiscrepancySeverityEnumMap[instance.severity]!,
-  'invoiceId': instance.invoiceId,
-  'invoiceNumber': instance.invoiceNumber,
-  'companyId': instance.companyId,
-  'companyName': instance.companyName,
+  'invoice_id': instance.invoiceId,
+  'invoice_number': instance.invoiceNumber,
+  'company_id': instance.companyId,
+  'company_name': instance.companyName,
   'notes': instance.notes,
-  'resolvedByAdminId': instance.resolvedByAdminId,
-  'resolvedByAdminName': instance.resolvedByAdminName,
-  'resolvedAt': instance.resolvedAt?.toIso8601String(),
+  'resolved_by_admin_id': instance.resolvedByAdminId,
+  'resolved_by_admin_name': instance.resolvedByAdminName,
+  'resolved_at': instance.resolvedAt?.toIso8601String(),
   'resolution': _$DiscrepancyResolutionEnumMap[instance.resolution],
-  'resolutionNotes': instance.resolutionNotes,
+  'resolution_notes': instance.resolutionNotes,
   'metadata': instance.metadata,
-  'createdAt': instance.createdAt?.toIso8601String(),
-  'updatedAt': instance.updatedAt?.toIso8601String(),
+  'created_at': instance.createdAt?.toIso8601String(),
+  'updated_at': instance.updatedAt?.toIso8601String(),
 };
 
 const _$DiscrepancyTypeEnumMap = {
@@ -366,23 +366,23 @@ const _$DiscrepancyResolutionEnumMap = {
 _ReconciliationFilter _$ReconciliationFilterFromJson(
   Map<String, dynamic> json,
 ) => _ReconciliationFilter(
-  startDate: json['startDate'] == null
+  startDate: json['start_date'] == null
       ? null
-      : DateTime.parse(json['startDate'] as String),
-  endDate: json['endDate'] == null
+      : DateTime.parse(json['start_date'] as String),
+  endDate: json['end_date'] == null
       ? null
-      : DateTime.parse(json['endDate'] as String),
+      : DateTime.parse(json['end_date'] as String),
   statuses: (json['statuses'] as List<dynamic>?)
       ?.map((e) => $enumDecode(_$ReconciliationStatusEnumMap, e))
       .toList(),
   sources: (json['sources'] as List<dynamic>?)
       ?.map((e) => $enumDecode(_$TransactionSourceEnumMap, e))
       .toList(),
-  searchQuery: json['searchQuery'] as String?,
-  minDiscrepancy: (json['minDiscrepancy'] as num?)?.toDouble(),
-  maxDiscrepancy: (json['maxDiscrepancy'] as num?)?.toDouble(),
-  sortBy: json['sortBy'] as String? ?? 'reconciliationDate',
-  sortDesc: json['sortDesc'] as bool? ?? true,
+  searchQuery: json['search_query'] as String?,
+  minDiscrepancy: (json['min_discrepancy'] as num?)?.toDouble(),
+  maxDiscrepancy: (json['max_discrepancy'] as num?)?.toDouble(),
+  sortBy: json['sort_by'] as String? ?? 'reconciliationDate',
+  sortDesc: json['sort_desc'] as bool? ?? true,
   page: (json['page'] as num?)?.toInt() ?? 1,
   limit: (json['limit'] as num?)?.toInt() ?? 20,
 );
@@ -390,19 +390,19 @@ _ReconciliationFilter _$ReconciliationFilterFromJson(
 Map<String, dynamic> _$ReconciliationFilterToJson(
   _ReconciliationFilter instance,
 ) => <String, dynamic>{
-  'startDate': instance.startDate?.toIso8601String(),
-  'endDate': instance.endDate?.toIso8601String(),
+  'start_date': instance.startDate?.toIso8601String(),
+  'end_date': instance.endDate?.toIso8601String(),
   'statuses': instance.statuses
       ?.map((e) => _$ReconciliationStatusEnumMap[e]!)
       .toList(),
   'sources': instance.sources
       ?.map((e) => _$TransactionSourceEnumMap[e]!)
       .toList(),
-  'searchQuery': instance.searchQuery,
-  'minDiscrepancy': instance.minDiscrepancy,
-  'maxDiscrepancy': instance.maxDiscrepancy,
-  'sortBy': instance.sortBy,
-  'sortDesc': instance.sortDesc,
+  'search_query': instance.searchQuery,
+  'min_discrepancy': instance.minDiscrepancy,
+  'max_discrepancy': instance.maxDiscrepancy,
+  'sort_by': instance.sortBy,
+  'sort_desc': instance.sortDesc,
   'page': instance.page,
   'limit': instance.limit,
 };

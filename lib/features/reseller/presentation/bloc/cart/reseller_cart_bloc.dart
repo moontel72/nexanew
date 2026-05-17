@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:nexatrace_system/shared/models/order/cart_item_model.dart';
+import 'package:nexatrace_system/shared/models/product/product_model.dart';
 import 'package:nexatrace_system/shared/models/reseller/reseller_marketplace_product_model.dart';
 
 // ---------------------------------------------------------------------------
@@ -48,16 +49,28 @@ final class ResellerCartState {
   /// Grouped by factoryId → list of cart items.
   final Map<String, List<CartItemModel>> itemsByFactory;
 
-  /// Total amount across all factories.
+  /// Total amount across all factories (sum of unitPrice × qty).
   final double totalAmount;
 
   /// Total unique item count (not quantity).
   final int itemCount;
 
+  /// Sum of listPrice × qty per factory.
+  final Map<String, double> subtotalByFactory;
+
+  /// Sum of discountAmount per factory.
+  final Map<String, double> discountByFactory;
+
+  /// Sum of taxAmount per factory.
+  final Map<String, double> taxByFactory;
+
   const ResellerCartState({
     this.itemsByFactory = const {},
     this.totalAmount = 0.0,
     this.itemCount = 0,
+    this.subtotalByFactory = const {},
+    this.discountByFactory = const {},
+    this.taxByFactory = const {},
   });
 
   ResellerCartState copyWith({
@@ -66,16 +79,33 @@ final class ResellerCartState {
     final map = itemsByFactory ?? this.itemsByFactory;
     double total = 0;
     int count = 0;
-    for (final list in map.values) {
-      for (final item in list) {
+    final subtotals = <String, double>{};
+    final discounts = <String, double>{};
+    final taxes = <String, double>{};
+
+    for (final entry in map.entries) {
+      double factorySubtotal = 0;
+      double factoryDiscount = 0;
+      double factoryTax = 0;
+      for (final item in entry.value) {
         total += item.unitPrice * item.quantity;
+        factorySubtotal += item.listPrice * item.quantity;
+        factoryDiscount += item.discountAmount;
+        factoryTax += item.taxAmount;
         count++;
       }
+      subtotals[entry.key] = factorySubtotal;
+      discounts[entry.key] = factoryDiscount;
+      taxes[entry.key] = factoryTax;
     }
+
     return ResellerCartState(
       itemsByFactory: map,
       totalAmount: total,
       itemCount: count,
+      subtotalByFactory: subtotals,
+      discountByFactory: discounts,
+      taxByFactory: taxes,
     );
   }
 
@@ -83,7 +113,7 @@ final class ResellerCartState {
   List<CartItemModel> get allItems =>
       itemsByFactory.values.expand((e) => e).toList();
 
-  /// Grouped subtotals per factory.
+  /// Grouped subtotals per factory (unitPrice × qty).
   Map<String, double> get subtotalsByFactory {
     final map = <String, double>{};
     itemsByFactory.forEach((factoryId, items) {
@@ -102,6 +132,8 @@ final class ResellerCartState {
 // ---------------------------------------------------------------------------
 
 class ResellerCartBloc extends Bloc<ResellerCartEvent, ResellerCartState> {
+  static const double _defaultTaxRate = 0.15;
+
   ResellerCartBloc() : super(const ResellerCartState()) {
     on<AddToCart>(_onAddToCart);
     on<RemoveFromCart>(_onRemoveFromCart);
@@ -116,6 +148,43 @@ class ResellerCartBloc extends Bloc<ResellerCartEvent, ResellerCartState> {
 
     final existingIdx = list.indexWhere((e) => e.productId == event.product.id);
 
+    // --- Pricing computation ---
+    final listPrice = event.product.price; // base MSRP
+    final int totalQty =
+        (existingIdx >= 0 ? list[existingIdx].quantity : 0) + event.quantity;
+
+    // Determine discount percent from volume tiers or promo
+    double discountPercent = 0.0;
+    String? discountType;
+
+    // Check volume discounts
+    final volumeDiscounts = event.product.volumeDiscounts;
+    if (volumeDiscounts != null && volumeDiscounts.isNotEmpty) {
+      // Sort tiers by minQuantity descending, pick highest applicable tier
+      final sorted = List<VolumeDiscountTier>.from(volumeDiscounts)
+        ..sort((a, b) => b.minQuantity.compareTo(a.minQuantity));
+      for (final tier in sorted) {
+        if (totalQty >= tier.minQuantity) {
+          discountPercent = tier.discountPercent;
+          discountType = 'volume';
+          break;
+        }
+      }
+    }
+
+    // Check promo discount (takes precedence if higher)
+    if (event.product.promoDiscount != null &&
+        event.product.promoDiscount! > discountPercent) {
+      discountPercent = event.product.promoDiscount!;
+      discountType = 'promo';
+    }
+
+    final discountAmount = listPrice * discountPercent * totalQty;
+    final unitPrice = listPrice * (1 - discountPercent);
+    final taxRate = _defaultTaxRate;
+    final taxAmount = unitPrice * totalQty * taxRate;
+    final lineTotal = (unitPrice * totalQty) + taxAmount;
+
     final meta = <String, dynamic>{
       'product_name': event.product.name,
       'sku': event.product.sku,
@@ -127,8 +196,15 @@ class ResellerCartBloc extends Bloc<ResellerCartEvent, ResellerCartState> {
         productId: existing.productId,
         tenantId: existing.tenantId,
         factoryId: existing.factoryId,
-        quantity: existing.quantity + event.quantity,
-        unitPrice: existing.unitPrice,
+        quantity: totalQty,
+        unitPrice: unitPrice,
+        listPrice: listPrice,
+        discountPercent: discountPercent > 0 ? discountPercent : null,
+        discountAmount: discountAmount,
+        taxRate: taxRate,
+        taxAmount: taxAmount,
+        lineTotal: lineTotal,
+        discountType: discountType,
         metadata: meta,
       );
     } else {
@@ -137,8 +213,15 @@ class ResellerCartBloc extends Bloc<ResellerCartEvent, ResellerCartState> {
           productId: event.product.id,
           tenantId: event.product.tenantId,
           factoryId: event.product.factoryId,
-          quantity: event.quantity,
-          unitPrice: event.product.price,
+          quantity: totalQty,
+          unitPrice: unitPrice,
+          listPrice: listPrice,
+          discountPercent: discountPercent > 0 ? discountPercent : null,
+          discountAmount: discountAmount,
+          taxRate: taxRate,
+          taxAmount: taxAmount,
+          lineTotal: lineTotal,
+          discountType: discountType,
           metadata: meta,
         ),
       );
@@ -181,13 +264,31 @@ class ResellerCartBloc extends Bloc<ResellerCartEvent, ResellerCartState> {
     final idx = list.indexWhere((e) => e.productId == event.productId);
 
     if (idx >= 0) {
+      final existing = list[idx];
+      final qty = event.newQuantity;
+      final listPrice = existing.listPrice;
+      final discountPercent = existing.discountPercent ?? 0.0;
+      final unitPrice = listPrice * (1 - discountPercent);
+      final discountAmount = listPrice * discountPercent * qty;
+      final taxRate = existing.taxRate;
+      final taxAmount = unitPrice * qty * taxRate;
+      final lineTotal = (unitPrice * qty) + taxAmount;
+
       list[idx] = CartItemModel(
-        productId: list[idx].productId,
-        tenantId: list[idx].tenantId,
-        factoryId: list[idx].factoryId,
-        quantity: event.newQuantity,
-        unitPrice: list[idx].unitPrice,
-        metadata: list[idx].metadata,
+        productId: existing.productId,
+        tenantId: existing.tenantId,
+        factoryId: existing.factoryId,
+        quantity: qty,
+        unitPrice: unitPrice,
+        listPrice: listPrice,
+        discountPercent: existing.discountPercent,
+        discountAmount: discountAmount,
+        taxRate: taxRate,
+        taxAmount: taxAmount,
+        lineTotal: lineTotal,
+        discountType: existing.discountType,
+        bonusQuantity: existing.bonusQuantity,
+        metadata: existing.metadata,
       );
       map[event.factoryId] = list;
       emit(state.copyWith(itemsByFactory: map));

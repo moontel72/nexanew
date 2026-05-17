@@ -14,37 +14,37 @@ _BaseCodeModel _$BaseCodeModelFromJson(Map<String, dynamic> json) =>
       status:
           $enumDecodeNullable(_$CodeStatusEnumMap, json['status']) ??
           CodeStatus.generated,
-      factoryId: json['factoryId'] as String,
-      subscriptionPlanId: json['subscriptionPlanId'] as String,
-      storeKeeperCode: json['storeKeeperCode'] as String,
-      internationalCode: json['internationalCode'] as String?,
-      batchId: json['batchId'] as String,
-      generatedAt: DateTime.parse(json['generatedAt'] as String),
-      linkedAt: json['linkedAt'] == null
+      factoryId: json['factory_id'] as String,
+      subscriptionPlanId: json['subscription_plan_id'] as String,
+      storeKeeperCode: json['store_keeper_code'] as String,
+      internationalCode: json['international_code'] as String?,
+      batchId: json['batch_id'] as String,
+      generatedAt: DateTime.parse(json['generated_at'] as String),
+      linkedAt: json['linked_at'] == null
           ? null
-          : DateTime.parse(json['linkedAt'] as String),
-      publishedAt: json['publishedAt'] == null
+          : DateTime.parse(json['linked_at'] as String),
+      publishedAt: json['published_at'] == null
           ? null
-          : DateTime.parse(json['publishedAt'] as String),
-      deactivatedAt: json['deactivatedAt'] == null
+          : DateTime.parse(json['published_at'] as String),
+      deactivatedAt: json['deactivated_at'] == null
           ? null
-          : DateTime.parse(json['deactivatedAt'] as String),
-      productId: json['productId'] as String?,
-      productBatchNumber: json['productBatchNumber'] as String?,
-      manufacturingDate: json['manufacturingDate'] == null
+          : DateTime.parse(json['deactivated_at'] as String),
+      productId: json['product_id'] as String?,
+      productBatchNumber: json['product_batch_number'] as String?,
+      manufacturingDate: json['manufacturing_date'] == null
           ? null
-          : DateTime.parse(json['manufacturingDate'] as String),
-      expiryDate: json['expiryDate'] == null
+          : DateTime.parse(json['manufacturing_date'] as String),
+      expiryDate: json['expiry_date'] == null
           ? null
-          : DateTime.parse(json['expiryDate'] as String),
-      warrantyMonths: (json['warrantyMonths'] as num?)?.toInt(),
-      qrCodeData: json['qrCodeData'] as String?,
-      barcodeData: json['barcodeData'] as String?,
+          : DateTime.parse(json['expiry_date'] as String),
+      warrantyMonths: (json['warranty_months'] as num?)?.toInt(),
+      qrCodeData: json['qr_code_data'] as String?,
+      barcodeData: json['barcode_data'] as String?,
       metadata: json['metadata'] as String?,
       version: (json['version'] as num?)?.toInt() ?? 1,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      isDeleted: json['isDeleted'] as bool? ?? false,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      isDeleted: json['is_deleted'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$BaseCodeModelToJson(_BaseCodeModel instance) =>
@@ -53,27 +53,27 @@ Map<String, dynamic> _$BaseCodeModelToJson(_BaseCodeModel instance) =>
       'code': instance.code,
       'type': _$CodeTypeEnumMap[instance.type]!,
       'status': _$CodeStatusEnumMap[instance.status]!,
-      'factoryId': instance.factoryId,
-      'subscriptionPlanId': instance.subscriptionPlanId,
-      'storeKeeperCode': instance.storeKeeperCode,
-      'internationalCode': instance.internationalCode,
-      'batchId': instance.batchId,
-      'generatedAt': instance.generatedAt.toIso8601String(),
-      'linkedAt': instance.linkedAt?.toIso8601String(),
-      'publishedAt': instance.publishedAt?.toIso8601String(),
-      'deactivatedAt': instance.deactivatedAt?.toIso8601String(),
-      'productId': instance.productId,
-      'productBatchNumber': instance.productBatchNumber,
-      'manufacturingDate': instance.manufacturingDate?.toIso8601String(),
-      'expiryDate': instance.expiryDate?.toIso8601String(),
-      'warrantyMonths': instance.warrantyMonths,
-      'qrCodeData': instance.qrCodeData,
-      'barcodeData': instance.barcodeData,
+      'factory_id': instance.factoryId,
+      'subscription_plan_id': instance.subscriptionPlanId,
+      'store_keeper_code': instance.storeKeeperCode,
+      'international_code': instance.internationalCode,
+      'batch_id': instance.batchId,
+      'generated_at': instance.generatedAt.toIso8601String(),
+      'linked_at': instance.linkedAt?.toIso8601String(),
+      'published_at': instance.publishedAt?.toIso8601String(),
+      'deactivated_at': instance.deactivatedAt?.toIso8601String(),
+      'product_id': instance.productId,
+      'product_batch_number': instance.productBatchNumber,
+      'manufacturing_date': instance.manufacturingDate?.toIso8601String(),
+      'expiry_date': instance.expiryDate?.toIso8601String(),
+      'warranty_months': instance.warrantyMonths,
+      'qr_code_data': instance.qrCodeData,
+      'barcode_data': instance.barcodeData,
       'metadata': instance.metadata,
       'version': instance.version,
-      'createdAt': instance.createdAt.toIso8601String(),
-      'updatedAt': instance.updatedAt.toIso8601String(),
-      'isDeleted': instance.isDeleted,
+      'created_at': instance.createdAt.toIso8601String(),
+      'updated_at': instance.updatedAt.toIso8601String(),
+      'is_deleted': instance.isDeleted,
     };
 
 const _$CodeTypeEnumMap = {

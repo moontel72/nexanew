@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$OrderModel {
 
- String get id; String get resellerId; String get tenantId; String get factoryId; String get orderStatus; List<CartItemModel> get items; double get totalAmount; String get currency; DateTime? get createdAt; DateTime? get updatedAt; Map<String, dynamic>? get metadata;
+ String get id; String get resellerId; String get tenantId; String get factoryId; String get orderStatus; List<CartItemModel> get items; double get totalAmount; String get currency; double get subtotal; double get discountTotal; double get taxTotal; double get grandTotal; String? get pricingProfileId; DateTime? get createdAt; DateTime? get updatedAt; Map<String, dynamic>? get metadata;
 /// Create a copy of OrderModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $OrderModelCopyWith<OrderModel> get copyWith => _$OrderModelCopyWithImpl<OrderMo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is OrderModel&&(identical(other.id, id) || other.id == id)&&(identical(other.resellerId, resellerId) || other.resellerId == resellerId)&&(identical(other.tenantId, tenantId) || other.tenantId == tenantId)&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.orderStatus, orderStatus) || other.orderStatus == orderStatus)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&const DeepCollectionEquality().equals(other.metadata, metadata));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OrderModel&&(identical(other.id, id) || other.id == id)&&(identical(other.resellerId, resellerId) || other.resellerId == resellerId)&&(identical(other.tenantId, tenantId) || other.tenantId == tenantId)&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.orderStatus, orderStatus) || other.orderStatus == orderStatus)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.subtotal, subtotal) || other.subtotal == subtotal)&&(identical(other.discountTotal, discountTotal) || other.discountTotal == discountTotal)&&(identical(other.taxTotal, taxTotal) || other.taxTotal == taxTotal)&&(identical(other.grandTotal, grandTotal) || other.grandTotal == grandTotal)&&(identical(other.pricingProfileId, pricingProfileId) || other.pricingProfileId == pricingProfileId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&const DeepCollectionEquality().equals(other.metadata, metadata));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,resellerId,tenantId,factoryId,orderStatus,const DeepCollectionEquality().hash(items),totalAmount,currency,createdAt,updatedAt,const DeepCollectionEquality().hash(metadata));
+int get hashCode => Object.hash(runtimeType,id,resellerId,tenantId,factoryId,orderStatus,const DeepCollectionEquality().hash(items),totalAmount,currency,subtotal,discountTotal,taxTotal,grandTotal,pricingProfileId,createdAt,updatedAt,const DeepCollectionEquality().hash(metadata));
 
 @override
 String toString() {
-  return 'OrderModel(id: $id, resellerId: $resellerId, tenantId: $tenantId, factoryId: $factoryId, orderStatus: $orderStatus, items: $items, totalAmount: $totalAmount, currency: $currency, createdAt: $createdAt, updatedAt: $updatedAt, metadata: $metadata)';
+  return 'OrderModel(id: $id, resellerId: $resellerId, tenantId: $tenantId, factoryId: $factoryId, orderStatus: $orderStatus, items: $items, totalAmount: $totalAmount, currency: $currency, subtotal: $subtotal, discountTotal: $discountTotal, taxTotal: $taxTotal, grandTotal: $grandTotal, pricingProfileId: $pricingProfileId, createdAt: $createdAt, updatedAt: $updatedAt, metadata: $metadata)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $OrderModelCopyWith<$Res>  {
   factory $OrderModelCopyWith(OrderModel value, $Res Function(OrderModel) _then) = _$OrderModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String resellerId, String tenantId, String factoryId, String orderStatus, List<CartItemModel> items, double totalAmount, String currency, DateTime? createdAt, DateTime? updatedAt, Map<String, dynamic>? metadata
+ String id, String resellerId, String tenantId, String factoryId, String orderStatus, List<CartItemModel> items, double totalAmount, String currency, double subtotal, double discountTotal, double taxTotal, double grandTotal, String? pricingProfileId, DateTime? createdAt, DateTime? updatedAt, Map<String, dynamic>? metadata
 });
 
 
@@ -65,7 +65,7 @@ class _$OrderModelCopyWithImpl<$Res>
 
 /// Create a copy of OrderModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? resellerId = null,Object? tenantId = null,Object? factoryId = null,Object? orderStatus = null,Object? items = null,Object? totalAmount = null,Object? currency = null,Object? createdAt = freezed,Object? updatedAt = freezed,Object? metadata = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? resellerId = null,Object? tenantId = null,Object? factoryId = null,Object? orderStatus = null,Object? items = null,Object? totalAmount = null,Object? currency = null,Object? subtotal = null,Object? discountTotal = null,Object? taxTotal = null,Object? grandTotal = null,Object? pricingProfileId = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,Object? metadata = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,resellerId: null == resellerId ? _self.resellerId : resellerId // ignore: cast_nullable_to_non_nullable
@@ -75,7 +75,12 @@ as String,orderStatus: null == orderStatus ? _self.orderStatus : orderStatus // 
 as String,items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
 as List<CartItemModel>,totalAmount: null == totalAmount ? _self.totalAmount : totalAmount // ignore: cast_nullable_to_non_nullable
 as double,currency: null == currency ? _self.currency : currency // ignore: cast_nullable_to_non_nullable
-as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,subtotal: null == subtotal ? _self.subtotal : subtotal // ignore: cast_nullable_to_non_nullable
+as double,discountTotal: null == discountTotal ? _self.discountTotal : discountTotal // ignore: cast_nullable_to_non_nullable
+as double,taxTotal: null == taxTotal ? _self.taxTotal : taxTotal // ignore: cast_nullable_to_non_nullable
+as double,grandTotal: null == grandTotal ? _self.grandTotal : grandTotal // ignore: cast_nullable_to_non_nullable
+as double,pricingProfileId: freezed == pricingProfileId ? _self.pricingProfileId : pricingProfileId // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,metadata: freezed == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,
@@ -163,10 +168,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String resellerId,  String tenantId,  String factoryId,  String orderStatus,  List<CartItemModel> items,  double totalAmount,  String currency,  DateTime? createdAt,  DateTime? updatedAt,  Map<String, dynamic>? metadata)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String resellerId,  String tenantId,  String factoryId,  String orderStatus,  List<CartItemModel> items,  double totalAmount,  String currency,  double subtotal,  double discountTotal,  double taxTotal,  double grandTotal,  String? pricingProfileId,  DateTime? createdAt,  DateTime? updatedAt,  Map<String, dynamic>? metadata)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OrderModel() when $default != null:
-return $default(_that.id,_that.resellerId,_that.tenantId,_that.factoryId,_that.orderStatus,_that.items,_that.totalAmount,_that.currency,_that.createdAt,_that.updatedAt,_that.metadata);case _:
+return $default(_that.id,_that.resellerId,_that.tenantId,_that.factoryId,_that.orderStatus,_that.items,_that.totalAmount,_that.currency,_that.subtotal,_that.discountTotal,_that.taxTotal,_that.grandTotal,_that.pricingProfileId,_that.createdAt,_that.updatedAt,_that.metadata);case _:
   return orElse();
 
 }
@@ -184,10 +189,10 @@ return $default(_that.id,_that.resellerId,_that.tenantId,_that.factoryId,_that.o
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String resellerId,  String tenantId,  String factoryId,  String orderStatus,  List<CartItemModel> items,  double totalAmount,  String currency,  DateTime? createdAt,  DateTime? updatedAt,  Map<String, dynamic>? metadata)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String resellerId,  String tenantId,  String factoryId,  String orderStatus,  List<CartItemModel> items,  double totalAmount,  String currency,  double subtotal,  double discountTotal,  double taxTotal,  double grandTotal,  String? pricingProfileId,  DateTime? createdAt,  DateTime? updatedAt,  Map<String, dynamic>? metadata)  $default,) {final _that = this;
 switch (_that) {
 case _OrderModel():
-return $default(_that.id,_that.resellerId,_that.tenantId,_that.factoryId,_that.orderStatus,_that.items,_that.totalAmount,_that.currency,_that.createdAt,_that.updatedAt,_that.metadata);case _:
+return $default(_that.id,_that.resellerId,_that.tenantId,_that.factoryId,_that.orderStatus,_that.items,_that.totalAmount,_that.currency,_that.subtotal,_that.discountTotal,_that.taxTotal,_that.grandTotal,_that.pricingProfileId,_that.createdAt,_that.updatedAt,_that.metadata);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -204,10 +209,10 @@ return $default(_that.id,_that.resellerId,_that.tenantId,_that.factoryId,_that.o
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String resellerId,  String tenantId,  String factoryId,  String orderStatus,  List<CartItemModel> items,  double totalAmount,  String currency,  DateTime? createdAt,  DateTime? updatedAt,  Map<String, dynamic>? metadata)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String resellerId,  String tenantId,  String factoryId,  String orderStatus,  List<CartItemModel> items,  double totalAmount,  String currency,  double subtotal,  double discountTotal,  double taxTotal,  double grandTotal,  String? pricingProfileId,  DateTime? createdAt,  DateTime? updatedAt,  Map<String, dynamic>? metadata)?  $default,) {final _that = this;
 switch (_that) {
 case _OrderModel() when $default != null:
-return $default(_that.id,_that.resellerId,_that.tenantId,_that.factoryId,_that.orderStatus,_that.items,_that.totalAmount,_that.currency,_that.createdAt,_that.updatedAt,_that.metadata);case _:
+return $default(_that.id,_that.resellerId,_that.tenantId,_that.factoryId,_that.orderStatus,_that.items,_that.totalAmount,_that.currency,_that.subtotal,_that.discountTotal,_that.taxTotal,_that.grandTotal,_that.pricingProfileId,_that.createdAt,_that.updatedAt,_that.metadata);case _:
   return null;
 
 }
@@ -219,7 +224,7 @@ return $default(_that.id,_that.resellerId,_that.tenantId,_that.factoryId,_that.o
 @JsonSerializable()
 
 class _OrderModel implements OrderModel {
-  const _OrderModel({required this.id, required this.resellerId, required this.tenantId, required this.factoryId, this.orderStatus = 'pending', final  List<CartItemModel> items = const <CartItemModel>[], this.totalAmount = 0.0, this.currency = 'PKR', this.createdAt, this.updatedAt, final  Map<String, dynamic>? metadata}): _items = items,_metadata = metadata;
+  const _OrderModel({required this.id, required this.resellerId, required this.tenantId, required this.factoryId, this.orderStatus = 'pending', final  List<CartItemModel> items = const <CartItemModel>[], this.totalAmount = 0.0, this.currency = 'PKR', this.subtotal = 0.0, this.discountTotal = 0.0, this.taxTotal = 0.0, this.grandTotal = 0.0, this.pricingProfileId, this.createdAt, this.updatedAt, final  Map<String, dynamic>? metadata}): _items = items,_metadata = metadata;
   factory _OrderModel.fromJson(Map<String, dynamic> json) => _$OrderModelFromJson(json);
 
 @override final  String id;
@@ -236,6 +241,11 @@ class _OrderModel implements OrderModel {
 
 @override@JsonKey() final  double totalAmount;
 @override@JsonKey() final  String currency;
+@override@JsonKey() final  double subtotal;
+@override@JsonKey() final  double discountTotal;
+@override@JsonKey() final  double taxTotal;
+@override@JsonKey() final  double grandTotal;
+@override final  String? pricingProfileId;
 @override final  DateTime? createdAt;
 @override final  DateTime? updatedAt;
  final  Map<String, dynamic>? _metadata;
@@ -261,16 +271,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OrderModel&&(identical(other.id, id) || other.id == id)&&(identical(other.resellerId, resellerId) || other.resellerId == resellerId)&&(identical(other.tenantId, tenantId) || other.tenantId == tenantId)&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.orderStatus, orderStatus) || other.orderStatus == orderStatus)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&const DeepCollectionEquality().equals(other._metadata, _metadata));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OrderModel&&(identical(other.id, id) || other.id == id)&&(identical(other.resellerId, resellerId) || other.resellerId == resellerId)&&(identical(other.tenantId, tenantId) || other.tenantId == tenantId)&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.orderStatus, orderStatus) || other.orderStatus == orderStatus)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.subtotal, subtotal) || other.subtotal == subtotal)&&(identical(other.discountTotal, discountTotal) || other.discountTotal == discountTotal)&&(identical(other.taxTotal, taxTotal) || other.taxTotal == taxTotal)&&(identical(other.grandTotal, grandTotal) || other.grandTotal == grandTotal)&&(identical(other.pricingProfileId, pricingProfileId) || other.pricingProfileId == pricingProfileId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&const DeepCollectionEquality().equals(other._metadata, _metadata));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,resellerId,tenantId,factoryId,orderStatus,const DeepCollectionEquality().hash(_items),totalAmount,currency,createdAt,updatedAt,const DeepCollectionEquality().hash(_metadata));
+int get hashCode => Object.hash(runtimeType,id,resellerId,tenantId,factoryId,orderStatus,const DeepCollectionEquality().hash(_items),totalAmount,currency,subtotal,discountTotal,taxTotal,grandTotal,pricingProfileId,createdAt,updatedAt,const DeepCollectionEquality().hash(_metadata));
 
 @override
 String toString() {
-  return 'OrderModel(id: $id, resellerId: $resellerId, tenantId: $tenantId, factoryId: $factoryId, orderStatus: $orderStatus, items: $items, totalAmount: $totalAmount, currency: $currency, createdAt: $createdAt, updatedAt: $updatedAt, metadata: $metadata)';
+  return 'OrderModel(id: $id, resellerId: $resellerId, tenantId: $tenantId, factoryId: $factoryId, orderStatus: $orderStatus, items: $items, totalAmount: $totalAmount, currency: $currency, subtotal: $subtotal, discountTotal: $discountTotal, taxTotal: $taxTotal, grandTotal: $grandTotal, pricingProfileId: $pricingProfileId, createdAt: $createdAt, updatedAt: $updatedAt, metadata: $metadata)';
 }
 
 
@@ -281,7 +291,7 @@ abstract mixin class _$OrderModelCopyWith<$Res> implements $OrderModelCopyWith<$
   factory _$OrderModelCopyWith(_OrderModel value, $Res Function(_OrderModel) _then) = __$OrderModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String resellerId, String tenantId, String factoryId, String orderStatus, List<CartItemModel> items, double totalAmount, String currency, DateTime? createdAt, DateTime? updatedAt, Map<String, dynamic>? metadata
+ String id, String resellerId, String tenantId, String factoryId, String orderStatus, List<CartItemModel> items, double totalAmount, String currency, double subtotal, double discountTotal, double taxTotal, double grandTotal, String? pricingProfileId, DateTime? createdAt, DateTime? updatedAt, Map<String, dynamic>? metadata
 });
 
 
@@ -298,7 +308,7 @@ class __$OrderModelCopyWithImpl<$Res>
 
 /// Create a copy of OrderModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? resellerId = null,Object? tenantId = null,Object? factoryId = null,Object? orderStatus = null,Object? items = null,Object? totalAmount = null,Object? currency = null,Object? createdAt = freezed,Object? updatedAt = freezed,Object? metadata = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? resellerId = null,Object? tenantId = null,Object? factoryId = null,Object? orderStatus = null,Object? items = null,Object? totalAmount = null,Object? currency = null,Object? subtotal = null,Object? discountTotal = null,Object? taxTotal = null,Object? grandTotal = null,Object? pricingProfileId = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,Object? metadata = freezed,}) {
   return _then(_OrderModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,resellerId: null == resellerId ? _self.resellerId : resellerId // ignore: cast_nullable_to_non_nullable
@@ -308,7 +318,12 @@ as String,orderStatus: null == orderStatus ? _self.orderStatus : orderStatus // 
 as String,items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
 as List<CartItemModel>,totalAmount: null == totalAmount ? _self.totalAmount : totalAmount // ignore: cast_nullable_to_non_nullable
 as double,currency: null == currency ? _self.currency : currency // ignore: cast_nullable_to_non_nullable
-as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,subtotal: null == subtotal ? _self.subtotal : subtotal // ignore: cast_nullable_to_non_nullable
+as double,discountTotal: null == discountTotal ? _self.discountTotal : discountTotal // ignore: cast_nullable_to_non_nullable
+as double,taxTotal: null == taxTotal ? _self.taxTotal : taxTotal // ignore: cast_nullable_to_non_nullable
+as double,grandTotal: null == grandTotal ? _self.grandTotal : grandTotal // ignore: cast_nullable_to_non_nullable
+as double,pricingProfileId: freezed == pricingProfileId ? _self.pricingProfileId : pricingProfileId // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,metadata: freezed == metadata ? _self._metadata : metadata // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,

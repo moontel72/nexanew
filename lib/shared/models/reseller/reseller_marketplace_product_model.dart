@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import '../product/product_model.dart'; // for VolumeDiscountTier
 
 part 'reseller_marketplace_product_model.freezed.dart';
 part 'reseller_marketplace_product_model.g.dart';
@@ -17,10 +18,11 @@ abstract class ResellerMarketplaceProductModel
     @Default('active') String status,
     @Default(0.0) double price,
     @Default('PKR') String currency,
+    List<VolumeDiscountTier>? volumeDiscounts,
+    double? promoDiscount,
     Map<String, dynamic>? metadata,
   }) = _ResellerMarketplaceProductModel;
 
   factory ResellerMarketplaceProductModel.fromJson(Map<String, dynamic> json) =>
       _$ResellerMarketplaceProductModelFromJson(json);
 }
-

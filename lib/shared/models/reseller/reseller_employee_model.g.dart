@@ -10,17 +10,17 @@ _ResellerEmployeeModel _$ResellerEmployeeModelFromJson(
   Map<String, dynamic> json,
 ) => _ResellerEmployeeModel(
   id: json['id'] as String,
-  resellerId: json['resellerId'] as String,
-  shopId: json['shopId'] as String,
+  resellerId: json['reseller_id'] as String,
+  shopId: json['shop_id'] as String,
   name: json['name'] as String,
   role: $enumDecode(_$ResellerEmployeeRoleEnumMap, json['role']),
-  isActive: json['isActive'] as bool? ?? true,
-  createdAt: json['createdAt'] == null
+  isActive: json['is_active'] as bool? ?? true,
+  createdAt: json['created_at'] == null
       ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
+      : DateTime.parse(json['created_at'] as String),
+  updatedAt: json['updated_at'] == null
       ? null
-      : DateTime.parse(json['updatedAt'] as String),
+      : DateTime.parse(json['updated_at'] as String),
   metadata: json['metadata'] as Map<String, dynamic>?,
 );
 
@@ -28,13 +28,13 @@ Map<String, dynamic> _$ResellerEmployeeModelToJson(
   _ResellerEmployeeModel instance,
 ) => <String, dynamic>{
   'id': instance.id,
-  'resellerId': instance.resellerId,
-  'shopId': instance.shopId,
+  'reseller_id': instance.resellerId,
+  'shop_id': instance.shopId,
   'name': instance.name,
   'role': _$ResellerEmployeeRoleEnumMap[instance.role]!,
-  'isActive': instance.isActive,
-  'createdAt': instance.createdAt?.toIso8601String(),
-  'updatedAt': instance.updatedAt?.toIso8601String(),
+  'is_active': instance.isActive,
+  'created_at': instance.createdAt?.toIso8601String(),
+  'updated_at': instance.updatedAt?.toIso8601String(),
   'metadata': instance.metadata,
 };
 

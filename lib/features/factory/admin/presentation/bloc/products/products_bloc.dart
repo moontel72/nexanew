@@ -9,6 +9,8 @@ enum ProductsStatus {
   loaded,
   creating,
   created,
+  updating,
+  updated,
   error,
 }
 
@@ -66,6 +68,21 @@ class CreateProduct extends ProductsEvent {
   final int? defaultWarrantyMonths;
   final DateTime? defaultManufacturingDate;
   final DateTime? defaultExpiryDate;
+  final double? unitPrice;
+  final double? cartonPrice;
+  final double? wholesalePrice;
+  final String? currency;
+  final String? discountType;
+  final double? discountValue;
+  final int? moq;
+  final bool? marketplaceEnabled;
+  final int? bonusQuantity;
+  final int? bonusThreshold;
+  final double? walletCredit;
+  final String? promoCode;
+  final double? promoDiscount;
+  final List<String>? tags;
+  final List<Map<String, dynamic>>? volumeDiscounts;
 
   const CreateProduct({
     required this.name,
@@ -79,6 +96,21 @@ class CreateProduct extends ProductsEvent {
     required this.defaultWarrantyMonths,
     required this.defaultManufacturingDate,
     required this.defaultExpiryDate,
+    this.unitPrice,
+    this.cartonPrice,
+    this.wholesalePrice,
+    this.currency,
+    this.discountType,
+    this.discountValue,
+    this.moq,
+    this.marketplaceEnabled,
+    this.bonusQuantity,
+    this.bonusThreshold,
+    this.walletCredit,
+    this.promoCode,
+    this.promoDiscount,
+    this.tags,
+    this.volumeDiscounts,
   });
 
   @override
@@ -94,17 +126,117 @@ class CreateProduct extends ProductsEvent {
     defaultWarrantyMonths,
     defaultManufacturingDate,
     defaultExpiryDate,
+    unitPrice,
+    cartonPrice,
+    wholesalePrice,
+    currency,
+    discountType,
+    discountValue,
+    moq,
+    marketplaceEnabled,
+    bonusQuantity,
+    bonusThreshold,
+    walletCredit,
+    promoCode,
+    promoDiscount,
+    tags,
+    volumeDiscounts,
   ];
+}
+
+final class UpdateProduct extends ProductsEvent {
+  final String id;
+  final String? name;
+  final String? sku;
+  final String? description;
+  final String? category;
+  final String? productType;
+  final double? unitPrice;
+  final double? cartonPrice;
+  final double? wholesalePrice;
+  final String? currency;
+  final String? discountType;
+  final double? discountValue;
+  final int? moq;
+  final bool? marketplaceEnabled;
+  final int? bonusQuantity;
+  final int? bonusThreshold;
+  final double? walletCredit;
+  final String? promoCode;
+  final double? promoDiscount;
+  final List<String>? tags;
+  final List<Map<String, dynamic>>? volumeDiscounts;
+
+  UpdateProduct({
+    required this.id,
+    this.name,
+    this.sku,
+    this.description,
+    this.category,
+    this.productType,
+    this.unitPrice,
+    this.cartonPrice,
+    this.wholesalePrice,
+    this.currency,
+    this.discountType,
+    this.discountValue,
+    this.moq,
+    this.marketplaceEnabled,
+    this.bonusQuantity,
+    this.bonusThreshold,
+    this.walletCredit,
+    this.promoCode,
+    this.promoDiscount,
+    this.tags,
+    this.volumeDiscounts,
+  });
+
+  @override
+  List<Object?> get props => [
+    id,
+    name,
+    sku,
+    description,
+    category,
+    productType,
+    unitPrice,
+    cartonPrice,
+    wholesalePrice,
+    currency,
+    discountType,
+    discountValue,
+    moq,
+    marketplaceEnabled,
+    bonusQuantity,
+    bonusThreshold,
+    walletCredit,
+    promoCode,
+    promoDiscount,
+    tags,
+    volumeDiscounts,
+  ];
+}
+
+final class ToggleMarketplace extends ProductsEvent {
+  final String productId;
+  final bool enabled;
+
+  ToggleMarketplace({required this.productId, required this.enabled});
+
+  @override
+  List<Object?> get props => [productId, enabled];
 }
 
 class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
   final FactoryProductsRepository _repo;
 
   ProductsBloc({required FactoryProductsRepository repository})
-      : _repo = repository,
-        super(const ProductsState()) {
+    : _repo = repository,
+      super(const ProductsState()) {
     on<LoadProducts>(_onLoadProducts);
     on<CreateProduct>(_onCreateProduct);
+    on<UpdateProduct>(_onUpdateProduct);
+    on<ToggleMarketplace>(_onToggleMarketplace);
   }
 
   Future<void> _onLoadProducts(
@@ -116,10 +248,12 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       final products = await _repo.listProducts(search: event.search);
       emit(state.copyWith(status: ProductsStatus.loaded, products: products));
     } catch (e) {
-      emit(state.copyWith(
-        status: ProductsStatus.error,
-        errorMessage: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ProductsStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 
@@ -141,17 +275,113 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
         defaultWarrantyMonths: event.defaultWarrantyMonths,
         defaultManufacturingDate: event.defaultManufacturingDate,
         defaultExpiryDate: event.defaultExpiryDate,
+        unitPrice: event.unitPrice,
+        cartonPrice: event.cartonPrice,
+        wholesalePrice: event.wholesalePrice,
+        currency: event.currency,
+        discountType: event.discountType,
+        discountValue: event.discountValue,
+        moq: event.moq,
+        marketplaceEnabled: event.marketplaceEnabled,
+        bonusQuantity: event.bonusQuantity,
+        bonusThreshold: event.bonusThreshold,
+        walletCredit: event.walletCredit,
+        promoCode: event.promoCode,
+        promoDiscount: event.promoDiscount,
+        tags: event.tags,
+        volumeDiscounts: event.volumeDiscounts,
       );
 
       final updated = [created, ...state.products];
       emit(state.copyWith(status: ProductsStatus.created, products: updated));
       emit(state.copyWith(status: ProductsStatus.loaded, products: updated));
     } catch (e) {
-      emit(state.copyWith(
-        status: ProductsStatus.error,
-        errorMessage: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ProductsStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateProduct(
+    UpdateProduct event,
+    Emitter<ProductsState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: ProductsStatus.updating, errorMessage: null));
+      await _repo.updateProduct(
+        id: event.id,
+        name: event.name,
+        sku: event.sku,
+        description: event.description,
+        category: event.category,
+        productType: event.productType,
+        unitPrice: event.unitPrice,
+        cartonPrice: event.cartonPrice,
+        wholesalePrice: event.wholesalePrice,
+        currency: event.currency,
+        discountType: event.discountType,
+        discountValue: event.discountValue,
+        moq: event.moq,
+        marketplaceEnabled: event.marketplaceEnabled,
+        bonusQuantity: event.bonusQuantity,
+        bonusThreshold: event.bonusThreshold,
+        walletCredit: event.walletCredit,
+        promoCode: event.promoCode,
+        promoDiscount: event.promoDiscount,
+        tags: event.tags,
+        volumeDiscounts: event.volumeDiscounts,
+      );
+
+      // Reload full list after update
+      final products = await _repo.listProducts();
+      emit(state.copyWith(status: ProductsStatus.updated, products: products));
+      emit(state.copyWith(status: ProductsStatus.loaded, products: products));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ProductsStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onToggleMarketplace(
+    ToggleMarketplace event,
+    Emitter<ProductsState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: ProductsStatus.updating, errorMessage: null));
+      final updated = await _repo.toggleMarketplace(
+        event.productId,
+        event.enabled,
+      );
+
+      // Update the product in the local list
+      final idx = state.products.indexWhere((p) => p.id == event.productId);
+      if (idx != -1) {
+        final list = List<ProductModel>.from(state.products);
+        list[idx] = updated;
+        emit(state.copyWith(status: ProductsStatus.updated, products: list));
+        emit(state.copyWith(status: ProductsStatus.loaded, products: list));
+      } else {
+        // Fallback: reload
+        final products = await _repo.listProducts();
+        emit(
+          state.copyWith(status: ProductsStatus.updated, products: products),
+        );
+        emit(state.copyWith(status: ProductsStatus.loaded, products: products));
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ProductsStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 }
-

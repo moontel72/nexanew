@@ -11,10 +11,10 @@ _CreditNoteItem _$CreditNoteItemFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       description: json['description'] as String,
       quantity: (json['quantity'] as num).toDouble(),
-      unitPrice: (json['unitPrice'] as num).toDouble(),
+      unitPrice: (json['unit_price'] as num).toDouble(),
       total: (json['total'] as num).toDouble(),
       currency: json['currency'] as String,
-      invoiceItemId: json['invoiceItemId'] as String?,
+      invoiceItemId: json['invoice_item_id'] as String?,
       reason: json['reason'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
@@ -24,22 +24,22 @@ Map<String, dynamic> _$CreditNoteItemToJson(_CreditNoteItem instance) =>
       'id': instance.id,
       'description': instance.description,
       'quantity': instance.quantity,
-      'unitPrice': instance.unitPrice,
+      'unit_price': instance.unitPrice,
       'total': instance.total,
       'currency': instance.currency,
-      'invoiceItemId': instance.invoiceItemId,
+      'invoice_item_id': instance.invoiceItemId,
       'reason': instance.reason,
       'metadata': instance.metadata,
     };
 
 _CreditNote _$CreditNoteFromJson(Map<String, dynamic> json) => _CreditNote(
   id: json['id'] as String,
-  creditNoteNumber: json['creditNoteNumber'] as String,
-  companyId: json['companyId'] as String,
-  invoiceId: json['invoiceId'] as String?,
+  creditNoteNumber: json['credit_note_number'] as String,
+  companyId: json['company_id'] as String,
+  invoiceId: json['invoice_id'] as String?,
   type: $enumDecode(_$CreditNoteTypeEnumMap, json['type']),
   reason: json['reason'] as String,
-  totalAmount: (json['totalAmount'] as num).toDouble(),
+  totalAmount: (json['total_amount'] as num).toDouble(),
   currency: json['currency'] as String? ?? 'USD',
   items: (json['items'] as List<dynamic>)
       .map((e) => CreditNoteItem.fromJson(e as Map<String, dynamic>))
@@ -47,48 +47,48 @@ _CreditNote _$CreditNoteFromJson(Map<String, dynamic> json) => _CreditNote(
   status:
       $enumDecodeNullable(_$CreditNoteStatusEnumMap, json['status']) ??
       CreditNoteStatus.draft,
-  approvalDate: json['approvalDate'] == null
+  approvalDate: json['approval_date'] == null
       ? null
-      : DateTime.parse(json['approvalDate'] as String),
-  approvedBy: json['approvedBy'] as String?,
-  applicationDate: json['applicationDate'] == null
+      : DateTime.parse(json['approval_date'] as String),
+  approvedBy: json['approved_by'] as String?,
+  applicationDate: json['application_date'] == null
       ? null
-      : DateTime.parse(json['applicationDate'] as String),
-  appliedToInvoiceId: json['appliedToInvoiceId'] as String?,
-  expiryDate: json['expiryDate'] == null
+      : DateTime.parse(json['application_date'] as String),
+  appliedToInvoiceId: json['applied_to_invoice_id'] as String?,
+  expiryDate: json['expiry_date'] == null
       ? null
-      : DateTime.parse(json['expiryDate'] as String),
+      : DateTime.parse(json['expiry_date'] as String),
   notes: json['notes'] as String?,
   metadata: json['metadata'] as Map<String, dynamic>?,
-  createdAt: json['createdAt'] == null
+  createdAt: json['created_at'] == null
       ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
+      : DateTime.parse(json['created_at'] as String),
+  updatedAt: json['updated_at'] == null
       ? null
-      : DateTime.parse(json['updatedAt'] as String),
+      : DateTime.parse(json['updated_at'] as String),
 );
 
 Map<String, dynamic> _$CreditNoteToJson(_CreditNote instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'creditNoteNumber': instance.creditNoteNumber,
-      'companyId': instance.companyId,
-      'invoiceId': instance.invoiceId,
+      'credit_note_number': instance.creditNoteNumber,
+      'company_id': instance.companyId,
+      'invoice_id': instance.invoiceId,
       'type': _$CreditNoteTypeEnumMap[instance.type]!,
       'reason': instance.reason,
-      'totalAmount': instance.totalAmount,
+      'total_amount': instance.totalAmount,
       'currency': instance.currency,
-      'items': instance.items,
+      'items': instance.items.map((e) => e.toJson()).toList(),
       'status': _$CreditNoteStatusEnumMap[instance.status]!,
-      'approvalDate': instance.approvalDate?.toIso8601String(),
-      'approvedBy': instance.approvedBy,
-      'applicationDate': instance.applicationDate?.toIso8601String(),
-      'appliedToInvoiceId': instance.appliedToInvoiceId,
-      'expiryDate': instance.expiryDate?.toIso8601String(),
+      'approval_date': instance.approvalDate?.toIso8601String(),
+      'approved_by': instance.approvedBy,
+      'application_date': instance.applicationDate?.toIso8601String(),
+      'applied_to_invoice_id': instance.appliedToInvoiceId,
+      'expiry_date': instance.expiryDate?.toIso8601String(),
       'notes': instance.notes,
       'metadata': instance.metadata,
-      'createdAt': instance.createdAt?.toIso8601String(),
-      'updatedAt': instance.updatedAt?.toIso8601String(),
+      'created_at': instance.createdAt?.toIso8601String(),
+      'updated_at': instance.updatedAt?.toIso8601String(),
     };
 
 const _$CreditNoteTypeEnumMap = {
@@ -110,73 +110,73 @@ const _$CreditNoteStatusEnumMap = {
 
 _CreditNoteFilter _$CreditNoteFilterFromJson(Map<String, dynamic> json) =>
     _CreditNoteFilter(
-      startDate: json['startDate'] == null
+      startDate: json['start_date'] == null
           ? null
-          : DateTime.parse(json['startDate'] as String),
-      endDate: json['endDate'] == null
+          : DateTime.parse(json['start_date'] as String),
+      endDate: json['end_date'] == null
           ? null
-          : DateTime.parse(json['endDate'] as String),
+          : DateTime.parse(json['end_date'] as String),
       statuses: (json['statuses'] as List<dynamic>?)
           ?.map((e) => $enumDecode(_$CreditNoteStatusEnumMap, e))
           .toList(),
       types: (json['types'] as List<dynamic>?)
           ?.map((e) => $enumDecode(_$CreditNoteTypeEnumMap, e))
           .toList(),
-      minAmount: (json['minAmount'] as num?)?.toDouble(),
-      maxAmount: (json['maxAmount'] as num?)?.toDouble(),
-      searchQuery: json['searchQuery'] as String?,
-      sortBy: json['sortBy'] as String? ?? 'createdAt',
-      sortDesc: json['sortDesc'] as bool? ?? false,
+      minAmount: (json['min_amount'] as num?)?.toDouble(),
+      maxAmount: (json['max_amount'] as num?)?.toDouble(),
+      searchQuery: json['search_query'] as String?,
+      sortBy: json['sort_by'] as String? ?? 'createdAt',
+      sortDesc: json['sort_desc'] as bool? ?? false,
       page: (json['page'] as num?)?.toInt() ?? 1,
       limit: (json['limit'] as num?)?.toInt() ?? 20,
     );
 
 Map<String, dynamic> _$CreditNoteFilterToJson(_CreditNoteFilter instance) =>
     <String, dynamic>{
-      'startDate': instance.startDate?.toIso8601String(),
-      'endDate': instance.endDate?.toIso8601String(),
+      'start_date': instance.startDate?.toIso8601String(),
+      'end_date': instance.endDate?.toIso8601String(),
       'statuses': instance.statuses
           ?.map((e) => _$CreditNoteStatusEnumMap[e]!)
           .toList(),
       'types': instance.types?.map((e) => _$CreditNoteTypeEnumMap[e]!).toList(),
-      'minAmount': instance.minAmount,
-      'maxAmount': instance.maxAmount,
-      'searchQuery': instance.searchQuery,
-      'sortBy': instance.sortBy,
-      'sortDesc': instance.sortDesc,
+      'min_amount': instance.minAmount,
+      'max_amount': instance.maxAmount,
+      'search_query': instance.searchQuery,
+      'sort_by': instance.sortBy,
+      'sort_desc': instance.sortDesc,
       'page': instance.page,
       'limit': instance.limit,
     };
 
 _CreditNoteSummary _$CreditNoteSummaryFromJson(Map<String, dynamic> json) =>
     _CreditNoteSummary(
-      totalIssued: (json['totalIssued'] as num?)?.toDouble() ?? 0.0,
-      totalApplied: (json['totalApplied'] as num?)?.toDouble() ?? 0.0,
-      totalAvailable: (json['totalAvailable'] as num?)?.toDouble() ?? 0.0,
-      draftCount: (json['draftCount'] as num?)?.toInt() ?? 0,
+      totalIssued: (json['total_issued'] as num?)?.toDouble() ?? 0.0,
+      totalApplied: (json['total_applied'] as num?)?.toDouble() ?? 0.0,
+      totalAvailable: (json['total_available'] as num?)?.toDouble() ?? 0.0,
+      draftCount: (json['draft_count'] as num?)?.toInt() ?? 0,
       pendingApprovalCount:
-          (json['pendingApprovalCount'] as num?)?.toInt() ?? 0,
-      approvedCount: (json['approvedCount'] as num?)?.toInt() ?? 0,
-      appliedCount: (json['appliedCount'] as num?)?.toInt() ?? 0,
-      expiredCount: (json['expiredCount'] as num?)?.toInt() ?? 0,
-      byType: (json['byType'] as Map<String, dynamic>?)?.map(
+          (json['pending_approval_count'] as num?)?.toInt() ?? 0,
+      approvedCount: (json['approved_count'] as num?)?.toInt() ?? 0,
+      appliedCount: (json['applied_count'] as num?)?.toInt() ?? 0,
+      expiredCount: (json['expired_count'] as num?)?.toInt() ?? 0,
+      byType: (json['by_type'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, (e as num).toDouble()),
       ),
-      byCompany: (json['byCompany'] as Map<String, dynamic>?)?.map(
+      byCompany: (json['by_company'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, (e as num).toDouble()),
       ),
     );
 
 Map<String, dynamic> _$CreditNoteSummaryToJson(_CreditNoteSummary instance) =>
     <String, dynamic>{
-      'totalIssued': instance.totalIssued,
-      'totalApplied': instance.totalApplied,
-      'totalAvailable': instance.totalAvailable,
-      'draftCount': instance.draftCount,
-      'pendingApprovalCount': instance.pendingApprovalCount,
-      'approvedCount': instance.approvedCount,
-      'appliedCount': instance.appliedCount,
-      'expiredCount': instance.expiredCount,
-      'byType': instance.byType,
-      'byCompany': instance.byCompany,
+      'total_issued': instance.totalIssued,
+      'total_applied': instance.totalApplied,
+      'total_available': instance.totalAvailable,
+      'draft_count': instance.draftCount,
+      'pending_approval_count': instance.pendingApprovalCount,
+      'approved_count': instance.approvedCount,
+      'applied_count': instance.appliedCount,
+      'expired_count': instance.expiredCount,
+      'by_type': instance.byType,
+      'by_company': instance.byCompany,
     };

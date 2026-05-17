@@ -21,6 +21,9 @@ class ResellerMarketplaceController extends Controller
         $factories = Company::where('status', 'active')
             ->where('verification_status', 'verified')
             ->where('is_deleted', false)
+            ->whereHas('products', function ($q) {
+                $q->where('marketplace_enabled', true)->where('status', 'active');
+            })
             ->select([
                 'id',
                 'name',
@@ -30,7 +33,7 @@ class ResellerMarketplaceController extends Controller
                 'logo_url',
             ])
             ->withCount(['products as product_count' => function ($query) {
-                $query->where('status', 'active');
+                $query->where('status', 'active')->where('marketplace_enabled', true);
             }])
             ->orderBy('name')
             ->get();
@@ -74,16 +77,14 @@ class ResellerMarketplaceController extends Controller
 
         $query = Product::where('company_id', $factoryId)
             ->where('status', 'active')
+            ->where('marketplace_enabled', true)
             ->select([
-                'id',
-                'company_id',
-                'name',
-                'sku',
-                'description',
-                'category',
-                'product_type',
-                'image_urls',
-                'status',
+                'id', 'company_id', 'name', 'sku', 'description', 'category', 'product_type',
+                'image_urls', 'status',
+                'unit_price', 'carton_price', 'wholesale_price', 'currency',
+                'discount_type', 'discount_value', 'moq', 'marketplace_enabled',
+                'bonus_quantity', 'bonus_threshold', 'wallet_credit',
+                'promo_code', 'promo_discount', 'tags', 'volume_discounts',
             ]);
 
         if ($search) {

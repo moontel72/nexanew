@@ -8,10 +8,7 @@ import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 import 'package:nexatrace_system/shared/widgets/inputs/custom_text_field.dart';
 
-enum ProductCategoryMode {
-  foodMedical,
-  nonFoodMedical,
-}
+enum ProductCategoryMode { foodMedical, nonFoodMedical }
 
 class CreateProductScreen extends StatefulWidget {
   const CreateProductScreen({super.key});
@@ -27,10 +24,25 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
   final _descriptionController = TextEditingController();
   final _categoryController = TextEditingController();
   final _warrantyMonthsController = TextEditingController(text: '12');
+  final _unitPriceController = TextEditingController();
+  final _cartonPriceController = TextEditingController();
+  final _wholesalePriceController = TextEditingController();
+  final _discountValueController = TextEditingController();
+  final _moqController = TextEditingController(text: '1');
+  final _bonusThresholdController = TextEditingController();
+  final _bonusQuantityController = TextEditingController();
+  final _walletCreditController = TextEditingController();
+  final _promoCodeController = TextEditingController();
+  final _promoDiscountController = TextEditingController();
 
   ProductCategoryMode _mode = ProductCategoryMode.foodMedical;
   DateTime? _defaultManufacturingDate;
   DateTime? _defaultExpiryDate;
+
+  String _currency = 'PKR';
+  String _discountType = 'none';
+  bool _marketplaceEnabled = false;
+  final List<_VolumeTier> _volumeTiers = [];
 
   @override
   void dispose() {
@@ -39,6 +51,16 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
     _descriptionController.dispose();
     _categoryController.dispose();
     _warrantyMonthsController.dispose();
+    _unitPriceController.dispose();
+    _cartonPriceController.dispose();
+    _wholesalePriceController.dispose();
+    _discountValueController.dispose();
+    _moqController.dispose();
+    _bonusThresholdController.dispose();
+    _bonusQuantityController.dispose();
+    _walletCreditController.dispose();
+    _promoCodeController.dispose();
+    _promoDiscountController.dispose();
     super.dispose();
   }
 
@@ -46,7 +68,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
     final now = DateTime.now();
     final initial =
         (isManufacturing ? _defaultManufacturingDate : _defaultExpiryDate) ??
-            now;
+        now;
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -85,25 +107,62 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
       }
     }
 
+    final unitPrice = double.tryParse(_unitPriceController.text.trim());
+    final cartonPrice = double.tryParse(_cartonPriceController.text.trim());
+    final wholesalePrice = double.tryParse(
+      _wholesalePriceController.text.trim(),
+    );
+    final discountValue = double.tryParse(_discountValueController.text.trim());
+    final moq = int.tryParse(_moqController.text.trim()) ?? 1;
+    final bonusThreshold = int.tryParse(_bonusThresholdController.text.trim());
+    final bonusQuantity = int.tryParse(_bonusQuantityController.text.trim());
+    final walletCredit = double.tryParse(_walletCreditController.text.trim());
+    final promoDiscount = double.tryParse(_promoDiscountController.text.trim());
+
+    final volumeDiscounts = _volumeTiers
+        .map(
+          (t) => <String, dynamic>{
+            'min_qty': t.minQty,
+            'discount_percent': t.discountPercent,
+          },
+        )
+        .toList();
+
     context.read<ProductsBloc>().add(
-          CreateProduct(
-            name: _nameController.text.trim(),
-            sku: _skuController.text.trim(),
-            description: _descriptionController.text.trim().isEmpty
-                ? null
-                : _descriptionController.text.trim(),
-            category: _categoryController.text.trim().isEmpty
-                ? null
-                : _categoryController.text.trim(),
-            productType: isFoodMedical ? 'food_beverage' : 'electronics',
-            requiresManufacturingDate: requiresManufacturingDate,
-            requiresExpiryDate: requiresExpiryDate,
-            requiresWarranty: requiresWarranty,
-            defaultWarrantyMonths: defaultWarrantyMonths,
-            defaultManufacturingDate: _defaultManufacturingDate,
-            defaultExpiryDate: _defaultExpiryDate,
-          ),
-        );
+      CreateProduct(
+        name: _nameController.text.trim(),
+        sku: _skuController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        category: _categoryController.text.trim().isEmpty
+            ? null
+            : _categoryController.text.trim(),
+        productType: isFoodMedical ? 'food_beverage' : 'electronics',
+        requiresManufacturingDate: requiresManufacturingDate,
+        requiresExpiryDate: requiresExpiryDate,
+        requiresWarranty: requiresWarranty,
+        defaultWarrantyMonths: defaultWarrantyMonths,
+        defaultManufacturingDate: _defaultManufacturingDate,
+        defaultExpiryDate: _defaultExpiryDate,
+        unitPrice: unitPrice,
+        cartonPrice: cartonPrice,
+        wholesalePrice: wholesalePrice,
+        currency: _currency,
+        discountType: _discountType == 'none' ? null : _discountType,
+        discountValue: _discountType != 'none' ? discountValue : null,
+        moq: moq,
+        marketplaceEnabled: _marketplaceEnabled,
+        bonusQuantity: bonusQuantity,
+        bonusThreshold: bonusThreshold,
+        walletCredit: walletCredit,
+        promoCode: _promoCodeController.text.trim().isEmpty
+            ? null
+            : _promoCodeController.text.trim(),
+        promoDiscount: promoDiscount,
+        volumeDiscounts: volumeDiscounts.isNotEmpty ? volumeDiscounts : null,
+      ),
+    );
   }
 
   @override
@@ -117,13 +176,14 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
       body: BlocConsumer<ProductsBloc, ProductsState>(
         listener: (context, state) {
           if (state.status == ProductsStatus.created) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Product created')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Product created')));
             context.go('/factory/products');
           }
 
-          if (state.status == ProductsStatus.error && state.errorMessage != null) {
+          if (state.status == ProductsStatus.error &&
+              state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.errorMessage!),
@@ -154,9 +214,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                         children: [
                           Text(
                             'Basic Info',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           SizedBox(height: 12.h),
@@ -165,7 +223,8 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                             labelText: 'Product Name',
                             hintText: 'Example: Panadol 500mg',
                             validator: (v) {
-                              if ((v ?? '').trim().isEmpty) return 'Enter product name';
+                              if ((v ?? '').trim().isEmpty)
+                                return 'Enter product name';
                               return null;
                             },
                           ),
@@ -176,7 +235,8 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                             hintText: 'Example: SKU-001',
                             validator: (v) {
                               if ((v ?? '').trim().isEmpty) return 'Enter SKU';
-                              if ((v ?? '').trim().length < 3) return 'SKU too short';
+                              if ((v ?? '').trim().length < 3)
+                                return 'SKU too short';
                               return null;
                             },
                           ),
@@ -211,9 +271,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                         children: [
                           Text(
                             'Product Category (README 3M)',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           SizedBox(height: 12.h),
@@ -223,9 +281,9 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                             onChanged: isBusy
                                 ? null
                                 : (v) => setState(() {
-                                      _mode = v!;
-                                      _warrantyMonthsController.text = '12';
-                                    }),
+                                    _mode = v!;
+                                    _warrantyMonthsController.text = '12';
+                                  }),
                             title: const Text('Food / Medical (Expiry Date)'),
                             subtitle: const Text(
                               'Requires manufacturing + expiry dates when publishing unit codes.',
@@ -237,11 +295,13 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                             onChanged: isBusy
                                 ? null
                                 : (v) => setState(() {
-                                      _mode = v!;
-                                      _defaultManufacturingDate = null;
-                                      _defaultExpiryDate = null;
-                                    }),
-                            title: const Text('Non Food / Medical (Warranty Months)'),
+                                    _mode = v!;
+                                    _defaultManufacturingDate = null;
+                                    _defaultExpiryDate = null;
+                                  }),
+                            title: const Text(
+                              'Non Food / Medical (Warranty Months)',
+                            ),
                             subtitle: const Text(
                               'Warranty starts when customer scans authenticity.',
                             ),
@@ -254,7 +314,8 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                                   child: OutlinedButton.icon(
                                     onPressed: isBusy
                                         ? null
-                                        : () => _pickDate(isManufacturing: true),
+                                        : () =>
+                                              _pickDate(isManufacturing: true),
                                     icon: const Icon(Icons.calendar_month),
                                     label: Text(
                                       _defaultManufacturingDate == null
@@ -268,7 +329,8 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                                   child: OutlinedButton.icon(
                                     onPressed: isBusy
                                         ? null
-                                        : () => _pickDate(isManufacturing: false),
+                                        : () =>
+                                              _pickDate(isManufacturing: false),
                                     icon: const Icon(Icons.calendar_month),
                                     label: Text(
                                       _defaultExpiryDate == null
@@ -302,6 +364,316 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                     ),
                   ),
                   SizedBox(height: 16.h),
+                  // --- Commercial Pricing ---
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      side: BorderSide(color: AppColors.border),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(16.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '\u{1F4B0} Commercial Pricing',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          SizedBox(height: 12.h),
+                          CustomTextField(
+                            controller: _unitPriceController,
+                            labelText: 'Unit Price (PKR)',
+                            hintText: 'e.g. 1500',
+                            keyboardType: TextInputType.number,
+                            prefixIcon: const Padding(
+                              padding: EdgeInsets.only(left: 12),
+                              child: Text(
+                                'Rs.',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 12.h),
+                          CustomTextField(
+                            controller: _cartonPriceController,
+                            labelText: 'Carton Price',
+                            hintText: 'e.g. 12000',
+                            keyboardType: TextInputType.number,
+                            prefixIcon: const Padding(
+                              padding: EdgeInsets.only(left: 12),
+                              child: Text(
+                                'Rs.',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 12.h),
+                          CustomTextField(
+                            controller: _wholesalePriceController,
+                            labelText: 'Wholesale Bulk Price',
+                            hintText: 'e.g. 950',
+                            keyboardType: TextInputType.number,
+                            prefixIcon: const Padding(
+                              padding: EdgeInsets.only(left: 12),
+                              child: Text(
+                                'Rs.',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 12.h),
+                          DropdownButtonFormField<String>(
+                            value: _currency,
+                            decoration: const InputDecoration(
+                              labelText: 'Currency',
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'PKR',
+                                child: Text('PKR'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'USD',
+                                child: Text('USD'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'EUR',
+                                child: Text('EUR'),
+                              ),
+                            ],
+                            onChanged: (v) {
+                              if (v != null) setState(() => _currency = v);
+                            },
+                          ),
+                          SizedBox(height: 12.h),
+                          DropdownButtonFormField<String>(
+                            value: _discountType,
+                            decoration: const InputDecoration(
+                              labelText: 'Discount Type',
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'none',
+                                child: Text('None'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'percentage',
+                                child: Text('Percentage'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'fixed',
+                                child: Text('Fixed Amount'),
+                              ),
+                            ],
+                            onChanged: (v) {
+                              if (v != null) {
+                                setState(() {
+                                  _discountType = v;
+                                  if (v == 'none') {
+                                    _discountValueController.clear();
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                          if (_discountType != 'none') ...[
+                            SizedBox(height: 12.h),
+                            CustomTextField(
+                              controller: _discountValueController,
+                              labelText: _discountType == 'percentage'
+                                  ? 'Discount %'
+                                  : 'Discount Amount',
+                              hintText: _discountType == 'percentage'
+                                  ? 'e.g. 10'
+                                  : 'e.g. 200',
+                              keyboardType: TextInputType.number,
+                            ),
+                          ],
+                          SizedBox(height: 12.h),
+                          CustomTextField(
+                            controller: _moqController,
+                            labelText: 'MOQ (Minimum Order Quantity)',
+                            hintText: 'Default: 1',
+                            keyboardType: TextInputType.number,
+                          ),
+                          SizedBox(height: 12.h),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('List on Marketplace'),
+                            value: _marketplaceEnabled,
+                            onChanged: (v) =>
+                                setState(() => _marketplaceEnabled = v),
+                          ),
+                          SizedBox(height: 12.h),
+                          Text(
+                            'Bonus Offer (Buy X get Y free)',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          SizedBox(height: 8.h),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CustomTextField(
+                                  controller: _bonusThresholdController,
+                                  labelText: 'Buy (Threshold)',
+                                  hintText: 'e.g. 10',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: CustomTextField(
+                                  controller: _bonusQuantityController,
+                                  labelText: 'Get (Free)',
+                                  hintText: 'e.g. 1',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 12.h),
+                          CustomTextField(
+                            controller: _walletCreditController,
+                            labelText: 'Wallet Credit Points',
+                            hintText: 'e.g. 50',
+                            keyboardType: TextInputType.number,
+                          ),
+                          SizedBox(height: 12.h),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CustomTextField(
+                                  controller: _promoCodeController,
+                                  labelText: 'Promo Code',
+                                  hintText: 'e.g. SUMMER20',
+                                ),
+                              ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: CustomTextField(
+                                  controller: _promoDiscountController,
+                                  labelText: 'Promo Discount %',
+                                  hintText: 'e.g. 15',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  // --- Offers & Discounts ---
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      side: BorderSide(color: AppColors.border),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(16.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '\u{1F3F7} Offers & Discounts',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          SizedBox(height: 12.h),
+                          Text(
+                            'Volume Discounts',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          SizedBox(height: 8.h),
+                          ...List.generate(_volumeTiers.length, (i) {
+                            final tier = _volumeTiers[i];
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: 8.h),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: CustomTextField(
+                                      labelText: 'Min Qty',
+                                      hintText: 'e.g. 50',
+                                      keyboardType: TextInputType.number,
+                                      initialValue: tier.minQty.toString(),
+                                      onChanged: (v) {
+                                        final parsed = int.tryParse(v);
+                                        if (parsed != null) {
+                                          setState(() {
+                                            _volumeTiers[i] = _VolumeTier(
+                                              minQty: parsed,
+                                              discountPercent:
+                                                  tier.discountPercent,
+                                            );
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Expanded(
+                                    child: CustomTextField(
+                                      labelText: 'Discount %',
+                                      hintText: 'e.g. 5',
+                                      keyboardType: TextInputType.number,
+                                      initialValue: tier.discountPercent
+                                          .toString(),
+                                      onChanged: (v) {
+                                        final parsed = double.tryParse(v);
+                                        if (parsed != null) {
+                                          setState(() {
+                                            _volumeTiers[i] = _VolumeTier(
+                                              minQty: tier.minQty,
+                                              discountPercent: parsed,
+                                            );
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.remove_circle_outline,
+                                      color: AppColors.error,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _volumeTiers.removeAt(i);
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                          SizedBox(height: 4.h),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _volumeTiers.add(
+                                  const _VolumeTier(
+                                    minQty: 0,
+                                    discountPercent: 0,
+                                  ),
+                                );
+                              });
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Tier'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
                   SizedBox(
                     width: double.infinity,
                     child: PrimaryButton(
@@ -324,3 +696,9 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
   }
 }
 
+class _VolumeTier {
+  final int minQty;
+  final double discountPercent;
+
+  const _VolumeTier({required this.minQty, required this.discountPercent});
+}

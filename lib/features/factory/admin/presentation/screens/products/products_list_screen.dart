@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/products/products_bloc.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
@@ -161,88 +162,224 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                             ? 'Non Food/Medical (Warranty)'
                             : 'Food/Medical (Expiry)';
 
+                        final currencySymbol = p.currency == 'USD'
+                            ? '\$'
+                            : p.currency == 'EUR'
+                            ? '\u20AC'
+                            : 'Rs.';
+                        final formattedPrice = p.unitPrice != null
+                            ? NumberFormat(
+                                '#,##0',
+                                'en_US',
+                              ).format(p.unitPrice!)
+                            : null;
+                        final listed = p.marketplaceEnabled;
+
                         return Card(
                           elevation: 2,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12.r),
                             side: BorderSide(color: AppColors.border),
                           ),
-                          child: Padding(
-                            padding: EdgeInsets.all(16.w),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        p.name,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 10.w,
-                                        vertical: 4.h,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.info.withValues(
-                                          alpha: 0.12,
-                                        ),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
-                                        ),
-                                        border: Border.all(
-                                          color: AppColors.info,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        p.status.toUpperCase(),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelSmall
-                                            ?.copyWith(
-                                              color: AppColors.info,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                      ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12.r),
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: Text('Edit ${p.name}'),
+                                  content: const Text(
+                                    'Edit screen is coming soon.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('OK'),
                                     ),
                                   ],
                                 ),
-                                SizedBox(height: 8.h),
-                                Text(
-                                  'SKU: ${p.sku}',
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
-                                ),
-                                SizedBox(height: 6.h),
-                                Text(
-                                  typeLabel,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.textTertiary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                                if (p.requiresWarranty &&
-                                    p.defaultWarrantyMonths != null) ...[
-                                  SizedBox(height: 6.h),
-                                  Text(
-                                    'Default warranty: ${p.defaultWarrantyMonths} months',
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: AppColors.textTertiary,
+                              );
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.all(16.w),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            const Text('\uD83C\uDFF7'),
+                                            SizedBox(width: 6.w),
+                                            Expanded(
+                                              child: Text(
+                                                p.name,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
+                                      ),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w,
+                                          vertical: 4.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: listed
+                                              ? Colors.green.withValues(
+                                                  alpha: 0.12,
+                                                )
+                                              : Colors.grey.withValues(
+                                                  alpha: 0.12,
+                                                ),
+                                          borderRadius: BorderRadius.circular(
+                                            999,
+                                          ),
+                                          border: Border.all(
+                                            color: listed
+                                                ? Colors.green
+                                                : Colors.grey,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 8.w,
+                                              height: 8.w,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: listed
+                                                    ? Colors.green
+                                                    : Colors.grey,
+                                              ),
+                                            ),
+                                            SizedBox(width: 4.w),
+                                            Text(
+                                              listed ? 'Listed' : 'Not Listed',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelSmall
+                                                  ?.copyWith(
+                                                    color: listed
+                                                        ? Colors.green
+                                                        : Colors.grey,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 8.h),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          'SKU: ${p.sku}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color: AppColors.textSecondary,
+                                              ),
+                                        ),
+                                      ),
+                                      Text(
+                                        'MOQ: ${p.moq} units',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: AppColors.textTertiary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 6.h),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            if (formattedPrice != null)
+                                              Text(
+                                                '$currencySymbol $formattedPrice / unit',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyLarge
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color:
+                                                          AppColors.secondary,
+                                                    ),
+                                              )
+                                            else
+                                              Text(
+                                                'Price not set',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: AppColors
+                                                          .textTertiary,
+                                                    ),
+                                              ),
+                                            SizedBox(height: 4.h),
+                                            Text(
+                                              typeLabel,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color:
+                                                        AppColors.textTertiary,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                            ),
+                                            if (p.requiresWarranty &&
+                                                p.defaultWarrantyMonths != null)
+                                              Text(
+                                                'Default warranty: ${p.defaultWarrantyMonths} months',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: AppColors
+                                                          .textTertiary,
+                                                    ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      Switch(
+                                        value: listed,
+                                        onChanged: (newValue) {
+                                          context.read<ProductsBloc>().add(
+                                            ToggleMarketplace(
+                                              productId: p.id,
+                                              enabled: newValue,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ],
-                              ],
+                              ),
                             ),
                           ),
                         );
