@@ -35,25 +35,26 @@ class ResellerMarketplaceRemoteDatasource {
     }
   }
 
-  /// Fetch products for a given factory.
+  /// Fetch products for a given factory, or all factories if factoryId is null.
   /// Returns an empty list on any error — never throws.
   Future<List<ResellerMarketplaceProductModel>> listProducts({
     required String tenantId,
-    required String factoryId,
+    String? factoryId,
     String? search,
     int page = 1,
     int limit = 20,
   }) async {
     try {
+      final params = <String, dynamic>{
+        'tenant_id': tenantId,
+        'page': page,
+        'limit': limit,
+        if (factoryId != null && factoryId.isNotEmpty) 'factory_id': factoryId,
+        if (search != null && search.isNotEmpty) 'search': search,
+      };
       final res = await _api.get(
         ApiEndpoints.browseProducts,
-        queryParameters: {
-          'tenant_id': tenantId,
-          'factory_id': factoryId,
-          'page': page,
-          'limit': limit,
-          if (search != null && search.isNotEmpty) 'search': search,
-        },
+        queryParameters: params,
       );
 
       if (res is Map) {

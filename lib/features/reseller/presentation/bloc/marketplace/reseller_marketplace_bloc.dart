@@ -25,6 +25,12 @@ final class ResellerMarketplaceSearchChanged extends ResellerMarketplaceEvent {
 final class ResellerMarketplaceRefreshRequested
     extends ResellerMarketplaceEvent {}
 
+final class ResellerMarketplaceAllProductsRequested
+    extends ResellerMarketplaceEvent {
+  final String tenantId;
+  ResellerMarketplaceAllProductsRequested({required this.tenantId});
+}
+
 final class ResellerMarketplaceState {
   final ResellerMarketplaceStatus status;
   final String tenantId;
@@ -85,6 +91,7 @@ class ResellerMarketplaceBloc
     on<ResellerMarketplaceFactorySelected>(_onSelectFactory);
     on<ResellerMarketplaceSearchChanged>(_onSearchChanged);
     on<ResellerMarketplaceRefreshRequested>(_onRefresh);
+    on<ResellerMarketplaceAllProductsRequested>(_onAllProducts);
   }
 
   Future<void> _onBoot(
@@ -197,6 +204,45 @@ class ResellerMarketplaceBloc
       final products = await _repo.getProducts(
         tenantId: state.tenantId,
         factoryId: state.selectedFactoryId,
+        search: state.searchQuery,
+      );
+      emit(
+        state.copyWith(
+          status: ResellerMarketplaceStatus.loaded,
+          products: products,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ResellerMarketplaceStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onAllProducts(
+    ResellerMarketplaceAllProductsRequested event,
+    Emitter<ResellerMarketplaceState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        status: ResellerMarketplaceStatus.loading,
+        selectedFactoryId: '', // clear factory filter
+        errorMessage: null,
+      ),
+    );
+    try {
+      // Ensure factories list is populated
+      if (state.factories.isEmpty) {
+        final factories = await _repo.getFactories(
+          tenantId: state.tenantId.isNotEmpty ? state.tenantId : event.tenantId,
+        );
+        emit(state.copyWith(factories: factories));
+      }
+      final products = await _repo.getAllProducts(
+        tenantId: state.tenantId.isNotEmpty ? state.tenantId : event.tenantId,
         search: state.searchQuery,
       );
       emit(

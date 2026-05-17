@@ -32,16 +32,27 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   String? _selectedCategory;
+  String? _selectedFactoryFilter; // null = all factories
   bool _businessVerified = true; // optimistic default
+
+  /// Whether the screen is in "all factories" mode.
+  bool get _isAllFactoriesMode => widget.factoryId.isEmpty;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkBusinessProof();
-      context.read<ResellerMarketplaceBloc>().add(
-        ResellerMarketplaceFactorySelected(widget.factoryId),
-      );
+      if (_isAllFactoriesMode) {
+        final tenantId = context.read<ResellerMarketplaceBloc>().state.tenantId;
+        context.read<ResellerMarketplaceBloc>().add(
+          ResellerMarketplaceAllProductsRequested(tenantId: tenantId),
+        );
+      } else {
+        context.read<ResellerMarketplaceBloc>().add(
+          ResellerMarketplaceFactorySelected(widget.factoryId),
+        );
+      }
     });
   }
 
@@ -77,6 +88,10 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
           )
           .toList();
     }
+    // Client-side factory filter (only in "all factories" mode)
+    if (_selectedFactoryFilter != null && _selectedFactoryFilter!.isNotEmpty) {
+      list = list.where((p) => p.factoryId == _selectedFactoryFilter).toList();
+    }
     return list;
   }
 
@@ -89,13 +104,30 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
       ..sort();
   }
 
+  // ── Factory name lookup helper ──────────────────────────────────
+  String _factoryNameFor(String factoryId) {
+    final factories = context.read<ResellerMarketplaceBloc>().state.factories;
+    for (final f in factories) {
+      if (f['id']?.toString() == factoryId) {
+        return f['name']?.toString() ?? factoryId;
+      }
+    }
+    return factoryId;
+  }
+
   // ── Add to cart helper ───────────────────────────────────────────
-  void _addToCart(ResellerMarketplaceProductModel product) {
-    context.read<ResellerCartBloc>().add(AddToCart(product: product));
+  void _addToCart(ResellerMarketplaceProductModel product, {int quantity = 1}) {
+    context.read<ResellerCartBloc>().add(
+      AddToCart(product: product, quantity: quantity),
+    );
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${product.name} added to cart'),
+        content: Text(
+          quantity > 1
+              ? '${product.name} × $quantity added to cart'
+              : '${product.name} added to cart',
+        ),
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.only(bottom: 80.h, left: 16.w, right: 16.w),
@@ -108,7 +140,7 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: widget.factoryName,
+        title: _isAllFactoriesMode ? 'All Products' : widget.factoryName,
         showBackButton: true,
         actions: [
           // ── Cart badge ────────────────────────────────────────
@@ -165,15 +197,35 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
             return ErrorState(
               title: 'Error',
               message: state.errorMessage ?? 'Failed to load products',
-              onRetry: () => context.read<ResellerMarketplaceBloc>().add(
-                ResellerMarketplaceRefreshRequested(),
-              ),
+              onRetry: () {
+                if (_isAllFactoriesMode) {
+                  final tenantId = context
+                      .read<ResellerMarketplaceBloc>()
+                      .state
+                      .tenantId;
+                  context.read<ResellerMarketplaceBloc>().add(
+                    ResellerMarketplaceAllProductsRequested(tenantId: tenantId),
+                  );
+                } else {
+                  context.read<ResellerMarketplaceBloc>().add(
+                    ResellerMarketplaceRefreshRequested(),
+                  );
+                }
+              },
             );
           }
 
           // ── Loaded ────────────────────────────────────────────
           final products = _filtered(state.products);
           final categories = _categories(state.products);
+          // Compute factory counts for filter chips (all-factories mode)
+          final factoryCounts = <String, int>{};
+          if (_isAllFactoriesMode) {
+            for (final p in state.products) {
+              factoryCounts[p.factoryId] =
+                  (factoryCounts[p.factoryId] ?? 0) + 1;
+            }
+          }
 
           return Column(
             children: [
@@ -190,6 +242,42 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
                   onClear: () => setState(() => _query = ''),
                 ),
               ),
+
+              // ── Factory filter chips (all-factories mode only) ─
+              if (_isAllFactoriesMode && state.factories.isNotEmpty)
+                SizedBox(
+                  height: 38.h,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    itemCount: state.factories.length + 1,
+                    separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                    itemBuilder: (_, i) {
+                      final isAll = i == 0;
+                      final fid = isAll
+                          ? null
+                          : state.factories[i - 1]['id']?.toString();
+                      final fname = isAll
+                          ? 'All Factories'
+                          : state.factories[i - 1]['name']?.toString() ??
+                                'Factory';
+                      final count = isAll
+                          ? state.products.length
+                          : (factoryCounts[fid] ?? 0);
+                      final selected = _selectedFactoryFilter == fid;
+                      return ChoiceChip(
+                        label: Text(
+                          '$fname ($count)',
+                          style: TextStyle(fontSize: 11.sp),
+                        ),
+                        selected: selected,
+                        onSelected: (_) =>
+                            setState(() => _selectedFactoryFilter = fid),
+                        padding: EdgeInsets.symmetric(horizontal: 4.w),
+                      );
+                    },
+                  ),
+                ),
 
               // ── Category chips ────────────────────────────────
               if (categories.isNotEmpty)
@@ -237,7 +325,7 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
                                   crossAxisCount: crossAxisCount,
                                   mainAxisSpacing: 10.h,
                                   crossAxisSpacing: 10.w,
-                                  childAspectRatio: 0.68,
+                                  childAspectRatio: 0.62,
                                 ),
                             itemCount: products.length,
                             itemBuilder: (_, i) =>
@@ -276,8 +364,10 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
           SizedBox(width: 10.w),
           Expanded(
             child: Text(
-              'Factory Promotions — Bulk discounts available. '
-              'Contact ${widget.factoryName} for wholesale rates.',
+              _isAllFactoriesMode
+                  ? 'Factory Promotions — Bulk discounts available across all factories.'
+                  : 'Factory Promotions — Bulk discounts available. '
+                        'Contact ${widget.factoryName} for wholesale rates.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 12.sp,
@@ -291,115 +381,504 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
 
   // ── Product card for grid ────────────────────────────────────────
   Widget _productGridCard(ResellerMarketplaceProductModel p) {
-    final cardColor = p.category.toLowerCase() == 'food'
-        ? AppColors.foodProduct
-        : p.category.toLowerCase() == 'medical'
-        ? AppColors.medicalProduct
-        : AppColors.primary;
+    final factoryName = p.factoryName ?? _factoryNameFor(p.factoryId);
+    final unitPrice = p.unitPrice;
 
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {} /* future: product detail */,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Image area ──────────────────────────────────
-            Expanded(
-              flex: 5,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Factory label ──────────────────────────────────
+          Padding(
+            padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 0),
+            child: Row(
+              children: [
+                Icon(Icons.factory, size: 12.sp, color: AppColors.gray500),
+                SizedBox(width: 4.w),
+                Expanded(
+                  child: Text(
+                    'Sold by: $factoryName',
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      color: AppColors.gray600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 4.h),
+
+          // ── Image area ──────────────────────────────────
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8.w),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8.r),
               child: Container(
+                height: 100.h,
                 color: AppColors.gray50,
-                child: Center(
-                  child: Icon(
-                    Icons.inventory_2_outlined,
-                    size: 40.sp,
+                child: p.imageUrl != null && p.imageUrl!.isNotEmpty
+                    ? Image.network(
+                        p.imageUrl!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (_, __, ___) =>
+                            _productImagePlaceholder(),
+                      )
+                    : _productImagePlaceholder(),
+              ),
+            ),
+          ),
+
+          SizedBox(height: 4.h),
+
+          // ── Offer badges row ──────────────────────────────
+          if (p.hasOffer)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.w),
+              child: Wrap(
+                spacing: 4.w,
+                runSpacing: 2.h,
+                children: [
+                  if (p.promoDiscount != null && p.promoDiscount! > 0)
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 5.w,
+                        vertical: 1.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00CC66).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(3.r),
+                      ),
+                      child: Text(
+                        '${p.promoDiscount!.toStringAsFixed(0)}% Off',
+                        style: TextStyle(
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF00994C),
+                        ),
+                      ),
+                    ),
+                  if (p.bonusThreshold != null && p.bonusQuantity != null)
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 5.w,
+                        vertical: 1.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(3.r),
+                      ),
+                      child: Text(
+                        'Buy ${p.bonusThreshold} Get ${p.bonusQuantity} Free',
+                        style: TextStyle(
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.accentDark,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+          if (p.hasOffer) SizedBox(height: 4.h),
+
+          // ── Product name ─────────────────────────────────
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8.w),
+            child: Text(
+              p.name,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 12.sp,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+
+          SizedBox(height: 2.h),
+
+          // ── Price ────────────────────────────────────────
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8.w),
+            child: Text(
+              '${p.currency} ${unitPrice.toStringAsFixed(0)} / unit',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+                fontSize: 13.sp,
+              ),
+            ),
+          ),
+
+          const Spacer(),
+
+          // ── Divider ──────────────────────────────────────
+          Divider(height: 1, thickness: 1, color: AppColors.gray100),
+
+          // ── Buttons row ──────────────────────────────────
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 4.h),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => _showPackageModal(p),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 4.w,
+                        vertical: 6.h,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'View Packages',
+                      style: TextStyle(
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => _addToCart(p),
+                  borderRadius: BorderRadius.circular(6.r),
+                  child: Container(
+                    padding: EdgeInsets.all(6.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(6.r),
+                    ),
+                    child: Icon(
+                      Icons.add_shopping_cart_rounded,
+                      size: 16.sp,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _productImagePlaceholder() {
+    return Center(
+      child: Icon(
+        Icons.inventory_2_outlined,
+        size: 40.sp,
+        color: AppColors.gray300,
+      ),
+    );
+  }
+
+  // ── Package Selection Modal Bottom Sheet ────────────────────────
+  void _showPackageModal(ResellerMarketplaceProductModel product) {
+    final factoryName =
+        product.factoryName ?? _factoryNameFor(product.factoryId);
+    int unitQty = product.moq ?? 1;
+    int cartonQty = product.cartonPrice != null ? 1 : 0;
+    int wholesaleQty = product.wholesalePrice != null ? 1 : 0;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.all(20.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
                     color: AppColors.gray300,
+                    borderRadius: BorderRadius.circular(2.r),
                   ),
                 ),
               ),
-            ),
+              SizedBox(height: 12.h),
 
-            // ── Info area ───────────────────────────────────
-            Expanded(
-              flex: 4,
-              child: Padding(
-                padding: EdgeInsets.all(8.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Category badge
-                    if (p.category.isNotEmpty)
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 6.w,
-                          vertical: 1.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: cardColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4.r),
-                        ),
-                        child: Text(
-                          p.category,
-                          style: TextStyle(
-                            fontSize: 9.sp,
-                            fontWeight: FontWeight.w600,
-                            color: cardColor,
-                          ),
+              // Factory header
+              Row(
+                children: [
+                  if (product.factoryLogo != null &&
+                      product.factoryLogo!.isNotEmpty)
+                    ClipOval(
+                      child: Image.network(
+                        product.factoryLogo!,
+                        width: 24.w,
+                        height: 24.w,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.factory,
+                          size: 24.sp,
+                          color: AppColors.gray500,
                         ),
                       ),
-                    SizedBox(height: 4.h),
-
-                    // Name
-                    Text(
-                      p.name,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    )
+                  else
+                    Icon(Icons.factory, size: 24.sp, color: AppColors.gray500),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      factoryName,
+                      style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 6.h),
 
-                    const Spacer(),
-
-                    // Price + Cart button
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${p.currency} ${p.price.toStringAsFixed(0)}',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                ),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () => _addToCart(p),
-                          borderRadius: BorderRadius.circular(6.r),
-                          child: Container(
-                            padding: EdgeInsets.all(6.w),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(6.r),
-                            ),
-                            child: Icon(
-                              Icons.add_shopping_cart_rounded,
-                              size: 16.sp,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+              // Product name
+              Text(
+                product.name,
+                style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.gray700,
                 ),
               ),
+              SizedBox(height: 10.h),
+
+              Divider(height: 1, color: AppColors.gray100),
+              SizedBox(height: 10.h),
+
+              // ── Volume discount info ──────────────────────
+              if (product.volumeDiscounts != null &&
+                  product.volumeDiscounts!.isNotEmpty) ...[
+                Container(
+                  padding: EdgeInsets.all(10.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.discount,
+                        size: 18.sp,
+                        color: AppColors.accent,
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          'Volume Discount: Buy more and save!',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.accentDark,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 10.h),
+              ],
+
+              // ── Unit package tile ─────────────────────────
+              _packageTile(
+                ctx: ctx,
+                icon: Icons.inventory_2_outlined,
+                label: 'Unit',
+                pricePer:
+                    '${product.currency} ${product.unitPrice.toStringAsFixed(0)} / unit',
+                moq: 'MOQ: ${product.moq ?? 1} units',
+                quantity: unitQty,
+                onChanged: (v) => setSheetState(() => unitQty = v),
+                onAdd: () {
+                  _addToCart(product, quantity: unitQty);
+                  Navigator.of(ctx).pop();
+                },
+              ),
+              SizedBox(height: 8.h),
+
+              // ── Carton package tile (if applicable) ──────
+              if (product.cartonPrice != null) ...[
+                _packageTile(
+                  ctx: ctx,
+                  icon: Icons.inventory_outlined,
+                  label: 'Carton',
+                  pricePer:
+                      '${product.currency} ${product.cartonPrice!.toStringAsFixed(0)} / carton',
+                  moq: '',
+                  quantity: cartonQty,
+                  onChanged: (v) => setSheetState(() => cartonQty = v),
+                  onAdd: () {
+                    _addToCart(product, quantity: cartonQty);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+                SizedBox(height: 8.h),
+              ],
+
+              // ── Wholesale package tile (if applicable) ───
+              if (product.wholesalePrice != null) ...[
+                _packageTile(
+                  ctx: ctx,
+                  icon: Icons.warehouse_outlined,
+                  label: 'Wholesale',
+                  pricePer:
+                      '${product.currency} ${product.wholesalePrice!.toStringAsFixed(0)} / bulk',
+                  moq: '',
+                  quantity: wholesaleQty,
+                  onChanged: (v) => setSheetState(() => wholesaleQty = v),
+                  onAdd: () {
+                    _addToCart(product, quantity: wholesaleQty);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+                SizedBox(height: 8.h),
+              ],
+
+              SizedBox(height: 8.h),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Single package type tile with quantity selector and Add to Cart.
+  Widget _packageTile({
+    required BuildContext ctx,
+    required IconData icon,
+    required String label,
+    required String pricePer,
+    required String moq,
+    required int quantity,
+    required ValueChanged<int> onChanged,
+    required VoidCallback onAdd,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.gray200),
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      padding: EdgeInsets.all(12.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              Icon(icon, size: 20.sp, color: AppColors.primary),
+              SizedBox(width: 8.w),
+              Text(
+                label,
+                style: Theme.of(
+                  ctx,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              Text(
+                pricePer,
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          if (moq.isNotEmpty) ...[
+            SizedBox(height: 4.h),
+            Text(
+              moq,
+              style: TextStyle(fontSize: 11.sp, color: AppColors.gray500),
             ),
           ],
-        ),
+          SizedBox(height: 8.h),
+
+          // Quantity selector + Add to Cart
+          Row(
+            children: [
+              // Minus
+              InkWell(
+                onTap: quantity > 1 ? () => onChanged(quantity - 1) : null,
+                borderRadius: BorderRadius.circular(4.r),
+                child: Container(
+                  padding: EdgeInsets.all(6.w),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.gray300),
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                  child: Icon(
+                    Icons.remove,
+                    size: 16.sp,
+                    color: AppColors.gray600,
+                  ),
+                ),
+              ),
+              // Quantity display
+              SizedBox(
+                width: 40.w,
+                child: Text(
+                  '$quantity',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              // Plus
+              InkWell(
+                onTap: () => onChanged(quantity + 1),
+                borderRadius: BorderRadius.circular(4.r),
+                child: Container(
+                  padding: EdgeInsets.all(6.w),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.gray300),
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                  child: Icon(Icons.add, size: 16.sp, color: AppColors.gray600),
+                ),
+              ),
+              const Spacer(),
+              // Add to Cart button
+              ElevatedButton.icon(
+                onPressed: onAdd,
+                icon: Icon(Icons.add_shopping_cart_rounded, size: 16.sp),
+                label: Text('Add to Cart', style: TextStyle(fontSize: 12.sp)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 8.h,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

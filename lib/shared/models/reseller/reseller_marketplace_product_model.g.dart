@@ -26,6 +26,19 @@ _ResellerMarketplaceProductModel _$ResellerMarketplaceProductModelFromJson(
     json['promo_discount'],
   ),
   metadata: json['metadata'] as Map<String, dynamic>?,
+  factoryName: json['factory_name'] as String?,
+  factoryCity: json['factory_city'] as String?,
+  factoryLogo: json['factory_logo'] as String?,
+  factoryStatus: json['factory_status'] as String?,
+  cartonPrice: ResellerMarketplaceProductModel._fromJsonDouble(
+    json['carton_price'],
+  ),
+  wholesalePrice: ResellerMarketplaceProductModel._fromJsonDouble(
+    json['wholesale_price'],
+  ),
+  moq: json['moq'] as int?,
+  bonusQuantity: json['bonus_quantity'] as int?,
+  bonusThreshold: json['bonus_threshold'] as int?,
 );
 
 Map<String, dynamic> _$ResellerMarketplaceProductModelToJson(
@@ -44,4 +57,13 @@ Map<String, dynamic> _$ResellerMarketplaceProductModelToJson(
   'volume_discounts': instance.volumeDiscounts?.map((e) => e.toJson()).toList(),
   'promo_discount': instance.promoDiscount,
   'metadata': instance.metadata,
+  'factory_name': instance.factoryName,
+  'factory_city': instance.factoryCity,
+  'factory_logo': instance.factoryLogo,
+  'factory_status': instance.factoryStatus,
+  'carton_price': instance.cartonPrice,
+  'wholesale_price': instance.wholesalePrice,
+  'moq': instance.moq,
+  'bonus_quantity': instance.bonusQuantity,
+  'bonus_threshold': instance.bonusThreshold,
 };

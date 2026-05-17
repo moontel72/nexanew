@@ -46,12 +46,13 @@ class ResellerMarketplaceController extends Controller
     }
 
     /**
-     * Browse products for a specific factory.
+     * Browse products. If factory_id is provided, filter by that factory.
+     * Otherwise, return products from all active factories with marketplace_enabled = true.
      */
     public function products(Request $request): JsonResponse
     {
         $request->validate([
-            'factory_id' => 'required|string',
+            'factory_id' => 'nullable|string',
             'tenant_id' => 'nullable|string',
             'search' => 'nullable|string|max:100',
             'page' => 'nullable|integer|min:1',
@@ -62,21 +63,7 @@ class ResellerMarketplaceController extends Controller
         $search = $request->query('search');
         $limit = (int) $request->query('limit', 20);
 
-        // Verify factory exists and is active
-        $factory = Company::where('id', $factoryId)
-            ->where('status', 'active')
-            ->where('is_deleted', false)
-            ->first();
-
-        if (!$factory) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Factory not found or inactive.',
-            ], 404);
-        }
-
-        $query = Product::where('company_id', $factoryId)
-            ->where('status', 'active')
+        $query = Product::where('status', 'active')
             ->where('marketplace_enabled', true)
             ->select([
                 'id', 'company_id', 'name', 'sku', 'description', 'category', 'product_type',
@@ -87,6 +74,30 @@ class ResellerMarketplaceController extends Controller
                 'promo_code', 'promo_discount', 'tags', 'volume_discounts',
             ]);
 
+        // Filter by factory if provided, otherwise get from all active factories
+        if ($factoryId) {
+            $query->where('company_id', $factoryId);
+
+            // Verify factory exists and is active
+            $factory = Company::where('id', $factoryId)
+                ->where('status', 'active')
+                ->where('is_deleted', false)
+                ->first();
+
+            if (!$factory) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Factory not found or inactive.',
+                ], 404);
+            }
+        }
+
+        // Always filter out products from suspended/inactive factories
+        $query->whereHas('company', function ($q) {
+            $q->where('status', 'active')
+              ->where('is_deleted', false);
+        });
+
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -95,12 +106,25 @@ class ResellerMarketplaceController extends Controller
             });
         }
 
+        // Eager-load company for factory info
+        $query->with('company:id,name,city,logo_url,status');
+
         $products = $query->orderBy('name')
             ->paginate($limit);
 
+        // Map factory info into each product
+        $data = collect($products->items())->map(function ($product) {
+            $arr = $product->toArray();
+            $arr['factory_name'] = $product->company->name ?? null;
+            $arr['factory_city'] = $product->company->city ?? null;
+            $arr['factory_logo'] = $product->company->logo_url ?? null;
+            $arr['factory_status'] = $product->company->status ?? null;
+            return $arr;
+        })->toArray();
+
         return response()->json([
             'success' => true,
-            'data' => $products->items(),
+            'data' => $data,
             'total' => $products->total(),
             'page' => $products->currentPage(),
             'per_page' => $products->perPage(),

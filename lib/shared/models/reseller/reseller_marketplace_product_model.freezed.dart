@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ResellerMarketplaceProductModel {
 
- String get id; String get tenantId; String get factoryId; String get name; String get sku; String get category; String get productType; String get status; double get price; String get currency; List<VolumeDiscountTier>? get volumeDiscounts; double? get promoDiscount; Map<String, dynamic>? get metadata;
+ String get id; String get tenantId; String get factoryId; String get name; String get sku; String get category; String get productType; String get status; double get price; String get currency; List<VolumeDiscountTier>? get volumeDiscounts; double? get promoDiscount; Map<String, dynamic>? get metadata; String? get factoryName; String? get factoryCity; String? get factoryLogo; String? get factoryStatus; double? get cartonPrice; double? get wholesalePrice; int? get moq; int? get bonusQuantity; int? get bonusThreshold;
 /// Create a copy of ResellerMarketplaceProductModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $ResellerMarketplaceProductModelCopyWith<ResellerMarketplaceProductModel> get co
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ResellerMarketplaceProductModel&&(identical(other.id, id) || other.id == id)&&(identical(other.tenantId, tenantId) || other.tenantId == tenantId)&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.name, name) || other.name == name)&&(identical(other.sku, sku) || other.sku == sku)&&(identical(other.category, category) || other.category == category)&&(identical(other.productType, productType) || other.productType == productType)&&(identical(other.status, status) || other.status == status)&&(identical(other.price, price) || other.price == price)&&(identical(other.currency, currency) || other.currency == currency)&&const DeepCollectionEquality().equals(other.volumeDiscounts, volumeDiscounts)&&(identical(other.promoDiscount, promoDiscount) || other.promoDiscount == promoDiscount)&&const DeepCollectionEquality().equals(other.metadata, metadata));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ResellerMarketplaceProductModel&&(identical(other.id, id) || other.id == id)&&(identical(other.tenantId, tenantId) || other.tenantId == tenantId)&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.name, name) || other.name == name)&&(identical(other.sku, sku) || other.sku == sku)&&(identical(other.category, category) || other.category == category)&&(identical(other.productType, productType) || other.productType == productType)&&(identical(other.status, status) || other.status == status)&&(identical(other.price, price) || other.price == price)&&(identical(other.currency, currency) || other.currency == currency)&&const DeepCollectionEquality().equals(other.volumeDiscounts, volumeDiscounts)&&(identical(other.promoDiscount, promoDiscount) || other.promoDiscount == promoDiscount)&&const DeepCollectionEquality().equals(other.metadata, metadata)&&(identical(other.factoryName, factoryName) || other.factoryName == factoryName)&&(identical(other.factoryCity, factoryCity) || other.factoryCity == factoryCity)&&(identical(other.factoryLogo, factoryLogo) || other.factoryLogo == factoryLogo)&&(identical(other.factoryStatus, factoryStatus) || other.factoryStatus == factoryStatus)&&(identical(other.cartonPrice, cartonPrice) || other.cartonPrice == cartonPrice)&&(identical(other.wholesalePrice, wholesalePrice) || other.wholesalePrice == wholesalePrice)&&(identical(other.moq, moq) || other.moq == moq)&&(identical(other.bonusQuantity, bonusQuantity) || other.bonusQuantity == bonusQuantity)&&(identical(other.bonusThreshold, bonusThreshold) || other.bonusThreshold == bonusThreshold));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,tenantId,factoryId,name,sku,category,productType,status,price,currency,const DeepCollectionEquality().hash(volumeDiscounts),promoDiscount,const DeepCollectionEquality().hash(metadata));
+int get hashCode => Object.hash(runtimeType,id,tenantId,factoryId,name,sku,category,productType,status,price,currency,const DeepCollectionEquality().hash(volumeDiscounts),promoDiscount,const DeepCollectionEquality().hash(metadata),factoryName,factoryCity,factoryLogo,factoryStatus,cartonPrice,wholesalePrice,moq,bonusQuantity,bonusThreshold);
 
 @override
 String toString() {
-  return 'ResellerMarketplaceProductModel(id: $id, tenantId: $tenantId, factoryId: $factoryId, name: $name, sku: $sku, category: $category, productType: $productType, status: $status, price: $price, currency: $currency, volumeDiscounts: $volumeDiscounts, promoDiscount: $promoDiscount, metadata: $metadata)';
+  return 'ResellerMarketplaceProductModel(id: $id, tenantId: $tenantId, factoryId: $factoryId, name: $name, sku: $sku, category: $category, productType: $productType, status: $status, price: $price, currency: $currency, volumeDiscounts: $volumeDiscounts, promoDiscount: $promoDiscount, metadata: $metadata, factoryName: $factoryName, factoryCity: $factoryCity, factoryLogo: $factoryLogo, factoryStatus: $factoryStatus, cartonPrice: $cartonPrice, wholesalePrice: $wholesalePrice, moq: $moq, bonusQuantity: $bonusQuantity, bonusThreshold: $bonusThreshold)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $ResellerMarketplaceProductModelCopyWith<$Res>  {
   factory $ResellerMarketplaceProductModelCopyWith(ResellerMarketplaceProductModel value, $Res Function(ResellerMarketplaceProductModel) _then) = _$ResellerMarketplaceProductModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String tenantId, String factoryId, String name, String sku, String category, String productType, String status, double price, String currency, List<VolumeDiscountTier>? volumeDiscounts, double? promoDiscount, Map<String, dynamic>? metadata
+ String id, String tenantId, String factoryId, String name, String sku, String category, String productType, String status, double price, String currency, List<VolumeDiscountTier>? volumeDiscounts, double? promoDiscount, Map<String, dynamic>? metadata, String? factoryName, String? factoryCity, String? factoryLogo, String? factoryStatus, double? cartonPrice, double? wholesalePrice, int? moq, int? bonusQuantity, int? bonusThreshold
 });
 
 
@@ -65,7 +65,7 @@ class _$ResellerMarketplaceProductModelCopyWithImpl<$Res>
 
 /// Create a copy of ResellerMarketplaceProductModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? tenantId = null,Object? factoryId = null,Object? name = null,Object? sku = null,Object? category = null,Object? productType = null,Object? status = null,Object? price = null,Object? currency = null,Object? volumeDiscounts = freezed,Object? promoDiscount = freezed,Object? metadata = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? tenantId = null,Object? factoryId = null,Object? name = null,Object? sku = null,Object? category = null,Object? productType = null,Object? status = null,Object? price = null,Object? currency = null,Object? volumeDiscounts = freezed,Object? promoDiscount = freezed,Object? metadata = freezed,Object? factoryName = freezed,Object? factoryCity = freezed,Object? factoryLogo = freezed,Object? factoryStatus = freezed,Object? cartonPrice = freezed,Object? wholesalePrice = freezed,Object? moq = freezed,Object? bonusQuantity = freezed,Object? bonusThreshold = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,tenantId: null == tenantId ? _self.tenantId : tenantId // ignore: cast_nullable_to_non_nullable
@@ -80,7 +80,16 @@ as double,currency: null == currency ? _self.currency : currency // ignore: cast
 as String,volumeDiscounts: freezed == volumeDiscounts ? _self.volumeDiscounts : volumeDiscounts // ignore: cast_nullable_to_non_nullable
 as List<VolumeDiscountTier>?,promoDiscount: freezed == promoDiscount ? _self.promoDiscount : promoDiscount // ignore: cast_nullable_to_non_nullable
 as double?,metadata: freezed == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>?,
+as Map<String, dynamic>?,factoryName: freezed == factoryName ? _self.factoryName : factoryName // ignore: cast_nullable_to_non_nullable
+as String?,factoryCity: freezed == factoryCity ? _self.factoryCity : factoryCity // ignore: cast_nullable_to_non_nullable
+as String?,factoryLogo: freezed == factoryLogo ? _self.factoryLogo : factoryLogo // ignore: cast_nullable_to_non_nullable
+as String?,factoryStatus: freezed == factoryStatus ? _self.factoryStatus : factoryStatus // ignore: cast_nullable_to_non_nullable
+as String?,cartonPrice: freezed == cartonPrice ? _self.cartonPrice : cartonPrice // ignore: cast_nullable_to_non_nullable
+as double?,wholesalePrice: freezed == wholesalePrice ? _self.wholesalePrice : wholesalePrice // ignore: cast_nullable_to_non_nullable
+as double?,moq: freezed == moq ? _self.moq : moq // ignore: cast_nullable_to_non_nullable
+as int?,bonusQuantity: freezed == bonusQuantity ? _self.bonusQuantity : bonusQuantity // ignore: cast_nullable_to_non_nullable
+as int?,bonusThreshold: freezed == bonusThreshold ? _self.bonusThreshold : bonusThreshold // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -165,10 +174,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status,  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts,  double? promoDiscount,  Map<String, dynamic>? metadata)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status,  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts,  double? promoDiscount,  Map<String, dynamic>? metadata,  String? factoryName,  String? factoryCity,  String? factoryLogo,  String? factoryStatus,  double? cartonPrice,  double? wholesalePrice,  int? moq,  int? bonusQuantity,  int? bonusThreshold)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ResellerMarketplaceProductModel() when $default != null:
-return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_that.category,_that.productType,_that.status,_that.price,_that.currency,_that.volumeDiscounts,_that.promoDiscount,_that.metadata);case _:
+return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_that.category,_that.productType,_that.status,_that.price,_that.currency,_that.volumeDiscounts,_that.promoDiscount,_that.metadata,_that.factoryName,_that.factoryCity,_that.factoryLogo,_that.factoryStatus,_that.cartonPrice,_that.wholesalePrice,_that.moq,_that.bonusQuantity,_that.bonusThreshold);case _:
   return orElse();
 
 }
@@ -186,10 +195,10 @@ return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status,  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts,  double? promoDiscount,  Map<String, dynamic>? metadata)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status,  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts,  double? promoDiscount,  Map<String, dynamic>? metadata,  String? factoryName,  String? factoryCity,  String? factoryLogo,  String? factoryStatus,  double? cartonPrice,  double? wholesalePrice,  int? moq,  int? bonusQuantity,  int? bonusThreshold)  $default,) {final _that = this;
 switch (_that) {
 case _ResellerMarketplaceProductModel():
-return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_that.category,_that.productType,_that.status,_that.price,_that.currency,_that.volumeDiscounts,_that.promoDiscount,_that.metadata);case _:
+return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_that.category,_that.productType,_that.status,_that.price,_that.currency,_that.volumeDiscounts,_that.promoDiscount,_that.metadata,_that.factoryName,_that.factoryCity,_that.factoryLogo,_that.factoryStatus,_that.cartonPrice,_that.wholesalePrice,_that.moq,_that.bonusQuantity,_that.bonusThreshold);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -206,10 +215,10 @@ return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status,  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts,  double? promoDiscount,  Map<String, dynamic>? metadata)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String tenantId,  String factoryId,  String name,  String sku,  String category,  String productType,  String status,  double price,  String currency,  List<VolumeDiscountTier>? volumeDiscounts,  double? promoDiscount,  Map<String, dynamic>? metadata,  String? factoryName,  String? factoryCity,  String? factoryLogo,  String? factoryStatus,  double? cartonPrice,  double? wholesalePrice,  int? moq,  int? bonusQuantity,  int? bonusThreshold)?  $default,) {final _that = this;
 switch (_that) {
 case _ResellerMarketplaceProductModel() when $default != null:
-return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_that.category,_that.productType,_that.status,_that.price,_that.currency,_that.volumeDiscounts,_that.promoDiscount,_that.metadata);case _:
+return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_that.category,_that.productType,_that.status,_that.price,_that.currency,_that.volumeDiscounts,_that.promoDiscount,_that.metadata,_that.factoryName,_that.factoryCity,_that.factoryLogo,_that.factoryStatus,_that.cartonPrice,_that.wholesalePrice,_that.moq,_that.bonusQuantity,_that.bonusThreshold);case _:
   return null;
 
 }
@@ -217,11 +226,12 @@ return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_th
 
 }
 
+
 /// @nodoc
 @JsonSerializable()
 
 class _ResellerMarketplaceProductModel implements ResellerMarketplaceProductModel {
-  const _ResellerMarketplaceProductModel({required this.id, required this.tenantId, required this.factoryId, required this.name, this.sku = '', this.category = '', this.productType = '', this.status = 'active', this.price = 0.0, this.currency = 'PKR', final  List<VolumeDiscountTier>? volumeDiscounts, this.promoDiscount, final  Map<String, dynamic>? metadata}): _volumeDiscounts = volumeDiscounts,_metadata = metadata;
+  const _ResellerMarketplaceProductModel({required this.id, required this.tenantId, required this.factoryId, required this.name, this.sku = '', this.category = '', this.productType = '', this.status = 'active', this.price = 0.0, this.currency = 'PKR', final  List<VolumeDiscountTier>? volumeDiscounts, this.promoDiscount, final  Map<String, dynamic>? metadata, this.factoryName, this.factoryCity, this.factoryLogo, this.factoryStatus, this.cartonPrice, this.wholesalePrice, this.moq, this.bonusQuantity, this.bonusThreshold}): _volumeDiscounts = volumeDiscounts,_metadata = metadata;
   factory _ResellerMarketplaceProductModel.fromJson(Map<String, dynamic> json) => _$ResellerMarketplaceProductModelFromJson(json);
 
 @override final  String id;
@@ -253,6 +263,15 @@ class _ResellerMarketplaceProductModel implements ResellerMarketplaceProductMode
   return EqualUnmodifiableMapView(value);
 }
 
+@override final  String? factoryName;
+@override final  String? factoryCity;
+@override final  String? factoryLogo;
+@override final  String? factoryStatus;
+@override final  double? cartonPrice;
+@override final  double? wholesalePrice;
+@override final  int? moq;
+@override final  int? bonusQuantity;
+@override final  int? bonusThreshold;
 
 /// Create a copy of ResellerMarketplaceProductModel
 /// with the given fields replaced by the non-null parameter values.
@@ -267,16 +286,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ResellerMarketplaceProductModel&&(identical(other.id, id) || other.id == id)&&(identical(other.tenantId, tenantId) || other.tenantId == tenantId)&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.name, name) || other.name == name)&&(identical(other.sku, sku) || other.sku == sku)&&(identical(other.category, category) || other.category == category)&&(identical(other.productType, productType) || other.productType == productType)&&(identical(other.status, status) || other.status == status)&&(identical(other.price, price) || other.price == price)&&(identical(other.currency, currency) || other.currency == currency)&&const DeepCollectionEquality().equals(other._volumeDiscounts, _volumeDiscounts)&&(identical(other.promoDiscount, promoDiscount) || other.promoDiscount == promoDiscount)&&const DeepCollectionEquality().equals(other._metadata, _metadata));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ResellerMarketplaceProductModel&&(identical(other.id, id) || other.id == id)&&(identical(other.tenantId, tenantId) || other.tenantId == tenantId)&&(identical(other.factoryId, factoryId) || other.factoryId == factoryId)&&(identical(other.name, name) || other.name == name)&&(identical(other.sku, sku) || other.sku == sku)&&(identical(other.category, category) || other.category == category)&&(identical(other.productType, productType) || other.productType == productType)&&(identical(other.status, status) || other.status == status)&&(identical(other.price, price) || other.price == price)&&(identical(other.currency, currency) || other.currency == currency)&&const DeepCollectionEquality().equals(other._volumeDiscounts, _volumeDiscounts)&&(identical(other.promoDiscount, promoDiscount) || other.promoDiscount == promoDiscount)&&const DeepCollectionEquality().equals(other._metadata, _metadata)&&(identical(other.factoryName, factoryName) || other.factoryName == factoryName)&&(identical(other.factoryCity, factoryCity) || other.factoryCity == factoryCity)&&(identical(other.factoryLogo, factoryLogo) || other.factoryLogo == factoryLogo)&&(identical(other.factoryStatus, factoryStatus) || other.factoryStatus == factoryStatus)&&(identical(other.cartonPrice, cartonPrice) || other.cartonPrice == cartonPrice)&&(identical(other.wholesalePrice, wholesalePrice) || other.wholesalePrice == wholesalePrice)&&(identical(other.moq, moq) || other.moq == moq)&&(identical(other.bonusQuantity, bonusQuantity) || other.bonusQuantity == bonusQuantity)&&(identical(other.bonusThreshold, bonusThreshold) || other.bonusThreshold == bonusThreshold));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,tenantId,factoryId,name,sku,category,productType,status,price,currency,const DeepCollectionEquality().hash(_volumeDiscounts),promoDiscount,const DeepCollectionEquality().hash(_metadata));
+int get hashCode => Object.hash(runtimeType,id,tenantId,factoryId,name,sku,category,productType,status,price,currency,const DeepCollectionEquality().hash(_volumeDiscounts),promoDiscount,const DeepCollectionEquality().hash(_metadata),factoryName,factoryCity,factoryLogo,factoryStatus,cartonPrice,wholesalePrice,moq,bonusQuantity,bonusThreshold);
 
 @override
 String toString() {
-  return 'ResellerMarketplaceProductModel(id: $id, tenantId: $tenantId, factoryId: $factoryId, name: $name, sku: $sku, category: $category, productType: $productType, status: $status, price: $price, currency: $currency, volumeDiscounts: $volumeDiscounts, promoDiscount: $promoDiscount, metadata: $metadata)';
+  return 'ResellerMarketplaceProductModel(id: $id, tenantId: $tenantId, factoryId: $factoryId, name: $name, sku: $sku, category: $category, productType: $productType, status: $status, price: $price, currency: $currency, volumeDiscounts: $volumeDiscounts, promoDiscount: $promoDiscount, metadata: $metadata, factoryName: $factoryName, factoryCity: $factoryCity, factoryLogo: $factoryLogo, factoryStatus: $factoryStatus, cartonPrice: $cartonPrice, wholesalePrice: $wholesalePrice, moq: $moq, bonusQuantity: $bonusQuantity, bonusThreshold: $bonusThreshold)';
 }
 
 
@@ -287,7 +306,7 @@ abstract mixin class _$ResellerMarketplaceProductModelCopyWith<$Res> implements 
   factory _$ResellerMarketplaceProductModelCopyWith(_ResellerMarketplaceProductModel value, $Res Function(_ResellerMarketplaceProductModel) _then) = __$ResellerMarketplaceProductModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String tenantId, String factoryId, String name, String sku, String category, String productType, String status, double price, String currency, List<VolumeDiscountTier>? volumeDiscounts, double? promoDiscount, Map<String, dynamic>? metadata
+ String id, String tenantId, String factoryId, String name, String sku, String category, String productType, String status, double price, String currency, List<VolumeDiscountTier>? volumeDiscounts, double? promoDiscount, Map<String, dynamic>? metadata, String? factoryName, String? factoryCity, String? factoryLogo, String? factoryStatus, double? cartonPrice, double? wholesalePrice, int? moq, int? bonusQuantity, int? bonusThreshold
 });
 
 
@@ -304,7 +323,7 @@ class __$ResellerMarketplaceProductModelCopyWithImpl<$Res>
 
 /// Create a copy of ResellerMarketplaceProductModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? tenantId = null,Object? factoryId = null,Object? name = null,Object? sku = null,Object? category = null,Object? productType = null,Object? status = null,Object? price = null,Object? currency = null,Object? volumeDiscounts = freezed,Object? promoDiscount = freezed,Object? metadata = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? tenantId = null,Object? factoryId = null,Object? name = null,Object? sku = null,Object? category = null,Object? productType = null,Object? status = null,Object? price = null,Object? currency = null,Object? volumeDiscounts = freezed,Object? promoDiscount = freezed,Object? metadata = freezed,Object? factoryName = freezed,Object? factoryCity = freezed,Object? factoryLogo = freezed,Object? factoryStatus = freezed,Object? cartonPrice = freezed,Object? wholesalePrice = freezed,Object? moq = freezed,Object? bonusQuantity = freezed,Object? bonusThreshold = freezed,}) {
   return _then(_ResellerMarketplaceProductModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,tenantId: null == tenantId ? _self.tenantId : tenantId // ignore: cast_nullable_to_non_nullable
@@ -319,11 +338,18 @@ as double,currency: null == currency ? _self.currency : currency // ignore: cast
 as String,volumeDiscounts: freezed == volumeDiscounts ? _self._volumeDiscounts : volumeDiscounts // ignore: cast_nullable_to_non_nullable
 as List<VolumeDiscountTier>?,promoDiscount: freezed == promoDiscount ? _self.promoDiscount : promoDiscount // ignore: cast_nullable_to_non_nullable
 as double?,metadata: freezed == metadata ? _self._metadata : metadata // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>?,
+as Map<String, dynamic>?,factoryName: freezed == factoryName ? _self.factoryName : factoryName // ignore: cast_nullable_to_non_nullable
+as String?,factoryCity: freezed == factoryCity ? _self.factoryCity : factoryCity // ignore: cast_nullable_to_non_nullable
+as String?,factoryLogo: freezed == factoryLogo ? _self.factoryLogo : factoryLogo // ignore: cast_nullable_to_non_nullable
+as String?,factoryStatus: freezed == factoryStatus ? _self.factoryStatus : factoryStatus // ignore: cast_nullable_to_non_nullable
+as String?,cartonPrice: freezed == cartonPrice ? _self.cartonPrice : cartonPrice // ignore: cast_nullable_to_non_nullable
+as double?,wholesalePrice: freezed == wholesalePrice ? _self.wholesalePrice : wholesalePrice // ignore: cast_nullable_to_non_nullable
+as double?,moq: freezed == moq ? _self.moq : moq // ignore: cast_nullable_to_non_nullable
+as int?,bonusQuantity: freezed == bonusQuantity ? _self.bonusQuantity : bonusQuantity // ignore: cast_nullable_to_non_nullable
+as int?,bonusThreshold: freezed == bonusThreshold ? _self.bonusThreshold : bonusThreshold // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
 
 }
-
-// dart format on
