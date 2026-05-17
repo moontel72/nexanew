@@ -68,7 +68,8 @@ class AppRouter {
     }
 
     router = GoRouter(
-      initialLocation: '/',
+      // No initialLocation — let GoRouter detect the actual browser URL on web.
+      // This prevents the redirect from firing on '/' before the real URL is read.
       debugLogDiagnostics: kDebugMode,
       redirect: _safeRedirect,
       routes: _routes,
