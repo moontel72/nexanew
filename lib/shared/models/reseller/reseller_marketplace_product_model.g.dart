@@ -17,12 +17,14 @@ _ResellerMarketplaceProductModel _$ResellerMarketplaceProductModelFromJson(
   category: json['category'] as String? ?? '',
   productType: json['product_type'] as String? ?? '',
   status: json['status'] as String? ?? 'active',
-  price: (json['price'] as num?)?.toDouble() ?? 0.0,
+  price: ResellerMarketplaceProductModel._fromJsonDouble(json['price']) ?? 0.0,
   currency: json['currency'] as String? ?? 'PKR',
   volumeDiscounts: (json['volume_discounts'] as List<dynamic>?)
       ?.map((e) => VolumeDiscountTier.fromJson(e as Map<String, dynamic>))
       .toList(),
-  promoDiscount: (json['promo_discount'] as num?)?.toDouble(),
+  promoDiscount: ResellerMarketplaceProductModel._fromJsonDouble(
+    json['promo_discount'],
+  ),
   metadata: json['metadata'] as Map<String, dynamic>?,
 );
 

@@ -1,3 +1,16 @@
+/// Safely parse a value that may be String, int, double, or null into a double.
+double? _parseDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is num) return value.toDouble();
+  if (value is String) {
+    final parsed = double.tryParse(value.trim());
+    return parsed;
+  }
+  return null;
+}
+
 class VolumeDiscountTier {
   final int minQuantity;
   final double discountPercent;
@@ -10,8 +23,9 @@ class VolumeDiscountTier {
   factory VolumeDiscountTier.fromJson(Map<String, dynamic> json) =>
       VolumeDiscountTier(
         minQuantity: json['min_qty'] ?? json['min_quantity'] ?? 0,
-        discountPercent: (json['discount_percent'] ?? json['discount'] ?? 0)
-            .toDouble(),
+        discountPercent: _parseDouble(
+                json['discount_percent'] ?? json['discount']) ??
+            0,
       );
 
   Map<String, dynamic> toJson() => {
@@ -161,14 +175,14 @@ class ProductModel {
       ),
 
       // Commercial pricing
-      unitPrice: (json['unit_price'] ?? json['unitPrice'])?.toDouble(),
-      cartonPrice: (json['carton_price'] ?? json['cartonPrice'])?.toDouble(),
-      wholesalePrice: (json['wholesale_price'] ?? json['wholesalePrice'])
-          ?.toDouble(),
+      unitPrice: _parseDouble(json['unit_price'] ?? json['unitPrice']),
+      cartonPrice: _parseDouble(json['carton_price'] ?? json['cartonPrice']),
+      wholesalePrice: _parseDouble(
+          json['wholesale_price'] ?? json['wholesalePrice']),
       currency: (json['currency'] ?? 'NGN').toString(),
       discountType: json['discount_type'] ?? json['discountType']?.toString(),
-      discountValue: (json['discount_value'] ?? json['discountValue'])
-          ?.toDouble(),
+      discountValue: _parseDouble(
+          json['discount_value'] ?? json['discountValue']),
       moq: (json['moq'] ?? json['minimum_order_quantity'] ?? 1) is int
           ? (json['moq'] ?? json['minimum_order_quantity'] ?? 1) as int
           : int.tryParse(
@@ -193,10 +207,10 @@ class ProductModel {
               (json['bonus_threshold'] ?? json['bonusThreshold'] ?? '')
                   .toString(),
             ),
-      walletCredit: (json['wallet_credit'] ?? json['walletCredit'])?.toDouble(),
+      walletCredit: _parseDouble(json['wallet_credit'] ?? json['walletCredit']),
       promoCode: json['promo_code'] ?? json['promoCode']?.toString(),
-      promoDiscount: (json['promo_discount'] ?? json['promoDiscount'])
-          ?.toDouble(),
+      promoDiscount: _parseDouble(
+          json['promo_discount'] ?? json['promoDiscount']),
       tags: parseTags(json['tags']),
       volumeDiscounts: parseVolumeDiscounts(
         json['volume_discounts'] ?? json['volumeDiscounts'],
