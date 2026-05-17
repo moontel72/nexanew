@@ -67,13 +67,17 @@ class AdminResellerController extends Controller
             'registration_no' => 'required|string|max:100',
             'email' => 'required|email|unique:resellers,email',
             'phone' => 'required|string|max:30|unique:resellers,phone',
+            'password' => 'required|string|min:8',
             'city' => 'required|string|max:100',
             'address' => 'nullable|string|max:500',
             'plan_id' => 'nullable|string|max:36',
         ]);
 
+        $validated['password'] = bcrypt($validated['password']);
         $reseller = Reseller::create($validated);
 
+        // Remove password from response
+        unset($reseller->password);
         return response()->json(['data' => $reseller], 201);
     }
 
@@ -95,13 +99,20 @@ class AdminResellerController extends Controller
             'registration_no' => 'sometimes|string|max:100',
             'email' => ['sometimes', 'email', Rule::unique('resellers', 'email')->ignore($id)],
             'phone' => ['sometimes', 'string', 'max:30', Rule::unique('resellers', 'phone')->ignore($id)],
+            'password' => 'nullable|string|min:8',
             'city' => 'sometimes|string|max:100',
             'address' => 'nullable|string|max:500',
             'plan_id' => 'nullable|string|max:36',
         ]);
 
+        if (!empty($validated['password'])) {
+            $validated['password'] = bcrypt($validated['password']);
+        } else {
+            unset($validated['password']);
+        }
         $reseller->update($validated);
 
+        unset($reseller->password);
         return response()->json(['data' => $reseller]);
     }
 

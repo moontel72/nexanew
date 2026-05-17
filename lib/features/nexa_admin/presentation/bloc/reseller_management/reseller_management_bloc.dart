@@ -40,6 +40,7 @@ final class CreateReseller extends ResellerManagementEvent {
   final String registrationNo;
   final String email;
   final String phone;
+  final String password;
   final String city;
   final String? address;
   final String? planId;
@@ -50,6 +51,7 @@ final class CreateReseller extends ResellerManagementEvent {
     required this.registrationNo,
     required this.email,
     required this.phone,
+    required this.password,
     required this.city,
     this.address,
     this.planId,
@@ -305,6 +307,7 @@ class ResellerManagementBloc
         registrationNo: event.registrationNo,
         email: event.email,
         phone: event.phone,
+        password: event.password,
         city: event.city,
         address: event.address,
         planId: event.planId,

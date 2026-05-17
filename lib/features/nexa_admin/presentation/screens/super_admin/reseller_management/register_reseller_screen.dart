@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/reseller_management/reseller_management_bloc.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
@@ -23,10 +22,12 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
   final _regCtl = TextEditingController();
   final _emailCtl = TextEditingController();
   final _phoneCtl = TextEditingController();
+  final _passwordCtl = TextEditingController();
   final _cityCtl = TextEditingController();
   final _addressCtl = TextEditingController();
 
   bool _submitting = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -35,6 +36,7 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
     _regCtl.dispose();
     _emailCtl.dispose();
     _phoneCtl.dispose();
+    _passwordCtl.dispose();
     _cityCtl.dispose();
     _addressCtl.dispose();
     super.dispose();
@@ -52,6 +54,7 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
         registrationNo: _regCtl.text.trim(),
         email: _emailCtl.text.trim(),
         phone: _phoneCtl.text.trim(),
+        password: _passwordCtl.text,
         city: _cityCtl.text.trim(),
         address: _addressCtl.text.trim(),
       ),
@@ -100,25 +103,24 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Text(
                   'Reseller Details',
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
-                Gap(4.h),
+                SizedBox(height: 4.h),
                 Text(
                   'Fill in the details to onboard a new reseller onto the NexaTrace Marketplace.',
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
                 ),
-                Gap(24.h),
+                SizedBox(height: 24.h),
 
-                // Personal Info Section
+                // ── Profile ───────────────────────────────────
                 _sectionHeader('Profile'),
-                Gap(12.h),
+                SizedBox(height: 12.h),
                 _field(
                   'Full Name *',
                   _nameCtl,
@@ -126,7 +128,7 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-                Gap(14.h),
+                SizedBox(height: 14.h),
                 _field(
                   'Business Name *',
                   _bizCtl,
@@ -134,11 +136,11 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-                Gap(24.h),
+                SizedBox(height: 24.h),
 
-                // Business Verification Section
+                // ── Business Verification ─────────────────────
                 _sectionHeader('Business Verification'),
-                Gap(12.h),
+                SizedBox(height: 12.h),
                 _field(
                   'Govt Registration No *',
                   _regCtl,
@@ -146,7 +148,7 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-                Gap(4.h),
+                SizedBox(height: 4.h),
                 Text(
                   'Required per B2B policy. Resellers must provide valid business proof.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -154,11 +156,11 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
                     fontSize: 11.sp,
                   ),
                 ),
-                Gap(24.h),
+                SizedBox(height: 24.h),
 
-                // Contact Section
-                _sectionHeader('Contact'),
-                Gap(12.h),
+                // ── Login Credentials ─────────────────────────
+                _sectionHeader('Login Credentials'),
+                SizedBox(height: 12.h),
                 _field(
                   'Email Address *',
                   _emailCtl,
@@ -170,7 +172,49 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
                     return null;
                   },
                 ),
-                Gap(14.h),
+                SizedBox(height: 14.h),
+                TextFormField(
+                  controller: _passwordCtl,
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    labelText: 'Password *',
+                    hintText: 'Min. 8 characters',
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 12.h,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        size: 20.sp,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Required';
+                    if (v.length < 8) return 'Min. 8 characters';
+                    return null;
+                  },
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  'This password will be used to log in at\nhttp://135.181.46.27/reseller/login',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.gray500,
+                    fontSize: 11.sp,
+                  ),
+                ),
+                SizedBox(height: 24.h),
+
+                // ── Contact ───────────────────────────────────
+                _sectionHeader('Contact'),
+                SizedBox(height: 12.h),
                 _field(
                   'Phone Number *',
                   _phoneCtl,
@@ -179,11 +223,11 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-                Gap(24.h),
+                SizedBox(height: 24.h),
 
-                // Location Section
+                // ── Location ──────────────────────────────────
                 _sectionHeader('Location'),
-                Gap(12.h),
+                SizedBox(height: 12.h),
                 _field(
                   'City *',
                   _cityCtl,
@@ -191,23 +235,23 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-                Gap(14.h),
+                SizedBox(height: 14.h),
                 _field(
                   'Address',
                   _addressCtl,
                   hint: '123 Main Boulevard, Gulberg',
                   maxLines: 3,
                 ),
-                Gap(32.h),
+                SizedBox(height: 32.h),
 
-                // Submit
+                // ── Submit ────────────────────────────────────
                 PrimaryButton(
                   text: _submitting ? 'Registering…' : 'Register Reseller',
                   isLoading: _submitting,
                   isEnabled: !_submitting,
                   onPressed: _submit,
                 ),
-                Gap(24.h),
+                SizedBox(height: 24.h),
               ],
             ),
           ),

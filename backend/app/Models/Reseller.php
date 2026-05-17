@@ -20,6 +20,7 @@ class Reseller extends Model
         'registration_no',
         'email',
         'phone',
+        'password',
         'city',
         'address',
         'status',
