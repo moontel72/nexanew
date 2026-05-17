@@ -82,9 +82,20 @@ class AppRouter {
               const SizedBox(height: 16),
               Text('Page not found: ${state.uri.path}'),
               const SizedBox(height: 16),
+              if (state.uri.path.startsWith('/reseller'))
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'The Reseller App is deployed separately.\n'
+                    'If you are the server admin, ensure Nginx has\n'
+                    'the /reseller/ location block configured.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                ),
+              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  // Go to factory login for factory routes, otherwise super admin login
                   if (state.uri.path.startsWith('/factory')) {
                     context.go('/factory/login');
                   } else {
@@ -165,7 +176,9 @@ class AppRouter {
     // ── Public routes that should NEVER be redirected ──────────
     // Store Keeper routes (login, dashboard, scanning, etc.)
     if (path.startsWith('/factory/store-keeper')) return null;
-    // Reseller routes are handled by a separate Flutter app (/reseller/)
+    // Reseller routes — handled by a separate Flutter app at /reseller/
+    // If Nginx is misconfigured, these hit the main app; don't redirect them.
+    if (path.startsWith('/reseller')) return null;
 
     // ── Protected routes - require authentication ─────────────
     // These are admin panel routes that require super admin login
