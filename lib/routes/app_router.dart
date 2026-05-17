@@ -154,12 +154,20 @@ class AppRouter {
     }
 
     // Root path redirects based on auth state
+    // IMPORTANT: Only redirect the EXACT root path '/'
+    // Never redirect explicit paths like /factory/store-keeper/login
     if (isRoot) {
       if (!kIsWeb) return '/factory/store-keeper/login';
       return isAuthenticatedCache ? '/dashboard' : '/login';
     }
 
-    // Protected routes - require authentication
+    // ── Public routes that should NEVER be redirected ──────────
+    // Store Keeper routes (login, dashboard, scanning, etc.)
+    if (path.startsWith('/factory/store-keeper')) return null;
+    // Reseller routes are handled by a separate Flutter app (/reseller/)
+
+    // ── Protected routes - require authentication ─────────────
+    // These are admin panel routes that require super admin login
     if (!isAuthenticatedCache && !isLogin) {
       if (kDebugMode) {
         debugPrint('ROUTER_REDIRECT: Not authenticated, redirecting to login');
@@ -274,12 +282,14 @@ class AppRouter {
         GoRoute(
           path: '/resellers',
           name: 'resellers',
-          builder: (context, state) => const ResellerManagementListScreen(inShell: true),
+          builder: (context, state) =>
+              const ResellerManagementListScreen(inShell: true),
           routes: [
             GoRoute(
               path: 'add',
               name: 'reseller_add',
-              builder: (context, state) => const RegisterResellerScreen(inShell: true),
+              builder: (context, state) =>
+                  const RegisterResellerScreen(inShell: true),
             ),
           ],
         ),

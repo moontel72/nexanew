@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/auth/reseller_auth_bloc.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+
+/// Reseller color — Deep Purple to differentiate from:
+///   Super Admin (Blue), Factory Admin (Green), Store Keeper (Orange)
+const Color _resellerColor = Color(0xFF673AB7);
 
 class ResellerLoginScreen extends StatefulWidget {
   const ResellerLoginScreen({super.key});
@@ -16,6 +21,7 @@ class ResellerLoginScreen extends StatefulWidget {
 class _ResellerLoginScreenState extends State<ResellerLoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -33,85 +39,176 @@ class _ResellerLoginScreenState extends State<ResellerLoginScreen> {
             context.go('/dashboard');
           }
         },
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: Padding(
-              padding: EdgeInsets.all(20.w),
-              child: Card(
-                elevation: 2,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [_resellerColor.withValues(alpha: 0.08), Colors.white],
+            ),
+          ),
+          child: Center(
+            child: SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
                 child: Padding(
-                  padding: EdgeInsets.all(16.w),
+                  padding: EdgeInsets.all(24.w),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // ── Icon badge ─────────────────────────
+                      Container(
+                        width: 80.w,
+                        height: 80.w,
+                        decoration: BoxDecoration(
+                          color: _resellerColor,
+                          borderRadius: BorderRadius.circular(20.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _resellerColor.withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.storefront,
+                          size: 40.w,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Gap(16.h),
+
+                      // ── Title ──────────────────────────────
                       Text(
                         'Reseller Login',
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: _resellerColor,
+                            ),
                       ),
-                      SizedBox(height: 12.h),
-                      TextField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
+                      Gap(8.h),
+                      Text(
+                        'NexaTrace B2B Marketplace Portal',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.grey[600],
                         ),
                       ),
-                      SizedBox(height: 12.h),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                          border: OutlineInputBorder(),
+                      Gap(32.h),
+
+                      // ── Login Card ─────────────────────────
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
                         ),
-                      ),
-                      SizedBox(height: 16.h),
-                      BlocBuilder<ResellerAuthBloc, ResellerAuthState>(
-                        builder: (context, state) {
-                          final isLoading = state is ResellerAuthLoading;
-                          final error = state is ResellerAuthError
-                              ? state.message
-                              : null;
-                          return Column(
+                        child: Padding(
+                          padding: EdgeInsets.all(20.w),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              PrimaryButton(
-                                text: isLoading ? 'Signing in…' : 'Sign In',
-                                isLoading: isLoading,
-                                isEnabled: !isLoading,
-                                onPressed: () {
-                                  context.read<ResellerAuthBloc>().add(
-                                    ResellerLoginRequested(
-                                      email: _emailController.text,
-                                      password: _passwordController.text,
+                              TextField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: InputDecoration(
+                                  labelText: 'Email',
+                                  prefixIcon: const Icon(Icons.email),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[50],
+                                ),
+                              ),
+                              Gap(12.h),
+                              TextField(
+                                controller: _passwordController,
+                                obscureText: _obscurePassword,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  prefixIcon: const Icon(Icons.lock),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.grey[600],
                                     ),
+                                    onPressed: () => setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
+                                    ),
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[50],
+                                ),
+                              ),
+                              Gap(20.h),
+                              BlocBuilder<ResellerAuthBloc, ResellerAuthState>(
+                                builder: (context, state) {
+                                  final isLoading =
+                                      state is ResellerAuthLoading;
+                                  final error = state is ResellerAuthError
+                                      ? state.message
+                                      : null;
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      PrimaryButton(
+                                        text: isLoading
+                                            ? 'Signing in…'
+                                            : 'Sign In',
+                                        isLoading: isLoading,
+                                        isEnabled: !isLoading,
+                                        backgroundColor: _resellerColor,
+                                        textColor: Colors.white,
+                                        onPressed: () {
+                                          context.read<ResellerAuthBloc>().add(
+                                            ResellerLoginRequested(
+                                              email: _emailController.text,
+                                              password:
+                                                  _passwordController.text,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      if (error != null &&
+                                          error.trim().isNotEmpty)
+                                        Padding(
+                                          padding: EdgeInsets.only(top: 12.h),
+                                          child: Text(
+                                            error,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: AppColors.error,
+                                                ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                    ],
                                   );
                                 },
                               ),
-                              if (error != null && error.trim().isNotEmpty)
-                                Padding(
-                                  padding: EdgeInsets.only(top: 12.h),
-                                  child: Text(
-                                    error,
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(color: AppColors.error),
-                                  ),
-                                ),
-                              Padding(
-                                padding: EdgeInsets.only(top: 10.h),
-                                child: Text(
-                                  'Medical Companies Agent App is a separate project and is not part of Reseller App.',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
-                                ),
-                              ),
                             ],
-                          );
-                        },
+                          ),
+                        ),
+                      ),
+                      Gap(16.h),
+
+                      // ── Footer note ────────────────────────
+                      Text(
+                        'Medical Companies Agent App is a separate project\nand is not part of the Reseller App.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
