@@ -435,6 +435,15 @@ $registerRoutes = function (): void {
                 "companies",
                 \App\Http\Controllers\Admin\AdminCompanyController::class,
             );
+
+            // Reseller Management
+            Route::get("resellers", [\App\Http\Controllers\Admin\AdminResellerController::class, "index"]);
+            Route::post("resellers", [\App\Http\Controllers\Admin\AdminResellerController::class, "store"]);
+            Route::get("resellers/{id}", [\App\Http\Controllers\Admin\AdminResellerController::class, "show"]);
+            Route::put("resellers/{id}", [\App\Http\Controllers\Admin\AdminResellerController::class, "update"]);
+            Route::delete("resellers/{id}", [\App\Http\Controllers\Admin\AdminResellerController::class, "destroy"]);
+            Route::patch("resellers/{id}/status", [\App\Http\Controllers\Admin\AdminResellerController::class, "updateStatus"]);
+            Route::patch("resellers/{id}/suspend", [\App\Http\Controllers\Admin\AdminResellerController::class, "toggleSuspend"]);
         });
 
     Route::prefix("factory")->group(function (): void {
