@@ -446,6 +446,15 @@ $registerRoutes = function (): void {
             Route::patch("resellers/{id}/suspend", [\App\Http\Controllers\Admin\AdminResellerController::class, "toggleSuspend"]);
         });
 
+    // ──────────────────────────────────────────────────────────────
+    // RESELLER MARKETPLACE (public B2B endpoints)
+    // ──────────────────────────────────────────────────────────────
+    Route::prefix("reseller")->group(function (): void {
+        Route::get("factories", [\App\Http\Controllers\Reseller\ResellerMarketplaceController::class, "factories"]);
+        Route::get("products", [\App\Http\Controllers\Reseller\ResellerMarketplaceController::class, "products"]);
+        // Future: order endpoints with auth:reseller middleware
+    });
+
     Route::prefix("factory")->group(function (): void {
         Route::prefix("auth")->group(function (): void {
             Route::post("login", [

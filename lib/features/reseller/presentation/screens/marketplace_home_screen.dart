@@ -124,10 +124,16 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
           final filtered = _filtered(allFactories);
 
           if (allFactories.isEmpty) {
-            return const EmptyState(
-              title: '',
-              description: 'No factories available yet.\nCheck back soon!',
+            return EmptyState(
+              title: 'No Factories Available',
+              description:
+                  'No factories are available in your area yet.\nCheck back soon or contact your administrator.',
               icon: Icons.store_mall_directory_outlined,
+              actionButton: TextButton.icon(
+                onPressed: () => context.go('/dashboard'),
+                icon: const Icon(Icons.dashboard),
+                label: const Text('Go to Dashboard'),
+              ),
             );
           }
 

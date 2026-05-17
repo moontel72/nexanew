@@ -11,7 +11,8 @@ final class ResellerMarketplaceBootRequested extends ResellerMarketplaceEvent {
   ResellerMarketplaceBootRequested({required this.tenantId});
 }
 
-final class ResellerMarketplaceFactorySelected extends ResellerMarketplaceEvent {
+final class ResellerMarketplaceFactorySelected
+    extends ResellerMarketplaceEvent {
   final String factoryId;
   ResellerMarketplaceFactorySelected(this.factoryId);
 }
@@ -21,7 +22,8 @@ final class ResellerMarketplaceSearchChanged extends ResellerMarketplaceEvent {
   ResellerMarketplaceSearchChanged(this.query);
 }
 
-final class ResellerMarketplaceRefreshRequested extends ResellerMarketplaceEvent {}
+final class ResellerMarketplaceRefreshRequested
+    extends ResellerMarketplaceEvent {}
 
 final class ResellerMarketplaceState {
   final ResellerMarketplaceStatus status;
@@ -43,13 +45,13 @@ final class ResellerMarketplaceState {
   });
 
   factory ResellerMarketplaceState.initial() => const ResellerMarketplaceState(
-        status: ResellerMarketplaceStatus.initial,
-        tenantId: '',
-        selectedFactoryId: '',
-        searchQuery: '',
-        factories: [],
-        products: [],
-      );
+    status: ResellerMarketplaceStatus.initial,
+    tenantId: '',
+    selectedFactoryId: '',
+    searchQuery: '',
+    factories: [],
+    products: [],
+  );
 
   ResellerMarketplaceState copyWith({
     ResellerMarketplaceStatus? status,
@@ -77,8 +79,8 @@ class ResellerMarketplaceBloc
   final ResellerMarketplaceRepository _repo;
 
   ResellerMarketplaceBloc({required ResellerMarketplaceRepository repo})
-      : _repo = repo,
-        super(ResellerMarketplaceState.initial()) {
+    : _repo = repo,
+      super(ResellerMarketplaceState.initial()) {
     on<ResellerMarketplaceBootRequested>(_onBoot);
     on<ResellerMarketplaceFactorySelected>(_onSelectFactory);
     on<ResellerMarketplaceSearchChanged>(_onSearchChanged);
@@ -97,10 +99,23 @@ class ResellerMarketplaceBloc
       ),
     );
     try {
+      // Datasource now catches all errors and returns empty list
       final factories = await _repo.getFactories(tenantId: event.tenantId);
-      final selectedFactoryId = factories.isNotEmpty
-          ? (factories.first['id']?.toString() ?? '')
-          : '';
+
+      // No factories available — emit loaded with empty list (screen shows EmptyState)
+      if (factories.isEmpty) {
+        emit(
+          state.copyWith(
+            status: ResellerMarketplaceStatus.loaded,
+            factories: [],
+            selectedFactoryId: '',
+            products: [],
+          ),
+        );
+        return;
+      }
+
+      final selectedFactoryId = factories.first['id']?.toString() ?? '';
 
       var products = <ResellerMarketplaceProductModel>[];
       if (selectedFactoryId.isNotEmpty) {
@@ -123,7 +138,7 @@ class ResellerMarketplaceBloc
       emit(
         state.copyWith(
           status: ResellerMarketplaceStatus.error,
-          errorMessage: e.toString(),
+          errorMessage: 'Could not load marketplace. Please try again.',
         ),
       );
     }
@@ -200,4 +215,3 @@ class ResellerMarketplaceBloc
     }
   }
 }
-
