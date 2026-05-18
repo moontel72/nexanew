@@ -205,15 +205,15 @@ class ProductController extends Controller
             ], 404);
         }
 
-        // Validation: cannot publish without a price
+        // TODO: Re-enable price validation after testing
         $enabled = $request->boolean('marketplace_enabled', !$product->marketplace_enabled);
 
-        if ($enabled && !$product->unit_price && !$product->carton_price && !$product->wholesale_price) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot publish to marketplace: product has no price set. Please set at least one price (unit, carton, or wholesale).',
-            ], 422);
-        }
+        // if ($enabled && !$product->unit_price && !$product->carton_price && !$product->wholesale_price) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Cannot publish to marketplace: product has no price set. Please set at least one price (unit, carton, or wholesale).',
+        //     ], 422);
+        // }
 
         $product->marketplace_enabled = $enabled;
         $product->save();

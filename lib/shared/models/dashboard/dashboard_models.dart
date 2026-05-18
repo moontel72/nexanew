@@ -27,17 +27,19 @@ class DashboardData extends Equatable {
 
   factory DashboardData.fromApi(Map<String, dynamic> json) {
     final stats = (json['statistics'] as Map?)?.cast<String, dynamic>() ?? {};
-    final recent = (json['recent_activities'] as List?)?.cast<Map>() ?? const [];
+    final recent =
+        (json['recent_activities'] as List?)?.cast<Map>() ?? const [];
     final revenue = (json['revenue_data'] as List?)?.cast<Map>() ?? const [];
     final usage = (json['usage_data'] as List?)?.cast<Map>() ?? const [];
     final top = (json['top_companies'] as List?)?.cast<Map>() ?? const [];
-    final health = (json['system_health'] as Map?)?.cast<String, dynamic>() ?? {};
+    final health =
+        (json['system_health'] as Map?)?.cast<String, dynamic>() ?? {};
 
     final monthlyRevenue = List<double>.generate(
       12,
       (i) => (revenue.length > i ? (revenue[i]['value'] ?? 0) : 0) is num
           ? ((revenue.length > i ? (revenue[i]['value'] ?? 0) : 0) as num)
-              .toDouble()
+                .toDouble()
           : 0.0,
     );
 
@@ -45,11 +47,12 @@ class DashboardData extends Equatable {
       12,
       (i) => (usage.length > i ? (usage[i]['new_companies'] ?? 0) : 0) is num
           ? ((usage.length > i ? (usage[i]['new_companies'] ?? 0) : 0) as num)
-              .toInt()
+                .toInt()
           : 0,
     );
 
-    final codesThisMonth = (stats['codes_generated_this_month'] as num?)?.toInt() ??
+    final codesThisMonth =
+        (stats['codes_generated_this_month'] as num?)?.toInt() ??
         (stats['codes_this_month'] as num?)?.toInt() ??
         0;
     final totalCodes = (stats['total_codes_generated'] as num?)?.toInt() ?? 0;
@@ -58,23 +61,28 @@ class DashboardData extends Equatable {
       kpis: DashboardKPIs(
         totalCompanies: (stats['total_companies'] as num?)?.toInt() ?? 0,
         activeCompanies: (stats['active_companies'] as num?)?.toInt() ?? 0,
+        verifiedCompanies: (stats['verified_companies'] as num?)?.toInt() ?? 0,
         monthlyRevenue: (stats['monthly_revenue'] as num?)?.toDouble() ?? 0.0,
-        pendingPayments:
-            (stats['pending_payments'] as num?)?.toDouble() ?? 0.0,
+        pendingPayments: (stats['pending_payments'] as num?)?.toDouble() ?? 0.0,
         totalCodesGenerated: totalCodes,
-        systemUptime: (health['uptime'] as num?)?.toDouble() ??
+        systemUptime:
+            (health['uptime'] as num?)?.toDouble() ??
             (stats['system_uptime'] as num?)?.toDouble() ??
             0.0,
-        openLoads: (stats['open_loads'] as num?)?.toInt() ??
+        openLoads:
+            (stats['open_loads'] as num?)?.toInt() ??
             (stats['transport_open_loads'] as num?)?.toInt() ??
             0,
-        activeTrips: (stats['active_trips'] as num?)?.toInt() ??
+        activeTrips:
+            (stats['active_trips'] as num?)?.toInt() ??
             (stats['transport_active_trips'] as num?)?.toInt() ??
             0,
-        pendingFraudReports: (stats['pending_fraud_reports'] as num?)?.toInt() ??
+        pendingFraudReports:
+            (stats['pending_fraud_reports'] as num?)?.toInt() ??
             (stats['fraud_pending'] as num?)?.toInt() ??
             0,
-        walletTransactions24h: (stats['wallet_transactions_24h'] as num?)?.toInt() ??
+        walletTransactions24h:
+            (stats['wallet_transactions_24h'] as num?)?.toInt() ??
             (stats['wallet_tx_24h'] as num?)?.toInt() ??
             0,
       ),
@@ -84,7 +92,8 @@ class DashboardData extends Equatable {
               id: (m['id'] ?? '').toString(),
               title: (m['title'] ?? '').toString(),
               description: (m['description'] ?? '').toString(),
-              timestamp: DateTime.tryParse((m['timestamp'] ?? '').toString()) ??
+              timestamp:
+                  DateTime.tryParse((m['timestamp'] ?? '').toString()) ??
                   DateTime.now(),
               type: (m['type'] ?? '').toString(),
             ),
@@ -97,12 +106,14 @@ class DashboardData extends Equatable {
               companyName: (m['company_name'] ?? m['name'] ?? '').toString(),
               planType: (m['plan_type'] ?? '').toString(),
               revenue: (m['revenue'] as num?)?.toDouble() ?? 0.0,
-              usagePercentage: (m['usage_percentage'] as num?)?.toDouble() ?? 0.0,
+              usagePercentage:
+                  (m['usage_percentage'] as num?)?.toDouble() ?? 0.0,
             ),
           )
           .toList(),
       systemHealthMetrics: SystemHealthMetrics(
-        uptimePercentage: (health['uptime_percentage'] as num?)?.toDouble() ??
+        uptimePercentage:
+            (health['uptime_percentage'] as num?)?.toDouble() ??
             (health['uptime'] as num?)?.toDouble() ??
             0.0,
         responseTime: (health['response_time'] as num?)?.toDouble() ?? 0.0,
@@ -132,22 +143,23 @@ class DashboardData extends Equatable {
 
   @override
   List<Object?> get props => [
-        kpis,
-        recentActivities,
-        topPerformingCompanies,
-        systemHealthMetrics,
-        pendingActions,
-        revenueAnalytics,
-        companyGrowthAnalytics,
-        usageAnalytics,
-        subscriptionAnalytics,
-        lastUpdated,
-      ];
+    kpis,
+    recentActivities,
+    topPerformingCompanies,
+    systemHealthMetrics,
+    pendingActions,
+    revenueAnalytics,
+    companyGrowthAnalytics,
+    usageAnalytics,
+    subscriptionAnalytics,
+    lastUpdated,
+  ];
 }
 
 class DashboardKPIs extends Equatable {
   final int totalCompanies;
   final int activeCompanies;
+  final int verifiedCompanies;
   final double monthlyRevenue;
   final double pendingPayments;
   final int totalCodesGenerated;
@@ -160,6 +172,7 @@ class DashboardKPIs extends Equatable {
   const DashboardKPIs({
     required this.totalCompanies,
     required this.activeCompanies,
+    this.verifiedCompanies = 0,
     required this.monthlyRevenue,
     required this.pendingPayments,
     required this.totalCodesGenerated,
@@ -172,17 +185,18 @@ class DashboardKPIs extends Equatable {
 
   @override
   List<Object?> get props => [
-        totalCompanies,
-        activeCompanies,
-        monthlyRevenue,
-        pendingPayments,
-        totalCodesGenerated,
-        systemUptime,
-        openLoads,
-        activeTrips,
-        pendingFraudReports,
-        walletTransactions24h,
-      ];
+    totalCompanies,
+    activeCompanies,
+    verifiedCompanies,
+    monthlyRevenue,
+    pendingPayments,
+    totalCodesGenerated,
+    systemUptime,
+    openLoads,
+    activeTrips,
+    pendingFraudReports,
+    walletTransactions24h,
+  ];
 }
 
 class RecentActivity extends Equatable {
@@ -220,7 +234,13 @@ class TopPerformingCompany extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, companyName, planType, revenue, usagePercentage];
+  List<Object?> get props => [
+    id,
+    companyName,
+    planType,
+    revenue,
+    usagePercentage,
+  ];
 }
 
 class SystemHealthMetrics extends Equatable {
@@ -237,7 +257,12 @@ class SystemHealthMetrics extends Equatable {
   });
 
   @override
-  List<Object?> get props => [uptimePercentage, responseTime, cpuUsage, memoryUsage];
+  List<Object?> get props => [
+    uptimePercentage,
+    responseTime,
+    cpuUsage,
+    memoryUsage,
+  ];
 }
 
 class PendingAction extends Equatable {
@@ -265,10 +290,7 @@ class RevenueAnalytics extends Equatable {
   final List<double> monthlyData;
   final double total;
 
-  const RevenueAnalytics({
-    required this.monthlyData,
-    required this.total,
-  });
+  const RevenueAnalytics({required this.monthlyData, required this.total});
 
   @override
   List<Object?> get props => [monthlyData, total];
@@ -312,4 +334,3 @@ class SubscriptionAnalytics extends Equatable {
   @override
   List<Object?> get props => [activeSubscriptions, expiringThisMonth];
 }
-

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -124,6 +125,11 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
           final filtered = _filtered(allFactories);
 
           if (allFactories.isEmpty) {
+            if (kDebugMode) {
+              debugPrint(
+                'MARKETPLACE: No factories loaded. State status: ${state.status}',
+              );
+            }
             return EmptyState(
               title: 'No Factories Available',
               description:

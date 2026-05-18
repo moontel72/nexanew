@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -308,10 +309,21 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
               // ── Product grid ──────────────────────────────────
               Expanded(
                 child: products.isEmpty
-                    ? const EmptyState(
-                        title: '',
-                        description: 'No products match your search.',
-                        icon: Icons.search_off,
+                    ? Builder(
+                        builder: (context) {
+                          if (kDebugMode) {
+                            debugPrint(
+                              'MARKETPLACE_CATALOG: No products. '
+                              'All products count: ${state.products.length}, '
+                              'Filtered count: ${products.length}',
+                            );
+                          }
+                          return const EmptyState(
+                            title: '',
+                            description: 'No products match your search.',
+                            icon: Icons.search_off,
+                          );
+                        },
                       )
                     : LayoutBuilder(
                         builder: (_, constraints) {

@@ -17,6 +17,7 @@ class AdminDashboardController extends Controller
         $companyAgg = DB::table('companies')
             ->selectRaw('COUNT(*) AS total')
             ->selectRaw("SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active")
+            ->selectRaw("SUM(CASE WHEN verification_status = 'verified' THEN 1 ELSE 0 END) AS verified")
             ->first();
 
         $now = now();
@@ -71,6 +72,7 @@ class AdminDashboardController extends Controller
                 'statistics' => [
                     'total_companies' => (int) ($companyAgg->total ?? 0),
                     'active_companies' => (int) ($companyAgg->active ?? 0),
+                    'verified_companies' => (int) ($companyAgg->verified ?? 0),
                     'monthly_revenue' => $monthlyRevenue,
                     'pending_payments' => $pendingPayments,
                     'total_codes_generated' => $totalCodesGenerated,
@@ -106,6 +108,7 @@ class AdminDashboardController extends Controller
             ->selectRaw("SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active")
             ->selectRaw("SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending")
             ->selectRaw("SUM(CASE WHEN status = 'suspended' THEN 1 ELSE 0 END) AS suspended")
+            ->selectRaw("SUM(CASE WHEN verification_status = 'verified' THEN 1 ELSE 0 END) AS verified")
             ->first();
 
         $planAgg = DB::table('subscription_plans')
@@ -119,6 +122,7 @@ class AdminDashboardController extends Controller
                 'active_companies' => (int) ($companyAgg->active ?? 0),
                 'pending_companies' => (int) ($companyAgg->pending ?? 0),
                 'suspended_companies' => (int) ($companyAgg->suspended ?? 0),
+                'verified_companies' => (int) ($companyAgg->verified ?? 0),
                 'total_plans' => (int) ($planAgg->total ?? 0),
             ],
         ]);

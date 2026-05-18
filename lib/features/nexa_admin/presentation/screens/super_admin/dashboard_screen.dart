@@ -52,10 +52,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                   child: Text(
                     'Command Center',
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 SizedBox(width: 12.w),
@@ -222,18 +221,14 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.red,
-          ),
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
           Gap(16.h),
           Text(
             'Error Loading Dashboard',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           Gap(8.h),
           Padding(
@@ -316,16 +311,16 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
         Text(
           'Welcome back, Super Admin!',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         Gap(4.h),
         Text(
           'Here\'s what\'s happening with your platform today',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
         ),
       ],
     );
@@ -341,9 +336,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
           children: [
             Text(
               'Key Performance Indicators',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             IconButton(
               icon: const Icon(Icons.info_outline),
@@ -372,6 +367,12 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
               color: Colors.green,
               trend: '+8%',
               onTap: () => _viewActiveCompanies(),
+            ),
+            KPICard(
+              title: 'Verified Companies',
+              value: kpis.verifiedCompanies.toString(),
+              icon: Icons.verified_user,
+              color: Colors.blue,
             ),
             KPICard(
               title: 'Monthly Revenue',
@@ -450,9 +451,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
       children: [
         Text(
           'Analytics & Charts',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         Gap(12.h),
         LayoutBuilder(
@@ -525,15 +526,15 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                       Text(
                         '${data.usageAnalytics.codesGeneratedThisMonth} codes this month',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Gap(4.h),
                       Text(
                         '${data.usageAnalytics.totalCodesGenerated} total',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
@@ -566,15 +567,15 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                       Text(
                         '${data.subscriptionAnalytics.activeSubscriptions} active',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Gap(4.h),
                       Text(
                         '${data.subscriptionAnalytics.expiringThisMonth} expiring',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
@@ -584,11 +585,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
 
             if (isNarrow) {
               return Column(
-                children: [
-                  codeUsageCard(),
-                  Gap(16.h),
-                  subscriptionsCard(),
-                ],
+                children: [codeUsageCard(), Gap(16.h), subscriptionsCard()],
               );
             }
 
@@ -615,9 +612,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
           children: [
             Text(
               'Recent Activities',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             TextButton(
               onPressed: _viewAllActivities,
@@ -645,9 +642,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
           children: [
             Text(
               'Top Performing Companies',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             TextButton(
               onPressed: _viewAllCompanies,
@@ -673,15 +670,17 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                       ),
                       title: Text(company.companyName),
                       subtitle: Text(
-                          '${company.planType} • \$${company.revenue.toStringAsFixed(2)}'),
+                        '${company.planType} • \$${company.revenue.toStringAsFixed(2)}',
+                      ),
                       trailing: Chip(
                         label: Text(
-                            '${company.usagePercentage.toStringAsFixed(1)}%'),
+                          '${company.usagePercentage.toStringAsFixed(1)}%',
+                        ),
                         backgroundColor: company.usagePercentage > 80
                             ? Colors.green[100]
                             : company.usagePercentage > 50
-                                ? Colors.orange[100]
-                                : Colors.blue[100],
+                            ? Colors.orange[100]
+                            : Colors.blue[100],
                       ),
                       onTap: () => _viewCompanyDetails(company),
                     ),
@@ -701,9 +700,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
       children: [
         Text(
           'System Health',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         Gap(12.h),
         Card(
@@ -720,8 +719,8 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                         metrics.uptimePercentage > 99.5
                             ? Colors.green
                             : metrics.uptimePercentage > 99
-                                ? Colors.orange
-                                : Colors.red,
+                            ? Colors.orange
+                            : Colors.red,
                         Icons.cloud,
                       ),
                     ),
@@ -732,8 +731,8 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                         metrics.responseTime < 100
                             ? Colors.green
                             : metrics.responseTime < 300
-                                ? Colors.orange
-                                : Colors.red,
+                            ? Colors.orange
+                            : Colors.red,
                         Icons.speed,
                       ),
                     ),
@@ -749,8 +748,8 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                         metrics.cpuUsage < 60
                             ? Colors.green
                             : metrics.cpuUsage < 80
-                                ? Colors.orange
-                                : Colors.red,
+                            ? Colors.orange
+                            : Colors.red,
                         Icons.memory,
                       ),
                     ),
@@ -761,8 +760,8 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                         metrics.memoryUsage < 70
                             ? Colors.green
                             : metrics.memoryUsage < 85
-                                ? Colors.orange
-                                : Colors.red,
+                            ? Colors.orange
+                            : Colors.red,
                         Icons.storage,
                       ),
                     ),
@@ -821,9 +820,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
           children: [
             Text(
               'Pending Actions',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             TextButton(
               onPressed: _viewAllPendingActions,
@@ -837,30 +836,27 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
             padding: EdgeInsets.all(16.w),
             child: Column(
               children: pendingActions.isEmpty
-                  ? [
-                      const Center(
-                        child: Text('No pending actions'),
-                      ),
-                    ]
+                  ? [const Center(child: Text('No pending actions'))]
                   : pendingActions
-                      .take(5)
-                      .map(
-                        (action) => ListTile(
-                          leading: Icon(
-                            _getActionIcon(action.type),
-                            color: _getActionColor(action.priority),
+                        .take(5)
+                        .map(
+                          (action) => ListTile(
+                            leading: Icon(
+                              _getActionIcon(action.type),
+                              color: _getActionColor(action.priority),
+                            ),
+                            title: Text(action.title),
+                            subtitle: Text(action.description),
+                            trailing: Chip(
+                              label: Text(action.priority.name.toUpperCase()),
+                              backgroundColor: _getActionColor(
+                                action.priority,
+                              ).withOpacity(0.2),
+                            ),
+                            onTap: () => _handlePendingAction(action),
                           ),
-                          title: Text(action.title),
-                          subtitle: Text(action.description),
-                          trailing: Chip(
-                            label: Text(action.priority.name.toUpperCase()),
-                            backgroundColor: _getActionColor(action.priority)
-                                .withOpacity(0.2),
-                          ),
-                          onTap: () => _handlePendingAction(action),
-                        ),
-                      )
-                      .toList(),
+                        )
+                        .toList(),
             ),
           ),
         ),
@@ -873,9 +869,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
     return Center(
       child: Text(
         'Last updated: ${_formatDateTime(lastUpdated)}',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey[600],
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
       ),
     );
   }
@@ -946,7 +942,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
   }
 
   void _exportDashboardData() {
-    context.read<AdminDashboardBloc>().add(const ExportDashboardData(format: 'pdf'));
+    context.read<AdminDashboardBloc>().add(
+      const ExportDashboardData(format: 'pdf'),
+    );
   }
 
   void _showNotifications() {
@@ -980,8 +978,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
   void _showExportSuccessSnackBar(String filePath) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-          content: Text('Export saved to: $filePath'),
-          backgroundColor: Colors.green),
+        content: Text('Export saved to: $filePath'),
+        backgroundColor: Colors.green,
+      ),
     );
   }
 

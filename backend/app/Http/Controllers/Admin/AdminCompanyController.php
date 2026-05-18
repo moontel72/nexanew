@@ -227,16 +227,24 @@ class AdminCompanyController extends Controller
     {
         $data = $request->validate([
             'status' => ['required', 'string'],
+            'verification_status' => ['sometimes', 'string'],
             'reason' => ['nullable', 'string'],
         ]);
 
         $company->status = $data['status'];
+        if (isset($data['verification_status'])) {
+            $company->verification_status = $data['verification_status'];
+            if ($data['verification_status'] === 'verified') {
+                $company->verified_at = now();
+            }
+        }
         if (!empty($data['reason'])) {
             $company->metadata = array_merge(($company->metadata ?? []), ['status_reason' => $data['reason']]);
         }
         $company->save();
+        $company->load(['documents', 'activeSubscription.plan']);
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'data' => (new \App\Http\Resources\CompanyResource($company))->toArray($request)]);
     }
 
     public function updateVerification(Request $request, Company $company)

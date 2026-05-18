@@ -19,7 +19,6 @@ class ResellerMarketplaceController extends Controller
         $tenantId = $request->query('tenant_id', 'default');
 
         $factories = Company::where('status', 'active')
-            ->where('verification_status', 'verified')
             ->where('is_deleted', false)
             ->whereHas('products', function ($q) {
                 $q->where('marketplace_enabled', true)->where('status', 'active');

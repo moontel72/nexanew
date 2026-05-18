@@ -488,6 +488,7 @@ class _CompaniesListScreenState extends State<CompaniesListScreen> {
                   name: company.name,
                   description: company.notes,
                   status: company.status.name,
+                  verificationStatus: company.verificationStatus.name,
                   industry: company.industry.name,
                   employeeCount: company.employeeCount,
                   location: '${company.city}, ${company.country}',

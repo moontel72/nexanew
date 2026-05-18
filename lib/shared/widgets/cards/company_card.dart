@@ -13,6 +13,7 @@ class CompanyCard extends StatelessWidget {
   final String? description;
   final String? logoUrl;
   final String status;
+  final String? verificationStatus;
   final String? industry;
   final int? employeeCount;
   final String? location;
@@ -31,6 +32,7 @@ class CompanyCard extends StatelessWidget {
     this.description,
     this.logoUrl,
     required this.status,
+    this.verificationStatus,
     this.industry,
     this.employeeCount,
     this.location,
@@ -122,7 +124,16 @@ class CompanyCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
-                        _buildStatusChip(),
+                        Row(
+                          children: [
+                            _buildStatusChip(),
+                            if (verificationStatus != null &&
+                                verificationStatus!.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              _buildVerificationChip(),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -167,10 +178,7 @@ class CompanyCard extends StatelessWidget {
         color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(8),
         image: logoUrl != null && logoUrl!.isNotEmpty
-            ? DecorationImage(
-                image: NetworkImage(logoUrl!),
-                fit: BoxFit.cover,
-              )
+            ? DecorationImage(image: NetworkImage(logoUrl!), fit: BoxFit.cover)
             : null,
       ),
       child: logoUrl == null || logoUrl!.isEmpty
@@ -199,11 +207,7 @@ class CompanyCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            _getStatusIcon(),
-            size: 12,
-            color: statusColor,
-          ),
+          Icon(_getStatusIcon(), size: 12, color: statusColor),
           const SizedBox(width: 4),
           Text(
             _getStatusText(),
@@ -217,12 +221,92 @@ class CompanyCard extends StatelessWidget {
     );
   }
 
+  Color _getVerificationColor() {
+    switch (verificationStatus?.toLowerCase()) {
+      case 'verified':
+        return AppColors.success;
+      case 'submitted':
+      case 'underreview':
+      case 'under_review':
+        return AppColors.warning;
+      case 'rejected':
+        return AppColors.error;
+      case 'notsubmitted':
+      case 'not_submitted':
+      default:
+        return AppColors.gray500;
+    }
+  }
+
+  String _getVerificationText() {
+    switch (verificationStatus?.toLowerCase()) {
+      case 'verified':
+        return '✓ Verified';
+      case 'submitted':
+        return 'Submitted';
+      case 'underreview':
+      case 'under_review':
+        return 'Under Review';
+      case 'rejected':
+        return 'Rejected';
+      case 'notsubmitted':
+      case 'not_submitted':
+        return 'Not Submitted';
+      case 'requiresadditional':
+      case 'requires_additional':
+        return 'Requires Additional';
+      default:
+        return 'Not Submitted';
+    }
+  }
+
+  IconData _getVerificationIcon() {
+    switch (verificationStatus?.toLowerCase()) {
+      case 'verified':
+        return Icons.verified;
+      case 'submitted':
+        return Icons.file_present;
+      case 'underreview':
+      case 'under_review':
+        return Icons.rate_review;
+      case 'rejected':
+        return Icons.cancel;
+      case 'notsubmitted':
+      case 'not_submitted':
+      default:
+        return Icons.info_outline;
+    }
+  }
+
+  Widget _buildVerificationChip() {
+    final vColor = _getVerificationColor();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: vColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: vColor.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_getVerificationIcon(), size: 12, color: vColor),
+          const SizedBox(width: 4),
+          Text(
+            _getVerificationText(),
+            style: TextStyles.caption.copyWith(
+              color: vColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildActionsMenu() {
     return PopupMenuButton<String>(
-      icon: Icon(
-        Icons.more_vert,
-        color: AppColors.textTertiary,
-      ),
+      icon: Icon(Icons.more_vert, color: AppColors.textTertiary),
       onSelected: (value) {
         switch (value) {
           case 'edit':
@@ -304,17 +388,11 @@ class CompanyCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(
-              icon,
-              size: 14,
-              color: AppColors.textTertiary,
-            ),
+            Icon(icon, size: 14, color: AppColors.textTertiary),
             const SizedBox(width: 4),
             Text(
               label,
-              style: TextStyles.caption.copyWith(
-                color: AppColors.textTertiary,
-              ),
+              style: TextStyles.caption.copyWith(color: AppColors.textTertiary),
             ),
           ],
         ),
@@ -339,16 +417,12 @@ class CompanyCard extends StatelessWidget {
         if (createdAt != null)
           Text(
             'Created: ${createdAt!.formatDate()}',
-            style: TextStyles.caption.copyWith(
-              color: AppColors.textTertiary,
-            ),
+            style: TextStyles.caption.copyWith(color: AppColors.textTertiary),
           ),
         if (updatedAt != null)
           Text(
             'Updated: ${updatedAt!.formatDate()}',
-            style: TextStyles.caption.copyWith(
-              color: AppColors.textTertiary,
-            ),
+            style: TextStyles.caption.copyWith(color: AppColors.textTertiary),
           ),
       ],
     );
@@ -378,9 +452,7 @@ class CompactCompanyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
@@ -512,9 +584,7 @@ class CompanyStatisticsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -539,10 +609,7 @@ class CompanyStatisticsCard extends StatelessWidget {
                     ),
                   ),
                   if (onTap != null)
-                    Icon(
-                      Icons.chevron_right,
-                      color: AppColors.textTertiary,
-                    ),
+                    Icon(Icons.chevron_right, color: AppColors.textTertiary),
                 ],
               ),
               const SizedBox(height: 16),
@@ -568,13 +635,15 @@ class CompanyStatisticsCard extends StatelessWidget {
                     value: '$activeProducts/$totalProducts',
                     icon: Icons.inventory,
                     color: AppColors.success,
-                    progress:
-                        totalProducts > 0 ? activeProducts / totalProducts : 0,
+                    progress: totalProducts > 0
+                        ? activeProducts / totalProducts
+                        : 0,
                   ),
                   _buildStatItem(
                     label: 'Codes Generated',
-                    value:
-                        StringUtils.formatNumberWithSeparator(generatedCodes),
+                    value: StringUtils.formatNumberWithSeparator(
+                      generatedCodes,
+                    ),
                     icon: Icons.qr_code,
                     color: AppColors.info,
                   ),
@@ -590,10 +659,7 @@ class CompanyStatisticsCard extends StatelessWidget {
               // Additional details if showDetails is true
               if (showDetails) ...[
                 const SizedBox(height: 16),
-                Divider(
-                  color: AppColors.outline,
-                  height: 1,
-                ),
+                Divider(color: AppColors.outline, height: 1),
                 const SizedBox(height: 16),
 
                 // Additional statistics
@@ -607,15 +673,17 @@ class CompanyStatisticsCard extends StatelessWidget {
                   children: [
                     _buildStatItem(
                       label: 'Published',
-                      value:
-                          StringUtils.formatNumberWithSeparator(publishedCodes),
+                      value: StringUtils.formatNumberWithSeparator(
+                        publishedCodes,
+                      ),
                       icon: Icons.publish,
                       color: AppColors.success,
                     ),
                     _buildStatItem(
                       label: 'Scanned',
-                      value:
-                          StringUtils.formatNumberWithSeparator(scannedCodes),
+                      value: StringUtils.formatNumberWithSeparator(
+                        scannedCodes,
+                      ),
                       icon: Icons.scanner,
                       color: AppColors.secondary,
                     ),
@@ -679,11 +747,7 @@ class CompanyStatisticsCard extends StatelessWidget {
               color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: color,
-            ),
+            child: Icon(icon, size: 20, color: color),
           ),
           const SizedBox(width: 12),
 
@@ -761,9 +825,7 @@ class CompactCompanyStatisticsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
@@ -839,9 +901,7 @@ class CompactCompanyStatisticsCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyles.caption.copyWith(
-            color: AppColors.textTertiary,
-          ),
+          style: TextStyles.caption.copyWith(color: AppColors.textTertiary),
         ),
       ],
     );
@@ -878,9 +938,7 @@ class DashboardStatisticsCard extends StatelessWidget {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -900,11 +958,7 @@ class DashboardStatisticsCard extends StatelessWidget {
                       color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
-                      icon,
-                      color: color,
-                      size: 24,
-                    ),
+                    child: Icon(icon, color: color, size: 24),
                   ),
                   if (previousValue != null)
                     Container(
@@ -999,9 +1053,7 @@ class StatisticsSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1099,9 +1151,7 @@ class StatisticsSummaryCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyles.caption.copyWith(
-              color: AppColors.textTertiary,
-            ),
+            style: TextStyles.caption.copyWith(color: AppColors.textTertiary),
             textAlign: TextAlign.center,
             maxLines: 2,
           ),
