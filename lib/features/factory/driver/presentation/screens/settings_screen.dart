@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nexatrace_system/features/factory/driver/presentation/widgets/driver_feature_scaffold.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
@@ -86,33 +88,38 @@ class _DriverSettingsScreenState extends State<DriverSettingsScreen> {
     }
   }
 
-  void _logout() {
-    showDialog(
+  Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Logout'),
         content: const Text('Are you sure you want to log out?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              // TODO: Dispatch logout event / clear auth
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Logged out'),
-                  backgroundColor: AppColors.info,
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(ctx, true),
             child: Text('Logout', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
     );
+
+    if (confirmed == true && mounted) {
+      // Clear stored auth
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('driver_auth_token');
+      await prefs.remove('driver_email');
+      await prefs.remove('driver_id');
+      await prefs.remove('driver_name');
+
+      // Navigate to login
+      if (mounted) {
+        context.go('/login');
+      }
+    }
   }
 
   @override
