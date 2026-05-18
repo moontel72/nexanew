@@ -1,0 +1,190 @@
+# Driver App Technical Architecture (Flutter BLoC + Laravel + PostgreSQL)
+
+## 1. Architecture Design
+```mermaid
+graph TD
+    A[Driver App (Flutter)] --> B[BLoC + Repositories]
+    B --> C[Laravel API (REST)]
+    C --> D[(PostgreSQL)]
+    C --> E[File Storage (Hetzner/local/S3-compatible)]
+    A --> F[Google Maps SDK + Directions API]
+    A --> G[Device Services: Camera, GPS, Network]
+    C --> H[Realtime (WebSocket/Pusher) (optional)]
+```
+
+## 2. Technology Description (Aligned with your existing project)
+- Mobile: Flutter + BLoC (flutter_bloc), feature-based architecture (`data/domain/presentation`)
+- Backend: Laravel (REST API), authentication via Sanctum or JWT (match your current setup)
+- Database: PostgreSQL
+- Hosting: Hetzner server (Laravel API + queue workers + scheduler)
+- Maps/Tracking: Google Maps SDK (Flutter) + Google Directions/Geocoding APIs
+- Offline sync: Reuse existing Hive local database pattern (already used in Store Keeper module)
+
+## 3. Driver App Route Definitions (Flutter)
+These are in-app routes/screens (not HTTP routes):
+| Screen | Purpose |
+|-------|---------|
+| Driver Dashboard | Current trip, lifecycle status, alerts, earnings summary |
+| Pickup Scan | Scan product at factory (4A) |
+| Delivery Scan | Scan at delivery location; button only within 100m (4B-4C) |
+| Location Confirm | Recipient confirmation fallback to unlock scan (4D) |
+| Proof of Delivery | PIN / recipient-with-doc photo / digital signature (4E, 4R) |
+| Map Tracking | Live navigation + tracking (4F) |
+| Earnings | Salary/commission/bonus/trip fee breakdown (4G) |
+| Payment History | Previous payments + invoice download (4H) |
+| Vehicle Info | Vehicle + plate number (4I) |
+| Meter Readings | Start, delivery, return (4J) |
+| Expenses | Fuel/food/mechanic/other receipts + amounts (4K-4O) |
+| Chat | Driver ↔ Admin, Driver ↔ Recipient (4P, 4X) |
+| Compliance | License/insurance/registration expiry (4Y) |
+
+## 4. API Definitions (Laravel)
+All endpoints are served by Laravel and secured by driver auth.
+
+### 4.1 Trip lifecycle
+Update trip status (enforce forward-only transitions)
+```
+POST /api/v1/driver/trips/{tripId}/status
+```
+Request JSON:
+| Field | Type | Required | Notes |
+|------|------|----------|------|
+| status | string | yes | Assigned/Picked-Up/In-Transit/Arrived/Delivered/Completed |
+| lat | number | yes | Current latitude |
+| lng | number | yes | Current longitude |
+| device_time | string | no | ISO8601 |
+| client_event_id | string | yes | Idempotency key for offline sync |
+
+### 4.2 Delivery scan eligibility (100m + recipient override)
+```
+GET /api/v1/driver/trips/{tripId}/delivery-scan-eligibility
+```
+Response JSON:
+| Field | Type | Notes |
+|------|------|------|
+| scan_allowed | boolean | True if within 100m OR recipient override exists |
+| distance_m | number | Server-calculated distance |
+| reason | string | e.g. OUTSIDE_GEOFENCE, GPS_DISABLED, SPOOFING_SUSPECTED |
+
+### 4.3 Pickup and delivery scans
+```
+POST /api/v1/driver/trips/{tripId}/scan/pickup
+POST /api/v1/driver/trips/{tripId}/scan/delivery
+```
+Request JSON:
+| Field | Type | Required |
+|------|------|----------|
+| code | string | yes |
+| lat | number | yes |
+| lng | number | yes |
+| client_event_id | string | yes |
+
+### 4.4 Proof of delivery (POD)
+```
+POST /api/v1/driver/trips/{tripId}/pod
+```
+Multipart form-data:
+| Field | Type | Required | Notes |
+|------|------|----------|------|
+| verification_type | string | yes | pin/photo/signature |
+| pin | string | conditional | Required when verification_type=pin |
+| recipient_photo | file | conditional | Required when verification_type=photo |
+| recipient_document_photo | file | conditional | Required when verification_type=photo |
+| signature_image | file | conditional | Required when verification_type=signature |
+| recipient_name | string | yes | |
+
+### 4.5 Expenses (fuel/food/mechanic/other)
+```
+POST /api/v1/driver/trips/{tripId}/expenses
+```
+Multipart form-data:
+| Field | Type | Required |
+|------|------|----------|
+| type | string | yes |
+| amount | number | yes |
+| receipt | file | yes |
+| notes | string | no |
+
+### 4.6 Chat and archival
+Chat can be implemented with standard REST + polling first, and upgraded to WebSockets later.
+```
+GET  /api/v1/driver/chats
+GET  /api/v1/driver/chats/{chatId}/messages
+POST /api/v1/driver/chats/{chatId}/messages
+```
+
+## 5. Server Architecture (Hetzner)
+```mermaid
+graph TD
+    A[Flutter Apps] --> B[Nginx]
+    B --> C[Laravel API]
+    C --> D[(PostgreSQL)]
+    C --> E[Storage: local/S3-compatible]
+    C --> F[Queue Worker]
+    C --> G[Scheduler]
+```
+
+## 6. Data Model (PostgreSQL)
+### 6.1 Data model definition
+```mermaid
+erDiagram
+    DRIVER ||--o{ TRIP : assigns
+    TRIP ||--o{ EXPENSE : contains
+    TRIP ||--|{ POD : has
+    DRIVER ||--o{ VEHICLE : operates
+    VEHICLE ||--o{ MAINTENANCE : logs
+
+    DRIVER {
+        UUID id PK
+        string name
+        string phone
+        date license_expiry
+        string tier
+        boolean blocked
+    }
+    TRIP {
+        UUID id PK
+        UUID driver_id FK
+        string status
+        string pickup_address
+        string delivery_address
+        timestamp delivery_window_start
+        timestamp delivery_window_end
+        float delivery_lat
+        float delivery_lng
+        jsonb route_history
+    }
+    EXPENSE {
+        UUID id PK
+        UUID trip_id FK
+        string type
+        numeric amount
+        string receipt_url
+        boolean mandatory
+        boolean approved
+        UUID approved_by
+        timestamp submitted_at
+    }
+    POD {
+        UUID id PK
+        UUID trip_id FK
+        string verification_type
+        jsonb verification_payload
+        jsonb photos
+        timestamp completed_at
+    }
+    VEHICLE {
+        UUID id PK
+        UUID driver_id FK
+        string plate_number
+        date insurance_expiry
+        date registration_expiry
+    }
+    MAINTENANCE {
+        UUID id PK
+        UUID vehicle_id FK
+        string type
+        date service_date
+        date next_service_date
+    }
+```

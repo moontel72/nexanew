@@ -64,7 +64,18 @@ jobs:
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/nexatrace/reseller/
 
       # ──────────────────────────────────────────────────────────────
-      # Post-Deployment: Fix permissions for both apps
+      # STEP C: Build & Deploy Driver App (main_driver.dart)
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Driver App (main_driver.dart)
+        run: flutter build web --release --target=lib/main_driver.dart --base-href "/driver/"
+
+      - name: Deploy Driver App to /driver/
+        run: |
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/nexatrace/driver/
+
+      # ──────────────────────────────────────────────────────────────
+      # Post-Deployment: Fix permissions for all apps
       # ──────────────────────────────────────────────────────────────
 
       - name: Post-Deployment Permissions Fix
@@ -73,5 +84,7 @@ jobs:
             chown -R www-data:www-data /var/www/nexatrace/frontend && \
             chmod -R 755 /var/www/nexatrace/frontend && \
             chown -R www-data:www-data /var/www/nexatrace/reseller && \
-            chmod -R 755 /var/www/nexatrace/reseller
+            chmod -R 755 /var/www/nexatrace/reseller && \
+            chown -R www-data:www-data /var/www/nexatrace/driver && \
+            chmod -R 755 /var/www/nexatrace/driver
           "

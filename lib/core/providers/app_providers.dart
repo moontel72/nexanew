@@ -12,9 +12,14 @@ import 'package:nexatrace_system/features/factory/admin/data/datasources/codes_r
 import 'package:nexatrace_system/features/factory/admin/data/repositories/codes_repository_impl.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/bloc/store_keeper_bloc.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/data/repositories/store_keeper_repository.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/bloc/factory_driver_geofence_bloc.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/bloc/driver_bloc.dart';
+import 'package:nexatrace_system/features/factory/driver/data/repositories/driver_repository_impl.dart';
+import 'package:nexatrace_system/features/factory/driver/data/datasources/driver_remote_datasource.dart';
 import 'package:nexatrace_system/features/factory/admin/domain/repositories/codes_repository.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/store_keepers/store_keepers_bloc.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/bloc/drivers/drivers_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_codes_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_bloc.dart';
@@ -114,10 +119,14 @@ class AppProviders {
       ),
 
       RepositoryProvider<ResellerManagementRemoteDatasource>(
-        create: (context) => ResellerManagementRemoteDatasource(apiService: context.read<ApiService>()),
+        create: (context) => ResellerManagementRemoteDatasource(
+          apiService: context.read<ApiService>(),
+        ),
       ),
       RepositoryProvider<ResellerManagementRepository>(
-        create: (context) => ResellerManagementRepository(remote: context.read<ResellerManagementRemoteDatasource>()),
+        create: (context) => ResellerManagementRepository(
+          remote: context.read<ResellerManagementRemoteDatasource>(),
+        ),
       ),
 
       // Factory Admin Repositories
@@ -158,7 +167,16 @@ class AppProviders {
   /// Get BLoC providers for Driver module
   static List<BlocProvider> getDriverBlocProviders() {
     return [
-      // Add Driver BLoCs here
+      BlocProvider<FactoryDriverGeofenceBloc>(
+        create: (context) => FactoryDriverGeofenceBloc(),
+      ),
+      BlocProvider<DriverBloc>(
+        create: (context) => DriverBloc(
+          repository: DriverRepositoryImpl(
+            remoteDatasource: DriverRemoteDatasource(),
+          ),
+        ),
+      ),
     ];
   }
 
@@ -205,7 +223,9 @@ class AppProviders {
         ),
       ),
       BlocProvider<ResellerManagementBloc>(
-        create: (context) => ResellerManagementBloc(repo: context.read<ResellerManagementRepository>()),
+        create: (context) => ResellerManagementBloc(
+          repo: context.read<ResellerManagementRepository>(),
+        ),
       ),
     ];
   }
@@ -241,7 +261,11 @@ class AppProviders {
       BlocProvider<BundleBloc>(create: (context) => BundleBloc()),
       BlocProvider<BundlePackingBloc>(create: (context) => BundlePackingBloc()),
       BlocProvider<StoreKeepersBloc>(create: (context) => StoreKeepersBloc()),
-      BlocProvider<StoreKeeperBloc>(create: (context) => StoreKeeperBloc(repository: StoreKeeperRepository())),
+      BlocProvider<DriversBloc>(create: (context) => DriversBloc()),
+      BlocProvider<StoreKeeperBloc>(
+        create: (context) =>
+            StoreKeeperBloc(repository: StoreKeeperRepository()),
+      ),
       // Billing Bloc
       BlocProvider<BillingBloc>(
         create: (context) =>

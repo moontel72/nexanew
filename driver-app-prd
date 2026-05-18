@@ -1,0 +1,103 @@
+## 1. Product Overview
+A comprehensive driver mobility platform integrated with factory admin panel for end-to-end delivery management, product scanning, geolocation verification, and digital proof of delivery.
+
+This system enables factory logistics teams to manage delivery fleets with real-time tracking, compliance monitoring, and automated workflow enforcement, while providing drivers with a mobile-optimized interface for task execution.
+
+Implementation context: this module is intended to be built inside the existing Flutter (BLoC) application and integrated with the existing Laravel + PostgreSQL backend running on Hetzner.
+
+## 2. Core Features
+
+### 2.1 User Roles
+| Role | Registration Method | Core Permissions |
+|------|---------------------|------------------|
+| Driver | Admin-created account with mobile login | Scan products, track trips, upload receipts, manage vehicle logs, communicate with admin/clients |
+| Factory Admin | System administrator access | Create driver accounts, set receipt mandatory flags, approve expense claims, view all trip data, manage compliance alerts |
+| Client/Recipient | Mobile app login | Confirm delivery location, verify receipt of goods, provide digital signature/PIN |
+
+### 2.2 Feature Module
+Our driver app requirements consist of the following main pages:
+1. **Home Dashboard**: Trip status tracking, current location, pending tasks, earnings summary.
+2. **Product Scanning Page**: Barcode/QR scanning for product pickup and delivery verification.
+3. **Trip Details Page**: Route navigation, delivery window timer, geolocation monitoring.
+4. **Proof of Delivery Page**: PIN verification, photo capture, digital signature collection.
+5. **Earnings & History Page**: Income breakdown, payment history, invoices, pending approvals.
+6. **Vehicle Management Page**: Meter readings, receipt uploads, maintenance logs, document expiry tracking.
+7. **Communication Center**: In-app chat, call history with admin and clients.
+8. **Settings & Profile**: Vehicle information, document uploads, app preferences.
+
+### 2.3 Page Details
+| Page Name | Module Name | Feature description |
+|-----------|-------------|---------------------|
+| Home Dashboard | Trip Lifecycle Tracker | Display current trip state: Assigned → Picked-Up → In-Transit → Arrived → Delivered → Completed. Prevent backward transitions. Show remaining delivery window time with route optimization suggestions. |
+| Home Dashboard | Earnings Summary | Display total combined income (salary, commission, bonuses, trip fees). Show red alert for pending admin approvals on expense claims. |
+| Home Dashboard | Compliance Alerts | Show vehicle/document expiry notifications (30-day advance warning). Block trip acceptance if critical documents expired. |
+| Home Dashboard | Fatigue Monitoring | Track cumulative driving hours. Block new trips if threshold (12hrs/day) exceeded, enforce mandatory rest periods. |
+| Product Scanning Page | Pickup Scan (4A) | Enable barcode/QR scanning at factory to confirm product pickup. Update trip status to Picked-Up. |
+| Product Scanning Page | Delivery Scan (4B-4D) | Show scan button only when driver within 100m of delivery location. If geolocation fails, enable location confirmation flow where recipient approves via their app to unlock scan button. |
+| Trip Details Page | Google Maps Integration (4F) | Provide real-time address tracking and optimal route calculation. Display geofence boundary for delivery location. |
+| Trip Details Page | Multi-source Location Verification (4V) | Validate location via GPS + cell tower triangulation + WiFi SSID. Reject inconsistent locations. Alert if GPS disabled. |
+| Trip Details Page | Fake GPS Protection (4S) | Detect third-party location spoofing apps. Block app access if spoofing detected. |
+| Proof of Delivery Page | POD Collection (4E, 4R) | Offer three verification methods: recipient PIN, photo of recipient holding ID documents, or digital signature on touchscreen. |
+| Proof of Delivery Page | Trip Debrief Upload (4W) | Require post-delivery photo uploads: product at location, recipient verification, any damage notes. Store with trip ID in immutable log. |
+| Earnings & History Page | Payment History (4H) | Show complete past payments, generate and download invoices. Filter by date range and payment type. |
+| Earnings & History Page | Expense Management (4K-4O) | Enable upload of fuel, food, mechanic/parts, or other receipts with amount fields. Display red alert for unapproved optional expenses. Auto-process mandatory expenses. |
+| Vehicle Management Page | Vehicle Information (4I) | Store and display vehicle details including plate number and assigned vehicle type. |
+| Vehicle Management Page | Meter Reading Tracking (4J) | Log meter readings at factory start, delivery location, and return to factory. Enforce mandatory entries if set by admin. |
+| Vehicle Management Page | Maintenance Log (4Q) | Track service dates, next service reminders, tire/battery replacement alerts. Send push notifications for upcoming maintenance. |
+| Vehicle Management Page | Compliance Tracking (4Y) | Monitor driver's license, insurance, registration expiry dates. Block trips if documents expired. Send 30-day renewal reminders. |
+| Communication Center | Chat & Call (4P) | Enable in-app chat and phone calls to admin panel and delivery recipients. |
+| Communication Center | Chat Archival (4X) | Store all communications with timestamps. Enable search by date/keyword. Auto-delete after 1 year unless flagged as evidence. |
+| Settings & Profile | Offline Mode (4Z) | Allow trip acceptance and scanning without internet. Cache data locally. Auto-sync when connection restored, resolve conflicts via server timestamps. |
+| System-wide | Performance Tracking (4AA) | Calculate driver KPIs: on-time delivery percentage, customer ratings, daily scan volume, photo quality. Assign Bronze/Silver/Gold tiers. Gold drivers get preferential assignments +5% bonus. |
+| System-wide | Dispute Management (4AB) | Notify driver of customer delivery disputes with evidence summary. Enable counter-evidence submission. Escalate to arbiter if unresolved in 24hrs. |
+
+## 3. Core Process
+Main driver operation flow:
+1. Driver receives trip assignment (status: Assigned)
+2. Driver arrives at factory, scans product to pickup (status: Picked-Up → In-Transit)
+3. App navigates to delivery location, monitors driver's proximity
+4. Within 100m, scan button unlocks; driver scans product on arrival (status: Arrived)
+5. Collects POD (PIN/photo/signature) from recipient, uploads debrief photos (status: Delivered)
+6. Driver completes any mandatory receipt/meter entries, trip marked Completed
+7. Expenses submitted for admin approval if optional, auto-processed if mandatory
+
+```mermaid
+graph TD
+    A[Home Dashboard] --> B[Product Pickup Scan]
+    B --> C[In-Transit Navigation]
+    C --> D{Within 100m?}
+    D -->|No| C
+    D -->|Yes| E[Delivery Scan Enabled]
+    E --> F[Proof of Delivery Collection]
+    F --> G[Trip Debrief & Photo Upload]
+    G --> H[Expense/Meter Entry]
+    H --> I[Trip Completed]
+    I --> J[Earnings Update]
+```
+
+## 4. User Interface Design
+### 4.1 Design Style
+- Primary colors: Industrial blue (#165DFF) for trust/reliability, safety orange (#FF7D00) for alerts
+- Secondary colors: Neutral grays for content, green (#00B42A) for status completions
+- Button style: Rounded corners (8px), elevated cards with subtle shadows
+- Font: Inter family, 14px base size, 16px for interactive elements
+- Layout: Bottom navigation for mobile, top navigation with map overlay for navigation views
+- Icons: Material Design icons consistent with logistics/transport use cases
+
+### 4.2 Page Design Overview
+| Page Name | Module Name | UI Elements |
+|-----------|-------------|-------------|
+| Home Dashboard | Status Tracker | Large status pill showing current trip state, countdown timer for delivery window, map snippet of current route |
+| Scanning Page | Camera View | Full-screen camera interface with scan frame, flash toggle, manual entry fallback, connection status indicator for offline mode |
+| POD Page | Verification Options | Three card-based options for PIN, photo, signature; large touch targets for on-site use; progress indicator showing POD completion |
+| Earnings Page | Summary Cards | Color-coded cards for approved/pending income, red alert badges for unapproved expenses, transaction list with filter chips |
+
+### 4.3 Responsiveness
+Mobile-first design optimized for smartphones and tablets used in field conditions. Touch interactions optimized for gloved operation where applicable. Offline mode maintains full functionality without connectivity.
+
+### 4.4 Location & Mapping Requirements
+- Google Maps SDK integration with offline map caching
+- Geofence radius visualization on map (100m circle around delivery address)
+- Real-time location tracking with 5-second update interval
+- Route recalculation with traffic avoidance
+- Dark mode support for low-light operations

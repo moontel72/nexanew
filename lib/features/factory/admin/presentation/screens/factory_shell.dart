@@ -138,6 +138,28 @@ class FactoryShell extends StatelessWidget {
               ),
             ],
           ),
+          AdminSidebarItem(
+            label: 'Drivers',
+            icon: Icons.delivery_dining,
+            route: '/factory/drivers',
+            children: [
+              AdminSidebarItem(
+                label: 'Add Driver',
+                icon: Icons.person_add_outlined,
+                route: '/factory/drivers/create',
+              ),
+              AdminSidebarItem(
+                label: 'View Drivers',
+                icon: Icons.list_alt,
+                route: '/factory/drivers',
+              ),
+              AdminSidebarItem(
+                label: 'Driver Dashboard',
+                icon: Icons.dashboard_outlined,
+                route: '/factory/driver/dashboard',
+              ),
+            ],
+          ),
         ],
       ),
       AdminSidebarSection(
@@ -250,6 +272,18 @@ class FactoryShell extends StatelessWidget {
     if (location.startsWith('/factory/store-keepers/create'))
       return 'Add Store Keeper';
     if (location.startsWith('/factory/store-keepers')) return 'Store Keepers';
+
+    if (location.startsWith('/factory/driver/scan-receive')) return 'Receive';
+    if (location.startsWith('/factory/driver/delivery-scan'))
+      return 'Delivery Scan';
+    if (location.startsWith('/factory/driver/location-confirm'))
+      return 'Location Confirm';
+    if (location.startsWith('/factory/driver/pod')) return 'Proof of Delivery';
+    if (location.startsWith('/factory/driver/earnings')) return 'Earnings';
+    if (location.startsWith('/factory/driver/vehicle')) return 'Vehicle';
+    if (location.startsWith('/factory/driver/map-tracking'))
+      return 'Map Tracking';
+    if (location.startsWith('/factory/driver')) return 'Drivers';
     if (location.startsWith('/factory/codes/unit/generate')) {
       return 'Generate Unit';
     }
@@ -295,6 +329,30 @@ class FactoryShell extends StatelessWidget {
     }
     if (location.startsWith('/factory/store-keepers')) {
       return const ['Factory', 'People', 'Store Keepers'];
+    }
+    if (location.startsWith('/factory/driver/scan-receive')) {
+      return const ['Factory', 'People', 'Drivers', 'Receive'];
+    }
+    if (location.startsWith('/factory/driver/delivery-scan')) {
+      return const ['Factory', 'People', 'Drivers', 'Delivery Scan'];
+    }
+    if (location.startsWith('/factory/driver/location-confirm')) {
+      return const ['Factory', 'People', 'Drivers', 'Location Confirm'];
+    }
+    if (location.startsWith('/factory/driver/pod')) {
+      return const ['Factory', 'People', 'Drivers', 'Proof of Delivery'];
+    }
+    if (location.startsWith('/factory/driver/earnings')) {
+      return const ['Factory', 'People', 'Drivers', 'Earnings'];
+    }
+    if (location.startsWith('/factory/driver/vehicle')) {
+      return const ['Factory', 'People', 'Drivers', 'Vehicle'];
+    }
+    if (location.startsWith('/factory/driver/map-tracking')) {
+      return const ['Factory', 'People', 'Drivers', 'Map Tracking'];
+    }
+    if (location.startsWith('/factory/driver')) {
+      return const ['Factory', 'People', 'Drivers'];
     }
     if (location.startsWith('/factory/codes/unit')) {
       return const ['Factory', 'Codes', 'Unit'];

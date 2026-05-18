@@ -58,6 +58,25 @@ import 'package:nexatrace_system/features/factory/store_keeper/presentation/scre
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/orders/orders_hub_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/orders/create_manual_order_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/orders/order_detail_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/driver_dashboard_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/scan_receive_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/delivery_scan_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/location_confirm_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/proof_delivery_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/earnings_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/vehicle_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/map_tracking_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/expenses_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/payment_history_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/chat_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/maintenance_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/compliance_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/disputes_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/performance_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/settings_screen.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/screens/drivers/drivers_list_screen.dart';
+import 'package:nexatrace_system/features/factory/admin/presentation/screens/drivers/create_driver_screen.dart';
+import 'package:nexatrace_system/features/factory/driver/presentation/screens/driver_login_screen.dart';
 
 class AppRouter {
   late final GoRouter router;
@@ -355,6 +374,18 @@ class AppRouter {
           ],
         ),
         GoRoute(
+          path: '/factory/drivers',
+          name: 'factory_drivers',
+          builder: (context, state) => const DriversListScreen(),
+          routes: [
+            GoRoute(
+              path: 'create',
+              name: 'factory_drivers_create',
+              builder: (context, state) => const CreateDriverScreen(),
+            ),
+          ],
+        ),
+        GoRoute(
           path: '/factory/codes/unit',
           name: 'factory_unit_codes',
           builder: (context, state) => const UnitCodesListScreen(),
@@ -451,8 +482,76 @@ class AppRouter {
       builder: (context, state) => const StoreKeeperLoginScreen(),
     ),
     GoRoute(
+      path: '/factory/driver/login',
+      builder: (context, state) => const DriverLoginScreen(),
+    ),
+    GoRoute(
       path: '/factory/store-keeper/dashboard',
       builder: (context, state) => const StoreKeeperDashboard(),
+    ),
+    GoRoute(
+      path: '/factory/driver/dashboard',
+      builder: (context, state) => const FactoryDriverDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/scan-receive',
+      builder: (context, state) => const ScanReceiveScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/delivery-scan',
+      builder: (context, state) => const DeliveryScanScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/location-confirm',
+      builder: (context, state) => const LocationConfirmScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/pod',
+      builder: (context, state) => const ProofDeliveryScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/earnings',
+      builder: (context, state) => const DriverEarningsScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/vehicle',
+      builder: (context, state) => const DriverVehicleScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/map-tracking',
+      builder: (context, state) => const DriverMapTrackingScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/expenses',
+      builder: (context, state) => const DriverExpensesScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/payment-history',
+      builder: (context, state) => const DriverPaymentHistoryScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/chat',
+      builder: (context, state) => const DriverChatScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/maintenance',
+      builder: (context, state) => const DriverMaintenanceScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/compliance',
+      builder: (context, state) => const DriverComplianceScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/disputes',
+      builder: (context, state) => const DriverDisputesScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/performance',
+      builder: (context, state) => const DriverPerformanceScreen(),
+    ),
+    GoRoute(
+      path: '/factory/driver/settings',
+      builder: (context, state) => const DriverSettingsScreen(),
     ),
     GoRoute(
       path: '/factory/store-keeper/scanner',

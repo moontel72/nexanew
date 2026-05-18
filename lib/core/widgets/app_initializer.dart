@@ -181,6 +181,7 @@ class _AppInitializerState extends State<AppInitializer> {
                     return MultiBlocProvider(
                       providers: [
                         ...AppProviders.getGlobalBlocProviders(),
+                        ...AppProviders.getDriverBlocProviders(),
                         ...AppProviders.getNexaAdminBlocProviders(),
                         ...AppProviders.getFactoryAdminBlocProviders(),
                       ],
