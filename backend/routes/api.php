@@ -466,6 +466,11 @@ $registerRoutes = function (): void {
                 \App\Http\Controllers\Factory\StoreKeeperController::class,
                 "login",
             ]);
+            // Dedicated driver login (uses Driver model + Sanctum)
+            Route::post("drivers/login", [
+                \App\Http\Controllers\Factory\DriverController::class,
+                "login",
+            ]);
             Route::post("logout", [
                 \App\Http\Controllers\Factory\FactoryAuthController::class,
                 "logout",
@@ -583,6 +588,17 @@ $registerRoutes = function (): void {
                 Route::put("{id}", [\App\Http\Controllers\Factory\StoreKeeperController::class, "update"]);
                 Route::delete("{id}", [\App\Http\Controllers\Factory\StoreKeeperController::class, "destroy"]);
                 Route::get("{id}/audit-trail", [\App\Http\Controllers\Factory\StoreKeeperController::class, "auditTrail"]);
+            });
+
+            // Driver Management
+            Route::prefix("drivers")->group(function (): void {
+                Route::get("list", [\App\Http\Controllers\Factory\DriverController::class, "index"]);
+                Route::post("create", [\App\Http\Controllers\Factory\DriverController::class, "store"]);
+                Route::get("{id}", [\App\Http\Controllers\Factory\DriverController::class, "show"]);
+                Route::put("{id}", [\App\Http\Controllers\Factory\DriverController::class, "update"]);
+                Route::delete("{id}", [\App\Http\Controllers\Factory\DriverController::class, "destroy"]);
+                Route::patch("{id}/status", [\App\Http\Controllers\Factory\DriverController::class, "toggleStatus"]);
+                Route::get("{id}/audit-trail", [\App\Http\Controllers\Factory\DriverController::class, "auditTrail"]);
             });
 
         });
