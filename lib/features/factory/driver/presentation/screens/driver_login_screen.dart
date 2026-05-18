@@ -11,9 +11,9 @@ import 'package:nexatrace_system/core/constants/app_constants.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 
-/// Industrial Blue (#165DFF) — distinct from Super Admin blue (#0066CC),
+/// Driver Teal (#0D9488) — distinct from Super Admin blue (#0066CC),
 /// Factory Admin green (#00CC66), Store Keeper orange (#FF9900), Reseller purple.
-const Color _driverBlue = Color(0xFF165DFF);
+const Color _driverBlue = Color(0xFF0D9488);
 
 /// Driver Login Screen
 /// Authentication screen for drivers to access the driver panel
@@ -48,7 +48,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [_driverBlue.withOpacity(0.1), Colors.white],
+            colors: [_driverBlue.withOpacity(0.08), Colors.white],
           ),
         ),
         child: Center(
