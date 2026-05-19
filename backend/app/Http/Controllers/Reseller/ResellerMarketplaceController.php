@@ -71,7 +71,7 @@ class ResellerMarketplaceController extends Controller
             ->where('marketplace_enabled', true)
             ->select([
                 'id', 'company_id', 'name', 'sku', 'description', 'category', 'product_type',
-                'image_urls', 'status',
+                'image_urls', 'metadata', 'status',
                 'unit_price', 'carton_price', 'wholesale_price', 'currency',
                 'discount_type', 'discount_value', 'moq', 'marketplace_enabled',
                 'bonus_quantity', 'bonus_threshold', 'wallet_credit',
@@ -140,6 +140,7 @@ class ResellerMarketplaceController extends Controller
                 'bonusThreshold' => $product->bonus_threshold,
                 'promoDiscount' => $product->promo_discount ? (float) $product->promo_discount : null,
                 'volumeDiscounts' => $product->volume_discounts,
+                'imageUrl' => $product->metadata['image_url'] ?? ($product->image_urls[0] ?? null),
                 'metadata' => $product->metadata,
             ];
         })->toArray();

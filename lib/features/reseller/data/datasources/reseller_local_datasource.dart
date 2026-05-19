@@ -18,6 +18,9 @@ class ResellerLocalDatasource {
   static const _kEmployees = 'reseller_employees';
   static const _kWallet = 'reseller_wallet';
   static const _kDeviceId = 'reseller_device_id';
+  static const _kName = 'reseller_name';
+  static const _kBusinessName = 'reseller_business_name';
+  static const _kPurchaseApproved = 'reseller_purchase_approved';
 
   String? getToken() => _prefs.getString(_kToken);
 
@@ -30,6 +33,22 @@ class ResellerLocalDatasource {
     await _prefs.setString(_kResellerId, resellerId);
     await _prefs.setString(_kToken, token);
   }
+
+  Future<void> setProfile({
+    String? name,
+    String? businessName,
+    bool? purchaseApproved,
+  }) async {
+    if (name != null) await _prefs.setString(_kName, name);
+    if (businessName != null)
+      await _prefs.setString(_kBusinessName, businessName);
+    if (purchaseApproved != null)
+      await _prefs.setBool(_kPurchaseApproved, purchaseApproved);
+  }
+
+  String? getName() => _prefs.getString(_kName);
+  String? getBusinessName() => _prefs.getString(_kBusinessName);
+  bool getPurchaseApproved() => _prefs.getBool(_kPurchaseApproved) ?? false;
 
   Future<void> clearSession() async {
     await _prefs.remove(_kResellerId);
@@ -198,4 +217,3 @@ class ResellerLocalDatasource {
     return [];
   }
 }
-

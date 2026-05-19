@@ -461,6 +461,8 @@ $registerRoutes = function (): void {
     // RESELLER MARKETPLACE (public B2B endpoints)
     // ──────────────────────────────────────────────────────────────
     Route::prefix("reseller")->group(function (): void {
+        // Public login
+        Route::post("login", [\App\Http\Controllers\Reseller\ResellerAuthController::class, "login"]);
         Route::get("factories", [\App\Http\Controllers\Reseller\ResellerMarketplaceController::class, "factories"]);
         Route::get("products", [\App\Http\Controllers\Reseller\ResellerMarketplaceController::class, "products"]);
 
