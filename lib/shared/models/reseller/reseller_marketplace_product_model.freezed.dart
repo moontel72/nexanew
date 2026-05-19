@@ -230,13 +230,13 @@ return $default(_that.id,_that.tenantId,_that.factoryId,_that.name,_that.sku,_th
 @JsonSerializable()
 
 class _ResellerMarketplaceProductModel implements ResellerMarketplaceProductModel {
-  const _ResellerMarketplaceProductModel({required this.id, required this.tenantId, required this.factoryId, required this.name, this.sku = '', this.category = '', this.productType = '', this.status = 'active', @JsonKey(fromJson: _safeParseDoubleNN) this.price = 0.0, this.currency = 'PKR', final  List<VolumeDiscountTier>? volumeDiscounts, @JsonKey(fromJson: _safeParseDouble) this.promoDiscount, final  Map<String, dynamic>? metadata, this.factoryName, this.factoryCity, this.factoryLogo, this.factoryStatus, @JsonKey(fromJson: _safeParseDouble) this.cartonPrice, @JsonKey(fromJson: _safeParseDouble) this.wholesalePrice, this.moq, this.bonusQuantity, this.bonusThreshold}): _volumeDiscounts = volumeDiscounts,_metadata = metadata;
+  const _ResellerMarketplaceProductModel({this.id = '', this.tenantId = '', this.factoryId = '', this.name = '', this.sku = '', this.category = '', this.productType = '', this.status = 'active', @JsonKey(fromJson: _safeParseDoubleNN) this.price = 0.0, this.currency = 'PKR', final  List<VolumeDiscountTier>? volumeDiscounts, @JsonKey(fromJson: _safeParseDouble) this.promoDiscount, final  Map<String, dynamic>? metadata, this.factoryName, this.factoryCity, this.factoryLogo, this.factoryStatus, @JsonKey(fromJson: _safeParseDouble) this.cartonPrice, @JsonKey(fromJson: _safeParseDouble) this.wholesalePrice, this.moq, this.bonusQuantity, this.bonusThreshold}): _volumeDiscounts = volumeDiscounts,_metadata = metadata;
   factory _ResellerMarketplaceProductModel.fromJson(Map<String, dynamic> json) => _$ResellerMarketplaceProductModelFromJson(json);
 
-@override final  String id;
-@override final  String tenantId;
-@override final  String factoryId;
-@override final  String name;
+@override@JsonKey() final  String id;
+@override@JsonKey() final  String tenantId;
+@override@JsonKey() final  String factoryId;
+@override@JsonKey() final  String name;
 @override@JsonKey() final  String sku;
 @override@JsonKey() final  String category;
 @override@JsonKey() final  String productType;

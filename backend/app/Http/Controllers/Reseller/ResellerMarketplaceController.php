@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ResellerMarketplaceController extends Controller
 {
@@ -16,6 +17,8 @@ class ResellerMarketplaceController extends Controller
      */
     public function factories(Request $request): JsonResponse
     {
+        Log::info('Reseller marketplace: factories() called');
+
         $tenantId = $request->query('tenant_id', 'default');
 
         $factories = Company::where('status', 'active')
@@ -61,6 +64,8 @@ class ResellerMarketplaceController extends Controller
         $factoryId = $request->query('factory_id');
         $search = $request->query('search');
         $limit = (int) $request->query('limit', 20);
+
+        Log::info('Reseller marketplace: products() called', ['factory_id' => $factoryId, 'search' => $search]);
 
         $query = Product::where('status', 'active')
             ->where('marketplace_enabled', true)
@@ -111,14 +116,32 @@ class ResellerMarketplaceController extends Controller
         $products = $query->orderBy('name')
             ->paginate($limit);
 
-        // Map factory info into each product
+        // Map factory info into each product using camelCase keys for Flutter
         $data = collect($products->items())->map(function ($product) {
-            $arr = $product->toArray();
-            $arr['factory_name'] = $product->company->name ?? null;
-            $arr['factory_city'] = $product->company->city ?? null;
-            $arr['factory_logo'] = $product->company->logo_url ?? null;
-            $arr['factory_status'] = $product->company->status ?? null;
-            return $arr;
+            return [
+                'id' => $product->id,
+                'tenantId' => 'default',
+                'factoryId' => $product->company_id,
+                'name' => $product->name,
+                'sku' => $product->sku ?? '',
+                'category' => $product->category ?? '',
+                'productType' => $product->product_type ?? '',
+                'status' => $product->status,
+                'price' => (float) ($product->unit_price ?? 0),
+                'currency' => $product->currency ?? 'PKR',
+                'factoryName' => $product->company->name ?? null,
+                'factoryCity' => $product->company->city ?? null,
+                'factoryLogo' => $product->company->logo_url ?? null,
+                'factoryStatus' => $product->company->status ?? null,
+                'cartonPrice' => $product->carton_price ? (float) $product->carton_price : null,
+                'wholesalePrice' => $product->wholesale_price ? (float) $product->wholesale_price : null,
+                'moq' => $product->moq,
+                'bonusQuantity' => $product->bonus_quantity,
+                'bonusThreshold' => $product->bonus_threshold,
+                'promoDiscount' => $product->promo_discount ? (float) $product->promo_discount : null,
+                'volumeDiscounts' => $product->volume_discounts,
+                'metadata' => $product->metadata,
+            ];
         })->toArray();
 
         return response()->json([

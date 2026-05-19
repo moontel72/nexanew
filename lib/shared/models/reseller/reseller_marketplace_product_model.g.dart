@@ -9,10 +9,10 @@ part of 'reseller_marketplace_product_model.dart';
 _ResellerMarketplaceProductModel _$ResellerMarketplaceProductModelFromJson(
   Map<String, dynamic> json,
 ) => _ResellerMarketplaceProductModel(
-  id: json['id'] as String,
-  tenantId: json['tenant_id'] as String,
-  factoryId: json['factory_id'] as String,
-  name: json['name'] as String,
+  id: json['id'] as String? ?? '',
+  tenantId: json['tenant_id'] as String? ?? '',
+  factoryId: json['factory_id'] as String? ?? '',
+  name: json['name'] as String? ?? '',
   sku: json['sku'] as String? ?? '',
   category: json['category'] as String? ?? '',
   productType: json['product_type'] as String? ?? '',

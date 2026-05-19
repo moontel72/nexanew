@@ -21,10 +21,10 @@ double _safeParseDoubleNN(dynamic value) => _safeParseDouble(value) ?? 0.0;
 abstract class ResellerMarketplaceProductModel
     with _$ResellerMarketplaceProductModel {
   const factory ResellerMarketplaceProductModel({
-    required String id,
-    required String tenantId,
-    required String factoryId,
-    required String name,
+    @Default('') String id,
+    @Default('') String tenantId,
+    @Default('') String factoryId,
+    @Default('') String name,
     @Default('') String sku,
     @Default('') String category,
     @Default('') String productType,

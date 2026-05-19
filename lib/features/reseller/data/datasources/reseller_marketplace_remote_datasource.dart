@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:nexatrace_system/core/constants/api_endpoints.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/shared/models/reseller/reseller_marketplace_product_model.dart';
@@ -26,11 +27,15 @@ class ResellerMarketplaceRemoteDatasource {
               .whereType<Map>()
               .map((m) => m.cast<String, dynamic>())
               .toList();
+        } else {
+          debugPrint(
+            'MARKETPLACE WARNING [listFactories]: Unexpected response format: $res',
+          );
         }
       }
       return [];
-    } catch (_) {
-      // Return empty list on any error — the BLoC/screen will show empty state
+    } catch (e, st) {
+      debugPrint('MARKETPLACE ERROR [listFactories]: $e\n$st');
       return [];
     }
   }
@@ -68,11 +73,15 @@ class ResellerMarketplaceRemoteDatasource {
                 ),
               )
               .toList();
+        } else {
+          debugPrint(
+            'MARKETPLACE WARNING [listProducts]: Unexpected response format: $res',
+          );
         }
       }
       return [];
-    } catch (_) {
-      // Return empty list on any error — the BLoC/screen will show empty state
+    } catch (e, st) {
+      debugPrint('MARKETPLACE ERROR [listProducts]: $e\n$st');
       return [];
     }
   }

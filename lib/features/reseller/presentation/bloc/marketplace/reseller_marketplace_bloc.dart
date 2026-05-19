@@ -1,4 +1,5 @@
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:nexatrace_system/features/reseller/data/repositories/reseller_marketplace_repository.dart';
 import 'package:nexatrace_system/shared/models/reseller/reseller_marketplace_product_model.dart';
 
@@ -107,7 +108,9 @@ class ResellerMarketplaceBloc
     );
     try {
       // Datasource now catches all errors and returns empty list
+      debugPrint('MARKETPLACE BLOC: Fetching factories...');
       final factories = await _repo.getFactories(tenantId: event.tenantId);
+      debugPrint('MARKETPLACE BLOC: Got ${factories.length} factories');
 
       // No factories available — emit loaded with empty list (screen shows EmptyState)
       if (factories.isEmpty) {
