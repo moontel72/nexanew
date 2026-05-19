@@ -74,6 +74,7 @@ class AdminResellerController extends Controller
         ]);
 
         $validated['password'] = bcrypt($validated['password']);
+        $validated['purchase_approved'] = true; // Admin-vouched, no proof needed
         $reseller = Reseller::create($validated);
 
         // Remove password from response
@@ -103,6 +104,7 @@ class AdminResellerController extends Controller
             'city' => 'sometimes|string|max:100',
             'address' => 'nullable|string|max:500',
             'plan_id' => 'nullable|string|max:36',
+            'purchase_approved' => 'sometimes|boolean',
         ]);
 
         if (!empty($validated['password'])) {

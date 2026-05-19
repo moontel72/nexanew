@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nexatrace_system/core/constants/api_endpoints.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
@@ -44,9 +45,12 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
 
   Future<void> _checkBusinessProof() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final resellerId = prefs.getString('reseller_current_user_id') ?? '';
       final res = await ApiService().get(
         ApiEndpoints.resellerProofStatus,
         requiresAuth: true,
+        headers: resellerId.isNotEmpty ? {'X-Reseller-Id': resellerId} : null,
       );
       final data = res is Map ? res : (res['data'] is Map ? res['data'] : null);
       final approved = data?['purchase_approved'] == true;
@@ -253,11 +257,13 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
                   try {
                     await ApiService().uploadFile(
                       ApiEndpoints.resellerProofUpload,
-                      _proofFile!.path!,
+                      _proofFile!.path ?? '',
                       'proof_file',
                       fields: {
                         'document_title': _proofTitleController.text.trim(),
                       },
+                      fileBytes: _proofFile!.bytes,
+                      fileName: _proofFile!.name,
                     );
                     if (mounted) {
                       setState(

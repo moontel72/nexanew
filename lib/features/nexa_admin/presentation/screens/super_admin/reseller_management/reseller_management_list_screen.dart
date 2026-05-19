@@ -162,18 +162,8 @@ class _ResellerManagementListScreenState
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Proof & Purchase Approval ──────────────────
-            if (hasProof)
-              _actionTile(
-                icon: Icons.description_outlined,
-                color: AppColors.info,
-                label: 'View Business Proof',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showProofDialog(id, name, reseller);
-                },
-              ),
-            if (hasProof && !purchaseApproved)
+            // ── Purchase Approval (always show if not approved) ──
+            if (!purchaseApproved)
               _actionTile(
                 icon: Icons.check_circle_outline,
                 color: AppColors.success,
@@ -183,7 +173,7 @@ class _ResellerManagementListScreenState
                   _confirmAction(
                     title: 'Approve $name?',
                     message:
-                        'This will allow the reseller to place orders on the marketplace.',
+                        'This allows the reseller to place orders on the marketplace.',
                     onConfirm: () {
                       context.read<ResellerManagementBloc>().add(
                         ApproveResellerPurchase(id),
@@ -209,6 +199,17 @@ class _ResellerManagementListScreenState
                       );
                     },
                   );
+                },
+              ),
+            // ── View Proof (only if uploaded) ──────────────
+            if (hasProof)
+              _actionTile(
+                icon: Icons.description_outlined,
+                color: AppColors.info,
+                label: 'View Business Proof',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showProofDialog(id, name, reseller);
                 },
               ),
             // Existing actions
@@ -352,11 +353,15 @@ class _ResellerManagementListScreenState
   }
 
   void _showEditDialog(Map<String, dynamic> reseller) {
+    final id = reseller['id']?.toString() ?? '';
     final nameCtl = TextEditingController(
       text: reseller['name']?.toString() ?? '',
     );
     final bizCtl = TextEditingController(
       text: reseller['business_name']?.toString() ?? '',
+    );
+    final regCtl = TextEditingController(
+      text: reseller['registration_no']?.toString() ?? '',
     );
     final emailCtl = TextEditingController(
       text: reseller['email']?.toString() ?? '',
@@ -367,53 +372,86 @@ class _ResellerManagementListScreenState
     final cityCtl = TextEditingController(
       text: reseller['city']?.toString() ?? '',
     );
-    final id = reseller['id']?.toString() ?? '';
+    final addrCtl = TextEditingController(
+      text: reseller['address']?.toString() ?? '',
+    );
+    final planCtl = TextEditingController(
+      text: reseller['plan_id']?.toString() ?? '',
+    );
+    var purchaseApproved =
+        reseller['purchase_approved'] == true ||
+        reseller['purchase_approved'] == '1';
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14.r),
-        ),
-        title: const Text('Edit Reseller'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _field('Name', nameCtl),
-              SizedBox(height: 10.h),
-              _field('Business Name', bizCtl),
-              SizedBox(height: 10.h),
-              _field('Email', emailCtl),
-              SizedBox(height: 10.h),
-              _field('Phone', phoneCtl),
-              SizedBox(height: 10.h),
-              _field('City', cityCtl),
-            ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (_, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14.r),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          PrimaryButton(
-            text: 'Save',
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<ResellerManagementBloc>().add(
-                UpdateReseller(
-                  id: id,
-                  name: nameCtl.text,
-                  businessName: bizCtl.text,
-                  email: emailCtl.text,
-                  phone: phoneCtl.text,
-                  city: cityCtl.text,
+          title: const Text('Edit Reseller'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _field('Name *', nameCtl),
+                SizedBox(height: 10.h),
+                _field('Business Name *', bizCtl),
+                SizedBox(height: 10.h),
+                _field('Registration No', regCtl),
+                SizedBox(height: 10.h),
+                _field('Email *', emailCtl),
+                SizedBox(height: 10.h),
+                _field('Phone *', phoneCtl),
+                SizedBox(height: 10.h),
+                _field('City', cityCtl),
+                SizedBox(height: 10.h),
+                _field('Address', addrCtl),
+                SizedBox(height: 10.h),
+                _field('Plan ID', planCtl),
+                SizedBox(height: 12.h),
+                // Purchase approval toggle
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Purchase Approved',
+                    style: TextStyle(fontSize: 13.sp),
+                  ),
+                  value: purchaseApproved,
+                  onChanged: (v) => setDialogState(() => purchaseApproved = v),
+                  activeColor: AppColors.success,
+                  dense: true,
                 ),
-              );
-            },
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            PrimaryButton(
+              text: 'Save',
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.read<ResellerManagementBloc>().add(
+                  UpdateReseller(
+                    id: id,
+                    name: nameCtl.text,
+                    businessName: bizCtl.text,
+                    registrationNo: regCtl.text,
+                    email: emailCtl.text,
+                    phone: phoneCtl.text,
+                    city: cityCtl.text,
+                    address: addrCtl.text,
+                    planId: planCtl.text,
+                    purchaseApproved: purchaseApproved,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -68,6 +68,7 @@ final class UpdateReseller extends ResellerManagementEvent {
   final String? city;
   final String? address;
   final String? planId;
+  final bool? purchaseApproved;
 
   UpdateReseller({
     required this.id,
@@ -79,6 +80,7 @@ final class UpdateReseller extends ResellerManagementEvent {
     this.city,
     this.address,
     this.planId,
+    this.purchaseApproved,
   });
 }
 
@@ -377,6 +379,7 @@ class ResellerManagementBloc
         city: event.city,
         address: event.address,
         planId: event.planId,
+        purchaseApproved: event.purchaseApproved,
       );
 
       emit(

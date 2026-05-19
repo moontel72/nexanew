@@ -1,6 +1,7 @@
 // API Service for NexaTrace System
 // This service provides a higher-level abstraction over ApiClient for business logic
 
+import 'dart:typed_data';
 import 'package:nexatrace_system/core/services/api_client.dart';
 
 class ApiService {
@@ -15,11 +16,13 @@ class ApiService {
     String endpoint, {
     Map<String, dynamic>? queryParams,
     Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
     bool requiresAuth = true,
   }) {
     return _apiClient.get(
       endpoint,
       queryParams: queryParams ?? queryParameters,
+      headers: headers,
       requiresAuth: requiresAuth,
     );
   }
@@ -94,6 +97,8 @@ class ApiService {
     String fieldName, {
     Map<String, String>? fields,
     bool requiresAuth = true,
+    Uint8List? fileBytes,
+    String? fileName,
   }) {
     return _apiClient.uploadFile(
       endpoint,
@@ -101,6 +106,8 @@ class ApiService {
       fieldName,
       fields: fields,
       requiresAuth: requiresAuth,
+      fileBytes: fileBytes,
+      fileName: fileName,
     );
   }
 
@@ -147,10 +154,7 @@ class ApiService {
     String? sortOrder,
   }) async {
     try {
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'per_page': perPage,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'per_page': perPage};
 
       if (search != null && search.isNotEmpty) {
         queryParams['search'] = search;
@@ -179,21 +183,17 @@ class ApiService {
 
   Future<Map<String, dynamic>> getCompanyById(String companyId) async {
     try {
-      return await _apiClient.get(
-        '/api/admin/companies/$companyId',
-      );
+      return await _apiClient.get('/api/admin/companies/$companyId');
     } catch (e) {
       rethrow;
     }
   }
 
   Future<Map<String, dynamic>> createCompany(
-      Map<String, dynamic> companyData) async {
+    Map<String, dynamic> companyData,
+  ) async {
     try {
-      return await _apiClient.post(
-        '/api/admin/companies',
-        body: companyData,
-      );
+      return await _apiClient.post('/api/admin/companies', body: companyData);
     } catch (e) {
       rethrow;
     }
@@ -215,9 +215,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> deleteCompany(String companyId) async {
     try {
-      return await _apiClient.delete(
-        '/api/admin/companies/$companyId',
-      );
+      return await _apiClient.delete('/api/admin/companies/$companyId');
     } catch (e) {
       rethrow;
     }
@@ -239,9 +237,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getCompanyStatistics() async {
     try {
-      return await _apiClient.get(
-        '/api/admin/companies/statistics',
-      );
+      return await _apiClient.get('/api/admin/companies/statistics');
     } catch (e) {
       rethrow;
     }
@@ -350,10 +346,7 @@ class ApiService {
     String? companyId,
   }) async {
     try {
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'per_page': perPage,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'per_page': perPage};
 
       if (search != null && search.isNotEmpty) {
         queryParams['search'] = search;
@@ -367,10 +360,7 @@ class ApiService {
         queryParams['company_id'] = companyId;
       }
 
-      return await _apiClient.get(
-        '/api/admin/users',
-        queryParams: queryParams,
-      );
+      return await _apiClient.get('/api/admin/users', queryParams: queryParams);
     } catch (e) {
       rethrow;
     }
@@ -378,10 +368,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> createUser(Map<String, dynamic> userData) async {
     try {
-      return await _apiClient.post(
-        '/api/admin/users',
-        body: userData,
-      );
+      return await _apiClient.post('/api/admin/users', body: userData);
     } catch (e) {
       rethrow;
     }
@@ -392,10 +379,7 @@ class ApiService {
     Map<String, dynamic> userData,
   ) async {
     try {
-      return await _apiClient.put(
-        '/api/admin/users/$userId',
-        body: userData,
-      );
+      return await _apiClient.put('/api/admin/users/$userId', body: userData);
     } catch (e) {
       rethrow;
     }
@@ -409,10 +393,7 @@ class ApiService {
     String? companyId,
   }) async {
     try {
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'per_page': perPage,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'per_page': perPage};
 
       if (status != null && status.isNotEmpty) {
         queryParams['status'] = status;

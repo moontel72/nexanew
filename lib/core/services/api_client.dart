@@ -2,9 +2,10 @@
 // This file handles all HTTP requests to the Laravel backend
 
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show SocketException;
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -269,13 +270,15 @@ class ApiClient {
     );
   }
 
-  // Upload file
+  // Upload file (works on both web and native)
   Future<dynamic> uploadFile(
     String endpoint,
     String filePath,
     String fieldName, {
     Map<String, String>? fields,
     Map<String, String>? headers,
+    Uint8List? fileBytes,
+    String? fileName,
     bool requiresAuth = true,
   }) async {
     try {
@@ -284,26 +287,29 @@ class ApiClient {
       }
 
       final requestHeaders = {..._headers, if (headers != null) ...headers};
-
       requestHeaders['Accept'] = 'application/json';
 
       final normalizedEndpoint = _normalizeEndpoint(endpoint);
       final uri = Uri.parse(normalizedEndpoint);
       final request = http.MultipartRequest('POST', uri);
 
-      // Add headers
       request.headers.addAll(requestHeaders);
 
-      // Add file
-      final file = await http.MultipartFile.fromPath(fieldName, filePath);
-      request.files.add(file);
+      // On web, use bytes; on native, use file path
+      if (kIsWeb && fileBytes != null) {
+        final name = fileName ?? 'upload';
+        request.files.add(
+          http.MultipartFile.fromBytes(fieldName, fileBytes, filename: name),
+        );
+      } else {
+        final file = await http.MultipartFile.fromPath(fieldName, filePath);
+        request.files.add(file);
+      }
 
-      // Add fields
       if (fields != null) {
         request.fields.addAll(fields);
       }
 
-      // Send request
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 

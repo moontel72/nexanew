@@ -23,10 +23,17 @@ class ResellerProofController extends Controller
                 'document_title' => 'required|string|max:255',
             ]);
 
-            /** @var Reseller $reseller */
             $reseller = $request->user();
 
-            if (!$reseller instanceof Reseller) {
+            // If not authenticated via Sanctum, fall back to header-based lookup
+            if (!$reseller || !$reseller instanceof Reseller) {
+                $resellerId = $request->header('X-Reseller-Id');
+                if ($resellerId) {
+                    $reseller = Reseller::find($resellerId);
+                }
+            }
+
+            if (!$reseller || !$reseller instanceof Reseller) {
                 Log::warning('ResellerProofController: Authenticated user is not a reseller.', [
                     'user_id' => $reseller->id ?? 'unknown',
                     'class' => get_class($reseller),
@@ -116,14 +123,17 @@ class ResellerProofController extends Controller
     public function checkStatus(Request $request): JsonResponse
     {
         try {
-            /** @var Reseller $reseller */
             $reseller = $request->user();
 
-            if (!$reseller instanceof Reseller) {
-                Log::warning('ResellerProofController: Authenticated user is not a reseller.', [
-                    'user_id' => $reseller->id ?? 'unknown',
-                    'class' => get_class($reseller),
-                ]);
+            // If not authenticated via Sanctum, fall back to header-based lookup
+            if (!$reseller || !$reseller instanceof Reseller) {
+                $resellerId = $request->header('X-Reseller-Id');
+                if ($resellerId) {
+                    $reseller = Reseller::find($resellerId);
+                }
+            }
+
+            if (!$reseller || !$reseller instanceof Reseller) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized.',

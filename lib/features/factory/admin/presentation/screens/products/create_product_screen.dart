@@ -117,13 +117,15 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
     String? imageUrl;
 
     // Upload image first if selected
-    if (_selectedImage != null && _selectedImage!.path != null) {
+    if (_selectedImage != null) {
       setState(() => _isUploadingImage = true);
       try {
         final response = await ApiService().uploadFile(
           ApiEndpoints.fileUpload,
-          _selectedImage!.path!,
+          _selectedImage!.path ?? '',
           'file',
+          fileBytes: _selectedImage!.bytes,
+          fileName: _selectedImage!.name,
         );
         final data = response is Map ? response : null;
         imageUrl =

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nexatrace_system/core/constants/api_endpoints.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
@@ -66,9 +67,12 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
 
   Future<void> _checkBusinessProof() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final resellerId = prefs.getString('reseller_current_user_id') ?? '';
       final res = await ApiService().get(
         ApiEndpoints.resellerProofStatus,
         requiresAuth: true,
+        headers: resellerId.isNotEmpty ? {'X-Reseller-Id': resellerId} : null,
       );
       final data = res is Map ? res : (res['data'] is Map ? res['data'] : null);
       final approved = data?['purchase_approved'] == true;

@@ -223,13 +223,15 @@ class _EditProductScreenState extends State<EditProductScreen> {
     String? imageUrl = _existingImageUrl;
 
     // Upload new image if selected
-    if (_selectedImage != null && _selectedImage!.path != null) {
+    if (_selectedImage != null) {
       setState(() => _isUploadingImage = true);
       try {
         final response = await ApiService().uploadFile(
           ApiEndpoints.fileUpload,
-          _selectedImage!.path!,
+          _selectedImage!.path ?? '',
           'file',
+          fileBytes: _selectedImage!.bytes,
+          fileName: _selectedImage!.name,
         );
         final data = response is Map ? response : null;
         final uploadedUrl =

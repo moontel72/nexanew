@@ -62,6 +62,7 @@ class ResellerManagementRepository {
     String? city,
     String? address,
     String? planId,
+    bool? purchaseApproved,
   }) => _remote.updateReseller(
     id: id,
     name: name,
@@ -72,6 +73,7 @@ class ResellerManagementRepository {
     city: city,
     address: address,
     planId: planId,
+    purchaseApproved: purchaseApproved,
   );
 
   Future<void> deleteReseller(String id) => _remote.deleteReseller(id);

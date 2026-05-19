@@ -80,6 +80,7 @@ class ResellerManagementRemoteDatasource {
     String? city,
     String? address,
     String? planId,
+    bool? purchaseApproved,
   }) async {
     final res = await _api.put(
       ApiEndpoints.adminUpdateReseller(id),
@@ -92,6 +93,7 @@ class ResellerManagementRemoteDatasource {
         if (city != null) 'city': city,
         if (address != null) 'address': address,
         if (planId != null) 'plan_id': planId,
+        if (purchaseApproved != null) 'purchase_approved': purchaseApproved,
       },
     );
     return _asMap(res, unwrapData: true);
