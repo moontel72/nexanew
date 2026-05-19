@@ -464,14 +464,12 @@ $registerRoutes = function (): void {
         Route::get("factories", [\App\Http\Controllers\Reseller\ResellerMarketplaceController::class, "factories"]);
         Route::get("products", [\App\Http\Controllers\Reseller\ResellerMarketplaceController::class, "products"]);
 
-        // Authenticated reseller routes
-        Route::middleware("auth:reseller")->group(function (): void {
-            Route::prefix("proof")->group(function (): void {
-                Route::post("upload", [\App\Http\Controllers\Reseller\ResellerProofController::class, "uploadProof"]);
-                Route::get("status", [\App\Http\Controllers\Reseller\ResellerProofController::class, "checkStatus"]);
-            });
-            Route::apiResource("orders", \App\Http\Controllers\Reseller\ResellerOrderController::class)->only(['index', 'store', 'show']);
+        // Authenticated reseller routes (header-based X-Reseller-Id fallback)
+        Route::prefix("proof")->group(function (): void {
+            Route::post("upload", [\App\Http\Controllers\Reseller\ResellerProofController::class, "uploadProof"]);
+            Route::get("status", [\App\Http\Controllers\Reseller\ResellerProofController::class, "checkStatus"]);
         });
+        Route::apiResource("orders", \App\Http\Controllers\Reseller\ResellerOrderController::class)->only(['index', 'store', 'show']);
     });
 
     Route::prefix("factory")->group(function (): void {

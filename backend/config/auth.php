@@ -61,6 +61,10 @@ return [
             'driver' => 'sanctum',
             'provider' => 'store_keepers',
         ],
+        'reseller' => [
+            'driver' => 'sanctum',
+            'provider' => 'resellers',
+        ],
     ],
 
     /*
@@ -96,6 +100,10 @@ return [
         'store_keepers' => [
             'driver' => 'eloquent',
             'model' => StoreKeeper::class,
+        ],
+        'resellers' => [
+            'driver' => 'eloquent',
+            'model' => \App\Models\Reseller::class,
         ],
 
         // 'users' => [

@@ -18,14 +18,14 @@ class ResellerOrderController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $reseller = $this->resolveReseller($request);
 
-        if (!$user instanceof Reseller) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        if (!$reseller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized. Reseller not found.'], 403);
         }
 
         // Check purchase approval
-        if (!$user->purchase_approved) {
+        if (!$reseller->purchase_approved) {
             return response()->json([
                 'success' => false,
                 'message' => 'Your business proof is pending approval. You cannot place orders yet.',
@@ -51,7 +51,7 @@ class ResellerOrderController extends Controller
 
         try {
             $order = ResellerOrder::create([
-                'reseller_id' => $user->id,
+                'reseller_id' => $reseller->id,
                 'tenant_id' => $validated['tenant_id'],
                 'factory_id' => $validated['factory_id'],
                 'order_status' => 'pending',
@@ -65,7 +65,7 @@ class ResellerOrderController extends Controller
 
             Log::info('ResellerOrderController: Order placed.', [
                 'order_id' => $order->id,
-                'reseller_id' => $user->id,
+                'reseller_id' => $reseller->id,
                 'factory_id' => $validated['factory_id'],
                 'grand_total' => $grandTotal,
             ]);
@@ -90,7 +90,7 @@ class ResellerOrderController extends Controller
         } catch (\Throwable $e) {
             Log::error('ResellerOrderController: Failed to place order.', [
                 'error' => $e->getMessage(),
-                'reseller_id' => $user->id,
+                'reseller_id' => $reseller->id,
             ]);
             return response()->json([
                 'success' => false,
@@ -105,9 +105,8 @@ class ResellerOrderController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        if (!$user instanceof Reseller) {
+        $reseller = $this->resolveReseller($request);
+        if (!$reseller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -115,7 +114,7 @@ class ResellerOrderController extends Controller
         $limit = min(100, (int) $request->query('limit', 20));
         $page = (int) $request->query('page', 1);
 
-        $query = ResellerOrder::where('reseller_id', $user->id)
+        $query = ResellerOrder::where('reseller_id', $reseller->id)
             ->orderByDesc('created_at');
 
         if ($factoryId) {
@@ -158,14 +157,13 @@ class ResellerOrderController extends Controller
      */
     public function show(string $id, Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        if (!$user instanceof Reseller) {
+        $reseller = $this->resolveReseller($request);
+        if (!$reseller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
         $order = ResellerOrder::where('id', $id)
-            ->where('reseller_id', $user->id)
+            ->where('reseller_id', $reseller->id)
             ->first();
 
         if (!$order) {
@@ -190,5 +188,21 @@ class ResellerOrderController extends Controller
                 'updatedAt' => $order->updated_at?->toISOString(),
             ],
         ]);
+    }
+
+    /**
+     * Resolve the reseller from Sanctum auth or X-Reseller-Id header.
+     */
+    private function resolveReseller(Request $request): ?Reseller
+    {
+        $user = $request->user();
+        if ($user instanceof Reseller) {
+            return $user;
+        }
+        $resellerId = $request->header('X-Reseller-Id');
+        if ($resellerId) {
+            return Reseller::find($resellerId);
+        }
+        return null;
     }
 }
