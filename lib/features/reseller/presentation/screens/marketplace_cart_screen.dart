@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:nexatrace_system/core/constants/api_endpoints.dart';
+import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/order/reseller_order_bloc.dart';
@@ -21,7 +23,10 @@ class MarketplaceCartScreen extends StatefulWidget {
 
 class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
   bool _businessVerified = true;
-  String? _placingFactoryId; // tracks which factory order is in-flight
+  String? _placingFactoryId;
+  PlatformFile? _proofFile;
+  final _proofTitleController = TextEditingController();
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -31,10 +36,25 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _proofTitleController.dispose();
+    super.dispose();
+  }
+
   Future<void> _checkBusinessProof() async {
-    final prefs = await SharedPreferences.getInstance();
-    final verified = prefs.getBool('reseller_business_proof_uploaded') ?? false;
-    if (mounted) setState(() => _businessVerified = verified);
+    try {
+      final res = await ApiService().get(
+        ApiEndpoints.resellerProofStatus,
+        requiresAuth: true,
+      );
+      final data = res is Map ? res : (res['data'] is Map ? res['data'] : null);
+      final approved = data?['purchase_approved'] == true;
+      if (mounted) setState(() => _businessVerified = approved);
+    } catch (_) {
+      // Fallback: allow if API unavailable
+      if (mounted) setState(() => _businessVerified = true);
+    }
   }
 
   // ── Factory name lookup ──────────────────────────────────────────
@@ -96,51 +116,181 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
   }
 
   void _showVerificationModal() {
+    _proofFile = null;
+    _proofTitleController.clear();
+    _isUploading = false;
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
       ),
-      builder: (_) => Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.verified_user, size: 48.sp, color: AppColors.warning),
-            SizedBox(height: 12.h),
-            Text(
-              'Verification Required',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'NexaTrace Marketplace is a B2B platform.\n'
-              'You must upload a Business Proof document\n'
-              'before placing your first order.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.gray600),
-            ),
-            SizedBox(height: 20.h),
-            PrimaryButton(
-              text: 'Upload Business Proof',
-              onPressed: () {
-                Navigator.pop(context);
-                // TODO: navigate to profile / document upload
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Document upload coming soon')),
-                );
-              },
-            ),
-            SizedBox(height: 8.h),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-          ],
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20.w,
+            right: 20.w,
+            top: 20.h,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20.h,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: AppColors.gray300,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Icon(Icons.verified_user, size: 48.sp, color: AppColors.warning),
+              SizedBox(height: 12.h),
+              Text(
+                'Verification Required',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                'Upload a business proof document (license, registration, tax certificate) to unlock purchasing.',
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.gray600),
+              ),
+              SizedBox(height: 16.h),
+              // ── File picker button ────────────────────
+              GestureDetector(
+                onTap: () async {
+                  final result = await FilePicker.platform.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+                    allowMultiple: false,
+                  );
+                  if (result?.files.isNotEmpty == true) {
+                    setSheetState(() => _proofFile = result!.files.first);
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.2),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        _proofFile != null
+                            ? Icons.check_circle
+                            : Icons.cloud_upload_outlined,
+                        size: 32.sp,
+                        color: _proofFile != null
+                            ? AppColors.success
+                            : AppColors.primary,
+                      ),
+                      SizedBox(height: 6.h),
+                      Text(
+                        _proofFile?.name ?? 'Tap to select document',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.gray700,
+                        ),
+                      ),
+                      if (_proofFile != null)
+                        Text(
+                          '${(_proofFile!.size / 1024).toStringAsFixed(0)} KB',
+                          style: TextStyle(
+                            fontSize: 10.sp,
+                            color: AppColors.gray400,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 12.h),
+              // ── Title field ────────────────────────────
+              TextField(
+                controller: _proofTitleController,
+                decoration: InputDecoration(
+                  labelText: 'Document Title / Description',
+                  hintText: 'e.g. Business Registration Certificate',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 12.h,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16.h),
+              // ── Upload button ─────────────────────────
+              PrimaryButton(
+                text: _isUploading ? 'Uploading…' : 'Submit for Approval',
+                isLoading: _isUploading,
+                isEnabled:
+                    _proofFile != null &&
+                    _proofTitleController.text.trim().isNotEmpty &&
+                    !_isUploading,
+                onPressed: () async {
+                  if (_proofFile == null ||
+                      _proofTitleController.text.trim().isEmpty)
+                    return;
+                  setSheetState(() => _isUploading = true);
+                  try {
+                    await ApiService().uploadFile(
+                      ApiEndpoints.resellerProofUpload,
+                      _proofFile!.path!,
+                      'proof_file',
+                      fields: {
+                        'document_title': _proofTitleController.text.trim(),
+                      },
+                    );
+                    if (mounted) {
+                      setState(
+                        () => _businessVerified = false,
+                      ); // Still needs admin approval
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Document submitted! Awaiting admin approval.',
+                          ),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                    Navigator.pop(sheetCtx);
+                  } catch (e) {
+                    setSheetState(() => _isUploading = false);
+                    ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                      SnackBar(
+                        content: Text('Upload failed: $e'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                },
+              ),
+              SizedBox(height: 8.h),
+              TextButton(
+                onPressed: () => Navigator.pop(sheetCtx),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
         ),
       ),
     );

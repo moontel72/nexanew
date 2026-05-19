@@ -92,10 +92,47 @@ class _ResellerManagementListScreenState
   }
 
   // ── Quick Actions — center-aligned dialog ───────────────────────
+  void _showProofDialog(String id, String name, Map<String, dynamic> r) {
+    final url = r['business_proof_url']?.toString() ?? '';
+    final title = r['business_proof_title']?.toString() ?? 'No title';
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Proof: $name'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Title: $title',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 8.h),
+            if (url.isNotEmpty)
+              Text(
+                'Document available at:\n$url',
+                style: TextStyle(fontSize: 11.sp, color: AppColors.gray500),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showQuickActions(Map<String, dynamic> reseller) {
     final id = reseller['id']?.toString() ?? '';
     final name = reseller['name']?.toString() ?? 'Reseller';
     final status = reseller['status']?.toString() ?? 'active';
+    final purchaseApproved =
+        reseller['purchase_approved'] == true ||
+        reseller['purchase_approved'] == '1';
+    final hasProof =
+        (reseller['business_proof_url']?.toString() ?? '').isNotEmpty;
 
     showDialog(
       context: context,
@@ -125,6 +162,56 @@ class _ResellerManagementListScreenState
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // ── Proof & Purchase Approval ──────────────────
+            if (hasProof)
+              _actionTile(
+                icon: Icons.description_outlined,
+                color: AppColors.info,
+                label: 'View Business Proof',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showProofDialog(id, name, reseller);
+                },
+              ),
+            if (hasProof && !purchaseApproved)
+              _actionTile(
+                icon: Icons.check_circle_outline,
+                color: AppColors.success,
+                label: 'Approve Purchase Access',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmAction(
+                    title: 'Approve $name?',
+                    message:
+                        'This will allow the reseller to place orders on the marketplace.',
+                    onConfirm: () {
+                      context.read<ResellerManagementBloc>().add(
+                        ApproveResellerPurchase(id),
+                      );
+                    },
+                  );
+                },
+              ),
+            if (purchaseApproved)
+              _actionTile(
+                icon: Icons.cancel_outlined,
+                color: AppColors.warning,
+                label: 'Revoke Purchase Access',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmAction(
+                    title: 'Revoke purchase access for $name?',
+                    message:
+                        'The reseller will no longer be able to place orders.',
+                    onConfirm: () {
+                      context.read<ResellerManagementBloc>().add(
+                        RejectResellerPurchase(id),
+                      );
+                    },
+                  );
+                },
+              ),
+            // Existing actions
             _actionTile(
               icon: status == 'active'
                   ? Icons.toggle_off_outlined
@@ -566,6 +653,9 @@ class _ResellerManagementListScreenState
     final status = r['status']?.toString() ?? 'active';
     final plan = r['plan_name']?.toString();
     final color = _statusColor(status);
+    final purchaseApproved =
+        r['purchase_approved'] == true || r['purchase_approved'] == '1';
+    final hasProof = (r['business_proof_url']?.toString() ?? '').isNotEmpty;
 
     return Card(
       elevation: 1,
@@ -634,6 +724,17 @@ class _ResellerManagementListScreenState
                       ),
                     ),
                   ),
+                  if (hasProof)
+                    Padding(
+                      padding: EdgeInsets.only(top: 4.h),
+                      child: Icon(
+                        purchaseApproved ? Icons.verified : Icons.pending,
+                        size: 16.sp,
+                        color: purchaseApproved
+                            ? AppColors.success
+                            : AppColors.warning,
+                      ),
+                    ),
                   SizedBox(height: 6.h),
                   IconButton(
                     icon: Icon(Icons.link, size: 18.sp, color: AppColors.info),

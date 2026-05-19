@@ -444,6 +444,9 @@ $registerRoutes = function (): void {
             Route::delete("resellers/{id}", [\App\Http\Controllers\Admin\AdminResellerController::class, "destroy"]);
             Route::patch("resellers/{id}/status", [\App\Http\Controllers\Admin\AdminResellerController::class, "updateStatus"]);
             Route::patch("resellers/{id}/suspend", [\App\Http\Controllers\Admin\AdminResellerController::class, "toggleSuspend"]);
+            Route::patch("resellers/{id}/approve-purchase", [\App\Http\Controllers\Admin\AdminResellerController::class, "approvePurchase"]);
+            Route::patch("resellers/{id}/reject-purchase", [\App\Http\Controllers\Admin\AdminResellerController::class, "rejectPurchase"]);
+            Route::get("resellers/{id}/proof", [\App\Http\Controllers\Admin\AdminResellerController::class, "viewProof"]);
         });
 
     // ──────────────────────────────────────────────────────────────
@@ -452,7 +455,14 @@ $registerRoutes = function (): void {
     Route::prefix("reseller")->group(function (): void {
         Route::get("factories", [\App\Http\Controllers\Reseller\ResellerMarketplaceController::class, "factories"]);
         Route::get("products", [\App\Http\Controllers\Reseller\ResellerMarketplaceController::class, "products"]);
-        // Future: order endpoints with auth:reseller middleware
+
+        // Authenticated reseller routes
+        Route::middleware("auth:reseller")->group(function (): void {
+            Route::prefix("proof")->group(function (): void {
+                Route::post("upload", [\App\Http\Controllers\Reseller\ResellerProofController::class, "uploadProof"]);
+                Route::get("status", [\App\Http\Controllers\Reseller\ResellerProofController::class, "checkStatus"]);
+            });
+        });
     });
 
     Route::prefix("factory")->group(function (): void {

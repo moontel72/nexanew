@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:nexatrace_system/core/constants/api_endpoints.dart';
+import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/products/products_bloc.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
@@ -43,6 +48,8 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
   String _discountType = 'none';
   bool _marketplaceEnabled = false;
   final List<_VolumeTier> _volumeTiers = [];
+  PlatformFile? _selectedImage;
+  bool _isUploadingImage = false;
 
   @override
   void dispose() {
@@ -85,7 +92,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
     });
   }
 
-  void _submit() {
+  void _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final isFoodMedical = _mode == ProductCategoryMode.foodMedical;
@@ -105,6 +112,47 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
         );
         return;
       }
+    }
+
+    String? imageUrl;
+
+    // Upload image first if selected
+    if (_selectedImage != null && _selectedImage!.path != null) {
+      setState(() => _isUploadingImage = true);
+      try {
+        final response = await ApiService().uploadFile(
+          ApiEndpoints.fileUpload,
+          _selectedImage!.path!,
+          'file',
+        );
+        final data = response is Map ? response : null;
+        imageUrl =
+            data?['url']?.toString() ?? data?['data']?['url']?.toString();
+        if (imageUrl == null || imageUrl.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to upload image. Please try again.'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+          setState(() => _isUploadingImage = false);
+          return;
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Image upload failed: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        setState(() => _isUploadingImage = false);
+        return;
+      }
+      setState(() => _isUploadingImage = false);
     }
 
     final unitPrice = double.tryParse(_unitPriceController.text.trim());
@@ -161,6 +209,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
             : _promoCodeController.text.trim(),
         promoDiscount: promoDiscount,
         volumeDiscounts: volumeDiscounts.isNotEmpty ? volumeDiscounts : null,
+        imageUrl: imageUrl,
       ),
     );
   }
@@ -674,6 +723,132 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                     ),
                   ),
                   SizedBox(height: 16.h),
+                  // --- Product Image ---
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      side: BorderSide(color: AppColors.border),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(16.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '🖼️ Product Image',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          SizedBox(height: 12.h),
+                          GestureDetector(
+                            onTap: isBusy || _isUploadingImage
+                                ? null
+                                : () async {
+                                    final result = await FilePicker.platform
+                                        .pickFiles(
+                                          type: FileType.image,
+                                          allowMultiple: false,
+                                        );
+                                    if (result != null &&
+                                        result.files.isNotEmpty) {
+                                      setState(() {
+                                        _selectedImage = result.files.first;
+                                      });
+                                    }
+                                  },
+                            child: Container(
+                              width: double.infinity,
+                              height: 180.h,
+                              decoration: BoxDecoration(
+                                color: AppColors.gray50,
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(
+                                  color: AppColors.border,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child:
+                                  _selectedImage != null &&
+                                      _selectedImage!.path != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(11.r),
+                                      child: Image.file(
+                                        File(_selectedImage!.path!),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      ),
+                                    )
+                                  : Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.camera_alt_outlined,
+                                          size: 40.sp,
+                                          color: AppColors.gray400,
+                                        ),
+                                        SizedBox(height: 8.h),
+                                        Text(
+                                          'Upload Product Image',
+                                          style: TextStyle(
+                                            fontSize: 13.sp,
+                                            color: AppColors.gray500,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        SizedBox(height: 4.h),
+                                        Text(
+                                          'Tap to select an image',
+                                          style: TextStyle(
+                                            fontSize: 11.sp,
+                                            color: AppColors.gray400,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                          if (_selectedImage != null) ...[
+                            SizedBox(height: 8.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 16.sp,
+                                  color: AppColors.success,
+                                ),
+                                SizedBox(width: 6.w),
+                                Expanded(
+                                  child: Text(
+                                    _selectedImage!.name,
+                                    style: TextStyle(
+                                      fontSize: 12.sp,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() => _selectedImage = null);
+                                  },
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 18.sp,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
                   SizedBox(
                     width: double.infinity,
                     child: PrimaryButton(
@@ -682,8 +857,8 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                       icon: Icons.save,
                       backgroundColor: AppColors.secondary,
                       textColor: Colors.white,
-                      isEnabled: !isBusy,
-                      isLoading: isBusy,
+                      isEnabled: !isBusy && !_isUploadingImage,
+                      isLoading: isBusy || _isUploadingImage,
                     ),
                   ),
                 ],

@@ -83,6 +83,7 @@ class CreateProduct extends ProductsEvent {
   final double? promoDiscount;
   final List<String>? tags;
   final List<Map<String, dynamic>>? volumeDiscounts;
+  final String? imageUrl;
 
   const CreateProduct({
     required this.name,
@@ -111,6 +112,7 @@ class CreateProduct extends ProductsEvent {
     this.promoDiscount,
     this.tags,
     this.volumeDiscounts,
+    this.imageUrl,
   });
 
   @override
@@ -141,6 +143,7 @@ class CreateProduct extends ProductsEvent {
     promoDiscount,
     tags,
     volumeDiscounts,
+    imageUrl,
   ];
 }
 
@@ -166,6 +169,7 @@ final class UpdateProduct extends ProductsEvent {
   final double? promoDiscount;
   final List<String>? tags;
   final List<Map<String, dynamic>>? volumeDiscounts;
+  final String? imageUrl;
 
   UpdateProduct({
     required this.id,
@@ -189,6 +193,7 @@ final class UpdateProduct extends ProductsEvent {
     this.promoDiscount,
     this.tags,
     this.volumeDiscounts,
+    this.imageUrl,
   });
 
   @override
@@ -214,6 +219,7 @@ final class UpdateProduct extends ProductsEvent {
     promoDiscount,
     tags,
     volumeDiscounts,
+    imageUrl,
   ];
 }
 
@@ -299,6 +305,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
         promoDiscount: event.promoDiscount,
         tags: event.tags,
         volumeDiscounts: event.volumeDiscounts,
+        imageUrl: event.imageUrl,
       );
 
       final updated = [created, ...state.products];
@@ -342,6 +349,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
         promoDiscount: event.promoDiscount,
         tags: event.tags,
         volumeDiscounts: event.volumeDiscounts,
+        imageUrl: event.imageUrl,
       );
 
       // Reload full list after update

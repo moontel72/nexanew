@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:nexatrace_system/core/constants/api_endpoints.dart';
+import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/products/products_bloc.dart';
 import 'package:nexatrace_system/shared/models/product/product_model.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
@@ -49,6 +54,9 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
   bool _initialized = false;
   bool _isDeleting = false;
+  PlatformFile? _selectedImage;
+  bool _isUploadingImage = false;
+  String? _existingImageUrl;
 
   @override
   void initState() {
@@ -60,15 +68,16 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
   void _loadProduct() {
     final bloc = context.read<ProductsBloc>();
-    final product =
-        bloc.state.products.where((p) => p.id == widget.productId).firstOrNull;
+    final product = bloc.state.products
+        .where((p) => p.id == widget.productId)
+        .firstOrNull;
 
     if (product == null) {
       // Product not in local list, trigger reload
       bloc.add(const LoadProducts());
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Loading product details…')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Loading product details…')));
       return;
     }
 
@@ -87,8 +96,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
     // Product category mode
     if (p.requiresWarranty) {
       _mode = ProductCategoryMode.nonFoodMedical;
-      _warrantyMonthsController.text =
-          (p.defaultWarrantyMonths ?? 12).toString();
+      _warrantyMonthsController.text = (p.defaultWarrantyMonths ?? 12)
+          .toString();
     } else {
       _mode = ProductCategoryMode.foodMedical;
       _defaultManufacturingDate = p.defaultManufacturingDate;
@@ -97,40 +106,53 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
 
     // Commercial pricing
-    _unitPriceController.text =
-        p.unitPrice != null ? p.unitPrice.toString() : '';
-    _cartonPriceController.text =
-        p.cartonPrice != null ? p.cartonPrice.toString() : '';
-    _wholesalePriceController.text =
-        p.wholesalePrice != null ? p.wholesalePrice.toString() : '';
+    _unitPriceController.text = p.unitPrice != null
+        ? p.unitPrice.toString()
+        : '';
+    _cartonPriceController.text = p.cartonPrice != null
+        ? p.cartonPrice.toString()
+        : '';
+    _wholesalePriceController.text = p.wholesalePrice != null
+        ? p.wholesalePrice.toString()
+        : '';
     _currency = const ['PKR', 'USD', 'EUR'].contains(p.currency)
         ? p.currency
         : 'PKR';
     _discountType = p.discountType ?? 'none';
-    _discountValueController.text =
-        p.discountValue != null ? p.discountValue.toString() : '';
+    _discountValueController.text = p.discountValue != null
+        ? p.discountValue.toString()
+        : '';
     _moqController.text = p.moq.toString();
     _marketplaceEnabled = p.marketplaceEnabled;
-    _bonusThresholdController.text =
-        p.bonusThreshold != null ? p.bonusThreshold.toString() : '';
-    _bonusQuantityController.text =
-        p.bonusQuantity != null ? p.bonusQuantity.toString() : '';
-    _walletCreditController.text =
-        p.walletCredit != null ? p.walletCredit.toString() : '';
+    _bonusThresholdController.text = p.bonusThreshold != null
+        ? p.bonusThreshold.toString()
+        : '';
+    _bonusQuantityController.text = p.bonusQuantity != null
+        ? p.bonusQuantity.toString()
+        : '';
+    _walletCreditController.text = p.walletCredit != null
+        ? p.walletCredit.toString()
+        : '';
     _promoCodeController.text = p.promoCode ?? '';
-    _promoDiscountController.text =
-        p.promoDiscount != null ? p.promoDiscount.toString() : '';
+    _promoDiscountController.text = p.promoDiscount != null
+        ? p.promoDiscount.toString()
+        : '';
 
     // Volume tiers
     if (p.volumeDiscounts != null && p.volumeDiscounts!.isNotEmpty) {
       _volumeTiers.clear();
       for (final t in p.volumeDiscounts!) {
-        _volumeTiers.add(_VolumeTier(
-          minQty: t.minQuantity,
-          discountPercent: t.discountPercent,
-        ));
+        _volumeTiers.add(
+          _VolumeTier(
+            minQty: t.minQuantity,
+            discountPercent: t.discountPercent,
+          ),
+        );
       }
     }
+
+    // Existing image
+    _existingImageUrl = p.imageUrl;
 
     setState(() {});
   }
@@ -176,7 +198,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
     });
   }
 
-  void _saveChanges() {
+  void _saveChanges() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final isFoodMedical = _mode == ProductCategoryMode.foodMedical;
@@ -196,6 +218,49 @@ class _EditProductScreenState extends State<EditProductScreen> {
         );
         return;
       }
+    }
+
+    String? imageUrl = _existingImageUrl;
+
+    // Upload new image if selected
+    if (_selectedImage != null && _selectedImage!.path != null) {
+      setState(() => _isUploadingImage = true);
+      try {
+        final response = await ApiService().uploadFile(
+          ApiEndpoints.fileUpload,
+          _selectedImage!.path!,
+          'file',
+        );
+        final data = response is Map ? response : null;
+        final uploadedUrl =
+            data?['url']?.toString() ?? data?['data']?['url']?.toString();
+        if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
+          imageUrl = uploadedUrl;
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to upload image. Please try again.'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+          setState(() => _isUploadingImage = false);
+          return;
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Image upload failed: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        setState(() => _isUploadingImage = false);
+        return;
+      }
+      setState(() => _isUploadingImage = false);
     }
 
     final unitPrice = double.tryParse(_unitPriceController.text.trim());
@@ -247,6 +312,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
             : _promoCodeController.text.trim(),
         promoDiscount: promoDiscount,
         volumeDiscounts: volumeDiscounts.isNotEmpty ? volumeDiscounts : null,
+        imageUrl: imageUrl,
       ),
     );
   }
@@ -302,9 +368,11 @@ class _EditProductScreenState extends State<EditProductScreen> {
           if (state.status == ProductsStatus.updated) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(_isDeleting
-                    ? 'Product deleted successfully'
-                    : 'Product updated successfully'),
+                content: Text(
+                  _isDeleting
+                      ? 'Product deleted successfully'
+                      : 'Product updated successfully',
+                ),
               ),
             );
             context.go('/factory/products');
@@ -322,8 +390,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
           }
         },
         builder: (context, state) {
-          final isBusy =
-              state.status == ProductsStatus.updating || _isDeleting;
+          final isBusy = state.status == ProductsStatus.updating || _isDeleting;
 
           if (!_initialized) {
             return const Center(child: CircularProgressIndicator());
@@ -350,9 +417,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                         children: [
                           Text(
                             '📋 Basic Information',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           SizedBox(height: 12.h),
@@ -382,8 +447,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                           CustomTextField(
                             controller: _categoryController,
                             labelText: 'Category (Optional)',
-                            hintText:
-                                'Example: Medicine, Food, Electronics',
+                            hintText: 'Example: Medicine, Food, Electronics',
                           ),
                           SizedBox(height: 12.h),
                           CustomTextField(
@@ -412,9 +476,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                         children: [
                           Text(
                             '📦 Product Category',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           SizedBox(height: 12.h),
@@ -424,11 +486,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
                             onChanged: isBusy
                                 ? null
                                 : (v) => setState(() {
-                                      _mode = v!;
-                                      _warrantyMonthsController.text = '12';
-                                    }),
-                            title:
-                                const Text('Food / Medical (Expiry Date)'),
+                                    _mode = v!;
+                                    _warrantyMonthsController.text = '12';
+                                  }),
+                            title: const Text('Food / Medical (Expiry Date)'),
                             subtitle: const Text(
                               'Requires manufacturing + expiry dates when publishing unit codes.',
                             ),
@@ -439,10 +500,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
                             onChanged: isBusy
                                 ? null
                                 : (v) => setState(() {
-                                      _mode = v!;
-                                      _defaultManufacturingDate = null;
-                                      _defaultExpiryDate = null;
-                                    }),
+                                    _mode = v!;
+                                    _defaultManufacturingDate = null;
+                                    _defaultExpiryDate = null;
+                                  }),
                             title: const Text(
                               'Non Food / Medical (Warranty Months)',
                             ),
@@ -458,8 +519,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
                                   child: OutlinedButton.icon(
                                     onPressed: isBusy
                                         ? null
-                                        : () => _pickDate(
-                                            isManufacturing: true),
+                                        : () =>
+                                              _pickDate(isManufacturing: true),
                                     icon: const Icon(Icons.calendar_month),
                                     label: Text(
                                       _defaultManufacturingDate == null
@@ -473,8 +534,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
                                   child: OutlinedButton.icon(
                                     onPressed: isBusy
                                         ? null
-                                        : () => _pickDate(
-                                            isManufacturing: false),
+                                        : () =>
+                                              _pickDate(isManufacturing: false),
                                     icon: const Icon(Icons.calendar_month),
                                     label: Text(
                                       _defaultExpiryDate == null
@@ -523,9 +584,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                         children: [
                           Text(
                             '💰 Commercial Pricing',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           SizedBox(height: 12.h),
@@ -538,8 +597,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                               padding: EdgeInsets.only(left: 12),
                               child: Text(
                                 'Rs.',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w700),
+                                style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
                           ),
@@ -553,8 +611,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                               padding: EdgeInsets.only(left: 12),
                               child: Text(
                                 'Rs.',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w700),
+                                style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
                           ),
@@ -568,8 +625,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                               padding: EdgeInsets.only(left: 12),
                               child: Text(
                                 'Rs.',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w700),
+                                style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
                           ),
@@ -659,9 +715,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                           SizedBox(height: 12.h),
                           Text(
                             'Bonus Offer (Buy X get Y free)',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           SizedBox(height: 8.h),
@@ -734,9 +788,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                         children: [
                           Text(
                             '🏷 Volume Discounts',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           SizedBox(height: 12.h),
@@ -773,11 +825,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
                                         labelText: 'Discount %',
                                         hintText: 'e.g. 5',
                                         keyboardType: TextInputType.number,
-                                        initialValue:
-                                            tier.discountPercent.toString(),
+                                        initialValue: tier.discountPercent
+                                            .toString(),
                                         onChanged: (v) {
-                                          final parsed =
-                                              double.tryParse(v);
+                                          final parsed = double.tryParse(v);
                                           if (parsed != null) {
                                             setState(() {
                                               _volumeTiers[i] = _VolumeTier(
@@ -810,11 +861,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
                               padding: EdgeInsets.only(bottom: 8.h),
                               child: Text(
                                 'No volume discount tiers added yet.',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                        color: AppColors.textTertiary),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.textTertiary),
                               ),
                             ),
                           SizedBox(height: 4.h),
@@ -838,19 +886,188 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   ),
                   SizedBox(height: 24.h),
 
+                  // ========== Product Image ==========
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      side: BorderSide(color: AppColors.border),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(16.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '🖼️ Product Image',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          SizedBox(height: 12.h),
+                          GestureDetector(
+                            onTap: isBusy || _isUploadingImage
+                                ? null
+                                : () async {
+                                    final result = await FilePicker.platform
+                                        .pickFiles(
+                                          type: FileType.image,
+                                          allowMultiple: false,
+                                        );
+                                    if (result != null &&
+                                        result.files.isNotEmpty) {
+                                      setState(() {
+                                        _selectedImage = result.files.first;
+                                      });
+                                    }
+                                  },
+                            child: Container(
+                              width: double.infinity,
+                              height: 180.h,
+                              decoration: BoxDecoration(
+                                color: AppColors.gray50,
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(
+                                  color: AppColors.border,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child:
+                                  _selectedImage != null &&
+                                      _selectedImage!.path != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(11.r),
+                                      child: Image.file(
+                                        File(_selectedImage!.path!),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      ),
+                                    )
+                                  : _existingImageUrl != null &&
+                                        _existingImageUrl!.isNotEmpty
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(11.r),
+                                      child: Image.network(
+                                        _existingImageUrl!,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        errorBuilder: (_, __, ___) => Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.camera_alt_outlined,
+                                              size: 40.sp,
+                                              color: AppColors.gray400,
+                                            ),
+                                            SizedBox(height: 8.h),
+                                            Text(
+                                              'Upload Product Image',
+                                              style: TextStyle(
+                                                fontSize: 13.sp,
+                                                color: AppColors.gray500,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            SizedBox(height: 4.h),
+                                            Text(
+                                              'Tap to change image',
+                                              style: TextStyle(
+                                                fontSize: 11.sp,
+                                                color: AppColors.gray400,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  : Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.camera_alt_outlined,
+                                          size: 40.sp,
+                                          color: AppColors.gray400,
+                                        ),
+                                        SizedBox(height: 8.h),
+                                        Text(
+                                          'Upload Product Image',
+                                          style: TextStyle(
+                                            fontSize: 13.sp,
+                                            color: AppColors.gray500,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        SizedBox(height: 4.h),
+                                        Text(
+                                          'Tap to select an image',
+                                          style: TextStyle(
+                                            fontSize: 11.sp,
+                                            color: AppColors.gray400,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                          if (_selectedImage != null) ...[
+                            SizedBox(height: 8.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 16.sp,
+                                  color: AppColors.success,
+                                ),
+                                SizedBox(width: 6.w),
+                                Expanded(
+                                  child: Text(
+                                    _selectedImage!.name,
+                                    style: TextStyle(
+                                      fontSize: 12.sp,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() => _selectedImage = null);
+                                  },
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 18.sp,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 24.h),
+
                   // ========== Save Changes Button ==========
                   SizedBox(
                     width: double.infinity,
                     child: PrimaryButton(
-                      onPressed: isBusy ? () {} : _saveChanges,
+                      onPressed: isBusy || _isUploadingImage
+                          ? () {}
+                          : _saveChanges,
                       text: 'Save Changes',
                       icon: Icons.save,
                       backgroundColor: AppColors.secondary,
                       textColor: Colors.white,
-                      isEnabled: !isBusy,
+                      isEnabled: !isBusy && !_isUploadingImage,
                       isLoading:
-                          state.status == ProductsStatus.updating &&
-                              !_isDeleting,
+                          (state.status == ProductsStatus.updating &&
+                              !_isDeleting) ||
+                          _isUploadingImage,
                     ),
                   ),
                   SizedBox(height: 16.h),
@@ -869,8 +1086,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
                                 color: AppColors.error,
                               ),
                             )
-                          : const Icon(Icons.delete_outline,
-                              color: AppColors.error),
+                          : const Icon(
+                              Icons.delete_outline,
+                              color: AppColors.error,
+                            ),
                       label: Text(
                         _isDeleting ? 'Deleting…' : 'Delete Product',
                         style: const TextStyle(color: AppColors.error),

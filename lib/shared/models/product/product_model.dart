@@ -23,9 +23,8 @@ class VolumeDiscountTier {
   factory VolumeDiscountTier.fromJson(Map<String, dynamic> json) =>
       VolumeDiscountTier(
         minQuantity: json['min_qty'] ?? json['min_quantity'] ?? 0,
-        discountPercent: _parseDouble(
-                json['discount_percent'] ?? json['discount']) ??
-            0,
+        discountPercent:
+            _parseDouble(json['discount_percent'] ?? json['discount']) ?? 0,
       );
 
   Map<String, dynamic> toJson() => {
@@ -65,6 +64,7 @@ class ProductModel {
   final double? promoDiscount;
   final List<String>? tags;
   final List<VolumeDiscountTier>? volumeDiscounts;
+  final String? imageUrl;
 
   ProductModel({
     required this.id,
@@ -96,6 +96,7 @@ class ProductModel {
     this.promoDiscount,
     this.tags,
     this.volumeDiscounts,
+    this.imageUrl,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -178,11 +179,13 @@ class ProductModel {
       unitPrice: _parseDouble(json['unit_price'] ?? json['unitPrice']),
       cartonPrice: _parseDouble(json['carton_price'] ?? json['cartonPrice']),
       wholesalePrice: _parseDouble(
-          json['wholesale_price'] ?? json['wholesalePrice']),
+        json['wholesale_price'] ?? json['wholesalePrice'],
+      ),
       currency: (json['currency'] ?? 'NGN').toString(),
       discountType: json['discount_type'] ?? json['discountType']?.toString(),
       discountValue: _parseDouble(
-          json['discount_value'] ?? json['discountValue']),
+        json['discount_value'] ?? json['discountValue'],
+      ),
       moq: (json['moq'] ?? json['minimum_order_quantity'] ?? 1) is int
           ? (json['moq'] ?? json['minimum_order_quantity'] ?? 1) as int
           : int.tryParse(
@@ -210,11 +213,13 @@ class ProductModel {
       walletCredit: _parseDouble(json['wallet_credit'] ?? json['walletCredit']),
       promoCode: json['promo_code'] ?? json['promoCode']?.toString(),
       promoDiscount: _parseDouble(
-          json['promo_discount'] ?? json['promoDiscount']),
+        json['promo_discount'] ?? json['promoDiscount'],
+      ),
       tags: parseTags(json['tags']),
       volumeDiscounts: parseVolumeDiscounts(
         json['volume_discounts'] ?? json['volumeDiscounts'],
       ),
+      imageUrl: metadata?['image_url']?.toString(),
     );
   }
 
@@ -242,6 +247,7 @@ class ProductModel {
               .toIso8601String()
               .split('T')
               .first,
+        if (imageUrl != null && imageUrl!.isNotEmpty) 'image_url': imageUrl,
       },
       // Commercial pricing
       if (unitPrice != null) 'unit_price': unitPrice,
@@ -293,6 +299,7 @@ class ProductModel {
     double? promoDiscount,
     List<String>? tags,
     List<VolumeDiscountTier>? volumeDiscounts,
+    String? imageUrl,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -327,6 +334,7 @@ class ProductModel {
       promoDiscount: promoDiscount ?? this.promoDiscount,
       tags: tags ?? this.tags,
       volumeDiscounts: volumeDiscounts ?? this.volumeDiscounts,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 }

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nexatrace_system/core/constants/api_endpoints.dart';
+import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
 import 'package:nexatrace_system/shared/models/reseller/reseller_marketplace_product_model.dart';
@@ -64,9 +65,17 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
   }
 
   Future<void> _checkBusinessProof() async {
-    final prefs = await SharedPreferences.getInstance();
-    final verified = prefs.getBool('reseller_business_proof_uploaded') ?? false;
-    if (mounted) setState(() => _businessVerified = verified);
+    try {
+      final res = await ApiService().get(
+        ApiEndpoints.resellerProofStatus,
+        requiresAuth: true,
+      );
+      final data = res is Map ? res : (res['data'] is Map ? res['data'] : null);
+      final approved = data?['purchase_approved'] == true;
+      if (mounted) setState(() => _businessVerified = approved);
+    } catch (_) {
+      if (mounted) setState(() => _businessVerified = true);
+    }
   }
 
   // ── Filtering ────────────────────────────────────────────────────
@@ -246,62 +255,58 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
 
               // ── Factory filter chips (all-factories mode only) ─
               if (_isAllFactoriesMode && state.factories.isNotEmpty)
-                SizedBox(
-                  height: 38.h,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    itemCount: state.factories.length + 1,
-                    separatorBuilder: (_, __) => SizedBox(width: 8.w),
-                    itemBuilder: (_, i) {
-                      final isAll = i == 0;
-                      final fid = isAll
-                          ? null
-                          : state.factories[i - 1]['id']?.toString();
-                      final fname = isAll
-                          ? 'All Factories'
-                          : state.factories[i - 1]['name']?.toString() ??
-                                'Factory';
-                      final count = isAll
-                          ? state.products.length
-                          : (factoryCounts[fid] ?? 0);
-                      final selected = _selectedFactoryFilter == fid;
-                      return ChoiceChip(
-                        label: Text(
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
+                  ),
+                  child: Wrap(
+                    spacing: 8.w,
+                    runSpacing: 8.h,
+                    children: [
+                      _filterChip(
+                        'All Factories (${state.products.length})',
+                        _selectedFactoryFilter == null,
+                        () => setState(() => _selectedFactoryFilter = null),
+                      ),
+                      ...state.factories.map((f) {
+                        final fid = f['id']?.toString();
+                        final fname = f['name']?.toString() ?? 'Factory';
+                        final count = factoryCounts[fid] ?? 0;
+                        return _filterChip(
                           '$fname ($count)',
-                          style: TextStyle(fontSize: 11.sp),
-                        ),
-                        selected: selected,
-                        onSelected: (_) =>
-                            setState(() => _selectedFactoryFilter = fid),
-                        padding: EdgeInsets.symmetric(horizontal: 4.w),
-                      );
-                    },
+                          _selectedFactoryFilter == fid,
+                          () => setState(() => _selectedFactoryFilter = fid),
+                        );
+                      }),
+                    ],
                   ),
                 ),
 
               // ── Category chips ────────────────────────────────
               if (categories.isNotEmpty)
-                SizedBox(
-                  height: 38.h,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    itemCount: categories.length + 1,
-                    separatorBuilder: (_, __) => SizedBox(width: 8.w),
-                    itemBuilder: (_, i) {
-                      final isAll = i == 0;
-                      final cat = isAll ? null : categories[i - 1];
-                      final selected = _selectedCategory == cat;
-                      return ChoiceChip(
-                        label: Text(isAll ? 'All' : cat!),
-                        selected: selected,
-                        onSelected: (_) =>
-                            setState(() => _selectedCategory = cat),
-                        labelStyle: TextStyle(fontSize: 12.sp),
-                        padding: EdgeInsets.symmetric(horizontal: 4.w),
-                      );
-                    },
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
+                  ),
+                  child: Wrap(
+                    spacing: 8.w,
+                    runSpacing: 8.h,
+                    children: [
+                      _filterChip(
+                        'All',
+                        _selectedCategory == null,
+                        () => setState(() => _selectedCategory = null),
+                      ),
+                      ...categories.map(
+                        (cat) => _filterChip(
+                          cat,
+                          _selectedCategory == cat,
+                          () => setState(() => _selectedCategory = cat),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               SizedBox(height: 4.h),
@@ -391,6 +396,32 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
     );
   }
 
+  // ── Filter chip helper ──────────────────────────────────────────
+  Widget _filterChip(String label, bool selected, VoidCallback onTap) {
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11.sp,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          color: selected ? Colors.white : AppColors.textSecondary,
+        ),
+      ),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      backgroundColor: AppColors.gray50,
+      selectedColor: AppColors.primary,
+      side: BorderSide(
+        color: selected ? AppColors.primary : AppColors.border,
+        width: 1,
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+      labelPadding: EdgeInsets.symmetric(horizontal: 2.w),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+    );
+  }
+
   // ── Product card for grid ────────────────────────────────────────
   Widget _productGridCard(ResellerMarketplaceProductModel p) {
     final factoryName = p.factoryName ?? _factoryNameFor(p.factoryId);
@@ -441,6 +472,10 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
                         p.imageUrl!,
                         fit: BoxFit.cover,
                         width: double.infinity,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return _imageLoadingPlaceholder();
+                        },
                         errorBuilder: (_, __, ___) =>
                             _productImagePlaceholder(),
                       )
@@ -588,11 +623,38 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
   }
 
   Widget _productImagePlaceholder() {
-    return Center(
-      child: Icon(
-        Icons.inventory_2_outlined,
-        size: 40.sp,
-        color: AppColors.gray300,
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFF0F4FF), Color(0xFFE8EDF5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.inventory_2_outlined,
+          size: 40.sp,
+          color: AppColors.gray300,
+        ),
+      ),
+    );
+  }
+
+  Widget _imageLoadingPlaceholder() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFF0F4FF), Color(0xFFE8EDF5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: AppColors.primary,
+        ),
       ),
     );
   }

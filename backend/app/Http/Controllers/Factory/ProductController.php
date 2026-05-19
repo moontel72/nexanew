@@ -11,6 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -93,6 +95,18 @@ class ProductController extends Controller
             'volume_discounts' => 'nullable|array',
         ]);
 
+        // Handle image upload (single file via multipart/form-data)
+        $imageUrls = $this->handleImageUpload($request);
+
+        // Merge uploaded image URLs with any manually provided image_urls
+        $existingUrls = $data['image_urls'] ?? [];
+        $data['image_urls'] = array_merge($existingUrls, $imageUrls);
+
+        // Build metadata, setting image_url for backward compatibility with Flutter marketplace
+        $data['metadata'] = array_merge($data['metadata'] ?? [], [
+            'image_url' => !empty($data['image_urls']) ? $data['image_urls'][0] : null,
+        ]);
+
         $product = Product::query()->create(array_merge(
             ['id' => (string) Str::uuid(), 'company_id' => $user->company_id],
             $data,
@@ -138,8 +152,26 @@ class ProductController extends Controller
             'volume_discounts' => 'nullable|array',
         ]);
 
+        // Handle image upload (single file via multipart/form-data)
+        $imageUrls = $this->handleImageUpload($request, $product);
+
+        // Merge uploaded image URLs with any manually provided image_urls
+        // For update, uploaded images replace the existing image_urls if new ones are provided
+        if (!empty($imageUrls)) {
+            $existingUrls = $data['image_urls'] ?? ($product->image_urls ?? []);
+            $data['image_urls'] = array_merge($existingUrls, $imageUrls);
+        }
+
+        // Ensure metadata->image_url is set for backward compatibility
+        if (!empty($data['image_urls'])) {
+            $metadata = $data['metadata'] ?? ($product->metadata ?? []);
+            $data['metadata'] = array_merge($metadata, [
+                'image_url' => $data['image_urls'][0],
+            ]);
+        }
+
         $product->fill($data)->save();
-        return response()->json(['success' => true, 'data' => $product]);
+        return response()->json(['success' => true, 'data' => $product->fresh()]);
     }
 
     public function destroy(Request $request, Product $product)
@@ -587,6 +619,99 @@ class ProductController extends Controller
                 'metadata' => $jsonExpr,
                 'updated_at' => $now,
             ]);
+    }
+
+    /**
+     * Handle single image file upload for products.
+     * Deletes the old image if the product already has one and a new image is being uploaded.
+     *
+     * @param Request $request
+     * @param Product|null $product  The existing product (for update) or null (for store)
+     * @return array  Array containing the newly uploaded image URL, or empty if no upload
+     */
+    private function handleImageUpload(Request $request, ?Product $product = null): array
+    {
+        if (!$request->hasFile('image')) {
+            return [];
+        }
+
+        $file = $request->file('image');
+
+        // Validate the file (additional safety beyond form validation)
+        if (!$file->isValid()) {
+            Log::warning('ProductController: Invalid image upload attempt.', [
+                'error' => $file->getError(),
+                'client_mime' => $file->getClientMimeType(),
+            ]);
+            return [];
+        }
+
+        // If updating an existing product, delete its old primary image from storage
+        if ($product && !empty($product->image_urls)) {
+            $oldUrl = is_array($product->image_urls) ? ($product->image_urls[0] ?? null) : null;
+            if ($oldUrl) {
+                $oldPath = $this->extractStoragePath($oldUrl);
+                if ($oldPath && Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                    Log::info('ProductController: Deleted old product image.', [
+                        'product_id' => $product->id,
+                        'old_path' => $oldPath,
+                    ]);
+                }
+            }
+        }
+
+        // Store the new image
+        $extension = $file->getClientOriginalExtension();
+        $filename = sprintf('product_%s_%s.%s',
+            $product ? $product->id : Str::uuid(),
+            now()->timestamp,
+            $extension
+        );
+        $path = $file->storeAs('products', $filename, 'public');
+
+        if (!$path) {
+            Log::error('ProductController: Failed to store product image.', [
+                'filename' => $filename,
+            ]);
+            return [];
+        }
+
+        $url = Storage::disk('public')->url($path);
+
+        Log::info('ProductController: Product image uploaded successfully.', [
+            'product_id' => $product?->id,
+            'path' => $path,
+            'url' => $url,
+        ]);
+
+        return [$url];
+    }
+
+    /**
+     * Extract the relative storage path from a full URL.
+     */
+    private function extractStoragePath(?string $url): ?string
+    {
+        if (!$url) {
+            return null;
+        }
+
+        $prefix = '/storage/';
+        $pos = strpos($url, $prefix);
+        if ($pos !== false) {
+            return substr($url, $pos + strlen($prefix));
+        }
+
+        $appUrl = config('app.url');
+        if ($appUrl && str_starts_with($url, $appUrl)) {
+            $relative = substr($url, strlen($appUrl));
+            if (str_starts_with($relative, '/storage/')) {
+                return substr($relative, strlen('/storage/'));
+            }
+        }
+
+        return null;
     }
 
     private function assertCompany(Request $request, Product $product): void

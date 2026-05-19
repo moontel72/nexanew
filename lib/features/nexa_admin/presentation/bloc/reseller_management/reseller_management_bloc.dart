@@ -103,6 +103,21 @@ final class ToggleSuspendReseller extends ResellerManagementEvent {
 
 final class ClearResellerMessage extends ResellerManagementEvent {}
 
+final class ApproveResellerPurchase extends ResellerManagementEvent {
+  final String id;
+  ApproveResellerPurchase(this.id);
+}
+
+final class RejectResellerPurchase extends ResellerManagementEvent {
+  final String id;
+  RejectResellerPurchase(this.id);
+}
+
+final class ViewResellerProof extends ResellerManagementEvent {
+  final String id;
+  ViewResellerProof(this.id);
+}
+
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -210,6 +225,9 @@ class ResellerManagementBloc
     on<UpdateResellerStatus>(_onUpdateStatus);
     on<ToggleSuspendReseller>(_onToggleSuspend);
     on<ClearResellerMessage>(_onClearMessage);
+    on<ApproveResellerPurchase>(_onApprovePurchase);
+    on<RejectResellerPurchase>(_onRejectPurchase);
+    on<ViewResellerProof>(_onViewProof);
   }
 
   // ── Load List ────────────────────────────────────────────────────
@@ -510,5 +528,96 @@ class ResellerManagementBloc
     Emitter<ResellerManagementState> emit,
   ) {
     emit(state.copyWith(clearMessage: true));
+  }
+
+  // ── Approve Purchase ─────────────────────────────────────────────
+  Future<void> _onApprovePurchase(
+    ApproveResellerPurchase event,
+    Emitter<ResellerManagementState> emit,
+  ) async {
+    emit(state.copyWith(status: ResellerLoadStatus.loading, clearError: true));
+    try {
+      await _repo.approvePurchase(event.id);
+      emit(
+        state.copyWith(
+          status: ResellerLoadStatus.actionSuccess,
+          message: 'Purchase access approved.',
+        ),
+      );
+      add(
+        LoadResellers(
+          search: state.search,
+          status: state.statusFilter,
+          city: state.cityFilter,
+          sortBy: state.sortBy,
+          sortOrder: state.sortOrder,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ResellerLoadStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
+  }
+
+  // ── Reject Purchase ──────────────────────────────────────────────
+  Future<void> _onRejectPurchase(
+    RejectResellerPurchase event,
+    Emitter<ResellerManagementState> emit,
+  ) async {
+    emit(state.copyWith(status: ResellerLoadStatus.loading, clearError: true));
+    try {
+      await _repo.rejectPurchase(event.id);
+      emit(
+        state.copyWith(
+          status: ResellerLoadStatus.actionSuccess,
+          message: 'Purchase access revoked.',
+        ),
+      );
+      add(
+        LoadResellers(
+          search: state.search,
+          status: state.statusFilter,
+          city: state.cityFilter,
+          sortBy: state.sortBy,
+          sortOrder: state.sortOrder,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ResellerLoadStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
+  }
+
+  // ── View Proof ───────────────────────────────────────────────────
+  Future<void> _onViewProof(
+    ViewResellerProof event,
+    Emitter<ResellerManagementState> emit,
+  ) async {
+    emit(state.copyWith(status: ResellerLoadStatus.loading, clearError: true));
+    try {
+      final proof = await _repo.viewProof(event.id);
+      emit(
+        state.copyWith(
+          status: ResellerLoadStatus.actionSuccess,
+          selectedReseller: proof,
+          message: 'Proof document loaded.',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ResellerLoadStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
   }
 }

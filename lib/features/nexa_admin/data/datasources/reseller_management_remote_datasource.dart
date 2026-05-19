@@ -128,6 +128,22 @@ class ResellerManagementRemoteDatasource {
     return _asMap(res, unwrapData: true);
   }
 
+  // ── Purchase Approval ────────────────────────────────────────────
+  Future<Map<String, dynamic>> approvePurchase(String id) async {
+    final res = await _api.patch(ApiEndpoints.adminApproveResellerPurchase(id));
+    return _asMap(res, unwrapData: true);
+  }
+
+  Future<Map<String, dynamic>> rejectPurchase(String id) async {
+    final res = await _api.patch(ApiEndpoints.adminRejectResellerPurchase(id));
+    return _asMap(res, unwrapData: true);
+  }
+
+  Future<Map<String, dynamic>> viewProof(String id) async {
+    final res = await _api.get(ApiEndpoints.adminViewResellerProof(id));
+    return _asMap(res, unwrapData: true);
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────
   Map<String, dynamic> _asMap(dynamic res, {bool unwrapData = false}) {
     if (res is Map) {

@@ -28,10 +28,16 @@ class Reseller extends Model
         'plan_name',
         'suspended_at',
         'suspended_reason',
+        'purchase_approved',
+        'business_proof_url',
+        'business_proof_title',
+        'business_proof_uploaded_at',
     ];
 
     protected $casts = [
         'suspended_at' => 'datetime',
+        'purchase_approved' => 'boolean',
+        'business_proof_uploaded_at' => 'datetime',
     ];
 
     // Boot: auto-generate UUID

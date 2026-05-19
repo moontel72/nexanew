@@ -87,4 +87,12 @@ class ResellerManagementRepository {
     required bool suspend,
     String? reason,
   }) => _remote.toggleSuspend(id: id, suspend: suspend, reason: reason);
+
+  Future<Map<String, dynamic>> approvePurchase(String id) =>
+      _remote.approvePurchase(id);
+
+  Future<Map<String, dynamic>> rejectPurchase(String id) =>
+      _remote.rejectPurchase(id);
+
+  Future<Map<String, dynamic>> viewProof(String id) => _remote.viewProof(id);
 }

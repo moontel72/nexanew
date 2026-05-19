@@ -69,6 +69,7 @@ class FactoryProductsRepository {
     double? promoDiscount,
     List<String>? tags,
     List<Map<String, dynamic>>? volumeDiscounts,
+    String? imageUrl,
   }) async {
     final res = await _api.post(
       ApiEndpoints.createProduct,
@@ -114,6 +115,7 @@ class FactoryProductsRepository {
                 .toIso8601String()
                 .split('T')
                 .first,
+          if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
         },
       },
     );
@@ -145,6 +147,7 @@ class FactoryProductsRepository {
     double? promoDiscount,
     List<String>? tags,
     List<Map<String, dynamic>>? volumeDiscounts,
+    String? imageUrl,
   }) async {
     final Map<String, dynamic> payload = {};
 
@@ -171,6 +174,8 @@ class FactoryProductsRepository {
     if (promoDiscount != null) payload['promo_discount'] = promoDiscount;
     if (tags != null) payload['tags'] = tags;
     if (volumeDiscounts != null) payload['volume_discounts'] = volumeDiscounts;
+    if (imageUrl != null && imageUrl.isNotEmpty)
+      payload['image_url'] = imageUrl;
 
     final res = await _api.patch(
       ApiEndpoints.productDetails.replaceFirst('{id}', id),
@@ -194,9 +199,7 @@ class FactoryProductsRepository {
   }
 
   Future<void> deleteProduct(String id) async {
-    await _api.delete(
-      ApiEndpoints.deleteProduct.replaceFirst('{id}', id),
-    );
+    await _api.delete(ApiEndpoints.deleteProduct.replaceFirst('{id}', id));
   }
 
   Future<int> linkUnitCodesToProduct({

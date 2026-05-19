@@ -156,4 +156,85 @@ class AdminResellerController extends Controller
 
         return response()->json(['data' => $reseller]);
     }
+
+    /**
+     * Approve a reseller's purchase/business proof.
+     * PATCH /api/v1/admin/resellers/{id}/approve-purchase
+     */
+    public function approvePurchase(string $id): JsonResponse
+    {
+        $reseller = Reseller::findOrFail($id);
+
+        if (!$reseller->business_proof_url) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No business proof document has been uploaded by this reseller yet.',
+            ], 422);
+        }
+
+        $reseller->update([
+            'purchase_approved' => true,
+        ]);
+
+        \Illuminate\Support\Facades\Log::info('AdminResellerController: Purchase approved for reseller.', [
+            'reseller_id' => $reseller->id,
+            'admin_id' => request()->user()?->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reseller purchase has been approved.',
+            'data' => $reseller->fresh(),
+        ]);
+    }
+
+    /**
+     * Reject/reset a reseller's purchase approval.
+     * PATCH /api/v1/admin/resellers/{id}/reject-purchase
+     */
+    public function rejectPurchase(string $id): JsonResponse
+    {
+        $reseller = Reseller::findOrFail($id);
+
+        $reseller->update([
+            'purchase_approved' => false,
+        ]);
+
+        \Illuminate\Support\Facades\Log::info('AdminResellerController: Purchase rejected for reseller.', [
+            'reseller_id' => $reseller->id,
+            'admin_id' => request()->user()?->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reseller purchase approval has been revoked.',
+            'data' => $reseller->fresh(),
+        ]);
+    }
+
+    /**
+     * View a reseller's business proof document.
+     * GET /api/v1/admin/resellers/{id}/proof
+     */
+    public function viewProof(string $id): JsonResponse
+    {
+        $reseller = Reseller::findOrFail($id);
+
+        if (!$reseller->business_proof_url) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No proof document has been uploaded by this reseller.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'business_proof_url' => $reseller->business_proof_url,
+                'business_proof_title' => $reseller->business_proof_title,
+                'business_proof_uploaded_at' => $reseller->business_proof_uploaded_at?->toISOString(),
+                'purchase_approved' => (bool) $reseller->purchase_approved,
+            ],
+        ]);
+    }
 }

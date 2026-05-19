@@ -91,6 +91,12 @@ class ApiEndpoints {
       '/admin/resellers/$id/status';
   static String adminSuspendReseller(String id) =>
       '/admin/resellers/$id/suspend';
+  static String adminApproveResellerPurchase(String id) =>
+      '/admin/resellers/$id/approve-purchase';
+  static String adminRejectResellerPurchase(String id) =>
+      '/admin/resellers/$id/reject-purchase';
+  static String adminViewResellerProof(String id) =>
+      '/admin/resellers/$id/proof';
 
   // Subscription Management
   static const String adminSubscriptions = '/admin/subscriptions';
@@ -256,6 +262,8 @@ class ApiEndpoints {
   static const String receiveDelivery = '/reseller/receive';
   static const String forwardToShop = '/reseller/forward';
   static const String availableFactories = '/reseller/factories';
+  static const String resellerProofUpload = '/reseller/proof/upload';
+  static const String resellerProofStatus = '/reseller/proof/status';
 
   // ==================== SHOP ENDPOINTS ====================
   static const String shopDashboard = '/shop/dashboard';
