@@ -296,77 +296,92 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
     );
   }
 
-  // ── Order success listener ───────────────────────────────────────
-  void _listenOrderSuccess(BuildContext context, ResellerOrderState state) {
-    if (state.status != OrderStatus.success ||
-        state.lastPlacedOrder == null ||
-        _placingFactoryId == null) {
-      return;
-    }
+  // ── Order success / failure listener ────────────────────────────
+  void _listenOrderResult(BuildContext context, ResellerOrderState state) {
+    if (_placingFactoryId == null) return;
 
-    final factoryId = _placingFactoryId!;
-    final order = state.lastPlacedOrder!;
-    final factoryName = state.lastPlacedFactoryName ?? _factoryName(factoryId);
+    // Success
+    if (state.status == OrderStatus.success && state.lastPlacedOrder != null) {
+      final factoryId = _placingFactoryId!;
+      final order = state.lastPlacedOrder!;
+      final factoryName =
+          state.lastPlacedFactoryName ?? _factoryName(factoryId);
 
-    // Clear this factory's items from cart
-    context.read<ResellerCartBloc>().add(ClearCart(factoryId: factoryId));
+      context.read<ResellerCartBloc>().add(ClearCart(factoryId: factoryId));
+      setState(() => _placingFactoryId = null);
 
-    setState(() => _placingFactoryId = null);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.check_circle, color: AppColors.success, size: 28.sp),
-            SizedBox(width: 8.w),
-            const Text('Order Placed!'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Your order has been sent to $factoryName.'),
-            SizedBox(height: 8.h),
-            Container(
-              padding: EdgeInsets.all(10.w),
-              decoration: BoxDecoration(
-                color: AppColors.gray50,
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Text(
-                'Order ID: ${order.id}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'monospace',
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: AppColors.success, size: 28.sp),
+              SizedBox(width: 8.w),
+              const Text('Order Placed!'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Your order has been sent to $factoryName.'),
+              SizedBox(height: 8.h),
+              Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: AppColors.gray50,
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  'Order ID: ${order.id}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'monospace',
+                  ),
                 ),
               ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.go('/marketplace/orders');
+              },
+              child: const Text('View Orders'),
+            ),
+            PrimaryButton(
+              text: 'Continue Shopping',
+              onPressed: () {
+                Navigator.pop(context);
+                context.go('/marketplace');
+              },
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // close dialog
-              context.go('/marketplace/orders');
-            },
-            child: const Text('View Orders'),
+      );
+      return;
+    }
+
+    // Failure
+    if (state.status == OrderStatus.failure) {
+      setState(() => _placingFactoryId = null);
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              state.errorMessage ?? 'Order failed. Please try again.',
+            ),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
           ),
-          PrimaryButton(
-            text: 'Continue Shopping',
-            onPressed: () {
-              Navigator.pop(context); // close dialog
-              context.go('/marketplace');
-            },
-          ),
-        ],
-      ),
-    );
+        );
+    }
   }
 
   @override
@@ -374,7 +389,7 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
     return Scaffold(
       appBar: CustomAppBar(title: 'Your Cart', showBackButton: true),
       body: BlocListener<ResellerOrderBloc, ResellerOrderState>(
-        listener: _listenOrderSuccess,
+        listener: _listenOrderResult,
         child: BlocBuilder<ResellerCartBloc, ResellerCartState>(
           builder: (context, cart) {
             if (cart.itemsByFactory.isEmpty) {

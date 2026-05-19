@@ -450,6 +450,14 @@ $registerRoutes = function (): void {
         });
 
     // ──────────────────────────────────────────────────────────────
+    // FILE UPLOAD (generic)
+    // ──────────────────────────────────────────────────────────────
+    Route::prefix("files")->group(function (): void {
+        Route::post("upload", [\App\Http\Controllers\FileController::class, "upload"]);
+        Route::delete("delete", [\App\Http\Controllers\FileController::class, "delete"]);
+    });
+
+    // ──────────────────────────────────────────────────────────────
     // RESELLER MARKETPLACE (public B2B endpoints)
     // ──────────────────────────────────────────────────────────────
     Route::prefix("reseller")->group(function (): void {
@@ -462,6 +470,7 @@ $registerRoutes = function (): void {
                 Route::post("upload", [\App\Http\Controllers\Reseller\ResellerProofController::class, "uploadProof"]);
                 Route::get("status", [\App\Http\Controllers\Reseller\ResellerProofController::class, "checkStatus"]);
             });
+            Route::apiResource("orders", \App\Http\Controllers\Reseller\ResellerOrderController::class)->only(['index', 'store', 'show']);
         });
     });
 
