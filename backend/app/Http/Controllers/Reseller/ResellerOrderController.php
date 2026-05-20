@@ -183,7 +183,7 @@ class ResellerOrderController extends Controller
     }
 
     /**
-     * Resolve the reseller from Sanctum auth or X-Reseller-Id header.
+     * Resolve the reseller from Sanctum auth, X-Reseller-Id header, or reseller_id body param.
      */
     private function resolveReseller(Request $request): ?Reseller
     {
@@ -191,7 +191,12 @@ class ResellerOrderController extends Controller
         if ($user instanceof Reseller) {
             return $user;
         }
+        // Check X-Reseller-Id header
         $resellerId = $request->header('X-Reseller-Id');
+        // Also check request body (Flutter sends reseller_id in POST body)
+        if (!$resellerId) {
+            $resellerId = $request->input('reseller_id');
+        }
         if ($resellerId) {
             return Reseller::find($resellerId);
         }

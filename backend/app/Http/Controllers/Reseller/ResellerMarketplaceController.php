@@ -123,6 +123,13 @@ class ResellerMarketplaceController extends Controller
             if (is_array($metadata) && empty($metadata)) {
                 $metadata = null;
             }
+            // Inject image_url into metadata so Flutter model can read it
+            $imageUrl = $product->metadata['image_url'] ?? ($product->image_urls[0] ?? null);
+            if ($imageUrl && is_array($metadata)) {
+                $metadata['image_url'] = $imageUrl;
+            } elseif ($imageUrl) {
+                $metadata = ['image_url' => $imageUrl];
+            }
 
             return [
                 'id' => $product->id,
