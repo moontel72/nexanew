@@ -97,58 +97,31 @@ class ProductController extends Controller
         ]);
 
         try {
-            // Handle image upload (single file via multipart/form-data)
-            $imageUrls = $this->handleImageUpload($request);
+            // Resolve the single image URL from all possible sources
+            $uploadedUrls = $this->handleImageUpload($request);
+            $topImageUrl = $request->input('image_url');
+            $metaImageUrl = $data['metadata']['image_url'] ?? null;
+            $imageUrl = $uploadedUrls[0] ?? $topImageUrl ?? $metaImageUrl;
 
-            // Merge uploaded image URLs with any manually provided image_urls
-            $existingUrls = is_array($data['image_urls'] ?? null) ? $data['image_urls'] : [];
-            $data['image_urls'] = array_values(array_filter(array_merge($existingUrls, $imageUrls)));
+            // Remove image_url from data — we'll set image_urls and metadata manually
+            unset($data['image_url'], $data['image_urls']);
 
-            // If Flutter sent image_url as a top-level string, add it to image_urls if not already present
-            $topImageUrl = $data['image_url'] ?? null;
-            if (!empty($topImageUrl) && is_string($topImageUrl) && !in_array($topImageUrl, $data['image_urls'])) {
-                $data['image_urls'][] = $topImageUrl;
+            // Preserve metadata from Flutter (dates, etc.) and inject image_url
+            $metadata = is_array($data['metadata'] ?? null) ? $data['metadata'] : [];
+            if (array_is_list($metadata)) { $metadata = []; }
+            if ($imageUrl) {
+                $metadata['image_url'] = $imageUrl;
             }
+            $data['metadata'] = !empty($metadata) ? $metadata : null;
 
-            // Build metadata — always an associative array for JSONB compatibility
-            $existingMeta = is_array($data['metadata'] ?? null) ? $data['metadata'] : [];
-            // Ensure metadata is a map (associative), not a list, for PostgreSQL JSONB
-            if (array_is_list($existingMeta) && !empty($existingMeta)) {
-                $existingMeta = [];
-            }
-
-            // Set image_url in metadata from whichever source has it
-            $resolvedImageUrl = $data['image_urls'][0] ?? $topImageUrl ?? $existingMeta['image_url'] ?? null;
-            if ($resolvedImageUrl) {
-                $existingMeta['image_url'] = $resolvedImageUrl;
-            }
-            $data['metadata'] = !empty($existingMeta) ? $existingMeta : null;
-
-            // Remove the top-level image_url — it's now in image_urls and metadata
-            unset($data['image_url']);
-
-            // Build the product row
-            $productData = array_merge(
+            $product = Product::query()->create(array_merge(
                 ['id' => (string) Str::uuid(), 'company_id' => $user->company_id],
                 $data,
-                ['status' => $data['status'] ?? 'active']
-            );
-
-            // Ensure JSON columns are proper arrays (not empty strings or objects)
-            if (empty($productData['image_urls'])) {
-                $productData['image_urls'] = [];
-            }
-            if (empty($productData['metadata'])) {
-                $productData['metadata'] = null;
-            }
-            if (empty($productData['tags'])) {
-                $productData['tags'] = [];
-            }
-            if (empty($productData['volume_discounts'])) {
-                $productData['volume_discounts'] = [];
-            }
-
-            $product = Product::query()->create($productData);
+                [
+                    'status' => $data['status'] ?? 'active',
+                    'image_urls' => $imageUrl ? [$imageUrl] : [],
+                ]
+            ));
 
             Log::info('ProductController: Product created.', [
                 'product_id' => $product->id,
@@ -209,50 +182,26 @@ class ProductController extends Controller
         ]);
 
         try {
-            // Handle image upload
-            $imageUrls = $this->handleImageUpload($request, $product);
+            // Resolve the single image URL from all possible sources
+            $uploadedUrls = $this->handleImageUpload($request, $product);
+            $topImageUrl = $request->input('image_url');
+            $metaImageUrl = $data['metadata']['image_url'] ?? null;
+            $existingImageUrl = is_array($product->image_urls) ? ($product->image_urls[0] ?? null) : null;
+            $imageUrl = $uploadedUrls[0] ?? $topImageUrl ?? $metaImageUrl ?? $existingImageUrl;
 
-            // Merge image URLs
-            if (!empty($imageUrls)) {
-                $existingUrls = is_array($data['image_urls'] ?? null) ? $data['image_urls'] : (is_array($product->image_urls) ? $product->image_urls : []);
-                $data['image_urls'] = array_values(array_filter(array_merge($existingUrls, $imageUrls)));
-            } elseif (isset($data['image_urls'])) {
-                $data['image_urls'] = array_values(array_filter($data['image_urls']));
-            }
+            // Remove image fields from data — we'll set them manually
+            unset($data['image_url'], $data['image_urls']);
 
-            // If Flutter sent top-level image_url, add it
-            $topImageUrl = $data['image_url'] ?? null;
-            if (!empty($topImageUrl) && is_string($topImageUrl)) {
-                $currentUrls = $data['image_urls'] ?? (is_array($product->image_urls) ? $product->image_urls : []);
-                if (!in_array($topImageUrl, $currentUrls)) {
-                    $currentUrls[] = $topImageUrl;
-                }
-                $data['image_urls'] = array_values(array_filter($currentUrls));
-            }
-
-            // Build metadata
+            // Preserve existing metadata and inject image_url
             $metadata = is_array($data['metadata'] ?? null) ? $data['metadata'] : (is_array($product->metadata) ? $product->metadata : []);
-            if (array_is_list($metadata) && !empty($metadata)) {
-                $metadata = [];
-            }
-
-            // Resolve image URL for metadata
-            $currentUrls = $data['image_urls'] ?? (is_array($product->image_urls) ? $product->image_urls : []);
-            $resolvedImageUrl = $currentUrls[0] ?? $topImageUrl ?? $metadata['image_url'] ?? null;
-            if ($resolvedImageUrl) {
-                $metadata['image_url'] = $resolvedImageUrl;
+            if (array_is_list($metadata)) { $metadata = []; }
+            if ($imageUrl) {
+                $metadata['image_url'] = $imageUrl;
             }
             $data['metadata'] = !empty($metadata) ? $metadata : null;
 
-            unset($data['image_url']);
-
-            // Ensure clean JSON columns
-            if (isset($data['image_urls']) && empty($data['image_urls'])) {
-                $data['image_urls'] = [];
-            }
-            if (isset($data['metadata']) && empty($data['metadata'])) {
-                $data['metadata'] = null;
-            }
+            // Set image_urls explicitly
+            $data['image_urls'] = $imageUrl ? [$imageUrl] : [];
 
             $product->fill($data)->save();
 
