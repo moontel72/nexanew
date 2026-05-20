@@ -73,40 +73,25 @@ class Product extends Model
 
     /**
      * Accessor: parse PostgreSQL text array literal into PHP array.
-     * Handles both native PG arrays and legacy JSON-encoded strings.
      */
     public function getImageUrlsAttribute($value): array
     {
-        if (empty($value) || $value === '{}') {
+        if (empty($value) || $value === '{}' || $value === '[]') {
             return [];
         }
-        // If it's already a PHP array (from previous cast), return as-is
+
         if (is_array($value)) {
             return $value;
         }
-        // Try JSON decode (legacy data)
-        if (str_starts_with($value, '[')) {
-            $decoded = json_decode($value, true);
-            if (is_array($decoded)) {
-                return $decoded;
-            }
-        }
-        // Parse PostgreSQL array literal: {"url1","url2"} or {url1,url2}
-        $trimmed = trim($value, '{}');
-        if ($trimmed === '') {
+
+        $clean = trim($value, '{}');
+        if (empty($clean)) {
             return [];
         }
-        // Split by comma, respecting quoted strings
-        preg_match_all('/"((?:[^"\\]|\\.)*)"|([^,]+)/', $trimmed, $matches);
-        $result = [];
-        foreach ($matches[1] as $i => $q) {
-            if ($q !== '') {
-                $result[] = stripslashes($q);
-            } elseif (isset($matches[2][$i]) && $matches[2][$i] !== '') {
-                $result[] = trim($matches[2][$i]);
-            }
-        }
-        return $result;
+
+        return array_map(function ($item) {
+            return trim($item, '" ');
+        }, str_getcsv($clean));
     }
 
     /**
@@ -114,21 +99,17 @@ class Product extends Model
      */
     public function setImageUrlsAttribute($value): void
     {
-        if (is_array($value)) {
-            if (empty($value)) {
-                $this->attributes['image_urls'] = '{}';
-                return;
-            }
-            $parts = [];
-            foreach ($value as $url) {
-                $escaped = str_replace(['\\', '"'], ['\\\\', '\\"'], (string) $url);
-                $parts[] = '"' . $escaped . '"';
-            }
-            $this->attributes['image_urls'] = '{' . implode(',', $parts) . '}';
-        } elseif (is_string($value)) {
-            $this->attributes['image_urls'] = $value;
-        } else {
+        if (empty($value)) {
             $this->attributes['image_urls'] = '{}';
+            return;
         }
+
+        $array = is_array($value) ? $value : [$value];
+
+        $escaped = array_map(function ($item) {
+            return '"' . str_replace('"', '\\"', $item) . '"';
+        }, $array);
+
+        $this->attributes['image_urls'] = '{' . implode(',', $escaped) . '}';
     }
 }
