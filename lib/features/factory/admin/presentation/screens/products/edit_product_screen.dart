@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -935,11 +933,11 @@ class _EditProductScreenState extends State<EditProductScreen> {
                               ),
                               child:
                                   _selectedImage != null &&
-                                      _selectedImage!.path != null
+                                      _selectedImage!.bytes != null
                                   ? ClipRRect(
                                       borderRadius: BorderRadius.circular(11.r),
-                                      child: Image.file(
-                                        File(_selectedImage!.path!),
+                                      child: Image.memory(
+                                        _selectedImage!.bytes!,
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         height: double.infinity,
