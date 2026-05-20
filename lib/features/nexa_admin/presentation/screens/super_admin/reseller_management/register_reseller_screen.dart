@@ -25,6 +25,7 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
   final _passwordCtl = TextEditingController();
   final _cityCtl = TextEditingController();
   final _addressCtl = TextEditingController();
+  final _planCtl = TextEditingController();
 
   bool _submitting = false;
   bool _obscurePassword = true;
@@ -39,6 +40,7 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
     _passwordCtl.dispose();
     _cityCtl.dispose();
     _addressCtl.dispose();
+    _planCtl.dispose();
     super.dispose();
   }
 
@@ -57,6 +59,7 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
         password: _passwordCtl.text,
         city: _cityCtl.text.trim(),
         address: _addressCtl.text.trim(),
+        planId: _planCtl.text.trim().isEmpty ? null : _planCtl.text.trim(),
       ),
     );
   }
@@ -164,6 +167,12 @@ class _RegisterResellerScreenState extends State<RegisterResellerScreen> {
                         color: AppColors.warning,
                         fontSize: 11.sp,
                       ),
+                    ),
+                    SizedBox(height: 14.h),
+                    _field(
+                      'Plan ID',
+                      _planCtl,
+                      hint: 'Subscription Plan ID (optional)',
                     ),
                     SizedBox(height: 24.h),
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nexatrace_system/core/constants/api_endpoints.dart';
+import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
 import 'package:nexatrace_system/shared/models/code/bundle_model.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
@@ -9,13 +11,14 @@ import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
 
 /// Orders Hub Screen
 ///
-/// Tabbed management hub for Factory Admin Orders with four tabs:
+/// Tabbed management hub for Factory Admin Orders with five tabs:
 /// - New (draft)
 /// - Pending (pending_store_linking)
 /// - Linked (store_linked)
 /// - Completed (delivered)
+/// - Reseller (reseller_orders from marketplace)
 ///
-/// Uses the existing [BundleBloc] which loads all bundles.
+/// Uses the existing [BundleBloc] for bundle tabs and direct API for reseller orders.
 class OrdersHubScreen extends StatefulWidget {
   const OrdersHubScreen({super.key});
 
@@ -26,6 +29,11 @@ class OrdersHubScreen extends StatefulWidget {
 class _OrdersHubScreenState extends State<OrdersHubScreen>
     with TickerProviderStateMixin {
   late final TabController _tabController;
+
+  // Reseller orders state
+  List<Map<String, dynamic>> _resellerOrders = [];
+  bool _resellerLoading = false;
+  String? _resellerError;
 
   static const _tabs = <_OrderTab>[
     _OrderTab(label: 'New', status: 'draft', icon: Icons.description_outlined),
@@ -44,21 +52,86 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
       status: 'delivered',
       icon: Icons.check_circle_outline,
     ),
+    _OrderTab(
+      label: 'Reseller',
+      status: 'reseller',
+      icon: Icons.storefront_outlined,
+    ),
   ];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController.addListener(_onTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<BundleBloc>().add(const LoadBundles());
+      _fetchResellerOrders();
     });
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging) {
+      final tab = _tabs[_tabController.index];
+      if (tab.status == 'reseller' &&
+          _resellerOrders.isEmpty &&
+          !_resellerLoading) {
+        _fetchResellerOrders();
+      }
+    }
+  }
+
+  Future<void> _fetchResellerOrders() async {
+    setState(() {
+      _resellerLoading = true;
+      _resellerError = null;
+    });
+    try {
+      final res = await ApiService().get(ApiEndpoints.factoryResellerOrders);
+      final map = res is Map
+          ? res.cast<String, dynamic>()
+          : <String, dynamic>{};
+      final data = map['data'];
+      if (data is List) {
+        _resellerOrders = data.cast<Map<String, dynamic>>();
+      } else {
+        _resellerOrders = [];
+      }
+    } catch (e) {
+      _resellerError = e.toString();
+    }
+    if (mounted) {
+      setState(() => _resellerLoading = false);
+    }
+  }
+
+  Future<void> _updateResellerOrderStatus(
+    String orderId,
+    String newStatus,
+  ) async {
+    try {
+      await ApiService().patch(
+        ApiEndpoints.factoryResellerOrderStatus(orderId),
+        body: {'order_status': newStatus},
+      );
+      await _fetchResellerOrders();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update status: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   Color _statusColor(String status) {
@@ -71,6 +144,14 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
         return AppColors.info;
       case 'delivered':
         return AppColors.success;
+      case 'pending':
+        return AppColors.warning;
+      case 'confirmed':
+        return AppColors.info;
+      case 'shipped':
+        return AppColors.accent;
+      case 'cancelled':
+        return AppColors.error;
       default:
         return AppColors.textSecondary;
     }
@@ -86,6 +167,14 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
         return 'Store Linked';
       case 'delivered':
         return 'Delivered';
+      case 'pending':
+        return 'Pending';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'shipped':
+        return 'Shipped';
+      case 'cancelled':
+        return 'Cancelled';
       default:
         return status;
     }
@@ -101,16 +190,7 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
         foregroundColor: AppColors.white,
         elevation: 0,
         centerTitle: true,
-        actions: [
-          TextButton.icon(
-            onPressed: () => context.push('/factory/orders/create'),
-            icon: const Icon(Icons.add_circle_outline, color: AppColors.white),
-            label: const Text(
-              'Create Order',
-              style: TextStyle(color: AppColors.white),
-            ),
-          ),
-        ],
+        actions: [],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.white,
@@ -126,38 +206,49 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
               .toList(),
         ),
       ),
-      body: BlocBuilder<BundleBloc, BundleState>(
-        builder: (context, state) {
-          if (state.status == BundleStatus.loading && state.bundles.isEmpty) {
-            return const Center(child: LoadingIndicator());
+      body: TabBarView(
+        controller: _tabController,
+        children: _tabs.map((tab) {
+          // ── Reseller tab uses its own data source ──────────────
+          if (tab.status == 'reseller') {
+            return _buildResellerOrdersTab(tab);
           }
 
-          if (state.status == BundleStatus.error && state.bundles.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 12),
-                  Text(
-                    state.errorMessage ?? 'Failed to load bundles',
-                    style: const TextStyle(color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: () =>
-                        context.read<BundleBloc>().add(const LoadBundles()),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
+          // ── Bundle tabs use BundleBloc ─────────────────────────
+          return BlocBuilder<BundleBloc, BundleState>(
+            builder: (context, state) {
+              if (state.status == BundleStatus.loading &&
+                  state.bundles.isEmpty) {
+                return const Center(child: LoadingIndicator());
+              }
 
-          return TabBarView(
-            controller: _tabController,
-            children: _tabs.map((tab) {
+              if (state.status == BundleStatus.error && state.bundles.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        state.errorMessage ?? 'Failed to load bundles',
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: () =>
+                            context.read<BundleBloc>().add(const LoadBundles()),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               final filtered = state.bundles
                   .where((b) => b.status == tab.status)
                   .toList();
@@ -211,7 +302,85 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
                   },
                 ),
               );
-            }).toList(),
+            },
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// Builds the Reseller Orders tab content, fetching from /factory/reseller-orders.
+  Widget _buildResellerOrdersTab(_OrderTab tab) {
+    if (_resellerLoading && _resellerOrders.isEmpty) {
+      return const Center(child: LoadingIndicator());
+    }
+
+    if (_resellerError != null && _resellerOrders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 12),
+            Text(
+              _resellerError!,
+              style: const TextStyle(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: _fetchResellerOrders,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_resellerOrders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(tab.icon, size: 56.w, color: AppColors.textDisabled),
+            SizedBox(height: 12.h),
+            Text(
+              'No Reseller Orders',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              'Orders placed by resellers on the marketplace will appear here.',
+              style: TextStyle(fontSize: 13.sp, color: AppColors.textTertiary),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchResellerOrders,
+      child: ListView.builder(
+        padding: EdgeInsets.all(16.w),
+        itemCount: _resellerOrders.length,
+        itemBuilder: (_, i) {
+          final order = _resellerOrders[i];
+          return _ResellerOrderCard(
+            order: order,
+            statusColor: _statusColor(order['orderStatus']?.toString() ?? ''),
+            statusLabel: _statusLabel(order['orderStatus']?.toString() ?? ''),
+            onStatusChanged: (newStatus) {
+              _updateResellerOrderStatus(
+                order['id']?.toString() ?? '',
+                newStatus,
+              );
+            },
           );
         },
       ),
@@ -374,6 +543,195 @@ class _BundleCard extends StatelessWidget {
           style: TextStyle(fontSize: 12.sp, color: AppColors.textTertiary),
         ),
       ],
+    );
+  }
+}
+
+/// Card widget for displaying a reseller (marketplace) order.
+class _ResellerOrderCard extends StatelessWidget {
+  final Map<String, dynamic> order;
+  final Color statusColor;
+  final String statusLabel;
+  final void Function(String newStatus) onStatusChanged;
+
+  const _ResellerOrderCard({
+    required this.order,
+    required this.statusColor,
+    required this.statusLabel,
+    required this.onStatusChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final resellerName =
+        order['resellerBusinessName']?.toString() ??
+        order['resellerName']?.toString() ??
+        'Unknown';
+    final grandTotal = (order['grandTotal'] is num)
+        ? (order['grandTotal'] as num).toDouble()
+        : 0.0;
+    final items = order['items'];
+    final itemCount = items is List ? items.length : 0;
+    final currency = order['currency']?.toString() ?? 'PKR';
+    final currentStatus = order['orderStatus']?.toString() ?? 'pending';
+
+    return Card(
+      margin: EdgeInsets.only(bottom: 10.h),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      elevation: 1,
+      child: Padding(
+        padding: EdgeInsets.all(14.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Left icon
+                Container(
+                  width: 44.w,
+                  height: 44.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Icon(
+                    Icons.storefront_outlined,
+                    color: AppColors.accent,
+                    size: 22.sp,
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                // Middle content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        resellerName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.sp,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 4.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.shopping_cart_outlined,
+                            size: 13.sp,
+                            color: AppColors.textSecondary,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            '$itemCount item${itemCount == 1 ? '' : 's'} · $currency ${grandTotal.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (order['resellerCity']?.toString().isNotEmpty == true)
+                        Padding(
+                          padding: EdgeInsets.only(top: 4.h),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.location_on_outlined,
+                                size: 13.sp,
+                                color: AppColors.textTertiary,
+                              ),
+                              SizedBox(width: 4.w),
+                              Text(
+                                order['resellerCity'].toString(),
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Right status badge
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                    vertical: 4.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: statusColor.withOpacity(0.4)),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // ── Status action chips ────────────────────────────
+            SizedBox(height: 10.h),
+            Row(
+              children: [
+                if (currentStatus == 'pending')
+                  _statusChip('Confirm', AppColors.info, () {
+                    onStatusChanged('confirmed');
+                  }),
+                if (currentStatus == 'confirmed')
+                  _statusChip('Ship', AppColors.accent, () {
+                    onStatusChanged('shipped');
+                  }),
+                if (currentStatus == 'shipped')
+                  _statusChip('Deliver', AppColors.success, () {
+                    onStatusChanged('delivered');
+                  }),
+                if (currentStatus != 'cancelled' &&
+                    currentStatus != 'delivered')
+                  _statusChip('Cancel', AppColors.error, () {
+                    onStatusChanged('cancelled');
+                  }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusChip(String label, Color color, VoidCallback onTap) {
+    return Padding(
+      padding: EdgeInsets.only(right: 8.w),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withOpacity(0.4)),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: 12.sp,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

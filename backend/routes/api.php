@@ -599,6 +599,10 @@ $registerRoutes = function (): void {
                 "toggleMarketplace",
             ]);
 
+            // Reseller orders received by this factory
+            Route::get("reseller-orders", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "resellerOrders"]);
+            Route::patch("reseller-orders/{orderId}/status", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "updateResellerOrderStatus"]);
+
             // Store Keeper Management
             Route::prefix("store-keepers")->group(function (): void {
                 Route::get("list", [\App\Http\Controllers\Factory\StoreKeeperController::class, "index"]);
@@ -629,7 +633,6 @@ $registerRoutes = function (): void {
                 Route::get("test-codes", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "testCodes"]);
                 Route::get("pending", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "pendingOrders"]);
                 Route::get("history", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "history"]);
-                Route::post("create-dummy", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "createDummyOrder"]);
                 Route::post("{bundleId}/generate-qr", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "generateBundleQR"]);
                 Route::post("{bundleId}/link-carton", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "linkCartonToBundle"]);
                 Route::post("{bundleId}/link-packet", [\App\Http\Controllers\Factory\StoreKeeperBundleController::class, "linkPacketToBundle"]);

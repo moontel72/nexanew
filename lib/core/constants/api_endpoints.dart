@@ -230,6 +230,11 @@ class ApiEndpoints {
   static const String productToggleMarketplace =
       '/factory/products/{id}/marketplace-toggle';
 
+  // Factory Reseller Orders (from marketplace)
+  static const String factoryResellerOrders = '/factory/reseller-orders';
+  static String factoryResellerOrderStatus(String orderId) =>
+      '/factory/reseller-orders/$orderId/status';
+
   // ==================== STORE KEEPER ENDPOINTS ====================
   static const String storeKeeperDashboard = '/store/dashboard';
   static const String createBundle = '/store/bundles';

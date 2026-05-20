@@ -52,7 +52,9 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
         requiresAuth: true,
         headers: resellerId.isNotEmpty ? {'X-Reseller-Id': resellerId} : null,
       );
-      final data = res is Map ? res : (res['data'] is Map ? res['data'] : null);
+      // Properly unwrap nested response: { success: true, data: { purchase_approved: true } }
+      final Map<String, dynamic>? map = res is Map ? res.cast<String, dynamic>() : null;
+      final data = map?['data'] is Map ? map!['data'] as Map<String, dynamic> : map;
       final approved = data?['purchase_approved'] == true;
       if (mounted) setState(() => _businessVerified = approved);
     } catch (_) {

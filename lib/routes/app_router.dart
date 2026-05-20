@@ -56,7 +56,6 @@ import 'package:nexatrace_system/features/factory/store_keeper/presentation/scre
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/bundle_linking_screen.dart';
 import 'package:nexatrace_system/features/factory/store_keeper/presentation/screens/bundle_scan_flow_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/orders/orders_hub_screen.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/screens/orders/create_manual_order_screen.dart';
 import 'package:nexatrace_system/features/factory/admin/presentation/screens/orders/order_detail_screen.dart';
 import 'package:nexatrace_system/features/factory/driver/presentation/screens/driver_dashboard_screen.dart';
 import 'package:nexatrace_system/features/factory/driver/presentation/screens/scan_receive_screen.dart';
@@ -460,11 +459,6 @@ class AppRouter {
           name: 'factory_orders',
           builder: (context, state) => const OrdersHubScreen(),
           routes: [
-            GoRoute(
-              path: 'create',
-              name: 'factory_orders_create',
-              builder: (context, state) => const CreateManualOrderScreen(),
-            ),
             GoRoute(
               path: ':bundleId',
               name: 'factory_order_detail',

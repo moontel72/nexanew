@@ -102,10 +102,16 @@ class ProductController extends Controller
         $existingUrls = $data['image_urls'] ?? [];
         $data['image_urls'] = array_merge($existingUrls, $imageUrls);
 
-        // Build metadata, setting image_url for backward compatibility with Flutter marketplace
-        $data['metadata'] = array_merge($data['metadata'] ?? [], [
-            'image_url' => !empty($data['image_urls']) ? $data['image_urls'][0] : null,
-        ]);
+        // Build metadata, setting image_url for backward compatibility with Flutter marketplace.
+        // Only override image_url if a new image was actually uploaded in this request.
+        // Otherwise, preserve whatever was sent in metadata (e.g. from Flutter's generic upload flow).
+        $existingMeta = $data['metadata'] ?? [];
+        if (!empty($data['image_urls'])) {
+            $existingMeta['image_url'] = $data['image_urls'][0];
+        } elseif (empty($existingMeta['image_url'])) {
+            $existingMeta['image_url'] = null;
+        }
+        $data['metadata'] = $existingMeta;
 
         $product = Product::query()->create(array_merge(
             ['id' => (string) Str::uuid(), 'company_id' => $user->company_id],
@@ -162,13 +168,16 @@ class ProductController extends Controller
             $data['image_urls'] = array_merge($existingUrls, $imageUrls);
         }
 
-        // Ensure metadata->image_url is set for backward compatibility
+        // Ensure metadata->image_url is set for backward compatibility.
+        // Only override image_url if new images were actually uploaded in this request.
+        $metadata = $data['metadata'] ?? ($product->metadata ?? []);
         if (!empty($data['image_urls'])) {
-            $metadata = $data['metadata'] ?? ($product->metadata ?? []);
-            $data['metadata'] = array_merge($metadata, [
-                'image_url' => $data['image_urls'][0],
-            ]);
+            $metadata['image_url'] = $data['image_urls'][0];
+        } elseif (isset($data['metadata']['image_url'])) {
+            // Preserve image_url passed from Flutter's generic upload flow
+            $metadata['image_url'] = $data['metadata']['image_url'];
         }
+        $data['metadata'] = $metadata;
 
         $product->fill($data)->save();
         return response()->json(['success' => true, 'data' => $product->fresh()]);

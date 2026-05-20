@@ -18,52 +18,6 @@ class StoreKeeperBundleController extends Controller
     // ─── Pending Orders ──────────────────────────────────────────
 
     /**
-     * No carton/packet codes required.
-     * Create a dummy/placeholder order for testing.
-     * No carton/packet codes required.
-     */
-    public function createDummyOrder(Request $request)
-    {
-        try {
-            $user = $request->user();
-            $companyId = (string) $user->company_id;
-            $data = $request->validate([
-                'order_reference' => ['required', 'string', 'max:200'],
-                'notes' => ['nullable', 'string', 'max:2000'],
-            ]);
-            $bundleId = (string) Str::uuid();
-            $now = now();
-            $bundleCode = 'BUN-' . $now->format('Ymd') . '-' . strtoupper(Str::random(6));
-            DB::table('bundles')->insert([
-                'id' => $bundleId,
-                'bundle_code' => $bundleCode,
-                'order_reference' => $data['order_reference'],
-                'company_id' => $companyId,
-                'status' => 'draft',
-                'linking_status' => 'admin_linked',
-                'total_cartons' => 0,
-                'total_packets' => 0,
-                'notes' => $data['notes'] ?? null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'id' => $bundleId,
-                    'bundleCode' => $bundleCode,
-                    'orderReference' => $data['order_reference'],
-                    'status' => 'draft',
-                    'createdAt' => $now->toISOString(),
-                ],
-            ], 201);
-        } catch (\Exception $e) {
-            Log::error('createDummyOrder failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
-        }
-    }
-
-    /**
      * List orders with linking_status = 'pending_store_linking' for the
      * authenticated user's company.
      */
@@ -862,6 +816,111 @@ class StoreKeeperBundleController extends Controller
         }
     }
     // ─── Helpers ─────────────────────────────────────────────────
+
+    /**
+     * List reseller orders received by this factory.
+     * GET /factory/reseller-orders
+     */
+    public function resellerOrders(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $companyId = (string) $user->company_id;
+
+            $limit = min(100, (int) $request->query('limit', 20));
+            $page = (int) $request->query('page', 1);
+            $status = $request->query('status');
+
+            $query = \App\Models\ResellerOrder::where('factory_id', $companyId)
+                ->with('reseller:id,name,business_name,email,phone,city')
+                ->orderByDesc('created_at');
+
+            if ($status && $status !== 'all') {
+                $query->where('order_status', $status);
+            }
+
+            $paginator = $query->paginate($limit, ['*'], 'page', $page);
+
+            $data = collect($paginator->items())->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'resellerId' => $order->reseller_id,
+                    'resellerName' => $order->reseller->name ?? 'Unknown',
+                    'resellerBusinessName' => $order->reseller->business_name ?? '',
+                    'resellerPhone' => $order->reseller->phone ?? '',
+                    'resellerCity' => $order->reseller->city ?? '',
+                    'factoryId' => $order->factory_id,
+                    'tenantId' => $order->tenant_id,
+                    'orderStatus' => $order->order_status,
+                    'items' => $order->items,
+                    'subtotal' => (float) $order->subtotal,
+                    'discountTotal' => (float) $order->discount_total,
+                    'taxTotal' => (float) $order->tax_total,
+                    'grandTotal' => (float) $order->grand_total,
+                    'currency' => $order->currency,
+                    'createdAt' => $order->created_at?->toISOString(),
+                    'updatedAt' => $order->updated_at?->toISOString(),
+                ];
+            })->toArray();
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'total' => $paginator->total(),
+                'page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total_pages' => $paginator->lastPage(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('StoreKeeperBundle resellerOrders failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Update the status of a reseller order.
+     * PATCH /factory/reseller-orders/{orderId}/status
+     */
+    public function updateResellerOrderStatus(Request $request, string $orderId)
+    {
+        try {
+            $user = $request->user();
+            $companyId = (string) $user->company_id;
+
+            $validated = $request->validate([
+                'order_status' => 'required|string|in:pending,confirmed,shipped,delivered,cancelled',
+            ]);
+
+            $order = \App\Models\ResellerOrder::where('id', $orderId)
+                ->where('factory_id', $companyId)
+                ->first();
+
+            if (!$order) {
+                return response()->json(['success' => false, 'message' => 'Order not found.'], 404);
+            }
+
+            $order->update(['order_status' => $validated['order_status']]);
+
+            Log::info('Reseller order status updated by factory.', [
+                'order_id' => $orderId,
+                'factory_id' => $companyId,
+                'old_status' => $order->getOriginal('order_status'),
+                'new_status' => $validated['order_status'],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $order->id,
+                    'orderStatus' => $order->order_status,
+                    'updatedAt' => $order->updated_at?->toISOString(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('StoreKeeperBundle updateResellerOrderStatus failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
 
     /**
      * Recalculate total_cartons and total_packets for a bundle.
