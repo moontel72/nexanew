@@ -103,11 +103,16 @@ class ProductController extends Controller
         $data['image_urls'] = array_merge($existingUrls, $imageUrls);
 
         // Build metadata, setting image_url for backward compatibility with Flutter marketplace.
-        // Only override image_url if a new image was actually uploaded in this request.
-        // Otherwise, preserve whatever was sent in metadata (e.g. from Flutter's generic upload flow).
+        // Flutter can send image_url in three ways:
+        // 1. As a file upload via multipart (handled by handleImageUpload → stored in image_urls)
+        // 2. As metadata.image_url from the generic /files/upload flow
+        // 3. As a top-level image_url string (factory panel sends this)
         $existingMeta = $data['metadata'] ?? [];
+        $imageUrl = $request->input('image_url'); // top-level string from Flutter (not in validation rules)
         if (!empty($data['image_urls'])) {
             $existingMeta['image_url'] = $data['image_urls'][0];
+        } elseif (!empty($imageUrl) && is_string($imageUrl)) {
+            $existingMeta['image_url'] = $imageUrl;
         } elseif (empty($existingMeta['image_url'])) {
             $existingMeta['image_url'] = null;
         }
@@ -169,10 +174,13 @@ class ProductController extends Controller
         }
 
         // Ensure metadata->image_url is set for backward compatibility.
-        // Only override image_url if new images were actually uploaded in this request.
+        // Flutter can send image_url in three ways (see store() for details).
         $metadata = $data['metadata'] ?? ($product->metadata ?? []);
+        $imageUrl = $request->input('image_url'); // top-level string from Flutter (not in validation rules)
         if (!empty($data['image_urls'])) {
             $metadata['image_url'] = $data['image_urls'][0];
+        } elseif (!empty($imageUrl) && is_string($imageUrl)) {
+            $metadata['image_url'] = $imageUrl;
         } elseif (isset($data['metadata']['image_url'])) {
             // Preserve image_url passed from Flutter's generic upload flow
             $metadata['image_url'] = $data['metadata']['image_url'];
