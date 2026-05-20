@@ -179,6 +179,16 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
       ),
       body: BlocBuilder<ResellerMarketplaceBloc, ResellerMarketplaceState>(
         builder: (context, state) {
+          // ── Debug: always print state on change ───────────────
+          if (kDebugMode) {
+            debugPrint(
+              'MARKETPLACE_CATALOG state: status=${state.status.name}, '
+              'products=${state.products.length}, '
+              'factories=${state.factories.length}, '
+              'error=${state.errorMessage}',
+            );
+          }
+
           // ── Loading ───────────────────────────────────────────
           if (state.status == ResellerMarketplaceStatus.loading) {
             return const Center(child: LoadingIndicator());

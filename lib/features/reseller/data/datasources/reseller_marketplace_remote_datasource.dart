@@ -13,6 +13,8 @@ class ResellerMarketplaceRemoteDatasource {
   /// Returns an empty list on any error — never throws.
   Future<List<Map<String, dynamic>>> listFactories({String? tenantId}) async {
     try {
+      debugPrint('MARKETPLACE API: GET ${ApiEndpoints.availableFactories}');
+
       final res = await _api.get(
         ApiEndpoints.availableFactories,
         queryParameters: {
@@ -23,6 +25,7 @@ class ResellerMarketplaceRemoteDatasource {
       if (res is Map) {
         final data = res['data'];
         if (data is List) {
+          debugPrint('MARKETPLACE API: Got ${data.length} factories');
           return data
               .whereType<Map>()
               .map((m) => m.cast<String, dynamic>())
@@ -57,6 +60,9 @@ class ResellerMarketplaceRemoteDatasource {
         if (factoryId != null && factoryId.isNotEmpty) 'factory_id': factoryId,
         if (search != null && search.isNotEmpty) 'search': search,
       };
+
+      debugPrint('MARKETPLACE API: GET ${ApiEndpoints.browseProducts} $params');
+
       final res = await _api.get(
         ApiEndpoints.browseProducts,
         queryParameters: params,
@@ -65,6 +71,7 @@ class ResellerMarketplaceRemoteDatasource {
       if (res is Map) {
         final data = res['data'];
         if (data is List) {
+          debugPrint('MARKETPLACE API: Got ${data.length} products');
           return data
               .whereType<Map>()
               .map(
