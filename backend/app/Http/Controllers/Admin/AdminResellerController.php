@@ -70,7 +70,6 @@ class AdminResellerController extends Controller
             'password' => 'required|string|min:8',
             'city' => 'required|string|max:100',
             'address' => 'nullable|string|max:500',
-            'plan_id' => 'nullable|string|max:36',
         ]);
 
         $validated['purchase_approved'] = true; // Admin-vouched, no proof needed
@@ -102,7 +101,6 @@ class AdminResellerController extends Controller
             'password' => 'nullable|string|min:8',
             'city' => 'sometimes|string|max:100',
             'address' => 'nullable|string|max:500',
-            'plan_id' => 'nullable|string|max:36',
             'purchase_approved' => 'sometimes|boolean',
         ]);
 

@@ -26,7 +26,6 @@ class Reseller extends Authenticatable
         'city',
         'address',
         'status',
-        'plan_id',
         'plan_name',
         'suspended_at',
         'suspended_reason',

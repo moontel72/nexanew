@@ -39,7 +39,6 @@ class ResellerManagementRepository {
     required String password,
     required String city,
     String? address,
-    String? planId,
   }) => _remote.createReseller(
     name: name,
     businessName: businessName,
@@ -49,7 +48,6 @@ class ResellerManagementRepository {
     password: password,
     city: city,
     address: address,
-    planId: planId,
   );
 
   Future<Map<String, dynamic>> updateReseller({
@@ -61,7 +59,6 @@ class ResellerManagementRepository {
     String? phone,
     String? city,
     String? address,
-    String? planId,
     bool? purchaseApproved,
   }) => _remote.updateReseller(
     id: id,
@@ -72,7 +69,6 @@ class ResellerManagementRepository {
     phone: phone,
     city: city,
     address: address,
-    planId: planId,
     purchaseApproved: purchaseApproved,
   );
 

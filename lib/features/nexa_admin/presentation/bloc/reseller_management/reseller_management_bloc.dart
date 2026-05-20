@@ -43,7 +43,6 @@ final class CreateReseller extends ResellerManagementEvent {
   final String password;
   final String city;
   final String? address;
-  final String? planId;
 
   CreateReseller({
     required this.name,
@@ -54,7 +53,6 @@ final class CreateReseller extends ResellerManagementEvent {
     required this.password,
     required this.city,
     this.address,
-    this.planId,
   });
 }
 
@@ -67,7 +65,6 @@ final class UpdateReseller extends ResellerManagementEvent {
   final String? phone;
   final String? city;
   final String? address;
-  final String? planId;
   final bool? purchaseApproved;
 
   UpdateReseller({
@@ -79,7 +76,6 @@ final class UpdateReseller extends ResellerManagementEvent {
     this.phone,
     this.city,
     this.address,
-    this.planId,
     this.purchaseApproved,
   });
 }
@@ -330,7 +326,6 @@ class ResellerManagementBloc
         password: event.password,
         city: event.city,
         address: event.address,
-        planId: event.planId,
       );
 
       emit(
@@ -378,7 +373,6 @@ class ResellerManagementBloc
         phone: event.phone,
         city: event.city,
         address: event.address,
-        planId: event.planId,
         purchaseApproved: event.purchaseApproved,
       );
 

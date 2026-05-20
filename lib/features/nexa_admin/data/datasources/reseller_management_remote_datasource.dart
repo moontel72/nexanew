@@ -50,7 +50,6 @@ class ResellerManagementRemoteDatasource {
     required String password,
     required String city,
     String? address,
-    String? planId,
   }) async {
     final res = await _api.post(
       ApiEndpoints.adminCreateReseller,
@@ -63,7 +62,6 @@ class ResellerManagementRemoteDatasource {
         'password': password,
         'city': city,
         if (address != null) 'address': address,
-        if (planId != null) 'plan_id': planId,
       },
     );
     return _asMap(res, unwrapData: true);
@@ -79,7 +77,6 @@ class ResellerManagementRemoteDatasource {
     String? phone,
     String? city,
     String? address,
-    String? planId,
     bool? purchaseApproved,
   }) async {
     final res = await _api.put(
@@ -92,7 +89,6 @@ class ResellerManagementRemoteDatasource {
         if (phone != null) 'phone': phone,
         if (city != null) 'city': city,
         if (address != null) 'address': address,
-        if (planId != null) 'plan_id': planId,
         if (purchaseApproved != null) 'purchase_approved': purchaseApproved,
       },
     );

@@ -24,14 +24,6 @@ class ResellerOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized. Reseller not found.'], 403);
         }
 
-        // Check purchase approval
-        if (!$reseller->purchase_approved) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your business proof is pending approval. You cannot place orders yet.',
-            ], 403);
-        }
-
         $validated = $request->validate([
             'tenant_id' => 'required|string|max:100',
             'factory_id' => 'required|string|max:36',

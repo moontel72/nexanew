@@ -3,9 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nexatrace_system/core/constants/api_endpoints.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
 import 'package:nexatrace_system/shared/models/reseller/reseller_marketplace_product_model.dart';
@@ -36,7 +33,6 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
   String _query = '';
   String? _selectedCategory;
   String? _selectedFactoryFilter; // null = all factories
-  bool _businessVerified = true; // optimistic default
 
   /// Whether the screen is in "all factories" mode.
   bool get _isAllFactoriesMode => widget.factoryId.isEmpty;
@@ -45,7 +41,6 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkBusinessProof();
       if (_isAllFactoriesMode) {
         final tenantId = context.read<ResellerMarketplaceBloc>().state.tenantId;
         context.read<ResellerMarketplaceBloc>().add(
@@ -63,23 +58,6 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _checkBusinessProof() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final resellerId = prefs.getString('reseller_current_user_id') ?? '';
-      final res = await ApiService().get(
-        ApiEndpoints.resellerProofStatus,
-        requiresAuth: true,
-        headers: resellerId.isNotEmpty ? {'X-Reseller-Id': resellerId} : null,
-      );
-      final data = res is Map ? res : (res['data'] is Map ? res['data'] : null);
-      final approved = data?['purchase_approved'] == true;
-      if (mounted) setState(() => _businessVerified = approved);
-    } catch (_) {
-      if (mounted) setState(() => _businessVerified = true);
-    }
   }
 
   // ── Filtering ────────────────────────────────────────────────────
@@ -355,9 +333,6 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
                         },
                       ),
               ),
-
-              // ── Business proof banner ─────────────────────────
-              if (!_businessVerified) _verificationBanner(),
             ],
           );
         },
@@ -961,47 +936,5 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
     );
   }
 
-  // ── Business verification banner ─────────────────────────────────
-  Widget _verificationBanner() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.1),
-        border: Border(
-          top: BorderSide(
-            color: AppColors.warning.withValues(alpha: 0.4),
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.verified_user_outlined,
-            color: AppColors.warning,
-            size: 20.sp,
-          ),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Text(
-              'Please upload Business Proof to complete your first purchase.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.gray700),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              /* TODO: navigate to profile upload */
-            },
-            child: Text(
-              'Upload',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.sp),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ── Package detail modal ────────────────────────────────────────
 }

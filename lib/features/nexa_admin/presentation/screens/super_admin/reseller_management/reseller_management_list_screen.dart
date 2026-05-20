@@ -375,9 +375,6 @@ class _ResellerManagementListScreenState
     final addrCtl = TextEditingController(
       text: reseller['address']?.toString() ?? '',
     );
-    final planCtl = TextEditingController(
-      text: reseller['plan_id']?.toString() ?? '',
-    );
     var purchaseApproved =
         reseller['purchase_approved'] == true ||
         reseller['purchase_approved'] == '1';
@@ -407,8 +404,6 @@ class _ResellerManagementListScreenState
                 _field('City', cityCtl),
                 SizedBox(height: 10.h),
                 _field('Address', addrCtl),
-                SizedBox(height: 10.h),
-                _field('Plan ID', planCtl),
                 SizedBox(height: 12.h),
                 // Purchase approval toggle
                 SwitchListTile(
@@ -444,7 +439,6 @@ class _ResellerManagementListScreenState
                     phone: phoneCtl.text,
                     city: cityCtl.text,
                     address: addrCtl.text,
-                    planId: planCtl.text,
                     purchaseApproved: purchaseApproved,
                   ),
                 );
