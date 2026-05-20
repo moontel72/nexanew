@@ -11,6 +11,15 @@ double? _parseDouble(dynamic value) {
   return null;
 }
 
+/// Extract the first image URL from image_urls array or metadata.
+String? _firstImageUrl(Map<String, dynamic> json) {
+  final urls = json['image_urls'];
+  if (urls is List && urls.isNotEmpty) {
+    return urls.first?.toString();
+  }
+  return null;
+}
+
 class VolumeDiscountTier {
   final int minQuantity;
   final double discountPercent;
@@ -219,7 +228,7 @@ class ProductModel {
       volumeDiscounts: parseVolumeDiscounts(
         json['volume_discounts'] ?? json['volumeDiscounts'],
       ),
-      imageUrl: metadata?['image_url']?.toString(),
+      imageUrl: metadata?['image_url']?.toString() ?? _firstImageUrl(json),
     );
   }
 

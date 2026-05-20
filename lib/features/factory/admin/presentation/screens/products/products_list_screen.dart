@@ -183,7 +183,8 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                           ),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12.r),
-                            onTap: () => context.go('/factory/products/edit/${p.id}'),
+                            onTap: () =>
+                                context.go('/factory/products/edit/${p.id}'),
                             child: Padding(
                               padding: EdgeInsets.all(16.w),
                               child: Column(
@@ -194,7 +195,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                                       Expanded(
                                         child: Row(
                                           children: [
-                                            const Text('\uD83C\uDFF7'),
+                                            _productThumbnail(p),
                                             SizedBox(width: 6.w),
                                             Expanded(
                                               child: Text(
@@ -376,6 +377,38 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
           );
         },
       ),
+    );
+  }
+
+  /// Builds a thumbnail for the product list card.
+  /// Reads imageUrl from the ProductModel, which already resolves
+  /// metadata['image_url'] with a fallback to image_urls[0].
+  Widget _productThumbnail(p) {
+    final url = p.imageUrl;
+    if (url != null && url.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(6.r),
+        child: Image.network(
+          url,
+          width: 44.w,
+          height: 44.w,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _placeholderIcon(),
+        ),
+      );
+    }
+    return _placeholderIcon();
+  }
+
+  Widget _placeholderIcon() {
+    return Container(
+      width: 44.w,
+      height: 44.w,
+      decoration: BoxDecoration(
+        color: AppColors.gray100,
+        borderRadius: BorderRadius.circular(6.r),
+      ),
+      child: Icon(Icons.image_outlined, size: 22.sp, color: AppColors.gray400),
     );
   }
 }
