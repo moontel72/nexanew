@@ -116,32 +116,38 @@ class ResellerMarketplaceController extends Controller
         $products = $query->orderBy('name')
             ->paginate($limit);
 
-        // Map factory info into each product using camelCase keys for Flutter
+        // Map factory info into each product using snake_case keys for Flutter (matches generated .g.dart)
         $data = collect($products->items())->map(function ($product) {
+            // Ensure metadata is always an object or null, never an empty array
+            $metadata = $product->metadata;
+            if (is_array($metadata) && empty($metadata)) {
+                $metadata = null;
+            }
+
             return [
                 'id' => $product->id,
-                'tenantId' => 'default',
-                'factoryId' => $product->company_id,
+                'tenant_id' => 'default',
+                'factory_id' => $product->company_id,
                 'name' => $product->name,
                 'sku' => $product->sku ?? '',
                 'category' => $product->category ?? '',
-                'productType' => $product->product_type ?? '',
+                'product_type' => $product->product_type ?? '',
                 'status' => $product->status,
                 'price' => (float) ($product->unit_price ?? 0),
                 'currency' => $product->currency ?? 'PKR',
-                'factoryName' => $product->company->name ?? null,
-                'factoryCity' => $product->company->city ?? null,
-                'factoryLogo' => $product->company->logo_url ?? null,
-                'factoryStatus' => $product->company->status ?? null,
-                'cartonPrice' => $product->carton_price ? (float) $product->carton_price : null,
-                'wholesalePrice' => $product->wholesale_price ? (float) $product->wholesale_price : null,
+                'factory_name' => $product->company->name ?? null,
+                'factory_city' => $product->company->city ?? null,
+                'factory_logo' => $product->company->logo_url ?? null,
+                'factory_status' => $product->company->status ?? null,
+                'carton_price' => $product->carton_price ? (float) $product->carton_price : null,
+                'wholesale_price' => $product->wholesale_price ? (float) $product->wholesale_price : null,
                 'moq' => $product->moq,
-                'bonusQuantity' => $product->bonus_quantity,
-                'bonusThreshold' => $product->bonus_threshold,
-                'promoDiscount' => $product->promo_discount ? (float) $product->promo_discount : null,
-                'volumeDiscounts' => $product->volume_discounts,
-                'imageUrl' => $product->metadata['image_url'] ?? ($product->image_urls[0] ?? null),
-                'metadata' => $product->metadata,
+                'bonus_quantity' => $product->bonus_quantity,
+                'bonus_threshold' => $product->bonus_threshold,
+                'promo_discount' => $product->promo_discount ? (float) $product->promo_discount : null,
+                'volume_discounts' => $product->volume_discounts,
+                'image_url' => $product->metadata['image_url'] ?? ($product->image_urls[0] ?? null),
+                'metadata' => $metadata,
             ];
         })->toArray();
 
