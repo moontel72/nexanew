@@ -20,6 +20,15 @@ String? _firstImageUrl(Map<String, dynamic> json) {
   return null;
 }
 
+/// Parse image_urls into a List<String>.
+List<String>? _parseImageUrls(Map<String, dynamic> json) {
+  final urls = json['image_urls'];
+  if (urls is List && urls.isNotEmpty) {
+    return urls.map((e) => e.toString()).toList();
+  }
+  return null;
+}
+
 class VolumeDiscountTier {
   final int minQuantity;
   final double discountPercent;
@@ -74,6 +83,7 @@ class ProductModel {
   final List<String>? tags;
   final List<VolumeDiscountTier>? volumeDiscounts;
   final String? imageUrl;
+  final List<String>? imageUrls;
 
   ProductModel({
     required this.id,
@@ -106,6 +116,7 @@ class ProductModel {
     this.tags,
     this.volumeDiscounts,
     this.imageUrl,
+    this.imageUrls,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -229,6 +240,7 @@ class ProductModel {
         json['volume_discounts'] ?? json['volumeDiscounts'],
       ),
       imageUrl: metadata?['image_url']?.toString() ?? _firstImageUrl(json),
+      imageUrls: _parseImageUrls(json),
     );
   }
 

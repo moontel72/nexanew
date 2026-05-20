@@ -381,15 +381,20 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
   }
 
   /// Builds a thumbnail for the product list card.
-  /// Reads imageUrl from the ProductModel, which already resolves
-  /// metadata['image_url'] with a fallback to image_urls[0].
+  /// Falls back: imageUrls[0] → metadata['image_url'] → imageUrl.
   Widget _productThumbnail(p) {
-    final url = p.imageUrl;
-    if (url != null && url.isNotEmpty) {
+    String? displayUrl;
+    if (p.imageUrls != null && p.imageUrls!.isNotEmpty) {
+      displayUrl = p.imageUrls![0];
+    } else if (p.imageUrl != null && p.imageUrl!.isNotEmpty) {
+      displayUrl = p.imageUrl;
+    }
+
+    if (displayUrl != null && displayUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(6.r),
         child: Image.network(
-          url,
+          displayUrl,
           width: 44.w,
           height: 44.w,
           fit: BoxFit.cover,
