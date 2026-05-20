@@ -76,7 +76,8 @@ class ProductController extends Controller
             'default_storage_conditions' => ['nullable', 'string'],
             'default_handling_instructions' => ['nullable', 'string'],
             'image_urls' => ['nullable', 'array'],
-            'status' => ['nullable', Rule::in(['active', 'inactive', 'archived'])],
+            'image_url' => ['nullable', 'string'],
+            'status' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
             'unit_price' => 'nullable|numeric|min:0',
             'carton_price' => 'nullable|numeric|min:0',
@@ -95,36 +96,79 @@ class ProductController extends Controller
             'volume_discounts' => 'nullable|array',
         ]);
 
-        // Handle image upload (single file via multipart/form-data)
-        $imageUrls = $this->handleImageUpload($request);
+        try {
+            // Handle image upload (single file via multipart/form-data)
+            $imageUrls = $this->handleImageUpload($request);
 
-        // Merge uploaded image URLs with any manually provided image_urls
-        $existingUrls = $data['image_urls'] ?? [];
-        $data['image_urls'] = array_merge($existingUrls, $imageUrls);
+            // Merge uploaded image URLs with any manually provided image_urls
+            $existingUrls = is_array($data['image_urls'] ?? null) ? $data['image_urls'] : [];
+            $data['image_urls'] = array_values(array_filter(array_merge($existingUrls, $imageUrls)));
 
-        // Build metadata, setting image_url for backward compatibility with Flutter marketplace.
-        // Flutter can send image_url in three ways:
-        // 1. As a file upload via multipart (handled by handleImageUpload → stored in image_urls)
-        // 2. As metadata.image_url from the generic /files/upload flow
-        // 3. As a top-level image_url string (factory panel sends this)
-        $existingMeta = $data['metadata'] ?? [];
-        $imageUrl = $request->input('image_url'); // top-level string from Flutter (not in validation rules)
-        if (!empty($data['image_urls'])) {
-            $existingMeta['image_url'] = $data['image_urls'][0];
-        } elseif (!empty($imageUrl) && is_string($imageUrl)) {
-            $existingMeta['image_url'] = $imageUrl;
-        } elseif (empty($existingMeta['image_url'])) {
-            $existingMeta['image_url'] = null;
+            // If Flutter sent image_url as a top-level string, add it to image_urls if not already present
+            $topImageUrl = $data['image_url'] ?? null;
+            if (!empty($topImageUrl) && is_string($topImageUrl) && !in_array($topImageUrl, $data['image_urls'])) {
+                $data['image_urls'][] = $topImageUrl;
+            }
+
+            // Build metadata — always an associative array for JSONB compatibility
+            $existingMeta = is_array($data['metadata'] ?? null) ? $data['metadata'] : [];
+            // Ensure metadata is a map (associative), not a list, for PostgreSQL JSONB
+            if (array_is_list($existingMeta) && !empty($existingMeta)) {
+                $existingMeta = [];
+            }
+
+            // Set image_url in metadata from whichever source has it
+            $resolvedImageUrl = $data['image_urls'][0] ?? $topImageUrl ?? $existingMeta['image_url'] ?? null;
+            if ($resolvedImageUrl) {
+                $existingMeta['image_url'] = $resolvedImageUrl;
+            }
+            $data['metadata'] = !empty($existingMeta) ? $existingMeta : null;
+
+            // Remove the top-level image_url — it's now in image_urls and metadata
+            unset($data['image_url']);
+
+            // Build the product row
+            $productData = array_merge(
+                ['id' => (string) Str::uuid(), 'company_id' => $user->company_id],
+                $data,
+                ['status' => $data['status'] ?? 'active']
+            );
+
+            // Ensure JSON columns are proper arrays (not empty strings or objects)
+            if (empty($productData['image_urls'])) {
+                $productData['image_urls'] = [];
+            }
+            if (empty($productData['metadata'])) {
+                $productData['metadata'] = null;
+            }
+            if (empty($productData['tags'])) {
+                $productData['tags'] = [];
+            }
+            if (empty($productData['volume_discounts'])) {
+                $productData['volume_discounts'] = [];
+            }
+
+            $product = Product::query()->create($productData);
+
+            Log::info('ProductController: Product created.', [
+                'product_id' => $product->id,
+                'company_id' => $user->company_id,
+                'image_urls' => $product->image_urls,
+                'metadata' => $product->metadata,
+            ]);
+
+            return response()->json(['success' => true, 'data' => $product], 201);
+        } catch (\Throwable $e) {
+            Log::error('ProductController: Failed to create product.', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'company_id' => $user->company_id,
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create product: ' . $e->getMessage(),
+            ], 500);
         }
-        $data['metadata'] = $existingMeta;
-
-        $product = Product::query()->create(array_merge(
-            ['id' => (string) Str::uuid(), 'company_id' => $user->company_id],
-            $data,
-            ['status' => $data['status'] ?? 'active']
-        ));
-
-        return response()->json(['success' => true, 'data' => $product], 201);
     }
 
     public function update(Request $request, Product $product)
@@ -144,7 +188,8 @@ class ProductController extends Controller
             'default_storage_conditions' => ['sometimes', 'nullable', 'string'],
             'default_handling_instructions' => ['sometimes', 'nullable', 'string'],
             'image_urls' => ['sometimes', 'array'],
-            'status' => ['sometimes', Rule::in(['active', 'inactive', 'archived'])],
+            'image_url' => ['nullable', 'string'],
+            'status' => ['nullable', 'string'],
             'metadata' => ['sometimes', 'array'],
             'unit_price' => 'nullable|numeric|min:0',
             'carton_price' => 'nullable|numeric|min:0',
@@ -163,32 +208,72 @@ class ProductController extends Controller
             'volume_discounts' => 'nullable|array',
         ]);
 
-        // Handle image upload (single file via multipart/form-data)
-        $imageUrls = $this->handleImageUpload($request, $product);
+        try {
+            // Handle image upload
+            $imageUrls = $this->handleImageUpload($request, $product);
 
-        // Merge uploaded image URLs with any manually provided image_urls
-        // For update, uploaded images replace the existing image_urls if new ones are provided
-        if (!empty($imageUrls)) {
-            $existingUrls = $data['image_urls'] ?? ($product->image_urls ?? []);
-            $data['image_urls'] = array_merge($existingUrls, $imageUrls);
+            // Merge image URLs
+            if (!empty($imageUrls)) {
+                $existingUrls = is_array($data['image_urls'] ?? null) ? $data['image_urls'] : (is_array($product->image_urls) ? $product->image_urls : []);
+                $data['image_urls'] = array_values(array_filter(array_merge($existingUrls, $imageUrls)));
+            } elseif (isset($data['image_urls'])) {
+                $data['image_urls'] = array_values(array_filter($data['image_urls']));
+            }
+
+            // If Flutter sent top-level image_url, add it
+            $topImageUrl = $data['image_url'] ?? null;
+            if (!empty($topImageUrl) && is_string($topImageUrl)) {
+                $currentUrls = $data['image_urls'] ?? (is_array($product->image_urls) ? $product->image_urls : []);
+                if (!in_array($topImageUrl, $currentUrls)) {
+                    $currentUrls[] = $topImageUrl;
+                }
+                $data['image_urls'] = array_values(array_filter($currentUrls));
+            }
+
+            // Build metadata
+            $metadata = is_array($data['metadata'] ?? null) ? $data['metadata'] : (is_array($product->metadata) ? $product->metadata : []);
+            if (array_is_list($metadata) && !empty($metadata)) {
+                $metadata = [];
+            }
+
+            // Resolve image URL for metadata
+            $currentUrls = $data['image_urls'] ?? (is_array($product->image_urls) ? $product->image_urls : []);
+            $resolvedImageUrl = $currentUrls[0] ?? $topImageUrl ?? $metadata['image_url'] ?? null;
+            if ($resolvedImageUrl) {
+                $metadata['image_url'] = $resolvedImageUrl;
+            }
+            $data['metadata'] = !empty($metadata) ? $metadata : null;
+
+            unset($data['image_url']);
+
+            // Ensure clean JSON columns
+            if (isset($data['image_urls']) && empty($data['image_urls'])) {
+                $data['image_urls'] = [];
+            }
+            if (isset($data['metadata']) && empty($data['metadata'])) {
+                $data['metadata'] = null;
+            }
+
+            $product->fill($data)->save();
+
+            Log::info('ProductController: Product updated.', [
+                'product_id' => $product->id,
+                'image_urls' => $product->image_urls,
+                'metadata' => $product->metadata,
+            ]);
+
+            return response()->json(['success' => true, 'data' => $product->fresh()]);
+        } catch (\Throwable $e) {
+            Log::error('ProductController: Failed to update product.', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'product_id' => $product->id,
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update product: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // Ensure metadata->image_url is set for backward compatibility.
-        // Flutter can send image_url in three ways (see store() for details).
-        $metadata = $data['metadata'] ?? ($product->metadata ?? []);
-        $imageUrl = $request->input('image_url'); // top-level string from Flutter (not in validation rules)
-        if (!empty($data['image_urls'])) {
-            $metadata['image_url'] = $data['image_urls'][0];
-        } elseif (!empty($imageUrl) && is_string($imageUrl)) {
-            $metadata['image_url'] = $imageUrl;
-        } elseif (isset($data['metadata']['image_url'])) {
-            // Preserve image_url passed from Flutter's generic upload flow
-            $metadata['image_url'] = $data['metadata']['image_url'];
-        }
-        $data['metadata'] = $metadata;
-
-        $product->fill($data)->save();
-        return response()->json(['success' => true, 'data' => $product->fresh()]);
     }
 
     public function destroy(Request $request, Product $product)
