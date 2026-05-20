@@ -187,6 +187,14 @@ class _MarketplaceCatalogScreenState extends State<MarketplaceCatalogScreen> {
               'factories=${state.factories.length}, '
               'error=${state.errorMessage}',
             );
+            if (state.products.isNotEmpty) {
+              final p = state.products.first;
+              debugPrint(
+                'MARKETPLACE_CATALOG first product: name=${p.name}, '
+                'imageUrl=${p.imageUrl}, '
+                'metadata keys=${p.metadata?.keys}',
+              );
+            }
           }
 
           // ── Loading ───────────────────────────────────────────

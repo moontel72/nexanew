@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
 import 'package:nexatrace_system/features/reseller/presentation/bloc/order/reseller_order_bloc.dart';
@@ -37,22 +38,13 @@ class _MarketplaceCartScreenState extends State<MarketplaceCartScreen> {
   }
 
   // ── Place order action ───────────────────────────────────────────
-  void _onPlaceOrder(String factoryId, List<CartItemModel> items) {
+  void _onPlaceOrder(String factoryId, List<CartItemModel> items) async {
     final marketplace = context.read<ResellerMarketplaceBloc>().state;
     final tenantId = marketplace.tenantId;
 
-    // Reseller ID from the dashboard bloc or prefs
-    String resellerId = '';
-    try {
-      resellerId =
-          context
-              .read<ResellerMarketplaceBloc>()
-              .state
-              .factories
-              .first['reseller_id']
-              ?.toString() ??
-          '';
-    } catch (_) {}
+    // Reseller ID from SharedPreferences (stored during login)
+    final prefs = await SharedPreferences.getInstance();
+    final resellerId = prefs.getString('reseller_current_user_id') ?? '';
 
     if (tenantId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
