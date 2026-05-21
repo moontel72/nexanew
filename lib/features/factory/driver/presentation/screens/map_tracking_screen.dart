@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:intl/intl.dart';
 import 'package:nexatrace_system/features/factory/driver/presentation/bloc/driver_bloc.dart';
 import 'package:nexatrace_system/features/factory/driver/presentation/bloc/factory_driver_geofence_bloc.dart';
 import 'package:nexatrace_system/features/factory/driver/presentation/bloc/factory_driver_geofence_state.dart';
@@ -14,7 +13,8 @@ class DriverMapTrackingScreen extends StatefulWidget {
   const DriverMapTrackingScreen({super.key});
 
   @override
-  State<DriverMapTrackingScreen> createState() => _DriverMapTrackingScreenState();
+  State<DriverMapTrackingScreen> createState() =>
+      _DriverMapTrackingScreenState();
 }
 
 class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
@@ -32,11 +32,11 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
   }
 
   double get _distanceMeters => distanceMeters(
-        fromLat: _currentLat,
-        fromLng: _currentLng,
-        toLat: _deliveryLat,
-        toLng: _deliveryLng,
-      );
+    fromLat: _currentLat,
+    fromLng: _currentLng,
+    toLat: _deliveryLat,
+    toLng: _deliveryLng,
+  );
 
   bool get _isWithinGeofence => _distanceMeters <= 100.0;
 
@@ -46,7 +46,10 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
       title: 'Map Tracking (4F)',
       child: BlocBuilder<DriverBloc, DriverState>(
         builder: (context, driverState) {
-          return BlocBuilder<FactoryDriverGeofenceBloc, FactoryDriverGeofenceState>(
+          return BlocBuilder<
+            FactoryDriverGeofenceBloc,
+            FactoryDriverGeofenceState
+          >(
             builder: (context, geoState) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -95,7 +98,11 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.map, size: 64.sp, color: AppColors.textSecondary.withOpacity(0.4)),
+                Icon(
+                  Icons.map,
+                  size: 64.sp,
+                  color: AppColors.textSecondary.withOpacity(0.4),
+                ),
                 SizedBox(height: 8.h),
                 Text(
                   'Google Maps Integration',
@@ -137,7 +144,9 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
                     height: 10.w,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _isWithinGeofence ? AppColors.success : AppColors.warning,
+                      color: _isWithinGeofence
+                          ? AppColors.success
+                          : AppColors.warning,
                     ),
                   ),
                   SizedBox(width: 6.w),
@@ -146,7 +155,9 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
                     style: TextStyle(
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w600,
-                      color: _isWithinGeofence ? AppColors.success : AppColors.warning,
+                      color: _isWithinGeofence
+                          ? AppColors.success
+                          : AppColors.warning,
                     ),
                   ),
                 ],
@@ -192,14 +203,20 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
           SizedBox(height: 8.h),
           Row(
             children: [
-              Icon(Icons.straighten, size: 16.sp, color: AppColors.textSecondary),
+              Icon(
+                Icons.straighten,
+                size: 16.sp,
+                color: AppColors.textSecondary,
+              ),
               SizedBox(width: 6.w),
               Text(
                 'Distance to delivery: ${_distanceMeters.toStringAsFixed(1)} m',
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
-                  color: _isWithinGeofence ? AppColors.success : AppColors.textPrimary,
+                  color: _isWithinGeofence
+                      ? AppColors.success
+                      : AppColors.textPrimary,
                 ),
               ),
             ],
@@ -264,7 +281,9 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w700,
-                    color: _isWithinGeofence ? AppColors.success : AppColors.warning,
+                    color: _isWithinGeofence
+                        ? AppColors.success
+                        : AppColors.warning,
                   ),
                 ),
                 SizedBox(height: 4.h),
@@ -326,7 +345,9 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
             if (_isWithinGeofence) {
               Navigator.of(context).pushNamed('/factory/driver/delivery-scan');
             } else {
-              Navigator.of(context).pushNamed('/factory/driver/location-confirm');
+              Navigator.of(
+                context,
+              ).pushNamed('/factory/driver/location-confirm');
             }
           },
         ),
@@ -339,12 +360,12 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
               _currentLng += 0.0003;
             });
             context.read<DriverBloc>().add(
-                  UpdateDriverLocation(
-                    tripId: 'current',
-                    lat: _currentLat,
-                    lng: _currentLng,
-                  ),
-                );
+              UpdateDriverLocation(
+                tripId: 'current',
+                lat: _currentLat,
+                lng: _currentLng,
+              ),
+            );
           },
           icon: const Icon(Icons.near_me),
           label: const Text('Simulate Move Closer (Demo)'),

@@ -474,7 +474,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                           ),
                           SizedBox(height: 12.h),
                           DropdownButtonFormField<String>(
-                            value: _currency,
+                            initialValue: _currency,
                             decoration: const InputDecoration(
                               labelText: 'Currency',
                             ),
@@ -498,7 +498,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                           ),
                           SizedBox(height: 12.h),
                           DropdownButtonFormField<String>(
-                            value: _discountType,
+                            initialValue: _discountType,
                             decoration: const InputDecoration(
                               labelText: 'Discount Type',
                             ),

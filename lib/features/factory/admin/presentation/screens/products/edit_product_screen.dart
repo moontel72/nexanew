@@ -631,7 +631,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                           ),
                           SizedBox(height: 12.h),
                           DropdownButtonFormField<String>(
-                            value: _currency,
+                            initialValue: _currency,
                             decoration: const InputDecoration(
                               labelText: 'Currency',
                             ),
@@ -655,7 +655,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                           ),
                           SizedBox(height: 12.h),
                           DropdownButtonFormField<String>(
-                            value: _discountType,
+                            initialValue: _discountType,
                             decoration: const InputDecoration(
                               labelText: 'Discount Type',
                             ),
