@@ -19,6 +19,7 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/add_bus_company_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/bus_companies_list_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_company_login_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet_dashboard_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/transport_wallet_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/transport_marketplace_admin_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/fraud_prevention_screen.dart';
@@ -223,6 +224,11 @@ class AppRouter {
       return '/dashboard';
     }
 
+    // Already authenticated and trying to access bus fleet login
+    if (isAuthenticatedCache && path == '/bus-fleet/login') {
+      return '/bus-fleet/dashboard';
+    }
+
     // No redirect needed
     return null;
   }
@@ -243,6 +249,11 @@ class AppRouter {
       path: '/bus-fleet/login',
       name: 'bus_fleet_login',
       builder: (context, state) => const BusCompanyLoginScreen(),
+    ),
+    GoRoute(
+      path: '/bus-fleet/dashboard',
+      name: 'bus_fleet_dashboard',
+      builder: (context, state) => const BusFleetDashboardScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) => SuperAdminShell(child: child),

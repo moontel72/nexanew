@@ -39,7 +39,7 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
     return BlocListener<AdminAuthBloc, AdminAuthState>(
       listener: (context, state) {
         if (state is AdminAuthAuthenticated) {
-          context.go('/dashboard');
+          context.go('/bus-fleet/dashboard');
         } else if (state is AdminAuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
