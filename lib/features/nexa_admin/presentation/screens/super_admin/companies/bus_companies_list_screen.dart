@@ -42,6 +42,7 @@ class _BusCompaniesListScreenState extends State<BusCompaniesListScreen> {
   }
 
   void _load() {
+    if (!mounted) return;
     context.read<CompanyManagementBloc>().add(
       CompanyManagementEvent.loadCompanies(
         search: _search,
@@ -208,6 +209,9 @@ class _BusCompaniesListScreenState extends State<BusCompaniesListScreen> {
     final routes = c.activeRoutes;
     final owner = c.busOwnerName;
     final color = _statusColor(c.status);
+    final isPending = c.status == CompanyStatus.pending;
+    final isActive = c.status == CompanyStatus.active;
+    final isSuspended = c.status == CompanyStatus.suspended;
 
     return Card(
       elevation: 1,
@@ -217,7 +221,7 @@ class _BusCompaniesListScreenState extends State<BusCompaniesListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Row 1 — icon + name + status badge
+            // Row 1 — icon + name + status badge + menu
             Row(
               children: [
                 Container(
@@ -270,6 +274,77 @@ class _BusCompaniesListScreenState extends State<BusCompaniesListScreen> {
                     ),
                   ),
                 ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  onSelected: (action) => _handleAction(action, c),
+                  itemBuilder: (_) => [
+                    if (isPending)
+                      const PopupMenuItem(
+                        value: 'approve',
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.verified,
+                            color: AppColors.success,
+                          ),
+                          title: Text('Approve (Activate)'),
+                          dense: true,
+                        ),
+                      ),
+                    if (isActive)
+                      const PopupMenuItem(
+                        value: 'suspend',
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.pause_circle,
+                            color: AppColors.warning,
+                          ),
+                          title: Text('Suspend'),
+                          dense: true,
+                        ),
+                      ),
+                    if (isSuspended)
+                      const PopupMenuItem(
+                        value: 'activate',
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.play_circle,
+                            color: AppColors.success,
+                          ),
+                          title: Text('Activate'),
+                          dense: true,
+                        ),
+                      ),
+                    if (isActive || isSuspended)
+                      const PopupMenuItem(
+                        value: 'deactivate',
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.stop_circle,
+                            color: AppColors.gray500,
+                          ),
+                          title: Text('Deactivate'),
+                          dense: true,
+                        ),
+                      ),
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: Icon(Icons.edit, color: AppColors.info),
+                        title: Text('Edit Company'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(Icons.delete, color: AppColors.error),
+                        title: Text('Delete'),
+                        dense: true,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             SizedBox(height: 10.h),
@@ -296,8 +371,166 @@ class _BusCompaniesListScreenState extends State<BusCompaniesListScreen> {
               ).textTheme.bodySmall?.copyWith(color: AppColors.gray600),
               overflow: TextOverflow.ellipsis,
             ),
+
+            // Row 4 — Quick action buttons
+            SizedBox(height: 10.h),
+            Row(
+              children: [
+                if (isPending)
+                  _actionBtn(
+                    'Approve',
+                    Icons.verified,
+                    AppColors.success,
+                    () => _approve(c),
+                  ),
+                if (isActive) ...[
+                  _actionBtn(
+                    'Suspend',
+                    Icons.pause_circle,
+                    AppColors.warning,
+                    () => _suspend(c),
+                  ),
+                  SizedBox(width: 8.w),
+                  _actionBtn(
+                    'Deactivate',
+                    Icons.stop_circle,
+                    AppColors.gray600,
+                    () => _setStatus(c, 'inactive'),
+                  ),
+                ],
+                if (isSuspended)
+                  _actionBtn(
+                    'Activate',
+                    Icons.play_circle,
+                    AppColors.success,
+                    () => _activate(c),
+                  ),
+                if (!isPending) ...[
+                  SizedBox(width: 8.w),
+                  _actionBtn(
+                    'Edit',
+                    Icons.edit,
+                    AppColors.info,
+                    () => _edit(c),
+                  ),
+                ],
+                SizedBox(width: 8.w),
+                _actionBtn(
+                  'Delete',
+                  Icons.delete_outline,
+                  AppColors.error,
+                  () => _confirmDelete(c),
+                ),
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _actionBtn(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16.w, color: color),
+            SizedBox(width: 4.w),
+            Text(
+              label,
+              style: TextStyle(fontSize: 12.sp, color: color),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Actions ────────────────────────────────────────────────
+  void _handleAction(String action, Company c) {
+    switch (action) {
+      case 'approve':
+        _approve(c);
+      case 'suspend':
+        _suspend(c);
+      case 'activate':
+        _activate(c);
+      case 'deactivate':
+        _setStatus(c, 'inactive');
+      case 'edit':
+        _edit(c);
+      case 'delete':
+        _confirmDelete(c);
+    }
+  }
+
+  void _approve(Company c) {
+    context.read<CompanyManagementBloc>().add(
+      CompanyManagementEvent.updateCompanyStatus(id: c.id, status: 'active'),
+    );
+    _load();
+  }
+
+  void _activate(Company c) {
+    context.read<CompanyManagementBloc>().add(
+      CompanyManagementEvent.updateCompanyStatus(id: c.id, status: 'active'),
+    );
+    _load();
+  }
+
+  void _suspend(Company c) {
+    context.read<CompanyManagementBloc>().add(
+      CompanyManagementEvent.updateCompanyStatus(id: c.id, status: 'suspended'),
+    );
+    _load();
+  }
+
+  void _setStatus(Company c, String status) {
+    context.read<CompanyManagementBloc>().add(
+      CompanyManagementEvent.updateCompanyStatus(id: c.id, status: status),
+    );
+    _load();
+  }
+
+  void _edit(Company c) {
+    context.go('/companies/${c.id}');
+  }
+
+  void _confirmDelete(Company c) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Bus Company?'),
+        content: Text(
+          'Are you sure you want to delete "${c.name}"?\n\n'
+          'This action cannot be undone. All associated data will be lost.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () {
+              context.read<CompanyManagementBloc>().add(
+                CompanyManagementEvent.deleteCompany(c.id),
+              );
+              Navigator.pop(ctx);
+              _load();
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
