@@ -10,6 +10,7 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies
 import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
 import 'package:nexatrace_system/features/nexa_admin/domain/entities/subscription_plan.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
+import 'package:nexatrace_system/core/constants/api_endpoints.dart';
 import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
 import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
 import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
@@ -33,6 +34,12 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   late CompanyDetailBloc _companyDetailBloc;
   Map<String, dynamic>? _companyCache;
 
+  // Password fields for Edit Company dialog
+  final _newPasswordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +50,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
 
   @override
   void dispose() {
+    _newPasswordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
     _companyDetailBloc.close();
     super.dispose();
   }
@@ -1326,6 +1335,12 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   }
 
   void _showEditCompanyDialog(Map<String, dynamic> company) {
+    // Clear password fields from previous use
+    _newPasswordCtrl.clear();
+    _confirmPasswordCtrl.clear();
+    _obscureNewPassword = true;
+    _obscureConfirmPassword = true;
+
     final contact = (company['contact_person'] is Map)
         ? (company['contact_person'] as Map).cast<String, dynamic>()
         : <String, dynamic>{};
@@ -1373,9 +1388,20 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     final postalCtrl = TextEditingController(
       text: (company['postal_code'] ?? '').toString(),
     );
-    final notesCtrl = TextEditingController(
-      text: (company['notes'] ?? '').toString(),
-    );
+    final rawNotes = (company['notes'] ?? '').toString();
+    // Parse JSON from notes for bus fleet metadata display
+    Map<String, dynamic>? busMeta;
+    String cleanNotes = rawNotes;
+    try {
+      final decoded = jsonDecode(rawNotes);
+      if (decoded is Map<String, dynamic> &&
+          decoded['company_type_tag'] == 'bus_fleet') {
+        busMeta = decoded;
+        cleanNotes = ''; // Don't show JSON in the text field
+      }
+    } catch (_) {}
+
+    final notesCtrl = TextEditingController(text: cleanNotes);
 
     final cpNameCtrl = TextEditingController(
       text: (contact['name'] ?? contact['full_name'] ?? '').toString(),
@@ -1698,14 +1724,120 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    // ── Bus Fleet Metadata (read-only) ────────────
+                    if (busMeta != null) ...[
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Bus Fleet Details',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.info.withValues(alpha: 0.15),
+                          ),
+                        ),
+                        child: Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          children: [
+                            _metaChip(
+                              Icons.confirmation_number,
+                              '${busMeta!['fleet_size'] ?? 0} buses',
+                            ),
+                            _metaChip(
+                              Icons.alt_route,
+                              '${busMeta!['active_routes'] ?? 0} routes',
+                            ),
+                            if ((busMeta!['owner_name'] ?? '')
+                                .toString()
+                                .isNotEmpty)
+                              _metaChip(
+                                Icons.person,
+                                busMeta!['owner_name'].toString(),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    // ── Admin Notes ─────────────────────────────
                     TextField(
                       controller: notesCtrl,
                       decoration: const InputDecoration(
                         labelText: 'Admin Notes',
+                        hintText:
+                            'Internal notes (bus fleet info stored separately)',
                         border: OutlineInputBorder(),
                       ),
                       minLines: 2,
                       maxLines: 4,
+                    ),
+                    const SizedBox(height: 20),
+                    // ── Change Password ─────────────────────────
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Change Credentials',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Leave blank to keep current password',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _newPasswordCtrl,
+                      obscureText: _obscureNewPassword,
+                      decoration: InputDecoration(
+                        labelText: 'New Password',
+                        hintText: 'Min 8 characters',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureNewPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setModalState(
+                            () => _obscureNewPassword = !_obscureNewPassword,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _confirmPasswordCtrl,
+                      obscureText: _obscureConfirmPassword,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm New Password',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setModalState(
+                            () => _obscureConfirmPassword =
+                                !_obscureConfirmPassword,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 30),
                   ],
@@ -1734,6 +1866,70 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   }
 
                   Navigator.pop(context);
+
+                  // ── Validate and handle password change ────────
+                  final newPass = _newPasswordCtrl.text.trim();
+                  final confirmPass = _confirmPasswordCtrl.text.trim();
+                  if (newPass.isNotEmpty) {
+                    if (newPass.length < 8) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Password must be at least 8 characters',
+                            ),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    if (newPass != confirmPass) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Passwords do not match'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    // Reset password via dedicated endpoint
+                    try {
+                      await repo.resetCompanyPassword(widget.companyId);
+                      // Then update with the new password
+                      final pwBody = {'password': newPass};
+                      await ApiService().put(
+                        '${ApiEndpoints.adminCompanies}/${widget.companyId}',
+                        data: pwBody,
+                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Password updated successfully'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Password update failed: $e'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                  }
+
+                  // ── Merge bus fleet metadata back into admin_notes ──
+                  final adminNotes = notesCtrl.text.trim();
+                  final finalNotes = adminNotes.isNotEmpty
+                      ? adminNotes
+                      : (busMeta != null ? jsonEncode(busMeta) : null);
 
                   final updateData = <String, dynamic>{
                     'name': nameCtrl.text.trim(),
@@ -1764,9 +1960,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                     'contact_person_position': cpPosCtrl.text.trim().isEmpty
                         ? null
                         : cpPosCtrl.text.trim(),
-                    'admin_notes': notesCtrl.text.trim().isEmpty
-                        ? null
-                        : notesCtrl.text.trim(),
+                    'admin_notes': finalNotes,
                   };
 
                   updateData.removeWhere((key, value) => value == null);
