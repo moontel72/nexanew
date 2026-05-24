@@ -120,6 +120,21 @@ class SuperAdminShell extends StatelessWidget {
         ],
       ),
       AdminSidebarSection(
+        title: 'Bus Fleet',
+        items: [
+          AdminSidebarItem(
+            label: 'View Bus Companies',
+            icon: Icons.directions_bus,
+            route: '/bus-companies',
+          ),
+          AdminSidebarItem(
+            label: 'Add Bus Company',
+            icon: Icons.add_road,
+            route: '/bus-companies/add',
+          ),
+        ],
+      ),
+      AdminSidebarSection(
         title: 'Subscriptions',
         items: [
           AdminSidebarItem(
@@ -187,6 +202,8 @@ class SuperAdminShell extends StatelessWidget {
     if (location.startsWith('/resellers')) return 'Reseller Management';
     if (location.startsWith('/companies/register')) return 'Create New Company';
     if (location.startsWith('/companies')) return 'Company Management';
+    if (location.startsWith('/bus-companies/add')) return 'Add Bus Company';
+    if (location.startsWith('/bus-companies')) return 'Bus Fleet Companies';
     if (location.startsWith('/plans/create')) return 'Create New Plan';
     if (location.startsWith('/plans')) return 'Subscription Plans';
     if (location.startsWith('/billing/invoices')) return 'Platform Invoices';
@@ -211,6 +228,12 @@ class SuperAdminShell extends StatelessWidget {
     }
     if (location.startsWith('/companies')) {
       return const ['Companies', 'View All Companies'];
+    }
+    if (location.startsWith('/bus-companies/add')) {
+      return const ['Bus Fleet', 'Add Bus Company'];
+    }
+    if (location.startsWith('/bus-companies')) {
+      return const ['Bus Fleet', 'View Bus Companies'];
     }
     if (location.startsWith('/plans/create')) {
       return const ['Subscriptions', 'Create New Plan'];

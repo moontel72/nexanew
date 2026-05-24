@@ -16,6 +16,9 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/companies_list_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/register_company_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/company_detail_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/add_bus_company_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/bus_companies_list_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_company_login_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/transport_wallet_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/transport_marketplace_admin_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/fraud_prevention_screen.dart';
@@ -198,6 +201,8 @@ class AppRouter {
     // Reseller routes — handled by a separate Flutter app at /reseller/
     // If Nginx is misconfigured, these hit the main app; don't redirect them.
     if (path.startsWith('/reseller')) return null;
+    // Bus Fleet login — public access for bus company owners
+    if (path == '/bus-fleet/login') return null;
 
     // ── Protected routes - require authentication ─────────────
     // These are admin panel routes that require super admin login
@@ -234,6 +239,11 @@ class AppRouter {
       name: 'factory_login',
       builder: (context, state) => const FactoryLoginScreen(),
     ),
+    GoRoute(
+      path: '/bus-fleet/login',
+      name: 'bus_fleet_login',
+      builder: (context, state) => const BusCompanyLoginScreen(),
+    ),
     ShellRoute(
       builder: (context, state, child) => SuperAdminShell(child: child),
       routes: [
@@ -261,6 +271,20 @@ class AppRouter {
                 final id = state.pathParameters['id'] ?? '';
                 return CompanyDetailScreen(companyId: id, inShell: true);
               },
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/bus-companies',
+          name: 'bus_companies',
+          builder: (context, state) =>
+              const BusCompaniesListScreen(inShell: true),
+          routes: [
+            GoRoute(
+              path: 'add',
+              name: 'bus_company_add',
+              builder: (context, state) =>
+                  const AddBusCompanyScreen(inShell: true),
             ),
           ],
         ),
@@ -653,6 +677,12 @@ class AppRouter {
       context.go('/transport/drivers');
   void goToTransportFraud(BuildContext context) =>
       context.go('/transport/fraud');
+
+  void goToBusCompanies(BuildContext context) => context.go('/bus-companies');
+  void goToAddBusCompany(BuildContext context) =>
+      context.go('/bus-companies/add');
+  void goToBusCompanyLogin(BuildContext context) =>
+      context.go('/bus-fleet/login');
 
   void pop(BuildContext context) => context.pop();
 }
