@@ -2,9 +2,9 @@
 
 part of 'local_scan_model.dart';
 
-// **************************************************************************
-// HiveAdapterGenerator
-// **************************************************************************
+// ─────────────────────────────────────────────────────────────
+// LocalScanModel Adapter (typeId: 20)
+// ─────────────────────────────────────────────────────────────
 
 class LocalScanModelAdapter extends TypeAdapter<LocalScanModel> {
   @override
@@ -29,7 +29,7 @@ class LocalScanModelAdapter extends TypeAdapter<LocalScanModel> {
       scannedAt: fields[9] as DateTime,
       synced: fields[10] as bool,
       sessionId: fields[11] as String?,
-      metadata: fields[12] as Map<String, dynamic>?,
+      metadata: (fields[12] as Map?)?.cast<String, dynamic>(),
     );
   }
 
@@ -75,6 +75,10 @@ class LocalScanModelAdapter extends TypeAdapter<LocalScanModel> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+// ─────────────────────────────────────────────────────────────
+// ScanSessionModel Adapter (typeId: 21)
+// ─────────────────────────────────────────────────────────────
 
 class ScanSessionModelAdapter extends TypeAdapter<ScanSessionModel> {
   @override
@@ -125,6 +129,10 @@ class ScanSessionModelAdapter extends TypeAdapter<ScanSessionModel> {
           typeId == other.typeId;
 }
 
+// ─────────────────────────────────────────────────────────────
+// PendingSyncModel Adapter (typeId: 22)
+// ─────────────────────────────────────────────────────────────
+
 class PendingSyncModelAdapter extends TypeAdapter<PendingSyncModel> {
   @override
   final int typeId = 22;
@@ -138,7 +146,7 @@ class PendingSyncModelAdapter extends TypeAdapter<PendingSyncModel> {
     return PendingSyncModel(
       id: fields[0] as String,
       operation: fields[1] as String,
-      payload: fields[2] as Map<String, dynamic>,
+      payload: (fields[2] as Map).cast<String, dynamic>(),
       createdAt: fields[3] as DateTime,
       retryCount: fields[4] as int,
       lastRetryAt: fields[5] as DateTime?,

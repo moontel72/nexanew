@@ -323,7 +323,7 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: shopId,
+                initialValue: shopId,
                 items: shops
                     .map(
                       (s) => DropdownMenuItem(value: s.id, child: Text(s.name)),
@@ -339,7 +339,7 @@ class _ResellerDashboardScreenState extends State<ResellerDashboardScreen> {
               ),
               SizedBox(height: 12.h),
               DropdownButtonFormField<ResellerEmployeeRole>(
-                value: role,
+                initialValue: role,
                 items: ResellerEmployeeRole.values
                     .map(
                       (r) => DropdownMenuItem(

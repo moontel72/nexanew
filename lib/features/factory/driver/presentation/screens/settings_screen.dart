@@ -177,7 +177,7 @@ class _DriverSettingsScreenState extends State<DriverSettingsScreen> {
                     Switch(
                       value: _offlineMode,
                       onChanged: _toggleOfflineMode,
-                      activeColor: AppColors.primary,
+                      activeThumbColor: AppColors.primary,
                     ),
                   ],
                 ),

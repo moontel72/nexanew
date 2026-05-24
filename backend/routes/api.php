@@ -143,6 +143,20 @@ $registerRoutes = function (): void {
                 ]);
             });
 
+            // ─── Notifications (Module 1F — NEW, ADDITIVE) ───────
+            Route::prefix("notifications")->group(function (): void {
+                Route::post("blast", [\App\Http\Controllers\NotificationController::class, "blast"]);
+                Route::get("logs", [\App\Http\Controllers\NotificationController::class, "logs"]);
+                Route::get("stats", [\App\Http\Controllers\NotificationController::class, "stats"]);
+            });
+
+    // ─── Analytics (Module 1D — NEW, ADDITIVE) ──────────
+    Route::prefix("analytics")->group(function (): void {
+    Route::get("dashboard", [\App\Http\Controllers\AnalyticsController::class, "dashboard"]);
+    Route::get("charts", [\App\Http\Controllers\AnalyticsController::class, "charts"]);
+    Route::get("health", [\App\Http\Controllers\AnalyticsController::class, "health"]);
+    Route::get("summary", [\App\Http\Controllers\AnalyticsController::class, "summary"]);
+    });
             // Super Admin Billing Routes
             Route::prefix("billing")->group(function (): void {
                 // Platform invoices
@@ -624,6 +638,13 @@ $registerRoutes = function (): void {
                 Route::get("{id}/audit-trail", [\App\Http\Controllers\Factory\DriverController::class, "auditTrail"]);
             });
 
+            // ─── Driver ↔ Store Keeper Handshake (NEW, ADDITIVE) ────
+            Route::prefix("driver/handshake")->group(function (): void {
+                Route::post("arrived", [\App\Http\Controllers\Factory\DriverHandshakeController::class, "arrived"]);
+                Route::get("{tripId}", [\App\Http\Controllers\Factory\DriverHandshakeController::class, "status"]);
+                Route::post("{tripId}/acknowledge", [\App\Http\Controllers\Factory\DriverHandshakeController::class, "acknowledge"]);
+            });
+
         });
 
         // Store Keeper Bundle Linking — accessible by BOTH factory admin and store keeper.
@@ -821,9 +842,64 @@ $registerRoutes = function (): void {
                 Route::post("scan", [\App\Http\Controllers\Factory\SmartCodeController::class, "scan"]);
             });
 
+            // ─── Bulk Code Generation (Async Queue — NEW, ADDITIVE) ──
+            Route::prefix("bulk")->group(function (): void {
+                Route::post("/", [\App\Http\Controllers\Factory\Codes\BulkCodeGenerationController::class, "dispatch"]);
+                Route::get("{jobId}", [\App\Http\Controllers\Factory\Codes\BulkCodeGenerationController::class, "progress"]);
+            });
+
             });
         });
 
+    // ═══════════════════════════════════════════════════════
+    // B2B MARKETPLACE (Module 12 — NEW, ADDITIVE)
+    // ═══════════════════════════════════════════════════════
+    Route::prefix("marketplace")
+        ->middleware(["auth:sanctum"])
+        ->group(function (): void {
+            Route::prefix("catalog")->group(function (): void {
+                Route::get("search", [\App\Http\Controllers\Marketplace\CatalogController::class, "search"]);
+                Route::get("facets", [\App\Http\Controllers\Marketplace\CatalogController::class, "facets"]);
+                Route::get("{id}", [\App\Http\Controllers\Marketplace\CatalogController::class, "show"]);
+            });
+            Route::get("storefronts", [\App\Http\Controllers\Marketplace\CatalogController::class, "storefronts"]);
+            Route::get("storefronts/{slug}", [\App\Http\Controllers\Marketplace\CatalogController::class, "storefrontDetail"]);
+            Route::prefix("pools")->group(function (): void {
+                Route::get("/", [\App\Http\Controllers\Marketplace\GroupBuyPoolController::class, "index"]);
+                Route::post("/", [\App\Http\Controllers\Marketplace\GroupBuyPoolController::class, "store"]);
+                Route::get("{id}", [\App\Http\Controllers\Marketplace\GroupBuyPoolController::class, "show"]);
+                Route::post("{id}/join", [\App\Http\Controllers\Marketplace\GroupBuyPoolController::class, "join"]);
+                Route::post("{id}/lock", [\App\Http\Controllers\Marketplace\GroupBuyPoolController::class, "lock"]);
+                Route::post("{id}/cancel", [\App\Http\Controllers\Marketplace\GroupBuyPoolController::class, "cancel"]);
+            });
+        });
+
+    Route::prefix("user")
+        ->middleware(["auth:sanctum"])
+        ->group(function (): void {
+            Route::prefix("notifications")->group(function (): void {
+                Route::get("preferences", [\App\Http\Controllers\NotificationController::class, "getPreferences"]);
+                Route::put("preferences", [\App\Http\Controllers\NotificationController::class, "updatePreferences"]);
+            });
+        });
+
+    Route::prefix("freight")
+        ->middleware(["auth:sanctum"])
+        ->group(function (): void {
+            Route::get("loads", [\App\Http\Controllers\FreightAuctionController::class, "indexLoads"]);
+            Route::post("loads", [\App\Http\Controllers\FreightAuctionController::class, "storeLoad"]);
+            Route::get("loads/{id}", [\App\Http\Controllers\FreightAuctionController::class, "showLoad"]);
+            Route::post("loads/{id}/bids", [\App\Http\Controllers\FreightAuctionController::class, "placeBid"]);
+            Route::get("loads/{id}/bids", [\App\Http\Controllers\FreightAuctionController::class, "listBids"]);
+            Route::post("loads/{id}/match", [\App\Http\Controllers\FreightAuctionController::class, "matchLoad"]);
+            Route::get("stats", [\App\Http\Controllers\FreightAuctionController::class, "stats"]);
+        });
+
+    // ─── Offline Sync (Modules 4Z, 5B — NEW, ADDITIVE) ────
+    Route::prefix("sync")->middleware(["auth:sanctum"])->group(function (): void {
+    Route::post("submit", [\App\Http\Controllers\OfflineSyncController::class, "submit"]);
+    Route::get("status", [\App\Http\Controllers\OfflineSyncController::class, "status"]);
+    });
     Route::prefix("transport")
         ->middleware(["auth:admin", "admin"])
         ->group(function (): void {

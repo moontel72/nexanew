@@ -5,6 +5,9 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
+    ->withProviders([
+        \App\Providers\PanelRouteServiceProvider::class,
+    ])
     ->withRouting(
         api: __DIR__.'/../routes/api.php',
         apiPrefix: 'api',
@@ -18,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth' => \App\Http\Middleware\Authenticate::class,
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'driver.type' => \App\Http\Middleware\EnsureDriverType::class,
+            'chat.filter' => \App\Http\Middleware\AIChatLeakFilter::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

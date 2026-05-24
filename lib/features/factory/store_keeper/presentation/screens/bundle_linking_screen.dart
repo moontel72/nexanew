@@ -782,7 +782,7 @@ class _BundleLinkingScreenState extends State<BundleLinkingScreen> {
                       ),
                       Gap(8.h),
                       DropdownButtonFormField<String>(
-                        value: _selectedPacketId,
+                        initialValue: _selectedPacketId,
                         isExpanded: true,
                         decoration: InputDecoration(
                           contentPadding: EdgeInsets.symmetric(

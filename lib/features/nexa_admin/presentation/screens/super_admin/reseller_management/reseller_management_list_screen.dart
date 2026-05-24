@@ -414,7 +414,7 @@ class _ResellerManagementListScreenState
                   ),
                   value: purchaseApproved,
                   onChanged: (v) => setDialogState(() => purchaseApproved = v),
-                  activeColor: AppColors.success,
+                  activeThumbColor: AppColors.success,
                   dense: true,
                 ),
               ],
