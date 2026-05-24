@@ -9,6 +9,7 @@ import 'package:gap/gap.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_register_bloc.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 import 'package:nexatrace_system/shared/widgets/inputs/custom_text_field.dart';
@@ -43,6 +44,7 @@ class _AddBusCompanyScreenState extends State<AddBusCompanyScreen> {
   final _descriptionController = TextEditingController();
 
   String _selectedStatus = 'active';
+  String? _selectedPlanId;
   bool _isSubmitting = false;
 
   @override
@@ -51,6 +53,17 @@ class _AddBusCompanyScreenState extends State<AddBusCompanyScreen> {
     _companyRegisterBloc = CompanyRegisterBloc(
       companyRepository: CompanyManagementRepository(apiService: ApiService()),
     );
+    // Load active plans so we can auto-select one for the new company
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PlanManagementBloc>().add(
+        const PlanManagementEvent.loadPlans(
+          status: 'active',
+          perPage: 100,
+          sortBy: 'sort_order',
+          sortOrder: 'asc',
+        ),
+      );
+    });
   }
 
   @override
@@ -77,29 +90,41 @@ class _AddBusCompanyScreenState extends State<AddBusCompanyScreen> {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => _companyRegisterBloc,
-      child: BlocListener<CompanyRegisterBloc, CompanyRegisterState>(
+      child: BlocListener<PlanManagementBloc, PlanManagementState>(
         listener: (context, state) {
-          if (state is CompanyRegisterSuccess) {
-            setState(() => _isSubmitting = false);
-            final name = state.company['name']?.toString() ?? 'Unknown';
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Bus company "$name" created successfully!'),
-                backgroundColor: AppColors.success,
-              ),
-            );
-            _clearForm();
-          } else if (state is CompanyRegisterError) {
-            setState(() => _isSubmitting = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
+          state.maybeWhen(
+            loaded: (plans, _, _, _, _, _, _, _, _, _, _, _) {
+              if (_selectedPlanId == null && plans.isNotEmpty) {
+                setState(() => _selectedPlanId = plans.first.id);
+              }
+            },
+            orElse: () {},
+          );
         },
-        child: _buildContent(),
+        child: BlocListener<CompanyRegisterBloc, CompanyRegisterState>(
+          listener: (context, state) {
+            if (state is CompanyRegisterSuccess) {
+              setState(() => _isSubmitting = false);
+              final name = state.company['name']?.toString() ?? 'Unknown';
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Bus company "$name" created successfully!'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+              _clearForm();
+            } else if (state is CompanyRegisterError) {
+              setState(() => _isSubmitting = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          },
+          child: _buildContent(),
+        ),
       ),
     );
   }
@@ -462,6 +487,16 @@ class _AddBusCompanyScreenState extends State<AddBusCompanyScreen> {
   void _submitForm() {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_selectedPlanId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Loading subscription plans... Please wait.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     // Store bus-specific data in admin_notes as JSON
@@ -496,7 +531,7 @@ class _AddBusCompanyScreenState extends State<AddBusCompanyScreen> {
           'contact_person_phone': _phoneController.text.trim(),
           'status': _selectedStatus,
           'admin_notes': jsonEncode(busMeta),
-          'plan_id': 'basic',
+          if (_selectedPlanId != null) 'plan_id': _selectedPlanId,
         },
       ),
     );
