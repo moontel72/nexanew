@@ -1,12 +1,12 @@
 // Add Bus Company Screen — Super Admin adds a new bus fleet company
 // Pattern follows RegisterCompanyScreen with bus-specific fields
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/company/bus_company_model.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_register_bloc.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
@@ -464,11 +464,12 @@ class _AddBusCompanyScreenState extends State<AddBusCompanyScreen> {
 
     setState(() => _isSubmitting = true);
 
-    final metadata = <String, dynamic>{
+    // Store bus-specific data in admin_notes as JSON
+    final busMeta = <String, dynamic>{
+      'company_type_tag': 'bus_fleet',
       'fleet_size': int.tryParse(_fleetSizeController.text.trim()) ?? 0,
       'active_routes': int.tryParse(_routeCountController.text.trim()) ?? 0,
       'owner_name': _ownerNameController.text.trim(),
-      'company_type': busCompanyTypeId,
     };
 
     _companyRegisterBloc.add(
@@ -488,16 +489,13 @@ class _AddBusCompanyScreenState extends State<AddBusCompanyScreen> {
               ? null
               : _addressController.text.trim(),
           'password': _passwordController.text,
-          'company_type': busCompanyTypeId,
-          'industry_type': 'transportation',
+          'company_type': 'other',
+          'industry_type': 'automotive',
           'contact_person_name': _ownerNameController.text.trim(),
           'contact_person_email': _emailController.text.trim(),
           'contact_person_phone': _phoneController.text.trim(),
           'status': _selectedStatus,
-          'description': _descriptionController.text.trim().isEmpty
-              ? null
-              : _descriptionController.text.trim(),
-          'metadata': metadata,
+          'admin_notes': jsonEncode(busMeta),
           'plan_id': 'basic',
         },
       ),

@@ -229,7 +229,7 @@ class _BusCompaniesListScreenState extends State<BusCompaniesListScreen> {
                 filterOptions,
               ) {
                 final busCompanies = companies
-                    .where((c) => c.tags.contains('bus_fleet'))
+                    .where((c) => c.isBusCompany)
                     .toList();
 
                 if (busCompanies.isEmpty) return _emptyState();
@@ -253,7 +253,7 @@ class _BusCompaniesListScreenState extends State<BusCompaniesListScreen> {
     final fleetSize = company.fleetSize;
     final routes = company.activeRoutes;
     final statusStr = company.status.name;
-    final ownerName = company.contactPerson.fullName;
+    final ownerName = company.busOwnerName;
 
     return Card(
       elevation: 1,
