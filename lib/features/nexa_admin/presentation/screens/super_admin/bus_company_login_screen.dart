@@ -1,15 +1,18 @@
 // Bus Company Login Screen — Authentication for bus fleet company owners
-// Pattern follows FactoryLoginScreen with bus fleet branding
+// Reuses the existing AdminAuthBloc already provided by the app
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 
 /// Bus Company Login Screen
-/// Authentication screen for bus fleet company owners
 class BusCompanyLoginScreen extends StatefulWidget {
   const BusCompanyLoginScreen({super.key});
 
@@ -25,14 +28,6 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
   bool _rememberMe = false;
 
   @override
-  void initState() {
-    super.initState();
-    // Pre-fill with test credentials for development
-    _emailController.text = 'bus-admin@nexatrace.local';
-    _passwordController.text = 'admin12345';
-  }
-
-  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -41,7 +36,21 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: _buildLoginScreen());
+    return BlocListener<AdminAuthBloc, AdminAuthState>(
+      listener: (context, state) {
+        if (state is AdminAuthAuthenticated) {
+          context.go('/dashboard');
+        } else if (state is AdminAuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      },
+      child: Scaffold(body: _buildLoginScreen()),
+    );
   }
 
   Widget _buildLoginScreen() {
@@ -59,7 +68,6 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
             padding: EdgeInsets.all(24.w),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _buildHeader(),
                 Gap(40.h),
@@ -87,7 +95,7 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
           width: 80.w,
           height: 80.h,
           decoration: BoxDecoration(
-            color: AppColors.info, // Bus uses info color (blue)
+            color: AppColors.info,
             borderRadius: BorderRadius.circular(20.r),
             boxShadow: [
               BoxShadow(
@@ -123,7 +131,6 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
       key: _formKey,
       child: Column(
         children: [
-          // Email field
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
@@ -138,21 +145,15 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
               filled: true,
               fillColor: Colors.white,
             ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter your email';
-              }
-              if (!RegExp(
-                r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-              ).hasMatch(value.trim())) {
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Please enter email';
+              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
                 return 'Enter a valid email';
               }
               return null;
             },
           ),
           Gap(16.h),
-
-          // Password field
           TextFormField(
             controller: _passwordController,
             obscureText: _obscurePassword,
@@ -174,17 +175,13 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
               filled: true,
               fillColor: Colors.white,
             ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter your password';
-              }
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Please enter password';
               return null;
             },
             onFieldSubmitted: (_) => _handleLogin(),
           ),
           Gap(12.h),
-
-          // Remember me
           Row(
             children: [
               Checkbox(
@@ -207,19 +204,33 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
   }
 
   Widget _buildLoginButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: PrimaryButton(
-        text: 'Sign In',
-        onPressed: _handleLogin,
-        backgroundColor: AppColors.info,
-      ),
+    return BlocBuilder<AdminAuthBloc, AdminAuthState>(
+      builder: (context, state) {
+        final isLoading = state is AdminAuthLoading;
+        return SizedBox(
+          width: double.infinity,
+          child: PrimaryButton(
+            text: isLoading ? 'Signing in...' : 'Sign In',
+            onPressed: () {
+              if (!isLoading) _handleLogin();
+            },
+            isLoading: isLoading,
+            backgroundColor: AppColors.info,
+          ),
+        );
+      },
     );
   }
 
   Widget _buildForgotPasswordLink() {
     return TextButton(
-      onPressed: _handleForgotPassword,
+      onPressed: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contact your super admin to reset password'),
+          ),
+        );
+      },
       child: Text(
         'Forgot Password?',
         style: TextStyle(color: AppColors.info, fontWeight: FontWeight.w600),
@@ -250,8 +261,7 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
           Gap(8.w),
           Expanded(
             child: Text(
-              'Secure connection • Your data is encrypted • '
-              '${DateTime.now().year} NexaTrace System',
+              'Secure connection • NexaTrace System',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
@@ -265,27 +275,11 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
   void _handleLogin() {
     if (!_formKey.currentState!.validate()) return;
 
-    final email = _emailController.text.trim();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Login attempt for $email — Backend auth endpoint pending',
-        ),
-        backgroundColor: AppColors.info,
-      ),
-    );
-
-    // TODO: Integrate with BusFleetAuthBloc when backend endpoint is available
-    // context.read<BusFleetAuthBloc>().add(
-    //   BusFleetLoginRequested(email: email, password: password),
-    // );
-  }
-
-  void _handleForgotPassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Password reset link will be sent to your email'),
+    context.read<AdminAuthBloc>().add(
+      AdminLoginRequested(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        rememberMe: _rememberMe,
       ),
     );
   }

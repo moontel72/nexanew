@@ -1,6 +1,7 @@
 // Company Detail Screen for NexaTrace System
 // Displays detailed information about a company
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
@@ -96,7 +97,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
           }
         },
         builder: (context, state) {
-          final company = state is CompanyDetailLoaded ? state.company : _companyCache;
+          final company = state is CompanyDetailLoaded
+              ? state.company
+              : _companyCache;
           final isLoading = state is CompanyDetailLoading;
 
           Widget page;
@@ -134,9 +137,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                         Expanded(
                           child: Text(
                             name.isNotEmpty ? name : 'Company Details',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
+                            style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w800),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -239,9 +240,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     final name = (company['name'] ?? '').toString();
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -263,11 +262,14 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               child: company['logo_url'] == null
                   ? Center(
                       child: Text(
-                        name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        name.isNotEmpty
+                            ? name.substring(0, 1).toUpperCase()
+                            : '?',
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     )
                   : null,
@@ -291,25 +293,120 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                     children: [
                       _buildStatusChip(company['status'] ?? 'unknown'),
                       _buildVerificationChip(
-                          company['verification_status'] ?? 'notSubmitted'),
+                        company['verification_status'] ?? 'notSubmitted',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   if ((company['notes'] ?? '').toString().isNotEmpty)
-                    Text(
-                      company['notes'].toString(),
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: AppColors.textSecondary),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    )
+                    _buildNotesSection(company['notes'].toString()),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Parse notes field — if it's valid JSON with bus fleet data, show structured
+  /// info cards; otherwise display as plain text.
+  Widget _buildNotesSection(String rawNotes) {
+    // Try to parse as JSON
+    Map<String, dynamic>? meta;
+    try {
+      final decoded = jsonDecode(rawNotes);
+      if (decoded is Map<String, dynamic>) meta = decoded;
+    } catch (_) {}
+
+    // If not JSON or no recognized fields, show plain text
+    if (meta == null || meta.isEmpty) {
+      return Text(
+        rawNotes,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    final isBusFleet = meta['company_type_tag'] == 'bus_fleet';
+    if (!isBusFleet) {
+      return Text(
+        rawNotes,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    // Bus fleet metadata — show compact info chips
+    final fleetSize = meta['fleet_size'] as int? ?? 0;
+    final activeRoutes = meta['active_routes'] as int? ?? 0;
+    final ownerName = meta['owner_name']?.toString() ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.info.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.info.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.directions_bus, size: 16, color: AppColors.info),
+              const SizedBox(width: 6),
+              Text(
+                'Bus Fleet Details',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppColors.info,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _metaChip(Icons.confirmation_number, '$fleetSize buses'),
+              _metaChip(Icons.alt_route, '$activeRoutes routes'),
+              if (ownerName.isNotEmpty) _metaChip(Icons.person, ownerName),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metaChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.textTertiary),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
       ),
     );
   }
@@ -352,11 +449,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            statusIcon,
-            size: 16,
-            color: statusColor,
-          ),
+          Icon(statusIcon, size: 16, color: statusColor),
           const SizedBox(width: 6),
           Text(
             normalized.toLowerCase() == 'blocked'
@@ -395,10 +488,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: color, fontWeight: FontWeight.w500),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -408,9 +501,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   Widget _buildCompanyInfo(Map<String, dynamic> company) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -427,7 +518,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             _buildInfoRow(
               icon: Icons.badge,
               label: 'Registration #',
-              value: (company['registration_number'] ?? '').toString().isNotEmpty
+              value:
+                  (company['registration_number'] ?? '').toString().isNotEmpty
                   ? company['registration_number'].toString()
                   : 'Not specified',
             ),
@@ -459,7 +551,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             _buildInfoRow(
               icon: Icons.location_on,
               label: 'Location',
-              value: '${(company['city'] ?? '').toString()}, ${(company['country'] ?? '').toString()}'.trim() == ','
+              value:
+                  '${(company['city'] ?? '').toString()}, ${(company['country'] ?? '').toString()}'
+                          .trim() ==
+                      ','
                   ? 'Not specified'
                   : '${(company['city'] ?? '').toString()}, ${(company['country'] ?? '').toString()}',
             ),
@@ -476,9 +571,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -519,7 +612,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             _buildInfoRow(
               icon: Icons.person,
               label: 'Contact Person',
-              value: (contact['name'] ?? contact['full_name'] ?? '').toString().isNotEmpty
+              value:
+                  (contact['name'] ?? contact['full_name'] ?? '')
+                      .toString()
+                      .isNotEmpty
                   ? (contact['name'] ?? contact['full_name']).toString()
                   : 'Not specified',
             ),
@@ -548,11 +644,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: AppColors.textTertiary,
-        ),
+        Icon(icon, size: 20, color: AppColors.textTertiary),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -560,15 +652,16 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             children: [
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textTertiary,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
               ),
               const SizedBox(height: 4),
               Text(
                 value,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: (isUrl || isEmail || isPhone) && value != 'Not specified'
+                  color:
+                      (isUrl || isEmail || isPhone) && value != 'Not specified'
                       ? AppColors.primary
                       : AppColors.textPrimary,
                 ),
@@ -586,12 +679,12 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     final usage = (company['usage_stats'] is Map)
         ? (company['usage_stats'] as Map).cast<String, dynamic>()
         : <String, dynamic>{};
-    final docs = (company['documents'] is List) ? (company['documents'] as List) : const [];
+    final docs = (company['documents'] is List)
+        ? (company['documents'] as List)
+        : const [];
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -661,11 +754,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               color: color.withAlpha(26),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: color,
-            ),
+            child: Icon(icon, size: 20, color: color),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -701,9 +790,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
         : <String, dynamic>{};
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -728,15 +815,22 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             _buildInfoRow(
               icon: Icons.calendar_today,
               label: 'Start Date',
-              value: (company['subscription_start_date'] ?? '').toString().isNotEmpty
-                  ? company['subscription_start_date'].toString().split('T').first
+              value:
+                  (company['subscription_start_date'] ?? '')
+                      .toString()
+                      .isNotEmpty
+                  ? company['subscription_start_date']
+                        .toString()
+                        .split('T')
+                        .first
                   : 'Not specified',
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               icon: Icons.calendar_today,
               label: 'End Date',
-              value: (company['subscription_end_date'] ?? '').toString().isNotEmpty
+              value:
+                  (company['subscription_end_date'] ?? '').toString().isNotEmpty
                   ? company['subscription_end_date'].toString().split('T').first
                   : 'Not specified',
             ),
@@ -762,9 +856,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -776,9 +868,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                 Text(
                   'Verification',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 Switch(
                   value: isVerified,
@@ -792,7 +884,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             _buildInfoRow(
               icon: Icons.verified,
               label: 'Status',
-              value: isVerified ? 'Verified' : verificationStatus.capitalizeFirst,
+              value: isVerified
+                  ? 'Verified'
+                  : verificationStatus.capitalizeFirst,
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
@@ -868,14 +962,13 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   }
 
   Widget _buildStatusManagementButtons(Map<String, dynamic> company) {
-    final currentStatus = company['status']?.toString().toLowerCase() ?? 'pending';
+    final currentStatus =
+        company['status']?.toString().toLowerCase() ?? 'pending';
     final normalized = currentStatus == 'suspended' ? 'blocked' : currentStatus;
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -934,9 +1027,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     required bool isCurrent,
   }) {
     return ElevatedButton(
-      onPressed: isCurrent ? null : () {
-        _updateCompanyStatus(company, status);
-      },
+      onPressed: isCurrent
+          ? null
+          : () {
+              _updateCompanyStatus(company, status);
+            },
       style: ElevatedButton.styleFrom(
         backgroundColor: isCurrent ? color : color.withAlpha(26),
         foregroundColor: isCurrent ? Colors.white : color,
@@ -951,11 +1046,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18),
-          const SizedBox(width: 6),
-          Text(label),
-        ],
+        children: [Icon(icon, size: 18), const SizedBox(width: 6), Text(label)],
       ),
     );
   }
@@ -964,9 +1055,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(16),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
         return SafeArea(
@@ -1089,7 +1178,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   }
 
   void _toggleCompanyStatus(Map<String, dynamic> company) {
-    final currentStatus = company['status']?.toString().toLowerCase() ?? 'pending';
+    final currentStatus =
+        company['status']?.toString().toLowerCase() ?? 'pending';
     final newStatus = currentStatus == 'active' ? 'suspended' : 'active';
 
     _updateCompanyStatus(company, newStatus);
@@ -1115,9 +1205,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                 DeleteCompany(companyId: widget.companyId),
               );
             },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.error,
-            ),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Delete'),
           ),
         ],
@@ -1125,7 +1213,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     );
   }
 
-  Future<void> _onToggleVerified(Map<String, dynamic> company, bool value) async {
+  Future<void> _onToggleVerified(
+    Map<String, dynamic> company,
+    bool value,
+  ) async {
     if (!value) {
       final ok = await _confirm(
         title: 'Unverify Company?',
@@ -1242,44 +1333,62 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     final subscriptionPlan = (company['subscription_plan'] is Map)
         ? (company['subscription_plan'] as Map).cast<String, dynamic>()
         : <String, dynamic>{};
-    final currentPlanId =
-        (subscriptionPlan['id'] ?? company['plan_id'] ?? '').toString().trim();
+    final currentPlanId = (subscriptionPlan['id'] ?? company['plan_id'] ?? '')
+        .toString()
+        .trim();
 
-    final nameCtrl =
-        TextEditingController(text: (company['name'] ?? '').toString());
+    final nameCtrl = TextEditingController(
+      text: (company['name'] ?? '').toString(),
+    );
     final regCtrl = TextEditingController(
-        text: (company['registration_number'] ?? '').toString());
-    final taxCtrl =
-        TextEditingController(text: (company['tax_id'] ?? '').toString());
-    final typeCtrl =
-        TextEditingController(text: (company['type'] ?? '').toString());
-    final industryCtrl =
-        TextEditingController(text: (company['industry'] ?? '').toString());
-    final emailCtrl =
-        TextEditingController(text: (company['email'] ?? '').toString());
-    final phoneCtrl =
-        TextEditingController(text: (company['phone'] ?? '').toString());
-    final websiteCtrl =
-        TextEditingController(text: (company['website'] ?? '').toString());
-    final countryCtrl =
-        TextEditingController(text: (company['country'] ?? '').toString());
-    final cityCtrl =
-        TextEditingController(text: (company['city'] ?? '').toString());
-    final addressCtrl =
-        TextEditingController(text: (company['address'] ?? '').toString());
-    final postalCtrl =
-        TextEditingController(text: (company['postal_code'] ?? '').toString());
-    final notesCtrl =
-        TextEditingController(text: (company['notes'] ?? '').toString());
+      text: (company['registration_number'] ?? '').toString(),
+    );
+    final taxCtrl = TextEditingController(
+      text: (company['tax_id'] ?? '').toString(),
+    );
+    final typeCtrl = TextEditingController(
+      text: (company['type'] ?? '').toString(),
+    );
+    final industryCtrl = TextEditingController(
+      text: (company['industry'] ?? '').toString(),
+    );
+    final emailCtrl = TextEditingController(
+      text: (company['email'] ?? '').toString(),
+    );
+    final phoneCtrl = TextEditingController(
+      text: (company['phone'] ?? '').toString(),
+    );
+    final websiteCtrl = TextEditingController(
+      text: (company['website'] ?? '').toString(),
+    );
+    final countryCtrl = TextEditingController(
+      text: (company['country'] ?? '').toString(),
+    );
+    final cityCtrl = TextEditingController(
+      text: (company['city'] ?? '').toString(),
+    );
+    final addressCtrl = TextEditingController(
+      text: (company['address'] ?? '').toString(),
+    );
+    final postalCtrl = TextEditingController(
+      text: (company['postal_code'] ?? '').toString(),
+    );
+    final notesCtrl = TextEditingController(
+      text: (company['notes'] ?? '').toString(),
+    );
 
     final cpNameCtrl = TextEditingController(
-        text: (contact['name'] ?? contact['full_name'] ?? '').toString());
-    final cpEmailCtrl =
-        TextEditingController(text: (contact['email'] ?? '').toString());
-    final cpPhoneCtrl =
-        TextEditingController(text: (contact['phone'] ?? '').toString());
-    final cpPosCtrl =
-        TextEditingController(text: (contact['position'] ?? '').toString());
+      text: (contact['name'] ?? contact['full_name'] ?? '').toString(),
+    );
+    final cpEmailCtrl = TextEditingController(
+      text: (contact['email'] ?? '').toString(),
+    );
+    final cpPhoneCtrl = TextEditingController(
+      text: (contact['phone'] ?? '').toString(),
+    );
+    final cpPosCtrl = TextEditingController(
+      text: (contact['position'] ?? '').toString(),
+    );
 
     showDialog(
       context: context,
@@ -1297,152 +1406,187 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Company Name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: regCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Registration Number',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: taxCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Tax ID',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: typeCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Company Type',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: industryCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Industry',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: countryCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Country',
-                          border: OutlineInputBorder(),
-                        ),
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Company Name',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: cityCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'City',
-                          border: OutlineInputBorder(),
-                        ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: regCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Registration Number',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: addressCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Address',
-                    border: OutlineInputBorder(),
-                  ),
-                  minLines: 2,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: postalCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Postal Code',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: emailCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
-                        ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: taxCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Tax ID',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: phoneCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone',
-                          border: OutlineInputBorder(),
-                        ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: typeCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Company Type',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: websiteCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Website',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FutureBuilder<List<SubscriptionPlan>>(
-                  future: plansFuture,
-                  builder: (context, snapshot) {
-                    final plans =
-                        (snapshot.data ?? const <SubscriptionPlan>[])
-                            .where((p) => p.id.trim().isNotEmpty)
-                            .toList();
-                    final effectiveSelectedId = plans.any(
-                          (p) => p.id == selectedPlanId,
-                        )
-                        ? selectedPlanId
-                        : (plans.isEmpty ? '' : plans.first.id);
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: industryCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Industry',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: countryCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Country',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: cityCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'City',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: addressCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Address',
+                        border: OutlineInputBorder(),
+                      ),
+                      minLines: 2,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: postalCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Postal Code',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: emailCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: phoneCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Phone',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: websiteCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Website',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    FutureBuilder<List<SubscriptionPlan>>(
+                      future: plansFuture,
+                      builder: (context, snapshot) {
+                        final plans =
+                            (snapshot.data ?? const <SubscriptionPlan>[])
+                                .where((p) => p.id.trim().isNotEmpty)
+                                .toList();
+                        final effectiveSelectedId =
+                            plans.any((p) => p.id == selectedPlanId)
+                            ? selectedPlanId
+                            : (plans.isEmpty ? '' : plans.first.id);
 
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const SizedBox(
-                        height: 52,
-                        child: Center(child: LoadingIndicator()),
-                      );
-                    }
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const SizedBox(
+                            height: 52,
+                            child: Center(child: LoadingIndicator()),
+                          );
+                        }
 
-                    if (snapshot.hasError) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                        if (snapshot.hasError) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      enabled: false,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Update Subscription Plan',
+                                        hintText: 'Failed to load plans',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      setModalState(() {
+                                        plansFuture = repo.getAvailablePlans();
+                                      });
+                                    },
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                snapshot.error.toString(),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.error),
+                              ),
+                            ],
+                          );
+                        }
+
+                        if (plans.isEmpty) {
+                          return Row(
+                            children: [
+                              const Expanded(
                                 child: TextField(
                                   enabled: false,
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     labelText: 'Update Subscription Plan',
-                                    hintText: 'Failed to load plans',
+                                    hintText: 'No active plans found',
                                     border: OutlineInputBorder(),
                                   ),
                                 ),
@@ -1458,149 +1602,112 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                                 label: const Text('Retry'),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            snapshot.error.toString(),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.error,
+                          );
+                        }
+
+                        if (selectedPlanId.trim().isEmpty &&
+                            effectiveSelectedId.trim().isNotEmpty &&
+                            selectedPlanId != effectiveSelectedId) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted) return;
+                            setModalState(() {
+                              selectedPlanId = effectiveSelectedId;
+                            });
+                          });
+                        }
+
+                        return DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          key: ValueKey('plan_$effectiveSelectedId'),
+                          initialValue: effectiveSelectedId.isEmpty
+                              ? null
+                              : effectiveSelectedId,
+                          items: plans
+                              .map(
+                                (p) => DropdownMenuItem<String>(
+                                  value: p.id,
+                                  child: Text(
+                                    p.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: false,
+                                  ),
                                 ),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            setModalState(() {
+                              selectedPlanId = (v ?? '').toString();
+                            });
+                          },
+                          decoration: const InputDecoration(
+                            labelText: 'Update Subscription Plan',
+                            border: OutlineInputBorder(),
                           ),
-                        ],
-                      );
-                    }
-
-                    if (plans.isEmpty) {
-                      return Row(
-                        children: [
-                          const Expanded(
-                            child: TextField(
-                              enabled: false,
-                              decoration: InputDecoration(
-                                labelText: 'Update Subscription Plan',
-                                hintText: 'No active plans found',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              setModalState(() {
-                                plansFuture = repo.getAvailablePlans();
-                              });
-                            },
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
-                          ),
-                        ],
-                      );
-                    }
-
-                    if (selectedPlanId.trim().isEmpty &&
-                        effectiveSelectedId.trim().isNotEmpty &&
-                        selectedPlanId != effectiveSelectedId) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!mounted) return;
-                        setModalState(() {
-                          selectedPlanId = effectiveSelectedId;
-                        });
-                      });
-                    }
-
-                    return DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      key: ValueKey('plan_$effectiveSelectedId'),
-                      initialValue: effectiveSelectedId.isEmpty
-                          ? null
-                          : effectiveSelectedId,
-                      items: plans
-                          .map(
-                            (p) => DropdownMenuItem<String>(
-                              value: p.id,
-                              child: Text(
-                                p.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                softWrap: false,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        setModalState(() {
-                          selectedPlanId = (v ?? '').toString();
-                        });
+                        );
                       },
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Contact Person',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: cpNameCtrl,
                       decoration: const InputDecoration(
-                        labelText: 'Update Subscription Plan',
+                        labelText: 'Name',
                         border: OutlineInputBorder(),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Contact Person',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: cpNameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: cpEmailCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: cpEmailCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
                         ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: cpPhoneCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Phone',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: cpPosCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Position',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: cpPhoneCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone',
-                          border: OutlineInputBorder(),
-                        ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: notesCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Admin Notes',
+                        border: OutlineInputBorder(),
                       ),
+                      minLines: 2,
+                      maxLines: 4,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: cpPosCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Position',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: notesCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Admin Notes',
-                    border: OutlineInputBorder(),
-                  ),
-                  minLines: 2,
-                  maxLines: 4,
-                ),
-                const SizedBox(height: 30),
+                    const SizedBox(height: 30),
                   ],
                 ),
               ),
@@ -1629,36 +1736,38 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   Navigator.pop(context);
 
                   final updateData = <String, dynamic>{
-                'name': nameCtrl.text.trim(),
-                'business_registration_number': regCtrl.text.trim(),
-                'tax_id':
-                    taxCtrl.text.trim().isEmpty ? null : taxCtrl.text.trim(),
-                'company_type': typeCtrl.text.trim(),
-                'industry_type': industryCtrl.text.trim(),
-                'email': emailCtrl.text.trim(),
-                'phone':
-                    phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
-                'website': websiteCtrl.text.trim().isEmpty
-                    ? null
-                    : websiteCtrl.text.trim(),
-                'country': countryCtrl.text.trim(),
-                'city': cityCtrl.text.trim(),
-                'address': addressCtrl.text.trim().isEmpty
-                    ? null
-                    : addressCtrl.text.trim(),
-                'postal_code': postalCtrl.text.trim().isEmpty
-                    ? null
-                    : postalCtrl.text.trim(),
-                'contact_person_name': cpNameCtrl.text.trim(),
-                'contact_person_email': cpEmailCtrl.text.trim(),
-                'contact_person_phone': cpPhoneCtrl.text.trim(),
-                'contact_person_position': cpPosCtrl.text.trim().isEmpty
-                    ? null
-                    : cpPosCtrl.text.trim(),
-                'admin_notes': notesCtrl.text.trim().isEmpty
-                    ? null
-                    : notesCtrl.text.trim(),
-              };
+                    'name': nameCtrl.text.trim(),
+                    'business_registration_number': regCtrl.text.trim(),
+                    'tax_id': taxCtrl.text.trim().isEmpty
+                        ? null
+                        : taxCtrl.text.trim(),
+                    'company_type': typeCtrl.text.trim(),
+                    'industry_type': industryCtrl.text.trim(),
+                    'email': emailCtrl.text.trim(),
+                    'phone': phoneCtrl.text.trim().isEmpty
+                        ? null
+                        : phoneCtrl.text.trim(),
+                    'website': websiteCtrl.text.trim().isEmpty
+                        ? null
+                        : websiteCtrl.text.trim(),
+                    'country': countryCtrl.text.trim(),
+                    'city': cityCtrl.text.trim(),
+                    'address': addressCtrl.text.trim().isEmpty
+                        ? null
+                        : addressCtrl.text.trim(),
+                    'postal_code': postalCtrl.text.trim().isEmpty
+                        ? null
+                        : postalCtrl.text.trim(),
+                    'contact_person_name': cpNameCtrl.text.trim(),
+                    'contact_person_email': cpEmailCtrl.text.trim(),
+                    'contact_person_phone': cpPhoneCtrl.text.trim(),
+                    'contact_person_position': cpPosCtrl.text.trim().isEmpty
+                        ? null
+                        : cpPosCtrl.text.trim(),
+                    'admin_notes': notesCtrl.text.trim().isEmpty
+                        ? null
+                        : notesCtrl.text.trim(),
+                  };
 
                   updateData.removeWhere((key, value) => value == null);
 
