@@ -18,7 +18,10 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/company_detail_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/add_bus_company_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/bus_companies_list_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/add_goods_company_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/goods_companies_list_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_company_login_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/goods_company_login_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet_dashboard_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_owners_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_drivers_screen.dart';
@@ -207,6 +210,8 @@ class AppRouter {
     if (path.startsWith('/reseller')) return null;
     // Bus Fleet login — public access for bus company owners
     if (path == '/bus-fleet/login') return null;
+    // Goods Fleet login — public access for goods company owners
+    if (path == '/goods-fleet/login') return null;
 
     // ── Protected routes - require authentication ─────────────
     // These are admin panel routes that require super admin login
@@ -232,6 +237,11 @@ class AppRouter {
       return '/bus-fleet/dashboard';
     }
 
+    // Already authenticated and trying to access goods fleet login
+    if (isAuthenticatedCache && path == '/goods-fleet/login') {
+      return '/goods-fleet/dashboard';
+    }
+
     // No redirect needed
     return null;
   }
@@ -252,6 +262,11 @@ class AppRouter {
       path: '/bus-fleet/login',
       name: 'bus_fleet_login',
       builder: (context, state) => const BusCompanyLoginScreen(),
+    ),
+    GoRoute(
+      path: '/goods-fleet/login',
+      name: 'goods_fleet_login',
+      builder: (context, state) => const GoodsCompanyLoginScreen(),
     ),
     GoRoute(
       path: '/bus-fleet/dashboard',
@@ -325,6 +340,20 @@ class AppRouter {
               name: 'bus_company_add',
               builder: (context, state) =>
                   const AddBusCompanyScreen(inShell: true),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/goods-companies',
+          name: 'goods_companies',
+          builder: (context, state) =>
+              const GoodsCompaniesListScreen(inShell: true),
+          routes: [
+            GoRoute(
+              path: 'add',
+              name: 'goods_company_add',
+              builder: (context, state) =>
+                  const AddGoodsCompanyScreen(inShell: true),
             ),
           ],
         ),
@@ -723,6 +752,13 @@ class AppRouter {
       context.go('/bus-companies/add');
   void goToBusCompanyLogin(BuildContext context) =>
       context.go('/bus-fleet/login');
+
+  void goToGoodsCompanies(BuildContext context) =>
+      context.go('/goods-companies');
+  void goToAddGoodsCompany(BuildContext context) =>
+      context.go('/goods-companies/add');
+  void goToGoodsCompanyLogin(BuildContext context) =>
+      context.go('/goods-fleet/login');
 
   void pop(BuildContext context) => context.pop();
 }
