@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
+import 'package:nexatrace_system/core/utils/auth_state.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
 
@@ -39,6 +40,12 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
     return BlocListener<AdminAuthBloc, AdminAuthState>(
       listener: (context, state) {
         if (state is AdminAuthAuthenticated) {
+          setSuperAdminAuthState(
+            isAuthenticated: true,
+            userType: 'bus_fleet',
+            userId: state.user.id,
+            token: state.token,
+          );
           context.go('/bus-fleet/dashboard');
         } else if (state is AdminAuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
