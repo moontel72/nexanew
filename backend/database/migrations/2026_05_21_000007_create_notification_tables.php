@@ -42,14 +42,13 @@ return new class extends Migration
 
         Schema::create('user_notification_preferences', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('user_id');
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('notification_type', 100); // invoice_ready, delivery_update, auction_alert, marketing, system
             $table->json('channel_preferences'); // {"email": true, "push": true, "sms": false, "websocket": true}
             $table->boolean('is_enabled')->default(true);
             $table->timestamps();
 
             $table->unique(['user_id', 'notification_type']);
-            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
     }
 
