@@ -48,7 +48,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
       final api = ApiService();
 
       // Call bus-fleet scoped profile endpoint (NOT admin/companies)
-      final response = await api.get('/api/v1/bus-fleet/profile');
+      final response = await api.get('/bus-fleet/profile');
 
       if (!mounted) return;
 
@@ -72,7 +72,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
       try {
         final company = Company.fromJson(companyJson);
-        setState(() { _company = company; _isLoading = false; });
+        setState(() {
+          _company = company;
+          _isLoading = false;
+        });
       } catch (e) {
         setState(() {
           _error = 'Failed to parse company data: $e';
@@ -82,7 +85,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     } catch (e) {
       final msg = e.toString();
       if (mounted) {
-        if (msg.contains('403') || msg.contains('Forbidden') || msg.contains('401') || msg.contains('Unauthorized')) {
+        if (msg.contains('403') ||
+            msg.contains('Forbidden') ||
+            msg.contains('401') ||
+            msg.contains('Unauthorized')) {
           setState(() {
             _forbidden = true;
             _error = 'Access denied. Please login again.';
@@ -94,7 +100,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
             _isLoading = false;
           });
         } else {
-          setState(() { _error = msg; _isLoading = false; });
+          setState(() {
+            _error = msg;
+            _isLoading = false;
+          });
         }
       }
     }
