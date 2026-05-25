@@ -284,6 +284,12 @@ class FleetManagementController extends Controller
         return response()->json(['success' => true, 'data' => $conductor], 201);
     }
 
+    public function showConductor(string $id): JsonResponse
+    {
+        $conductor = Driver::where('staff_type', 'conductor')->findOrFail($id);
+        return response()->json(['success' => true, 'data' => $conductor]);
+    }
+
     public function updateConductor(string $id, Request $request): JsonResponse
     {
         $conductor = Driver::where('staff_type', 'conductor')->findOrFail($id);
