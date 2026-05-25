@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\CompanyDocument;
 use App\Models\CompanySubscription;
 use App\Models\FactoryUser;
+use App\Models\AdminUser;
 use App\Models\SubscriptionPlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -170,6 +171,30 @@ class AdminCompanyController extends Controller
                 ]);
                 $factoryUser->setPassword($data['password']);
                 $factoryUser->save();
+            }
+
+            // Also create AdminUser for universal auth login (/bus-fleet/login)
+            foreach ($loginEmails as $loginEmail) {
+                $existingAdmin = AdminUser::query()
+                    ->where('email', $loginEmail)
+                    ->first();
+
+                if ($existingAdmin) {
+                    continue;
+                }
+
+                AdminUser::query()->create([
+                    'id'       => (string) Str::uuid(),
+                    'name'     => $data['contact_person_name'],
+                    'email'    => $loginEmail,
+                    'password' => bcrypt($data['password']),
+                    'role'     => 'company_admin',
+                    'status'   => 'active',
+                    'metadata' => json_encode([
+                        'company_id'   => $company->id,
+                        'company_type' => 'bus_fleet',
+                    ]),
+                ]);
             }
 
             $company->load(['documents', 'activeSubscription.plan']);

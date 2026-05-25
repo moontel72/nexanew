@@ -21,6 +21,82 @@ Route::prefix('api/v1/bus-fleet')
     ->middleware(['auth:sanctum'])
     ->group(function (): void {
 
+        // ─── Company Profile (Dashboard) ───────────────
+        Route::get('profile', function (\Illuminate\Http\Request $request) {
+            $user = $request->user();
+            $email = $user->email;
+
+            $company = \App\Models\Company::query()
+                ->where('email', $email)
+                ->orWhere('contact_person_email', $email)
+                ->with(['documents', 'activeSubscription.plan'])
+                ->first();
+
+            if (!$company) {
+                return response()->json(['message' => 'No company found for this account'], 404);
+            }
+
+            $meta = $company->metadata ?? [];
+            $notes = $meta['notes'] ?? null;
+            $busMeta = null;
+            if ($notes && is_string($notes)) {
+                $decoded = json_decode($notes, true);
+                if (is_array($decoded) && ($decoded['company_type_tag'] ?? null) === 'bus_fleet') {
+                    $busMeta = $decoded;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'company' => (new \App\Http\Resources\CompanyResource($company))->toArray($request),
+                    'fleet_size' => $busMeta['fleet_size'] ?? 0,
+                    'active_routes' => $busMeta['active_routes'] ?? 0,
+                    'owner_name' => $busMeta['owner_name'] ?? null,
+                    'is_bus_fleet' => $busMeta !== null,
+                ],
+            ]);
+        });
+
+        // ─── Fleet Dashboard Stats ─────────────────────
+        Route::get('dashboard', function (\Illuminate\Http\Request $request) {
+            $user = $request->user();
+            $email = $user->email;
+
+            $company = \App\Models\Company::query()
+                ->where('email', $email)
+                ->orWhere('contact_person_email', $email)
+                ->first();
+
+            if (!$company) {
+                return response()->json(['message' => 'No company found for this account'], 404);
+            }
+
+            $meta = $company->metadata ?? [];
+            $notes = $meta['notes'] ?? null;
+            $busMeta = null;
+            if ($notes && is_string($notes)) {
+                $decoded = json_decode($notes, true);
+                if (is_array($decoded) && ($decoded['company_type_tag'] ?? null) === 'bus_fleet') {
+                    $busMeta = $decoded;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'company_id' => $company->id,
+                    'company_name' => $company->name,
+                    'status' => $company->status,
+                    'fleet_size' => $busMeta['fleet_size'] ?? 0,
+                    'active_routes' => $busMeta['active_routes'] ?? 0,
+                    'owner_name' => $busMeta['owner_name'] ?? $company->contact_person_name,
+                    'total_trips' => 0,
+                    'active_trips' => 0,
+                ],
+            ]);
+        });
+
         // ─── Trips (Admin / Owner) ────────────────────
         Route::post('trips', [\App\Http\Controllers\BusDispatchController::class, 'createTrip']);
         Route::get('trips/active', [\App\Http\Controllers\BusDispatchController::class, 'activeTrips']);

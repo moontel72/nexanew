@@ -1,5 +1,6 @@
 // Bus Fleet Dashboard — Company owner's home after login
-// Shows company-specific fleet stats, routes, buses
+// Module 13 + 14: Bus Admin Panel + Bus Owners App
+// Uses bus-fleet scoped endpoints to avoid 403 Forbidden from admin routes
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -8,11 +9,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
 import 'package:nexatrace_system/features/nexa_admin/data/models/company/bus_company_model.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_management_bloc.dart';
 import 'package:nexatrace_system/shared/models/company/company_model.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 
@@ -29,6 +28,8 @@ class BusFleetDashboardScreen extends StatefulWidget {
 class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   Company? _company;
   String? _error;
+  bool _isLoading = true;
+  bool _forbidden = false;
 
   @override
   void initState() {
@@ -37,51 +38,78 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   }
 
   Future<void> _loadCompany() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+      _forbidden = false;
+    });
+
     try {
-      final repo = CompanyManagementRepository(apiService: ApiService());
-      // If we have a company ID, load directly; otherwise find by auth user email
-      if (widget.companyId != null) {
-        final c = await repo.getCompany(widget.companyId!);
-        setState(() => _company = c);
-      } else {
-        // Fetch companies and find the one matching the logged-in user
-        final response = await repo.getCompanies(perPage: 100);
-        final authState = context.read<AdminAuthBloc>().state;
-        String? userEmail;
-        if (authState is AdminAuthAuthenticated) {
-          userEmail = authState.user.email;
-        }
-        if (userEmail != null) {
-          final match = response.companies.where((c) {
-            // Match by email or contact person email
-            final notesRaw = c.notes ?? '';
-            try {
-              final meta = jsonDecode(notesRaw);
-              if (meta is Map && meta['owner_name'] != null) return false;
-            } catch (_) {}
-            return c.email == userEmail || c.contactPerson.email == userEmail;
-          }).toList();
-          if (match.isNotEmpty) {
-            setState(() => _company = match.first);
-            return;
-          }
-        }
-        // Fallback: show first bus fleet company
-        final bus = response.companies.where((c) => c.isBusCompany).toList();
-        if (bus.isNotEmpty) setState(() => _company = bus.first);
+      final api = ApiService();
+
+      // Call bus-fleet scoped profile endpoint (NOT admin/companies)
+      final response = await api.get('/api/v1/bus-fleet/profile');
+
+      if (!mounted) return;
+
+      final data = response['data'] as Map<String, dynamic>?;
+      if (data == null || !(data['is_bus_fleet'] == true)) {
+        setState(() {
+          _error = 'No bus fleet company found for this account';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final companyJson = data['company'] as Map<String, dynamic>?;
+      if (companyJson == null) {
+        setState(() {
+          _error = 'Company data not available';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      try {
+        final company = Company.fromJson(companyJson);
+        setState(() { _company = company; _isLoading = false; });
+      } catch (e) {
+        setState(() {
+          _error = 'Failed to parse company data: $e';
+          _isLoading = false;
+        });
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      final msg = e.toString();
+      if (mounted) {
+        if (msg.contains('403') || msg.contains('Forbidden') || msg.contains('401') || msg.contains('Unauthorized')) {
+          setState(() {
+            _forbidden = true;
+            _error = 'Access denied. Please login again.';
+            _isLoading = false;
+          });
+        } else if (msg.contains('404')) {
+          setState(() {
+            _error = 'No bus fleet company found. Contact your super admin.';
+            _isLoading = false;
+          });
+        } else {
+          setState(() { _error = msg; _isLoading = false; });
+        }
+      }
     }
+  }
+
+  void _logout() {
+    context.read<AdminAuthBloc>().add(AdminLogoutRequested());
+    context.go('/bus-fleet/login');
   }
 
   @override
   Widget build(BuildContext context) {
-    final company = _company;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(company?.name ?? 'Bus Fleet Dashboard'),
+        title: Text(_company?.name ?? 'Bus Fleet Dashboard'),
         backgroundColor: AppColors.info,
         foregroundColor: Colors.white,
         actions: [
@@ -93,102 +121,115 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
-            onPressed: () {
-              context.read<AdminAuthBloc>().add(AdminLogoutRequested());
-              context.go('/bus-fleet/login');
-            },
+            onPressed: _logout,
           ),
         ],
       ),
-      body: _buildBody(company),
+      body: _buildBody(),
     );
   }
 
-  Widget _buildBody(Company? company) {
-    if (_error != null) {
+  Widget _buildBody() {
+    // ── Loading ─────────────────────────────────────────
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // ── 403 Forbidden — graceful fallback ──────────────
+    if (_forbidden) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: AppColors.error),
-            SizedBox(height: 16.h),
-            Text(_error!, textAlign: TextAlign.center),
-            SizedBox(height: 16.h),
-            ElevatedButton(onPressed: _loadCompany, child: const Text('Retry')),
-          ],
+        child: Padding(
+          padding: EdgeInsets.all(24.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.shield, size: 64, color: AppColors.warning),
+              SizedBox(height: 16.h),
+              Text(
+                'Permission Required',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                _error ?? '',
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColors.gray600),
+              ),
+              SizedBox(height: 24.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _loadCompany,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                  SizedBox(width: 12.w),
+                  OutlinedButton.icon(
+                    onPressed: _logout,
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Logout'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    if (company == null) {
-      return const Center(child: CircularProgressIndicator());
+    // ── Generic error ──────────────────────────────────
+    if (_error != null || _company == null) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(24.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: AppColors.error),
+              SizedBox(height: 16.h),
+              Text(
+                _error ?? 'Could not load company data',
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _loadCompany,
+                    child: const Text('Retry'),
+                  ),
+                  SizedBox(width: 12.w),
+                  OutlinedButton(
+                    onPressed: _logout,
+                    child: const Text('Logout'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
-    final fleet = company.fleetSize;
-    final routes = company.activeRoutes;
-    final owner = company.busOwnerName;
+    // ── Company loaded — show dashboard ────────────────
+    final c = _company!;
+    final fleet = c.fleetSize;
+    final routes = c.activeRoutes;
+    final owner = c.busOwnerName;
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(20.w),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Company Header ───────────────────────────────
-          Card(
-            color: AppColors.info.withValues(alpha: 0.05),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(20.w),
-              child: Row(
-                children: [
-                  Container(
-                    width: 60.w,
-                    height: 60.w,
-                    decoration: BoxDecoration(
-                      color: AppColors.info,
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
-                    child: Icon(
-                      Icons.directions_bus,
-                      size: 30.w,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 16.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          company.name,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          company.email,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppColors.gray600),
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          '${company.city}, ${company.country}',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.gray500),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _statusBadge(company.status),
-                ],
-              ),
-            ),
-          ),
+          _headerCard(c),
           SizedBox(height: 20.h),
-
-          // ── Stats Grid ──────────────────────────────────
           Text(
             'Fleet Overview',
             style: Theme.of(
@@ -196,38 +237,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           SizedBox(height: 12.h),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 12.w,
-            mainAxisSpacing: 12.h,
-            childAspectRatio: 1.6,
-            children: [
-              _statCard(
-                'Total Buses',
-                '$fleet',
-                Icons.directions_bus,
-                AppColors.info,
-              ),
-              _statCard(
-                'Active Routes',
-                '$routes',
-                Icons.alt_route,
-                AppColors.success,
-              ),
-              _statCard('Owner', owner, Icons.person, AppColors.warning),
-              _statCard(
-                'Status',
-                company.status.name,
-                Icons.verified,
-                AppColors.primary,
-              ),
-            ],
-          ),
+          _statsGrid(fleet, routes, owner, c.status),
           SizedBox(height: 20.h),
-
-          // ── Quick Info ──────────────────────────────────
           Text(
             'Company Details',
             style: Theme.of(
@@ -235,13 +246,97 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           SizedBox(height: 12.h),
-          _infoRow('Registration', company.registrationNumber),
-          _infoRow('Phone', company.phone),
-          _infoRow('Address', company.address),
-          _infoRow('Type', company.type.name),
-          _infoRow('Industry', company.industry.name),
+          _infoRow('Registration', c.registrationNumber),
+          _infoRow('Phone', c.phone),
+          _infoRow('Address', c.address),
+          _infoRow('Type', c.type.name),
+          _infoRow('Industry', c.industry.name),
         ],
       ),
+    );
+  }
+
+  // ── Widgets ────────────────────────────────────────────────
+  Widget _headerCard(Company c) {
+    return Card(
+      color: AppColors.info.withValues(alpha: 0.05),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+      child: Padding(
+        padding: EdgeInsets.all(20.w),
+        child: Row(
+          children: [
+            Container(
+              width: 60.w,
+              height: 60.w,
+              decoration: BoxDecoration(
+                color: AppColors.info,
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+              child: Icon(
+                Icons.directions_bus,
+                size: 30.w,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    c.name,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    c.email,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: AppColors.gray600),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    '${c.city}, ${c.country}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+                  ),
+                ],
+              ),
+            ),
+            _statusBadge(c.status),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statsGrid(int fleet, int routes, String owner, CompanyStatus status) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 12.w,
+      mainAxisSpacing: 12.h,
+      childAspectRatio: 1.6,
+      children: [
+        _statCard(
+          'Total Buses',
+          '$fleet',
+          Icons.directions_bus,
+          AppColors.info,
+        ),
+        _statCard(
+          'Active Routes',
+          '$routes',
+          Icons.alt_route,
+          AppColors.success,
+        ),
+        _statCard('Owner', owner, Icons.person, AppColors.warning),
+        _statCard('Status', status.name, Icons.verified, AppColors.primary),
+      ],
     );
   }
 
