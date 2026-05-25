@@ -13,7 +13,6 @@ return new class extends Migration
         Schema::create('tenant_accounts', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('parent_account_id')->nullable();
-            $table->foreign('parent_account_id')->references('id')->on('tenant_accounts')->nullOnDelete();
             $table->string('account_name', 255);
             $table->string('email', 255)->unique();
             $table->string('password', 255);
@@ -26,6 +25,11 @@ return new class extends Migration
 
             $table->index('parent_account_id');
             $table->index('account_type');
+        });
+
+        // Self-referencing FK must be added AFTER table creation
+        Schema::table('tenant_accounts', function (Blueprint $table) {
+            $table->foreign('parent_account_id')->references('id')->on('tenant_accounts')->nullOnDelete();
         });
 
         // Link bus_shift_allocations to tenant_accounts
