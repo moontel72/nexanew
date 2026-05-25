@@ -128,6 +128,39 @@ Route::prefix('api/v1/bus-fleet')
             Route::get('plates', [\App\Http\Controllers\FleetStaffController::class, 'getBusPlates']);
         });
 
+        // ─── Bus Owners CRUD ───────────────────────────
+        Route::apiResource('owners', \App\Http\Controllers\FleetManagementController::class)
+            ->only(['index', 'store', 'show', 'update', 'destroy'])
+            ->names([
+                'index'   => 'bus-fleet.owners.index',
+                'store'   => 'bus-fleet.owners.store',
+                'show'    => 'bus-fleet.owners.show',
+                'update'  => 'bus-fleet.owners.update',
+                'destroy' => 'bus-fleet.owners.destroy',
+            ])
+            ->parameters(['owners' => 'owner']);
+
+        // ─── Bus Drivers CRUD ───────────────────────────
+        Route::prefix('drivers/manage')->group(function (): void {
+            Route::get('/', [\App\Http\Controllers\FleetManagementController::class, 'listDrivers']);
+            Route::post('/', [\App\Http\Controllers\FleetManagementController::class, 'storeDriver']);
+            Route::get('/{id}', [\App\Http\Controllers\FleetManagementController::class, 'showDriver']);
+            Route::put('/{id}', [\App\Http\Controllers\FleetManagementController::class, 'updateDriver']);
+            Route::delete('/{id}', [\App\Http\Controllers\FleetManagementController::class, 'destroyDriver']);
+        });
+
+        // ─── Bus Conductors CRUD ────────────────────────
+        Route::apiResource('conductors', \App\Http\Controllers\FleetManagementController::class)
+            ->only(['index', 'store', 'show', 'update', 'destroy'])
+            ->names([
+                'index'   => 'bus-fleet.conductors.index',
+                'store'   => 'bus-fleet.conductors.store',
+                'show'    => 'bus-fleet.conductors.show',
+                'update'  => 'bus-fleet.conductors.update',
+                'destroy' => 'bus-fleet.conductors.destroy',
+            ])
+            ->parameters(['conductors' => 'conductor']);
+
         // ─── Shift Allocation Roster (Setup 14/15) ──────
         Route::prefix('shifts')->group(function (): void {
             Route::post('save', [\App\Http\Controllers\BusShiftController::class, 'saveShiftRoster']);

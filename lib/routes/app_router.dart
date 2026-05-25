@@ -20,6 +20,9 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/bus_companies_list_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_company_login_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet_dashboard_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_owners_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_drivers_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_conductors_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/transport_wallet_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/transport_marketplace_admin_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/transport/fraud_prevention_screen.dart';
@@ -254,6 +257,32 @@ class AppRouter {
       path: '/bus-fleet/dashboard',
       name: 'bus_fleet_dashboard',
       builder: (context, state) => const BusFleetDashboardScreen(),
+      routes: [
+        GoRoute(
+          path: 'owners',
+          builder: (context, state) => const FleetOwnersScreen(),
+        ),
+        GoRoute(
+          path: 'owners/add',
+          builder: (context, state) => const FleetOwnersScreen(),
+        ),
+        GoRoute(
+          path: 'drivers',
+          builder: (context, state) => const FleetDriversScreen(),
+        ),
+        GoRoute(
+          path: 'drivers/add',
+          builder: (context, state) => const FleetDriversScreen(),
+        ),
+        GoRoute(
+          path: 'conductors',
+          builder: (context, state) => const FleetConductorsScreen(),
+        ),
+        GoRoute(
+          path: 'conductors/add',
+          builder: (context, state) => const FleetConductorsScreen(),
+        ),
+      ],
     ),
     ShellRoute(
       builder: (context, state, child) => SuperAdminShell(child: child),
