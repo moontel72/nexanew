@@ -12,17 +12,16 @@ return new class extends Migration
         Schema::create('transport_bus_layouts', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('bus_id');
-            $table->uuid('owner_id');
+            $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
             $table->unsignedTinyInteger('total_rows')->default(10);
             $table->unsignedTinyInteger('left_columns')->default(2);  // 2 or 3 seats
             $table->unsignedTinyInteger('right_columns')->default(2); // 2 or 1 seats
             $table->unsignedTinyInteger('driver_seats')->default(1);  // 1 or 2
-            $table->json('raw_grid_json'); // full serialized grid: [{"row":1,"left":[1,2],"right":[3,4],"aisle":1,"driver":[5]}]
+            $table->json('raw_grid_json'); // full serialized grid
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
             $table->unique('bus_id');
-            $table->foreign('owner_id')->references('id')->on('users')->cascadeOnDelete();
         });
 
         // 2. Bus door QR code registry
