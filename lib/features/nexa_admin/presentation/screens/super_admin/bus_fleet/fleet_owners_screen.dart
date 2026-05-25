@@ -50,9 +50,6 @@ class _FleetOwnersScreenState extends State<FleetOwnersScreen> {
         passCtrl = TextEditingController();
     final cnicCtrl = TextEditingController(),
         addrCtrl = TextEditingController();
-    final licenseCtrl = TextEditingController(),
-        plateCtrl = TextEditingController();
-    final salaryCtrl = TextEditingController();
 
     final ok = await showDialog<bool>(
       context: context,
@@ -73,12 +70,6 @@ class _FleetOwnersScreenState extends State<FleetOwnersScreen> {
               _field(cnicCtrl, 'CNIC'),
               SizedBox(height: 10.h),
               _field(addrCtrl, 'Address', maxLines: 2),
-              SizedBox(height: 10.h),
-              _field(licenseCtrl, 'License Number'),
-              SizedBox(height: 10.h),
-              _field(plateCtrl, 'Vehicle Plate'),
-              SizedBox(height: 10.h),
-              _field(salaryCtrl, 'Salary', number: true),
             ],
           ),
         ),
@@ -107,12 +98,6 @@ class _FleetOwnersScreenState extends State<FleetOwnersScreen> {
           'password': passCtrl.text,
           if (cnicCtrl.text.isNotEmpty) 'cnic': cnicCtrl.text.trim(),
           if (addrCtrl.text.isNotEmpty) 'address': addrCtrl.text.trim(),
-          if (licenseCtrl.text.isNotEmpty)
-            'license_number': licenseCtrl.text.trim(),
-          if (plateCtrl.text.isNotEmpty)
-            'vehicle_plate_number': plateCtrl.text.trim(),
-          if (salaryCtrl.text.isNotEmpty)
-            'salary': double.tryParse(salaryCtrl.text),
         },
       );
       _load();
@@ -218,14 +203,7 @@ class _FleetOwnersScreenState extends State<FleetOwnersScreen> {
                   ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
                 ),
                 SizedBox(height: 4.h),
-                Row(
-                  children: [
-                    _chip(Icons.phone, o['phone'] ?? '—'),
-                    SizedBox(width: 12.w),
-                    if ((o['vehicle_plate_number'] ?? '').toString().isNotEmpty)
-                      _chip(Icons.directions_bus, o['vehicle_plate_number']),
-                  ],
-                ),
+                Row(children: [_chip(Icons.phone, o['phone'] ?? '—')]),
               ],
             ),
           ),

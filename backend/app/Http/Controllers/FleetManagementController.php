@@ -66,10 +66,6 @@ class FleetManagementController extends Controller
             'password' => 'required|string|min:8',
             'cnic' => 'nullable|string|max:30',
             'address' => 'nullable|string',
-            'license_number' => 'nullable|string|max:100',
-            'vehicle_plate_number' => 'nullable|string|max:50',
-            'salary' => 'nullable|numeric',
-            'hire_date' => 'nullable|date',
         ]);
 
         $id = (string) Str::uuid();
@@ -84,10 +80,6 @@ class FleetManagementController extends Controller
             'password' => bcrypt($data['password']),
             'cnic' => $data['cnic'] ?? null,
             'address' => $data['address'] ?? null,
-            'license_number' => $data['license_number'] ?? null,
-            'vehicle_plate_number' => $data['vehicle_plate_number'] ?? null,
-            'salary' => $data['salary'] ?? null,
-            'hire_date' => $data['hire_date'] ?? null,
             'status' => 'active',
             'is_active' => true,
             'created_at' => now(),
@@ -110,6 +102,7 @@ class FleetManagementController extends Controller
         $exists = DB::table('drivers')->where('staff_type', 'owner')->where('id', $id)->exists();
         if (!$exists) return response()->json(['message' => 'Not found'], 404);
 
+        // Owners (Type A) — no salary, vehicle_plate, license, or hire_date
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:drivers,email,'.$id,
@@ -117,19 +110,14 @@ class FleetManagementController extends Controller
             'password' => 'sometimes|string|min:8',
             'cnic' => 'nullable|string|max:30',
             'address' => 'nullable|string',
-            'license_number' => 'nullable|string|max:100',
-            'vehicle_plate_number' => 'nullable|string|max:50',
-            'salary' => 'nullable|numeric',
-            'hire_date' => 'nullable|date',
             'status' => 'sometimes|in:active,inactive,suspended',
         ]);
 
-        $update = [];
-        foreach (['name','email','phone','cnic','address','license_number','vehicle_plate_number','salary','hire_date','status'] as $f) {
+        $update = ['updated_at' => now()];
+        foreach (['name','email','phone','cnic','address','status'] as $f) {
             if (array_key_exists($f, $data)) $update[$f] = $data[$f];
         }
         if (isset($data['password'])) $update['password'] = bcrypt($data['password']);
-        $update['updated_at'] = now();
 
         DB::table('drivers')->where('id', $id)->update($update);
         return response()->json(['success' => true, 'data' => DB::table('drivers')->find($id)]);
@@ -154,6 +142,17 @@ class FleetManagementController extends Controller
                 ->where('driver_type', 'bus')
                 ->where('staff_type', 'driver');
             if ($cid) $query->where('company_id', $cid);
+
+            // owner_id filter: B (null) vs D (specific owner UUID)
+            if ($request->has('owner_id')) {
+                $oid = $request->input('owner_id');
+                if ($oid === 'null' || $oid === '' || $oid === 'company') {
+                    $query->whereNull('owner_id'); // Type B — Company Direct Drivers
+                } else {
+                    $query->where('owner_id', $oid); // Type D — Owner's Drivers
+                }
+            }
+
             if ($request->filled('search')) {
                 $s = $request->search;
                 $query->where(function($q) use ($s) {
@@ -185,12 +184,28 @@ class FleetManagementController extends Controller
             'vehicle_plate_number' => 'nullable|string|max:50',
             'salary' => 'nullable|numeric',
             'hire_date' => 'nullable|date',
+            'owner_id' => 'nullable|uuid|exists:drivers,id', // D = Owner's Driver
         ]);
+
+        $cid = $this->companyId($request);
+        $ownerId = $data['owner_id'] ?? null;
+
+        // If owner_id is provided (Type D), validate ownership scoping
+        if ($ownerId) {
+            $owner = DB::table('drivers')
+                ->where('id', $ownerId)
+                ->where('staff_type', 'owner')
+                ->first();
+            if (!$owner) {
+                return response()->json(['message' => 'Invalid owner_id: not a bus owner'], 422);
+            }
+        }
 
         $id = (string) Str::uuid();
         DB::table('drivers')->insert([
             'id' => $id,
-            'company_id' => $this->companyId($request),
+            'company_id' => $cid,
+            'owner_id' => $ownerId,
             'driver_type' => 'bus',
             'staff_type' => 'driver',
             'name' => $data['name'],
@@ -221,8 +236,8 @@ class FleetManagementController extends Controller
 
     public function updateDriver(string $id, Request $request): JsonResponse
     {
-        $exists = DB::table('drivers')->where('staff_type', 'driver')->where('id', $id)->exists();
-        if (!$exists) return response()->json(['message' => 'Not found'], 404);
+        $driver = DB::table('drivers')->where('staff_type', 'driver')->where('id', $id)->first();
+        if (!$driver) return response()->json(['message' => 'Not found'], 404);
 
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -235,11 +250,23 @@ class FleetManagementController extends Controller
             'vehicle_plate_number' => 'nullable|string|max:50',
             'salary' => 'nullable|numeric',
             'hire_date' => 'nullable|date',
+            'owner_id' => 'nullable|uuid|exists:drivers,id',
             'status' => 'sometimes|in:active,inactive,suspended',
         ]);
 
+        // If owner_id is provided, validate it references a valid owner
+        if ($ownerId = ($data['owner_id'] ?? null)) {
+            $owner = DB::table('drivers')
+                ->where('id', $ownerId)
+                ->where('staff_type', 'owner')
+                ->first();
+            if (!$owner) {
+                return response()->json(['message' => 'Invalid owner_id: not a bus owner'], 422);
+            }
+        }
+
         $update = ['updated_at' => now()];
-        foreach (['name','phone','email','license_number','cnic','address','vehicle_plate_number','salary','hire_date','status'] as $f) {
+        foreach (['name','phone','email','license_number','cnic','address','vehicle_plate_number','salary','hire_date','owner_id','status'] as $f) {
             if (array_key_exists($f, $data)) $update[$f] = $data[$f];
         }
         if (isset($data['password'])) $update['password'] = bcrypt($data['password']);
@@ -267,6 +294,17 @@ class FleetManagementController extends Controller
                 ->where('driver_type', 'bus')
                 ->where('staff_type', 'conductor');
             if ($cid) $query->where('company_id', $cid);
+
+            // owner_id filter: C (null) vs E (specific owner UUID)
+            if ($request->has('owner_id')) {
+                $oid = $request->input('owner_id');
+                if ($oid === 'null' || $oid === '' || $oid === 'company') {
+                    $query->whereNull('owner_id'); // Type C — Company Direct Conductors
+                } else {
+                    $query->where('owner_id', $oid); // Type E — Owner's Conductors
+                }
+            }
+
             if ($request->filled('search')) {
                 $s = $request->search;
                 $query->where(function($q) use ($s) {
@@ -290,20 +328,40 @@ class FleetManagementController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:50',
+            'password' => 'required|string|min:8',
+            'email' => 'nullable|email|unique:drivers,email',
             'cnic' => 'nullable|string|max:30',
             'address' => 'nullable|string',
             'salary' => 'nullable|numeric',
             'hire_date' => 'nullable|date',
+            'owner_id' => 'nullable|uuid|exists:drivers,id', // E = Owner's Conductor
         ]);
+
+        $cid = $this->companyId($request);
+        $ownerId = $data['owner_id'] ?? null;
+
+        // If owner_id is provided (Type E), validate ownership scoping
+        if ($ownerId) {
+            $owner = DB::table('drivers')
+                ->where('id', $ownerId)
+                ->where('staff_type', 'owner')
+                ->first();
+            if (!$owner) {
+                return response()->json(['message' => 'Invalid owner_id: not a bus owner'], 422);
+            }
+        }
 
         $id = (string) Str::uuid();
         DB::table('drivers')->insert([
             'id' => $id,
-            'company_id' => $this->companyId($request),
+            'company_id' => $cid,
+            'owner_id' => $ownerId,
             'driver_type' => 'bus',
             'staff_type' => 'conductor',
             'name' => $data['name'],
             'phone' => $data['phone'],
+            'email' => $data['email'] ?? null,
+            'password' => bcrypt($data['password']),
             'cnic' => $data['cnic'] ?? null,
             'address' => $data['address'] ?? null,
             'salary' => $data['salary'] ?? null,
@@ -326,23 +384,39 @@ class FleetManagementController extends Controller
 
     public function updateConductor(string $id, Request $request): JsonResponse
     {
-        $exists = DB::table('drivers')->where('staff_type', 'conductor')->where('id', $id)->exists();
-        if (!$exists) return response()->json(['message' => 'Not found'], 404);
+        $conductor = DB::table('drivers')->where('staff_type', 'conductor')->where('id', $id)->first();
+        if (!$conductor) return response()->json(['message' => 'Not found'], 404);
 
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
             'phone' => 'sometimes|string|max:50',
+            'password' => 'sometimes|string|min:8',
+            'email' => 'nullable|email|unique:drivers,email,'.$id,
             'cnic' => 'nullable|string|max:30',
             'address' => 'nullable|string',
             'salary' => 'nullable|numeric',
             'hire_date' => 'nullable|date',
+            'owner_id' => 'nullable|uuid|exists:drivers,id',
             'status' => 'sometimes|in:active,inactive,suspended',
         ]);
 
+        // If owner_id is provided, validate it references a valid owner
+        if ($ownerId = ($data['owner_id'] ?? null)) {
+            $owner = DB::table('drivers')
+                ->where('id', $ownerId)
+                ->where('staff_type', 'owner')
+                ->first();
+            if (!$owner) {
+                return response()->json(['message' => 'Invalid owner_id: not a bus owner'], 422);
+            }
+        }
+
         $update = ['updated_at' => now()];
-        foreach (['name','phone','cnic','address','salary','hire_date','status'] as $f) {
+        foreach (['name','phone','email','cnic','address','salary','hire_date','owner_id','status'] as $f) {
             if (array_key_exists($f, $data)) $update[$f] = $data[$f];
         }
+        if (isset($data['password'])) $update['password'] = bcrypt($data['password']);
+
         DB::table('drivers')->where('id', $id)->update($update);
         return response()->json(['success' => true, 'data' => DB::table('drivers')->find($id)]);
     }

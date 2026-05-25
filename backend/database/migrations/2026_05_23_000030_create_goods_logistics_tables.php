@@ -26,9 +26,9 @@ return new class extends Migration
 
         if (!Schema::hasTable('smart_tracking_payloads')) {
             Schema::create('smart_tracking_payloads', function (Blueprint $table) {
-                $table->uuid('id')->primary();
+                $table->uuid('id');
+                $table->primary('id');
                 $table->uuid('parent_code_id')->nullable();
-                $table->foreign('parent_code_id')->references('id')->on('smart_tracking_payloads')->nullOnDelete();
                 $table->string('smart_code_string', 20)->unique();
                 $table->string('destination_province', 60)->nullable();
                 $table->string('destination_district', 60)->nullable();
@@ -43,6 +43,17 @@ return new class extends Migration
                 $table->index('smart_code_string');
                 $table->index('truck_plate_id');
                 $table->index('parent_code_id');
+            });
+        }
+
+        // Self-referencing FK — always attempt (idempotent via try/catch + check)
+        $fkAlreadyExists = \Illuminate\Support\Facades\DB::select(
+            "SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = ? AND table_name = ?",
+            ['smart_tracking_payloads_parent_code_id_foreign', 'smart_tracking_payloads']
+        );
+        if (empty($fkAlreadyExists) && Schema::hasTable('smart_tracking_payloads')) {
+            Schema::table('smart_tracking_payloads', function (Blueprint $table) {
+                $table->foreign('parent_code_id')->references('id')->on('smart_tracking_payloads')->nullOnDelete();
             });
         }
     }
