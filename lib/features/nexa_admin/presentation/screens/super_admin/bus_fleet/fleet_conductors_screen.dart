@@ -46,7 +46,8 @@ class _FleetConductorsScreenState extends State<FleetConductorsScreen> {
   Future<void> _showAdd() async {
     final name = TextEditingController(), phone = TextEditingController();
     final cnic = TextEditingController(), addr = TextEditingController();
-    final salary = TextEditingController();
+    final salary = TextEditingController(), pass = TextEditingController();
+    final email = TextEditingController();
 
     final ok = await showDialog<bool>(
       context: context,
@@ -60,11 +61,15 @@ class _FleetConductorsScreenState extends State<FleetConductorsScreen> {
               SizedBox(height: 10.h),
               _f(phone, 'Phone *', phone: true),
               SizedBox(height: 10.h),
+              _f(pass, 'Password *', obscure: true),
+              SizedBox(height: 10.h),
+              _f(email, 'Email', email: true),
+              SizedBox(height: 10.h),
               _f(cnic, 'CNIC'),
               SizedBox(height: 10.h),
               _f(addr, 'Address', maxLines: 2),
               SizedBox(height: 10.h),
-              _f(salary, 'Salary', number: true),
+              _f(salary, 'Salary *', number: true),
             ],
           ),
         ),
@@ -88,9 +93,11 @@ class _FleetConductorsScreenState extends State<FleetConductorsScreen> {
         data: {
           'name': name.text.trim(),
           'phone': phone.text.trim(),
+          'password': pass.text,
+          if (email.text.isNotEmpty) 'email': email.text.trim(),
           if (cnic.text.isNotEmpty) 'cnic': cnic.text.trim(),
           if (addr.text.isNotEmpty) 'address': addr.text.trim(),
-          if (salary.text.isNotEmpty) 'salary': double.tryParse(salary.text),
+          'salary': double.tryParse(salary.text) ?? 0,
         },
       );
       _load();
@@ -115,13 +122,20 @@ class _FleetConductorsScreenState extends State<FleetConductorsScreen> {
   Widget _f(
     TextEditingController c,
     String l, {
+    bool obscure = false,
+    bool email = false,
     bool phone = false,
     bool number = false,
     int maxLines = 1,
   }) => TextField(
     controller: c,
+    obscureText: obscure,
     maxLines: maxLines,
-    keyboardType: phone || number ? TextInputType.phone : TextInputType.text,
+    keyboardType: email
+        ? TextInputType.emailAddress
+        : phone || number
+        ? TextInputType.phone
+        : TextInputType.text,
     decoration: InputDecoration(
       labelText: l,
       border: const OutlineInputBorder(),

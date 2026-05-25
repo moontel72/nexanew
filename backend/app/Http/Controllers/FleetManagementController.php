@@ -323,18 +323,20 @@ class FleetManagementController extends Controller
         }
     }
 
+
+
     public function storeConductor(Request $request): JsonResponse
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:50',
-            'password' => 'required|string|min:8',
-            'email' => 'nullable|email|unique:drivers,email',
+            'phone' => 'required|string|max:50|unique:drivers,phone', // Phone-based login key
+            'password' => 'required|string|min:6',                    // App auth password
+            'email' => 'nullable|email|unique:drivers,email',         // Optional — conductors often lack corporate email
             'cnic' => 'nullable|string|max:30',
             'address' => 'nullable|string',
-            'salary' => 'nullable|numeric',
+            'salary' => 'required|numeric|min:0',
             'hire_date' => 'nullable|date',
-            'owner_id' => 'nullable|uuid|exists:drivers,id', // E = Owner's Conductor
+            'owner_id' => 'nullable|uuid|exists:drivers,id',          // E = Owner's Conductor
         ]);
 
         $cid = $this->companyId($request);
@@ -351,6 +353,9 @@ class FleetManagementController extends Controller
             }
         }
 
+        // Normalise empty-string email to null for DB compatibility
+        $email = !empty($data['email']) ? $data['email'] : null;
+
         $id = (string) Str::uuid();
         DB::table('drivers')->insert([
             'id' => $id,
@@ -360,11 +365,11 @@ class FleetManagementController extends Controller
             'staff_type' => 'conductor',
             'name' => $data['name'],
             'phone' => $data['phone'],
-            'email' => $data['email'] ?? null,
+            'email' => $email,
             'password' => bcrypt($data['password']),
             'cnic' => $data['cnic'] ?? null,
             'address' => $data['address'] ?? null,
-            'salary' => $data['salary'] ?? null,
+            'salary' => $data['salary'],
             'hire_date' => $data['hire_date'] ?? null,
             'status' => 'active',
             'is_active' => true,
@@ -389,12 +394,12 @@ class FleetManagementController extends Controller
 
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'phone' => 'sometimes|string|max:50',
-            'password' => 'sometimes|string|min:8',
+            'phone' => 'sometimes|string|max:50|unique:drivers,phone,'.$id,
+            'password' => 'sometimes|string|min:6',
             'email' => 'nullable|email|unique:drivers,email,'.$id,
             'cnic' => 'nullable|string|max:30',
             'address' => 'nullable|string',
-            'salary' => 'nullable|numeric',
+            'salary' => 'sometimes|numeric|min:0',
             'hire_date' => 'nullable|date',
             'owner_id' => 'nullable|uuid|exists:drivers,id',
             'status' => 'sometimes|in:active,inactive,suspended',
@@ -409,6 +414,11 @@ class FleetManagementController extends Controller
             if (!$owner) {
                 return response()->json(['message' => 'Invalid owner_id: not a bus owner'], 422);
             }
+        }
+
+        // Normalise empty-string email to null for DB compatibility
+        if (array_key_exists('email', $data) && empty($data['email'])) {
+            $data['email'] = null;
         }
 
         $update = ['updated_at' => now()];
