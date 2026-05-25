@@ -18,6 +18,7 @@ use Illuminate\Support\ServiceProvider;
  *   marketplace.php  →  /api/v1/marketplace    (Modules 6, 7, 12)
  *   truck_fleet.php  →  /api/v1/truck-fleet    (Modules 9, 10, 11)
  *   bus_fleet.php    →  /api/v1/bus-fleet      (Modules 13, 14, 15)
+ *   goods_fleet.php  →  /api/v1/goods-fleet    (Goods Logistics)
  *
  * SAFETY:
  *   - 100 % ADDITIVE. Does NOT modify routes/api.php.
@@ -45,6 +46,7 @@ class PanelRouteServiceProvider extends ServiceProvider
         'marketplace' => 'marketplace',
         'truck_fleet' => 'truck_fleet',
         'bus_fleet'   => 'bus_fleet',
+        'goods_fleet' => 'goods_fleet',
     ];
 
     /**
