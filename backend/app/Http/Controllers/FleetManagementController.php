@@ -323,10 +323,12 @@ class FleetManagementController extends Controller
 
     private function resolveCompanyId($user): ?string
     {
-        $meta = $user->metadata;
+        if (!$user) return null;
+        $meta = $user->metadata ?? null;
         if (is_string($meta)) {
             $meta = json_decode($meta, true);
         }
+        if (!is_array($meta)) return null;
         return $meta['company_id'] ?? null;
     }
 }

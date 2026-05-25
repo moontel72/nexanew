@@ -24,6 +24,12 @@ class Driver extends Authenticatable
         'phone',
         'email',
         'password',
+        'driver_type',
+        'staff_type',
+        'cnic',
+        'address',
+        'hire_date',
+        'salary',
         'license_number',
         'license_expiry',
         'vehicle_plate_number',
@@ -39,6 +45,7 @@ class Driver extends Authenticatable
         'driving_hours_today',
         'driving_hours_week',
         'is_fatigued',
+        'is_active',
     ];
 
     protected $hidden = [
