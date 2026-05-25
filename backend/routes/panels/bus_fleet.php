@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::prefix('api/v1/bus-fleet')
-    ->middleware(['auth:sanctum'])
+    ->middleware(['auth:admin'])
     ->group(function (): void {
 
         // ─── Company Profile (Dashboard) ───────────────
