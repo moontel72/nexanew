@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -28,21 +29,32 @@ class FleetManagementController extends Controller
 
     public function listOwners(Request $request): JsonResponse
     {
-        $cid = $this->companyId($request);
-        $query = DB::table('drivers')
-            ->where('driver_type', 'bus')
-            ->where('staff_type', 'owner');
-        if ($cid) $query->where('company_id', $cid);
-        if ($request->has('search') && $request->search) {
-            $s = $request->search;
-            $query->where(function($q) use ($s) {
-                $q->where('name', 'ilike', "%{$s}%")
-                  ->orWhere('phone', 'ilike', "%{$s}%")
-                  ->orWhere('email', 'ilike', "%{$s}%");
-            });
+        try {
+            $cid = $this->companyId($request);
+            $perPage = (int) $request->input('per_page', 20);
+            $perPage = max(1, min(100, $perPage));
+
+            $query = DB::table('drivers')
+                ->where('driver_type', 'bus')
+                ->where('staff_type', 'owner');
+            if ($cid) $query->where('company_id', $cid);
+            if ($request->filled('search')) {
+                $s = $request->search;
+                $query->where(function($q) use ($s) {
+                    $q->where('name', 'ilike', "%{$s}%")
+                      ->orWhere('phone', 'ilike', "%{$s}%")
+                      ->orWhere('email', 'ilike', "%{$s}%");
+                });
+            }
+            $result = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (\Exception $e) {
+            Log::error('Fleet Management - listOwners Error: ' . $e->getMessage(), [
+                'sql' => $e->getTraceAsString(),
+                'user_id' => $request->user()?->id,
+            ]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
-        $result = $query->orderBy('created_at', 'desc')->paginate(20);
-        return response()->json(['success' => true, 'data' => $result]);
     }
 
     public function storeOwner(Request $request): JsonResponse
@@ -133,20 +145,31 @@ class FleetManagementController extends Controller
 
     public function listDrivers(Request $request): JsonResponse
     {
-        $cid = $this->companyId($request);
-        $query = DB::table('drivers')
-            ->where('driver_type', 'bus')
-            ->where('staff_type', 'driver');
-        if ($cid) $query->where('company_id', $cid);
-        if ($request->has('search') && $request->search) {
-            $s = $request->search;
-            $query->where(function($q) use ($s) {
-                $q->where('name', 'ilike', "%{$s}%")
-                  ->orWhere('phone', 'ilike', "%{$s}%");
-            });
+        try {
+            $cid = $this->companyId($request);
+            $perPage = (int) $request->input('per_page', 20);
+            $perPage = max(1, min(100, $perPage));
+
+            $query = DB::table('drivers')
+                ->where('driver_type', 'bus')
+                ->where('staff_type', 'driver');
+            if ($cid) $query->where('company_id', $cid);
+            if ($request->filled('search')) {
+                $s = $request->search;
+                $query->where(function($q) use ($s) {
+                    $q->where('name', 'ilike', "%{$s}%")
+                      ->orWhere('phone', 'ilike', "%{$s}%");
+                });
+            }
+            $result = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (\Exception $e) {
+            Log::error('Fleet Management - listDrivers Error: ' . $e->getMessage(), [
+                'sql' => $e->getTraceAsString(),
+                'user_id' => $request->user()?->id,
+            ]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
-        $result = $query->orderBy('created_at', 'desc')->paginate(20);
-        return response()->json(['success' => true, 'data' => $result]);
     }
 
     public function storeDriver(Request $request): JsonResponse
@@ -235,20 +258,31 @@ class FleetManagementController extends Controller
 
     public function listConductors(Request $request): JsonResponse
     {
-        $cid = $this->companyId($request);
-        $query = DB::table('drivers')
-            ->where('driver_type', 'bus')
-            ->where('staff_type', 'conductor');
-        if ($cid) $query->where('company_id', $cid);
-        if ($request->has('search') && $request->search) {
-            $s = $request->search;
-            $query->where(function($q) use ($s) {
-                $q->where('name', 'ilike', "%{$s}%")
-                  ->orWhere('phone', 'ilike', "%{$s}%");
-            });
+        try {
+            $cid = $this->companyId($request);
+            $perPage = (int) $request->input('per_page', 20);
+            $perPage = max(1, min(100, $perPage));
+
+            $query = DB::table('drivers')
+                ->where('driver_type', 'bus')
+                ->where('staff_type', 'conductor');
+            if ($cid) $query->where('company_id', $cid);
+            if ($request->filled('search')) {
+                $s = $request->search;
+                $query->where(function($q) use ($s) {
+                    $q->where('name', 'ilike', "%{$s}%")
+                      ->orWhere('phone', 'ilike', "%{$s}%");
+                });
+            }
+            $result = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (\Exception $e) {
+            Log::error('Fleet Management - listConductors Error: ' . $e->getMessage(), [
+                'sql' => $e->getTraceAsString(),
+                'user_id' => $request->user()?->id,
+            ]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
-        $result = $query->orderBy('created_at', 'desc')->paginate(20);
-        return response()->json(['success' => true, 'data' => $result]);
     }
 
     public function storeConductor(Request $request): JsonResponse
