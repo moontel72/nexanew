@@ -44,6 +44,8 @@ class _AddGoodsCompanyScreenState extends State<AddGoodsCompanyScreen> {
   final _descriptionController = TextEditingController();
 
   String _selectedStatus = 'active';
+  String _selectedCompanyType = 'logistics';
+  String _selectedIndustryType = 'automotive';
   String? _selectedPlanId;
   bool _isSubmitting = false;
 
@@ -252,6 +254,47 @@ class _AddGoodsCompanyScreenState extends State<AddGoodsCompanyScreen> {
           validator: (v) => (v == null || v.trim().isEmpty)
               ? 'Registration number is required'
               : null,
+        ),
+        Gap(12.h),
+        // Company Type dropdown
+        DropdownButtonFormField<String>(
+          value: _selectedCompanyType,
+          decoration: const InputDecoration(
+            labelText: 'Company Type *',
+            prefixIcon: Icon(Icons.category),
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'logistics', child: Text('Logistics')),
+            DropdownMenuItem(value: 'manufacturing', child: Text('Manufacturing')),
+            DropdownMenuItem(value: 'retail', child: Text('Retail')),
+            DropdownMenuItem(value: 'wholesale', child: Text('Wholesale')),
+            DropdownMenuItem(value: 'service', child: Text('Service')),
+            DropdownMenuItem(value: 'other', child: Text('Other')),
+          ],
+          onChanged: (v) => setState(() => _selectedCompanyType = v ?? 'logistics'),
+        ),
+        Gap(12.h),
+        // Industry Type dropdown
+        DropdownButtonFormField<String>(
+          value: _selectedIndustryType,
+          decoration: const InputDecoration(
+            labelText: 'Industry *',
+            prefixIcon: Icon(Icons.factory),
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'automotive', child: Text('Automotive')),
+            DropdownMenuItem(value: 'food_beverage', child: Text('Food & Beverage')),
+            DropdownMenuItem(value: 'pharmaceutical', child: Text('Pharmaceutical')),
+            DropdownMenuItem(value: 'electronics', child: Text('Electronics')),
+            DropdownMenuItem(value: 'textile', child: Text('Textile')),
+            DropdownMenuItem(value: 'construction', child: Text('Construction')),
+            DropdownMenuItem(value: 'energy', child: Text('Energy')),
+            DropdownMenuItem(value: 'technology', child: Text('Technology')),
+            DropdownMenuItem(value: 'other', child: Text('Other')),
+          ],
+          onChanged: (v) => setState(() => _selectedIndustryType = v ?? 'automotive'),
         ),
         Gap(12.h),
         Row(
@@ -525,8 +568,8 @@ class _AddGoodsCompanyScreenState extends State<AddGoodsCompanyScreen> {
               ? null
               : _addressController.text.trim(),
           'password': _passwordController.text,
-          'company_type': 'other',
-          'industry_type': 'automotive',
+          'company_type': _selectedCompanyType,
+          'industry_type': _selectedIndustryType,
           'contact_person_name': _ownerNameController.text.trim(),
           'contact_person_email': _emailController.text.trim(),
           'contact_person_phone': _phoneController.text.trim(),
@@ -552,6 +595,9 @@ class _AddGoodsCompanyScreenState extends State<AddGoodsCompanyScreen> {
     _fleetSizeController.clear();
     _websiteController.clear();
     _descriptionController.clear();
+    _selectedCompanyType = 'logistics';
+    _selectedIndustryType = 'automotive';
+    _selectedStatus = 'active';
     _formKey.currentState?.reset();
   }
 }

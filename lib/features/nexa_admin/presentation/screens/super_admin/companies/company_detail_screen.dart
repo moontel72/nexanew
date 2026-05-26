@@ -318,8 +318,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     );
   }
 
-  /// Parse notes field — if it's valid JSON with bus fleet data, show structured
-  /// info cards; otherwise display as plain text.
+  /// Parse notes field — if it's valid JSON with bus or goods fleet data, show
+  /// structured info cards; otherwise display as plain text.
   Widget _buildNotesSection(String rawNotes) {
     // Try to parse as JSON
     Map<String, dynamic>? meta;
@@ -340,8 +340,12 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       );
     }
 
-    final isBusFleet = meta['company_type_tag'] == 'bus_fleet';
-    if (!isBusFleet) {
+    final tag = meta['company_type_tag']?.toString();
+    final isBusFleet = tag == 'bus_fleet';
+    final isGoodsFleet = tag == 'goods_fleet';
+
+    // Not a fleet metadata block — show as plain text
+    if (!isBusFleet && !isGoodsFleet) {
       return Text(
         rawNotes,
         style: Theme.of(
@@ -352,45 +356,52 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       );
     }
 
-    // Bus fleet metadata — show compact info chips
-    final fleetSize = meta['fleet_size'] as int? ?? 0;
-    final activeRoutes = meta['active_routes'] as int? ?? 0;
+    // ── Render fleet metadata chips ───────────────────
+    final themeColor = isBusFleet ? AppColors.info : AppColors.success;
+    final icon = isBusFleet ? Icons.directions_bus : Icons.local_shipping;
+    final title = isBusFleet ? 'Bus Fleet Details' : 'Goods Fleet Details';
+
+    final chips = <Widget>[];
+    if (isBusFleet) {
+      final fleetSize = meta['fleet_size'] as int? ?? 0;
+      final activeRoutes = meta['active_routes'] as int? ?? 0;
+      chips.add(_metaChip(Icons.confirmation_number, '$fleetSize buses'));
+      chips.add(_metaChip(Icons.alt_route, '$activeRoutes routes'));
+    } else {
+      final truckCount = meta['truck_count'] as int? ?? 0;
+      final fleetSize = meta['fleet_size'] as int? ?? 0;
+      chips.add(_metaChip(Icons.local_shipping, '$truckCount trucks'));
+      chips.add(_metaChip(Icons.confirmation_number, 'Fleet: $fleetSize'));
+    }
     final ownerName = meta['owner_name']?.toString() ?? '';
+    if (ownerName.isNotEmpty) chips.add(_metaChip(Icons.person, ownerName));
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.info.withValues(alpha: 0.05),
+        color: themeColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.info.withValues(alpha: 0.15)),
+        border: Border.all(color: themeColor.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.directions_bus, size: 16, color: AppColors.info),
+              Icon(icon, size: 16, color: themeColor),
               const SizedBox(width: 6),
               Text(
-                'Bus Fleet Details',
+                title,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.info,
+                  color: themeColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _metaChip(Icons.confirmation_number, '$fleetSize buses'),
-              _metaChip(Icons.alt_route, '$activeRoutes routes'),
-              if (ownerName.isNotEmpty) _metaChip(Icons.person, ownerName),
-            ],
-          ),
+          Wrap(spacing: 8, runSpacing: 8, children: chips),
         ],
       ),
     );
@@ -417,6 +428,58 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Build a read-only fleet metadata section for the edit dialog.
+  /// Handles both bus_fleet and goods_fleet tags.
+  Widget _buildFleetMetaSection(Map<String, dynamic> meta) {
+    final tag = meta['company_type_tag']?.toString();
+    final isBus = tag == 'bus_fleet';
+    final themeColor = isBus ? AppColors.info : AppColors.success;
+    final icon = isBus ? Icons.directions_bus : Icons.local_shipping;
+    final title = isBus ? 'Bus Fleet Details' : 'Goods Fleet Details';
+
+    final chips = <Widget>[];
+    if (isBus) {
+      final fleetSize = meta['fleet_size'] as int? ?? 0;
+      final activeRoutes = meta['active_routes'] as int? ?? 0;
+      chips.add(_metaChip(Icons.confirmation_number, '$fleetSize buses'));
+      chips.add(_metaChip(Icons.alt_route, '$activeRoutes routes'));
+    } else {
+      final truckCount = meta['truck_count'] as int? ?? 0;
+      final fleetSize = meta['fleet_size'] as int? ?? 0;
+      chips.add(_metaChip(Icons.local_shipping, '$truckCount trucks'));
+      chips.add(_metaChip(Icons.confirmation_number, 'Fleet: $fleetSize'));
+    }
+    final ownerName = meta['owner_name']?.toString() ?? '';
+    if (ownerName.isNotEmpty) chips.add(_metaChip(Icons.person, ownerName));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: themeColor.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: themeColor.withValues(alpha: 0.15)),
+          ),
+          child: Wrap(spacing: 10, runSpacing: 8, children: chips),
+        ),
+        const SizedBox(height: 16),
+      ],
     );
   }
 
@@ -1389,15 +1452,17 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       text: (company['postal_code'] ?? '').toString(),
     );
     final rawNotes = (company['notes'] ?? '').toString();
-    // Parse JSON from notes for bus fleet metadata display
-    Map<String, dynamic>? busMeta;
+    // Parse JSON from notes for fleet metadata display (bus or goods)
+    Map<String, dynamic>? fleetMeta;
     String cleanNotes = rawNotes;
     try {
       final decoded = jsonDecode(rawNotes);
-      if (decoded is Map<String, dynamic> &&
-          decoded['company_type_tag'] == 'bus_fleet') {
-        busMeta = decoded;
-        cleanNotes = ''; // Don't show JSON in the text field
+      if (decoded is Map<String, dynamic>) {
+        final tag = decoded['company_type_tag']?.toString();
+        if (tag == 'bus_fleet' || tag == 'goods_fleet') {
+          fleetMeta = decoded;
+          cleanNotes = ''; // Don't show system JSON in the text field
+        }
       }
     } catch (_) {}
 
@@ -1724,58 +1789,14 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // ── Bus Fleet Metadata (read-only) ────────────
-                    if (busMeta != null) ...[
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Bus Fleet Details',
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.info.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: AppColors.info.withValues(alpha: 0.15),
-                          ),
-                        ),
-                        child: Wrap(
-                          spacing: 10,
-                          runSpacing: 8,
-                          children: [
-                            _metaChip(
-                              Icons.confirmation_number,
-                              '${busMeta!['fleet_size'] ?? 0} buses',
-                            ),
-                            _metaChip(
-                              Icons.alt_route,
-                              '${busMeta!['active_routes'] ?? 0} routes',
-                            ),
-                            if ((busMeta!['owner_name'] ?? '')
-                                .toString()
-                                .isNotEmpty)
-                              _metaChip(
-                                Icons.person,
-                                busMeta!['owner_name'].toString(),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                    // ── Fleet Metadata (read-only) ───────────────
+                    if (fleetMeta != null) ...[_buildFleetMetaSection(fleetMeta!)],
                     // ── Admin Notes ─────────────────────────────
                     TextField(
                       controller: notesCtrl,
                       decoration: const InputDecoration(
                         labelText: 'Admin Notes',
-                        hintText:
-                            'Internal notes (bus fleet info stored separately)',
+                        hintText: 'Internal notes (fleet info stored separately)',
                         border: OutlineInputBorder(),
                       ),
                       minLines: 2,
@@ -1925,11 +1946,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                     }
                   }
 
-                  // ── Merge bus fleet metadata back into admin_notes ──
+                  // ── Merge fleet metadata back into admin_notes ──
                   final adminNotes = notesCtrl.text.trim();
                   final finalNotes = adminNotes.isNotEmpty
                       ? adminNotes
-                      : (busMeta != null ? jsonEncode(busMeta) : null);
+                      : (fleetMeta != null ? jsonEncode(fleetMeta) : null);
 
                   final updateData = <String, dynamic>{
                     'name': nameCtrl.text.trim(),
