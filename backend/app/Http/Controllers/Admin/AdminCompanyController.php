@@ -173,7 +173,16 @@ class AdminCompanyController extends Controller
                 $factoryUser->save();
             }
 
-            // Also create AdminUser for universal auth login (/bus-fleet/login)
+            // Also create AdminUser for universal auth login (/bus-fleet/login, /goods-fleet/login)
+            // Detect fleet type from admin_notes JSON
+            $fleetType = 'bus_fleet'; // default
+            if (!empty($data['admin_notes'])) {
+                $notes = json_decode($data['admin_notes'], true);
+                if (is_array($notes) && !empty($notes['company_type_tag'])) {
+                    $fleetType = $notes['company_type_tag'];
+                }
+            }
+
             foreach ($loginEmails as $loginEmail) {
                 $existingAdmin = AdminUser::query()
                     ->where('email', $loginEmail)
@@ -187,12 +196,12 @@ class AdminCompanyController extends Controller
                     'id'       => (string) Str::uuid(),
                     'name'     => $data['contact_person_name'],
                     'email'    => $loginEmail,
-                    'password' => bcrypt($data['password']),
+                    'password' => $data['password'], // Model mutator hashes automatically
                     'role'     => 'company_admin',
                     'status'   => 'active',
                     'metadata' => json_encode([
                         'company_id'   => $company->id,
-                        'company_type' => 'bus_fleet',
+                        'company_type' => $fleetType,
                     ]),
                 ]);
             }
