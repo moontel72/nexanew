@@ -57,16 +57,14 @@ class _GoodsFleetConductorsScreenState
     final salary = TextEditingController(
       text: existing?['salary']?.toString() ?? '',
     );
+    bool obscure = true;
 
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSt) {
-          bool obscure = true;
           return AlertDialog(
-            title: Text(
-              isEdit ? 'Edit Truck Conductor' : 'Add Truck Conductor',
-            ),
+            title: Text(isEdit ? 'Edit Truck Conductor' : 'Add Truck Conductor'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -75,23 +73,7 @@ class _GoodsFleetConductorsScreenState
                   SizedBox(height: 10.h),
                   _f(phone, 'Phone *', phone: true),
                   SizedBox(height: 10.h),
-                  if (!isEdit) ...[
-                    TextField(
-                      controller: pass,
-                      obscureText: obscure,
-                      decoration: InputDecoration(
-                        labelText: 'Password *',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            obscure ? Icons.visibility_off : Icons.visibility,
-                          ),
-                          onPressed: () => setSt(() => obscure = !obscure),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 10.h),
-                  ],
+                  if (!isEdit) ...[_buildPasswordField(pass, obscure, setSt)],
                   _f(email, 'Email', email: true),
                   SizedBox(height: 10.h),
                   _f(cnic, 'CNIC'),
@@ -221,6 +203,24 @@ class _GoodsFleetConductorsScreenState
           ),
         );
     }
+  }
+
+  Widget _buildPasswordField(TextEditingController ctrl, bool obscure, void Function(VoidCallback) setSt) {
+    return Column(children: [
+      TextField(
+        controller: ctrl,
+        obscureText: obscure,
+        decoration: InputDecoration(
+          labelText: 'Password *',
+          border: const OutlineInputBorder(),
+          suffixIcon: IconButton(
+            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
+            onPressed: () => setSt(() => obscure = !obscure),
+          ),
+        ),
+      ),
+      SizedBox(height: 10.h),
+    ]);
   }
 
   Widget _f(

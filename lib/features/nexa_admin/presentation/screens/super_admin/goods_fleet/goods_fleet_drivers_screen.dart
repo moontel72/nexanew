@@ -62,12 +62,12 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
     final salary = TextEditingController(
       text: existing?['salary']?.toString() ?? '',
     );
+    bool obscure = true;
 
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSt) {
-          bool obscure = true;
           return AlertDialog(
             title: Text(isEdit ? 'Edit Truck Driver' : 'Add Truck Driver'),
             content: SingleChildScrollView(
@@ -80,23 +80,7 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
                   SizedBox(height: 10.h),
                   _f(license, 'License Number *'),
                   SizedBox(height: 10.h),
-                  if (!isEdit) ...[
-                    TextField(
-                      controller: pass,
-                      obscureText: obscure,
-                      decoration: InputDecoration(
-                        labelText: 'Password *',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            obscure ? Icons.visibility_off : Icons.visibility,
-                          ),
-                          onPressed: () => setSt(() => obscure = !obscure),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 10.h),
-                  ],
+                  if (!isEdit) ...[_buildPasswordField(pass, obscure, setSt)],
                   _f(email, 'Email', email: true),
                   SizedBox(height: 10.h),
                   _f(cnic, 'CNIC'),
@@ -230,6 +214,24 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
           ),
         );
     }
+  }
+
+  Widget _buildPasswordField(TextEditingController ctrl, bool obscure, void Function(VoidCallback) setSt) {
+    return Column(children: [
+      TextField(
+        controller: ctrl,
+        obscureText: obscure,
+        decoration: InputDecoration(
+          labelText: 'Password *',
+          border: const OutlineInputBorder(),
+          suffixIcon: IconButton(
+            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
+            onPressed: () => setSt(() => obscure = !obscure),
+          ),
+        ),
+      ),
+      SizedBox(height: 10.h),
+    ]);
   }
 
   Widget _f(
