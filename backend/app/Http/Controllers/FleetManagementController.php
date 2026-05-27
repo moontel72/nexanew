@@ -25,6 +25,15 @@ class FleetManagementController extends Controller
         return is_array($meta) ? ($meta['company_id'] ?? null) : null;
     }
 
+    /**
+     * Detect driver_type from request path.
+     * /bus-fleet/* → 'bus'  |  /goods-fleet/* → 'truck'
+     */
+    private function driverType(Request $request): string
+    {
+        return str_contains($request->path(), 'goods-fleet') ? 'truck' : 'bus';
+    }
+
     // ═══════════════════ OWNERS ═══════════════════
 
     public function listOwners(Request $request): JsonResponse
@@ -35,7 +44,7 @@ class FleetManagementController extends Controller
             $perPage = max(1, min(100, $perPage));
 
             $query = DB::table('drivers')
-                ->where('driver_type', 'bus')
+                ->where('driver_type', $this->driverType($request))
                 ->where('staff_type', 'owner');
             if ($cid) $query->where('company_id', $cid);
             if ($request->filled('search')) {
@@ -72,7 +81,7 @@ class FleetManagementController extends Controller
         DB::table('drivers')->insert([
             'id' => $id,
             'company_id' => $this->companyId($request),
-            'driver_type' => 'bus',
+            'driver_type' => $this->driverType($request),
             'staff_type' => 'owner',
             'name' => $data['name'],
             'email' => $data['email'],
@@ -139,7 +148,7 @@ class FleetManagementController extends Controller
             $perPage = max(1, min(100, $perPage));
 
             $query = DB::table('drivers')
-                ->where('driver_type', 'bus')
+                ->where('driver_type', $this->driverType($request))
                 ->where('staff_type', 'driver');
             if ($cid) $query->where('company_id', $cid);
 
@@ -206,7 +215,7 @@ class FleetManagementController extends Controller
             'id' => $id,
             'company_id' => $cid,
             'owner_id' => $ownerId,
-            'driver_type' => 'bus',
+            'driver_type' => $this->driverType($request),
             'staff_type' => 'driver',
             'name' => $data['name'],
             'phone' => $data['phone'],
@@ -291,7 +300,7 @@ class FleetManagementController extends Controller
             $perPage = max(1, min(100, $perPage));
 
             $query = DB::table('drivers')
-                ->where('driver_type', 'bus')
+                ->where('driver_type', $this->driverType($request))
                 ->where('staff_type', 'conductor');
             if ($cid) $query->where('company_id', $cid);
 
@@ -361,7 +370,7 @@ class FleetManagementController extends Controller
             'id' => $id,
             'company_id' => $cid,
             'owner_id' => $ownerId,
-            'driver_type' => 'bus',
+            'driver_type' => $this->driverType($request),
             'staff_type' => 'conductor',
             'name' => $data['name'],
             'phone' => $data['phone'],

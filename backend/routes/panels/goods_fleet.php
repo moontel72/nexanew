@@ -34,4 +34,27 @@ Route::prefix('api/v1/goods-fleet')
         // Authenticated goods fleet owner — Profile & Dashboard
         Route::get('profile', [\App\Http\Controllers\Admin\GoodsFleetController::class, 'profile']);
         Route::get('dashboard', [\App\Http\Controllers\Admin\GoodsFleetController::class, 'dashboard']);
+
+        // ─── Goods Fleet Staff CRUD (A–E Hierarchy) ────────
+        // Reuses FleetManagementController — detects 'truck' via request path
+
+        Route::get('owners', [\App\Http\Controllers\FleetManagementController::class, 'listOwners']);
+        Route::post('owners', [\App\Http\Controllers\FleetManagementController::class, 'storeOwner']);
+        Route::get('owners/{id}', [\App\Http\Controllers\FleetManagementController::class, 'showOwner']);
+        Route::put('owners/{id}', [\App\Http\Controllers\FleetManagementController::class, 'updateOwner']);
+        Route::delete('owners/{id}', [\App\Http\Controllers\FleetManagementController::class, 'destroyOwner']);
+
+        Route::prefix('drivers/manage')->group(function (): void {
+            Route::get('/', [\App\Http\Controllers\FleetManagementController::class, 'listDrivers']);
+            Route::post('/', [\App\Http\Controllers\FleetManagementController::class, 'storeDriver']);
+            Route::get('/{id}', [\App\Http\Controllers\FleetManagementController::class, 'showDriver']);
+            Route::put('/{id}', [\App\Http\Controllers\FleetManagementController::class, 'updateDriver']);
+            Route::delete('/{id}', [\App\Http\Controllers\FleetManagementController::class, 'destroyDriver']);
+        });
+
+        Route::get('conductors', [\App\Http\Controllers\FleetManagementController::class, 'listConductors']);
+        Route::post('conductors', [\App\Http\Controllers\FleetManagementController::class, 'storeConductor']);
+        Route::get('conductors/{id}', [\App\Http\Controllers\FleetManagementController::class, 'showConductor']);
+        Route::put('conductors/{id}', [\App\Http\Controllers\FleetManagementController::class, 'updateConductor']);
+        Route::delete('conductors/{id}', [\App\Http\Controllers\FleetManagementController::class, 'destroyConductor']);
     });

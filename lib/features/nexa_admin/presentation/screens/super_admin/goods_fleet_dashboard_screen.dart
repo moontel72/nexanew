@@ -1,16 +1,13 @@
 // Goods Fleet Dashboard — Company Admin Panel (Module 9)
 // Management hub: Owners, Drivers, Conductors, Fleet Overview
 
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/company/goods_company_model.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
 import 'package:nexatrace_system/shared/models/company/company_model.dart';
 import 'package:nexatrace_system/shared/theme/colors.dart';
 
@@ -161,7 +158,11 @@ class _GoodsFleetDashboardScreenState extends State<GoodsFleetDashboardScreen> {
                 color: AppColors.success,
                 borderRadius: BorderRadius.circular(14.r),
               ),
-              child: Icon(Icons.local_shipping, size: 26.w, color: Colors.white),
+              child: Icon(
+                Icons.local_shipping,
+                size: 26.w,
+                color: Colors.white,
+              ),
             ),
             SizedBox(width: 14.w),
             Expanded(
@@ -177,8 +178,9 @@ class _GoodsFleetDashboardScreenState extends State<GoodsFleetDashboardScreen> {
                   SizedBox(height: 2.h),
                   Text(
                     '${c.city}, ${c.country}',
-                    style: Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(color: AppColors.gray500),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
                   ),
                 ],
               ),
@@ -203,14 +205,28 @@ class _GoodsFleetDashboardScreenState extends State<GoodsFleetDashboardScreen> {
     mainAxisSpacing: 12.h,
     childAspectRatio: 1.4,
     children: [
-      _mgmtCard('Truck Owners', '$_ownerCount', Icons.person, AppColors.primary,
-          () {}),
       _mgmtCard(
-          'Truck Drivers', '$_driverCount', Icons.badge, AppColors.success, () {}),
-      _mgmtCard('Conductors', '$_conductorCount', Icons.group, AppColors.warning,
-          () {}),
+        'Truck Owners',
+        '$_ownerCount',
+        Icons.person,
+        AppColors.primary,
+        () => context.push('/goods-fleet/dashboard/owners'),
+      ),
       _mgmtCard(
-          'Fleet Routes', '—', Icons.alt_route, AppColors.info, () {}),
+        'Truck Drivers',
+        '$_driverCount',
+        Icons.badge,
+        AppColors.success,
+        () => context.push('/goods-fleet/dashboard/drivers'),
+      ),
+      _mgmtCard(
+        'Conductors',
+        '$_conductorCount',
+        Icons.group,
+        AppColors.warning,
+        () => context.push('/goods-fleet/dashboard/conductors'),
+      ),
+      _mgmtCard('Fleet Routes', '—', Icons.alt_route, AppColors.info, () {}),
     ],
   );
 
@@ -239,7 +255,11 @@ class _GoodsFleetDashboardScreenState extends State<GoodsFleetDashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(icon, size: 28.w, color: color),
-                Icon(Icons.arrow_forward_ios, size: 14.w, color: AppColors.gray400),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14.w,
+                  color: AppColors.gray400,
+                ),
               ],
             ),
             Column(
@@ -255,8 +275,9 @@ class _GoodsFleetDashboardScreenState extends State<GoodsFleetDashboardScreen> {
                 SizedBox(height: 2.h),
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: AppColors.gray600),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.gray600),
                 ),
               ],
             ),
@@ -318,8 +339,9 @@ class _GoodsFleetDashboardScreenState extends State<GoodsFleetDashboardScreen> {
             ),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: AppColors.gray500),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
             ),
           ],
         ),
@@ -338,19 +360,19 @@ class _GoodsFleetDashboardScreenState extends State<GoodsFleetDashboardScreen> {
             'Add Owner',
             Icons.person_add,
             AppColors.primary,
-            () {},
+            () => context.push('/goods-fleet/dashboard/owners/add'),
           ),
           _qLink(
             'Add Driver',
             Icons.badge_outlined,
             AppColors.success,
-            () {},
+            () => context.push('/goods-fleet/dashboard/drivers/add'),
           ),
           _qLink(
             'Add Conductor',
             Icons.group_add,
             AppColors.warning,
-            () {},
+            () => context.push('/goods-fleet/dashboard/conductors/add'),
           ),
         ],
       ),
@@ -388,8 +410,9 @@ class _GoodsFleetDashboardScreenState extends State<GoodsFleetDashboardScreen> {
 
   Widget _sectionTitle(String t) => Text(
     t,
-    style: Theme.of(context).textTheme.titleMedium
-        ?.copyWith(fontWeight: FontWeight.w700),
+    style: Theme.of(
+      context,
+    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
   );
 
   Widget _badge(String t, Color c) => Container(
@@ -401,8 +424,7 @@ class _GoodsFleetDashboardScreenState extends State<GoodsFleetDashboardScreen> {
     ),
     child: Text(
       t.toUpperCase(),
-      style: TextStyle(
-          fontSize: 11.sp, fontWeight: FontWeight.w600, color: c),
+      style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600, color: c),
     ),
   );
 
