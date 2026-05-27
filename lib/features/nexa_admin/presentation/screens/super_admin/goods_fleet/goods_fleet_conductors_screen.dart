@@ -1,4 +1,4 @@
-// Goods Fleet Conductors — List + Add Truck Conductors
+// Goods Fleet Conductors — List + Add + Edit + Status + Delete Truck Conductors
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -45,36 +45,149 @@ class _GoodsFleetConductorsScreenState
     }
   }
 
-  Future<void> _showAdd() async {
-    final name = TextEditingController(), phone = TextEditingController();
-    final cnic = TextEditingController(), addr = TextEditingController();
-    final salary = TextEditingController(), pass = TextEditingController();
-    final email = TextEditingController();
+  // ═══ ADD / EDIT DIALOG ═══
+  Future<void> _showForm({Map<String, dynamic>? existing}) async {
+    final isEdit = existing != null;
+    final name = TextEditingController(text: existing?['name'] ?? '');
+    final phone = TextEditingController(text: existing?['phone'] ?? '');
+    final pass = TextEditingController();
+    final email = TextEditingController(text: existing?['email'] ?? '');
+    final cnic = TextEditingController(text: existing?['cnic'] ?? '');
+    final addr = TextEditingController(text: existing?['address'] ?? '');
+    final salary = TextEditingController(
+      text: existing?['salary']?.toString() ?? '',
+    );
 
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Truck Conductor'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _f(name, 'Full Name *'),
-              SizedBox(height: 10.h),
-              _f(phone, 'Phone *', phone: true),
-              SizedBox(height: 10.h),
-              _f(pass, 'Password *', obscure: true),
-              SizedBox(height: 10.h),
-              _f(email, 'Email', email: true),
-              SizedBox(height: 10.h),
-              _f(cnic, 'CNIC'),
-              SizedBox(height: 10.h),
-              _f(addr, 'Address', maxLines: 2),
-              SizedBox(height: 10.h),
-              _f(salary, 'Salary *', number: true),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) {
+          bool obscure = true;
+          return AlertDialog(
+            title: Text(
+              isEdit ? 'Edit Truck Conductor' : 'Add Truck Conductor',
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _f(name, 'Full Name *'),
+                  SizedBox(height: 10.h),
+                  _f(phone, 'Phone *', phone: true),
+                  SizedBox(height: 10.h),
+                  if (!isEdit) ...[
+                    TextField(
+                      controller: pass,
+                      obscureText: obscure,
+                      decoration: InputDecoration(
+                        labelText: 'Password *',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscure ? Icons.visibility_off : Icons.visibility,
+                          ),
+                          onPressed: () => setSt(() => obscure = !obscure),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                  ],
+                  _f(email, 'Email', email: true),
+                  SizedBox(height: 10.h),
+                  _f(cnic, 'CNIC'),
+                  SizedBox(height: 10.h),
+                  _f(addr, 'Address', maxLines: 2),
+                  SizedBox(height: 10.h),
+                  _f(salary, 'Salary *', number: true),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(isEdit ? 'Update' : 'Save'),
+              ),
             ],
+          );
+        },
+      ),
+    );
+    if (ok != true) return;
+
+    try {
+      final payload = <String, dynamic>{
+        'name': name.text.trim(),
+        'phone': phone.text.trim(),
+        if (pass.text.isNotEmpty) 'password': pass.text,
+        if (email.text.isNotEmpty) 'email': email.text.trim(),
+        if (cnic.text.isNotEmpty) 'cnic': cnic.text.trim(),
+        if (addr.text.isNotEmpty) 'address': addr.text.trim(),
+        'salary': double.tryParse(salary.text) ?? 0,
+      };
+      if (isEdit) {
+        await ApiService().put(
+          '/goods-fleet/conductors/${existing!['id']}',
+          data: payload,
+        );
+      } else {
+        await ApiService().post('/goods-fleet/conductors', data: payload);
+      }
+      _load();
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isEdit ? 'Conductor updated' : 'Conductor added'),
+            backgroundColor: AppColors.success,
           ),
-        ),
+        );
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+    }
+  }
+
+  // ═══ STATUS CHANGE ═══
+  Future<void> _setStatus(String id, String status) async {
+    try {
+      await ApiService().put(
+        '/goods-fleet/conductors/$id',
+        data: {'status': status},
+      );
+      _load();
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Status set to $status'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+    }
+  }
+
+  // ═══ DELETE ═══
+  Future<void> _confirmDelete(String id, String name) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Truck Conductor?'),
+        content: Text('Permanently delete "$name"? This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -82,31 +195,20 @@ class _GoodsFleetConductorsScreenState
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Save'),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
     if (ok != true) return;
-
     try {
-      await ApiService().post(
-        '/goods-fleet/conductors',
-        data: {
-          'name': name.text.trim(),
-          'phone': phone.text.trim(),
-          'password': pass.text,
-          if (email.text.isNotEmpty) 'email': email.text.trim(),
-          if (cnic.text.isNotEmpty) 'cnic': cnic.text.trim(),
-          if (addr.text.isNotEmpty) 'address': addr.text.trim(),
-          'salary': double.tryParse(salary.text) ?? 0,
-        },
-      );
+      await ApiService().delete('/goods-fleet/conductors/$id');
       _load();
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Conductor added'),
+            content: Text('Conductor deleted'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -129,20 +231,35 @@ class _GoodsFleetConductorsScreenState
     bool phone = false,
     bool number = false,
     int maxLines = 1,
-  }) => TextField(
-    controller: c,
-    obscureText: obscure,
-    maxLines: maxLines,
-    keyboardType: email
-        ? TextInputType.emailAddress
-        : phone || number
-        ? TextInputType.phone
-        : TextInputType.text,
-    decoration: InputDecoration(
-      labelText: l,
-      border: const OutlineInputBorder(),
-    ),
-  );
+  }) {
+    return TextField(
+      controller: c,
+      obscureText: obscure,
+      maxLines: maxLines,
+      keyboardType: email
+          ? TextInputType.emailAddress
+          : phone || number
+          ? TextInputType.phone
+          : TextInputType.text,
+      decoration: InputDecoration(
+        labelText: l,
+        border: const OutlineInputBorder(),
+      ),
+    );
+  }
+
+  Color _statusColor(String s) {
+    switch (s) {
+      case 'active':
+        return AppColors.success;
+      case 'inactive':
+        return AppColors.warning;
+      case 'suspended':
+        return AppColors.error;
+      default:
+        return AppColors.gray500;
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -150,7 +267,9 @@ class _GoodsFleetConductorsScreenState
       title: const Text('Truck Conductors'),
       backgroundColor: AppColors.warning,
       foregroundColor: Colors.white,
-      actions: [IconButton(icon: const Icon(Icons.add), onPressed: _showAdd)],
+      actions: [
+        IconButton(icon: const Icon(Icons.add), onPressed: () => _showForm()),
+      ],
     ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
@@ -175,45 +294,132 @@ class _GoodsFleetConductorsScreenState
           ),
   );
 
-  Widget _card(Map<String, dynamic> c) => Card(
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-    child: Padding(
-      padding: EdgeInsets.all(14.w),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: AppColors.warning.withValues(alpha: 0.1),
-            child: Icon(Icons.group, color: AppColors.warning),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _card(Map<String, dynamic> c) {
+    final id = c['id']?.toString() ?? '';
+    final name = c['name']?.toString() ?? '—';
+    final status = c['status']?.toString() ?? 'active';
+    final color = _statusColor(status);
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: Padding(
+        padding: EdgeInsets.all(14.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  c['name'] ?? '—',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                CircleAvatar(
+                  backgroundColor: color.withValues(alpha: 0.1),
+                  child: Icon(Icons.group, color: color),
                 ),
-                _ch(Icons.phone, c['phone'] ?? '—'),
-                if (c['salary'] != null) ...[
-                  SizedBox(height: 2.h),
-                  Text(
-                    'Salary: Rs. ${c['salary']}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      _ch(Icons.phone, c['phone'] ?? '—'),
+                      if (c['salary'] != null) ...[
+                        SizedBox(height: 2.h),
+                        Text(
+                          'Salary: Rs. ${c['salary']}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.gray500),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
+                ),
+                _bd(status, color),
               ],
             ),
-          ),
-          _bd(c['status'] ?? 'active'),
-        ],
+            SizedBox(height: 10.h),
+            Wrap(
+              spacing: 6.w,
+              runSpacing: 6.h,
+              children: [
+                _actionChip(
+                  'Edit',
+                  Icons.edit,
+                  AppColors.primary,
+                  () => _showForm(existing: c),
+                ),
+                if (status != 'active')
+                  _actionChip(
+                    'Active',
+                    Icons.check_circle,
+                    AppColors.success,
+                    () => _setStatus(id, 'active'),
+                  ),
+                if (status != 'inactive')
+                  _actionChip(
+                    'Inactive',
+                    Icons.pause_circle,
+                    AppColors.warning,
+                    () => _setStatus(id, 'inactive'),
+                  ),
+                if (status != 'suspended')
+                  _actionChip(
+                    'Suspend',
+                    Icons.block,
+                    AppColors.error,
+                    () => _setStatus(id, 'suspended'),
+                  ),
+                _actionChip(
+                  'Delete',
+                  Icons.delete,
+                  AppColors.error,
+                  () => _confirmDelete(id, name),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
+
+  Widget _actionChip(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14.w, color: color),
+            SizedBox(width: 4.w),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _ch(IconData i, String t) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -227,19 +433,17 @@ class _GoodsFleetConductorsScreenState
       ),
     ],
   );
-  Widget _bd(String s) => Container(
+
+  Widget _bd(String s, Color c) => Container(
     padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
     decoration: BoxDecoration(
-      color: AppColors.warning.withValues(alpha: 0.1),
+      color: c.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(12.r),
+      border: Border.all(color: c.withValues(alpha: 0.3)),
     ),
     child: Text(
       s.toUpperCase(),
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        color: AppColors.warning,
-      ),
+      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c),
     ),
   );
 }

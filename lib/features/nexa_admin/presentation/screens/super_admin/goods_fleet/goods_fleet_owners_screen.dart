@@ -1,4 +1,4 @@
-// Goods Fleet Owners — List + Add Truck Owners
+// Goods Fleet Owners — List + Add + Edit + Status + Delete Truck Owners
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -43,68 +43,92 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
     }
   }
 
-  Future<void> _showAddDialog() async {
-    final nameCtrl = TextEditingController(),
-        emailCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController(),
-        passCtrl = TextEditingController();
-    final cnicCtrl = TextEditingController(),
-        addrCtrl = TextEditingController();
+  // ═══ ADD / EDIT DIALOG ═══
+  Future<void> _showFormDialog({Map<String, dynamic>? existing}) async {
+    final isEdit = existing != null;
+    final nameCtrl = TextEditingController(text: existing?['name'] ?? '');
+    final emailCtrl = TextEditingController(text: existing?['email'] ?? '');
+    final phoneCtrl = TextEditingController(text: existing?['phone'] ?? '');
+    final passCtrl = TextEditingController();
+    final cnicCtrl = TextEditingController(text: existing?['cnic'] ?? '');
+    final addrCtrl = TextEditingController(text: existing?['address'] ?? '');
+    bool obscure = true;
 
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Truck Owner'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _field(nameCtrl, 'Full Name *'),
-              SizedBox(height: 10.h),
-              _field(emailCtrl, 'Email *', email: true),
-              SizedBox(height: 10.h),
-              _field(phoneCtrl, 'Phone *', phone: true),
-              SizedBox(height: 10.h),
-              _field(passCtrl, 'Password *', obscure: true),
-              SizedBox(height: 10.h),
-              _field(cnicCtrl, 'CNIC'),
-              SizedBox(height: 10.h),
-              _field(addrCtrl, 'Address', maxLines: 2),
-            ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (stCtx, setSt) => AlertDialog(
+          title: Text(isEdit ? 'Edit Truck Owner' : 'Add Truck Owner'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _field(nameCtrl, 'Full Name *'),
+                SizedBox(height: 10.h),
+                _field(emailCtrl, 'Email *', email: true),
+                SizedBox(height: 10.h),
+                _field(phoneCtrl, 'Phone *', phone: true),
+                SizedBox(height: 10.h),
+                if (!isEdit)
+                  TextField(
+                    controller: passCtrl,
+                    obscureText: obscure,
+                    decoration: InputDecoration(
+                      labelText: 'Password *',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscure ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () => setSt(() => obscure = !obscure),
+                      ),
+                    ),
+                  ),
+                if (!isEdit) SizedBox(height: 10.h),
+                _field(cnicCtrl, 'CNIC'),
+                SizedBox(height: 10.h),
+                _field(addrCtrl, 'Address', maxLines: 2),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(isEdit ? 'Update' : 'Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
-
     if (ok != true) return;
 
     try {
-      await ApiService().post(
-        '/goods-fleet/owners',
-        data: {
-          'name': nameCtrl.text.trim(),
-          'email': emailCtrl.text.trim(),
-          'phone': phoneCtrl.text.trim(),
-          'password': passCtrl.text,
-          if (cnicCtrl.text.isNotEmpty) 'cnic': cnicCtrl.text.trim(),
-          if (addrCtrl.text.isNotEmpty) 'address': addrCtrl.text.trim(),
-        },
-      );
+      final payload = <String, dynamic>{
+        'name': nameCtrl.text.trim(),
+        'email': emailCtrl.text.trim(),
+        'phone': phoneCtrl.text.trim(),
+        if (passCtrl.text.isNotEmpty) 'password': passCtrl.text,
+        if (cnicCtrl.text.isNotEmpty) 'cnic': cnicCtrl.text.trim(),
+        if (addrCtrl.text.isNotEmpty) 'address': addrCtrl.text.trim(),
+      };
+
+      if (isEdit) {
+        await ApiService().put(
+          '/goods-fleet/owners/${existing['id']}',
+          data: payload,
+        );
+      } else {
+        await ApiService().post('/goods-fleet/owners', data: payload);
+      }
       _load();
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Owner added'),
+          SnackBar(
+            content: Text(isEdit ? 'Owner updated' : 'Owner added'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -119,6 +143,77 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
     }
   }
 
+  // ═══ STATUS CHANGE ═══
+  Future<void> _setStatus(String id, String status) async {
+    try {
+      await ApiService().put(
+        '/goods-fleet/owners/$id',
+        data: {'status': status},
+      );
+      _load();
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Status set to $status'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+    }
+  }
+
+  // ═══ DELETE ═══
+  Future<void> _confirmDelete(String id, String name) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Truck Owner?'),
+        content: Text(
+          'Permanently delete "$name" and all associated data? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService().delete('/goods-fleet/owners/$id');
+      _load();
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Owner deleted'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+    }
+  }
+
+  // ═══ FIELD HELPER ═══
   Widget _field(
     TextEditingController ctrl,
     String label, {
@@ -127,20 +222,36 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
     bool phone = false,
     bool number = false,
     int maxLines = 1,
-  }) => TextField(
-    controller: ctrl,
-    obscureText: obscure,
-    maxLines: maxLines,
-    keyboardType: email
-        ? TextInputType.emailAddress
-        : phone || number
-        ? TextInputType.phone
-        : TextInputType.text,
-    decoration: InputDecoration(
-      labelText: label,
-      border: const OutlineInputBorder(),
-    ),
-  );
+  }) {
+    return TextField(
+      controller: ctrl,
+      obscureText: obscure,
+      maxLines: maxLines,
+      keyboardType: email
+          ? TextInputType.emailAddress
+          : phone || number
+          ? TextInputType.phone
+          : TextInputType.text,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+      ),
+    );
+  }
+
+  // ═══ STATUS COLOR ═══
+  Color _statusColor(String s) {
+    switch (s) {
+      case 'active':
+        return AppColors.success;
+      case 'inactive':
+        return AppColors.warning;
+      case 'suspended':
+        return AppColors.error;
+      default:
+        return AppColors.gray500;
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -149,7 +260,10 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
       backgroundColor: AppColors.success,
       foregroundColor: Colors.white,
       actions: [
-        IconButton(icon: const Icon(Icons.add), onPressed: _showAddDialog),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () => _showFormDialog(),
+        ),
       ],
     ),
     body: _loading
@@ -175,43 +289,131 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
           ),
   );
 
-  Widget _ownerCard(Map<String, dynamic> o) => Card(
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-    child: Padding(
-      padding: EdgeInsets.all(14.w),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: AppColors.success.withValues(alpha: 0.1),
-            child: Icon(Icons.person, color: AppColors.success),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _ownerCard(Map<String, dynamic> o) {
+    final id = o['id']?.toString() ?? '';
+    final name = o['name']?.toString() ?? '—';
+    final status = o['status']?.toString() ?? 'active';
+    final color = _statusColor(status);
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: Padding(
+        padding: EdgeInsets.all(14.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  o['name'] ?? '—',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                CircleAvatar(
+                  backgroundColor: color.withValues(alpha: 0.1),
+                  child: Icon(Icons.person, color: color),
                 ),
-                Text(
-                  o['email'] ?? '',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        o['email'] ?? '',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Row(children: [_chip(Icons.phone, o['phone'] ?? '—')]),
+                    ],
+                  ),
                 ),
-                SizedBox(height: 4.h),
-                Row(children: [_chip(Icons.phone, o['phone'] ?? '—')]),
+                _badge(status, color),
               ],
             ),
-          ),
-          _badge(o['status'] ?? 'active'),
-        ],
+            SizedBox(height: 10.h),
+            // ── Lifecycle toolbar ──
+            Wrap(
+              spacing: 6.w,
+              runSpacing: 6.h,
+              children: [
+                _actionChip(
+                  'Edit',
+                  Icons.edit,
+                  AppColors.primary,
+                  () => _showFormDialog(existing: o),
+                ),
+                if (status != 'active')
+                  _actionChip(
+                    'Active',
+                    Icons.check_circle,
+                    AppColors.success,
+                    () => _setStatus(id, 'active'),
+                  ),
+                if (status != 'inactive')
+                  _actionChip(
+                    'Inactive',
+                    Icons.pause_circle,
+                    AppColors.warning,
+                    () => _setStatus(id, 'inactive'),
+                  ),
+                if (status != 'suspended')
+                  _actionChip(
+                    'Suspend',
+                    Icons.block,
+                    AppColors.error,
+                    () => _setStatus(id, 'suspended'),
+                  ),
+                _actionChip(
+                  'Delete',
+                  Icons.delete,
+                  AppColors.error,
+                  () => _confirmDelete(id, name),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
+
+  Widget _actionChip(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14.w, color: color),
+            SizedBox(width: 4.w),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _chip(IconData ic, String t) => Row(
     mainAxisSize: MainAxisSize.min,
@@ -226,19 +428,17 @@ class _GoodsFleetOwnersScreenState extends State<GoodsFleetOwnersScreen> {
       ),
     ],
   );
-  Widget _badge(String s) => Container(
+
+  Widget _badge(String s, Color c) => Container(
     padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
     decoration: BoxDecoration(
-      color: AppColors.success.withValues(alpha: 0.1),
+      color: c.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(12.r),
+      border: Border.all(color: c.withValues(alpha: 0.3)),
     ),
     child: Text(
       s.toUpperCase(),
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        color: AppColors.success,
-      ),
+      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c),
     ),
   );
 }
