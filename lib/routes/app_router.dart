@@ -22,6 +22,7 @@ import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/companies/goods_companies_list_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_company_login_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/goods_company_login_screen.dart';
+import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/goods_fleet_dashboard_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet_dashboard_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_owners_screen.dart';
 import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_drivers_screen.dart';
@@ -267,6 +268,11 @@ class AppRouter {
       path: '/goods-fleet/login',
       name: 'goods_fleet_login',
       builder: (context, state) => const GoodsCompanyLoginScreen(),
+    ),
+    GoRoute(
+      path: '/goods-fleet/dashboard',
+      name: 'goods_fleet_dashboard',
+      builder: (context, state) => const GoodsFleetDashboardScreen(),
     ),
     GoRoute(
       path: '/bus-fleet/dashboard',
