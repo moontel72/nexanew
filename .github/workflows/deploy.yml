@@ -34,9 +34,9 @@ jobs:
           cd rust
           cargo build --release
           # Verify binary exists
-          ls -la target/release/nexatrace_rust
+          ls -la target/release/trace_odd_rust
           # Make executable
-          chmod +x target/release/nexatrace_rust
+          chmod +x target/release/trace_odd_rust
 
       # 🔥 SSH Setup
       - name: Setup SSH
@@ -53,37 +53,37 @@ jobs:
       # 🔥 Deploy backend via rsync (Excluding .env to protect server config)
       - name: Deploy backend via rsync
         run: |
-          rsync -avz --delete --exclude='.env' backend/ root@135.181.46.27:/var/www/nexatrace/admin-panel/
+          rsync -avz --delete --exclude='.env' backend/ root@135.181.46.27:/var/www/traceodd/admin-panel/
 
       # 🔥 Deploy Rust source + compiled binary to server
       #    This copies the entire rust/ directory so RustCodeGenerator.php
-      #    can find the binary at rust/target/release/nexatrace_rust
+      #    can find the binary at rust/target/release/trace_odd_rust
       - name: Deploy Rust directory to server
         run: |
-          rsync -avz --delete rust/ root@135.181.46.27:/var/www/nexatrace/admin-panel/rust/
+          rsync -avz --delete rust/ root@135.181.46.27:/var/www/traceodd/admin-panel/rust/
 
       # 🔥 Also deploy shared libs to rust-lib for FFI consumers
       - name: Deploy Rust shared libraries
         run: |
-          ssh root@135.181.46.27 "mkdir -p /var/www/nexatrace/rust-lib"
-          rsync -avz rust/target/release/*.so root@135.181.46.27:/var/www/nexatrace/rust-lib/ 2>/dev/null || true
+          ssh root@135.181.46.27 "mkdir -p /var/www/traceodd/rust-lib"
+          rsync -avz rust/target/release/*.so root@135.181.46.27:/var/www/traceodd/rust-lib/ 2>/dev/null || true
 
       # 🔥 Laravel optimize, Fix Permissions and Reload Nginx
       - name: Server Post-Deployment Tasks
         run: |
           ssh root@135.181.46.27 "
-            cd /var/www/nexatrace/admin-panel
+            cd /var/www/traceodd/admin-panel
 
             # 0. Ensure Rust binary permissions
-            if [ -f rust/target/release/nexatrace_rust ]; then
-              chmod +x rust/target/release/nexatrace_rust
-              echo 'Rust binary OK: ' \$(rust/target/release/nexatrace_rust --version)
+            if [ -f rust/target/release/trace_odd_rust ]; then
+              chmod +x rust/target/release/trace_odd_rust
+              echo 'Rust binary OK: ' \$(rust/target/release/trace_odd_rust --version)
             else
-              echo 'WARNING: Rust binary not found at rust/target/release/nexatrace_rust'
+              echo 'WARNING: Rust binary not found at rust/target/release/trace_odd_rust'
             fi
-            chmod 755 /var/www/nexatrace/rust-lib/*.so 2>/dev/null || true
-            chown -R www-data:www-data /var/www/nexatrace/rust-lib
-            chown -R www-data:www-data /var/www/nexatrace/admin-panel/rust
+            chmod 755 /var/www/traceodd/rust-lib/*.so 2>/dev/null || true
+            chown -R www-data:www-data /var/www/traceodd/rust-lib
+            chown -R www-data:www-data /var/www/traceodd/admin-panel/rust
 
             # 1. Run database migrations
             php artisan migrate --force
@@ -93,16 +93,16 @@ jobs:
             php artisan optimize
 
             # 2. Fix Ownership
-            chown -R www-data:www-data /var/www/nexatrace/admin-panel
-            chown -R www-data:www-data /var/www/nexatrace/frontend
+            chown -R www-data:www-data /var/www/traceodd/admin-panel
+            chown -R www-data:www-data /var/www/traceodd/frontend
 
             # 3. Set standard permissions
-            find /var/www/nexatrace/admin-panel -type d -exec chmod 755 {} \;
-            find /var/www/nexatrace/admin-panel -type f -exec chmod 644 {} \;
+            find /var/www/traceodd/admin-panel -type d -exec chmod 755 {} \;
+            find /var/www/traceodd/admin-panel -type f -exec chmod 644 {} \;
 
             # 4. Special permissions for storage and cache
-            chmod -R 775 /var/www/nexatrace/admin-panel/storage
-            chmod -R 775 /var/www/nexatrace/admin-panel/bootstrap/cache
+            chmod -R 775 /var/www/traceodd/admin-panel/storage
+            chmod -R 775 /var/www/traceodd/admin-panel/bootstrap/cache
 
             # 5. Reload Nginx
             systemctl reload nginx

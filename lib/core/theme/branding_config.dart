@@ -8,7 +8,7 @@
 // or shell widget to receive the correct brand parameters.
 //
 // Asset fallback policy: if a panel-specific asset is missing, the
-// base NexaTrace asset tree under `assets/images/` is used instead.
+// base Trace Odd asset tree under `assets/images/` is used instead.
 
 import 'package:flutter/material.dart';
 import 'package:nexatrace_system/core/navigation/panel_routes.dart';
@@ -23,7 +23,7 @@ class BrandProfile {
   final String workspaceBanner;
 
   /// Path to the logo asset in `assets/images/logos/`.
-  /// Falls back to `assets/images/nexatrace_logo.png` if null / missing.
+  /// Falls back to `assets/images/trace_odd_logo.png` if null / missing.
   final String? logoAssetPath;
 
   /// Icon shown when no logo asset is available.
@@ -56,30 +56,40 @@ class BrandProfile {
 class BrandingConfig {
   BrandingConfig._();
 
-  // ── Default NexaTrace brand (fallback for all panels) ─────
+  // ── Trace Odd brand palette (master identity colors) ─────
+  //   Navy Blue        #1e40af  → primary
+  //   Bright Blue      #2563eb  → secondary / accent
+  //   Light Fill Blue  #eff4ff  → background fills
+  //   Clean White      #ffffff  → surfaces
+  static const Color _traceOddNavy = Color(0xFF1E40AF);
+  static const Color _traceOddBright = Color(0xFF2563EB);
+
+  // ── Default Trace Odd brand (fallback for all panels) ─────
 
   static const BrandProfile _nexaTraceDefault = BrandProfile(
-    enterpriseTitle: 'NexaTrace',
+    enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'Enterprise Authentication Platform',
-    logoAssetPath: 'assets/images/logos/nexatrace_logo.png',
+    logoAssetPath: 'assets/images/logos/trace_odd_logo.png',
     fallbackIcon: Icons.verified_user,
-    primaryColor: AppColors.primary, // #0066CC
+    primaryColor: _traceOddNavy,
+    secondaryColor: _traceOddBright,
   );
 
   // ── Panel-specific brand profiles ─────────────────────────
 
-  /// Super Admin panel — always uses NexaTrace branding.
+  /// Super Admin panel — always uses Trace Odd master branding.
   static const BrandProfile _superAdminBrand = BrandProfile(
-    enterpriseTitle: 'NexaTrace',
+    enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'Super Admin Control Panel',
-    logoAssetPath: 'assets/images/logos/nexatrace_logo.png',
+    logoAssetPath: 'assets/images/logos/trace_odd_logo.png',
     fallbackIcon: Icons.admin_panel_settings,
-    primaryColor: AppColors.primary,
+    primaryColor: _traceOddNavy,
+    secondaryColor: _traceOddBright,
   );
 
   /// Factory Admin panel — third-party factory brand.
   /// Title, logo, and color are resolved dynamically from the factory's
-  /// registered company profile.  Falls back to NexaTrace green.
+  /// registered company profile.  Falls back to Trace Odd accent.
   static const BrandProfile _factoryDefaultBrand = BrandProfile(
     enterpriseTitle: 'Factory Portal',
     workspaceBanner: 'Production & Serialization Dashboard',
@@ -97,13 +107,14 @@ class BrandingConfig {
     primaryColor: AppColors.accent, // #FF9900
   );
 
-  /// Reseller / Shopkeeper panel — NexaTrace Marketplace brand.
+  /// Reseller / Marketplace panel — Trace Odd Marketplace master brand.
   static const BrandProfile _resellerBrand = BrandProfile(
-    enterpriseTitle: 'NexaTrace',
+    enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'B2B Marketplace & Reseller Portal',
-    logoAssetPath: 'assets/images/logos/nexatrace_logo.png',
+    logoAssetPath: 'assets/images/logos/trace_odd_logo.png',
     fallbackIcon: Icons.storefront,
-    primaryColor: const Color(0xFF673AB7), // Deep Purple
+    primaryColor: _traceOddNavy,
+    secondaryColor: _traceOddBright,
   );
 
   /// Driver Mobile Portal — inherits factory context brand.
@@ -115,13 +126,14 @@ class BrandingConfig {
     primaryColor: const Color(0xFF0D9488), // Industrial Teal
   );
 
-  /// Customer Super-App — always NexaTrace brand.
+  /// Customer Super-App — always Trace Odd master brand.
   static const BrandProfile _customerBrand = BrandProfile(
-    enterpriseTitle: 'NexaTrace',
+    enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'Product Authentication & Transit',
-    logoAssetPath: 'assets/images/logos/nexatrace_logo.png',
+    logoAssetPath: 'assets/images/logos/trace_odd_logo.png',
     fallbackIcon: Icons.qr_code_scanner,
-    primaryColor: AppColors.primary,
+    primaryColor: _traceOddNavy,
+    secondaryColor: _traceOddBright,
   );
 
   // ── Public API ────────────────────────────────────────────
@@ -181,7 +193,7 @@ class BrandingConfig {
     }
   }
 
-  /// Returns the default NexaTrace brand (used when no panel context exists).
+  /// Returns the default Trace Odd brand (used when no panel context exists).
   static BrandProfile get defaultBrand => _nexaTraceDefault;
 
   /// Convenience: resolve a brand profile from a route path string.

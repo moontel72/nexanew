@@ -1,5 +1,5 @@
-name: nexatrace_system
-description: NexaTrace - Cloud-Based SaaS Platform for Product Tracking, Authentication, and Supply Chain Management
+name: trace_odd
+description: Trace Odd - Cloud-Based SaaS Platform for Product Tracking, Authentication, and Supply Chain Management
 publish_to: "none"
 version: 1.0.0+1
 
@@ -32,6 +32,7 @@ dependencies:
   google_fonts: ^8.0.2
   shimmer: ^3.0.0
   lottie: ^3.3.2
+  flutter_svg: ^2.0.10+1
 
   # Forms & Validation
   formz: ^0.8.0
@@ -99,6 +100,29 @@ dev_dependencies:
   freezed: ^3.1.0
   json_serializable: ^6.7.1
   mockito: ^5.3.2
+
+  # Branding
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logos/trace_odd_logo_1024.png"
+  adaptive_icon_background: "#eff4ff"
+  adaptive_icon_foreground: "assets/images/logos/trace_odd_adaptive_fg.png"
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/images/logos/trace_odd_logo_1024.png"
+    background_color: "#eff4ff"
+    theme_color: "#1e40af"
+  windows:
+    generate: true
+    image_path: "assets/images/logos/trace_odd_logo_1024.png"
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: "assets/images/logos/trace_odd_logo_1024.png"
 
 flutter:
   uses-material-design: true

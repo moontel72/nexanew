@@ -1,19 +1,19 @@
 [package]
-name = "nexatrace_rust"
+name = "trace_odd_rust"
 version = "0.1.0"
 edition = "2021"
-authors = ["NexaTrace Team"]
-description = "High-performance code generation module for NexaTrace System"
+authors = ["Trace Odd Team"]
+description = "High-performance code generation module for Trace Odd System"
 license = "MIT"
-repository = "https://github.com/nexatrace/nexatrace-system"
+repository = "https://github.com/traceodd/trace-odd-system"
 readme = "README.md"
 
 [lib]
 crate-type = ["cdylib", "staticlib"]
-name = "nexatrace_rust"
+name = "trace_odd_rust"
 
 [[bin]]
-name = "nexatrace_rust"
+name = "trace_odd_rust"
 path = "src/main.rs"
 
 [dependencies]

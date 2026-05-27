@@ -50,7 +50,7 @@ jobs:
 
       - name: Deploy Admin Panel to /frontend/
         run: |
-          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/nexatrace/frontend/
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/frontend/
 
       # ──────────────────────────────────────────────────────────────
       # STEP B: Build & Deploy Reseller App (main_reseller.dart)
@@ -61,7 +61,7 @@ jobs:
 
       - name: Deploy Reseller App to /reseller/
         run: |
-          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/nexatrace/reseller/
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/reseller/
 
       # ──────────────────────────────────────────────────────────────
       # STEP C: Build & Deploy Driver App (main_driver.dart)
@@ -72,7 +72,7 @@ jobs:
 
       - name: Deploy Driver App to /driver/
         run: |
-          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/nexatrace/driver/
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/driver/
 
       # ──────────────────────────────────────────────────────────────
       # Post-Deployment: Fix permissions for all apps
@@ -81,10 +81,10 @@ jobs:
       - name: Post-Deployment Permissions Fix
         run: |
           ssh root@135.181.46.27 "
-            chown -R www-data:www-data /var/www/nexatrace/frontend && \
-            chmod -R 755 /var/www/nexatrace/frontend && \
-            chown -R www-data:www-data /var/www/nexatrace/reseller && \
-            chmod -R 755 /var/www/nexatrace/reseller && \
-            chown -R www-data:www-data /var/www/nexatrace/driver && \
-            chmod -R 755 /var/www/nexatrace/driver
+            chown -R www-data:www-data /var/www/traceodd/frontend && \
+            chmod -R 755 /var/www/traceodd/frontend && \
+            chown -R www-data:www-data /var/www/traceodd/reseller && \
+            chmod -R 755 /var/www/traceodd/reseller && \
+            chown -R www-data:www-data /var/www/traceodd/driver && \
+            chmod -R 755 /var/www/traceodd/driver
           "
