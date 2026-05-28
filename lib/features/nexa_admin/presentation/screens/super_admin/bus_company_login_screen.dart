@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
@@ -98,21 +99,10 @@ class _BusCompanyLoginScreenState extends State<BusCompanyLoginScreen> {
   Widget _buildHeader() {
     return Column(
       children: [
-        Container(
-          width: 80.w,
-          height: 80.h,
-          decoration: BoxDecoration(
-            color: AppColors.info,
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.info.withValues(alpha: 0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Icon(Icons.directions_bus, size: 40.w, color: Colors.white),
+        SvgPicture.asset(
+          'assets/logo/traceodd_logo.svg',
+          width: 100.w,
+          height: 100.h,
         ),
         Gap(16.h),
         Text(

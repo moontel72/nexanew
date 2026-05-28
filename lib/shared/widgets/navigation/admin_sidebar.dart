@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
@@ -63,14 +64,10 @@ class AdminSidebar extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Container(
+                    SvgPicture.asset(
+                      'assets/logo/traceodd_logo.svg',
                       width: 36,
                       height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.hub, color: Colors.white, size: 20),
                     ),
                     if (!collapsed) ...[
                       const Gap(10),

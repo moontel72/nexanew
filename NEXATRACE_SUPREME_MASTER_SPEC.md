@@ -1,9 +1,9 @@
-# NEXATRACE — SUPREME MASTER ARCHITECTURE SPECIFICATION
-## Universal Source of Truth · Production Roadmap 2026 · v4.0
+# TRACE ODD — SUPREME MASTER ARCHITECTURE SPECIFICATION
+## Universal Source of Truth · Production Roadmap 2026 · v4.1
 
 ---
 
-> **PROTOCOL FOR ALL AI AGENTS & DEVELOPERS:** This document is the absolute, unified, and singular Source of Truth for the entire NexaTrace ecosystem. It replaces all prior master files (`PROJECT_MASTER.md`, `PROJECT_LOGICS_TREE.md`, and all derivative specifications). It integrates the original ~4,000‑line business requirement trees, ~30 % tactical on‑floor adaptations already present in production code, the full technical modernization blueprint of 2026, and the 15‑module product registry. **No code generation, architecture decision, or feature planning shall proceed without strict reference to this document.**
+> **PROTOCOL FOR ALL AI AGENTS & DEVELOPERS:** This document is the absolute, unified, and singular Source of Truth for the entire Trace Odd ecosystem. It replaces all prior master files (`PROJECT_MASTER.md`, `PROJECT_LOGICS_TREE.md`, and all derivative specifications). It integrates the original ~4,000‑line business requirement trees, ~30 % tactical on‑floor adaptations already present in production code, the full technical modernization blueprint of 2026, and the 15‑module product registry. **No code generation, architecture decision, or feature planning shall proceed without strict reference to this document.**
 
 ---
 
@@ -113,7 +113,7 @@
 ## 3. THE 15-MODULE MASTER REGISTRY
 
 > **STRATEGIC AMENDMENT (2026-05-22):** The original 17-module blueprint has been consolidated to 15 modules:
-> - **Module 16 (Bus Passenger App)** → Consolidated into **Module 8 (Customers App)** as a unified 2-in-1 interface handling both product anti-counterfeit verification AND live bus tracking/ticket booking. Passengers use the exact same NexaTrace Customer App.
+> - **Module 16 (Bus Passenger App)** → Consolidated into **Module 8 (Customers App)** as a unified 2-in-1 interface handling both product anti-counterfeit verification AND live bus tracking/ticket booking. Passengers use the exact same Trace Odd Customer App.
 > - **Module 17 (P2P Intercity Trip Sharing)** → **Permanently removed.** Private car trip sharing creates a direct conflict of interest with commercial Bus Fleet Operators. This module is shelved for a standalone future project under a different brand, to be launched alongside a Restaurant Food Delivery network.
 
 > **🚨 GLOBAL STACK REQUIREMENT (MANDATORY FOR ALL APPS & PANELS):**
@@ -488,7 +488,7 @@
 
 #### 3AE — Factory Billing Dashboard
 - Dedicated Billing section per Factory Admin.
-- Displays: current Owed Balance to NexaTrace, outstanding invoices, payment due dates, credit limit status, payment method on file.
+- Displays: current Owed Balance to Trace Odd, outstanding invoices, payment due dates, credit limit status, payment method on file.
 - **Tech:** `FactoryBillingController`, `InvoiceService`.
 - **Built:** ✅ Billing dashboard, invoice list, payment history complete.
 
@@ -1087,7 +1087,7 @@
 - Verified item serials instantly credited to Shopkeeper active retail inventory ledger for consumer verification scanning (Module 8).
 - **Tech:** RetailDistributionService::executeShopkeeperStockIn() with lockForUpdate() on delivery + order; ownership transfers from warehouse pool to shopkeeper retail ledger; async sync for customer lookup validation.
 - **Built:** Not started.
-- **70% Anti-Fraud Gate (8W-C):** Cash-out only permitted if customer consumed >= 70% of voucher face value on actual NexaTrace services. Prevents velocity fraud.
+- **70% Anti-Fraud Gate (8W-C):** Cash-out only permitted if customer consumed >= 70% of voucher face value on actual Trace Odd services. Prevents velocity fraud.
 **Domain:** Consumer Trust Terminal · **Code Namespace:** `universal/customer`  
 **Build Status:** █░░░░░░░░░ 10 % — Shell exists; anti-counterfeit scanner prototype only
 
@@ -1114,7 +1114,7 @@
 
 #### 8E — Multi-Currency E-Wallet Payment Module (Main Wallet)
 - Integrated digital wallet: credit cards, digital payment tokens, swift refund lines.
-- Personal credit for NexaTrace platform payments.
+- Personal credit for Trace Odd platform payments.
 - **Built:** ❌ Not started.
 
 #### 8F — Smart Loyalty & Reward Point Trackers
@@ -1123,12 +1123,12 @@
 - **Built:** ❌ Not started.
 
 #### 8G — Multi-Company Scan Aggregation
-- Scan products from different pharmaceutical/other companies through single NexaTrace Universal App.
+- Scan products from different pharmaceutical/other companies through single Trace Odd Universal App.
 - Records of discounts, points, vouchers per company maintained separately.
 - **Built:** ❌ Not started.
 
 #### 8H — Dual Wallet Architecture
-- Main Wallet (8E): personal credit for NexaTrace payments.
+- Main Wallet (8E): personal credit for Trace Odd payments.
 - Subsidiary Wallets: company-specific discounts/refunds for future purchases only at that company.
 - **Built:** ❌ Not started.
 
@@ -1213,9 +1213,9 @@
 **Domain:** Logistics Management Base · **Code Namespace:** `transport/goods_company`  
 **Backend:** `app/Http/Controllers/Transport/`  
 #### 8W — 3-Way Tiered Payment & Voucher Refund Logic
-- **Wallet Deduction:** Pay directly from existing NexaTrace wallet credits (Step 8 Financial Ledger).
+- **Wallet Deduction:** Pay directly from existing Trace Odd wallet credits (Step 8 Financial Ledger).
 - **Card Payment:** Standard debit/credit card gateway processing.
-- **NexaTrace Cash Vouchers:** Physical vouchers purchasable from local shops (Kirana, cigarette shops). Customer buys Rs. 1,000 worth of vouchers; if ticket costs Rs. 930, system pays Bus Owner Rs. 930 and instantly credits remaining Rs. 70 into Customer NexaTrace Wallet. This balance is usable for future trips or withdrawable to bank via formal request.
+- **Trace Odd Cash Vouchers:** Physical vouchers purchasable from local shops (Kirana, cigarette shops). Customer buys Rs. 1,000 worth of vouchers; if ticket costs Rs. 930, system pays Bus Owner Rs. 930 and instantly credits remaining Rs. 70 into Customer Trace Odd Wallet. This balance is usable for future trips or withdrawable to bank via formal request.
 - **Tech:** Step 8 Double-Entry Ledger; nexatrace_vouchers table with hashed codes; BusInventoryService with lockForUpdate() race-safe booking.
 > **[REQUIRED TECH-STACK & INTEGRATION POINTS]**
 > - **Freight Auction Matching Engine** (Step 6): Post loads via `POST /api/v1/freight/loads`; place bids via `POST /api/v1/freight/loads/{id}/bids`; matching runs on `auctions` queue with weighted scoring.
@@ -1224,9 +1224,9 @@
 - **Cash Voucher Channel:** Customer buying physical voucher from local shop pays a system-defined surcharge (e.g., Rs. 50 extra on Rs. 1000). This Rs. 50 belongs entirely to the selling Shopkeeper as instant physical cash retail incentive.
 - Voucher schema tracks purchase_channel (card vs cash_voucher) and consumed_amount for anti-fraud validation.
 #### 8W-C — 70% Usage Anti-Fraud Rule (Velocity Block)
-- **Rule:** A customer MUST consume at least 70% of voucher face value on actual NexaTrace services before remaining change can be liquidated for physical cash at a shop.
+- **Rule:** A customer MUST consume at least 70% of voucher face value on actual Trace Odd services before remaining change can be liquidated for physical cash at a shop.
 - **Violation:** If usage < 70%, Shopkeeper cash-out endpoint throws strict FinancialFraudException — cash-out blocked. User can only use balance in-app or request standard bank withdrawal.
-- **Compliance (usage >= 70%):** NexaTrace pays liquidating shopkeeper their micro-commission out of platform treasury.
+- **Compliance (usage >= 70%):** Trace Odd pays liquidating shopkeeper their micro-commission out of platform treasury.
 - Prevents corrupt shopkeepers from generating fake vouchers and immediately processing fraudulent cash-outs to harvest system commissions.
 - **Tech:** ShopkeeperLiquidityService validates usageRatio before lockForUpdate(); nexatrace_vouchers.consumed_amount tracks actual service spend.
 - **Built:** Not started.
@@ -1649,7 +1649,7 @@
 - **Built:** Not started.
 #### 12I — 2-Tier Reseller Margin Controller
 - **Part 1 (MSRP Enforced Guard):** Absolute factory price control. Buy rate Rs. 400, sell rate Rs. 450 — Reseller cannot alter by Re. 1. System hard-locks invoice generator.
-- **Part 2 (Open-Margin Wholesale):** Resellers buy at locked rate but set own wholesale price as custom listing on NexaTrace Marketplace.
+- **Part 2 (Open-Margin Wholesale):** Resellers buy at locked rate but set own wholesale price as custom listing on Trace Odd Marketplace.
 - **Tech:** is_msrp_enforced flag on marketplace_product_listings; factory_buy_price + reseller_sell_price columns; MSRPViolationException in ResellerPortalService checkout flow.
 - **Built:** Not started.
 #### 12J — Reseller B2B Whitelisting (OTP Product Vault)
@@ -2264,20 +2264,20 @@
 | **SSH User** | root |
 | **SSH Command** | `ssh root@135.181.46.27` |
 | **Web Server** | Nginx (reverse proxy for Laravel API + Flutter Web static files) |
-| **Nginx Config** | `/etc/nginx/sites-available/nexatrace` |
+| **Nginx Config** | `/etc/nginx/sites-available/traceodd` |
 | **API Port** | 8090 (Laravel `php artisan serve`) |
-| **API Root** | `/var/www/nexatrace/admin-panel` (Laravel application) |
-| **Web Root** | `/var/www/nexatrace/admin-web` (Flutter build output) |
-| **Custom Code Root** | `/var/www/nexatrace/admin-panel` (all Nano-edited custom files live here) |
+| **API Root** | `/var/www/traceodd/admin-panel` (Laravel application) |
+| **Web Root** | `/var/www/traceodd/frontend` (Flutter build output) |
+| **Custom Code Root** | `/var/www/traceodd/admin-panel` (all Nano-edited custom files live here) |
 
 ### 8.2 Application URLs & Branding (Production — Tested)
 
 | App | URL | Branding | Status |
 |-----|-----|----------|--------|
-| **Super Admin** | `http://135.181.46.27` | NexaTrace logo | ✅ Login tested |
+| **Super Admin** | `http://135.181.46.27` | Trace Odd logo | ✅ Login tested |
 | **Factory Admin** | `http://135.181.46.27/factory/login` | Third-party factory logo | ✅ Login tested |
 | **Store Keeper** | `http://135.181.46.27/factory/store-keeper/login` | Related factory logo | ✅ Login tested |
-| **Reseller (Ecommerce)** | `http://135.181.46.27/reseller/login` | NexaTrace logo | ✅ Login tested |
+| **Reseller (Ecommerce)** | `http://135.181.46.27/reseller/login` | Trace Odd logo | ✅ Login tested |
 | **Factory Driver** | `http://135.181.46.27/driver/login` | Related factory logo | ✅ Login tested |
 
 ### 8.3 Auto-Deploy CI/CD Pipeline — Git Branch `mainnew`
@@ -2605,4 +2605,4 @@ chmod 600 ~/.ssh/authorized_keys
 
 > **END OF SUPREME MASTER SPECIFICATION**
 >
-> This document is the singular authority for all architecture decisions, code generation, and feature planning within the NexaTrace ecosystem. All prior specification documents are hereby superseded. Questions of priority, scope, or technical approach shall be resolved exclusively by reference to this specification.
+> This document is the singular authority for all architecture decisions, code generation, and feature planning within the Trace Odd ecosystem. All prior specification documents are hereby superseded. Questions of priority, scope, or technical approach shall be resolved exclusively by reference to this specification.
