@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/constants/app_constants.dart';
@@ -114,8 +113,8 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
     return Column(
       children: [
         // Logo
-        SvgPicture.asset(
-          'assets/logo/traceodd_logo.svg',
+        Image.asset(
+          'assets/logo/traceodd_logo.png',
           width: 120.w,
           height: 120.h,
         ),
@@ -125,9 +124,9 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
         Text(
           'NexaTrace Admin',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         Gap(8.h),
 
@@ -310,8 +309,9 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                 borderRadius: BorderRadius.circular(12.r),
               ),
               elevation: 4,
-              shadowColor:
-                  Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              shadowColor: Theme.of(
+                context,
+              ).colorScheme.primary.withOpacity(0.3),
             ),
             child: isLoading
                 ? SizedBox(
@@ -425,12 +425,12 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
       final password = _passwordController.text;
 
       context.read<AdminAuthBloc>().add(
-            AdminLoginRequested(
-              email: email,
-              password: password,
-              rememberMe: _rememberMe,
-            ),
-          );
+        AdminLoginRequested(
+          email: email,
+          password: password,
+          rememberMe: _rememberMe,
+        ),
+      );
     }
   }
 
