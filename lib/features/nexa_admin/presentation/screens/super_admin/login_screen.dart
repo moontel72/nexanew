@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/constants/app_constants.dart';
@@ -113,10 +114,10 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
     return Column(
       children: [
         // Logo
-        Image.asset(
-          'assets/logo/traceodd_logo.png',
-          width: 120.w,
-          height: 120.h,
+        SvgPicture.asset(
+          'assets/logo/traceodd_logo.svg',
+          width: 200.w,
+          height: 200.h,
         ),
         Gap(16.h),
 

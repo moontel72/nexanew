@@ -99,10 +99,21 @@ class _GoodsCompanyLoginScreenState extends State<GoodsCompanyLoginScreen> {
   Widget _buildHeader() {
     return Column(
       children: [
-        Image.asset(
-          'assets/logo/traceodd_logo.png',
-          width: 100.w,
-          height: 100.h,
+        Container(
+          width: 80.w,
+          height: 80.h,
+          decoration: BoxDecoration(
+            color: AppColors.success,
+            borderRadius: BorderRadius.circular(20.r),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.success.withValues(alpha: 0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(Icons.local_shipping, size: 40.w, color: Colors.white),
         ),
         Gap(16.h),
         Text(
