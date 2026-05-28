@@ -1,20 +1,20 @@
-// Register Company Screen for NexaTrace System
+﻿// Register Company Screen for NexaTrace System
 // Allows super admin to register new companies
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nexatrace_system/core/errors/error_handler.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/text_styles.dart';
-import 'package:nexatrace_system/core/utils/string_utils.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_register_bloc.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/inputs/custom_text_field.dart';
-import 'package:nexatrace_system/shared/models/subscription/plan_model.dart';
+import 'package:trace_odd/core/errors/error_handler.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/text_styles.dart';
+import 'package:trace_odd/core/utils/string_utils.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/company_management_repository.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/companies/company_register_bloc.dart';
+import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
+import 'package:trace_odd/shared/models/subscription/plan_model.dart';
 
 class RegisterCompanyScreen extends StatefulWidget {
   final bool inShell;

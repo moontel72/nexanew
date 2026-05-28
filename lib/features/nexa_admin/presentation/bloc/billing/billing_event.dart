@@ -1,11 +1,11 @@
-//lib/features/nexa_admin/presentation/bloc/billing/billing_event.dart
+﻿//lib/features/nexa_admin/presentation/bloc/billing/billing_event.dart
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/usecases/generate_invoice_usecase.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/usecases/process_payment_usecase.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
+import 'package:trace_odd/features/nexa_admin/domain/usecases/generate_invoice_usecase.dart';
+import 'package:trace_odd/features/nexa_admin/domain/usecases/process_payment_usecase.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart'
     as shared;
-import 'package:nexatrace_system/features/nexa_admin/data/models/credit_note_model.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/revenue_report_model.dart';
+import 'package:trace_odd/features/nexa_admin/data/models/credit_note_model.dart';
+import 'package:trace_odd/features/nexa_admin/data/models/revenue_report_model.dart';
 
 part 'billing_event.freezed.dart';
 

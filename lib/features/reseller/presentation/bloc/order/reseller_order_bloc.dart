@@ -1,7 +1,7 @@
-import 'package:bloc/bloc.dart';
-import 'package:nexatrace_system/features/reseller/data/repositories/reseller_order_repository.dart';
-import 'package:nexatrace_system/shared/models/order/cart_item_model.dart';
-import 'package:nexatrace_system/shared/models/order/order_model.dart';
+﻿import 'package:bloc/bloc.dart';
+import 'package:trace_odd/features/reseller/data/repositories/reseller_order_repository.dart';
+import 'package:trace_odd/shared/models/order/cart_item_model.dart';
+import 'package:trace_odd/shared/models/order/order_model.dart';
 
 // ---------------------------------------------------------------------------
 // Events

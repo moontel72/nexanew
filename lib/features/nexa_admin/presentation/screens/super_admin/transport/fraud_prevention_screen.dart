@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nexatrace_system/core/services/api_client.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/transport_admin_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/transport_admin/transport_admin_bloc.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/transport_admin_repository.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/transport_admin/transport_admin_bloc.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 
 class FraudPreventionAdminScreen extends StatelessWidget {
   const FraudPreventionAdminScreen({super.key});

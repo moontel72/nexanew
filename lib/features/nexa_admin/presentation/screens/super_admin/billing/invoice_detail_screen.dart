@@ -1,18 +1,18 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:nexatrace_system/core/services/api_client.dart';
-import 'package:nexatrace_system/core/utils/file_saver.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/payment_timeline_widget.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart' as shared;
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/typography.dart';
-import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/core/utils/file_saver.dart';
+import 'package:trace_odd/features/nexa_admin/data/models/invoice_model.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/widgets/billing/payment_timeline_widget.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart' as shared;
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/typography.dart';
+import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class InvoiceDetailScreen extends StatefulWidget {
   final String invoiceId;

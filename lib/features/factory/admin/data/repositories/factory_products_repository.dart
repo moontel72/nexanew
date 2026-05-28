@@ -1,6 +1,6 @@
-import 'package:nexatrace_system/core/constants/api_endpoints.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/shared/models/product/product_model.dart';
+﻿import 'package:trace_odd/core/constants/api_endpoints.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/models/product/product_model.dart';
 
 class FactoryProductsRepository {
   final ApiService _api;

@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/billing/billing_bloc.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/text_styles.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/cards/info_card.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/billing/billing_bloc.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/text_styles.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/cards/info_card.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class MakePaymentScreen extends StatefulWidget {
   const MakePaymentScreen({super.key});

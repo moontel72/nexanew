@@ -1,8 +1,8 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/status_badge.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/status_badge.dart';
 
 // ============================================================================
 // MarketplaceCompanyCard — B2B grid card for marketplace

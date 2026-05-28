@@ -1,9 +1,9 @@
-// Panel Auth State — Immutable states for multi-panel authentication bloc
+﻿// Panel Auth State — Immutable states for multi-panel authentication bloc
 // Matches the backend data structure from Setup 1's PanelAuthState.
 
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/features/auth/data/repositories/panel_auth_repository.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/features/auth/data/repositories/panel_auth_repository.dart';
 
 abstract class PanelAuthState extends Equatable {
   const PanelAuthState();

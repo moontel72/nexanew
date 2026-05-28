@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/core/theme/branding_config.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/theme/branding_config.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 /// High-visibility alert terminal for counterfeit scans or geo-diversions
 /// inside the factory tenant perimeter.  Under 100 lines.

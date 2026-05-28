@@ -1,4 +1,4 @@
-// Rust Serial Validator — Microsecond-level offline cryptographic verification
+﻿// Rust Serial Validator — Microsecond-level offline cryptographic verification
 //
 // Wraps the native Rust `verify_serial` FFI function (Step 22 vault) and
 // provides a synchronous pure-Dart SHA256 fallback for platforms where the
@@ -20,8 +20,8 @@ import 'dart:ffi';
 import 'package:crypto/crypto.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/core/crypto/ffi_bridge_config.dart';
-import 'package:nexatrace_system/rust_module/ffi_config.dart' as ffi;
+import 'package:trace_odd/core/crypto/ffi_bridge_config.dart';
+import 'package:trace_odd/rust_module/ffi_config.dart' as ffi;
 
 // ─────────────────────────────────────────────────────────────
 // Exception

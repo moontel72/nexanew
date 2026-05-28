@@ -1,5 +1,5 @@
-import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/core/services/hardware_scan_service.dart';
+﻿import 'package:equatable/equatable.dart';
+import 'package:trace_odd/core/services/hardware_scan_service.dart';
 
 abstract class CustomerSuperAppEvent extends Equatable {
   const CustomerSuperAppEvent();

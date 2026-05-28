@@ -1,4 +1,4 @@
-// Panel Provider Binder — Non-breaking DI injection for Setup 2 auth layer
+﻿// Panel Provider Binder — Non-breaking DI injection for Setup 2 auth layer
 //
 // Provides static provider lists that wire `PanelAuthBloc` and
 // `PanelAuthRepository` into the global dependency tree WITHOUT modifying
@@ -25,9 +25,9 @@
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:nexatrace_system/core/network/api_client_v2.dart';
-import 'package:nexatrace_system/features/auth/data/repositories/panel_auth_repository.dart';
-import 'package:nexatrace_system/features/auth/presentation/bloc/panel_auth_bloc.dart';
+import 'package:trace_odd/core/network/api_client_v2.dart';
+import 'package:trace_odd/features/auth/data/repositories/panel_auth_repository.dart';
+import 'package:trace_odd/features/auth/presentation/bloc/panel_auth_bloc.dart';
 
 class PanelProviderBinder {
   PanelProviderBinder._();

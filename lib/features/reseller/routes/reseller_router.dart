@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/features/reseller/presentation/screens/reseller_dashboard_screen.dart';
-import 'package:nexatrace_system/features/reseller/presentation/screens/reseller_login_screen.dart';
-import 'package:nexatrace_system/features/reseller/presentation/screens/marketplace_home_screen.dart';
-import 'package:nexatrace_system/features/reseller/presentation/screens/marketplace_catalog_screen.dart';
-import 'package:nexatrace_system/features/reseller/presentation/screens/marketplace_cart_screen.dart';
-import 'package:nexatrace_system/features/reseller/presentation/screens/marketplace_order_history_screen.dart';
-import 'package:nexatrace_system/features/reseller/presentation/screens/marketplace_order_detail_screen.dart';
+import 'package:trace_odd/features/reseller/presentation/screens/reseller_dashboard_screen.dart';
+import 'package:trace_odd/features/reseller/presentation/screens/reseller_login_screen.dart';
+import 'package:trace_odd/features/reseller/presentation/screens/marketplace_home_screen.dart';
+import 'package:trace_odd/features/reseller/presentation/screens/marketplace_catalog_screen.dart';
+import 'package:trace_odd/features/reseller/presentation/screens/marketplace_cart_screen.dart';
+import 'package:trace_odd/features/reseller/presentation/screens/marketplace_order_history_screen.dart';
+import 'package:trace_odd/features/reseller/presentation/screens/marketplace_order_detail_screen.dart';
 
 class ResellerRouter {
   final GoRouter config;

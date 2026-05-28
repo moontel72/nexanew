@@ -1,10 +1,10 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
-import 'package:nexatrace_system/shared/models/reseller/reseller_employee_model.dart';
-import 'package:nexatrace_system/shared/models/reseller/reseller_shop_model.dart';
-import 'package:nexatrace_system/shared/models/wallet/wallet_model.dart';
+import 'package:trace_odd/shared/models/reseller/reseller_employee_model.dart';
+import 'package:trace_odd/shared/models/reseller/reseller_shop_model.dart';
+import 'package:trace_odd/shared/models/wallet/wallet_model.dart';
 
 class ResellerLocalDatasource {
   final SharedPreferences _prefs;

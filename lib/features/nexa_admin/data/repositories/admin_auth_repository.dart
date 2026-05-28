@@ -1,15 +1,15 @@
-// Admin Authentication Repository for NexaTrace System
+﻿// Admin Authentication Repository for NexaTrace System
 // Simplified version to fix compilation errors
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/core/interfaces/secure_storage_interface.dart';
+import 'package:trace_odd/core/interfaces/secure_storage_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
-import 'package:nexatrace_system/core/config/api_config.dart';
-import 'package:nexatrace_system/core/errors/app_exceptions.dart';
-import 'package:nexatrace_system/core/services/api_client.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/entities/admin_user.dart';
+import 'package:trace_odd/core/config/api_config.dart';
+import 'package:trace_odd/core/errors/app_exceptions.dart';
+import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/features/nexa_admin/domain/entities/admin_user.dart';
 
 /// Authentication response model
 class AuthResponse {

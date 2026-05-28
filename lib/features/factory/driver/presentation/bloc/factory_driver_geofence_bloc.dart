@@ -1,7 +1,7 @@
-import 'package:bloc/bloc.dart';
-import 'package:nexatrace_system/features/factory/driver/domain/utils/geo_utils.dart';
-import 'package:nexatrace_system/features/factory/driver/presentation/bloc/factory_driver_geofence_event.dart';
-import 'package:nexatrace_system/features/factory/driver/presentation/bloc/factory_driver_geofence_state.dart';
+﻿import 'package:bloc/bloc.dart';
+import 'package:trace_odd/features/factory/driver/domain/utils/geo_utils.dart';
+import 'package:trace_odd/features/factory/driver/presentation/bloc/factory_driver_geofence_event.dart';
+import 'package:trace_odd/features/factory/driver/presentation/bloc/factory_driver_geofence_state.dart';
 
 class FactoryDriverGeofenceBloc
     extends Bloc<FactoryDriverGeofenceEvent, FactoryDriverGeofenceState> {

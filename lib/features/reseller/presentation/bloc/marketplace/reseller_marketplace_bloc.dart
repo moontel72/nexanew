@@ -1,7 +1,7 @@
-import 'package:bloc/bloc.dart';
+﻿import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/features/reseller/data/repositories/reseller_marketplace_repository.dart';
-import 'package:nexatrace_system/shared/models/reseller/reseller_marketplace_product_model.dart';
+import 'package:trace_odd/features/reseller/data/repositories/reseller_marketplace_repository.dart';
+import 'package:trace_odd/shared/models/reseller/reseller_marketplace_product_model.dart';
 
 enum ResellerMarketplaceStatus { initial, loading, loaded, error }
 

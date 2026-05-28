@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 class AdminSidebarSection {
   final String title;

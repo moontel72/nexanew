@@ -1,4 +1,4 @@
-// Network Exceptions — Dio interceptor error taxonomy
+﻿// Network Exceptions — Dio interceptor error taxonomy
 // Handles all backend status anomalies from the 26-step architecture.
 // Reuses AppException base from lib/core/errors/app_exceptions.dart.
 //
@@ -9,7 +9,7 @@
 //   423 → LockedException (existing)
 //   429 → RateLimitException (existing)
 
-import 'package:nexatrace_system/core/errors/app_exceptions.dart';
+import 'package:trace_odd/core/errors/app_exceptions.dart';
 
 /// Thrown when backend returns 403 with driver.type mismatch payload.
 /// Middleware: EnsureDriverType (Step 19)

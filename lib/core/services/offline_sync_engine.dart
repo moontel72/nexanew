@@ -1,4 +1,4 @@
-// Offline Sync Engine — Local transactional queue with idempotent flush
+﻿// Offline Sync Engine — Local transactional queue with idempotent flush
 //
 // Stores pending API mutations (scans, handshakes, location updates) in a
 // Hive box when the device is offline.  When connectivity returns, flushes
@@ -29,7 +29,7 @@ import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
-import 'package:nexatrace_system/core/network/api_client_v2.dart';
+import 'package:trace_odd/core/network/api_client_v2.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Sync Record

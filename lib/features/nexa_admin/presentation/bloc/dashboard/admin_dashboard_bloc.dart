@@ -1,9 +1,9 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/dashboard_repository.dart';
-import 'package:nexatrace_system/shared/models/dashboard/dashboard_models.dart';
+import 'package:trace_odd/core/errors/failures.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/dashboard_repository.dart';
+import 'package:trace_odd/shared/models/dashboard/dashboard_models.dart';
 
 part 'admin_dashboard_event.dart';
 part 'admin_dashboard_state.dart';

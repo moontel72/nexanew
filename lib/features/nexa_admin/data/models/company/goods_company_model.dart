@@ -1,8 +1,8 @@
-// Goods Company Model — Goods logistics fleet company extensions and helpers
+﻿// Goods Company Model — Goods logistics fleet company extensions and helpers
 // Uses the existing Company model from shared/models/company
 
 import 'dart:convert';
-import 'package:nexatrace_system/shared/models/company/company_model.dart';
+import 'package:trace_odd/shared/models/company/company_model.dart';
 
 /// Goods-specific company type constant (stored in admin_notes JSON)
 const String goodsCompanyTypeId = 'goods_fleet';

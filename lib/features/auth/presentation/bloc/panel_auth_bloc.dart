@@ -1,4 +1,4 @@
-// Panel Auth Bloc — Centralised multi-panel authentication state machine
+﻿// Panel Auth Bloc — Centralised multi-panel authentication state machine
 //
 // Handles login/logout for all 6 panels (Super Admin, Factory, Marketplace,
 // Truck Fleet, Bus Fleet, Consumer) through a single bloc instance.
@@ -22,11 +22,11 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/core/network/network_exceptions.dart';
-import 'package:nexatrace_system/core/errors/app_exceptions.dart';
-import 'package:nexatrace_system/features/auth/data/repositories/panel_auth_repository.dart';
-import 'package:nexatrace_system/features/auth/presentation/bloc/panel_auth_event.dart';
-import 'package:nexatrace_system/features/auth/presentation/bloc/panel_auth_state.dart';
+import 'package:trace_odd/core/network/network_exceptions.dart';
+import 'package:trace_odd/core/errors/app_exceptions.dart';
+import 'package:trace_odd/features/auth/data/repositories/panel_auth_repository.dart';
+import 'package:trace_odd/features/auth/presentation/bloc/panel_auth_event.dart';
+import 'package:trace_odd/features/auth/presentation/bloc/panel_auth_state.dart';
 
 class PanelAuthBloc extends Bloc<PanelAuthEvent, PanelAuthState> {
   final PanelAuthRepository _repository;

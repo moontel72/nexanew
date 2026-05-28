@@ -1,19 +1,19 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/unit_codes/unit_codes_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/products/products_bloc.dart';
-import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
-import 'package:nexatrace_system/shared/models/code/code_generation_request.dart';
-import 'package:nexatrace_system/shared/models/product/product_model.dart';
-import 'package:nexatrace_system/core/utils/auth_state.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/dialogs/code_generation_success_dialog.dart';
-import 'package:nexatrace_system/shared/widgets/inputs/custom_text_field.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/unit_codes/unit_codes_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/products/products_bloc.dart';
+import 'package:trace_odd/shared/models/code/base_code_model.dart';
+import 'package:trace_odd/shared/models/code/code_generation_request.dart';
+import 'package:trace_odd/shared/models/product/product_model.dart';
+import 'package:trace_odd/core/utils/auth_state.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/dialogs/code_generation_success_dialog.dart';
+import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class UnitCodeGenerateScreen extends StatefulWidget {
   const UnitCodeGenerateScreen({super.key});

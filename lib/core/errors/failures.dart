@@ -1,8 +1,8 @@
-// File: lib/core/errors/failures.dart
+﻿// File: lib/core/errors/failures.dart
 // File: lib/core/errors/failures.dart
 
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/core/errors/app_exceptions.dart';
+import 'package:trace_odd/core/errors/app_exceptions.dart';
 
 /// Base class for all failures in the application
 abstract class Failure extends Equatable {

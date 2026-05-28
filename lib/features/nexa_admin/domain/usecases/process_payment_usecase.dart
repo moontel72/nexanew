@@ -1,9 +1,9 @@
-import 'package:dartz/dartz.dart';
-import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/core/usecase/usecase.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/entities/billing_entity.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
+﻿import 'package:dartz/dartz.dart';
+import 'package:trace_odd/core/errors/failures.dart';
+import 'package:trace_odd/core/usecase/usecase.dart';
+import 'package:trace_odd/features/nexa_admin/domain/entities/billing_entity.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/billing_repository.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart'
     as shared;
 
 /// Converts shared PaymentMethod to entity PaymentMethod

@@ -1,17 +1,17 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/reseller_management/reseller_management_bloc.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/inputs/search_field.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/reseller_management/reseller_management_bloc.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
+import 'package:trace_odd/shared/widgets/inputs/search_field.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class ResellerManagementListScreen extends StatefulWidget {
   final bool inShell;

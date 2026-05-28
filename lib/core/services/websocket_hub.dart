@@ -1,4 +1,4 @@
-// WebSocket Hub — Panel-aware real-time event client
+﻿// WebSocket Hub — Panel-aware real-time event client
 //
 // Singleton stream hub for all NexaTrace WebSocket channels (Step 3 backend).
 // Provides:
@@ -21,7 +21,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show WebSocket, WebSocketException;
 import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Event payload types

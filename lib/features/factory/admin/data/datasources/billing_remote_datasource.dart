@@ -1,11 +1,11 @@
-// Billing Remote Datasource for Factory Admin Portal
+﻿// Billing Remote Datasource for Factory Admin Portal
 // Handles direct API calls for billing operations
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:nexatrace_system/core/config/api_config.dart';
-import 'package:nexatrace_system/core/utils/auth_state.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
+import 'package:trace_odd/core/config/api_config.dart';
+import 'package:trace_odd/core/utils/auth_state.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart';
 
 class BillingRemoteDatasource {
   final String _baseUrl;

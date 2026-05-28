@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:nexatrace_system/shared/widgets/inputs/custom_text_field.dart';
+import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
 
 class BundleSpecificationsSection extends StatelessWidget {
   final TextEditingController cartonsPerBundleController;

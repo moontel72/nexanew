@@ -1,11 +1,11 @@
-// Company Register Bloc for NexaTrace System
+﻿// Company Register Bloc for NexaTrace System
 // Business logic for company registration operations
 
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
+import 'package:trace_odd/core/errors/failures.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/company_management_repository.dart';
 
 part 'company_register_event.dart';
 part 'company_register_state.dart';

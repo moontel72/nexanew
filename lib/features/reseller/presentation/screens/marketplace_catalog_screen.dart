@@ -1,17 +1,17 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
-import 'package:nexatrace_system/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
-import 'package:nexatrace_system/shared/models/reseller/reseller_marketplace_product_model.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
-import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/inputs/search_field.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
+import 'package:trace_odd/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
+import 'package:trace_odd/shared/models/reseller/reseller_marketplace_product_model.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
+import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
+import 'package:trace_odd/shared/widgets/inputs/search_field.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class MarketplaceCatalogScreen extends StatefulWidget {
   final String factoryId;

@@ -1,8 +1,8 @@
-// API Service for NexaTrace System
+﻿// API Service for NexaTrace System
 // This service provides a higher-level abstraction over ApiClient for business logic
 
 import 'dart:typed_data';
-import 'package:nexatrace_system/core/services/api_client.dart';
+import 'package:trace_odd/core/services/api_client.dart';
 
 class ApiService {
   // Singleton instance

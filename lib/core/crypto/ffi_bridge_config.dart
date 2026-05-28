@@ -1,4 +1,4 @@
-// FFI Bridge Config — Rust native module initialization & diagnostics
+﻿// FFI Bridge Config — Rust native module initialization & diagnostics
 //
 // Triggers `RustLib.init()` for flutter_rust_bridge, loads the platform
 // dynamic library, and provides fallback diagnostics for web/simulator
@@ -10,7 +10,7 @@
 
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/rust_module/ffi_config.dart' as ffi;
+import 'package:trace_odd/rust_module/ffi_config.dart' as ffi;
 
 class RustBridgeConfig {
   RustBridgeConfig._();

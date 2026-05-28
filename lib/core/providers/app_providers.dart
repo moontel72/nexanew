@@ -1,62 +1,62 @@
-// App Providers for NexaTrace System
+﻿// App Providers for NexaTrace System
 // This file provides dependency injection using Flutter BLoC's RepositoryProvider
 
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nexatrace_system/core/constants/api_endpoints.dart' as api;
-import 'package:nexatrace_system/core/services/api_client.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/factory/admin/data/repositories/factory_auth_repository.dart';
-import 'package:nexatrace_system/features/factory/admin/data/repositories/factory_products_repository.dart';
-import 'package:nexatrace_system/features/factory/admin/data/datasources/codes_remote_datasource.dart';
-import 'package:nexatrace_system/features/factory/admin/data/repositories/codes_repository_impl.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/presentation/bloc/store_keeper_bloc.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/data/repositories/store_keeper_repository.dart';
-import 'package:nexatrace_system/features/factory/driver/presentation/bloc/factory_driver_geofence_bloc.dart';
-import 'package:nexatrace_system/features/factory/driver/presentation/bloc/driver_bloc.dart';
-import 'package:nexatrace_system/features/factory/driver/data/repositories/driver_repository_impl.dart';
-import 'package:nexatrace_system/features/factory/driver/data/datasources/driver_remote_datasource.dart';
-import 'package:nexatrace_system/features/factory/admin/domain/repositories/codes_repository.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/store_keepers/store_keepers_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/drivers/drivers_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_codes_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/carton_codes/carton_codes_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/packet_codes/packet_codes_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/unit_codes/unit_codes_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/products/products_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/admin_auth_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/dashboard_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/plan_management_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_management_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/dashboard/admin_dashboard_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/datasources/reseller_management_remote_datasource.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/reseller_management_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/reseller_management/reseller_management_bloc.dart';
-import 'package:nexatrace_system/core/interfaces/secure_storage_interface.dart';
+import 'package:trace_odd/core/constants/api_endpoints.dart' as api;
+import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/factory/admin/data/repositories/factory_auth_repository.dart';
+import 'package:trace_odd/features/factory/admin/data/repositories/factory_products_repository.dart';
+import 'package:trace_odd/features/factory/admin/data/datasources/codes_remote_datasource.dart';
+import 'package:trace_odd/features/factory/admin/data/repositories/codes_repository_impl.dart';
+import 'package:trace_odd/features/factory/store_keeper/presentation/bloc/store_keeper_bloc.dart';
+import 'package:trace_odd/features/factory/store_keeper/data/repositories/store_keeper_repository.dart';
+import 'package:trace_odd/features/factory/driver/presentation/bloc/factory_driver_geofence_bloc.dart';
+import 'package:trace_odd/features/factory/driver/presentation/bloc/driver_bloc.dart';
+import 'package:trace_odd/features/factory/driver/data/repositories/driver_repository_impl.dart';
+import 'package:trace_odd/features/factory/driver/data/datasources/driver_remote_datasource.dart';
+import 'package:trace_odd/features/factory/admin/domain/repositories/codes_repository.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/store_keepers/store_keepers_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/drivers/drivers_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_codes_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/carton_codes/carton_codes_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/packet_codes/packet_codes_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/unit_codes/unit_codes_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/products/products_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/company_management_repository.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/admin_auth_repository.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/dashboard_repository.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/plan_management_repository.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/companies/company_management_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/dashboard/admin_dashboard_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/data/datasources/reseller_management_remote_datasource.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/reseller_management_repository.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/reseller_management/reseller_management_bloc.dart';
+import 'package:trace_odd/core/interfaces/secure_storage_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Billing imports
-import 'package:nexatrace_system/features/factory/admin/data/repositories/billing_repository_impl.dart';
-import 'package:nexatrace_system/features/factory/admin/domain/repositories/billing_repository.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/billing/billing_bloc.dart';
+import 'package:trace_odd/features/factory/admin/data/repositories/billing_repository_impl.dart';
+import 'package:trace_odd/features/factory/admin/domain/repositories/billing_repository.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/billing/billing_bloc.dart';
 
-import 'package:nexatrace_system/features/nexa_admin/data/datasources/billing_datasource.dart'
+import 'package:trace_odd/features/nexa_admin/data/datasources/billing_datasource.dart'
     as admin_billing_ds;
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart'
+import 'package:trace_odd/features/nexa_admin/data/repositories/billing_repository.dart'
     as admin_billing_repo;
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart'
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart'
     as admin_billing_bloc;
-import 'package:nexatrace_system/features/nexa_admin/domain/usecases/generate_invoice_usecase.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/usecases/process_payment_usecase.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/usecases/reconcile_payments_usecase.dart';
+import 'package:trace_odd/features/nexa_admin/domain/usecases/generate_invoice_usecase.dart';
+import 'package:trace_odd/features/nexa_admin/domain/usecases/process_payment_usecase.dart';
+import 'package:trace_odd/features/nexa_admin/domain/usecases/reconcile_payments_usecase.dart';
 
 class AppProviders {
   /// Get all repository providers for the root of the app

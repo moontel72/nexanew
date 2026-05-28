@@ -1,4 +1,4 @@
-// Auth Interceptor — Dio interceptor for NexaTrace 26-step backend
+﻿// Auth Interceptor — Dio interceptor for NexaTrace 26-step backend
 //
 // Handles three critical status anomalies per the architecture spec:
 //   1. 403 — Driver type mismatch (EnsureDriverType middleware, Step 19)
@@ -15,8 +15,8 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:nexatrace_system/core/network/network_exceptions.dart';
-import 'package:nexatrace_system/core/errors/app_exceptions.dart';
+import 'package:trace_odd/core/network/network_exceptions.dart';
+import 'package:trace_odd/core/errors/app_exceptions.dart';
 
 /// Callback invoked when the backend signals a 401 and a token refresh
 /// should be attempted.  Return a fresh access-token string or null to

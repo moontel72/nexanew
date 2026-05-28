@@ -1,4 +1,4 @@
-// App Bootstrapper — Centralized async initialization pipeline
+﻿// App Bootstrapper — Centralized async initialization pipeline
 //
 // Coordinates the exact chronological startup sequence for native engines,
 // local storage, and network event buses.  Call once in main() before
@@ -12,9 +12,9 @@
 //   }
 
 import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/core/crypto/ffi_bridge_config.dart';
-import 'package:nexatrace_system/core/services/offline_sync_engine.dart';
-import 'package:nexatrace_system/core/services/websocket_hub.dart';
+import 'package:trace_odd/core/crypto/ffi_bridge_config.dart';
+import 'package:trace_odd/core/services/offline_sync_engine.dart';
+import 'package:trace_odd/core/services/websocket_hub.dart';
 
 class AppBootstrapper {
   AppBootstrapper._();

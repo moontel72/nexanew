@@ -1,4 +1,4 @@
-// Router Integration — Panel-aware GoRouter extensions
+﻿// Router Integration — Panel-aware GoRouter extensions
 //
 // Provides the `/access-denied` GoRoute and a composable panel-aware
 // redirect function that enforces route authorization.  These are
@@ -23,10 +23,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/core/navigation/route_guard_middleware.dart';
-import 'package:nexatrace_system/features/auth/presentation/bloc/panel_auth_bloc.dart';
-import 'package:nexatrace_system/features/auth/presentation/bloc/panel_auth_state.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/navigation/route_guard_middleware.dart';
+import 'package:trace_odd/features/auth/presentation/bloc/panel_auth_bloc.dart';
+import 'package:trace_odd/features/auth/presentation/bloc/panel_auth_state.dart';
 
 class RouterIntegration {
   RouterIntegration._();

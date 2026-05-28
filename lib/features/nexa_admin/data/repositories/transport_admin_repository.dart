@@ -1,6 +1,6 @@
-import 'package:nexatrace_system/core/constants/api_endpoints.dart';
-import 'package:nexatrace_system/core/services/api_client.dart';
-import 'package:nexatrace_system/shared/models/transport/admin_transport_stats.dart';
+﻿import 'package:trace_odd/core/constants/api_endpoints.dart';
+import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/shared/models/transport/admin_transport_stats.dart';
 
 class TransportAdminRepository {
   final ApiClient apiClient;

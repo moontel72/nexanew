@@ -1,4 +1,4 @@
-import 'package:nexatrace_system/shared/models/company/company_model.dart';
+﻿import 'package:trace_odd/shared/models/company/company_model.dart';
 
 class CompanyDocumentInput {
   final DocumentType type;

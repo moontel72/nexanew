@@ -1,19 +1,19 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
-import 'package:nexatrace_system/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
-import 'package:nexatrace_system/features/reseller/presentation/widgets/marketplace_company_card.dart';
-import 'package:nexatrace_system/features/reseller/presentation/widgets/marketplace_promo_ticker.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
-import 'package:nexatrace_system/shared/widgets/carousel/banner_carousel.dart';
-import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
-import 'package:nexatrace_system/shared/widgets/pagination/pagination_bar.dart';
+import 'package:trace_odd/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
+import 'package:trace_odd/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
+import 'package:trace_odd/features/reseller/presentation/widgets/marketplace_company_card.dart';
+import 'package:trace_odd/features/reseller/presentation/widgets/marketplace_promo_ticker.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
+import 'package:trace_odd/shared/widgets/carousel/banner_carousel.dart';
+import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/shared/widgets/pagination/pagination_bar.dart';
 
 // ============================================================================
 // MarketplaceHomeScreen — Premium B2B Marketplace (composes shared widgets)

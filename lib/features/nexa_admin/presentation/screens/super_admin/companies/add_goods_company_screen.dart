@@ -1,4 +1,4 @@
-// Add Goods Company Screen — Super Admin adds a new goods logistics fleet company
+﻿// Add Goods Company Screen — Super Admin adds a new goods logistics fleet company
 // Pattern follows AddBusCompanyScreen with truck/goods theme
 
 import 'dart:convert';
@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_register_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/inputs/custom_text_field.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/company_management_repository.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/companies/company_register_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
 
 /// Add Goods Company Screen — Super Admin registration form for goods logistics fleet companies
 class AddGoodsCompanyScreen extends StatefulWidget {

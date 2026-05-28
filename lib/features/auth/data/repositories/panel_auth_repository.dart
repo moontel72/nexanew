@@ -1,4 +1,4 @@
-// Panel Auth Repository — Multi-panel authentication data layer
+﻿// Panel Auth Repository — Multi-panel authentication data layer
 //
 // Wires the `NexaTraceApiClient` (Dio-based, Setup 1) directly into the
 // authentication flow.  Handles login across all 5 endpoints by dispatching
@@ -13,9 +13,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/core/network/api_client_v2.dart';
-import 'package:nexatrace_system/core/network/network_exceptions.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/network/api_client_v2.dart';
+import 'package:trace_odd/core/network/network_exceptions.dart';
 
 /// Data class returned after successful authentication.
 class PanelAuthResponse {

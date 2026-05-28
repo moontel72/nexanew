@@ -1,4 +1,4 @@
-// Panel BLoC Providers — Unified injection container for all 6 panels
+﻿// Panel BLoC Providers — Unified injection container for all 6 panels
 //
 // Provides a single spreadable list of BlocProviders for the 4 primary
 // panel BLoCs (FactoryDashboardBloc, SecurityMonitorBloc, ConsumerSuperAppBloc,
@@ -15,11 +15,11 @@
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:nexatrace_system/core/services/hardware_scan_service.dart';
-import 'package:nexatrace_system/features/auth/data/repositories/panel_auth_repository.dart';
-import 'package:nexatrace_system/features/auth/presentation/bloc/panel_auth_bloc.dart';
-import 'package:nexatrace_system/features/factory/presentation/bloc/factory_dashboard_bloc.dart';
-import 'package:nexatrace_system/core/network/api_client_v2.dart';
+import 'package:trace_odd/core/services/hardware_scan_service.dart';
+import 'package:trace_odd/features/auth/data/repositories/panel_auth_repository.dart';
+import 'package:trace_odd/features/auth/presentation/bloc/panel_auth_bloc.dart';
+import 'package:trace_odd/features/factory/presentation/bloc/factory_dashboard_bloc.dart';
+import 'package:trace_odd/core/network/api_client_v2.dart';
 
 class PanelBlocProviders {
   PanelBlocProviders._();

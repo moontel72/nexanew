@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nexatrace_system/core/services/api_client.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/screens/super_admin/billing/invoice_detail_screen.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart' as shared;
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/typography.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/features/nexa_admin/data/models/invoice_model.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/billing/invoice_detail_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart' as shared;
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/typography.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class PlatformInvoicesScreen extends StatefulWidget {
   const PlatformInvoicesScreen({super.key});

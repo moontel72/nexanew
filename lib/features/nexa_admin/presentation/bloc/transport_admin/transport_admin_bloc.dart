@@ -1,7 +1,7 @@
-import 'package:bloc/bloc.dart';
+﻿import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/transport_admin_repository.dart';
-import 'package:nexatrace_system/shared/models/transport/admin_transport_stats.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/transport_admin_repository.dart';
+import 'package:trace_odd/shared/models/transport/admin_transport_stats.dart';
 
 part 'transport_admin_event.dart';
 part 'transport_admin_state.dart';

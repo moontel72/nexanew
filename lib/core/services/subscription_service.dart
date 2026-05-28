@@ -1,4 +1,4 @@
-import 'package:nexatrace_system/shared/models/wallet/wallet_model.dart';
+﻿import 'package:trace_odd/shared/models/wallet/wallet_model.dart';
 
 class SubscriptionFeatureResult {
   final bool allowed;

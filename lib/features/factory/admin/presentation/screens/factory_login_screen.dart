@@ -1,4 +1,4 @@
-// Factory Login Screen for NexaTrace System
+﻿// Factory Login Screen for NexaTrace System
 // Factory Admin authentication interface - Updated to match Super Admin design pattern
 
 import 'package:flutter/material.dart';
@@ -6,13 +6,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/core/constants/app_constants.dart';
-import 'package:nexatrace_system/core/utils/auth_state.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
+import 'package:trace_odd/core/constants/app_constants.dart';
+import 'package:trace_odd/core/utils/auth_state.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
 
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 /// Factory Admin Login Screen
 /// Authentication screen for factory administrators to access the factory panel

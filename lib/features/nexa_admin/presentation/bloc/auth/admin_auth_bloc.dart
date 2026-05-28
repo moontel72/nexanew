@@ -1,8 +1,8 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/core/utils/auth_state.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/admin_auth_repository.dart';
+import 'package:trace_odd/core/errors/failures.dart';
+import 'package:trace_odd/core/utils/auth_state.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/admin_auth_repository.dart';
 
 import 'admin_auth_event.dart';
 import 'admin_auth_state.dart';

@@ -1,16 +1,16 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_event.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_state.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/inputs/custom_text_field.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_event.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_packing_state.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 class BundlePackingScreen extends StatefulWidget {
   const BundlePackingScreen({super.key});

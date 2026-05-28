@@ -1,7 +1,7 @@
-// Panel Auth Events — Events for multi-panel authentication bloc
+﻿// Panel Auth Events — Events for multi-panel authentication bloc
 
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
 
 abstract class PanelAuthEvent extends Equatable {
   const PanelAuthEvent();

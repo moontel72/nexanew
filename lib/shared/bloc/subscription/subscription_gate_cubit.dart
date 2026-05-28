@@ -1,4 +1,4 @@
-// Subscription Gate Cubit — Single source of truth for plan-tier UI gating.
+﻿// Subscription Gate Cubit — Single source of truth for plan-tier UI gating.
 //
 // Reads subscription state from `/api/v1/{panel}/subscription` and exposes
 // helper methods (hasFeature, wouldExceed, isAtLeast) consumed by widgets.
@@ -7,7 +7,7 @@
 // child widget can `context.watch<SubscriptionGateCubit>()` to gate features.
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nexatrace_system/shared/bloc/subscription/subscription_gate_state.dart';
+import 'package:trace_odd/shared/bloc/subscription/subscription_gate_state.dart';
 
 class SubscriptionGateCubit extends Cubit<SubscriptionGateState> {
   /// Optional loader injected from the API layer — returns the raw

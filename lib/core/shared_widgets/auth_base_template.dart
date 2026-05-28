@@ -1,4 +1,4 @@
-// Auth Base Template — Shared multi-tenant login layout wrapper
+﻿// Auth Base Template — Shared multi-tenant login layout wrapper
 //
 // A single, highly scannable, adaptive login wrapper used by all 5 login
 // endpoints.  Under 100 lines by delegating contextual rendering (logo,
@@ -17,10 +17,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:nexatrace_system/core/theme/branding_config.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
+import 'package:trace_odd/core/theme/branding_config.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 
 class AuthBaseTemplate extends StatelessWidget {
   final BrandProfile brand;

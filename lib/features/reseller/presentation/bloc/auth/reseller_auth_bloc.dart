@@ -1,5 +1,5 @@
-import 'package:bloc/bloc.dart';
-import 'package:nexatrace_system/features/reseller/data/repositories/reseller_session_repository.dart';
+﻿import 'package:bloc/bloc.dart';
+import 'package:trace_odd/features/reseller/data/repositories/reseller_session_repository.dart';
 
 sealed class ResellerAuthEvent {}
 

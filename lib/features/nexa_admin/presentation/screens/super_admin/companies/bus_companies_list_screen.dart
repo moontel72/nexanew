@@ -1,4 +1,4 @@
-// View All Bus Companies Screen — Super Admin lists bus fleet companies
+﻿// View All Bus Companies Screen — Super Admin lists bus fleet companies
 // Layout matches ResellerManagementListScreen pattern
 
 import 'dart:async';
@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/company/bus_company_model.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_management_bloc.dart';
-import 'package:nexatrace_system/shared/models/company/company_model.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/inputs/search_field.dart';
+import 'package:trace_odd/features/nexa_admin/data/models/company/bus_company_model.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/companies/company_management_bloc.dart';
+import 'package:trace_odd/shared/models/company/company_model.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/inputs/search_field.dart';
 
 /// Bus Companies List Screen — Displays all bus fleet companies
 class BusCompaniesListScreen extends StatefulWidget {

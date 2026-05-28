@@ -1,4 +1,4 @@
-// File: lib/features/nexa_admin/presentation/screens/super_admin/login_screen.dart
+﻿// File: lib/features/nexa_admin/presentation/screens/super_admin/login_screen.dart
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,12 +7,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/core/constants/app_constants.dart';
-import 'package:nexatrace_system/core/utils/string_utils.dart';
-import 'package:nexatrace_system/core/utils/auth_state.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
+import 'package:trace_odd/core/constants/app_constants.dart';
+import 'package:trace_odd/core/utils/string_utils.dart';
+import 'package:trace_odd/core/utils/auth_state.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
 
 /// Super Admin Login Screen
 /// Authentication screen for super administrators to access the admin panel

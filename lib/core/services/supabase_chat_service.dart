@@ -1,4 +1,4 @@
-// Supabase Chat Service — Protected B2B messaging stream bridge
+﻿// Supabase Chat Service — Protected B2B messaging stream bridge
 //
 // Provides a clean, low-footprint client manager for the Reseller ↔ Factory
 // encrypted chat channel (Step 12F).  All outgoing messages pass through
@@ -17,7 +17,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/core/network/network_exceptions.dart';
+import 'package:trace_odd/core/network/network_exceptions.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Message types

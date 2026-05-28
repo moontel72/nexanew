@@ -1,11 +1,11 @@
-// Company Card Widget for NexaTrace System
+﻿// Company Card Widget for NexaTrace System
 // Displays company information in a card format
 
 import 'package:flutter/material.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/text_styles.dart';
-import 'package:nexatrace_system/core/utils/date_utils.dart';
-import 'package:nexatrace_system/core/utils/string_utils.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/text_styles.dart';
+import 'package:trace_odd/core/utils/date_utils.dart';
+import 'package:trace_odd/core/utils/string_utils.dart';
 
 class CompanyCard extends StatelessWidget {
   final String id;

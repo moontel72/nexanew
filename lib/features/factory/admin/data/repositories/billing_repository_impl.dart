@@ -1,10 +1,10 @@
-// Billing Repository Implementation for Factory Admin Portal
+﻿// Billing Repository Implementation for Factory Admin Portal
 // Implements billing data operations using remote datasource
 
-import 'package:nexatrace_system/core/services/api_client.dart';
-import 'package:nexatrace_system/core/utils/file_saver.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
-import 'package:nexatrace_system/features/factory/admin/domain/repositories/billing_repository.dart';
+import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/core/utils/file_saver.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart';
+import 'package:trace_odd/features/factory/admin/domain/repositories/billing_repository.dart';
 
 class BillingRepositoryImpl implements BillingRepository {
   final ApiClient _apiClient;

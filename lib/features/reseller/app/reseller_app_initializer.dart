@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,23 +6,23 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-import 'package:nexatrace_system/core/interfaces/secure_storage_interface.dart';
-import 'package:nexatrace_system/core/providers/app_providers.dart';
-import 'package:nexatrace_system/core/services/mock_secure_storage.dart';
-import 'package:nexatrace_system/core/services/secure_storage_service.dart';
-import 'package:nexatrace_system/shared/theme/app_theme.dart';
+import 'package:trace_odd/core/interfaces/secure_storage_interface.dart';
+import 'package:trace_odd/core/providers/app_providers.dart';
+import 'package:trace_odd/core/services/mock_secure_storage.dart';
+import 'package:trace_odd/core/services/secure_storage_service.dart';
+import 'package:trace_odd/shared/theme/app_theme.dart';
 
-import 'package:nexatrace_system/features/reseller/data/repositories/reseller_session_repository.dart';
-import 'package:nexatrace_system/features/reseller/data/datasources/reseller_marketplace_remote_datasource.dart';
-import 'package:nexatrace_system/features/reseller/data/repositories/reseller_marketplace_repository.dart';
-import 'package:nexatrace_system/features/reseller/data/datasources/reseller_order_remote_datasource.dart';
-import 'package:nexatrace_system/features/reseller/data/repositories/reseller_order_repository.dart';
-import 'package:nexatrace_system/features/reseller/presentation/bloc/auth/reseller_auth_bloc.dart';
-import 'package:nexatrace_system/features/reseller/presentation/bloc/dashboard/reseller_dashboard_bloc.dart';
-import 'package:nexatrace_system/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
-import 'package:nexatrace_system/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
-import 'package:nexatrace_system/features/reseller/presentation/bloc/order/reseller_order_bloc.dart';
-import 'package:nexatrace_system/features/reseller/routes/reseller_router.dart';
+import 'package:trace_odd/features/reseller/data/repositories/reseller_session_repository.dart';
+import 'package:trace_odd/features/reseller/data/datasources/reseller_marketplace_remote_datasource.dart';
+import 'package:trace_odd/features/reseller/data/repositories/reseller_marketplace_repository.dart';
+import 'package:trace_odd/features/reseller/data/datasources/reseller_order_remote_datasource.dart';
+import 'package:trace_odd/features/reseller/data/repositories/reseller_order_repository.dart';
+import 'package:trace_odd/features/reseller/presentation/bloc/auth/reseller_auth_bloc.dart';
+import 'package:trace_odd/features/reseller/presentation/bloc/dashboard/reseller_dashboard_bloc.dart';
+import 'package:trace_odd/features/reseller/presentation/bloc/marketplace/reseller_marketplace_bloc.dart';
+import 'package:trace_odd/features/reseller/presentation/bloc/cart/reseller_cart_bloc.dart';
+import 'package:trace_odd/features/reseller/presentation/bloc/order/reseller_order_bloc.dart';
+import 'package:trace_odd/features/reseller/routes/reseller_router.dart';
 
 class ResellerAppInitializer extends StatefulWidget {
   const ResellerAppInitializer({super.key});

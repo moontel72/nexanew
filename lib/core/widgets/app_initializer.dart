@@ -1,4 +1,4 @@
-// File: lib/core/widgets/app_initializer.dart
+﻿// File: lib/core/widgets/app_initializer.dart
 // Widget that initializes async dependencies before showing the app
 // Replaces get_it initialization with Flutter BLoC's RepositoryProvider
 
@@ -8,17 +8,17 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nexatrace_system/core/providers/app_providers.dart';
+import 'package:trace_odd/core/providers/app_providers.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, debugPrint;
-import 'package:nexatrace_system/core/interfaces/secure_storage_interface.dart';
-import 'package:nexatrace_system/core/services/secure_storage_service.dart';
-import 'package:nexatrace_system/core/services/mock_secure_storage.dart';
-import 'package:nexatrace_system/core/constants/app_constants.dart';
-import 'package:nexatrace_system/shared/theme/app_theme.dart';
-import 'package:nexatrace_system/routes/app_router.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/admin_auth_repository.dart';
-import 'package:nexatrace_system/features/factory/admin/data/repositories/factory_auth_repository.dart';
-import 'package:nexatrace_system/core/utils/auth_state.dart';
+import 'package:trace_odd/core/interfaces/secure_storage_interface.dart';
+import 'package:trace_odd/core/services/secure_storage_service.dart';
+import 'package:trace_odd/core/services/mock_secure_storage.dart';
+import 'package:trace_odd/core/constants/app_constants.dart';
+import 'package:trace_odd/shared/theme/app_theme.dart';
+import 'package:trace_odd/routes/app_router.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/admin_auth_repository.dart';
+import 'package:trace_odd/features/factory/admin/data/repositories/factory_auth_repository.dart';
+import 'package:trace_odd/core/utils/auth_state.dart';
 import 'dart:convert';
 
 /// Widget that initializes async dependencies before showing the app

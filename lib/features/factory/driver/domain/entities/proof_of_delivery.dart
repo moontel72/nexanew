@@ -1,5 +1,5 @@
-import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/features/factory/driver/domain/entities/trip.dart';
+﻿import 'package:equatable/equatable.dart';
+import 'package:trace_odd/features/factory/driver/domain/entities/trip.dart';
 
 /// Proof of Delivery entity (4E, 4R, 4W)
 class ProofOfDelivery extends Equatable {

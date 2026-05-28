@@ -1,4 +1,4 @@
-// Route Guard Middleware — Panel-aware GoRouter redirect composable
+﻿// Route Guard Middleware — Panel-aware GoRouter redirect composable
 //
 // Provides cross-cutting navigation guards that evaluate `PanelAuthState`
 // and driver-type boundaries on every route transition WITHOUT modifying
@@ -25,8 +25,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/features/auth/presentation/pages/panel_access_denied_screen.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/features/auth/presentation/pages/panel_access_denied_screen.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Panel Access Guard — singleton flag store

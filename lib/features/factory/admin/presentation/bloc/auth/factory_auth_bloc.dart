@@ -1,10 +1,10 @@
-// Factory Auth Bloc for NexaTrace System
+﻿// Factory Auth Bloc for NexaTrace System
 // Business logic for factory authentication operations
 
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:nexatrace_system/core/utils/auth_state.dart';
-import 'package:nexatrace_system/features/factory/admin/data/repositories/factory_auth_repository.dart';
+import 'package:trace_odd/core/utils/auth_state.dart';
+import 'package:trace_odd/features/factory/admin/data/repositories/factory_auth_repository.dart';
 
 // Events
 abstract class FactoryAuthEvent {}

@@ -1,8 +1,8 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/shared/models/code/bundle_model.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/models/code/bundle_model.dart';
 
 part 'bundle_bloc_event.dart';
 part 'bundle_bloc_state.dart';

@@ -1,7 +1,7 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
+﻿import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:trace_odd/core/errors/failures.dart';
+import 'package:trace_odd/features/nexa_admin/data/models/invoice_model.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart'
     as shared;
 
 part 'invoice_state.freezed.dart';

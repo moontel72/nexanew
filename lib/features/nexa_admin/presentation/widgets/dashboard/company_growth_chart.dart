@@ -1,10 +1,10 @@
-// File: lib/features/nexa_admin/presentation/widgets/dashboard/company_growth_chart.dart
+﻿// File: lib/features/nexa_admin/presentation/widgets/dashboard/company_growth_chart.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 
-import 'package:nexatrace_system/shared/models/dashboard/dashboard_models.dart';
+import 'package:trace_odd/shared/models/dashboard/dashboard_models.dart';
 
 /// Company Growth Chart Widget
 /// Displays company growth analytics with simple bar chart and summary statistics

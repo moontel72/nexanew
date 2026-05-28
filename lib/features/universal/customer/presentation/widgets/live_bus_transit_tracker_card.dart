@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/core/theme/branding_config.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/theme/branding_config.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 /// Live bus progress card with driver name, ETA, and progress bar from
 /// WebSocket busFleetGps stream.  Under 100 lines.

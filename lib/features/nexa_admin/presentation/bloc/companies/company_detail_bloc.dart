@@ -1,10 +1,10 @@
-// Company Detail Bloc for NexaTrace System
+﻿// Company Detail Bloc for NexaTrace System
 // Business logic for company detail operations
 
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/company_management_repository.dart';
 
 part 'company_detail_event.dart';
 part 'company_detail_state.dart';

@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
-import 'package:nexatrace_system/routes/app_router.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/admin_top_bar.dart';
-import 'package:nexatrace_system/shared/widgets/navigation/admin_sidebar.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/auth/factory_auth_bloc.dart';
+import 'package:trace_odd/routes/app_router.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/app_bars/admin_top_bar.dart';
+import 'package:trace_odd/shared/widgets/navigation/admin_sidebar.dart';
 
 class FactoryShell extends StatelessWidget {
   final Widget child;

@@ -1,12 +1,12 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:nexatrace_system/core/errors/app_exceptions.dart';
-import 'package:nexatrace_system/features/factory/admin/data/repositories/codes_repository_impl.dart';
-import 'package:nexatrace_system/features/factory/admin/domain/repositories/codes_repository.dart';
-import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
-import 'package:nexatrace_system/shared/models/code/packet_code_model.dart';
-import 'package:nexatrace_system/shared/models/code/code_generation_request.dart';
+import 'package:trace_odd/core/errors/app_exceptions.dart';
+import 'package:trace_odd/features/factory/admin/data/repositories/codes_repository_impl.dart';
+import 'package:trace_odd/features/factory/admin/domain/repositories/codes_repository.dart';
+import 'package:trace_odd/shared/models/code/base_code_model.dart';
+import 'package:trace_odd/shared/models/code/packet_code_model.dart';
+import 'package:trace_odd/shared/models/code/code_generation_request.dart';
 
 part 'packet_codes_event.dart';
 part 'packet_codes_state.dart';

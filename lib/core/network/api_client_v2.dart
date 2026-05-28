@@ -1,4 +1,4 @@
-// API Client v2 — Dio-based network engine for NexaTrace 6-panel backend
+﻿// API Client v2 — Dio-based network engine for NexaTrace 6-panel backend
 //
 // This is an ADDITIVE layer.  The existing `ApiClient` (lib/core/services/api_client.dart)
 // which uses the `http` package remains untouched.  This client wraps Dio and provides:
@@ -16,8 +16,8 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:nexatrace_system/core/network/auth_interceptor.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/network/auth_interceptor.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
 
 /// Singleton Dio wrapper configured for the NexaTrace backend.
 class NexaTraceApiClient {

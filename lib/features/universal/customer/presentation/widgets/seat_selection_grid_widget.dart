@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/core/theme/branding_config.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/theme/branding_config.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 /// Interactive seat grid visualizer.  States: 0=Available (green outline),
 /// 1=Booked (gray filled), 2=Selected (brand solid).  Under 100 lines.

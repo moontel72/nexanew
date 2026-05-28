@@ -1,7 +1,7 @@
-import 'package:dartz/dartz.dart';
-import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/core/usecase/usecase.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/data/repositories/store_keeper_repository.dart';
+﻿import 'package:dartz/dartz.dart';
+import 'package:trace_odd/core/errors/failures.dart';
+import 'package:trace_odd/core/usecase/usecase.dart';
+import 'package:trace_odd/features/factory/store_keeper/data/repositories/store_keeper_repository.dart';
 
 class LinkPacketParams {
   final String cartonId;

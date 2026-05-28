@@ -1,7 +1,7 @@
-import 'package:bloc/bloc.dart';
+﻿import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/features/factory/admin/data/repositories/factory_products_repository.dart';
-import 'package:nexatrace_system/shared/models/product/product_model.dart';
+import 'package:trace_odd/features/factory/admin/data/repositories/factory_products_repository.dart';
+import 'package:trace_odd/shared/models/product/product_model.dart';
 
 enum ProductsStatus {
   initial,

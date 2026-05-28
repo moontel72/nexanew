@@ -1,8 +1,8 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/core/repositories/wallet_repository.dart';
-import 'package:nexatrace_system/shared/models/wallet/wallet_model.dart';
+import 'package:trace_odd/core/repositories/wallet_repository.dart';
+import 'package:trace_odd/shared/models/wallet/wallet_model.dart';
 
 part 'wallet_event.dart';
 part 'wallet_state.dart';

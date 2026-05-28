@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:nexatrace_system/shared/models/subscription/plan_model.dart';
-import 'package:nexatrace_system/shared/models/subscription/plan_type.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/utils/extensions.dart';
-import 'package:nexatrace_system/core/utils/date_utils.dart' as date_utils;
+import 'package:trace_odd/shared/models/subscription/plan_model.dart';
+import 'package:trace_odd/shared/models/subscription/plan_type.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/utils/extensions.dart';
+import 'package:trace_odd/core/utils/date_utils.dart' as date_utils;
 
 class PlanCard extends StatelessWidget {
   final Plan plan;

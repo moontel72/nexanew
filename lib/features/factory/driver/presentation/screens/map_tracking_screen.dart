@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:nexatrace_system/features/factory/driver/presentation/bloc/driver_bloc.dart';
-import 'package:nexatrace_system/features/factory/driver/presentation/bloc/factory_driver_geofence_bloc.dart';
-import 'package:nexatrace_system/features/factory/driver/presentation/bloc/factory_driver_geofence_state.dart';
-import 'package:nexatrace_system/features/factory/driver/presentation/widgets/driver_feature_scaffold.dart';
-import 'package:nexatrace_system/features/factory/driver/domain/utils/geo_utils.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/features/factory/driver/presentation/bloc/driver_bloc.dart';
+import 'package:trace_odd/features/factory/driver/presentation/bloc/factory_driver_geofence_bloc.dart';
+import 'package:trace_odd/features/factory/driver/presentation/bloc/factory_driver_geofence_state.dart';
+import 'package:trace_odd/features/factory/driver/presentation/widgets/driver_feature_scaffold.dart';
+import 'package:trace_odd/features/factory/driver/domain/utils/geo_utils.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 
 class DriverMapTrackingScreen extends StatefulWidget {
   const DriverMapTrackingScreen({super.key});

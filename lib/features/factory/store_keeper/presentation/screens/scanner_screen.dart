@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,12 +6,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/presentation/bloc/store_keeper_bloc.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/presentation/widgets/torch_button.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/presentation/widgets/scanner_overlay.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/text_styles.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/features/factory/store_keeper/presentation/bloc/store_keeper_bloc.dart';
+import 'package:trace_odd/features/factory/store_keeper/presentation/widgets/torch_button.dart';
+import 'package:trace_odd/features/factory/store_keeper/presentation/widgets/scanner_overlay.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/text_styles.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 
 class ScannerScreen extends StatefulWidget {
   final bool returnResult;

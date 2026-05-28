@@ -1,8 +1,8 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:dartz/dartz.dart';
-import 'package:nexatrace_system/shared/models/wallet/wallet_model.dart';
-import 'package:nexatrace_system/core/services/analytics_service.dart';
-import 'package:nexatrace_system/core/services/cache_service.dart';
+import 'package:trace_odd/shared/models/wallet/wallet_model.dart';
+import 'package:trace_odd/core/services/analytics_service.dart';
+import 'package:trace_odd/core/services/cache_service.dart';
 import '../repositories/wallet_repository.dart';
 
 class FraudDetectionService {

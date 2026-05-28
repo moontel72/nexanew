@@ -1,9 +1,9 @@
-import 'package:bloc/bloc.dart';
+﻿import 'package:bloc/bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nexatrace_system/features/reseller/data/datasources/reseller_local_datasource.dart';
-import 'package:nexatrace_system/shared/models/reseller/reseller_employee_model.dart';
-import 'package:nexatrace_system/shared/models/reseller/reseller_shop_model.dart';
-import 'package:nexatrace_system/shared/models/wallet/wallet_model.dart';
+import 'package:trace_odd/features/reseller/data/datasources/reseller_local_datasource.dart';
+import 'package:trace_odd/shared/models/reseller/reseller_employee_model.dart';
+import 'package:trace_odd/shared/models/reseller/reseller_shop_model.dart';
+import 'package:trace_odd/shared/models/wallet/wallet_model.dart';
 
 sealed class ResellerDashboardEvent {}
 

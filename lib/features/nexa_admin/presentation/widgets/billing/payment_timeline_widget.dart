@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/text_styles.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/text_styles.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart'
     as shared;
 
 /// Payment Timeline Widget

@@ -1,10 +1,10 @@
-//lib/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart
+﻿//lib/features/nexa_admin/presentation/bloc/invoices/invoice_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/billing_repository.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
+import 'package:trace_odd/core/errors/failures.dart';
+import 'package:trace_odd/features/nexa_admin/data/models/invoice_model.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/billing_repository.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart'
     as shared;
 
 import 'invoice_event.dart';

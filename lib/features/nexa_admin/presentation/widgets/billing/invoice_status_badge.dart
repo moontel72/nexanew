@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/text_styles.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/text_styles.dart';
 
 /// Invoice Status Badge Widget
 /// Displays invoice status with appropriate colors and icons

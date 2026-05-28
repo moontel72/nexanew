@@ -1,10 +1,10 @@
-import 'package:bloc/bloc.dart';
-import 'package:nexatrace_system/core/bloc/websocket_bloc_mixin.dart';
-import 'package:nexatrace_system/core/crypto/rust_serial_validator.dart';
-import 'package:nexatrace_system/core/services/hardware_scan_service.dart';
-import 'package:nexatrace_system/core/services/websocket_hub.dart';
-import 'package:nexatrace_system/features/universal/customer/presentation/bloc/customer_super_app_event.dart';
-import 'package:nexatrace_system/features/universal/customer/presentation/bloc/customer_super_app_state.dart';
+﻿import 'package:bloc/bloc.dart';
+import 'package:trace_odd/core/bloc/websocket_bloc_mixin.dart';
+import 'package:trace_odd/core/crypto/rust_serial_validator.dart';
+import 'package:trace_odd/core/services/hardware_scan_service.dart';
+import 'package:trace_odd/core/services/websocket_hub.dart';
+import 'package:trace_odd/features/universal/customer/presentation/bloc/customer_super_app_event.dart';
+import 'package:trace_odd/features/universal/customer/presentation/bloc/customer_super_app_state.dart';
 
 class CustomerSuperAppBloc
     extends Bloc<CustomerSuperAppEvent, CustomerSuperAppState>

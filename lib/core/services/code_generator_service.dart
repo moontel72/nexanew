@@ -1,9 +1,9 @@
-// Code Generator Service for NexaTrace System
+﻿// Code Generator Service for NexaTrace System
 // This service provides an interface to the Rust module for high-performance code generation
 
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:nexatrace_system/rust_module/rust_module.dart';
+import 'package:trace_odd/rust_module/rust_module.dart';
 
 class CodeGeneratorService {
   // Singleton instance

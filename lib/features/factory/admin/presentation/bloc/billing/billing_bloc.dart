@@ -1,11 +1,11 @@
-// Billing Bloc for Factory Admin Portal
+﻿// Billing Bloc for Factory Admin Portal
 // Business logic for factory billing operations
 
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
-import 'package:nexatrace_system/features/factory/admin/domain/repositories/billing_repository.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart';
+import 'package:trace_odd/features/factory/admin/domain/repositories/billing_repository.dart';
 
 part 'billing_event.dart';
 part 'billing_state.dart';

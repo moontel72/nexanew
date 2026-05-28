@@ -1,9 +1,9 @@
-// Error State Widget for NexaTrace System
+﻿// Error State Widget for NexaTrace System
 // Provides consistent error display across the application
 
 import 'package:flutter/material.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/text_styles.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/text_styles.dart';
 
 class ErrorState extends StatelessWidget {
   final String title;

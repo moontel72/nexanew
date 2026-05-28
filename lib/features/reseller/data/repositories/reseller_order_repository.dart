@@ -1,6 +1,6 @@
-import 'package:nexatrace_system/features/reseller/data/datasources/reseller_order_remote_datasource.dart';
-import 'package:nexatrace_system/shared/models/order/cart_item_model.dart';
-import 'package:nexatrace_system/shared/models/order/order_model.dart';
+﻿import 'package:trace_odd/features/reseller/data/datasources/reseller_order_remote_datasource.dart';
+import 'package:trace_odd/shared/models/order/cart_item_model.dart';
+import 'package:trace_odd/shared/models/order/order_model.dart';
 
 class ResellerOrderRepository {
   final ResellerOrderRemoteDatasource _remote;

@@ -1,7 +1,7 @@
-// Billing Repository Interface for Factory Admin Portal
+﻿// Billing Repository Interface for Factory Admin Portal
 // Defines the contract for billing data operations
 
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart';
 
 abstract class BillingRepository {
   // Get billing summary for the current factory

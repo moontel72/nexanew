@@ -1,6 +1,6 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:dartz/dartz.dart';
-import 'package:nexatrace_system/shared/models/wallet/wallet_model.dart';
+import 'package:trace_odd/shared/models/wallet/wallet_model.dart';
 
 abstract class WalletRepository {
   // Wallet operations

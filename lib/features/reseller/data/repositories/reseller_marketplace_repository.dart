@@ -1,5 +1,5 @@
-import 'package:nexatrace_system/features/reseller/data/datasources/reseller_marketplace_remote_datasource.dart';
-import 'package:nexatrace_system/shared/models/reseller/reseller_marketplace_product_model.dart';
+﻿import 'package:trace_odd/features/reseller/data/datasources/reseller_marketplace_remote_datasource.dart';
+import 'package:trace_odd/shared/models/reseller/reseller_marketplace_product_model.dart';
 
 class ResellerMarketplaceRepository {
   final ResellerMarketplaceRemoteDatasource _remote;

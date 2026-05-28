@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/admin_top_bar.dart';
-import 'package:nexatrace_system/shared/widgets/navigation/admin_sidebar.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/layout/super_admin_layout_cubit.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/app_bars/admin_top_bar.dart';
+import 'package:trace_odd/shared/widgets/navigation/admin_sidebar.dart';
 
 class SuperAdminShell extends StatelessWidget {
   final Widget child;

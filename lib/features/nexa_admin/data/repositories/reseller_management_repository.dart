@@ -1,4 +1,4 @@
-import 'package:nexatrace_system/features/nexa_admin/data/datasources/reseller_management_remote_datasource.dart';
+﻿import 'package:trace_odd/features/nexa_admin/data/datasources/reseller_management_remote_datasource.dart';
 
 class ResellerManagementRepository {
   final ResellerManagementRemoteDatasource _remote;

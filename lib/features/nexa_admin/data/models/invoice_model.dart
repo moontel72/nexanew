@@ -1,5 +1,5 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
+﻿import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart'
     show InvoiceStatus, PaymentMethod;
 
 part 'invoice_model.freezed.dart';

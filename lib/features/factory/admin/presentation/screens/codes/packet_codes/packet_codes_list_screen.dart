@@ -1,22 +1,22 @@
-//lib/features/factory/admin/presentation/screens/codes/packet_codes/packet_codes_list_screen.dart
+﻿//lib/features/factory/admin/presentation/screens/codes/packet_codes/packet_codes_list_screen.dart
 import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/packet_codes/packet_codes_bloc.dart';
-import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
-import 'package:nexatrace_system/shared/models/code/packet_code_model.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
-import 'package:nexatrace_system/shared/widgets/search/search_bar.dart'
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/packet_codes/packet_codes_bloc.dart';
+import 'package:trace_odd/shared/models/code/base_code_model.dart';
+import 'package:trace_odd/shared/models/code/packet_code_model.dart';
+import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/shared/widgets/search/search_bar.dart'
     as custom;
 import 'package:url_launcher/url_launcher.dart';
-import 'package:nexatrace_system/core/constants/api_endpoints.dart';
+import 'package:trace_odd/core/constants/api_endpoints.dart';
 
 class PacketCodesListScreen extends StatefulWidget {
   const PacketCodesListScreen({super.key});

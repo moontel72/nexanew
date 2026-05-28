@@ -1,20 +1,20 @@
-// Company Detail Screen for NexaTrace System
+﻿// Company Detail Screen for NexaTrace System
 // Displays detailed information about a company
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/utils/extensions.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_detail_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/entities/subscription_plan.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/core/constants/api_endpoints.dart';
-import 'package:nexatrace_system/shared/widgets/app_bars/custom_app_bar.dart';
-import 'package:nexatrace_system/shared/widgets/empty_states/empty_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/utils/extensions.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/companies/company_detail_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/company_management_repository.dart';
+import 'package:trace_odd/features/nexa_admin/domain/entities/subscription_plan.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/core/constants/api_endpoints.dart';
+import 'package:trace_odd/shared/widgets/app_bars/custom_app_bar.dart';
+import 'package:trace_odd/shared/widgets/empty_states/empty_state_widget.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 
 class CompanyDetailScreen extends StatefulWidget {
   final String companyId;

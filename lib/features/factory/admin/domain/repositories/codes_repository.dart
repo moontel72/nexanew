@@ -1,7 +1,7 @@
-import 'package:nexatrace_system/shared/models/code/unit_code_model.dart';
-import 'package:nexatrace_system/shared/models/code/packet_code_model.dart';
-import 'package:nexatrace_system/shared/models/code/carton_code_model.dart';
-import 'package:nexatrace_system/shared/models/code/bundle_code_model.dart';
+﻿import 'package:trace_odd/shared/models/code/unit_code_model.dart';
+import 'package:trace_odd/shared/models/code/packet_code_model.dart';
+import 'package:trace_odd/shared/models/code/carton_code_model.dart';
+import 'package:trace_odd/shared/models/code/bundle_code_model.dart';
 
 abstract class CodesRepository {
   Future<void> generateBundleCodes({

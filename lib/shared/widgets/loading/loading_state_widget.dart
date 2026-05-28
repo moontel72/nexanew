@@ -1,9 +1,9 @@
-// Loading State Widget for NexaTrace System
+﻿// Loading State Widget for NexaTrace System
 // Provides consistent loading indicators across the application
 
 import 'package:flutter/material.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/text_styles.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/text_styles.dart';
 
 class LoadingState extends StatelessWidget {
   final String? message;

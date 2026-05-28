@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/core/navigation/route_guard_middleware.dart';
-import 'package:nexatrace_system/core/theme/branding_config.dart';
-import 'package:nexatrace_system/features/auth/presentation/bloc/panel_auth_bloc.dart';
-import 'package:nexatrace_system/features/auth/presentation/bloc/panel_auth_event.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/navigation/route_guard_middleware.dart';
+import 'package:trace_odd/core/theme/branding_config.dart';
+import 'package:trace_odd/features/auth/presentation/bloc/panel_auth_bloc.dart';
+import 'package:trace_odd/features/auth/presentation/bloc/panel_auth_event.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 
 class PanelAccessDeniedScreen extends StatelessWidget {
   const PanelAccessDeniedScreen({super.key});

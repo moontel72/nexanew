@@ -1,6 +1,6 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:dartz/dartz.dart';
-import 'package:nexatrace_system/shared/models/transport/goods_company_model.dart';
+import 'package:trace_odd/shared/models/transport/goods_company_model.dart';
 
 abstract class GoodsCompanyRepository {
   // Company registration and management

@@ -1,5 +1,5 @@
-import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/features/factory/driver/domain/entities/earning_transaction.dart';
+﻿import 'package:equatable/equatable.dart';
+import 'package:trace_odd/features/factory/driver/domain/entities/earning_transaction.dart';
 
 /// Driver earnings summary entity (4AA)
 class DriverEarnings extends Equatable {

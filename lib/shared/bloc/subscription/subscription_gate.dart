@@ -1,4 +1,4 @@
-// Subscription Gate Widget — Declarative UI guard for plan-tier features.
+﻿// Subscription Gate Widget — Declarative UI guard for plan-tier features.
 //
 // Wraps any child widget and either renders it (when the gate is satisfied)
 // or shows a fallback (locked badge, upsell button, or nothing).  Backed by
@@ -6,8 +6,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nexatrace_system/shared/bloc/subscription/subscription_gate_cubit.dart';
-import 'package:nexatrace_system/shared/bloc/subscription/subscription_gate_state.dart';
+import 'package:trace_odd/shared/bloc/subscription/subscription_gate_cubit.dart';
+import 'package:trace_odd/shared/bloc/subscription/subscription_gate_state.dart';
 
 /// Renders [child] only when the subscription criteria are met.
 ///

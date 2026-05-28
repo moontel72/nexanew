@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 /// Empty state widget for displaying when no data is available
 class EmptyState extends StatelessWidget {

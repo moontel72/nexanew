@@ -1,10 +1,10 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/data/datasources/local_database.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/data/models/local_scan_model.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/domain/entities/scan_record.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/domain/usecases/sync_data_usecase.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/factory/store_keeper/data/datasources/local_database.dart';
+import 'package:trace_odd/features/factory/store_keeper/data/models/local_scan_model.dart';
+import 'package:trace_odd/features/factory/store_keeper/domain/entities/scan_record.dart';
+import 'package:trace_odd/features/factory/store_keeper/domain/usecases/sync_data_usecase.dart';
 
 class StoreKeeperRepository {
   final LocalDatabase _localDb;

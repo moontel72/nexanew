@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/core/constants/api_endpoints.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/shared/models/reseller/reseller_marketplace_product_model.dart';
+﻿import 'package:flutter/foundation.dart';
+import 'package:trace_odd/core/constants/api_endpoints.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/models/reseller/reseller_marketplace_product_model.dart';
 
 class ResellerMarketplaceRemoteDatasource {
   final ApiService _api;

@@ -1,4 +1,4 @@
-// View All Goods Companies Screen — Super Admin lists goods logistics fleet companies
+﻿// View All Goods Companies Screen — Super Admin lists goods logistics fleet companies
 // Layout matches BusCompaniesListScreen pattern
 
 import 'dart:async';
@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/models/company/goods_company_model.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_management_bloc.dart';
-import 'package:nexatrace_system/shared/models/company/company_model.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/inputs/search_field.dart';
+import 'package:trace_odd/features/nexa_admin/data/models/company/goods_company_model.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/companies/company_management_bloc.dart';
+import 'package:trace_odd/shared/models/company/company_model.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/inputs/search_field.dart';
 
 /// Goods Companies List Screen — Displays all goods logistics fleet companies
 class GoodsCompaniesListScreen extends StatefulWidget {

@@ -1,4 +1,4 @@
-// Add Bus Company Screen — Super Admin adds a new bus fleet company
+﻿// Add Bus Company Screen — Super Admin adds a new bus fleet company
 // Pattern follows RegisterCompanyScreen with bus-specific fields
 
 import 'dart:convert';
@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/companies/company_register_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/inputs/custom_text_field.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/company_management_repository.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/companies/company_register_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/inputs/custom_text_field.dart';
 
 /// Add Bus Company Screen — Super Admin registration form for bus fleet companies
 class AddBusCompanyScreen extends StatefulWidget {

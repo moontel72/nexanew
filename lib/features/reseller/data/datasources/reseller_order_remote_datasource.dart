@@ -1,7 +1,7 @@
-import 'package:nexatrace_system/core/constants/api_endpoints.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/shared/models/order/cart_item_model.dart';
-import 'package:nexatrace_system/shared/models/order/order_model.dart';
+﻿import 'package:trace_odd/core/constants/api_endpoints.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/models/order/cart_item_model.dart';
+import 'package:trace_odd/shared/models/order/order_model.dart';
 
 class ResellerOrderRemoteDatasource {
   final ApiService _api;

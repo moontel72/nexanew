@@ -1,11 +1,11 @@
-// Company Filter Sheet for NexaTrace System
+﻿// Company Filter Sheet for NexaTrace System
 // Provides filtering options for companies list
 
 import 'package:flutter/material.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/text_styles.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/secondary_button.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/text_styles.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/widgets/buttons/secondary_button.dart';
 
 class CompanyFilterSheet extends StatefulWidget {
   final Map<String, dynamic> currentFilters;

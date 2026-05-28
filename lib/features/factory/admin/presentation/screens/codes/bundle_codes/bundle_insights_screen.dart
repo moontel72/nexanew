@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/insights/bundle_insights_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/widgets/link_units_to_packet_modal.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/insights/bundle_insights_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/widgets/link_units_to_packet_modal.dart';
 
 /// Comprehensive Bundle Insights / Aggregation Report.
 ///

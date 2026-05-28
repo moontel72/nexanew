@@ -1,12 +1,12 @@
-import 'package:nexatrace_system/core/constants/app_constants.dart';
-import 'package:nexatrace_system/core/constants/api_endpoints.dart';
-import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/entities/subscription_plan.dart';
+﻿import 'package:trace_odd/core/constants/app_constants.dart';
+import 'package:trace_odd/core/constants/api_endpoints.dart';
+import 'package:trace_odd/core/errors/failures.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/nexa_admin/domain/entities/subscription_plan.dart';
 import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/shared/models/company/company_document_input.dart';
-import 'package:nexatrace_system/shared/models/company/company_model.dart';
-import 'package:nexatrace_system/shared/models/company/company_statistics.dart';
+import 'package:trace_odd/shared/models/company/company_document_input.dart';
+import 'package:trace_odd/shared/models/company/company_model.dart';
+import 'package:trace_odd/shared/models/company/company_statistics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CompanyManagementRepository {

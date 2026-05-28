@@ -1,17 +1,17 @@
-//lib/features/nexa_admin/presentation/screens/super_admin/billing/company_invoices_screen.dartS
+﻿//lib/features/nexa_admin/presentation/screens/super_admin/billing/company_invoices_screen.dartS
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/theme/typography.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
-import 'package:nexatrace_system/shared/widgets/error_state/error_state_widget.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
-import 'package:nexatrace_system/shared/models/billing/invoice_model.dart'
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/typography.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/billing/billing_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/widgets/billing/invoice_status_badge.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/shared/models/billing/invoice_model.dart'
     as shared;
-import 'package:nexatrace_system/features/nexa_admin/data/models/invoice_model.dart';
+import 'package:trace_odd/features/nexa_admin/data/models/invoice_model.dart';
 
 /// Company Invoices Screen
 /// Displays all invoices for a specific company with filtering and management options

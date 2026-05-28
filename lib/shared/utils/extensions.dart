@@ -1,8 +1,8 @@
-// Extensions for NexaTrace System
+﻿// Extensions for NexaTrace System
 // This file contains useful extensions for String, int, DateTime, etc.
 
-import 'package:nexatrace_system/core/utils/date_utils.dart';
-import 'package:nexatrace_system/core/utils/string_utils.dart';
+import 'package:trace_odd/core/utils/date_utils.dart';
+import 'package:trace_odd/core/utils/string_utils.dart';
 
 // String extensions
 extension StringExtensions on String {

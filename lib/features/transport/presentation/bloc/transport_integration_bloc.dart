@@ -1,11 +1,11 @@
-import 'package:bloc/bloc.dart';
+﻿import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/shared/models/wallet/wallet_model.dart';
-import 'package:nexatrace_system/core/repositories/wallet_repository.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/load.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/bid.dart';
-import 'package:nexatrace_system/core/services/fraud_detection_service.dart';
-import 'package:nexatrace_system/core/services/subscription_service.dart';
+import 'package:trace_odd/shared/models/wallet/wallet_model.dart';
+import 'package:trace_odd/core/repositories/wallet_repository.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/load.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/bid.dart';
+import 'package:trace_odd/core/services/fraud_detection_service.dart';
+import 'package:trace_odd/core/services/subscription_service.dart';
 
 // Events
 abstract class TransportIntegrationEvent extends Equatable {

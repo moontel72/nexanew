@@ -1,7 +1,7 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/shared/models/transport/goods_company_model.dart';
+import 'package:trace_odd/shared/models/transport/goods_company_model.dart';
 
 part 'goods_company_auth_event.dart';
 part 'goods_company_auth_state.dart';

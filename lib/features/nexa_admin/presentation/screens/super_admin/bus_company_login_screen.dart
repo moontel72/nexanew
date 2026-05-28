@@ -1,4 +1,4 @@
-// Bus Company Login Screen — Authentication for bus fleet company owners
+﻿// Bus Company Login Screen — Authentication for bus fleet company owners
 // Reuses the existing AdminAuthBloc already provided by the app
 
 import 'package:flutter/material.dart';
@@ -6,12 +6,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
-import 'package:nexatrace_system/core/utils/auth_state.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
+import 'package:trace_odd/core/utils/auth_state.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 
 /// Bus Company Login Screen
 class BusCompanyLoginScreen extends StatefulWidget {

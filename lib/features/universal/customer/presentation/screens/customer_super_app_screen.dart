@@ -1,4 +1,4 @@
-// Customer Super-App Dashboard Screen — NexaTrace Module 8 + 25.
+﻿// Customer Super-App Dashboard Screen — NexaTrace Module 8 + 25.
 //
 // Single-screen "super-app" assembling the four customer-facing journeys:
 //   1. Product Authenticity Scan (Module 8 — QR/SHA256 Rust-FFI verify)
@@ -14,17 +14,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/core/services/hardware_scan_service.dart';
-import 'package:nexatrace_system/core/theme/branding_config.dart';
-import 'package:nexatrace_system/features/universal/customer/presentation/bloc/customer_super_app_bloc.dart';
-import 'package:nexatrace_system/features/universal/customer/presentation/bloc/customer_super_app_event.dart';
-import 'package:nexatrace_system/features/universal/customer/presentation/bloc/customer_super_app_state.dart';
-import 'package:nexatrace_system/features/universal/customer/presentation/widgets/authenticity_verification_card.dart';
-import 'package:nexatrace_system/features/universal/customer/presentation/widgets/live_bus_transit_tracker_card.dart';
-import 'package:nexatrace_system/features/universal/customer/presentation/widgets/seat_selection_grid_widget.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/services/hardware_scan_service.dart';
+import 'package:trace_odd/core/theme/branding_config.dart';
+import 'package:trace_odd/features/universal/customer/presentation/bloc/customer_super_app_bloc.dart';
+import 'package:trace_odd/features/universal/customer/presentation/bloc/customer_super_app_event.dart';
+import 'package:trace_odd/features/universal/customer/presentation/bloc/customer_super_app_state.dart';
+import 'package:trace_odd/features/universal/customer/presentation/widgets/authenticity_verification_card.dart';
+import 'package:trace_odd/features/universal/customer/presentation/widgets/live_bus_transit_tracker_card.dart';
+import 'package:trace_odd/features/universal/customer/presentation/widgets/seat_selection_grid_widget.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 
 class CustomerSuperAppScreen extends StatelessWidget {
   const CustomerSuperAppScreen({super.key});

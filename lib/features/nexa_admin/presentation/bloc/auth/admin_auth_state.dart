@@ -1,5 +1,5 @@
-import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/entities/admin_user.dart';
+﻿import 'package:equatable/equatable.dart';
+import 'package:trace_odd/features/nexa_admin/domain/entities/admin_user.dart';
 
 abstract class AdminAuthState extends Equatable {
   const AdminAuthState();

@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/bloc/codes/bundle_codes/insights/bundle_insights_bloc.dart';
-import 'package:nexatrace_system/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_insights_screen.dart';
-import 'package:nexatrace_system/shared/models/code/bundle_model.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
-import 'package:nexatrace_system/shared/widgets/loading/loading_indicator.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/bundle_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/bloc/codes/bundle_codes/insights/bundle_insights_bloc.dart';
+import 'package:trace_odd/features/factory/admin/presentation/screens/codes/bundle_codes/bundle_insights_screen.dart';
+import 'package:trace_odd/shared/models/code/bundle_model.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_indicator.dart';
 
 /// Order Detail Screen
 ///

@@ -1,4 +1,4 @@
-// Driver Login Screen for NexaTrace System
+﻿// Driver Login Screen for NexaTrace System
 // Driver authentication interface - Mobile-optimized for both web and APK
 // Uses Industrial Blue (#165DFF) per PRD section 4.1
 
@@ -7,9 +7,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nexatrace_system/core/constants/app_constants.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/shared/widgets/buttons/primary_button.dart';
+import 'package:trace_odd/core/constants/app_constants.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/widgets/buttons/primary_button.dart';
 
 /// Driver Teal (#0D9488) — distinct from Super Admin blue (#0066CC),
 /// Factory Admin green (#00CC66), Store Keeper orange (#FF9900), Reseller purple.

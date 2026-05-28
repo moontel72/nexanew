@@ -1,10 +1,10 @@
-// File: lib/features/nexa_admin/presentation/widgets/dashboard/recent_activities_widget.dart
+﻿// File: lib/features/nexa_admin/presentation/widgets/dashboard/recent_activities_widget.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
-import 'package:nexatrace_system/shared/models/dashboard/dashboard_models.dart';
+import 'package:trace_odd/shared/models/dashboard/dashboard_models.dart';
 
 /// Recent Activities Widget
 /// Displays a list of recent activities with timestamps and action types

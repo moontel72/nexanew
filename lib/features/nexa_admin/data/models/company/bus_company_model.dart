@@ -1,8 +1,8 @@
-// Bus Company Model — Bus fleet company extensions and helpers
+﻿// Bus Company Model — Bus fleet company extensions and helpers
 // Uses the existing Company model from shared/models/company
 
 import 'dart:convert';
-import 'package:nexatrace_system/shared/models/company/company_model.dart';
+import 'package:trace_odd/shared/models/company/company_model.dart';
 
 /// Bus-specific company type constant (stored in admin_notes JSON)
 const String busCompanyTypeId = 'bus_fleet';

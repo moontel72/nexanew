@@ -1,7 +1,7 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/shared/models/code/base_code_model.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/shared/models/code/base_code_model.dart';
 import 'bundle_packing_event.dart';
 import 'bundle_packing_state.dart';
 

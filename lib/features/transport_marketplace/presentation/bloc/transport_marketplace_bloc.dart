@@ -1,16 +1,16 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/bid.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/document.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/load.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/marketplace_statistics.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/message.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/rating.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/route.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/shipment.dart';
-import 'package:nexatrace_system/features/transport_marketplace/domain/entities/truck.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/bid.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/document.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/load.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/marketplace_statistics.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/message.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/rating.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/route.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/shipment.dart';
+import 'package:trace_odd/features/transport_marketplace/domain/entities/truck.dart';
 
 part 'transport_marketplace_event.dart';
 part 'transport_marketplace_state.dart';

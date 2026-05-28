@@ -1,10 +1,10 @@
-// Dashboard Repository for NexaTrace System
+﻿// Dashboard Repository for NexaTrace System
 // Simplified version to fix compilation errors
 
-import 'package:nexatrace_system/core/config/api_config.dart';
-import 'package:nexatrace_system/core/errors/app_exceptions.dart';
-import 'package:nexatrace_system/core/services/api_client.dart';
-import 'package:nexatrace_system/shared/models/dashboard/dashboard_models.dart';
+import 'package:trace_odd/core/config/api_config.dart';
+import 'package:trace_odd/core/errors/app_exceptions.dart';
+import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/shared/models/dashboard/dashboard_models.dart';
 
 /// Dashboard Repository
 class DashboardRepository {

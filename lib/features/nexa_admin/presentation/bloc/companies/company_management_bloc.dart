@@ -1,16 +1,16 @@
-// File: lib/features/nexa_admin/presentation/bloc/companies/company_management_bloc.dart
+﻿// File: lib/features/nexa_admin/presentation/bloc/companies/company_management_bloc.dart
 
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:nexatrace_system/core/errors/failures.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/company_management_repository.dart';
-import 'package:nexatrace_system/features/nexa_admin/domain/entities/subscription_plan.dart';
-import 'package:nexatrace_system/shared/models/company/company_document_input.dart';
-import 'package:nexatrace_system/shared/models/company/company_model.dart';
-import 'package:nexatrace_system/shared/models/company/company_statistics.dart';
+import 'package:trace_odd/core/errors/failures.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/company_management_repository.dart';
+import 'package:trace_odd/features/nexa_admin/domain/entities/subscription_plan.dart';
+import 'package:trace_odd/shared/models/company/company_document_input.dart';
+import 'package:trace_odd/shared/models/company/company_model.dart';
+import 'package:trace_odd/shared/models/company/company_statistics.dart';
 
 part 'company_management_event.dart';
 part 'company_management_state.dart';

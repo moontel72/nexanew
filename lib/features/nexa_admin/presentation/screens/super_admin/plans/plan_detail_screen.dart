@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nexatrace_system/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
-import 'package:nexatrace_system/shared/models/subscription/plan_feature_model.dart';
-import 'package:nexatrace_system/shared/models/subscription/plan_model.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart';
+import 'package:trace_odd/shared/models/subscription/plan_feature_model.dart';
+import 'package:trace_odd/shared/models/subscription/plan_model.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 class PlanDetailScreen extends StatefulWidget {
   final String planId;

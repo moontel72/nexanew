@@ -1,11 +1,11 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
-import 'package:nexatrace_system/core/bloc/websocket_bloc_mixin.dart';
-import 'package:nexatrace_system/core/services/hardware_scan_service.dart';
-import 'package:nexatrace_system/core/services/websocket_hub.dart';
-import 'package:nexatrace_system/features/factory/presentation/bloc/factory_dashboard_event.dart';
-import 'package:nexatrace_system/features/factory/presentation/bloc/factory_dashboard_state.dart';
+import 'package:trace_odd/core/bloc/websocket_bloc_mixin.dart';
+import 'package:trace_odd/core/services/hardware_scan_service.dart';
+import 'package:trace_odd/core/services/websocket_hub.dart';
+import 'package:trace_odd/features/factory/presentation/bloc/factory_dashboard_event.dart';
+import 'package:trace_odd/features/factory/presentation/bloc/factory_dashboard_state.dart';
 
 class FactoryDashboardBloc
     extends Bloc<FactoryDashboardEvent, FactoryDashboardState>

@@ -1,4 +1,4 @@
-// Branding Configuration — Dynamic multi-tenant branding engine
+﻿// Branding Configuration — Dynamic multi-tenant branding engine
 //
 // Injects logo paths, enterprise titles, and core primary color profiles
 // based on the targeted route panel.  Eliminates the need for 5 discrete
@@ -11,8 +11,8 @@
 // base Trace Odd asset tree under `assets/images/` is used instead.
 
 import 'package:flutter/material.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 /// Immutable brand profile for a single tenant context.
 class BrandProfile {

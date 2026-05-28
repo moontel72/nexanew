@@ -1,12 +1,12 @@
-// File: lib/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart
+﻿// File: lib/features/nexa_admin/presentation/bloc/plans/plan_management_bloc.dart
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:equatable/equatable.dart';
-import 'package:nexatrace_system/shared/models/subscription/plan_model.dart';
-import 'package:nexatrace_system/shared/models/subscription/plan_type.dart';
-import 'package:nexatrace_system/shared/models/subscription/plan_feature_model.dart';
-import 'package:nexatrace_system/features/nexa_admin/data/repositories/plan_management_repository.dart';
+import 'package:trace_odd/shared/models/subscription/plan_model.dart';
+import 'package:trace_odd/shared/models/subscription/plan_type.dart';
+import 'package:trace_odd/shared/models/subscription/plan_feature_model.dart';
+import 'package:trace_odd/features/nexa_admin/data/repositories/plan_management_repository.dart';
 
 part 'plan_management_event.dart';
 part 'plan_management_state.dart';

@@ -1,6 +1,6 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nexatrace_system/core/services/api_service.dart';
-import 'package:nexatrace_system/features/reseller/data/datasources/reseller_local_datasource.dart';
+﻿import 'package:shared_preferences/shared_preferences.dart';
+import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/reseller/data/datasources/reseller_local_datasource.dart';
 
 class ResellerSessionRepository {
   final ResellerLocalDatasource _local;

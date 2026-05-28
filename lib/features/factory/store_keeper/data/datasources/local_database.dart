@@ -1,9 +1,9 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
-import 'package:nexatrace_system/features/factory/store_keeper/data/models/local_scan_model.dart';
+import 'package:trace_odd/features/factory/store_keeper/data/models/local_scan_model.dart';
 
 class LocalDatabase {
   static final LocalDatabase _instance = LocalDatabase._internal();

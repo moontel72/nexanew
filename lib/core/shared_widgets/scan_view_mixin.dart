@@ -1,4 +1,4 @@
-// Scan View Mixin — Injectable QR/NFC scan boundary overlay
+﻿// Scan View Mixin — Injectable QR/NFC scan boundary overlay
 //
 // Lightweight mixin (< 100 lines) that can be added to any StatefulWidget
 // to project a branded scan boundary.  Integrates HardwareScanService for
@@ -20,10 +20,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:nexatrace_system/core/navigation/panel_routes.dart';
-import 'package:nexatrace_system/core/services/hardware_scan_service.dart';
-import 'package:nexatrace_system/core/theme/branding_config.dart';
-import 'package:nexatrace_system/shared/theme/colors.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/services/hardware_scan_service.dart';
+import 'package:trace_odd/core/theme/branding_config.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 mixin ScanViewMixin<T extends StatefulWidget> on State<T> {
   HardwareScanService? _scanService;
