@@ -351,7 +351,7 @@ class _DriverSettingsScreenState extends State<DriverSettingsScreen> {
                 _settingsRow(
                   icon: Icons.info_outline,
                   title: 'App Version',
-                  subtitle: 'NexaTrace Driver v1.2.3 (build 145)',
+                  subtitle: 'Trace Odd Driver v1.2.3 (build 145)',
                 ),
                 Divider(color: AppColors.border, height: 20.h),
                 _settingsRow(

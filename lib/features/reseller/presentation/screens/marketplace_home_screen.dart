@@ -47,7 +47,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
       accentColor: Color(0xFF00E5FF),
     ),
     BannerData(
-      companyName: 'NexaTrace Verified',
+      companyName: 'Trace Odd Verified',
       tagline: 'Trusted Factories with Real-Time Tracking',
       gradientColors: [Color(0xFF0D2137), Color(0xFF0066CC)],
       icon: Icons.verified_rounded,
@@ -141,7 +141,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
       appBar: CustomAppBar(
-        title: 'NexaTrace Marketplace',
+        title: 'Trace Odd Marketplace',
         showBackButton: false,
         actions: [_cartBadge()],
       ),

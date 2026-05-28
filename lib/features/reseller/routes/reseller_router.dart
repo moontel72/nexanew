@@ -57,7 +57,7 @@ class ResellerRouter {
           ),
         ],
         errorBuilder: (context, state) => Scaffold(
-          appBar: AppBar(title: const Text('NexaTrace Reseller')),
+          appBar: AppBar(title: const Text('Trace Odd Reseller')),
           body: Center(
             child: Padding(
               padding: const EdgeInsets.all(24),

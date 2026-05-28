@@ -1,6 +1,6 @@
 {
-    "name": "nexatrace_system",
-    "short_name": "nexatrace_system",
+    "name": "Trace Odd",
+    "short_name": "Trace Odd",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

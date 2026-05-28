@@ -64,16 +64,24 @@ class AdminSidebar extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    SvgPicture.asset(
-                      'assets/logo/traceodd_logo.svg',
-                      width: 40,
-                      height: 40,
+                    // Responsive Logo Icon Container (42x42 wrapper, BoxFit.contain)
+                    SizedBox(
+                      width: 42,
+                      height: 42,
+                      child: Center(
+                        child: SvgPicture.asset(
+                          'assets/logo/traceodd_logo.svg',
+                          width: 42,
+                          height: 42,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                     if (!collapsed) ...[
-                      const Gap(10),
+                      const Gap(12),
                       Expanded(
                         child: Text(
-                          'NexaTrace',
+                          'Trace Odd',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.w800,

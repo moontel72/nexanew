@@ -29,8 +29,8 @@ class AuthenticityVerificationCard extends StatelessWidget {
     final icon = isAuthentic ? Icons.verified_user : Icons.gpp_maybe;
     final title = isAuthentic ? 'AUTHENTIC PRODUCT' : 'COUNTERFEIT DETECTED';
     final subtitle = isAuthentic
-        ? 'Verified by NexaTrace Vault'
-        : 'This product is not registered in the NexaTrace system';
+        ? 'Verified by Trace Odd Vault'
+        : 'This product is not registered in the Trace Odd system';
 
     return Container(
       padding: EdgeInsets.all(16.w),

@@ -150,7 +150,7 @@ class _FactoryLoginScreenState extends State<FactoryLoginScreen> {
 
         // Title
         Text(
-          'NexaTrace Factory',
+          'Trace Odd Factory',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.secondary, // Factory uses secondary color

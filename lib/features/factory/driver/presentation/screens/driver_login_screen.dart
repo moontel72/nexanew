@@ -100,7 +100,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
         ),
         Gap(16.h),
         Text(
-          'NexaTrace Driver',
+          'Trace Odd Driver',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: _driverBlue,

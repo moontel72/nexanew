@@ -185,7 +185,7 @@ class _DriverAppInitializerState extends State<DriverAppInitializer> {
           splitScreenMode: true,
           builder: (context, child) {
             return MaterialApp.router(
-              title: 'NexaTrace Driver',
+              title: 'Trace Odd Driver',
               debugShowCheckedModeBanner: false,
               theme: AppTheme.lightTheme(),
               darkTheme: AppTheme.darkTheme(),

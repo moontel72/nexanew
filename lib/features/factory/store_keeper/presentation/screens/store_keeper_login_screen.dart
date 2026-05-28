@@ -82,7 +82,7 @@ class _StoreKeeperLoginScreenState extends State<StoreKeeperLoginScreen> {
                     ),
                     Gap(16.h),
                     Text(
-                      'NexaTrace Store',
+                      'Trace Odd Store',
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
                             fontWeight: FontWeight.bold,

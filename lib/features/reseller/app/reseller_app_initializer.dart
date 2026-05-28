@@ -128,7 +128,7 @@ class _ResellerAppInitializerState extends State<ResellerAppInitializer> {
           splitScreenMode: true,
           builder: (context, child) {
             return MaterialApp.router(
-              title: 'NexaTrace Reseller',
+              title: 'Trace Odd Reseller',
               debugShowCheckedModeBanner: false,
               theme: AppTheme.lightTheme(),
               darkTheme: AppTheme.darkTheme(),

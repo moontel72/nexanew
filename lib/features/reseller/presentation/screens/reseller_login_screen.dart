@@ -90,7 +90,7 @@ class _ResellerLoginScreenState extends State<ResellerLoginScreen> {
                       ),
                       Gap(8.h),
                       Text(
-                        'NexaTrace B2B Marketplace Portal',
+                        'Trace Odd B2B Marketplace Portal',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey[600],
                         ),
