@@ -115,15 +115,15 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
       children: [
         // Logo
         SvgPicture.asset(
-          'assets/logo/traceodd_logo.svg',
-          width: 200.w,
-          height: 200.h,
+          'assets/logo/traceodd-logo.svg',
+          width: 280.w,
+          height: 280.h,
         ),
         Gap(16.h),
 
         // Title
         Text(
-          'NexaTrace Admin',
+          'Trace Odd',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.primary,

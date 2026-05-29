@@ -64,21 +64,13 @@ class AdminSidebar extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    // Responsive Logo Icon Container (42x42 wrapper, BoxFit.contain)
-                    SizedBox(
-                      width: 42,
-                      height: 42,
-                      child: Center(
-                        child: SvgPicture.asset(
-                          'assets/logo/traceodd_logo.svg',
-                          width: 42,
-                          height: 42,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
+                    SvgPicture.asset(
+                      'assets/logo/traceodd-logo.svg',
+                      width: 44,
+                      height: 44,
                     ),
                     if (!collapsed) ...[
-                      const Gap(12),
+                      const Gap(10),
                       Expanded(
                         child: Text(
                           'Trace Odd',
