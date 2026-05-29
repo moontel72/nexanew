@@ -63,11 +63,11 @@ jobs:
         run: |
           rsync -avz --delete rust/ root@135.181.46.27:/var/www/traceodd/admin-panel/rust/
 
-      # 🔥 Also deploy shared libs to rust-lib for FFI consumers
+      # 🔥 Also deploy shared libs to rust-lib for FFI consumers (non-blocking)
       - name: Deploy Rust shared libraries
+        continue-on-error: true
         run: |
-          ssh root@135.181.46.27 "mkdir -p /var/www/traceodd/rust-lib"
-          rsync -avz rust/target/release/*.so root@135.181.46.27:/var/www/traceodd/rust-lib/ 2>/dev/null || true
+          rsync -avz --include='*.so' --include='*.rlib' --exclude='*' rust/target/release/ root@135.181.46.27:/var/www/traceodd/rust-lib/ 2>/dev/null || echo "No shared libs to deploy"
 
       # 🔥 Deploy Nginx config to server
       - name: Deploy Nginx configuration
