@@ -115,7 +115,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
       children: [
         // Logo
         SvgPicture.asset(
-          'assets/logo/traceodd-logo.svg',
+          'assets/logo/traceodd_logo.svg',
           width: 280.w,
           height: 280.h,
         ),
