@@ -113,21 +113,11 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
   Widget _buildHeader() {
     return Column(
       children: [
-        // Logo
+        // Combined Logo + Company Name SVG
         SvgPicture.asset(
-          'assets/logo/traceodd_logo.svg',
+          'assets/logo/logo-company-name.svg',
           width: 560.w,
-          height: 560.h,
-        ),
-        Gap(0.h),
-
-        // Title
-        Text(
-          'Trace Odd',
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          height: 322.h,
         ),
         Gap(8.h),
 
