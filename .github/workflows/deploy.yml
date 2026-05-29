@@ -7,6 +7,7 @@ on:
     paths:
       - "backend/**"
       - "rust/**"
+      - ".nginx/**"
 
 jobs:
   deploy:
@@ -67,6 +68,16 @@ jobs:
         run: |
           ssh root@135.181.46.27 "mkdir -p /var/www/traceodd/rust-lib"
           rsync -avz rust/target/release/*.so root@135.181.46.27:/var/www/traceodd/rust-lib/ 2>/dev/null || true
+
+      # 🔥 Deploy Nginx config to server
+      - name: Deploy Nginx configuration
+        run: |
+          rsync -avz .nginx/traceodd.conf root@135.181.46.27:/etc/nginx/sites-available/traceodd
+          ssh root@135.181.46.27 "
+            ln -sf /etc/nginx/sites-available/traceodd /etc/nginx/sites-enabled/traceodd 2>/dev/null || true
+            rm -f /etc/nginx/sites-enabled/nexatrace 2>/dev/null || true
+            nginx -t
+          "
 
       # 🔥 Laravel optimize, Fix Permissions and Reload Nginx
       - name: Server Post-Deployment Tasks
