@@ -66,8 +66,8 @@ class AdminSidebar extends StatelessWidget {
                   children: [
                     SvgPicture.asset(
                       'assets/logo/traceodd_logo.svg',
-                      width: 44,
-                      height: 44,
+                      width: 88,
+                      height: 88,
                     ),
                     if (!collapsed) ...[
                       const Gap(10),
