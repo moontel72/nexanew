@@ -62,24 +62,23 @@ class AdminSidebar extends StatelessWidget {
                   horizontal: 12,
                   vertical: 16,
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SvgPicture.asset(
                       'assets/logo/traceodd_logo.svg',
-                      width: 88,
-                      height: 88,
+                      width: collapsed ? 48 : 176,
+                      height: collapsed ? 48 : 176,
                     ),
                     if (!collapsed) ...[
-                      const Gap(10),
-                      Expanded(
-                        child: Text(
-                          'Trace Odd',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.adminSidebarText,
-                              ),
-                        ),
+                      const Gap(4),
+                      Text(
+                        'Trace Odd',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.adminSidebarText,
+                            ),
                       ),
                     ],
                   ],

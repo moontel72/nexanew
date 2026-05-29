@@ -119,12 +119,12 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
           width: 560.w,
           height: 560.h,
         ),
-        Gap(16.h),
+        Gap(0.h),
 
         // Title
         Text(
           'Trace Odd',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.primary,
           ),
