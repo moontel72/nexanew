@@ -74,9 +74,9 @@ jobs:
         run: |
           rsync -avz .nginx/traceodd.conf root@135.181.46.27:/etc/nginx/sites-available/traceodd
           ssh root@135.181.46.27 "
-            ln -sf /etc/nginx/sites-available/traceodd /etc/nginx/sites-enabled/traceodd 2>/dev/null || true
+            ln -sf /etc/nginx/sites-available/traceodd /etc/nginx/sites-enabled/traceodd
             rm -f /etc/nginx/sites-enabled/nexatrace 2>/dev/null || true
-            nginx -t
+            nginx -t && systemctl reload nginx && echo 'Nginx OK'
           "
 
       # 🔥 Laravel optimize, Fix Permissions and Reload Nginx
