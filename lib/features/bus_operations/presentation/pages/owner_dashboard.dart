@@ -70,15 +70,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       final api = ApiService();
 
       // Fetch owner profile + dashboard summary
-      final profileRes = await api.get('/api/v1/bus-fleet/owner/profile');
+      final profileRes = await api.get('/bus-fleet/owner/profile');
       final profile = profileRes['data'] as Map<String, dynamic>? ?? {};
 
       // Fetch seat manifest
       List<Map<String, dynamic>> manifest = [];
       try {
-        final manifestRes = await api.get(
-          '/api/v1/bus-fleet/owner/seat-manifest',
-        );
+        final manifestRes = await api.get('/bus-fleet/owner/seat-manifest');
         final raw = manifestRes['data'];
         if (raw is List) {
           manifest = raw.cast<Map<String, dynamic>>();

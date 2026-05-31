@@ -1,8 +1,9 @@
 // Bus Owner Standalone Login Screen (Module 14)
 //
-// Primary authentication via Phone Number + Password.
-// Email field is optional / bypassed for third-party bus owners.
-// Hits POST /api/v1/bus-fleet/owner-login on submit.
+// Authentication via Email / Phone Number + Password.
+// Both email and phone are accepted as primary identifiers.
+// Phone numbers accept +92 prefix or local 03XX format.
+// Hits POST /bus-fleet/owner-login on submit (base URL includes /api/v1).
 // Caches bearer token and tenant company metadata on success.
 
 import 'package:flutter/material.dart';
@@ -121,14 +122,40 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
       key: _formKey,
       child: Column(
         children: [
-          // Phone Number — primary identifier
+          // Email — primary identifier 1
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: 'Email',
+              hintText: 'owner@example.com',
+              prefixIcon: const Icon(Icons.email_outlined),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14.r),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14.r),
+                borderSide: BorderSide(color: AppColors.gray200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14.r),
+                borderSide: BorderSide(color: AppColors.primary, width: 1.8),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+          Gap(12.h),
+
+          // Phone Number — primary identifier 2
           TextFormField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
-              labelText: 'Phone Number *',
-              hintText: '+92 300 1234567',
+              labelText: 'Phone Number',
+              hintText: '+92 300 1234567  or  0300 1234567',
               prefixIcon: const Icon(Icons.phone_android_rounded),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
@@ -144,16 +171,8 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
               filled: true,
               fillColor: Colors.white,
             ),
-            validator: (v) {
-              final trimmed = v?.trim() ?? '';
-              if (trimmed.isEmpty) return 'Phone number is required';
-              if (trimmed.replaceAll(RegExp(r'[\s\-+()]'), '').length < 10) {
-                return 'Enter a valid phone number';
-              }
-              return null;
-            },
           ),
-          Gap(14.h),
+          Gap(12.h),
 
           // Password
           TextFormField(
@@ -196,38 +215,6 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
               return null;
             },
             onFieldSubmitted: (_) => _handleLogin(),
-          ),
-
-          Gap(10.h),
-
-          // Email (optional)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: InkWell(
-              onTap: () => setState(() {}), // just rebuild to show/hide
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 4.h),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.email_outlined,
-                      size: 16.w,
-                      color: AppColors.gray400,
-                    ),
-                    Gap(4.w),
-                    Text(
-                      'Login with email instead',
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -380,9 +367,63 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
     );
   }
 
+  /// Normalize a Pakistani phone number to international +92 format.
+  /// Accepts: +923009873214, 03009873214, 3009873214, +92 300 9873214, etc.
+  String _normalizePhone(String raw) {
+    // Strip all non-digit characters except leading +
+    final hasPlus = raw.trim().startsWith('+');
+    var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (hasPlus) {
+      return '+$digits';
+    }
+
+    // Convert local 03XX → +923XX
+    if (digits.startsWith('03') && digits.length == 11) {
+      return '+92${digits.substring(1)}';
+    }
+
+    // Convert local 3XX (without leading 0) → +923XX
+    if (digits.startsWith('3') && digits.length == 10) {
+      return '+92$digits';
+    }
+
+    // Already has country code 92 prefix
+    if (digits.startsWith('92') && digits.length == 12) {
+      return '+$digits';
+    }
+
+    // Fallback: return as-is (backend will validate)
+    return digits;
+  }
+
   // ─── Login Handler ─────────────────────────────────────
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+
+    // At least one of email or phone must be provided
+    if (email.isEmpty && phone.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter your email or phone number.';
+      });
+      return;
+    }
+
+    // Password is still required
+    final password = _passwordController.text;
+    if (password.trim().isEmpty) {
+      setState(() {
+        _errorMessage = 'Password is required.';
+      });
+      return;
+    }
+    if (password.trim().length < 6) {
+      setState(() {
+        _errorMessage = 'Password must be at least 6 characters.';
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -392,19 +433,19 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
     try {
       final api = ApiService();
 
-      final body = <String, dynamic>{
-        'phone': _phoneController.text.trim(),
-        'password': _passwordController.text,
-      };
+      final body = <String, dynamic>{'password': password};
 
-      // Include email only if user provided it
-      final email = _emailController.text.trim();
+      // Send both email and phone if provided; backend resolves identity
       if (email.isNotEmpty) {
         body['email'] = email;
       }
+      if (phone.isNotEmpty) {
+        body['phone'] = _normalizePhone(phone);
+      }
 
+      // Base URL is http://135.181.46.27/api/v1 — do NOT prepend /api/v1
       final response = await api.post(
-        '/api/v1/bus-fleet/owner-login',
+        '/bus-fleet/owner-login',
         body: body,
         requiresAuth: false,
       );
@@ -419,10 +460,9 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
         throw Exception('No authentication token received');
       }
 
-      // Cache token and tenant metadata via ApiClient
-      // (ApiService caches internally via ApiClient.setAuthToken)
+      // Cache token and tenant metadata
       await api.post(
-        '/api/v1/auth/set-token',
+        '/auth/set-token',
         body: {
           'token': token,
           'user_type': 'bus_owner',
@@ -450,7 +490,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
   String _mapLoginError(dynamic error) {
     final msg = error.toString().toLowerCase();
     if (msg.contains('invalid') && msg.contains('credential')) {
-      return 'Invalid phone number or password. Please try again.';
+      return 'Invalid email/phone or password. Please try again.';
     }
     if (msg.contains('network') ||
         msg.contains('socket') ||
