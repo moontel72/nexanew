@@ -58,25 +58,125 @@ class AccountEngineController extends Controller
         ]]);
     }
 
-    /** POST /api/v1/tenants/login */
+    /**
+     * POST /api/v1/tenants/login
+     *
+     * Authenticates bus/goods fleet owners.
+     * Accepts email OR phone + password.
+     * First checks tenant_accounts, then falls back to drivers table
+     * (owners registered via admin panel). Auto-syncs drivers to
+     * tenant_accounts on first login for Sanctum token support.
+     */
     public function tenantLogin(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => ['required', 'email'], 'password' => ['required', 'string'],
+            'email' => ['nullable', 'email'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'password' => ['required', 'string'],
         ]);
-        $tenant = TenantAccount::where('email', $validated['email'])->first();
-        if (!$tenant || !Hash::check($validated['password'], $tenant->password)) {
-            return response()->json(['status' => 'error', 'message' => 'Invalid credentials.'], 401);
+
+        $email = $validated['email'] ?? null;
+        $phone = $validated['phone'] ?? null;
+
+        if (!$email && !$phone) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Email or phone number is required.',
+            ], 422);
+        }
+
+        // ── 1. Try tenant_accounts table ──────────────────
+        $tenant = null;
+        if ($email) {
+            $tenant = TenantAccount::where('email', $email)->first();
+        }
+        if (!$tenant && $phone) {
+            $tenant = TenantAccount::where('phone_number', $phone)->first();
+        }
+
+        // ── 2. Fallback: drivers table (owners from admin panel) ─
+        if (!$tenant) {
+            $driverQuery = DB::table('drivers')
+                ->where('staff_type', 'owner');
+
+            if ($email) {
+                $driverQuery->where('email', $email);
+            }
+            if ($phone) {
+                $driverQuery->orWhere('phone', $phone);
+            }
+
+            $driver = $driverQuery->first();
+
+            if ($driver && Hash::check($validated['password'], $driver->password)) {
+                // Auto-sync to tenant_accounts so Sanctum can issue tokens
+                $existing = TenantAccount::where('email', $driver->email)->first();
+                if ($existing) {
+                    if ($phone && $existing->phone_number !== $phone) {
+                        $existing->update(['phone_number' => $phone]);
+                    }
+                    $tenant = $existing;
+                } else {
+                    $tenant = TenantAccount::create([
+                        'account_name' => $driver->name,
+                        'email' => $driver->email,
+                        'password' => $driver->password,
+                        'phone_number' => $driver->phone,
+                        'parent_account_id' => $driver->company_id ?? null,
+                        'is_independent' => false,
+                        'account_type' => 'bus_owner',
+                        'status' => $driver->status ?? 'active',
+                    ]);
+                }
+
+                $token = $tenant->createToken('tenant-token')->plainTextToken;
+                return response()->json([
+                    'status' => 'success',
+                    'token' => $token,
+                    'data' => [
+                        'id' => $tenant->id,
+                        'account_name' => $driver->name,
+                        'email' => $driver->email,
+                        'phone' => $driver->phone,
+                        'account_type' => 'bus_owner',
+                        'owner_type' => $driver->driver_type ?? 'bus',
+                        'company_name' => $driver->company_id ?? null,
+                    ],
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid credentials.',
+            ], 401);
+        }
+
+        // ── 3. Tenant account found — verify password ─────
+        if (!Hash::check($validated['password'], $tenant->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid credentials.',
+            ], 401);
         }
         if ($tenant->status !== 'active') {
-            return response()->json(['status' => 'error', 'message' => 'Account suspended.'], 403);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Account suspended.',
+            ], 403);
         }
+
         $token = $tenant->createToken('tenant-token')->plainTextToken;
         return response()->json([
-            'status' => 'success', 'token' => $token,
-            'data' => ['id' => $tenant->id, 'account_name' => $tenant->account_name,
-                'account_type' => $tenant->account_type, 'is_independent' => $tenant->is_independent,
-                'parent_account_id' => $tenant->parent_account_id, 'children_count' => $tenant->children()->count()],
+            'status' => 'success',
+            'token' => $token,
+            'data' => [
+                'id' => $tenant->id,
+                'account_name' => $tenant->account_name,
+                'account_type' => $tenant->account_type,
+                'is_independent' => $tenant->is_independent,
+                'parent_account_id' => $tenant->parent_account_id,
+                'children_count' => $tenant->children()->count(),
+            ],
         ]);
     }
 

@@ -69,39 +69,27 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     try {
       final api = ApiService();
 
-      // Fetch owner profile + dashboard summary
-      final profileRes = await api.get('/bus-fleet/owner/profile');
-      final profile = profileRes['data'] as Map<String, dynamic>? ?? {};
+      // Fetch owner profile via tenant fleet-data
+      final profileRes = await api.get('/super-admin/tenants/fleet-data');
+      final fleet = profileRes['data'] as Map<String, dynamic>? ?? {};
 
-      // Fetch seat manifest
+      // Fetch active shifts as seat manifest
       List<Map<String, dynamic>> manifest = [];
       try {
-        final manifestRes = await api.get('/bus-fleet/owner/seat-manifest');
-        final raw = manifestRes['data'];
-        if (raw is List) {
-          manifest = raw.cast<Map<String, dynamic>>();
-        } else if (raw is Map && raw['trips'] is List) {
-          manifest = (raw['trips'] as List).cast<Map<String, dynamic>>();
-        }
-      } catch (_) {
-        // Seat manifest may be empty if no active trips
-      }
+        final shifts = fleet['shift_allocations'] as List<dynamic>? ?? [];
+        manifest = shifts.cast<Map<String, dynamic>>();
+      } catch (_) {}
 
       if (!mounted) return;
 
       setState(() {
-        _ownerName = profile['name']?.toString() ?? 'Bus Owner';
-        _companyName =
-            profile['company_name']?.toString() ??
-            profile['tenant']?.toString();
-        _activeBuses =
-            (profile['active_buses'] as num?)?.toInt() ??
-            (profile['fleet_size'] as num?)?.toInt() ??
-            0;
-        _dailyRevenue =
-            (profile['daily_revenue'] as num?)?.toDouble() ??
-            (profile['earnings_today'] as num?)?.toDouble() ??
-            0.0;
+        _ownerName =
+            fleet['account_name']?.toString() ??
+            fleet['tenant_id']?.toString() ??
+            'Bus Owner';
+        _companyName = fleet['tenant_id']?.toString();
+        _activeBuses = (fleet['buses'] as List<dynamic>?)?.length ?? 0;
+        _dailyRevenue = 0.0; // populated via separate earnings endpoint
         _seatManifest = manifest;
         _isLoading = false;
       });
