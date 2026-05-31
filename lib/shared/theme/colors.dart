@@ -1,19 +1,19 @@
-// Colors for NexaTrace System
-// Colors for NexaTrace System
+// Colors for Trace Odd System
+// Colors for Trace Odd System
 // This file defines the color palette for the application
 
 import 'package:flutter/material.dart';
 
 class AppColors {
   // Primary Colors
-  static const Color primary = Color(0xFF0066CC); // NexaTrace Blue
-  static const Color primaryDark = Color(0xFF004C99);
-  static const Color primaryLight = Color(0xFF3385D6);
+  static const Color primary = Color(0xFF1F5E6B); // Deep Teal
+  static const Color primaryDark = Color(0xFF14434D);
+  static const Color primaryLight = Color(0xFF2E7A8A);
 
   // Secondary Colors
-  static const Color secondary = Color(0xFF00CC66); // Success Green
-  static const Color secondaryDark = Color(0xFF00994C);
-  static const Color secondaryLight = Color(0xFF33D685);
+  static const Color secondary = Color(0xFF00C49F); // Mint Green
+  static const Color secondaryDark = Color(0xFF009478);
+  static const Color secondaryLight = Color(0xFF43E2C4);
 
   // Accent Colors
   static const Color accent = Color(0xFFFF9900); // Warning Orange
@@ -38,32 +38,32 @@ class AppColors {
   static const Color gray50 = Color(0xFFF5F5F5);
 
   // Semantic Colors
-  static const Color success = Color(0xFF00CC66);
-  static const Color successColor = Color(0xFF00CC66);
+  static const Color success = Color(0xFF00C49F);
+  static const Color successColor = Color(0xFF00C49F);
   static const Color warning = Color(0xFFFF9900);
   static const Color warningColor = Color(0xFFFF9900);
   static const Color error = Color(0xFFFF3333);
   static const Color errorColor = Color(0xFFFF3333);
-  static const Color info = Color(0xFF0066CC);
-  static const Color infoColor = Color(0xFF0066CC);
+  static const Color info = Color(0xFF1F5E6B);
+  static const Color infoColor = Color(0xFF1F5E6B);
 
   // Background Colors
-  static const Color background = Color(0xFFF8F9FA);
+  static const Color background = Color(0xFFE6F7F4);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceVariant = Color(0xFFE7E0EC);
+  static const Color surfaceVariant = Color(0xFFD4EFEA);
   static const Color cardBackground = Color(0xFFFFFFFF);
 
   // Admin Panel Colors
-  static const Color adminSidebarBackground = Color(0xFF0F172A);
-  static const Color adminSidebarBorder = Color(0xFF1E293B);
+  static const Color adminSidebarBackground = Color(0xFF256B77);
+  static const Color adminSidebarBorder = Color(0xFF1F5E6B);
   static const Color adminSidebarText = Color(0xFFF8FAFC);
-  static const Color adminSidebarTextMuted = Color(0xFFCBD5E1);
-  static const Color adminContentBackground = Color(0xFFF3F4F6);
+  static const Color adminSidebarTextMuted = Color(0xFFBDD8DB);
+  static const Color adminContentBackground = Color(0xFFE6F7F4);
 
   // Input Background Colors (FIXED: Added missing colors)
-  static const Color inputBackgroundLight = Color(0xFFF8F9FA);
-  static const Color inputBackgroundDark = Color(0xFF2D2D2D);
-  static const Color inputBackground = Color(0xFFF8F9FA);
+  static const Color inputBackgroundLight = Color(0xFFF0FAF8);
+  static const Color inputBackgroundDark = Color(0xFF1E293B);
+  static const Color inputBackground = Color(0xFFF0FAF8);
 
   // Text Colors
   static const Color textPrimary = Color(0xFF1A1A1A);
@@ -73,7 +73,7 @@ class AppColors {
   static const Color textInverse = Color(0xFFFFFFFF);
 
   // UI Component Colors
-  static const Color codeBackground = Color(0xFFF0F8FF);
+  static const Color codeBackground = Color(0xFFF0FAF8);
   static const Color shimmerColor = Color(0xFFF0F0F0);
 
   // Border Colors
@@ -96,25 +96,25 @@ class AppColors {
   static const Color overlayLight = Color(0x33000000);
 
   // Factory Status Colors
-  static const Color activeFactory = Color(0xFF00CC66);
+  static const Color activeFactory = Color(0xFF00C49F);
   static const Color inactiveFactory = Color(0xFFFF9900);
   static const Color suspendedFactory = Color(0xFFFF3333);
 
   // Additional UI Colors
-  static const Color primaryColor = Color(0xFF0066CC);
-  static const Color secondaryColor = Color(0xFF00CC66);
+  static const Color primaryColor = Color(0xFF1F5E6B);
+  static const Color secondaryColor = Color(0xFF00C49F);
   static const Color grey = Color(0xFF808080);
 
   // Code Status Colors
-  static const Color codeGenerated = Color(0xFF0066CC);
-  static const Color codeLinked = Color(0xFF00CC66);
-  static const Color codePublished = Color(0xFF9900CC);
+  static const Color codeGenerated = Color(0xFF1F5E6B);
+  static const Color codeLinked = Color(0xFF00C49F);
+  static const Color codePublished = Color(0xFF8B5CF6);
   static const Color codeDeactivated = Color(0xFFFF3333);
 
   // Product Type Colors
-  static const Color foodProduct = Color(0xFF00CC66);
-  static const Color medicalProduct = Color(0xFF0066CC);
-  static const Color otherProduct = Color(0xFF9900CC);
+  static const Color foodProduct = Color(0xFF00C49F);
+  static const Color medicalProduct = Color(0xFF1F5E6B);
+  static const Color otherProduct = Color(0xFF8B5CF6);
 
   // Get color by code status
   static Color getCodeStatusColor(String status) {
