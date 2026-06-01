@@ -218,6 +218,8 @@ class AppRouter {
     if (path == '/bus-fleet/login') return null;
     // Bus Owner login — public access for third-party bus owners
     if (path == '/bus-owner/login') return null;
+    // Bus Owner dashboard — owner auth is managed by ApiClient token, not super-admin session
+    if (path == '/bus-owner/dashboard') return null;
     // Goods Fleet login — public access for goods company owners
     if (path == '/goods-fleet/login') return null;
 
