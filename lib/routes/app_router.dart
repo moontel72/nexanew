@@ -27,6 +27,8 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/g
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_drivers_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_conductors_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet_dashboard_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/owner_login_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/owner_dashboard.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_owners_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_drivers_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_conductors_screen.dart';
@@ -214,8 +216,8 @@ class AppRouter {
     if (path.startsWith('/reseller')) return null;
     // Bus Fleet login — public access for bus company owners
     if (path == '/bus-fleet/login') return null;
-    // Bus Owner routes are a separate Flutter build at /bus-owner/
-    if (path.startsWith('/bus-owner')) return null;
+    // Bus Owner login — public access for third-party bus owners
+    if (path == '/bus-owner/login') return null;
     // Goods Fleet login — public access for goods company owners
     if (path == '/goods-fleet/login') return null;
 
@@ -273,6 +275,16 @@ class AppRouter {
       path: '/goods-fleet/login',
       name: 'goods_fleet_login',
       builder: (context, state) => const GoodsCompanyLoginScreen(),
+    ),
+    GoRoute(
+      path: '/bus-owner/login',
+      name: 'bus_owner_login',
+      builder: (context, state) => const OwnerLoginScreen(),
+    ),
+    GoRoute(
+      path: '/bus-owner/dashboard',
+      name: 'bus_owner_dashboard',
+      builder: (context, state) => const OwnerDashboardScreen(),
     ),
     GoRoute(
       path: '/goods-fleet/dashboard',
