@@ -423,16 +423,16 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
       // Store token directly via ApiClient (not a separate API call)
       await ApiClient().setAuthToken(token);
 
-      // Also cache owner name in shared prefs for dashboard greeting
+      // Also cache owner metadata in shared prefs for dashboard
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        'bus_owner_name',
-        data?['account_name']?.toString() ?? 'Owner',
-      );
+      final accountName = data?['account_name']?.toString() ?? 'Owner';
+      final companyName = data?['company_name']?.toString() ?? '';
+      await prefs.setString('bus_owner_name', accountName);
       await prefs.setString(
         'bus_owner_email',
         data?['email']?.toString() ?? '',
       );
+      await prefs.setString('bus_owner_company', companyName);
 
       if (!mounted) return;
       context.go('/bus-owner/dashboard');
