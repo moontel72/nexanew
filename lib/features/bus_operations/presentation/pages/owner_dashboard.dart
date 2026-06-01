@@ -1,15 +1,14 @@
 // Bus Owner Interactive 3D Dashboard (Module 14)
 //
-// Fixed layout with constrained sidebar (260dp), dynamic parent company
-// branding, editable custom display name, and proper token-passing.
+// • Sidebar: fixed 260px, no screenutil scaling inside (prevents text collapse)
+// • Brand: dynamic parent company from login response
+// • Auth: token verified BEFORE any API call, redirects to login if missing
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
-import 'package:trace_odd/core/services/api_client.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
@@ -31,26 +30,28 @@ class OwnerDashboardScreen extends StatefulWidget {
 }
 
 class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
+  // ── Identity (loaded from SharedPreferences before anything else)
+  String _token = '';
+  String _ownerName = 'Owner';
+  String _parentCompanyName = '';
+  String _customDisplayName = '';
+
+  // ── Dashboard data
   bool _isSidebarOpen = true;
   int _activeBuses = 0;
   double _dailyRevenue = 0.0;
   List<Map<String, dynamic>> _seatManifest = [];
-  String _ownerName = 'Owner';
-  String _parentCompanyName = '';
-  String _customDisplayName = '';
   bool _isLoading = true;
   String? _error;
-  String _selectedNav = 'dashboard';
 
-  // Editing state
+  // ── Editing
   final _displayNameController = TextEditingController();
   bool _isEditingName = false;
 
   @override
   void initState() {
     super.initState();
-    _loadCachedIdentity();
-    _loadDashboardData();
+    _bootstrap();
   }
 
   @override
@@ -59,16 +60,39 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     super.dispose();
   }
 
-  /// Read cached identity from login, then fetch fleet data.
-  Future<void> _loadCachedIdentity() async {
+  // ────────────────────────────────────────────────────────
+  // BOOTSTRAP: load identity & token, then fetch fleet data
+  // ────────────────────────────────────────────────────────
+  Future<void> _bootstrap() async {
     final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString('auth_token') ?? '';
+
+    if (!mounted) return;
+    if (_token.isEmpty) {
+      // No token → redirect to login immediately
+      context.go('/bus-owner/login');
+      return;
+    }
+
     setState(() {
       _ownerName = prefs.getString('bus_owner_name') ?? 'Owner';
       _parentCompanyName = prefs.getString('bus_owner_company') ?? '';
       _customDisplayName = prefs.getString('bus_owner_display_name') ?? '';
     });
+
+    await _loadDashboardData();
   }
 
+  /// Brand name: custom > parent company > fallback
+  String get _brandName {
+    if (_customDisplayName.isNotEmpty) return _customDisplayName;
+    if (_parentCompanyName.isNotEmpty) return _parentCompanyName;
+    return 'NexaTrace';
+  }
+
+  // ────────────────────────────────────────────────────────
+  // DATA FETCH — only called after token is confirmed
+  // ────────────────────────────────────────────────────────
   Future<void> _loadDashboardData() async {
     setState(() {
       _isLoading = true;
@@ -76,36 +100,36 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     });
 
     try {
-      // Ensure token is available before making authenticated calls
-      final apiClient = ApiClient();
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token') ?? '';
-      if (token.isNotEmpty) {
-        await apiClient.setAuthToken(token);
-      }
-
       final api = ApiService();
 
-      // Fetch fleet data (requires auth)
       final profileRes = await api.get('/super-admin/tenants/fleet-data');
       final fleet = profileRes['data'] as Map<String, dynamic>? ?? {};
 
       List<Map<String, dynamic>> manifest = [];
       try {
-        final shifts = fleet['shift_allocations'] as List<dynamic>? ?? [];
-        manifest = shifts.cast<Map<String, dynamic>>();
+        manifest = (fleet['shift_allocations'] as List<dynamic>? ?? [])
+            .cast<Map<String, dynamic>>();
       } catch (_) {}
 
       if (!mounted) return;
-
       setState(() {
         _activeBuses = (fleet['buses'] as List<dynamic>?)?.length ?? 0;
         _dailyRevenue = 0.0;
         _seatManifest = manifest;
         _isLoading = false;
       });
-    } catch (e) {
+    } on Exception catch (e) {
       if (!mounted) return;
+      final msg = e.toString().toLowerCase();
+      // If token expired or invalid, bounce to login
+      if (msg.contains('unauth') ||
+          msg.contains('401') ||
+          msg.contains('token')) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('auth_token');
+        if (mounted) context.go('/bus-owner/login');
+        return;
+      }
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -113,19 +137,15 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     }
   }
 
-  void _logout() {
-    // Clear token and navigate to login
-    ApiClient().clearAuthToken();
-    context.go('/bus-owner/login');
+  void _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    if (mounted) context.go('/bus-owner/login');
   }
 
-  /// Brand name shown in header: custom > parent company > fallback
-  String get _brandName {
-    if (_customDisplayName.isNotEmpty) return _customDisplayName;
-    if (_parentCompanyName.isNotEmpty) return _parentCompanyName;
-    return 'NexaTrace';
-  }
-
+  // ═══════════════════════════════════════════════════════
+  // BUILD
+  // ═══════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 900;
@@ -142,11 +162,11 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   }
 
   // ═══════════════════════════════════════════════════════
-  // SIDEBAR — fixed width 260, deep teal
+  // SIDEBAR — 260px fixed, NO .w/.sp scaling inside
   // ═══════════════════════════════════════════════════════
   Widget _buildSidebar(bool isWide) {
     return Container(
-      width: 260, // FIXED: prevents sidebar from crushing content
+      width: 260,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -165,23 +185,23 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         child: Column(
           children: [
             _buildSidebarHeader(isWide),
-            Gap(8.h),
+            const Gap(8),
             _buildOwnerBadge(),
-            Gap(12.h),
-            Divider(
-              color: Colors.white.withValues(alpha: 0.12),
+            const Gap(12),
+            const Divider(
+              color: Color(0x20FFFFFF),
               height: 1,
               indent: 20,
               endIndent: 20,
             ),
-            Gap(12.h),
+            const Gap(12),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 12.w),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Column(
                   children: [
                     _sectionLabel('NAVIGATION'),
-                    Gap(6.h),
+                    const Gap(6),
                     Missile3DButton(
                       label: 'Project / Fleet Timeline',
                       subtitle: 'Activity & routes',
@@ -237,15 +257,15 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   Widget _buildSidebarHeader(bool isWide) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16.w, 14.h, 12.w, 8.h),
+      padding: const EdgeInsets.fromLTRB(14, 14, 10, 8),
       child: Row(
         children: [
           Container(
-            width: 34.w,
-            height: 34.h,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
               color: AppColors.secondary,
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.directions_bus_filled,
@@ -253,37 +273,40 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               size: 20,
             ),
           ),
-          Gap(10.w),
-          Expanded(
+          const Gap(10),
+          // FLEXIBLE prevents text from collapsing vertically
+          Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   _brandName,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 15.sp,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
+                const Text(
                   'Owner Terminal',
-                  style: TextStyle(
-                    color: AppColors.adminSidebarTextMuted,
-                    fontSize: 10.sp,
-                  ),
+                  style: TextStyle(color: Color(0xFFBDD8DB), fontSize: 11),
                 ),
               ],
             ),
           ),
           if (!isWide)
             IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.white70),
+              icon: const Icon(
+                Icons.close_rounded,
+                color: Colors.white70,
+                size: 20,
+              ),
               onPressed: () => setState(() => _isSidebarOpen = false),
-              iconSize: 20,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
         ],
       ),
@@ -292,37 +315,38 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   Widget _buildOwnerBadge() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 14.w),
-      padding: EdgeInsets.all(10.w),
+      margin: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10.r),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 16.r,
+            radius: 16,
             backgroundColor: AppColors.secondary,
             child: Text(
               _ownerName.characters.first.toUpperCase(),
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
-                fontSize: 13.sp,
+                fontSize: 13,
               ),
             ),
           ),
-          Gap(8.w),
-          Expanded(
+          const Gap(8),
+          Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   _ownerName,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
-                    fontSize: 12.sp,
+                    fontSize: 12,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -330,9 +354,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 if (_parentCompanyName.isNotEmpty)
                   Text(
                     'under $_parentCompanyName',
-                    style: TextStyle(
-                      color: AppColors.adminSidebarTextMuted,
-                      fontSize: 10.sp,
+                    style: const TextStyle(
+                      color: Color(0xFFBDD8DB),
+                      fontSize: 10,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -349,12 +373,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
-        padding: EdgeInsets.only(left: 4.w, bottom: 2.h),
+        padding: const EdgeInsets.only(left: 4, bottom: 2),
         child: Text(
           text,
-          style: TextStyle(
-            color: AppColors.adminSidebarTextMuted,
-            fontSize: 10.sp,
+          style: const TextStyle(
+            color: Color(0xFFBDD8DB),
+            fontSize: 10,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
           ),
@@ -365,23 +389,23 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   Widget _buildSidebarBottom() {
     return Padding(
-      padding: EdgeInsets.all(10.w),
+      padding: const EdgeInsets.all(10),
       child: Column(
         children: [
-          Divider(color: Colors.white.withValues(alpha: 0.12), height: 1),
-          Gap(8.h),
+          const Divider(color: Color(0x20FFFFFF), height: 1),
+          const Gap(8),
           InkWell(
             onTap: _loadDashboardData,
-            borderRadius: BorderRadius.circular(8.r),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Row(
                 children: [
                   Icon(Icons.refresh_rounded, size: 18, color: Colors.white60),
-                  Gap(8.w),
+                  Gap(8),
                   Text(
                     'Refresh Data',
-                    style: TextStyle(color: Colors.white60, fontSize: 12.sp),
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                 ],
               ),
@@ -389,16 +413,16 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           ),
           InkWell(
             onTap: _logout,
-            borderRadius: BorderRadius.circular(8.r),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Row(
                 children: [
                   Icon(Icons.logout_rounded, size: 18, color: Colors.white60),
-                  Gap(8.w),
+                  Gap(8),
                   Text(
                     'Logout',
-                    style: TextStyle(color: Colors.white60, fontSize: 12.sp),
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                 ],
               ),
@@ -426,16 +450,16 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                     onRefresh: _loadDashboardData,
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.all(20.w),
+                      padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildGreeting(),
-                          Gap(20.h),
-                          _buildAnalyticsCards(),
-                          Gap(24.h),
+                          const Gap(20),
+                          _buildAnalyticsCards(isWide),
+                          const Gap(24),
                           _buildSeatManifestSection(),
-                          Gap(24.h),
+                          const Gap(24),
                           _buildStaffManagementCards(),
                         ],
                       ),
@@ -449,7 +473,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   Widget _buildTopBar(bool isWide) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -467,15 +491,16 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               icon: const Icon(Icons.menu_rounded),
               onPressed: () => setState(() => _isSidebarOpen = true),
             ),
-          Text(
-            'Owner Dashboard',
-            style: TextStyle(
-              fontSize: 17.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+          const Expanded(
+            child: Text(
+              'Owner Dashboard',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
-          const Spacer(),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             color: AppColors.gray500,
@@ -495,14 +520,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             Expanded(
               child: Text(
                 'Welcome back, $_ownerName',
-                style: TextStyle(
-                  fontSize: 20.sp,
+                style: const TextStyle(
+                  fontSize: 20,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
               ),
             ),
-            // Edit brand name button
             IconButton(
               icon: Icon(
                 _isEditingName ? Icons.check_rounded : Icons.edit_rounded,
@@ -519,41 +543,40 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           ],
         ),
         if (_isEditingName) ...[
-          Gap(8.h),
+          const Gap(8),
           TextFormField(
             controller: _displayNameController,
             decoration: InputDecoration(
               hintText: _parentCompanyName.isNotEmpty
                   ? _parentCompanyName
-                  : 'Enter your fleet brand name',
-              hintStyle: TextStyle(color: AppColors.gray400, fontSize: 13.sp),
+                  : 'Enter fleet brand name',
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10.r),
+                borderRadius: BorderRadius.circular(10),
               ),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 12.w,
-                vertical: 8.h,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
               ),
               isDense: true,
               filled: true,
               fillColor: Colors.white,
             ),
-            style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             onFieldSubmitted: (_) => _saveDisplayName(),
           ),
         ] else ...[
-          Gap(4.h),
+          const Gap(4),
           Text(
             _parentCompanyName.isNotEmpty
                 ? 'Fleet under $_parentCompanyName'
                 : 'Here\'s your fleet overview for today',
-            style: TextStyle(fontSize: 13.sp, color: AppColors.gray500),
+            style: const TextStyle(fontSize: 13, color: AppColors.gray500),
           ),
           if (_customDisplayName.isNotEmpty)
             Text(
               'Branding: $_customDisplayName',
-              style: TextStyle(
-                fontSize: 12.sp,
+              style: const TextStyle(
+                fontSize: 12,
                 color: AppColors.secondary,
                 fontWeight: FontWeight.w500,
               ),
@@ -578,28 +601,28 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       _customDisplayName = name;
       _isEditingName = false;
     });
-    // TODO: POST /api/v1/bus-fleet/owner/update-display-name
   }
 
-  // ─── Analytics Cards ───────────────────────────────────
-  Widget _buildAnalyticsCards() {
-    return Row(
+  // ─── Analytics ─────────────────────────────────────────
+  Widget _buildAnalyticsCards(bool isWide) {
+    return Flex(
+      direction: isWide ? Axis.horizontal : Axis.vertical,
       children: [
         Expanded(
           child: _analyticsCard(
             'Active Buses',
             '$_activeBuses',
-            'Total owned assets',
+            'Total owned',
             Icons.directions_bus,
             AppColors.primary,
           ),
         ),
-        Gap(12.w),
+        const Gap(12),
         Expanded(
           child: _analyticsCard(
             'Daily Revenue',
             'Rs. ${_dailyRevenue.toStringAsFixed(0)}',
-            'Today\'s earnings',
+            'Earnings',
             Icons.trending_up_rounded,
             OwnerButtonColors.earnings,
           ),
@@ -616,16 +639,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     Color accent,
   ) {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14.r),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
         ],
         border: Border.all(color: AppColors.borderLight),
       ),
@@ -636,38 +655,38 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                width: 36.w,
-                height: 36.h,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: accent, size: 20),
               ),
-              Icon(Icons.more_horiz, color: AppColors.gray300, size: 18),
+              const Icon(Icons.more_horiz, color: AppColors.gray300, size: 18),
             ],
           ),
-          Gap(12.h),
+          const Gap(12),
           Text(
             value,
             style: TextStyle(
-              fontSize: 26.sp,
+              fontSize: 26,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
           ),
-          Gap(2.h),
+          const Gap(2),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12.sp,
+            style: const TextStyle(
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
             ),
           ),
           Text(
             subtitle,
-            style: TextStyle(fontSize: 11.sp, color: AppColors.gray400),
+            style: const TextStyle(fontSize: 11, color: AppColors.gray400),
           ),
         ],
       ),
@@ -677,16 +696,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   // ─── Seat Manifest ─────────────────────────────────────
   Widget _buildSeatManifestSection() {
     return Container(
-      padding: EdgeInsets.all(18.w),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14.r),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
         ],
       ),
       child: Column(
@@ -695,18 +710,24 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Live Seat Manifest',
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
               ),
-              _buildSeatLegend(),
+              Row(
+                children: [
+                  _legendDot(OwnerButtonColors.seats, 'Booked'),
+                  const Gap(10),
+                  _legendDot(Colors.grey.shade300, 'Vacant'),
+                ],
+              ),
             ],
           ),
-          Gap(14.h),
+          const Gap(14),
           if (_seatManifest.isEmpty)
             _buildEmptyManifest()
           else
@@ -716,49 +737,40 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  Widget _buildSeatLegend() {
-    return Row(
-      children: [
-        _legendDot(OwnerButtonColors.seats, 'Booked'),
-        Gap(10.w),
-        _legendDot(Colors.grey.shade300, 'Vacant'),
-      ],
-    );
-  }
-
   Widget _legendDot(Color color, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 8.w,
-          height: 8.h,
+          width: 8,
+          height: 8,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        Gap(4.w),
+        const Gap(4),
         Text(
           label,
-          style: TextStyle(fontSize: 10.sp, color: AppColors.gray500),
+          style: const TextStyle(fontSize: 10, color: AppColors.gray500),
         ),
       ],
     );
   }
 
   Widget _buildEmptyManifest() {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 24.h),
+    return SizedBox(
+      height: 100,
       child: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.event_seat, size: 40, color: AppColors.gray300),
-            Gap(8.h),
-            Text(
-              'No active trips with seat data',
-              style: TextStyle(color: AppColors.gray400, fontSize: 13.sp),
+            const Icon(Icons.event_seat, size: 40, color: AppColors.gray300),
+            const Gap(8),
+            const Text(
+              'No active trips',
+              style: TextStyle(color: AppColors.gray400, fontSize: 13),
             ),
             Text(
-              'Seat manifests appear when trips are in progress',
-              style: TextStyle(color: AppColors.gray300, fontSize: 11.sp),
+              'Manifests appear when trips are in progress',
+              style: TextStyle(color: AppColors.gray300, fontSize: 11),
             ),
           ],
         ),
@@ -767,23 +779,22 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   }
 
   Widget _buildTripSeatCard(Map<String, dynamic> trip) {
-    final routeName = trip['route_name']?.toString() ?? 'Unknown Route';
-    final busPlate =
+    final route = trip['route_name']?.toString() ?? 'Unknown Route';
+    final plate =
         trip['plate_number']?.toString() ??
         trip['bus_plate']?.toString() ??
         '--';
-    final totalSeats = (trip['total_seats'] as num?)?.toInt() ?? 0;
-    final bookedSeats = (trip['booked_seats'] as num?)?.toInt() ?? 0;
-    final vacantSeats =
-        (trip['vacant_seats'] as num?)?.toInt() ?? (totalSeats - bookedSeats);
-    final safeTotal = totalSeats > 0 ? totalSeats : 1;
+    final total = (trip['total_seats'] as num?)?.toInt() ?? 0;
+    final booked = (trip['booked_seats'] as num?)?.toInt() ?? 0;
+    final vacant = (trip['vacant_seats'] as num?)?.toInt() ?? (total - booked);
+    final safeTotal = total > 0 ? total : 1;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(12.w),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(10.r),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.borderLight),
       ),
       child: Column(
@@ -792,12 +803,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
+              Flexible(
                 child: Text(
-                  routeName,
-                  style: TextStyle(
+                  route,
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 13.sp,
+                    fontSize: 13,
                     color: AppColors.textPrimary,
                   ),
                   maxLines: 1,
@@ -805,15 +816,15 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 ),
               ),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(4.r),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  busPlate,
-                  style: TextStyle(
-                    fontSize: 10.sp,
+                  plate,
+                  style: const TextStyle(
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: AppColors.primary,
                   ),
@@ -821,30 +832,30 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               ),
             ],
           ),
-          Gap(8.h),
+          const Gap(8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(5.r),
+            borderRadius: BorderRadius.circular(5),
             child: SizedBox(
-              height: 10.h,
+              height: 10,
               child: Row(
                 children: [
                   Flexible(
-                    flex: bookedSeats.clamp(0, safeTotal),
+                    flex: booked.clamp(0, safeTotal),
                     child: Container(color: OwnerButtonColors.seats),
                   ),
                   Flexible(
-                    flex: vacantSeats.clamp(0, safeTotal),
+                    flex: vacant.clamp(0, safeTotal),
                     child: Container(color: Colors.grey.shade200),
                   ),
                 ],
               ),
             ),
           ),
-          Gap(6.h),
+          const Gap(6),
           Text(
-            '$bookedSeats/$totalSeats seats',
-            style: TextStyle(
-              fontSize: 12.sp,
+            '$booked / $total seats',
+            style: const TextStyle(
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
             ),
@@ -854,39 +865,37 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // ─── Staff Cards ───────────────────────────────────────
+  // ─── Staff ─────────────────────────────────────────────
   Widget _buildStaffManagementCards() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Staff Management',
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 16,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
         ),
-        Gap(12.h),
+        const Gap(12),
         Row(
           children: [
             Expanded(
               child: _staffCard(
                 'My Drivers',
-                'Type D -- View & register',
+                'Type D',
                 Icons.badge_rounded,
                 OwnerButtonColors.drivers,
-                () {},
               ),
             ),
-            Gap(12.w),
+            const Gap(12),
             Expanded(
               child: _staffCard(
                 'My Conductors',
-                'Type E -- View & register',
+                'Type E',
                 Icons.group_rounded,
                 OwnerButtonColors.conductors,
-                () {},
               ),
             ),
           ],
@@ -895,85 +904,75 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  Widget _staffCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12.r),
-      child: Container(
-        padding: EdgeInsets.all(14.w),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
+  Widget _staffCard(String title, String subtitle, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 34.w,
-              height: 34.h,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Icon(icon, color: color, size: 18),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const Gap(10),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
-            Gap(10.h),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 11.sp, color: AppColors.gray500),
-            ),
-            Gap(6.h),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Icon(Icons.arrow_forward_rounded, size: 16, color: color),
-            ),
-          ],
-        ),
+          ),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 11, color: AppColors.gray500),
+          ),
+          const Gap(6),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Icon(Icons.arrow_forward_rounded, size: 16, color: color),
+          ),
+        ],
       ),
     );
   }
 
+  // ─── Error ─────────────────────────────────────────────
   Widget _buildErrorView() {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(24.w),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 48, color: AppColors.error),
-            Gap(16.h),
+            const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+            const Gap(16),
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.gray600, fontSize: 13.sp),
+              style: const TextStyle(color: AppColors.gray600, fontSize: 13),
             ),
-            Gap(20.h),
+            const Gap(20),
             ElevatedButton.icon(
               onPressed: _loadDashboardData,
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
             ),
+            const Gap(8),
+            TextButton(onPressed: _logout, child: const Text('Back to Login')),
           ],
         ),
       ),
