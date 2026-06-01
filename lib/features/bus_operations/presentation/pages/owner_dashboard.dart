@@ -102,34 +102,18 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     try {
       final api = ApiService();
 
-      final profileRes = await api.get('/super-admin/tenants/fleet-data');
-      final fleet = profileRes['data'] as Map<String, dynamic>? ?? {};
-
-      List<Map<String, dynamic>> manifest = [];
-      try {
-        manifest = (fleet['shift_allocations'] as List<dynamic>? ?? [])
-            .cast<Map<String, dynamic>>();
-      } catch (_) {}
+      final profileRes = await api.get('/bus-fleet/owner/profile');
+      final data = profileRes['data'] as Map<String, dynamic>? ?? {};
 
       if (!mounted) return;
       setState(() {
-        _activeBuses = (fleet['buses'] as List<dynamic>?)?.length ?? 0;
-        _dailyRevenue = 0.0;
-        _seatManifest = manifest;
+        _activeBuses = (data['active_buses'] as num?)?.toInt() ?? 0;
+        _dailyRevenue = (data['daily_revenue'] as num?)?.toDouble() ?? 0.0;
+        _seatManifest = [];
         _isLoading = false;
       });
     } on Exception catch (e) {
       if (!mounted) return;
-      final msg = e.toString().toLowerCase();
-      // If token expired or invalid, bounce to login
-      if (msg.contains('unauth') ||
-          msg.contains('401') ||
-          msg.contains('token')) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('auth_token');
-        if (mounted) context.go('/bus-owner/login');
-        return;
-      }
       setState(() {
         _error = e.toString();
         _isLoading = false;

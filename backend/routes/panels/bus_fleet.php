@@ -166,3 +166,29 @@ Route::prefix('api/v1/bus-fleet')
 Route::post('api/v1/bus-fleet/owner-login',     [\App\Http\Controllers\Tenant\AccountEngineController::class, 'busOwnerLogin']);
 Route::post('api/v1/bus-fleet/driver-login',    [\App\Http\Controllers\Tenant\AccountEngineController::class, 'busDriverLogin']);
 Route::post('api/v1/bus-fleet/conductor-login', [\App\Http\Controllers\Tenant\AccountEngineController::class, 'busConductorLogin']);
+
+// PUBLIC: Owner dashboard profile - validates Bearer token manually
+Route::get('api/v1/bus-fleet/owner/profile', function (\Illuminate\Http\Request $request) {
+    $token = $request->bearerToken();
+    if (!$token) {
+        return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
+    }
+    $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+    if (!$accessToken || !$accessToken->tokenable) {
+        return response()->json(['status' => 'error', 'message' => 'Invalid token.'], 401);
+    }
+    $owner = $accessToken->tokenable;
+    return response()->json([
+        'status' => 'success',
+        'data' => [
+            'id' => $owner->id,
+            'account_name' => $owner->account_name,
+            'email' => $owner->email ?? '',
+            'phone' => $owner->phone_number ?? '',
+            'account_type' => $owner->account_type ?? 'bus_owner',
+            'status' => $owner->status ?? 'active',
+            'active_buses' => 0,
+            'daily_revenue' => 0,
+        ],
+    ]);
+});
