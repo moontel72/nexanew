@@ -58,38 +58,51 @@ class AccountEngineController extends Controller
         ]]);
     }
 
-    // ═══════════════════════════════════════════════════════
-    // PUBLIC LOGIN ENDPOINTS (no auth required)
-    // ═══════════════════════════════════════════════════════
+    // ================================================================
+    // 6 PUBLIC STAFF LOGIN ENDPOINTS (no auth required)
+    //
+    // Each endpoint hardcodes staff_type + driver_type.
+    // The Flutter app never sends these — the route IS the filter.
+    // ================================================================
 
-    /**
-     * POST /api/v1/bus-fleet/owner-login
-     * Bus Owner App login — only matches bus fleet owners (driver_type=bus).
-     */
-    public function busOwnerLogin(Request $request): JsonResponse
-    {
-        return $this->_ownerLogin($request, 'bus', 'bus_owner');
+    // --- BUS COMPANY ECOSYSTEM --------------------------------
+    public function busOwnerLogin(Request $request): JsonResponse {
+        return $this->_staffLogin($request, 'owner', 'bus', 'bus_owner');
+    }
+    public function busDriverLogin(Request $request): JsonResponse {
+        return $this->_staffLogin($request, 'driver', 'bus', 'bus_driver');
+    }
+    public function busConductorLogin(Request $request): JsonResponse {
+        return $this->_staffLogin($request, 'conductor', 'bus', 'bus_conductor');
+    }
+
+    // --- GOODS COMPANY ECOSYSTEM ------------------------------
+    public function truckOwnerLogin(Request $request): JsonResponse {
+        return $this->_staffLogin($request, 'owner', 'truck', 'truck_owner');
+    }
+    public function truckDriverLogin(Request $request): JsonResponse {
+        return $this->_staffLogin($request, 'driver', 'truck', 'truck_driver');
+    }
+    public function truckConductorLogin(Request $request): JsonResponse {
+        return $this->_staffLogin($request, 'conductor', 'truck', 'truck_conductor');
     }
 
     /**
-     * POST /api/v1/goods-fleet/owner-login
-     * Truck Owner App login — only matches goods fleet owners (driver_type=truck).
+     * Universal staff login engine.
+     *
+     * @param string $staffType   'owner' | 'driver' | 'conductor'
+     * @param string $driverType  'bus' | 'truck'
+     * @param string $accountType tenant_accounts account_type value
      */
-    public function truckOwnerLogin(Request $request): JsonResponse
-    {
-        return $this->_ownerLogin($request, 'truck', 'truck_owner');
-    }
-
-    /**
-     * Shared owner login engine.
-     * Queries tenant_accounts first, then falls back to drivers table.
-     * Auto-syncs drivers → tenant_accounts on first login for Sanctum tokens.
-     */
-    private function _ownerLogin(Request $request, string $driverType, string $accountType): JsonResponse
-    {
+    private function _staffLogin(
+        Request $request,
+        string $staffType,
+        string $driverType,
+        string $accountType
+    ): JsonResponse {
         $validated = $request->validate([
-            'email' => ['nullable', 'email'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'email'    => ['nullable', 'email'],
+            'phone'    => ['nullable', 'string', 'max:50'],
             'password' => ['required', 'string'],
         ]);
 
@@ -103,7 +116,7 @@ class AccountEngineController extends Controller
             ], 422);
         }
 
-        // ── 1. Try tenant_accounts table ──────────────────
+        // 1. Try tenant_accounts table
         $tenant = null;
         if ($email) {
             $tenant = TenantAccount::where('email', $email)
@@ -116,10 +129,10 @@ class AccountEngineController extends Controller
                 ->first();
         }
 
-        // ── 2. Fallback: drivers table ────────────────────
+        // 2. Fallback: drivers table (registered via admin panel)
         if (!$tenant) {
             $driver = DB::table('drivers')
-                ->where('staff_type', 'owner')
+                ->where('staff_type', $staffType)
                 ->where('driver_type', $driverType)
                 ->where(function ($q) use ($email, $phone) {
                     if ($email) $q->where('email', $email);
@@ -128,7 +141,7 @@ class AccountEngineController extends Controller
                 ->first();
 
             if ($driver && Hash::check($validated['password'], $driver->password)) {
-                // Auto-sync to tenant_accounts so Sanctum can issue tokens
+                // Auto-sync to tenant_accounts for Sanctum tokens
                 $existing = TenantAccount::where('email', $driver->email)->first();
                 if ($existing) {
                     if ($phone && $existing->phone_number !== $phone) {
@@ -137,49 +150,50 @@ class AccountEngineController extends Controller
                     $tenant = $existing;
                 } else {
                     $tenant = TenantAccount::create([
-                        'account_name' => $driver->name,
-                        'email' => $driver->email,
-                        'password' => $driver->password,
-                        'phone_number' => $driver->phone,
+                        'account_name'      => $driver->name,
+                        'email'             => $driver->email,
+                        'password'          => $driver->password,
+                        'phone_number'      => $driver->phone,
                         'parent_account_id' => $driver->company_id ?? null,
-                        'is_independent' => false,
-                        'account_type' => $accountType,
-                        'status' => $driver->status ?? 'active',
+                        'is_independent'    => false,
+                        'account_type'      => $accountType,
+                        'status'            => $driver->status ?? 'active',
                     ]);
                 }
 
                 $token = $tenant->createToken('tenant-token')->plainTextToken;
                 return response()->json([
                     'status' => 'success',
-                    'token' => $token,
-                    'data' => [
-                        'id' => $tenant->id,
+                    'token'  => $token,
+                    'data'   => [
+                        'id'           => $tenant->id,
                         'account_name' => $driver->name,
-                        'email' => $driver->email,
-                        'phone' => $driver->phone,
+                        'email'        => $driver->email,
+                        'phone'        => $driver->phone,
                         'account_type' => $accountType,
-                        'owner_type' => $driverType,
+                        'staff_type'   => $staffType,
+                        'driver_type'  => $driverType,
                         'company_name' => $driver->company_id ?? null,
                     ],
                 ]);
             }
 
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Invalid credentials.',
             ], 401);
         }
 
-        // ── 3. Tenant account found — verify password ─────
+        // 3. Tenant account found — verify password
         if (!Hash::check($validated['password'], $tenant->password)) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Invalid credentials.',
             ], 401);
         }
         if ($tenant->status !== 'active') {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Account suspended.',
             ], 403);
         }
@@ -187,28 +201,27 @@ class AccountEngineController extends Controller
         $token = $tenant->createToken('tenant-token')->plainTextToken;
         return response()->json([
             'status' => 'success',
-            'token' => $token,
-            'data' => [
-                'id' => $tenant->id,
-                'account_name' => $tenant->account_name,
-                'account_type' => $tenant->account_type,
-                'is_independent' => $tenant->is_independent,
+            'token'  => $token,
+            'data'   => [
+                'id'                => $tenant->id,
+                'account_name'      => $tenant->account_name,
+                'account_type'      => $tenant->account_type,
+                'is_independent'    => $tenant->is_independent,
                 'parent_account_id' => $tenant->parent_account_id,
-                'children_count' => $tenant->children()->count(),
+                'children_count'    => $tenant->children()->count(),
             ],
         ]);
     }
 
-    // ═══════════════════════════════════════════════════════
-    // LEGACY (kept for backward compat with super-admin panel)
-    // ═══════════════════════════════════════════════════════
+    // ================================================================
+    // LEGACY — kept for super-admin panel backward compat
+    // ================================================================
 
-    /** POST /api/v1/super-admin/tenants/login — only checks tenant_accounts by email */
+    /** POST /api/v1/super-admin/tenants/login */
     public function tenantLogin(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
+            'email' => ['required', 'email'], 'password' => ['required', 'string'],
         ]);
         $tenant = TenantAccount::where('email', $validated['email'])->first();
         if (!$tenant || !Hash::check($validated['password'], $tenant->password)) {

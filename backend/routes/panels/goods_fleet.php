@@ -15,14 +15,16 @@ use Illuminate\Support\Facades\Route;
  *   - Goods Fleet Dashboard
  */
 
-// ─── PUBLIC: Goods Company Owner Login ───────────
+// PUBLIC: Goods Fleet Staff Login gates (no auth) independent apps
 Route::prefix('api/v1/goods-fleet')->group(function (): void {
 
-    Route::post('login', [\App\Http\Controllers\Admin\GoodsFleetController::class, 'login']);
-    Route::post('owner-login', [\App\Http\Controllers\Tenant\AccountEngineController::class, 'truckOwnerLogin']);
+    Route::post('login',           [\App\Http\Controllers\Admin\GoodsFleetController::class, 'login']);
+    Route::post('owner-login',     [\App\Http\Controllers\Tenant\AccountEngineController::class, 'truckOwnerLogin']);
+    Route::post('driver-login',    [\App\Http\Controllers\Tenant\AccountEngineController::class, 'truckDriverLogin']);
+    Route::post('conductor-login', [\App\Http\Controllers\Tenant\AccountEngineController::class, 'truckConductorLogin']);
 });
 
-// ─── AUTH: Super Admin Company Management + Owner Profile ────────
+// AUTH: Super Admin Company Management + Owner Profile
 Route::prefix('api/v1/goods-fleet')
     ->middleware(['auth:admin'])
     ->group(function (): void {
@@ -36,9 +38,8 @@ Route::prefix('api/v1/goods-fleet')
         Route::get('profile', [\App\Http\Controllers\Admin\GoodsFleetController::class, 'profile']);
         Route::get('dashboard', [\App\Http\Controllers\Admin\GoodsFleetController::class, 'dashboard']);
 
-        // ─── Goods Fleet Staff CRUD (A–E Hierarchy) ────────
+        // Goods Fleet Staff CRUD (A-E Hierarchy)
         // Reuses FleetManagementController — detects 'truck' via request path
-
         Route::get('owners', [\App\Http\Controllers\FleetManagementController::class, 'listOwners']);
         Route::post('owners', [\App\Http\Controllers\FleetManagementController::class, 'storeOwner']);
         Route::get('owners/{id}', [\App\Http\Controllers\FleetManagementController::class, 'showOwner']);
