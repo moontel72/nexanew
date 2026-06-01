@@ -192,3 +192,20 @@ Route::get('api/v1/bus-fleet/owner/profile', function (\Illuminate\Http\Request 
         ],
     ]);
 });
+
+// PUBLIC: Driver/Conductor profile - validates Bearer token for any staff
+Route::get('api/v1/bus-fleet/staff/profile', function (\Illuminate\Http\Request $request) {
+    $token = $request->bearerToken();
+    if (!$token) return response()->json(['status'=>'error','message'=>'Unauthenticated.'], 401);
+    $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+    if (!$accessToken || !$accessToken->tokenable) return response()->json(['status'=>'error','message'=>'Invalid token.'], 401);
+    $staff = $accessToken->tokenable;
+    return response()->json([
+        'status'=>'success',
+        'data'=>[
+            'id'=>$staff->id,'account_name'=>$staff->account_name,
+            'email'=>$staff->email??'','phone'=>$staff->phone_number??'',
+            'account_type'=>$staff->account_type??'staff','status'=>$staff->status??'active',
+        ],
+    ]);
+});

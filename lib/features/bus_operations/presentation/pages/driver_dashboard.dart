@@ -35,32 +35,36 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   Future<void> _bootstrap() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ?? '';
-    if (token.isEmpty) { if (mounted) context.go('/bus-driver/login'); return; }
+    if (token.isEmpty) {
+      if (mounted) context.go('/bus-driver/login');
+      return;
+    }
     setState(() => _driverName = prefs.getString('driver_name') ?? 'Driver');
     await _loadData();
   }
 
   Future<void> _loadData() async {
-    setState(() { _isLoading = true; _error = null; });
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
     try {
       final api = ApiService();
-      final res = await api.get('/bus-fleet/trips/active');
+      final res = await api.get('/bus-fleet/staff/profile');
       final data = res['data'] as Map<String, dynamic>? ?? {};
 
       if (!mounted) return;
       setState(() {
-        _activeRoute = data['route_name']?.toString() ?? 'No active route';
-        _vehiclePlate = data['plate_number']?.toString() ?? '--';
-        _totalSeats = (data['total_seats'] as num?)?.toInt() ?? 0;
-        _bookedSeats = (data['booked_seats'] as num?)?.toInt() ?? 0;
-        _nextCheckpoint = data['next_checkpoint']?.toString() ?? '--';
-        _scheduleStatus = data['status']?.toString() ?? 'Off Duty';
+        _driverName = data['account_name']?.toString() ?? 'Driver';
         _isLoading = false;
       });
     } on Exception catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.toString(); _isLoading = false; });
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
     }
   }
 
@@ -72,9 +76,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
 
   Color get _statusColor {
     switch (_scheduleStatus.toLowerCase()) {
-      case 'active': case 'on route': case 'driving': return AppColors.success;
-      case 'delayed': case 'stopped': return AppColors.warning;
-      default: return AppColors.gray400;
+      case 'active':
+      case 'on route':
+      case 'driving':
+        return AppColors.success;
+      case 'delayed':
+      case 'stopped':
+        return AppColors.warning;
+      default:
+        return AppColors.gray400;
     }
   }
 
@@ -83,7 +93,10 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Driver Terminal', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+        title: const Text(
+          'Driver Terminal',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        ),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -94,107 +107,170 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildError()
-              : RefreshIndicator(
-                  onRefresh: _loadData,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(20),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Welcome, $_driverName', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                      const Gap(4),
-                      Text('Plate: $_vehiclePlate', style: const TextStyle(fontSize: 14, color: AppColors.gray500)),
-                      const Gap(24),
-
-                      // Active Route Card
-                      _buildSectionCard(
-                        'Active Route',
-                        Icons.alt_route_rounded,
-                        AppColors.primary,
-                        children: [
-                          _detailRow('Route', _activeRoute),
-                          _detailRow('Status', _scheduleStatus.toUpperCase(), _statusColor),
-                          _detailRow('Next Stop', _nextCheckpoint),
-                        ],
+          ? _buildError()
+          : RefreshIndicator(
+              onRefresh: _loadData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome, $_driverName',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
                       ),
-                      const Gap(16),
-
-                      // Seat Manifest Card
-                      _buildSectionCard(
-                        'Seat Manifest',
-                        Icons.event_seat_rounded,
-                        OwnerButtonColors.seats,
-                        children: [
-                          _detailRow('Total Seats', '$_totalSeats'),
-                          _detailRow('Booked', '$_bookedSeats', OwnerButtonColors.seats),
-                          _detailRow('Vacant', '${_totalSeats - _bookedSeats}', AppColors.gray400),
-                          const Gap(8),
-                          _buildOccupancyBar(),
-                        ],
+                    ),
+                    const Gap(4),
+                    Text(
+                      'Plate: $_vehiclePlate',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.gray500,
                       ),
-                      const Gap(16),
+                    ),
+                    const Gap(24),
 
-                      // GPS Status
-                      _buildSectionCard(
-                        'GPS Tracking',
-                        Icons.gps_fixed_rounded,
-                        AppColors.secondary,
-                        children: [
-                          _detailRow('Live Beacon', 'Active', AppColors.success),
-                          _detailRow('Last Sync', 'Just now'),
-                          _detailRow('Accuracy', '3.2 meters'),
-                        ],
-                      ),
-                      const Gap(16),
+                    // Active Route Card
+                    _buildSectionCard(
+                      'Active Route',
+                      Icons.alt_route_rounded,
+                      AppColors.primary,
+                      children: [
+                        _detailRow('Route', _activeRoute),
+                        _detailRow(
+                          'Status',
+                          _scheduleStatus.toUpperCase(),
+                          _statusColor,
+                        ),
+                        _detailRow('Next Stop', _nextCheckpoint),
+                      ],
+                    ),
+                    const Gap(16),
 
-                      // Alerts
-                      _buildSectionCard(
-                        'Dispatch Alerts',
-                        Icons.campaign_rounded,
-                        AppColors.warning,
-                        children: [
-                          _detailRow('Traffic', 'Clear ahead'),
-                          _detailRow('ETA', 'On schedule'),
-                        ],
-                      ),
-                    ]),
-                  ),
+                    // Seat Manifest Card
+                    _buildSectionCard(
+                      'Seat Manifest',
+                      Icons.event_seat_rounded,
+                      OwnerButtonColors.seats,
+                      children: [
+                        _detailRow('Total Seats', '$_totalSeats'),
+                        _detailRow(
+                          'Booked',
+                          '$_bookedSeats',
+                          OwnerButtonColors.seats,
+                        ),
+                        _detailRow(
+                          'Vacant',
+                          '${_totalSeats - _bookedSeats}',
+                          AppColors.gray400,
+                        ),
+                        const Gap(8),
+                        _buildOccupancyBar(),
+                      ],
+                    ),
+                    const Gap(16),
+
+                    // GPS Status
+                    _buildSectionCard(
+                      'GPS Tracking',
+                      Icons.gps_fixed_rounded,
+                      AppColors.secondary,
+                      children: [
+                        _detailRow('Live Beacon', 'Active', AppColors.success),
+                        _detailRow('Last Sync', 'Just now'),
+                        _detailRow('Accuracy', '3.2 meters'),
+                      ],
+                    ),
+                    const Gap(16),
+
+                    // Alerts
+                    _buildSectionCard(
+                      'Dispatch Alerts',
+                      Icons.campaign_rounded,
+                      AppColors.warning,
+                      children: [
+                        _detailRow('Traffic', 'Clear ahead'),
+                        _detailRow('ETA', 'On schedule'),
+                      ],
+                    ),
+                  ],
                 ),
+              ),
+            ),
     );
   }
 
-  Widget _buildSectionCard(String title, IconData icon, Color color, {required List<Widget> children}) {
+  Widget _buildSectionCard(
+    String title,
+    IconData icon,
+    Color color, {
+    required List<Widget> children,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
+        ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: color, size: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const Gap(12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
           ),
-          const Gap(12),
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-        ]),
-        const Gap(16),
-        ...children,
-      ]),
+          const Gap(16),
+          ...children,
+        ],
+      ),
     );
   }
 
   Widget _detailRow(String label, String value, [Color? color]) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.gray500)),
-        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color ?? AppColors.textPrimary)),
-      ]),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: AppColors.gray500),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: color ?? AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -202,10 +278,21 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final safe = _totalSeats > 0 ? _totalSeats : 1;
     return ClipRRect(
       borderRadius: BorderRadius.circular(5),
-      child: SizedBox(height: 12, child: Row(children: [
-        Flexible(flex: _bookedSeats.clamp(0, safe), child: Container(color: OwnerButtonColors.seats)),
-        Flexible(flex: (_totalSeats - _bookedSeats).clamp(0, safe), child: Container(color: Colors.grey.shade200)),
-      ])),
+      child: SizedBox(
+        height: 12,
+        child: Row(
+          children: [
+            Flexible(
+              flex: _bookedSeats.clamp(0, safe),
+              child: Container(color: OwnerButtonColors.seats),
+            ),
+            Flexible(
+              flex: (_totalSeats - _bookedSeats).clamp(0, safe),
+              child: Container(color: Colors.grey.shade200),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -213,14 +300,25 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-          const Gap(16),
-          Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.gray600)),
-          const Gap(20),
-          ElevatedButton.icon(onPressed: _loadData, icon: const Icon(Icons.refresh), label: const Text('Retry')),
-          TextButton(onPressed: _logout, child: const Text('Back to Login')),
-        ]),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+            const Gap(16),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.gray600),
+            ),
+            const Gap(20),
+            ElevatedButton.icon(
+              onPressed: _loadData,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+            TextButton(onPressed: _logout, child: const Text('Back to Login')),
+          ],
+        ),
       ),
     );
   }
