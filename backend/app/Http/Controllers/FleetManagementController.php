@@ -108,8 +108,8 @@ class FleetManagementController extends Controller
 
     public function updateOwner(string $id, Request $request): JsonResponse
     {
-        $exists = DB::table('drivers')->where('staff_type', 'owner')->where('id', $id)->exists();
-        if (!$exists) return response()->json(['message' => 'Not found'], 404);
+        $owner = DB::table('drivers')->where('staff_type', 'owner')->where('id', $id)->first();
+        if (!$owner) return response()->json(['message' => 'Not found'], 404);
 
         // Owners (Type A) — no salary, vehicle_plate, license, or hire_date
         $data = $request->validate([
@@ -129,6 +129,15 @@ class FleetManagementController extends Controller
         if (isset($data['password'])) $update['password'] = bcrypt($data['password']);
 
         DB::table('drivers')->where('id', $id)->update($update);
+
+        // Sync password change to tenant_accounts (prevents login desync)
+        if (isset($data['password']) && $owner->email) {
+            DB::table('tenant_accounts')
+                ->where('email', $owner->email)
+                ->where('account_type', 'bus_owner')
+                ->update(['password' => $update['password'], 'updated_at' => now()]);
+        }
+
         return response()->json(['success' => true, 'data' => DB::table('drivers')->find($id)]);
     }
 
@@ -281,6 +290,18 @@ class FleetManagementController extends Controller
         if (isset($data['password'])) $update['password'] = bcrypt($data['password']);
 
         DB::table('drivers')->where('id', $id)->update($update);
+
+        // Sync password change to tenant_accounts (prevents login desync)
+        if (isset($data['password'])) {
+            $driverEmail = $driver->email ?? ($data['email'] ?? null);
+            if ($driverEmail) {
+                DB::table('tenant_accounts')
+                    ->where('email', $driverEmail)
+                    ->where('account_type', 'bus_driver')
+                    ->update(['password' => $update['password'], 'updated_at' => now()]);
+            }
+        }
+
         return response()->json(['success' => true, 'data' => DB::table('drivers')->find($id)]);
     }
 
@@ -437,6 +458,18 @@ class FleetManagementController extends Controller
         if (isset($data['password'])) $update['password'] = bcrypt($data['password']);
 
         DB::table('drivers')->where('id', $id)->update($update);
+
+        // Sync password change to tenant_accounts (prevents login desync)
+        if (isset($data['password'])) {
+            $conductorEmail = $conductor->email ?? ($data['email'] ?? null);
+            if ($conductorEmail) {
+                DB::table('tenant_accounts')
+                    ->where('email', $conductorEmail)
+                    ->where('account_type', 'bus_conductor')
+                    ->update(['password' => $update['password'], 'updated_at' => now()]);
+            }
+        }
+
         return response()->json(['success' => true, 'data' => DB::table('drivers')->find($id)]);
     }
 

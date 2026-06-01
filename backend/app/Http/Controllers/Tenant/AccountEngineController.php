@@ -186,10 +186,26 @@ class AccountEngineController extends Controller
 
         // 3. Tenant account found — verify password
         if (!Hash::check($validated['password'], $tenant->password)) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Invalid credentials.',
-            ], 401);
+            // Password mismatch on tenant_accounts — check drivers table as
+            // the admin panel may have reset the password there without syncing.
+            $driverFallback = DB::table('drivers')
+                ->where('staff_type', $staffType)
+                ->where('driver_type', $driverType)
+                ->where(function ($q) use ($email, $phone) {
+                    if ($email) $q->where('email', $email);
+                    if ($phone) $q->orWhere('phone', $phone);
+                })
+                ->first();
+
+            if ($driverFallback && Hash::check($validated['password'], $driverFallback->password)) {
+                // Re-sync: update tenant_accounts password to match drivers table
+                $tenant->update(['password' => $driverFallback->password]);
+            } else {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Invalid credentials.',
+                ], 401);
+            }
         }
         if ($tenant->status !== 'active') {
             return response()->json([
