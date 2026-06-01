@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api/v1/goods-fleet')->group(function (): void {
 
     Route::post('login', [\App\Http\Controllers\Admin\GoodsFleetController::class, 'login']);
+    Route::post('owner-login', [\App\Http\Controllers\Tenant\AccountEngineController::class, 'truckOwnerLogin']);
 });
 
 // ─── AUTH: Super Admin Company Management + Owner Profile ────────

@@ -2,8 +2,8 @@
 //
 // Two-field login: Email or Phone Number + Password.
 // Phone numbers accept +92 prefix or local 03XX format.
-// Hits POST /super-admin/tenants/login (base URL includes /api/v1).
-// Caches Sanctum bearer token and tenant metadata on success.
+// Hits POST /bus-fleet/owner-login (base URL includes /api/v1).
+// Caches Sanctum bearer token in ApiClient.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -396,10 +396,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
     try {
       final api = ApiService();
 
-      final body = <String, dynamic>{
-        'password': password,
-        'driver_type': 'bus', // isolates bus owners from truck owners
-      };
+      final body = <String, dynamic>{'password': password};
 
       if (_isEmail(identity)) {
         body['email'] = identity;
@@ -407,9 +404,9 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
         body['phone'] = _normalizePhone(identity);
       }
 
-      // POST /super-admin/tenants/login — base URL already includes /api/v1
+      // POST /bus-fleet/owner-login — dedicated Bus Owner endpoint
       final response = await api.post(
-        '/super-admin/tenants/login',
+        '/bus-fleet/owner-login',
         body: body,
         requiresAuth: false,
       );

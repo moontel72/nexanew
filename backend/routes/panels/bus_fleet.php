@@ -157,3 +157,6 @@ Route::prefix('api/v1/bus-fleet')
             Route::get('{plate}', [\App\Http\Controllers\BusShiftController::class, 'getShiftRoster']);
         });
     });
+
+// ─── PUBLIC: Bus Owner App Login (no auth) ───────────────
+Route::post('api/v1/bus-fleet/owner-login', [\App\Http\Controllers\Tenant\AccountEngineController::class, 'busOwnerLogin']);

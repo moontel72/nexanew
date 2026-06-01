@@ -58,27 +58,43 @@ class AccountEngineController extends Controller
         ]]);
     }
 
+    // ═══════════════════════════════════════════════════════
+    // PUBLIC LOGIN ENDPOINTS (no auth required)
+    // ═══════════════════════════════════════════════════════
+
     /**
-     * POST /api/v1/super-admin/tenants/login
-     *
-     * Authenticates bus/goods fleet owners.
-     * Accepts email OR phone + password + optional driver_type.
-     * First checks tenant_accounts, then falls back to drivers table
-     * (owners registered via admin panel). Auto-syncs drivers to
-     * tenant_accounts on first login for Sanctum token support.
+     * POST /api/v1/bus-fleet/owner-login
+     * Bus Owner App login — only matches bus fleet owners (driver_type=bus).
      */
-    public function tenantLogin(Request $request): JsonResponse
+    public function busOwnerLogin(Request $request): JsonResponse
+    {
+        return $this->_ownerLogin($request, 'bus', 'bus_owner');
+    }
+
+    /**
+     * POST /api/v1/goods-fleet/owner-login
+     * Truck Owner App login — only matches goods fleet owners (driver_type=truck).
+     */
+    public function truckOwnerLogin(Request $request): JsonResponse
+    {
+        return $this->_ownerLogin($request, 'truck', 'truck_owner');
+    }
+
+    /**
+     * Shared owner login engine.
+     * Queries tenant_accounts first, then falls back to drivers table.
+     * Auto-syncs drivers → tenant_accounts on first login for Sanctum tokens.
+     */
+    private function _ownerLogin(Request $request, string $driverType, string $accountType): JsonResponse
     {
         $validated = $request->validate([
             'email' => ['nullable', 'email'],
             'phone' => ['nullable', 'string', 'max:50'],
             'password' => ['required', 'string'],
-            'driver_type' => ['nullable', 'string', 'in:bus,truck'],
         ]);
 
         $email = $validated['email'] ?? null;
         $phone = $validated['phone'] ?? null;
-        $driverType = $validated['driver_type'] ?? 'bus';
 
         if (!$email && !$phone) {
             return response()->json([
@@ -91,16 +107,16 @@ class AccountEngineController extends Controller
         $tenant = null;
         if ($email) {
             $tenant = TenantAccount::where('email', $email)
-                ->where('account_type', $driverType === 'bus' ? 'bus_owner' : 'truck_owner')
+                ->where('account_type', $accountType)
                 ->first();
         }
         if (!$tenant && $phone) {
             $tenant = TenantAccount::where('phone_number', $phone)
-                ->where('account_type', $driverType === 'bus' ? 'bus_owner' : 'truck_owner')
+                ->where('account_type', $accountType)
                 ->first();
         }
 
-        // ── 2. Fallback: drivers table (owners from admin panel) ─
+        // ── 2. Fallback: drivers table ────────────────────
         if (!$tenant) {
             $driver = DB::table('drivers')
                 ->where('staff_type', 'owner')
@@ -127,7 +143,7 @@ class AccountEngineController extends Controller
                         'phone_number' => $driver->phone,
                         'parent_account_id' => $driver->company_id ?? null,
                         'is_independent' => false,
-                        'account_type' => $driverType === 'bus' ? 'bus_owner' : 'truck_owner',
+                        'account_type' => $accountType,
                         'status' => $driver->status ?? 'active',
                     ]);
                 }
@@ -141,8 +157,8 @@ class AccountEngineController extends Controller
                         'account_name' => $driver->name,
                         'email' => $driver->email,
                         'phone' => $driver->phone,
-                        'account_type' => 'bus_owner',
-                        'owner_type' => $driver->driver_type ?? 'bus',
+                        'account_type' => $accountType,
+                        'owner_type' => $driverType,
                         'company_name' => $driver->company_id ?? null,
                     ],
                 ]);
@@ -180,6 +196,33 @@ class AccountEngineController extends Controller
                 'parent_account_id' => $tenant->parent_account_id,
                 'children_count' => $tenant->children()->count(),
             ],
+        ]);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // LEGACY (kept for backward compat with super-admin panel)
+    // ═══════════════════════════════════════════════════════
+
+    /** POST /api/v1/super-admin/tenants/login — only checks tenant_accounts by email */
+    public function tenantLogin(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
+        $tenant = TenantAccount::where('email', $validated['email'])->first();
+        if (!$tenant || !Hash::check($validated['password'], $tenant->password)) {
+            return response()->json(['status' => 'error', 'message' => 'Invalid credentials.'], 401);
+        }
+        if ($tenant->status !== 'active') {
+            return response()->json(['status' => 'error', 'message' => 'Account suspended.'], 403);
+        }
+        $token = $tenant->createToken('tenant-token')->plainTextToken;
+        return response()->json([
+            'status' => 'success', 'token' => $token,
+            'data' => ['id' => $tenant->id, 'account_name' => $tenant->account_name,
+                'account_type' => $tenant->account_type, 'is_independent' => $tenant->is_independent,
+                'parent_account_id' => $tenant->parent_account_id, 'children_count' => $tenant->children()->count()],
         ]);
     }
 
