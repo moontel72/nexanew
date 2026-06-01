@@ -40,7 +40,10 @@ class BusDriverApp extends StatelessWidget {
 final _router = GoRouter(
   initialLocation: '/login',
   routes: [
-    GoRoute(path: '/login', builder: (_, __) => const DriverLoginScreen()),
-    GoRoute(path: '/dashboard', builder: (_, __) => const DriverDashboardScreen()),
+    GoRoute(path: '/login', builder: (_, __) => const FleetDriverLoginScreen()),
+    GoRoute(
+      path: '/dashboard',
+      builder: (_, __) => const DriverDashboardScreen(),
+    ),
   ],
 );

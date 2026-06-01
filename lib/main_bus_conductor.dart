@@ -40,7 +40,7 @@ class BusConductorApp extends StatelessWidget {
 final _router = GoRouter(
   initialLocation: '/login',
   routes: [
-    GoRoute(path: '/login', builder: (_, __) => const ConductorLoginScreen()),
+    GoRoute(path: '/login', builder: (_, __) => const FleetConductorLoginScreen()),
     GoRoute(
       path: '/dashboard',
       builder: (_, __) => const ConductorDashboardScreen(),

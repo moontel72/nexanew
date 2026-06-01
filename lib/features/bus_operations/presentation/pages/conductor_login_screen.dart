@@ -9,12 +9,12 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/core/services/api_client.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
-class ConductorLoginScreen extends StatefulWidget {
+class FleetConductorLoginScreen extends StatefulWidget {
   final String loginEndpoint; // e.g. '/bus-fleet/conductor-login'
   final String appTitle;
   final IconData appIcon;
 
-  const ConductorLoginScreen({
+  const FleetConductorLoginScreen({
     super.key,
     this.loginEndpoint = '/bus-fleet/conductor-login',
     this.appTitle = 'Bus Conductor Portal',
@@ -22,10 +22,11 @@ class ConductorLoginScreen extends StatefulWidget {
   });
 
   @override
-  State<ConductorLoginScreen> createState() => _ConductorLoginScreenState();
+  State<FleetConductorLoginScreen> createState() =>
+      _FleetConductorLoginScreenState();
 }
 
-class _ConductorLoginScreenState extends State<ConductorLoginScreen> {
+class _FleetConductorLoginScreenState extends State<FleetConductorLoginScreen> {
   final _identityController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;

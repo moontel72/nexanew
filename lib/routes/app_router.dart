@@ -312,7 +312,7 @@ class AppRouter {
     GoRoute(
       path: '/bus-driver/login',
       name: 'bus_driver_login',
-      builder: (context, state) => const DriverLoginScreen(),
+      builder: (context, state) => const FleetDriverLoginScreen(),
     ),
     GoRoute(
       path: '/bus-driver/dashboard',
@@ -322,7 +322,7 @@ class AppRouter {
     GoRoute(
       path: '/bus-conductor/login',
       name: 'bus_conductor_login',
-      builder: (context, state) => const ConductorLoginScreen(),
+      builder: (context, state) => const FleetConductorLoginScreen(),
     ),
     GoRoute(
       path: '/bus-conductor/dashboard',
@@ -342,7 +342,7 @@ class AppRouter {
     GoRoute(
       path: '/truck-driver/login',
       name: 'truck_driver_login',
-      builder: (context, state) => const DriverLoginScreen(),
+      builder: (context, state) => const FleetDriverLoginScreen(),
     ),
     GoRoute(
       path: '/truck-driver/dashboard',
@@ -352,12 +352,12 @@ class AppRouter {
     GoRoute(
       path: '/truck-conductor/login',
       name: 'truck_conductor_login',
-      builder: (context, state) => const ConductorLoginScreen(),
+      builder: (context, state) => const FleetConductorLoginScreen(),
     ),
     GoRoute(
       path: '/truck-conductor/dashboard',
       name: 'truck_conductor_dashboard',
-      builder: (context, state) => const ConductorDashboardScreen()
+      builder: (context, state) => const ConductorDashboardScreen(),
     ),
     GoRoute(
       path: '/goods-fleet/dashboard',
@@ -692,7 +692,7 @@ class AppRouter {
     ),
     GoRoute(
       path: '/factory/driver/login',
-      builder: (context, state) => const DriverLoginScreen(),
+      builder: (context, state) => const FleetDriverLoginScreen(),
     ),
     GoRoute(
       path: '/factory/store-keeper/dashboard',

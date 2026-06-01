@@ -1,12 +1,9 @@
-// Shared Driver Login Screen (Bus + Truck)
-// Endpoint determined by which app builds/runs this code.
-// Bus Driver → /bus-fleet/driver-login
+// Shared Fleet Driver Login Screen (Bus Driver + Truck Driver)
+// Endpoint passed via constructor.
+// Bus Driver  → /bus-fleet/driver-login
 // Truck Driver → /goods-fleet/driver-login
-//
-// Calls the endpoint passed via constructor or detected from build context.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,12 +11,12 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/core/services/api_client.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
-class DriverLoginScreen extends StatefulWidget {
-  final String loginEndpoint; // e.g. '/bus-fleet/driver-login'
+class FleetDriverLoginScreen extends StatefulWidget {
+  final String loginEndpoint;
   final String appTitle;
   final IconData appIcon;
 
-  const DriverLoginScreen({
+  const FleetDriverLoginScreen({
     super.key,
     this.loginEndpoint = '/bus-fleet/driver-login',
     this.appTitle = 'Bus Driver Portal',
@@ -27,10 +24,10 @@ class DriverLoginScreen extends StatefulWidget {
   });
 
   @override
-  State<DriverLoginScreen> createState() => _DriverLoginScreenState();
+  State<FleetDriverLoginScreen> createState() => _FleetDriverLoginScreenState();
 }
 
-class _DriverLoginScreenState extends State<DriverLoginScreen> {
+class _FleetDriverLoginScreenState extends State<FleetDriverLoginScreen> {
   final _identityController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -59,7 +56,6 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
   Future<void> _handleLogin() async {
     final identity = _identityController.text.trim();
     final password = _passwordController.text;
-
     if (identity.isEmpty) {
       setState(() => _errorMessage = 'Enter your email or phone');
       return;
@@ -68,7 +64,6 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
       setState(() => _errorMessage = 'Password is required');
       return;
     }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -82,29 +77,25 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
       } else {
         body['phone'] = _normalizePhone(identity);
       }
-
       final response = await api.post(
         widget.loginEndpoint,
         body: body,
         requiresAuth: false,
       );
       if (!mounted) return;
-
       final token = response['token']?.toString();
       if (token == null || token.isEmpty) throw Exception('No token');
-
       await ApiClient().setAuthToken(token);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
         'driver_name',
         response['data']?['account_name']?.toString() ?? 'Driver',
       );
-
       if (!mounted) return;
       context.go('/dashboard');
     } catch (e) {
       if (!mounted) return;
-      setState(() => _errorMessage = 'Login failed. Check your credentials.');
+      setState(() => _errorMessage = 'Login failed.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -117,18 +108,18 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 28.w, vertical: 24.h),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 88.w,
-                  height: 88.h,
+                  width: 88,
+                  height: 88,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       colors: [AppColors.primary, AppColors.primaryDark],
                     ),
-                    borderRadius: BorderRadius.circular(22.r),
+                    borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.primary.withValues(alpha: 0.35),
@@ -137,9 +128,9 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                       ),
                     ],
                   ),
-                  child: Icon(widget.appIcon, size: 42.w, color: Colors.white),
+                  child: Icon(widget.appIcon, size: 42, color: Colors.white),
                 ),
-                Gap(18.h),
+                const Gap(18),
                 Text(
                   widget.appTitle,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -147,14 +138,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                     color: AppColors.primary,
                   ),
                 ),
-                Gap(6.h),
-                Text(
-                  'Sign in to access your routes',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppColors.gray500),
-                ),
-                Gap(36.h),
+                const Gap(36),
                 TextFormField(
                   controller: _identityController,
                   keyboardType: TextInputType.emailAddress,
@@ -163,13 +147,13 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                     hintText: 'driver@example.com  or  0300 1234567',
                     prefixIcon: const Icon(Icons.person_outline_rounded),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14.r),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     filled: true,
                     fillColor: Colors.white,
                   ),
                 ),
-                Gap(14.h),
+                const Gap(14),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -186,7 +170,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14.r),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     filled: true,
                     fillColor: Colors.white,
@@ -194,29 +178,29 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                   onFieldSubmitted: (_) => _handleLogin(),
                 ),
                 if (_errorMessage != null) ...[
-                  Gap(16.h),
+                  const Gap(16),
                   Container(
-                    padding: EdgeInsets.all(12.w),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppColors.error.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12.r),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(color: AppColors.error, fontSize: 13.sp),
+                      style: const TextStyle(color: AppColors.error),
                     ),
                   ),
                 ],
-                Gap(24.h),
+                const Gap(24),
                 SizedBox(
-                  height: 52.h,
+                  height: 52,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14.r),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: _isLoading
@@ -228,10 +212,10 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : Text(
+                        : const Text(
                             'Sign In',
                             style: TextStyle(
-                              fontSize: 16.sp,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
