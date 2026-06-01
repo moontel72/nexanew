@@ -151,10 +151,10 @@ class AccountEngineController extends Controller
                 } else {
                     $tenant = TenantAccount::create([
                         'account_name'      => $driver->name,
-                        'email'             => $driver->email,
+                        'email'             => $driver->email ?? ($driver->phone . '@placeholder.local'),
                         'password'          => $driver->password,
                         'phone_number'      => $driver->phone,
-                        'parent_account_id' => $driver->company_id ?? null,
+                        'parent_account_id' => null,
                         'is_independent'    => false,
                         'account_type'      => $accountType,
                         'status'            => $driver->status ?? 'active',
