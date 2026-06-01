@@ -10,15 +10,17 @@ import 'package:trace_odd/core/services/api_client.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class FleetConductorLoginScreen extends StatefulWidget {
-  final String loginEndpoint; // e.g. '/bus-fleet/conductor-login'
+  final String loginEndpoint;
   final String appTitle;
   final IconData appIcon;
+  final String dashboardPath;
 
   const FleetConductorLoginScreen({
     super.key,
     this.loginEndpoint = '/bus-fleet/conductor-login',
     this.appTitle = 'Bus Conductor Portal',
     this.appIcon = Icons.group_rounded,
+    this.dashboardPath = '/bus-conductor/dashboard',
   });
 
   @override
@@ -86,7 +88,7 @@ class _FleetConductorLoginScreenState extends State<FleetConductorLoginScreen> {
       if (token == null || token.isEmpty) throw Exception('No token');
       await ApiClient().setAuthToken(token);
       if (!mounted) return;
-      context.go('/dashboard');
+      context.go(widget.dashboardPath);
     } catch (e) {
       if (!mounted) return;
       setState(() => _errorMessage = 'Login failed.');

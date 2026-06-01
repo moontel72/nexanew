@@ -15,12 +15,14 @@ class FleetDriverLoginScreen extends StatefulWidget {
   final String loginEndpoint;
   final String appTitle;
   final IconData appIcon;
+  final String dashboardPath;
 
   const FleetDriverLoginScreen({
     super.key,
     this.loginEndpoint = '/bus-fleet/driver-login',
     this.appTitle = 'Bus Driver Portal',
     this.appIcon = Icons.badge_rounded,
+    this.dashboardPath = '/bus-driver/dashboard',
   });
 
   @override
@@ -92,7 +94,7 @@ class _FleetDriverLoginScreenState extends State<FleetDriverLoginScreen> {
         response['data']?['account_name']?.toString() ?? 'Driver',
       );
       if (!mounted) return;
-      context.go('/dashboard');
+      context.go('/bus-driver/dashboard');
     } catch (e) {
       if (!mounted) return;
       setState(() => _errorMessage = 'Login failed.');

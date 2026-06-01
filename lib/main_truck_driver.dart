@@ -40,7 +40,12 @@ class TruckDriverApp extends StatelessWidget {
 final _router = GoRouter(
   initialLocation: '/login',
   routes: [
-    GoRoute(path: '/login', builder: (_, __) => const FleetDriverLoginScreen()),
+    GoRoute(path: '/login', builder: (_, __) => const FleetDriverLoginScreen(
+      loginEndpoint: '/goods-fleet/driver-login',
+      appTitle: 'Truck Driver Portal',
+      appIcon: Icons.local_shipping_rounded,
+      dashboardPath: '/truck-driver/dashboard',
+    )),
     GoRoute(path: '/dashboard', builder: (_, __) => const DriverDashboardScreen()),
   ],
 );

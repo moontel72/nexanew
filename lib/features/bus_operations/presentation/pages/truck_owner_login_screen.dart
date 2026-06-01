@@ -11,6 +11,7 @@ class TruckOwnerLoginScreen extends StatelessWidget {
       loginEndpoint: '/goods-fleet/owner-login',
       appTitle: 'Truck Owner Portal',
       appIcon: Icons.local_shipping_rounded,
+      dashboardPath: '/truck-owner/dashboard',
     );
   }
 }
