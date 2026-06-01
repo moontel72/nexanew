@@ -96,17 +96,13 @@ class AccountEngineController extends Controller
 
         // ── 2. Fallback: drivers table (owners from admin panel) ─
         if (!$tenant) {
-            $driverQuery = DB::table('drivers')
-                ->where('staff_type', 'owner');
-
-            if ($email) {
-                $driverQuery->where('email', $email);
-            }
-            if ($phone) {
-                $driverQuery->orWhere('phone', $phone);
-            }
-
-            $driver = $driverQuery->first();
+            $driver = DB::table('drivers')
+                ->where('staff_type', 'owner')
+                ->where(function ($q) use ($email, $phone) {
+                    if ($email) $q->where('email', $email);
+                    if ($phone) $q->orWhere('phone', $phone);
+                })
+                ->first();
 
             if ($driver && Hash::check($validated['password'], $driver->password)) {
                 // Auto-sync to tenant_accounts so Sanctum can issue tokens
