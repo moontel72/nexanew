@@ -9,7 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/core/services/api_client.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class OwnerLoginScreen extends StatefulWidget {
@@ -394,7 +396,10 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
     try {
       final api = ApiService();
 
-      final body = <String, dynamic>{'password': password};
+      final body = <String, dynamic>{
+        'password': password,
+        'driver_type': 'bus', // isolates bus owners from truck owners
+      };
 
       if (_isEmail(identity)) {
         body['email'] = identity;
@@ -418,15 +423,18 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
         throw Exception('No authentication token received');
       }
 
-      // Cache token and tenant metadata
-      await api.post(
-        '/auth/set-token',
-        body: {
-          'token': token,
-          'user_type': 'bus_owner',
-          'tenant': data?['company_name'] ?? data?['account_name'] ?? '',
-        },
-        requiresAuth: false,
+      // Store token directly via ApiClient (not a separate API call)
+      await ApiClient().setAuthToken(token);
+
+      // Also cache owner name in shared prefs for dashboard greeting
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'bus_owner_name',
+        data?['account_name']?.toString() ?? 'Owner',
+      );
+      await prefs.setString(
+        'bus_owner_email',
+        data?['email']?.toString() ?? '',
       );
 
       if (!mounted) return;

@@ -59,10 +59,10 @@ class AccountEngineController extends Controller
     }
 
     /**
-     * POST /api/v1/tenants/login
+     * POST /api/v1/super-admin/tenants/login
      *
      * Authenticates bus/goods fleet owners.
-     * Accepts email OR phone + password.
+     * Accepts email OR phone + password + optional driver_type.
      * First checks tenant_accounts, then falls back to drivers table
      * (owners registered via admin panel). Auto-syncs drivers to
      * tenant_accounts on first login for Sanctum token support.
@@ -73,10 +73,12 @@ class AccountEngineController extends Controller
             'email' => ['nullable', 'email'],
             'phone' => ['nullable', 'string', 'max:50'],
             'password' => ['required', 'string'],
+            'driver_type' => ['nullable', 'string', 'in:bus,truck'],
         ]);
 
         $email = $validated['email'] ?? null;
         $phone = $validated['phone'] ?? null;
+        $driverType = $validated['driver_type'] ?? 'bus';
 
         if (!$email && !$phone) {
             return response()->json([
@@ -88,16 +90,21 @@ class AccountEngineController extends Controller
         // ── 1. Try tenant_accounts table ──────────────────
         $tenant = null;
         if ($email) {
-            $tenant = TenantAccount::where('email', $email)->first();
+            $tenant = TenantAccount::where('email', $email)
+                ->where('account_type', $driverType === 'bus' ? 'bus_owner' : 'truck_owner')
+                ->first();
         }
         if (!$tenant && $phone) {
-            $tenant = TenantAccount::where('phone_number', $phone)->first();
+            $tenant = TenantAccount::where('phone_number', $phone)
+                ->where('account_type', $driverType === 'bus' ? 'bus_owner' : 'truck_owner')
+                ->first();
         }
 
         // ── 2. Fallback: drivers table (owners from admin panel) ─
         if (!$tenant) {
             $driver = DB::table('drivers')
                 ->where('staff_type', 'owner')
+                ->where('driver_type', $driverType)
                 ->where(function ($q) use ($email, $phone) {
                     if ($email) $q->where('email', $email);
                     if ($phone) $q->orWhere('phone', $phone);
@@ -120,7 +127,7 @@ class AccountEngineController extends Controller
                         'phone_number' => $driver->phone,
                         'parent_account_id' => $driver->company_id ?? null,
                         'is_independent' => false,
-                        'account_type' => 'bus_owner',
+                        'account_type' => $driverType === 'bus' ? 'bus_owner' : 'truck_owner',
                         'status' => $driver->status ?? 'active',
                     ]);
                 }
