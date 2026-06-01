@@ -342,7 +342,12 @@ class AppRouter {
     GoRoute(
       path: '/truck-driver/login',
       name: 'truck_driver_login',
-      builder: (context, state) => const FleetDriverLoginScreen(),
+      builder: (context, state) => const FleetDriverLoginScreen(
+        loginEndpoint: '/goods-fleet/driver-login',
+        appTitle: 'Truck Driver Portal',
+        appIcon: Icons.local_shipping_rounded,
+        dashboardPath: '/truck-driver/dashboard',
+      ),
     ),
     GoRoute(
       path: '/truck-driver/dashboard',
@@ -352,7 +357,12 @@ class AppRouter {
     GoRoute(
       path: '/truck-conductor/login',
       name: 'truck_conductor_login',
-      builder: (context, state) => const FleetConductorLoginScreen(),
+      builder: (context, state) => const FleetConductorLoginScreen(
+        loginEndpoint: '/goods-fleet/conductor-login',
+        appTitle: 'Truck Conductor Portal',
+        appIcon: Icons.local_shipping_rounded,
+        dashboardPath: '/truck-conductor/dashboard',
+      ),
     ),
     GoRoute(
       path: '/truck-conductor/dashboard',
