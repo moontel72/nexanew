@@ -29,6 +29,12 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/g
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet_dashboard_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/owner_login_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/owner_dashboard.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/driver_login_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/driver_dashboard.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/conductor_login_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/conductor_dashboard.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/truck_owner_login_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/truck_owner_dashboard.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_owners_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_drivers_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_conductors_screen.dart';
@@ -220,6 +226,21 @@ class AppRouter {
     if (path == '/bus-owner/login') return null;
     // Bus Owner dashboard — owner auth is managed by ApiClient token, not super-admin session
     if (path == '/bus-owner/dashboard') return null;
+    // Bus Driver login + dashboard — separate app routes
+    if (path == '/bus-driver/login') return null;
+    if (path == '/bus-driver/dashboard') return null;
+    // Bus Conductor login + dashboard — separate app routes
+    if (path == '/bus-conductor/login') return null;
+    if (path == '/bus-conductor/dashboard') return null;
+    // Truck Owner login + dashboard
+    if (path == '/truck-owner/login') return null;
+    if (path == '/truck-owner/dashboard') return null;
+    // Truck Driver login + dashboard
+    if (path == '/truck-driver/login') return null;
+    if (path == '/truck-driver/dashboard') return null;
+    // Truck Conductor login + dashboard
+    if (path == '/truck-conductor/login') return null;
+    if (path == '/truck-conductor/dashboard') return null;
     // Goods Fleet login — public access for goods company owners
     if (path == '/goods-fleet/login') return null;
 
@@ -287,6 +308,56 @@ class AppRouter {
       path: '/bus-owner/dashboard',
       name: 'bus_owner_dashboard',
       builder: (context, state) => const OwnerDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/bus-driver/login',
+      name: 'bus_driver_login',
+      builder: (context, state) => const DriverLoginScreen(),
+    ),
+    GoRoute(
+      path: '/bus-driver/dashboard',
+      name: 'bus_driver_dashboard',
+      builder: (context, state) => const DriverDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/bus-conductor/login',
+      name: 'bus_conductor_login',
+      builder: (context, state) => const ConductorLoginScreen(),
+    ),
+    GoRoute(
+      path: '/bus-conductor/dashboard',
+      name: 'bus_conductor_dashboard',
+      builder: (context, state) => const ConductorDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/truck-owner/login',
+      name: 'truck_owner_login',
+      builder: (context, state) => const TruckOwnerLoginScreen(),
+    ),
+    GoRoute(
+      path: '/truck-owner/dashboard',
+      name: 'truck_owner_dashboard',
+      builder: (context, state) => const TruckOwnerDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/truck-driver/login',
+      name: 'truck_driver_login',
+      builder: (context, state) => const DriverLoginScreen(),
+    ),
+    GoRoute(
+      path: '/truck-driver/dashboard',
+      name: 'truck_driver_dashboard',
+      builder: (context, state) => const DriverDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/truck-conductor/login',
+      name: 'truck_conductor_login',
+      builder: (context, state) => const ConductorLoginScreen(),
+    ),
+    GoRoute(
+      path: '/truck-conductor/dashboard',
+      name: 'truck_conductor_dashboard',
+      builder: (context, state) => const ConductorDashboardScreen()
     ),
     GoRoute(
       path: '/goods-fleet/dashboard',
