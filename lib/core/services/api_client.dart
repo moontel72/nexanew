@@ -530,7 +530,7 @@ class ApiClient {
     try {
       errorResponse = jsonDecode(responseBody);
     } catch (e) {
-      // If response is not JSON, use raw response
+      // If response is not JSON, use raw response as message
     }
 
     final message =
@@ -540,9 +540,9 @@ class ApiClient {
 
     switch (statusCode) {
       case 400:
-        if (errorResponse?['errors'] != null) {
+        if (errorResponse != null && errorResponse['errors'] != null) {
           final errors = Map<String, String>.from(
-            (errorResponse!['errors'] as Map<String, dynamic>).map(
+            (errorResponse['errors'] as Map<String, dynamic>).map(
               (key, value) => MapEntry(
                 key,
                 value is List ? value.join(', ') : value.toString(),
@@ -561,9 +561,9 @@ class ApiClient {
       case 409:
         throw ConflictException(message);
       case 422:
-        if (errorResponse?['errors'] != null) {
+        if (errorResponse != null && errorResponse['errors'] != null) {
           final errors = Map<String, String>.from(
-            (errorResponse!['errors'] as Map<String, dynamic>).map(
+            (errorResponse['errors'] as Map<String, dynamic>).map(
               (key, value) => MapEntry(
                 key,
                 value is List ? value.join(', ') : value.toString(),

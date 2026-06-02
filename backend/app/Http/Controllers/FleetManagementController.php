@@ -132,9 +132,10 @@ class FleetManagementController extends Controller
 
         // Sync password change to tenant_accounts (prevents login desync)
         if (isset($data['password']) && $owner->email) {
+            $accountType = $this->driverType($request) === 'truck' ? 'truck_owner' : 'bus_owner';
             DB::table('tenant_accounts')
                 ->where('email', $owner->email)
-                ->where('account_type', 'bus_owner')
+                ->where('account_type', $accountType)
                 ->update(['password' => $update['password'], 'updated_at' => now()]);
         }
 
@@ -294,10 +295,18 @@ class FleetManagementController extends Controller
         // Sync password change to tenant_accounts (prevents login desync)
         if (isset($data['password'])) {
             $driverEmail = $driver->email ?? ($data['email'] ?? null);
+            $accountType = $this->driverType($request) === 'truck' ? 'truck_driver' : 'bus_driver';
             if ($driverEmail) {
                 DB::table('tenant_accounts')
                     ->where('email', $driverEmail)
-                    ->where('account_type', 'bus_driver')
+                    ->where('account_type', $accountType)
+                    ->update(['password' => $update['password'], 'updated_at' => now()]);
+            }
+            // Also sync by phone (for drivers without email)
+            if ($driver->phone) {
+                DB::table('tenant_accounts')
+                    ->where('phone_number', $driver->phone)
+                    ->where('account_type', $accountType)
                     ->update(['password' => $update['password'], 'updated_at' => now()]);
             }
         }
@@ -462,10 +471,18 @@ class FleetManagementController extends Controller
         // Sync password change to tenant_accounts (prevents login desync)
         if (isset($data['password'])) {
             $conductorEmail = $conductor->email ?? ($data['email'] ?? null);
+            $accountType = $this->driverType($request) === 'truck' ? 'truck_conductor' : 'bus_conductor';
             if ($conductorEmail) {
                 DB::table('tenant_accounts')
                     ->where('email', $conductorEmail)
-                    ->where('account_type', 'bus_conductor')
+                    ->where('account_type', $accountType)
+                    ->update(['password' => $update['password'], 'updated_at' => now()]);
+            }
+            // Also sync by phone (conductors often don't have email)
+            if ($conductor->phone) {
+                DB::table('tenant_accounts')
+                    ->where('phone_number', $conductor->phone)
+                    ->where('account_type', $accountType)
                     ->update(['password' => $update['password'], 'updated_at' => now()]);
             }
         }

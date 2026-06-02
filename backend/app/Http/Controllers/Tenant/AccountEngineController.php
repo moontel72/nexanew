@@ -142,23 +142,44 @@ class AccountEngineController extends Controller
 
             if ($driver && Hash::check($validated['password'], $driver->password)) {
                 // Auto-sync to tenant_accounts for Sanctum tokens
-                $existing = TenantAccount::where('email', $driver->email)->first();
+                $existing = null;
+                if ($driver->email) {
+                    $existing = TenantAccount::where('email', $driver->email)
+                        ->where('account_type', $accountType)
+                        ->first();
+                }
+                // Fallback: lookup by phone when email is null or not found
+                if (!$existing && $driver->phone) {
+                    $existing = TenantAccount::where('phone_number', $driver->phone)
+                        ->where('account_type', $accountType)
+                        ->first();
+                }
                 if ($existing) {
                     if ($phone && $existing->phone_number !== $phone) {
                         $existing->update(['phone_number' => $phone]);
                     }
+                    if ($driver->email && $existing->email !== $driver->email) {
+                        $existing->update(['email' => $driver->email]);
+                    }
                     $tenant = $existing;
                 } else {
-                    $tenant = TenantAccount::create([
-                        'account_name'      => $driver->name,
-                        'email'             => $driver->email ?? ($driver->phone . '@placeholder.local'),
-                        'password'          => $driver->password,
-                        'phone_number'      => $driver->phone,
-                        'parent_account_id' => null,
-                        'is_independent'    => false,
-                        'account_type'      => $accountType,
-                        'status'            => $driver->status ?? 'active',
-                    ]);
+                    try {
+                        $tenant = TenantAccount::create([
+                            'account_name'      => $driver->name,
+                            'email'             => $driver->email ?? ($driver->phone . '@placeholder.local'),
+                            'password'          => $driver->password,
+                            'phone_number'      => $driver->phone,
+                            'parent_account_id' => null,
+                            'is_independent'    => false,
+                            'account_type'      => $accountType,
+                            'status'            => $driver->status ?? 'active',
+                        ]);
+                    } catch (\Exception $e) {
+                        return response()->json([
+                            'status'  => 'error',
+                            'message' => 'Account sync failed. Please contact support.',
+                        ], 500);
+                    }
                 }
 
                 $token = $tenant->createToken('tenant-token')->plainTextToken;
