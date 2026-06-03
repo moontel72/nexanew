@@ -6,12 +6,17 @@ use Illuminate\Support\Facades\Route;
 Route::get("/health", fn() => response()->json(["ok" => true]));
 
 $registerRoutes = function (): void {
+    // ═══════════════════════════════════════════════════════════
+    // Wave 2 — Unified Global Auth API (Section 10.1.5)
+    // Accepts phone, email, CNIC, passport — any claim type.
+    // Replaces all legacy /bus-fleet/*, /goods-fleet/* login gates.
+    // ═══════════════════════════════════════════════════════════
     Route::prefix("auth")->group(function (): void {
+        // Unified global identity login (Section 10.1.5)
         Route::post("login", [
-            \App\Http\Controllers\Auth\AdminAuthController::class,
+            \App\Http\Controllers\Auth\GlobalAuthController::class,
             "login",
         ]);
-        // Temporary GET route for debugging 405 errors
         Route::get("login", function (\Illuminate\Http\Request $request) {
             Log::warning("GET request to login endpoint", [
                 "method" => $request->method(),
@@ -22,45 +27,44 @@ $registerRoutes = function (): void {
                 "ip" => $request->ip(),
                 "query_params" => $request->query(),
             ]);
-
-            return response()->json(
-                [
-                    "error" => "GET method not supported for login",
-                    "message" => "Please use POST method for login requests",
-                    "debug" => [
-                        "request_method" => $request->method(),
-                        "expected_method" => "POST",
-                        "timestamp" => now()->toISOString(),
-                    ],
+            return response()->json([
+                "error"   => "GET method not supported for login",
+                "message" => "Please use POST method for login requests",
+                "debug"   => [
+                    "request_method"  => $request->method(),
+                    "expected_method" => "POST",
+                    "timestamp"       => now()->toISOString(),
                 ],
-                405,
-            );
+            ], 405);
         });
-        Route::post("logout", [
-            \App\Http\Controllers\Auth\AdminAuthController::class,
-            "logout",
-        ])->middleware("auth:admin");
-        Route::post("refresh", [
-            \App\Http\Controllers\Auth\AdminAuthController::class,
-            "refresh",
-        ])->middleware("auth:admin");
-        Route::post("change-password", [
-            \App\Http\Controllers\Auth\AdminAuthController::class,
-            "changePassword",
-        ])->middleware("auth:admin");
-        Route::get("validate", [
-            \App\Http\Controllers\Auth\AdminAuthController::class,
-            "validateToken",
-        ])->middleware("auth:admin");
-        Route::get("profile", [
-            \App\Http\Controllers\Auth\AdminAuthController::class,
-            "profile",
-        ])->middleware("auth:admin");
+
+        // Sanctum-authenticated auth operations
+        Route::middleware("auth:sanctum")->group(function (): void {
+            Route::post("refresh", [\App\Http\Controllers\Auth\GlobalAuthController::class, "refresh"]);
+            Route::post("logout",  [\App\Http\Controllers\Auth\GlobalAuthController::class, "logout"]);
+            Route::get("me",       [\App\Http\Controllers\Auth\GlobalAuthController::class, "me"]);
+        });
+
+        // Legacy admin auth routes (Super Admin web panel)
+        Route::post("admin/login", [\App\Http\Controllers\Auth\AdminAuthController::class, "login"]);
+        Route::middleware("auth:admin")->group(function (): void {
+            Route::post("admin/logout",          [\App\Http\Controllers\Auth\AdminAuthController::class, "logout"]);
+            Route::post("admin/refresh",         [\App\Http\Controllers\Auth\AdminAuthController::class, "refresh"]);
+            Route::post("admin/change-password", [\App\Http\Controllers\Auth\AdminAuthController::class, "changePassword"]);
+            Route::get("admin/validate",         [\App\Http\Controllers\Auth\AdminAuthController::class, "validateToken"]);
+            Route::get("admin/profile",          [\App\Http\Controllers\Auth\AdminAuthController::class, "profile"]);
+        });
     });
 
     Route::prefix("admin")
         ->middleware(["auth:admin", "admin"])
         ->group(function (): void {
+            /// Wave 3 — Sub-Admin Feature Toggle Management (Section 10.3)
+            Route::prefix("sub-admins")->group(function (): void {
+                Route::post("toggle-feature", [\App\Http\Controllers\Admin\SubAdminFeatureToggleController::class, "toggleFeature"]);
+                Route::get("grants/{assignmentId}", [\App\Http\Controllers\Admin\SubAdminFeatureToggleController::class, "listGrants"]);
+            });
+
             Route::prefix("dashboard")->group(function (): void {
                 Route::get("", [
                     \App\Http\Controllers\Admin\AdminDashboardController::class,

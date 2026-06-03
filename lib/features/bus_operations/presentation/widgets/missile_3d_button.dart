@@ -1,7 +1,8 @@
-// Missile3DButton — Custom 3D arrow-shaped navigation button
+// Pencil3DButton — Custom 3D pencil-shaped navigation button
 //
-// Renders a horizontal right-pointing missile/rocket shape with:
-//   • Angular arrowhead on the right side
+// Renders a horizontal right-pointing pencil shape with:
+//   • Clean flat left edge flush against sidebar boundary
+//   • Sharp single-point tip on the right (nook wali pencil)
 //   • Gradient fill for beveled 3D shading
 //   • Multi-layer BoxShadow for pronounced depth
 //   • Unique vibrant color per instance for instant scannability
@@ -10,15 +11,15 @@
 
 import 'package:flutter/material.dart';
 
-/// A single Mizaeel (missile/arrow) 3D navigation button.
+/// A single Pencil (nook wali pencil) 3D navigation button.
 ///
-/// The button is drawn via [Missile3DPainter] which produces a right-pointing
-/// arrow with a beveled gradient and stacked shadows for a tactile look.
+/// The button is drawn via [Pencil3DPainter] which produces a right-pointing
+/// pencil shape with a flat left edge, tapered body, and sharp point.
 class Missile3DButton extends StatelessWidget {
   /// Display label for the button.
   final String label;
 
-  /// Icon displayed on the left (rocket body) side.
+  /// Icon displayed on the left side.
   final IconData icon;
 
   /// Background color of the button body.
@@ -27,10 +28,10 @@ class Missile3DButton extends StatelessWidget {
   /// Called when the button is tapped.
   final VoidCallback onTap;
 
-  /// Optional subtitle shown below the label.
+  /// Optional subtitle shown below the label (deprecated in Phase 1).
   final String? subtitle;
 
-  /// Height of the button. Defaults to 64.
+  /// Height of the button. Defaults to 80.
   final double height;
 
   const Missile3DButton({
@@ -40,33 +41,33 @@ class Missile3DButton extends StatelessWidget {
     required this.color,
     required this.onTap,
     this.subtitle,
-    this.height = 64,
+    this.height = 80,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: GestureDetector(
         onTap: onTap,
         child: CustomPaint(
-          painter: Missile3DPainter(color: color, shadowColor: color),
+          painter: Pencil3DPainter(color: color, shadowColor: color),
           size: Size(double.infinity, height),
           child: Padding(
-            // Leave room for the arrowhead on the right (~40px)
-            padding: const EdgeInsets.only(left: 18, right: 48),
+            // Leave room for the pencil tip on the right (~48px)
+            padding: const EdgeInsets.only(left: 20, right: 54),
             child: Row(
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: Colors.white, size: 20),
+                  child: Icon(icon, color: Colors.white, size: 22),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -76,12 +77,12 @@ class Missile3DButton extends StatelessWidget {
                         label,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.3,
-                          height: 1.15,
+                          height: 1.2,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (subtitle != null)
@@ -107,54 +108,43 @@ class Missile3DButton extends StatelessWidget {
   }
 }
 
-/// CustomPainter that draws a 3D missile/arrow shape pointing right.
-class Missile3DPainter extends CustomPainter {
+/// CustomPainter that draws a 3D pencil shape pointing right.
+///
+/// The shape has a clean flat left edge (no ears/notches)
+/// and tapers to a sharp single-point tip on the right.
+class Pencil3DPainter extends CustomPainter {
   final Color color;
   final Color shadowColor;
 
-  Missile3DPainter({required this.color, required this.shadowColor});
+  Pencil3DPainter({required this.color, required this.shadowColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final arrowW = 36.0; // width of the arrowhead
-    final r = 14.0; // corner radius on the body
     final tipX = w; // the very right point
     final tipY = h / 2;
-    final baseX = w - arrowW; // where arrowhead meets body
+    final bodyW = w * 0.82; // body extends to 82% of width, rest is taper
 
-    // ── Build the missile path ──────────────────────────
+    // ── Build the pencil path ────────────────────────────
     final path = Path();
 
-    // Start at top-left (with radius inset)
-    path.moveTo(r, 0);
+    // Start at top-left (clean flat edge, no radius)
+    path.moveTo(0, 0);
 
-    // Top edge to the arrowhead base
-    path.lineTo(baseX - r, 0);
+    // Top edge to the taper start
+    path.lineTo(bodyW, 0);
 
-    // Small rounded corner at top arrowhead junction
-    path.arcToPoint(Offset(baseX + 6, 8), radius: const Radius.circular(6));
-
-    // Angled top edge of arrowhead → tip
-    path.lineTo(tipX - 4, tipY - 2);
+    // Taper diagonally to the sharp pencil point
     path.lineTo(tipX, tipY);
 
-    // Angled bottom edge of arrowhead ← tip
-    path.lineTo(tipX - 4, tipY + 2);
-    path.lineTo(baseX + 6, h - 8);
-
-    // Small rounded corner at bottom arrowhead junction
-    path.arcToPoint(Offset(baseX - r, h), radius: const Radius.circular(6));
+    // Taper diagonally back from point to bottom of body
+    path.lineTo(bodyW, h);
 
     // Bottom edge back to left
-    path.lineTo(r, h);
+    path.lineTo(0, h);
 
-    // Left rounded edge
-    path.arcToPoint(Offset(0, h - r), radius: Radius.circular(r));
-    path.lineTo(0, r);
-    path.arcToPoint(Offset(r, 0), radius: Radius.circular(r));
-
+    // Close back to top-left (clean vertical left edge)
     path.close();
 
     // ── Multi-layer shadows for 3D bevel effect ─────────
@@ -183,13 +173,9 @@ class Missile3DPainter extends CustomPainter {
 
     // ── Top highlight line for bevel ────────────────────
     final highlightPath = Path();
-    highlightPath.moveTo(r, 3);
-    highlightPath.lineTo(baseX - r, 3);
-    highlightPath.arcToPoint(
-      Offset(baseX + 6, 9),
-      radius: const Radius.circular(4),
-    );
-    highlightPath.lineTo(tipX - 4, tipY - 2);
+    highlightPath.moveTo(0, 3);
+    highlightPath.lineTo(bodyW, 3);
+    highlightPath.lineTo(tipX - 2, tipY);
 
     final highlightPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.22)
@@ -200,13 +186,9 @@ class Missile3DPainter extends CustomPainter {
 
     // ── Subtle bottom shadow line inside ────────────────
     final bottomPath = Path();
-    bottomPath.moveTo(r, h - 3);
-    bottomPath.lineTo(baseX - r, h - 3);
-    bottomPath.arcToPoint(
-      Offset(baseX + 6, h - 9),
-      radius: const Radius.circular(4),
-    );
-    bottomPath.lineTo(tipX - 4, tipY + 2);
+    bottomPath.moveTo(0, h - 3);
+    bottomPath.lineTo(bodyW, h - 3);
+    bottomPath.lineTo(tipX - 2, tipY);
 
     final bottomPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.12)
@@ -217,7 +199,7 @@ class Missile3DPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant Missile3DPainter oldDelegate) =>
+  bool shouldRepaint(covariant Pencil3DPainter oldDelegate) =>
       color != oldDelegate.color || shadowColor != oldDelegate.shadowColor;
 
   /// Lighten a color by [amount] (0.0–1.0).

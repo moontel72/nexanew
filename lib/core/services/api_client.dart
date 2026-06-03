@@ -430,6 +430,28 @@ class ApiClient {
         }
       }
 
+      // Wave 2 — TokenVersionGuard: handle transparent token_stale refresh
+      if (response.statusCode == 401 &&
+          requiresAuth &&
+          retryCount == 0 &&
+          endpoint != '/api/v1/auth/refresh' &&
+          endpoint != '/factory/auth/refresh' &&
+          endpoint != '/api/v1/auth/login' &&
+          endpoint != '/factory/auth/login') {
+        final refreshed = await _handleTokenStaleIfNeeded(response);
+        if (refreshed) {
+          await _initializeHeaders(endpoint: endpoint);
+          return await _makeRequest(
+            method,
+            endpoint,
+            body: body,
+            queryParams: queryParams,
+            requiresAuth: requiresAuth,
+            retryCount: retryCount + 1,
+          );
+        }
+      }
+
       return _handleResponse(response);
     } catch (error, stackTrace) {
       ErrorLogger.error(
@@ -447,7 +469,9 @@ class ApiClient {
           endpoint != ApiEndpoints.refreshToken &&
           endpoint != '/factory/auth/refresh' &&
           endpoint != ApiEndpoints.login &&
-          endpoint != '/factory/auth/login') {
+          endpoint != '/factory/auth/login' &&
+          endpoint != '/api/v1/auth/refresh' &&
+          endpoint != '/api/v1/auth/login') {
         try {
           await refreshToken(originalEndpoint: endpoint);
           await _initializeHeaders(endpoint: endpoint);
@@ -621,11 +645,35 @@ class ApiClient {
     }
   }
 
-  // Login
+  // ═══════════════════════════════════════════════════════════
+  // Wave 2 — Unified Global Auth (Section 10.1.5)
+  // Accepts any identifier: phone, email, CNIC, passport.
+  // ═══════════════════════════════════════════════════════════
+
+  /// Legacy login kept for backward compat — delegates to unifiedLogin.
   Future<Map<String, dynamic>> login(String email, String password) async {
+    return unifiedLogin(identifier: email, password: password);
+  }
+
+  /// Unified login accepting any claim type with optional fleet context.
+  Future<Map<String, dynamic>> unifiedLogin({
+    required String identifier,
+    String? claimType,
+    required String password,
+    String? fleetRole,
+    String? fleetType,
+  }) async {
+    final body = <String, dynamic>{
+      'identifier': identifier,
+      'password': password,
+    };
+    if (claimType != null) body['claim_type'] = claimType;
+    if (fleetRole != null) body['fleet_role'] = fleetRole;
+    if (fleetType != null) body['fleet_type'] = fleetType;
+
     final response = await post(
-      ApiEndpoints.login,
-      body: {'email': email, 'password': password},
+      '/api/v1/auth/login',
+      body: body,
       requiresAuth: false,
     );
 
@@ -636,6 +684,15 @@ class ApiClient {
 
     if (token != null) {
       await _setAuthToken(token.toString());
+      final grantsVersion = response is Map
+          ? (response['data'] is Map
+                ? response['data']['grants_version']
+                : null)
+          : null;
+      if (grantsVersion != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('grants_version', grantsVersion as int);
+      }
     }
 
     return response;
@@ -650,7 +707,7 @@ class ApiClient {
     }
   }
 
-  // Refresh token — uses factory refresh for /factory/* calls, admin refresh otherwise
+  // Refresh token — uses unified /api/v1/auth/refresh for Wave 2
   Future<void> refreshToken({String? originalEndpoint}) async {
     final isFactory =
         originalEndpoint != null &&
@@ -659,10 +716,9 @@ class ApiClient {
 
     final refreshEndpoint = isFactory
         ? '/factory/auth/refresh'
-        : ApiEndpoints.refreshToken;
+        : '/api/v1/auth/refresh';
 
     try {
-      // For factory refresh, we need to send the existing factory token
       final response = await post(refreshEndpoint, requiresAuth: isFactory);
 
       final token = response is Map
@@ -676,10 +732,20 @@ class ApiClient {
           await prefs.setString('factory_auth_token', token.toString());
         } else {
           await _setAuthToken(token.toString());
+          // Update grants_version after refresh
+          final grantsVersion = response is Map
+              ? (response['grants_version'] ??
+                    (response['data'] is Map
+                        ? response['data']['grants_version']
+                        : null))
+              : null;
+          if (grantsVersion != null) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setInt('grants_version', grantsVersion as int);
+          }
         }
       }
     } catch (_) {
-      // If refresh fails, clear tokens so user can re-login
       if (isFactory) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('factory_auth_token');
@@ -690,15 +756,32 @@ class ApiClient {
     }
   }
 
+  /// Wave 2 — TokenVersionGuard: check if 401 is due to stale token version.
+  /// Returns true if token was refreshed and caller should retry.
+  Future<bool> _handleTokenStaleIfNeeded(http.Response response) async {
+    if (response.statusCode != 401) return false;
+
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map && body['reason'] == 'token_stale') {
+        await refreshToken();
+        return true;
+      }
+    } catch (_) {
+      // Not JSON or not token_stale — let normal error handling take over
+    }
+    return false;
+  }
+
   // Check if user is authenticated
   Future<bool> isAuthenticated() async {
     final token = await _getAuthToken();
     return token != null && token.isNotEmpty;
   }
 
-  // Get current user
+  // Get current user — Wave 2 unified /api/v1/auth/me
   Future<Map<String, dynamic>> getCurrentUser() async {
-    return await get('${ApiEndpoints.baseUrl}/user');
+    return await get('/api/v1/auth/me');
   }
 
   // Factory methods

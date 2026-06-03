@@ -1,9 +1,20 @@
 # TRACE ODD — SUPREME MASTER ARCHITECTURE SPECIFICATION
-## Universal Source of Truth · Production Roadmap 2026 · v4.1
+## Universal Source of Truth · Production Roadmap 2026 · v5.0 — Greenfield Cutover Edition
 
 ---
 
-> **PROTOCOL FOR ALL AI AGENTS & DEVELOPERS:** This document is the absolute, unified, and singular Source of Truth for the entire Trace Odd ecosystem. It replaces all prior master files (`PROJECT_MASTER.md`, `PROJECT_LOGICS_TREE.md`, and all derivative specifications). It integrates the original ~4,000‑line business requirement trees, ~30 % tactical on‑floor adaptations already present in production code, the full technical modernization blueprint of 2026, and the 15‑module product registry. **No code generation, architecture decision, or feature planning shall proceed without strict reference to this document.**
+> **PROTOCOL FOR ALL AI AGENTS & DEVELOPERS:** This document is the absolute, unified, and singular Source of Truth for the entire Trace Odd ecosystem. It replaces all prior master files (`PROJECT_MASTER.md`, `PROJECT_LOGICS_TREE.md`, `ARCHITECTURAL_PROPOSAL_MULTI_TENANT_CLOUD.md` v1.0, and all derivative specifications). It integrates the original ~4,000-line business requirement trees, the full technical modernization blueprint of 2026, the 15-module product registry, AND the approved **Multi-Tenant Cloud Architecture v2.0** (Section 10 — authoritative). **No code generation, architecture decision, or feature planning shall proceed without strict reference to this document.**
+
+---
+
+> **🚨 GREENFIELD CUTOVER NOTICE (2026-06-02 — AUTHORITATIVE):**
+>
+> 1. **Zero Published Apps.** No application is currently live on the Google Play Store or Apple App Store.
+> 2. **Zero Live Users.** All deployments to date are internal/testing only.
+> 3. **Ultra-Basic Code Baseline.** All Flutter applications (Owner, Driver, Conductor, etc.) currently support **only Login + an empty Dashboard**. No core operational features are implemented on the frontend.
+> 4. **Single-Wave Authoritative Cutover Approved.** All multi-phase / staged migration / dual-endpoint / backward-compatibility strategies are **PURGED** from this specification. The legacy `drivers` table is **dropped, not migrated**. The 6 separate `main_*.dart` entry points are **deleted, not preserved**.
+> 5. **Section 10 Is Authoritative.** Where any earlier section in this document conflicts with Section 10 (Multi-Tenant Cloud Architecture v2.0), **Section 10 wins unconditionally**.
+> 6. **All `Built: ✅ 100%` / `Built: ✅ 85%` claims throughout this document are SPECIFIED SCOPE, not implementation status.** Per item 3 above, current physical implementation = Login + empty Dashboard. Build-status reset is consolidated in Section 6 (Implementation Status Matrix — Greenfield Reset).
 
 ---
 
@@ -33,6 +44,21 @@
 7. [Backend Infrastructure Blueprint](#7-backend-infrastructure-blueprint)
 8. [Deployment & CI/CD](#8-deployment--cicd)
 9. [Security Framework](#9-security-framework)
+10. [**Multi-Tenant Cloud Architecture v2.0 (Authoritative)**](#10-multi-tenant-cloud-architecture-v20-authoritative)
+    - [10.1 Global Identity & Claims Spine](#101-global-identity--claims-spine)
+    - [10.2 Quad Sub-Admin Hierarchy](#102-quad-sub-admin-hierarchy)
+    - [10.3 Dynamic Feature Toggle Engine — 3-Level Cache](#103-dynamic-feature-toggle-engine--3-level-cache)
+    - [10.4 Vendor Allowance Shield — 5-Tier Mask](#104-vendor-allowance-shield--5-tier-mask)
+    - [10.5 Idempotent Commission Split Engine](#105-idempotent-commission-split-engine)
+    - [10.6 Decentralized Seat Layout Sovereignty](#106-decentralized-seat-layout-sovereignty)
+    - [10.7 Penalty Engine (Cup-of-Tea Anti-Spam)](#107-penalty-engine-cup-of-tea-anti-spam)
+    - [10.8 Audit Log Partitioning & Cryptographic Chain](#108-audit-log-partitioning--cryptographic-chain)
+    - [10.9 Telemetry Channel Routing](#109-telemetry-channel-routing)
+    - [10.10 Middleware Stack Order v2.0](#1010-middleware-stack-order-v20)
+    - [10.11 Unified Flutter App Architecture](#1011-unified-flutter-app-architecture)
+    - [10.12 Single-Wave Greenfield Cutover Roadmap](#1012-single-wave-greenfield-cutover-roadmap)
+    - [10.13 Schema Delta Summary (Authoritative)](#1013-schema-delta-summary-authoritative)
+    - [10.14 Glossary v2.0](#1014-glossary-v20)
 
 ---
 
@@ -245,9 +271,17 @@
 
 ---
 
-### MODULE 2 — SUB-ADMIN PANELS
+### MODULE 2 — SUB-ADMIN PANELS (QUAD SUB-ADMIN HIERARCHY)
 **Domain:** Delegated Enterprise Authority · **Code Namespace:** Part of `nexa_admin`  
-**Build Status:** ██░░░░░░░░ 15 % — Role scaffolding exists; full delegation engine pending
+**Build Status:** Specified — frontend at greenfield baseline (Login + empty Dashboard). Authoritative architecture is defined in **Section 10.2 (Quad Sub-Admin Hierarchy)** and **Section 10.3 (Dynamic Feature Toggle Engine)**.
+
+> **STRUCTURAL OVERRIDE (v5.0):** Module 2 is no longer a generic "sub-admin panel". It is the **four-environment Quad Sub-Admin Hierarchy** defined in Section 10.2:
+> - **Sub-Admin 1:** Bus Transit Manager
+> - **Sub-Admin 2:** Goods & Logistics Manager
+> - **Sub-Admin 3:** Commercial Marketplace Manager
+> - **Sub-Admin 4:** Financial & Subscription Auditor
+>
+> Every functional component (Marketplace Engine, Factory Serial Verification, Route Allocation, Driver Management, etc.) is registered in `feature_registry` and can be hot-swapped between the four sub-admins at runtime via the **3-level cache hierarchy** + `TokenVersionGuard` middleware. See Section 10.3 for the complete toggle flow.
 
 #### 2A — Dynamic UI Feature Accessibility Mapping
 - Structural authorization system altering workspace UI based on parameters delegated by Super Admin.
@@ -1785,12 +1819,15 @@
 - **2-Factor Confirmation:** Mandatory for amounts > $10K equivalent.
 
 ### 12B — Authentication & Multi-Tenancy (CRITICAL — Before MVP)
-- **Row-Level Security (RLS):** PostgreSQL RLS policies per tenant.
-- **Field-Level Encryption:** AES-256 on PII fields at rest.
-- **JWT Rotation:** Every 8 hours; refresh token lifespan 30 days.
-- **Device Fingerprinting:** Hash of device attributes; SMS OTP challenge for new devices.
-- **Rate Limiting:** 5 login attempts per 15 minutes per IP + account.
-- **Session Termination:** All active sessions invalidated on password change.
+- **Identity Spine:** Authentication is built on the `global_identities` + `identity_claims` two-table model defined in **Section 10.1**. Login accepts ANY active, non-revoked claim (phone, email, CNIC old/new format, passport, driving license, biometric hash) and resolves to a single immutable identity. **Single-column UNIQUE phone constraints are EXPLICITLY FORBIDDEN** — recycled SIMs, dual-CNIC formats, and multi-phone owners are all native to the claim model.
+- **Token Version Vector:** Every Sanctum/JWT token carries `feature_grants_version`. The `TokenVersionGuard` middleware (Section 10.10) catches stale tokens on the next request after a Master Admin feature toggle — no waiting for JWT TTL to expire.
+- **Row-Level Security (RLS):** PostgreSQL RLS policies per tenant where appropriate, augmented by the `VendorAllowanceFilter` middleware (Section 10.4) for cross-tenant masking.
+- **Field-Level Encryption:** AES-256-GCM on PII fields at rest via Laravel encryption.
+- **JWT Rotation:** Every 8 hours; refresh token lifespan 30 days. Refresh endpoint also re-issues `feature_grants_version` claim.
+- **Device Fingerprinting:** Hash of device attributes; SMS/Email OTP challenge for new devices via `identity_claims.verified_via`.
+- **Rate Limiting:** 5 login attempts per 15 minutes per IP + per claim_value.
+- **Session Termination:** All active sessions invalidated on password change OR on `global_identities.status` transition to `suspended` / `frozen` / `deleted`.
+- **Identity Disputes:** When two parties claim the same identifier (e.g., same CNIC), the conflict is resolved via the `identity_disputes` workflow (Section 10.1) handled by Sub-Admin 4.
 
 ### 12C — Escrow & Dispute Resolution (CRITICAL — Before MVP)
 - **Escrow Lifecycle:** On-Hold → Buyer-Confirms-Receipt (24 hr grace) → Funds-Released OR Dispute-Filed (7-day freeze).
@@ -1931,7 +1968,22 @@
 
 ## 6. IMPLEMENTATION STATUS MATRIX
 
-### 6.1 Flutter Features — Built vs. Pending
+> **🚨 GREENFIELD STATUS RESET (v5.0 — 2026-06-02 — AUTHORITATIVE):**
+>
+> The Build / BLoC / Screens / Status columns in the matrix below describe **specified scope** carried forward from the v4.x design baseline. They **do NOT reflect physical implementation** as of the v5.0 cutover. The actual code baseline is:
+>
+> | Surface | Real Status (2026-06-02) |
+> |---------|--------------------------|
+> | Super Admin Web (`lib/main.dart`) | Login screen + empty Dashboard shell |
+> | Fleet Owner / Driver / Conductor apps | **Not yet created** — to be scaffolded under Wave 1 of Section 10.12 |
+> | Customer / Marketplace apps | Login + empty Dashboard only |
+> | Backend (Laravel) | Sanctum auth + `/me` endpoint only; **no business tables migrated** |
+> | Rust FFI | Skeleton crate only |
+> | Database | `users`, `personal_access_tokens`, `migrations` (default Laravel) — **all v2.0 tables in Section 10.13 are pending** |
+>
+> **Therefore:** every `✅` mark in the rows below is to be read as “target scope confirmed for the Single-Wave Cutover (Section 10.12),” NOT as “shipped.” No regressions exist because nothing is in production. The legacy `drivers` table, the six separate `main_*.dart` entry points, and any backward-compatibility scaffolding referenced in earlier specification revisions are **purged, not migrated**.
+
+### 6.1 Flutter Features — Specified Scope (Greenfield)
 
 | Module | Feature | BLoC | Screens | Rust FFI | Offline | Status |
 |--------|---------|------|---------|----------|---------|--------|
@@ -2555,28 +2607,644 @@ chmod 600 ~/.ssh/authorized_keys
 
 ---
 
+## 10. MULTI-TENANT CLOUD ARCHITECTURE v2.0 (AUTHORITATIVE)
+
+> **🔏 AUTHORITATIVE ARBITER.** This section is the single source of truth for identity, authorization, feature gating, cross-tenant masking, money flow, seat layout sovereignty, audit, telemetry, and middleware ordering. **Where any earlier section in this document conflicts with Section 10, Section 10 wins unconditionally.** All content from `ARCHITECTURAL_PROPOSAL_MULTI_TENANT_CLOUD.md` v1.0 and Addendum v1.1 is hereby **fully merged and superseded** by this section. The 7-wave staged migration plan from Addendum v1.1 is **deleted**; it is replaced by the Single-Wave Greenfield Cutover Roadmap in Section 10.12.
+
+---
+
+### 10.1 Global Identity & Claims Spine
+
+**Purpose.** A single immutable identity per real human/legal entity, decoupled from any specific contact channel. Replaces every `users.phone UNIQUE` / `users.email UNIQUE` / `drivers.cnic UNIQUE` pattern in legacy specs. Native support for: recycled SIM cards, dual CNIC formats (old 13-digit & new dashed), passport changes, multi-phone owners, biometric onboarding, dispute resolution.
+
+#### 10.1.1 Two-Table Model
+
+| Table | Role | Mutability |
+|-------|------|------------|
+| `global_identities` | Immutable spine — the **person/entity** | INSERT-only on the `id` and `created_at`; status transitions logged |
+| `identity_claims` | Revocable surface — the **contact channels & credentials** that prove the spine | Soft-revocable; never hard-deleted |
+
+#### 10.1.2 `global_identities` Schema (canonical)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID v7 | Primary key; time-ordered for index locality |
+| `display_name` | VARCHAR(160) | Non-unique — humans share names |
+| `kyc_status` | ENUM(`unverified`,`pending`,`verified`,`rejected`,`expired`) | Drives access tier |
+| `kyc_tier` | SMALLINT (0–3) | 0=anonymous, 1=phone-verified, 2=document-verified, 3=biometric-verified |
+| `risk_score` | NUMERIC(5,2) | 0–100; computed by fraud engine, read by VendorAllowanceFilter |
+| `status` | ENUM(`active`,`suspended`,`frozen`,`deleted`) | `deleted` is logical-only; row never removed |
+| `primary_locale` | VARCHAR(8) | e.g. `en-PK`, `ur-PK` |
+| `created_at` / `updated_at` | TIMESTAMPTZ | — |
+
+#### 10.1.3 `identity_claims` Schema (canonical)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID v7 | PK |
+| `global_identity_id` | UUID | FK → `global_identities.id` (ON DELETE RESTRICT) |
+| `claim_type` | ENUM(`phone`,`email`,`cnic_old`,`cnic_new`,`passport`,`driving_license`,`biometric_hash`,`oauth_google`,`oauth_apple`,`device_fingerprint`) | — |
+| `claim_value` | VARCHAR(255) | Normalized (E.164 for phone, lowercased email, dash-stripped CNIC, etc.) |
+| `claim_value_hash` | BYTEA | SHA-256 of `claim_value` for indexed lookup of high-PII claims |
+| `is_primary` | BOOLEAN | Exactly one `TRUE` per `(global_identity_id, claim_type)` enforced via partial unique |
+| `is_revoked` | BOOLEAN | Default `FALSE` — revocation is the soft-delete |
+| `revoked_at` / `revoked_reason` | TIMESTAMPTZ / TEXT | Audit trail for SIM recycling, phone change, etc. |
+| `verified_via` | ENUM(`otp_sms`,`otp_email`,`document_upload`,`biometric_match`,`manual_kyc`,`oauth_provider`) | — |
+| `verified_at` | TIMESTAMPTZ | — |
+| `created_at` | TIMESTAMPTZ | — |
+
+#### 10.1.4 Index Strategy (CRITICAL — NO single-column UNIQUE on phone/email)
+
+```
+CREATE UNIQUE INDEX idx_claims_active_value
+  ON identity_claims (claim_type, claim_value)
+  WHERE is_revoked = FALSE;
+
+CREATE UNIQUE INDEX idx_claims_primary_per_type
+  ON identity_claims (global_identity_id, claim_type)
+  WHERE is_primary = TRUE AND is_revoked = FALSE;
+
+CREATE INDEX idx_claims_by_identity ON identity_claims (global_identity_id) WHERE is_revoked = FALSE;
+CREATE INDEX idx_claims_hash ON identity_claims (claim_type, claim_value_hash) WHERE is_revoked = FALSE;
+```
+
+The **partial unique index** is the keystone: a recycled phone number can be revoked on the original identity and re-claimed by a new identity without constraint violation, while still preventing two simultaneous active claims to the same value.
+
+#### 10.1.5 Login Resolution Algorithm
+
+1. User enters any identifier (phone / email / CNIC / passport / etc.).
+2. Backend normalizes (E.164, lowercase, dash-strip) and computes `claim_value_hash`.
+3. Lookup `identity_claims WHERE claim_type = ? AND claim_value = ? AND is_revoked = FALSE` → resolves to exactly one `global_identity_id`.
+4. OTP / password / biometric challenge sent to the **claim**; on success, session is created against the `global_identity_id`.
+5. Token payload includes: `sub = global_identity_id`, `claim_id = identity_claims.id` (which channel was used), `feature_grants_version` (Section 10.3), `tenant_context` array.
+
+#### 10.1.6 Identity Disputes Workflow
+
+Table: `identity_disputes` (claimant_global_identity_id, disputed_claim_id, evidence JSONB, status, assigned_sub_admin_4_id, resolution, decided_at).
+
+Disputes (e.g., two parties claim the same CNIC) are routed to **Sub-Admin 4 (Financial & Subscription Auditor)** — see Section 10.2 — who has the sole authority to revoke or reassign claims with full audit trail in `audit_log_compliance` (Section 10.8).
+
+---
+
+### 10.2 Quad Sub-Admin Hierarchy
+
+**Mandate.** Replaces every legacy reference to “Sub-Admin” (singular) or two-Sub-Admin layouts. The Master Admin (Module 1) remains supreme. Beneath it sit **exactly four** Sub-Admin verticals with mutually-exclusive jurisdictions and dynamically-grantable feature surfaces.
+
+#### 10.2.1 The Four Verticals
+
+| Vertical | Code | Scope | Default Feature Bundles |
+|----------|------|-------|------------------------|
+| **Sub-Admin 1** | `bus_transit` | Public Transport Bus ecosystem (Modules 13–15): bus owners, bus drivers, bus conductors, route management, seat layouts, ticketing | `bus.routes.*`, `bus.layouts.*`, `bus.ticketing.*`, `bus.fleet.*` |
+| **Sub-Admin 2** | `goods_logistics` | Goods & Logistics ecosystem (Modules 9–11): truck owners, truck drivers, freight auctions, factory drivers, store keepers | `truck.fleet.*`, `truck.dispatch.*`, `factory.driver.*`, `freight.auction.*` |
+| **Sub-Admin 3** | `commercial_marketplace` | B2B Marketplace + Anti-Counterfeit (Modules 3, 5–8, 12): factories, resellers, shops, customers, marketplace listings, escrow disputes (operational tier) | `factory.*`, `reseller.*`, `shop.*`, `customer.*`, `marketplace.*` |
+| **Sub-Admin 4** | `financial_auditor` | Financial & Subscription Auditing across **all** verticals: subscriptions (Section 5), commission splits (Section 10.5), penalties (Section 10.7), identity disputes (Section 10.1.6), refunds, escrow mediation (financial tier) | `finance.*`, `subscription.*`, `commission.*`, `penalty.*`, `identity.dispute.*` |
+
+#### 10.2.2 Schema
+
+```
+sub_admin_verticals (id PK, code, display_name, default_feature_bundle_codes TEXT[], created_at)
+sub_admin_assignments (
+  id PK,
+  global_identity_id FK,
+  vertical_id FK,
+  appointed_by_master_admin_id FK,
+  appointed_at, revoked_at,
+  UNIQUE (global_identity_id, vertical_id) WHERE revoked_at IS NULL
+)
+feature_registry (
+  code PK,                       -- dotted path, e.g. 'bus.layouts.publish'
+  vertical_default_id FK NULL,   -- which Sub-Admin owns this feature by default
+  description, severity, is_destructive BOOLEAN,
+  introduced_in_version, deprecated_in_version
+)
+sub_admin_feature_grants (
+  id PK,
+  sub_admin_assignment_id FK,
+  feature_code FK → feature_registry.code,
+  granted_by_master_admin_id FK,
+  granted_at, revoked_at,
+  scope_filter JSONB,            -- optional row-level scoping (region, tenant subset)
+  UNIQUE (sub_admin_assignment_id, feature_code) WHERE revoked_at IS NULL
+)
+```
+
+#### 10.2.3 Cross-Vertical Feature Loans
+
+A Master Admin may grant **any feature_code** to **any Sub-Admin assignment** — the `vertical_default_id` is purely advisory. Example: temporarily lend `commission.dispute.review` from Sub-Admin 4 to Sub-Admin 1 for a regional incident; revoke after resolution. Every loan/revoke increments `feature_grants_version_counter` (Section 10.3) and triggers token-version invalidation on the affected Sub-Admin.
+
+#### 10.2.4 Boundary Rules
+
+- A `global_identity` MAY hold simultaneous Sub-Admin assignments across multiple verticals (e.g., Sub-Admin 1 + Sub-Admin 4) — union of grants applies.
+- Master Admin assignments are recorded in a separate `master_admin_assignments` table; Master Admins **bypass** `sub_admin_feature_grants` and have implicit `*` grant.
+- No Sub-Admin can grant features to another Sub-Admin; only Master Admin holds grant authority. UI affordances for grant management are gated behind `master.subadmin.grant.manage`.
+
+---
+
+### 10.3 Dynamic Feature Toggle Engine — 3-Level Cache
+
+**Purpose.** Master Admin toggles a feature on/off (or grants to a Sub-Admin); the change is reflected in every active session **on the very next request**, without waiting for JWT TTL to expire and without thundering-herd cache stampede.
+
+#### 10.3.1 Cache Hierarchy
+
+| Level | Where | Holds | Invalidation Trigger | TTL |
+|-------|-------|-------|---------------------|-----|
+| **L1 — Token Claim** | JWT / Sanctum token payload | `feature_grants_version: <int>` | Re-issued only on token refresh OR forced refresh by `TokenVersionGuard` | 8h (token TTL) |
+| **L2 — Redis Grant Set** | Redis key `feat:v<version>:role:<role_id>` | Materialized SET of feature codes for that role at that version | Written once per (version, role); read-mostly | 24h sliding |
+| **L3 — Postgres Counter** | `feature_grants_version_counter` (single row) | Authoritative current version (monotonic BIGINT) | Incremented in same transaction as any `sub_admin_feature_grants` / `master_admin_assignments` mutation | Permanent |
+
+#### 10.3.2 Read Path (Hot Path — every authenticated request)
+
+1. Middleware reads `feature_grants_version` from token (L1).
+2. Middleware reads `current_version` from L3 counter via a 1-second Redis-cached pointer (effectively L2-fronted).
+3. **If `token_version == current_version`** → use L2 grant set keyed at that version. **DONE** in O(1) Redis SISMEMBER.
+4. **If `token_version < current_version`** → `TokenVersionGuard` triggers: client receives `401 + { reason: "token_stale", refresh_required: true }`; client transparently calls `/auth/refresh` which re-mints token with `current_version`; original request is auto-retried.
+5. **If L2 set is missing** for the requested `(version, role)` → lazy materialize from `sub_admin_feature_grants` JOIN `feature_registry` in a single Redis-locked query; subsequent readers hit the warm set.
+
+#### 10.3.3 Write Path (Master Admin toggles a feature)
+
+In one Postgres transaction:
+```
+BEGIN;
+  UPDATE / INSERT / DELETE on sub_admin_feature_grants ...;
+  UPDATE feature_grants_version_counter SET version = version + 1 RETURNING version;
+COMMIT;
+AFTER COMMIT:
+  Redis: SET feat:current_version <new_version> EX 86400
+  Redis Pub/Sub: PUBLISH feat:version:bumped <new_version>
+  WebSocket fan-out (Laravel Reverb): emit `feature.version.bumped` to all subscribed admin / sub-admin sockets
+```
+
+#### 10.3.4 Stampede Protection
+
+- L2 materialization is wrapped in a Redis `SETNX` lock keyed `lock:feat:v<version>:role:<role_id>` with 5s expiry; losers wait-and-poll for 50ms then read the warm set.
+- The version counter is read through a 1-second cached pointer (`feat:current_version`) so spike traffic does not hammer Postgres.
+
+#### 10.3.5 Telemetry Channel Migration
+
+When a feature toggle moves a capability from one Sub-Admin to another, `feature_telemetry_channels` (Section 10.9) re-routes the relevant WebSocket / Pub-Sub channels so the receiving Sub-Admin's dashboard begins streaming live data and the previous holder stops — atomic with the version bump.
+
+---
+
+### 10.4 Vendor Allowance Shield — 5-Tier Mask
+
+**Purpose.** Cross-tenant data exposure with deny-by-default semantics. Replaces ad-hoc “tenant_id WHERE” filters scattered across legacy controllers. Resolves the JSONB-table-scan performance pathology by maintaining a **flat B-tree projection** alongside the canonical JSONB matrix.
+
+#### 10.4.1 Five Mask Levels
+
+| Level | Code | Semantics | Example |
+|-------|------|-----------|---------|
+| 1 | `full` | Read & write, all columns | Owner viewing own fleet |
+| 2 | `view` | Read-only, all columns | Auditor reviewing partner's records |
+| 3 | `aggregate` | Read-only, aggregated rollups only (counts, sums, averages) — no row identifiers | Marketplace dashboard partner KPIs |
+| 4 | `redacted` | Read-only with PII columns nullified (phone→`***`, name→`Customer #N`) | Cross-tenant analytics with PII shield |
+| 5 | `hidden` | Row not returned at all (404 / empty set) | Default for any unmapped relationship |
+
+**Default = `hidden`.** Any pair `(viewer_tenant_id, target_tenant_id, resource_type)` not present in `tenant_allowance_grants` is treated as `hidden`. **No allowance ⇒ no data.**
+
+#### 10.4.2 Two-Layer Storage
+
+| Layer | Table | Shape | Purpose |
+|-------|-------|-------|---------|
+| **Canonical** | `tenant_allowance_matrix` | JSONB (rich nested rules: time-of-day, geofence, role-of-viewer, conditional masks) | Authoring surface for Sub-Admin 4 / Master Admin |
+| **Flat Projection** | `tenant_allowance_grants` | Plain B-tree-indexed rows | Hot read path for `VendorAllowanceFilter` middleware |
+
+#### 10.4.3 `tenant_allowance_grants` Schema (hot read path)
+
+```
+tenant_allowance_grants (
+  id PK,
+  viewer_tenant_id BIGINT NOT NULL,
+  target_tenant_id BIGINT NOT NULL,
+  resource_type VARCHAR(64) NOT NULL,    -- e.g. 'fleet.vehicle','marketplace.order'
+  mask_level SMALLINT NOT NULL,          -- 1..5 per 10.4.1
+  granted_by_global_identity_id UUID,
+  granted_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ NULL,
+  source_matrix_row_id BIGINT FK → tenant_allowance_matrix.id,
+  is_active BOOLEAN GENERATED ALWAYS AS (expires_at IS NULL OR expires_at > now()) STORED,
+  UNIQUE (viewer_tenant_id, target_tenant_id, resource_type)
+);
+CREATE INDEX idx_grants_viewer_resource ON tenant_allowance_grants (viewer_tenant_id, resource_type) WHERE is_active = TRUE;
+CREATE INDEX idx_grants_target ON tenant_allowance_grants (target_tenant_id) WHERE is_active = TRUE;
+```
+
+Lookup is now an **O(log n) B-tree probe** keyed on `(viewer_tenant_id, target_tenant_id, resource_type)` — replacing the legacy O(n) JSONB `@>` containment scan that caused deadlocks under load.
+
+#### 10.4.4 Projection Sync
+
+- Insert/Update/Delete on `tenant_allowance_matrix` fires an **after-commit trigger** that recomputes affected `tenant_allowance_grants` rows in a queue job (`ProjectAllowanceMatrixJob`). Idempotent, replayable.
+- Nightly reconciliation job verifies projection integrity (`reconcile_allowance_projection`) — mismatches alert Sub-Admin 4.
+
+#### 10.4.5 `VendorAllowanceFilter` Middleware
+
+Attached to every cross-tenant API route. Pseudocode of behavior (no implementation):
+
+1. Resolve `(viewer_tenant_id, target_tenant_id, resource_type)` from request context.
+2. Single B-tree probe on `tenant_allowance_grants` (Redis-cached for 60s).
+3. If row missing or `is_active = FALSE` → return 404 (`hidden`).
+4. Otherwise, attach `mask_level` to the request context; response serializer applies the mask before egress.
+5. Every probe logged to `audit_log_security` (Section 10.8) with `mask_applied`, `viewer_tenant_id`, `target_tenant_id`, `resource_type`.
+
+---
+
+### 10.5 Idempotent Commission Split Engine
+
+**Purpose.** Every payment that crosses tenant boundaries (marketplace sale, freight auction settlement, ticket revenue split with 3rd-party owner) is split deterministically across N recipients with **exactly-once** financial semantics under retries, timeouts, and gateway webhook duplication.
+
+#### 10.5.1 Schema
+
+```
+split_transactions (
+  id PK,
+  idempotency_key CHAR(64) UNIQUE NOT NULL,    -- SHA-256(source_event_id + version)
+  source_event_type VARCHAR(64),               -- 'marketplace.order.paid','freight.settlement', etc.
+  source_event_id BIGINT,
+  gross_amount NUMERIC(18,4) NOT NULL,
+  currency CHAR(3),
+  status ENUM('pending','splitting','settled','partial_failed','reversed') NOT NULL,
+  split_rule_snapshot JSONB,                   -- frozen snapshot of the rule at execution time
+  created_at, settled_at,
+  CHECK (gross_amount > 0)
+);
+split_transaction_recipients (
+  id PK,
+  split_transaction_id FK,
+  recipient_global_identity_id UUID,
+  recipient_role ENUM('platform','owner','driver','conductor','factory','reseller','tax_authority','penalty_pool'),
+  amount NUMERIC(18,4) NOT NULL,
+  state ENUM('queued','transferring','credited','failed','reversed') NOT NULL,
+  ledger_entry_id BIGINT NULL FK → ledger_entries.id,
+  attempt_count SMALLINT DEFAULT 0,
+  last_error TEXT NULL,
+  CHECK (amount >= 0)
+);
+CREATE UNIQUE INDEX idx_split_idem ON split_transactions (idempotency_key);
+```
+
+#### 10.5.2 Idempotency Guarantees
+
+- `idempotency_key = SHA-256(source_event_type || ':' || source_event_id || ':' || rule_version)`.
+- The split executor performs `INSERT … ON CONFLICT (idempotency_key) DO NOTHING RETURNING id`. If no row returned, the split already exists — the executor short-circuits and returns the prior outcome.
+- Recipient credits use the **double-entry bookkeeping** rules (12N): every `split_transaction_recipients` settlement produces a balanced (debit, credit) pair in `ledger_entries` referencing `split_transaction_recipients.id`. The ledger has its own UNIQUE constraint preventing double-credit even if the executor is somehow reentered.
+
+#### 10.5.3 Five-State Recipient Lifecycle
+
+`queued → transferring → credited` (happy path) · `queued → transferring → failed` (retryable) · `credited → reversed` (compliance / dispute / Sub-Admin 4 directive). State transitions are guarded by Postgres `CHECK` and an after-trigger that writes to `audit_log_financial`.
+
+#### 10.5.4 Partial Failure Handling
+
+If any recipient ends in `failed` after exhausting retries, the parent `split_transactions.status` is set to `partial_failed` and the gross amount minus credited recipients is held in a **suspense account** awaiting Sub-Admin 4 disposition (manual replay, manual reversal, or write-off). The original source transaction is **never** rolled back from this layer — reversals flow only forward through `reversed` state.
+
+---
+
+### 10.6 Decentralized Seat Layout Sovereignty
+
+**Purpose.** Each fleet owner draws their own bus seat layouts (decks, aisles, exit doors, sleeper berths, mixed-class). Edits across multiple admin sessions of the same owner-tenant must be **non-destructive** under concurrency. Layouts published to the customer ticketing UI are immutable until a new revision is published.
+
+#### 10.6.1 Schema
+
+```
+transport_bus_layouts (
+  id PK,
+  owner_tenant_id BIGINT NOT NULL,
+  bus_id BIGINT NOT NULL,
+  current_revision_id BIGINT NULL FK → transport_bus_layout_revisions.id,
+  is_locked_sovereign BOOLEAN DEFAULT FALSE,    -- TRUE ⇒ only owner-tenant + Sub-Admin 1 can mutate
+  edit_lock_held_by UUID NULL,                  -- global_identity_id holding the edit lock
+  edit_lock_expires_at TIMESTAMPTZ NULL,        -- short-lived lease (default 5 min)
+  version_number INTEGER NOT NULL DEFAULT 0,    -- optimistic concurrency token
+  created_at, updated_at
+);
+transport_bus_layout_revisions (
+  id PK,
+  layout_id FK,
+  revision_number INTEGER NOT NULL,             -- monotonic per layout
+  parent_revision_id BIGINT NULL FK,
+  json_patch JSONB,                             -- RFC 6902 diff from parent
+  full_snapshot JSONB,                          -- materialized snapshot for fast read
+  authored_by UUID,
+  status ENUM('draft','review','published','superseded'),
+  published_at TIMESTAMPTZ NULL,
+  UNIQUE (layout_id, revision_number)
+);
+```
+
+#### 10.6.2 Optimistic Concurrency Protocol
+
+1. Editor reads layout with `version_number = N`.
+2. Editor acquires the edit lock: `UPDATE … SET edit_lock_held_by = ?, edit_lock_expires_at = now() + interval '5 min' WHERE id = ? AND (edit_lock_held_by IS NULL OR edit_lock_expires_at < now())`. Zero rows ⇒ someone else holds the lock; UI shows a coexistence banner.
+3. Editor submits `json_patch` with `expected_version = N`.
+4. Server: `UPDATE transport_bus_layouts SET version_number = N + 1, current_revision_id = ? WHERE id = ? AND version_number = N`. Zero rows ⇒ conflict; client must rebase its patch on the latest revision (auto-merge for non-overlapping seat IDs, manual otherwise).
+5. The new revision is written with `parent_revision_id` pointing at the prior `current_revision_id`.
+
+#### 10.6.3 Tenant Sovereignty
+
+- `is_locked_sovereign = TRUE` is the **default** for every owner-drawn layout. Master Admin can read but cannot mutate without an explicit `master.layout.override` grant (audited under `audit_log_compliance`).
+- Sub-Admin 1 (`bus_transit`) can mutate only with the feature grant `bus.layouts.edit.cross_tenant`, and only when the owner's tenant has not opted into `is_locked_sovereign`.
+- Customer ticketing reads `current_revision_id.full_snapshot` exclusively — never the live editor state.
+
+#### 10.6.4 Publish Workflow
+
+`draft → review → published`. Publication transitions the prior `published` revision to `superseded` in the same transaction; the layout's `current_revision_id` is repointed; the customer ticketing cache key `bus.layout:<bus_id>` is invalidated; a `layout.published` event is emitted on the per-tenant WebSocket channel (Section 10.9).
+
+---
+
+### 10.7 Penalty Engine (Cup-of-Tea Anti-Spam)
+
+**Purpose.** Discourage abusive behavior (bulk no-show bookings, freight-auction bid spam, false counterfeit reports) with small calibrated fines (“one cup of tea”) that route to a transparent penalty pool.
+
+#### 10.7.1 Schema
+
+```
+penalty_rules (
+  code PK,                          -- e.g. 'bus.booking.no_show'
+  display_name, description,
+  base_amount NUMERIC(18,4),
+  currency CHAR(3),
+  scaling ENUM('flat','escalating','time_decay'),
+  scaling_params JSONB,             -- e.g. {"step":1.5,"max_multiplier":5}
+  cooldown_hours INTEGER,
+  enabled BOOLEAN DEFAULT TRUE,
+  managed_by_vertical VARCHAR(32)   -- which Sub-Admin tunes this rule
+);
+penalty_events (
+  id PK,
+  rule_code FK,
+  offender_global_identity_id UUID,
+  context_type, context_id,         -- polymorphic anchor
+  amount NUMERIC(18,4),
+  status ENUM('assessed','collected','waived','disputed','reversed'),
+  assessed_at, collected_at,
+  collection_split_transaction_id BIGINT NULL FK → split_transactions.id
+);
+```
+
+#### 10.7.2 Routing
+
+Collection runs through the **Commission Split Engine** (Section 10.5) with a single recipient role `penalty_pool`. The pool is reconciled monthly by Sub-Admin 4 and may be redistributed to affected counterparties (e.g., refunds to no-showed driver) per published policy. **No penalty is ever credited to platform revenue without a published policy line item.**
+
+---
+
+### 10.8 Audit Log Partitioning & Cryptographic Chain
+
+**Purpose.** A single monolithic `audit_logs` table cannot meet 7-year retention, sub-second compliance queries, and tamper-evidence simultaneously. Section 10.8 splits audit into **four partitioned tables** with cryptographic chain hashing.
+
+#### 10.8.1 Four Streams
+
+| Table | Captures | Retention | Read Audience |
+|-------|----------|-----------|---------------|
+| `audit_log_security` | Authentication, authorization, allowance probes, rate-limit hits, device-fingerprint changes | 3 years hot · 4 years cold | Master Admin, Security Officer |
+| `audit_log_financial` | Ledger entries, split transactions, recipient state transitions, penalties, refunds, escrow | 7 years hot | Sub-Admin 4, External Auditor |
+| `audit_log_operational` | Module-level CRUD on business entities (fleet, layouts, listings, scans) | 2 years hot · 3 years cold | Vertical Sub-Admin (1–3) |
+| `audit_log_compliance` | KYC decisions, identity-claim revocations, identity disputes, sovereign-override actions, regulatory exports | 7 years hot · indefinite cold | Sub-Admin 4, Regulator |
+
+#### 10.8.2 Partitioning Strategy
+
+All four tables are **monthly-range-partitioned on `event_time TIMESTAMPTZ`**. Old partitions are detached to cold storage (S3 + Glacier) at the retention boundary. Hot queries hit at most 2–3 partitions. Indexes are local per partition.
+
+#### 10.8.3 Cryptographic Chain
+
+Every row carries:
+- `payload_hash` = SHA-256 of canonicalized JSON of mutable columns.
+- `prev_chain_hash` = chain hash of the previous row in the same logical stream (per `(table, partition)`).
+- `chain_hash` = SHA-256(`prev_chain_hash` ∥ `payload_hash` ∥ `event_time` ∥ `actor_global_identity_id`).
+
+Monthly, a signed chain summary (latest `chain_hash` per stream-partition + Ed25519 signature using a Master Admin–controlled key) is exported to a write-once bucket and notarized externally. Any tampering with a historical row breaks the chain at and after that row — instantly detectable on the next signed export.
+
+#### 10.8.4 Append-Only Enforcement
+
+GRANTs are restricted: the application role has `INSERT, SELECT` only; `UPDATE, DELETE, TRUNCATE` are revoked even from migrations on these four tables. Schema changes use `ALTER TABLE … ATTACH PARTITION` exclusively.
+
+---
+
+### 10.9 Telemetry Channel Routing
+
+**Purpose.** When Master Admin moves a feature between Sub-Admins (e.g., re-assigns `freight.auction.monitor` from Sub-Admin 2 to Sub-Admin 4 for a quarter), the live WebSocket / Pub-Sub channels carrying that feature's telemetry must seamlessly re-route — atomically with the feature-grant version bump (Section 10.3.3).
+
+#### 10.9.1 Schema
+
+```
+feature_telemetry_channels (
+  id PK,
+  feature_code FK → feature_registry.code,
+  channel_kind ENUM('websocket','pubsub','webhook'),
+  channel_pattern VARCHAR(255),         -- e.g. 'admin.{sub_admin_assignment_id}.freight.auction'
+  current_subscriber_assignment_id BIGINT NULL FK → sub_admin_assignments.id,
+  version BIGINT NOT NULL,              -- bumped in lockstep with feature_grants_version_counter
+  created_at, updated_at
+);
+```
+
+#### 10.9.2 Routing Algorithm
+
+1. WebSocket connection authentication resolves the connecting Sub-Admin's `assignment_id`.
+2. Subscription request to `admin.<assignment_id>.<feature_code>` is accepted iff `feature_telemetry_channels.current_subscriber_assignment_id` matches AND the connection's L1 token version equals current.
+3. On feature transfer, the version-bump transaction also updates `current_subscriber_assignment_id`. After commit, Reverb broadcasts `channel.reroute` to both the prior and new assignment sockets; clients reconnect to the new pattern. No telemetry is duplicated and no telemetry is lost (a 200ms overlap window is tolerated by client-side de-dup keyed on event UUID).
+
+---
+
+### 10.10 Middleware Stack Order v2.0
+
+**Mandate.** The order below is **authoritative** for every authenticated, tenant-scoped HTTP route. Earlier or partial pipelines from legacy specs are superseded.
+
+| # | Middleware | Responsibility |
+|---|-----------|----------------|
+| 1 | `ForceHttps` | Reject non-TLS in production |
+| 2 | `RateLimiter` | IP + claim_value throttling (Section 12B) |
+| 3 | `SanctumAuthenticate` | Token → session → `global_identity_id`, `claim_id` |
+| 4 | `TokenVersionGuard` | Compares L1 token `feature_grants_version` against L3 counter; on mismatch → 401 `token_stale` (Section 10.3.2) |
+| 5 | `IdentityStatusGate` | Reject if `global_identities.status ≠ active` |
+| 6 | `KycTierGate` | Optional per-route minimum `kyc_tier` |
+| 7 | `TenantContextResolver` | Resolves `viewer_tenant_id`, `target_tenant_id`, `resource_type` from route + payload |
+| 8 | `FeatureGrantGate` | O(1) Redis SISMEMBER against L2 grant set; deny if feature not granted |
+| 9 | `VendorAllowanceFilter` | B-tree probe `tenant_allowance_grants`; resolves `mask_level` (Section 10.4) |
+| 10 | `RowLevelSecurityBinder` | Sets Postgres session GUCs (`app.viewer_tenant_id`, `app.mask_level`) for RLS policies |
+| 11 | `AuditCapture` | Emits `audit_log_security` row (deferred-write, async) |
+| 12 | `ResponseMaskSerializer` | Applies `mask_level` to the response body before egress |
+
+Any route that bypasses this stack (e.g., public marketing endpoints) is explicitly enumerated in `routes/public.php` and code-reviewed by Master Admin.
+
+---
+
+### 10.11 Unified Flutter App Architecture
+
+**Mandate.** The legacy six `main_*.dart` entry points (`main_bus_owner`, `main_bus_driver`, `main_bus_conductor`, `main_truck_owner`, `main_truck_driver`, `main_truck_conductor`) plus `main_driver.dart` and `main_reseller.dart` are **deleted under the greenfield cutover**. Bus vs Truck is **runtime data** carried in `fleet_assignments.fleet_type`.
+
+#### 10.11.1 Three Unified Fleet Apps
+
+| Entry Point | Replaces | Vertical Selection |
+|-------------|----------|--------------------|
+| `lib/main_fleet_owner.dart` | `main_bus_owner.dart` + `main_truck_owner.dart` | `assignment.fleet_type ∈ {bus, truck}` chooses feature module under `lib/features/fleet/owner/` |
+| `lib/main_fleet_driver.dart` | `main_bus_driver.dart` + `main_truck_driver.dart` + `main_driver.dart` (factory) | `assignment.fleet_type ∈ {bus, truck, factory}` |
+| `lib/main_fleet_conductor.dart` | `main_bus_conductor.dart` + `main_truck_conductor.dart` | `assignment.fleet_type ∈ {bus, truck}` |
+
+Plus: `lib/main.dart` (Super Admin web), `lib/main_customer.dart` (Module 8), `lib/main_marketplace.dart` (Module 12). **Total = 6 entry points** down from a notional 9.
+
+#### 10.11.2 AssignmentBloc Contract
+
+A single `AssignmentBloc` (under `lib/core/assignment/`) holds the user's active assignment:
+```
+Assignment {
+  global_identity_id,
+  tenant_id,
+  role: enum {owner, driver, conductor, ...},
+  fleet_type: enum {bus, truck, factory, n_a},
+  feature_grants_version: int,
+  granted_features: Set<String>
+}
+```
+All feature widgets are **subscribed** to `AssignmentBloc`; switching assignment (e.g., a driver who works for two owners) triggers a re-route through GoRouter and a re-fetch of the L2 grant set.
+
+#### 10.11.3 Remote Manifest & Rebrand Tokens
+
+`lib/core/config/remote_manifest.dart` pulls a per-tenant manifest at boot: brand colors, logo, app display name, locale defaults, support contacts. Single binary, multi-tenant white-label without a re-release cycle.
+
+#### 10.11.4 Deleted Surfaces (Greenfield Purge)
+
+The following are **removed, not migrated**:
+- `lib/main_bus_owner.dart`, `lib/main_bus_driver.dart`, `lib/main_bus_conductor.dart`
+- `lib/main_truck_owner.dart`, `lib/main_truck_driver.dart`, `lib/main_truck_conductor.dart`
+- `lib/main_driver.dart`, `lib/main_reseller.dart`
+- Any `lib/features/transport/truck_*` and `lib/features/transport/bus_*` sibling pairs — collapsed under `lib/features/fleet/`
+
+---
+
+### 10.12 Single-Wave Greenfield Cutover Roadmap
+
+**Mandate.** This roadmap **REPLACES** the 7-wave staged migration plan from Addendum v1.1 (now deleted). There is no production traffic to protect; therefore there is no need for dual-write, dual-read, shadow tables, or backward-compatible API versioning. Four ordered waves, each fully landed before the next begins. **No partial deployments. No feature flags for legacy paths.** A single authoritative cutover.
+
+#### Wave 1 — Foundation (Schema + Auth Spine)
+- Create `global_identities`, `identity_claims` (with partial unique indexes per 10.1.4).
+- Create `feature_registry`, `feature_grants_version_counter` (seeded `version = 1`).
+- Create `sub_admin_verticals` (seeded with the four codes from 10.2.1).
+- Create `master_admin_assignments`, `sub_admin_assignments`, `sub_admin_feature_grants`.
+- Create the four `audit_log_*` partitioned tables with first month's partition.
+- Drop the legacy `drivers` table outright; do **not** migrate.
+- Stand up Redis with `feat:current_version` pointer.
+
+#### Wave 2 — Identity & Auth Surface
+- Implement claim-based login resolution per 10.1.5.
+- Implement `TokenVersionGuard` and full middleware stack 10.10 (steps 1–6).
+- Stand up Sub-Admin appointment UI in Super Admin web (`lib/main.dart`).
+- Master Admin seeding script: bootstrap one Master Admin and the four Sub-Admin verticals.
+
+#### Wave 3 — Permissions & Toggles
+- Implement Dynamic Feature Toggle Engine end-to-end (Section 10.3): write path, L2 materialization, L3 counter, Pub/Sub fan-out.
+- Implement `FeatureGrantGate` middleware (step 8) and `feature_telemetry_channels` (Section 10.9).
+- Create `tenant_allowance_matrix` + `tenant_allowance_grants` (Section 10.4); implement `VendorAllowanceFilter` (step 9), `RowLevelSecurityBinder` (step 10), `ResponseMaskSerializer` (step 12).
+- Wire `AuditCapture` (step 11) for `audit_log_security`.
+
+#### Wave 4 — Money & Operations
+- Create `split_transactions`, `split_transaction_recipients`, `ledger_entries`, suspense account.
+- Implement Idempotent Commission Split Engine (Section 10.5) and wire Sub-Admin 4 reconciliation UI.
+- Create `transport_bus_layouts`, `transport_bus_layout_revisions`; implement Decentralized Seat Layout Sovereignty (Section 10.6).
+- Create `penalty_rules`, `penalty_events`; wire Penalty Engine (Section 10.7) through the split engine.
+- Wire `audit_log_financial`, `audit_log_operational`, `audit_log_compliance` capture across all the above.
+- Scaffold the three unified Flutter apps per 10.11; collapse legacy entry points.
+
+#### Cutover Acceptance Gates
+
+A wave is accepted **only when** all of the following are true:
+1. Schema delta of the wave matches Section 10.13 exactly (verified by `pg_dump --schema-only` diff).
+2. Middleware stack ordering matches Section 10.10 (verified by route list inspection).
+3. Audit chain hashes verify from genesis to latest row in every stream.
+4. No reference in code or migrations to any deleted surface from 10.11.4 or to the dropped `drivers` table.
+5. Master Admin sign-off recorded in `audit_log_compliance`.
+
+---
+
+### 10.13 Schema Delta Summary (Authoritative)
+
+The following tables are introduced (➕), modified (🔄), or deleted (❌) by the v2.0 cutover relative to a default Laravel baseline.
+
+| Table | Action | Section |
+|-------|--------|---------|
+| `global_identities` | ➕ | 10.1.2 |
+| `identity_claims` | ➕ | 10.1.3 |
+| `identity_disputes` | ➕ | 10.1.6 |
+| `sub_admin_verticals` | ➕ | 10.2.2 |
+| `master_admin_assignments` | ➕ | 10.2.4 |
+| `sub_admin_assignments` | ➕ | 10.2.2 |
+| `feature_registry` | ➕ | 10.2.2 |
+| `sub_admin_feature_grants` | ➕ | 10.2.2 |
+| `feature_grants_version_counter` | ➕ | 10.3.1 |
+| `feature_telemetry_channels` | ➕ | 10.9.1 |
+| `tenant_allowance_matrix` | ➕ | 10.4.2 |
+| `tenant_allowance_grants` | ➕ | 10.4.3 |
+| `split_transactions` | ➕ | 10.5.1 |
+| `split_transaction_recipients` | ➕ | 10.5.1 |
+| `ledger_entries` | ➕ | 10.5.2 |
+| `transport_bus_layouts` | ➕ | 10.6.1 |
+| `transport_bus_layout_revisions` | ➕ | 10.6.1 |
+| `penalty_rules` | ➕ | 10.7.1 |
+| `penalty_events` | ➕ | 10.7.1 |
+| `audit_log_security` | ➕ (partitioned) | 10.8.1 |
+| `audit_log_financial` | ➕ (partitioned) | 10.8.1 |
+| `audit_log_operational` | ➕ (partitioned) | 10.8.1 |
+| `audit_log_compliance` | ➕ (partitioned) | 10.8.1 |
+| `users` | 🔄 strip `phone UNIQUE`, `email UNIQUE`, `cnic UNIQUE`; keep as Sanctum auth shell only | 10.1, 12B |
+| `drivers` (legacy) | ❌ **DROP** — not migrated | 10.12 Wave 1 |
+| `audit_logs` (legacy single-table) | ❌ **DROP** — replaced by four partitioned streams | 10.8 |
+
+**Hard rule:** no migration in the codebase may add a `UNIQUE (phone)` / `UNIQUE (email)` / `UNIQUE (cnic)` constraint on any table. PII uniqueness is enforced **exclusively** through the partial unique indexes on `identity_claims` (Section 10.1.4). PR review must reject any violation.
+
+---
+
+### 10.14 Glossary v2.0
+
+| Term | Definition |
+|------|------------|
+| **Spine** | The immutable `global_identities` row representing one real human/legal entity. |
+| **Claim** | A revocable row in `identity_claims` proving control of a contact channel or credential. |
+| **Master Admin** | Top-tier administrator (Module 1); implicit `*` feature grant; sole grantor of Sub-Admin features. |
+| **Sub-Admin (1–4)** | One of the four verticals defined in 10.2.1. |
+| **Vertical** | A jurisdictional slice of the system owned by exactly one Sub-Admin role at a time. |
+| **Feature Grant** | A row in `sub_admin_feature_grants` permitting a Sub-Admin assignment to use a specific `feature_registry.code`. |
+| **Grants Version** | The monotonic counter incremented on every grant change; embedded in tokens; checked by `TokenVersionGuard`. |
+| **Allowance** | A `(viewer_tenant, target_tenant, resource_type) → mask_level` mapping authored in `tenant_allowance_matrix` and projected to `tenant_allowance_grants`. |
+| **Mask Level** | One of `full`, `view`, `aggregate`, `redacted`, `hidden` (Section 10.4.1); `hidden` is the default. |
+| **Idempotency Key** | SHA-256 of `(source_event_type, source_event_id, rule_version)` guaranteeing exactly-once split execution. |
+| **Layout Revision** | An immutable, RFC-6902-patched snapshot of a bus seat layout with optimistic-concurrency `version_number`. |
+| **Sovereign Lock** | `is_locked_sovereign = TRUE` flag preventing cross-tenant mutation of an owner's seat layout. |
+| **Cup of Tea** | Colloquial name for a small calibrated penalty assessed by the Penalty Engine (Section 10.7). |
+| **Chain Hash** | SHA-256(`prev_chain_hash` ∥ `payload_hash` ∥ `event_time` ∥ `actor`) creating tamper-evident audit linkage. |
+| **Telemetry Channel** | A WebSocket / Pub-Sub pattern routed by `feature_telemetry_channels` to the current Sub-Admin holder of a feature. |
+| **Greenfield Cutover** | The single-wave, no-backward-compatibility deployment policy authoritative as of v5.0 (2026-06-02). |
+
+---
+
 ## APPENDIX A: KEY FILE PATHS
 
-### Flutter
+### Flutter (v5.0 Greenfield Layout)
+
+> **STRUCTURAL OVERRIDE (v5.0):** The legacy six `main_*.dart` entry points (`main_bus_owner.dart`, `main_bus_driver.dart`, `main_bus_conductor.dart`, `main_truck_owner.dart`, `main_truck_driver.dart`, `main_truck_conductor.dart`) and `main_driver.dart`, `main_reseller.dart` are **deleted under the greenfield cutover**. Bus vs Truck is **runtime data** carried in `fleet_assignments.fleet_type`, not a compile-time distinction. The fleet ecosystem ships as **three unified apps** keyed on role (owner / driver / conductor); seven entry points collapse to four total Flutter apps (Super Admin web + 3 unified fleet apps). Dedicated Customer App and B2B Marketplace shell apps remain separate.
+
 | Path | Purpose |
 |------|---------|
-| `lib/main.dart` | Super Admin + Universal App entry point |
-| `lib/main_driver.dart` | Factory Driver App entry point |
-| `lib/main_reseller.dart` | Reseller App entry point |
-| `lib/core/config/` | App configuration, API endpoints, constants |
-| `lib/core/services/api_client.dart` | HTTP client with token management, error handling |
-| `lib/routes/app_router.dart` | GoRouter configuration (300+ routes) |
+| `lib/main.dart` | Super Admin Web Panel entry point (Master Admin + Quad Sub-Admin dashboards via dynamic feature toggles per Section 10.3) |
+| `lib/main_fleet_owner.dart` | **NEW** — Unified Fleet Owner app (bus owners + truck owners; vertical chosen by `assignment.fleet_type`) |
+| `lib/main_fleet_driver.dart` | **NEW** — Unified Fleet Driver app (bus drivers + truck drivers + factory drivers; vertical chosen by `assignment.fleet_type`) |
+| `lib/main_fleet_conductor.dart` | **NEW** — Unified Fleet Conductor app (bus conductors + truck loaders) |
+| `lib/main_customer.dart` | Customer App (anti-counterfeit + bus transit, Module 8) |
+| `lib/main_marketplace.dart` | B2B Marketplace shell (Module 12) |
+| `lib/core/config/` | App configuration, API endpoints, remote manifest, rebrand tokens (Section 10.11.3) |
+| `lib/core/services/api_client.dart` | HTTP client with token management, `TokenVersionGuard` interceptor, allowance-aware response stripping |
+| `lib/core/auth/` | Global identity + claims login flow (Section 10.1) |
+| `lib/core/assignment/` | `AssignmentBloc` — current-assignment switcher, role/fleet_type context |
+| `lib/routes/app_router.dart` | GoRouter configuration with role-based + feature-grant guards |
 | `lib/rust_module/` | Rust FFI bridge (Dart side) |
 | `lib/shared/bloc/` | Cross-cutting BLoC: auth, global state, scanner, subscription |
-| `lib/features/nexa_admin/` | Super Admin panel (1) |
-| `lib/features/factory/admin/` | Factory admin panel (3) |
-| `lib/features/factory/driver/` | Factory driver app (4) |
-| `lib/features/factory/store_keeper/` | Store keeper app (5) |
-| `lib/features/reseller/` | Reseller app (6) |
-| `lib/features/universal/shop/` | Shop keeper app (7) |
-| `lib/features/universal/customer/` | Customer app (8) |
-| `lib/features/transport/` | Transport ecosystem (9, 10, 11) |
-| `lib/features/transport_marketplace/` | B2B marketplace (12) |
+| `lib/features/nexa_admin/` | Super Admin Web Panel + 4 Sub-Admin views (Module 1, Module 2 / Section 10.2) |
+| `lib/features/factory/admin/` | Factory admin panel (Module 3) |
+| `lib/features/factory/store_keeper/` | Store keeper app (Module 5) |
+| `lib/features/fleet/owner/` | Unified Fleet Owner feature module (replaces `transport/truck_owner` + bus owner stubs) |
+| `lib/features/fleet/driver/` | Unified Fleet Driver feature module (replaces `factory/driver` + `transport/driver` + bus driver stubs) |
+| `lib/features/fleet/conductor/` | Unified Fleet Conductor feature module |
+| `lib/features/fleet/seat_layout/` | Seat Layout Designer (sovereign for owners — Section 10.6) |
+| `lib/features/reseller/` | Reseller app (Module 6) |
+| `lib/features/universal/shop/` | Shop keeper app (Module 7) |
+| `lib/features/universal/customer/` | Customer app (Module 8) |
+| `lib/features/transport_marketplace/` | B2B marketplace (Module 12) |
 
 ### Backend (Laravel)
 | Path | Purpose |
@@ -2603,6 +3271,8 @@ chmod 600 ~/.ssh/authorized_keys
 
 ---
 
-> **END OF SUPREME MASTER SPECIFICATION**
+> **END OF SUPREME MASTER SPECIFICATION — v5.0 GREENFIELD CUTOVER EDITION**
 >
-> This document is the singular authority for all architecture decisions, code generation, and feature planning within the Trace Odd ecosystem. All prior specification documents are hereby superseded. Questions of priority, scope, or technical approach shall be resolved exclusively by reference to this specification.
+> This document is the singular authority for all architecture decisions, code generation, and feature planning within the Trace Odd ecosystem. All prior specification documents (including `ARCHITECTURAL_PROPOSAL_MULTI_TENANT_CLOUD.md` v1.0 with its 7-wave staged migration plan and Addendum v1.1) are **hereby superseded**. Questions of priority, scope, or technical approach shall be resolved exclusively by reference to this specification, with **Section 10 (Multi-Tenant Cloud Architecture v2.0) as the authoritative arbiter** in case of any conflict with earlier sections.
+>
+> **No code shall be written, refactored, or tested until written authorization from the project owner is issued.** The greenfield freeze remains in full effect.

@@ -65,26 +65,45 @@ class AccountEngineController extends Controller
     // The Flutter app never sends these — the route IS the filter.
     // ================================================================
 
-    // --- BUS COMPANY ECOSYSTEM --------------------------------
+    // --- BUS COMPANY ECOSYSTEM (DEPRECATED — use /api/v1/auth/login) ---
     public function busOwnerLogin(Request $request): JsonResponse {
-        return $this->_staffLogin($request, 'owner', 'bus', 'bus_owner');
+        return $this->_deprecatedLoginResponse('bus_owner');
     }
     public function busDriverLogin(Request $request): JsonResponse {
-        return $this->_staffLogin($request, 'driver', 'bus', 'bus_driver');
+        return $this->_deprecatedLoginResponse('bus_driver');
     }
     public function busConductorLogin(Request $request): JsonResponse {
-        return $this->_staffLogin($request, 'conductor', 'bus', 'bus_conductor');
+        return $this->_deprecatedLoginResponse('bus_conductor');
     }
 
-    // --- GOODS COMPANY ECOSYSTEM ------------------------------
+    // --- GOODS COMPANY ECOSYSTEM (DEPRECATED — use /api/v1/auth/login) ---
     public function truckOwnerLogin(Request $request): JsonResponse {
-        return $this->_staffLogin($request, 'owner', 'truck', 'truck_owner');
+        return $this->_deprecatedLoginResponse('truck_owner');
     }
     public function truckDriverLogin(Request $request): JsonResponse {
-        return $this->_staffLogin($request, 'driver', 'truck', 'truck_driver');
+        return $this->_deprecatedLoginResponse('truck_driver');
     }
     public function truckConductorLogin(Request $request): JsonResponse {
-        return $this->_staffLogin($request, 'conductor', 'truck', 'truck_conductor');
+        return $this->_deprecatedLoginResponse('truck_conductor');
+    }
+
+    /**
+     * Return deprecation response pointing to unified auth endpoint.
+     * Greenfield cutover: no backward compatibility for old fleet login gates.
+     */
+    private function _deprecatedLoginResponse(string $accountType): JsonResponse
+    {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'This login endpoint has been deprecated. Please use /api/v1/auth/login instead.',
+            'deprecated_endpoint' => true,
+            'new_endpoint' => '/api/v1/auth/login',
+            'migration_guide' => [
+                'Send identifier (phone/email/CNIC) and password.',
+                'Optionally include fleet_role and fleet_type for fleet-specific login.',
+                'Example: { "identifier": "033009631475", "password": "...", "fleet_role": "driver", "fleet_type": "truck" }',
+            ],
+        ], 410);
     }
 
     /**

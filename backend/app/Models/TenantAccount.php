@@ -14,7 +14,7 @@ class TenantAccount extends Model
     protected $table = 'tenant_accounts';
 
     protected $fillable = [
-        'id', 'parent_account_id', 'account_name', 'email', 'password',
+        'id', 'global_identity_id', 'parent_account_id', 'account_name', 'email', 'password',
         'phone_number', 'is_independent', 'account_type', 'status', 'metadata',
     ];
 
@@ -24,7 +24,17 @@ class TenantAccount extends Model
     protected static function boot()
     {
         parent::boot();
-        static::creating(fn ($m) => $m->id = (string) Str::uuid());
+        // Defect #3 fix: ordered UUID for index locality (time-ordered, similar to UUID v7)
+        static::creating(fn ($m) => $m->id = $m->id ?? (string) Str::orderedUuid());
+    }
+
+    /**
+     * Defect #4 fix: dedicated identity spine link.
+     * parent_account_id remains exclusively for org hierarchy.
+     */
+    public function globalIdentity()
+    {
+        return $this->belongsTo(GlobalIdentity::class, 'global_identity_id');
     }
 
     public function parent()
