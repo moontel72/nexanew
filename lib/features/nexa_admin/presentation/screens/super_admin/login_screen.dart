@@ -453,10 +453,21 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
     if (_isErrorDialogVisible) return;
     _isErrorDialogVisible = true;
 
-    final details = StringBuffer()
-      ..writeln(state.message)
-      ..writeln()
-      ..writeln(state.stackTrace.toString());
+    // Build a clean, user-friendly message — never expose raw stack traces
+    final buffer = StringBuffer();
+    buffer.writeln(state.message);
+
+    // Append validation details if present (safe, structured format)
+    if (state.isInvalidCredentials) {
+      buffer.writeln();
+      buffer.writeln('Please check your email and password.');
+    } else if (state.isNetworkError) {
+      buffer.writeln();
+      buffer.writeln('Check your internet connection and try again.');
+    } else if (state.isServerError) {
+      buffer.writeln();
+      buffer.writeln('The server is experiencing issues. Please try again later.');
+    }
 
     if (!mounted) return;
 
@@ -466,22 +477,12 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Login Error'),
         content: SizedBox(
-          width: 520,
+          width: 440,
           child: SingleChildScrollView(
-            child: SelectableText(details.toString()),
+            child: SelectableText(buffer.toString()),
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: details.toString()));
-              if (!mounted) return;
-              ScaffoldMessenger.of(this.context).showSnackBar(
-                const SnackBar(content: Text('Copied to clipboard')),
-              );
-            },
-            child: const Text('Copy'),
-          ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),

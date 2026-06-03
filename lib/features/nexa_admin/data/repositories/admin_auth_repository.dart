@@ -119,7 +119,7 @@ class AdminAuthRepository {
       final response = await apiClient.post(
         '${ApiConfig.apiBaseUrl}/auth/login',
         body: {
-          'email': sanitizedEmail,
+          'identifier': sanitizedEmail,
           'password': password,
           'remember_me': rememberMe,
           if (twoFactorCode != null && twoFactorCode.isNotEmpty)

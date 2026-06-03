@@ -552,7 +552,10 @@ class ApiClient {
     Map<String, dynamic>? errorResponse;
 
     try {
-      errorResponse = jsonDecode(responseBody);
+      final decoded = jsonDecode(responseBody);
+      if (decoded is Map<String, dynamic>) {
+        errorResponse = decoded;
+      }
     } catch (e) {
       // If response is not JSON, use raw response as message
     }
@@ -562,19 +565,30 @@ class ApiClient {
         errorResponse?['error']?.toString() ??
         'HTTP Error $statusCode';
 
+    // ── Safe error-map extraction (guards against non-Map types) ──
+    Map<String, String>? _safeExtractErrors(dynamic errorsNode) {
+      if (errorsNode == null) return null;
+      if (errorsNode is Map) {
+        final map = <String, String>{};
+        for (final entry in errorsNode.entries) {
+          final key = entry.key.toString();
+          final val = entry.value;
+          if (val is List) {
+            map[key] = val.map((e) => e.toString()).join(', ');
+          } else {
+            map[key] = val.toString();
+          }
+        }
+        return map;
+      }
+      // Fallback: wrap the entire payload as a single "general" error
+      return {'general': errorsNode.toString()};
+    }
+
     switch (statusCode) {
       case 400:
-        if (errorResponse != null && errorResponse['errors'] != null) {
-          final errors = Map<String, String>.from(
-            (errorResponse['errors'] as Map<String, dynamic>).map(
-              (key, value) => MapEntry(
-                key,
-                value is List ? value.join(', ') : value.toString(),
-              ),
-            ),
-          );
-          throw ValidationException(errors);
-        }
+        final errors = _safeExtractErrors(errorResponse?['errors']);
+        if (errors != null) throw ValidationException(errors);
         throw BadRequestException(message);
       case 401:
         throw UnauthorizedException(message);
@@ -585,17 +599,8 @@ class ApiClient {
       case 409:
         throw ConflictException(message);
       case 422:
-        if (errorResponse != null && errorResponse['errors'] != null) {
-          final errors = Map<String, String>.from(
-            (errorResponse['errors'] as Map<String, dynamic>).map(
-              (key, value) => MapEntry(
-                key,
-                value is List ? value.join(', ') : value.toString(),
-              ),
-            ),
-          );
-          throw ValidationException(errors);
-        }
+        final errors = _safeExtractErrors(errorResponse?['errors']);
+        if (errors != null) throw ValidationException(errors);
         throw UnprocessableEntityException(message);
       case 429:
         throw RateLimitException(message);
