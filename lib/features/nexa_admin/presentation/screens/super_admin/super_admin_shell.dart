@@ -170,6 +170,21 @@ class SuperAdminShell extends StatelessWidget {
         ],
       ),
       AdminSidebarSection(
+        title: 'Sub Admins',
+        items: [
+          AdminSidebarItem(
+            label: 'View All Sub-Admins',
+            icon: Icons.admin_panel_settings_rounded,
+            route: '/sub-admins',
+          ),
+          AdminSidebarItem(
+            label: 'Add Sub-Admin',
+            icon: Icons.person_add_alt_rounded,
+            route: '/sub-admins/add',
+          ),
+        ],
+      ),
+      AdminSidebarSection(
         title: 'Resellers',
         items: [
           AdminSidebarItem(
@@ -215,12 +230,15 @@ class SuperAdminShell extends StatelessWidget {
   String _titleForLocation(String location) {
     if (location.startsWith('/resellers/add')) return 'Register Reseller';
     if (location.startsWith('/resellers')) return 'Reseller Management';
+    if (location.startsWith('/sub-admins/add')) return 'Add Sub-Admin';
+    if (location.startsWith('/sub-admins')) return 'Sub-Admin Management';
     if (location.startsWith('/companies/register')) return 'Create New Company';
     if (location.startsWith('/companies')) return 'Company Management';
     if (location.startsWith('/bus-companies/add')) return 'Add Bus Company';
     if (location.startsWith('/bus-companies')) return 'Bus Fleet Companies';
     if (location.startsWith('/goods-companies/add')) return 'Add Goods Company';
-    if (location.startsWith('/goods-companies')) return 'Goods Logistics Companies';
+    if (location.startsWith('/goods-companies'))
+      return 'Goods Logistics Companies';
     if (location.startsWith('/plans/create')) return 'Create New Plan';
     if (location.startsWith('/plans')) return 'Subscription Plans';
     if (location.startsWith('/billing/invoices')) return 'Platform Invoices';
@@ -239,6 +257,12 @@ class SuperAdminShell extends StatelessWidget {
     }
     if (location.startsWith('/resellers')) {
       return const ['Resellers', 'View All Resellers'];
+    }
+    if (location.startsWith('/sub-admins/add')) {
+      return const ['Sub Admins', 'Add Sub-Admin'];
+    }
+    if (location.startsWith('/sub-admins')) {
+      return const ['Sub Admins', 'View All Sub-Admins'];
     }
     if (location.startsWith('/companies/register')) {
       return const ['Companies', 'Create New Company'];

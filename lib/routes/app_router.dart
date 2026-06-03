@@ -22,6 +22,10 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/c
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/companies/goods_companies_list_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_company_login_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_company_login_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_list_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/add_sub_admin_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_login_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_dashboard.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet_dashboard_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_owners_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_drivers_screen.dart';
@@ -222,6 +226,9 @@ class AppRouter {
     if (path.startsWith('/reseller')) return null;
     // Bus Fleet login — public access for bus company owners
     if (path == '/bus-fleet/login') return null;
+    // Sub-Admin login + dashboard — separate auth from super-admin
+    if (path == '/sub-admin/login') return null;
+    if (path == '/sub-admin/dashboard') return null;
     // Bus Owner login — public access for third-party bus owners
     if (path == '/bus-owner/login') return null;
     // Bus Owner dashboard — owner auth is managed by ApiClient token, not super-admin session
@@ -298,6 +305,16 @@ class AppRouter {
       path: '/goods-fleet/login',
       name: 'goods_fleet_login',
       builder: (context, state) => const GoodsCompanyLoginScreen(),
+    ),
+    GoRoute(
+      path: '/sub-admin/login',
+      name: 'sub_admin_login',
+      builder: (context, state) => const SubAdminLoginScreen(),
+    ),
+    GoRoute(
+      path: '/sub-admin/dashboard',
+      name: 'sub_admin_dashboard',
+      builder: (context, state) => const SubAdminDashboardScreen(),
     ),
     GoRoute(
       path: '/bus-owner/login',
@@ -548,6 +565,19 @@ class AppRouter {
               name: 'reseller_add',
               builder: (context, state) =>
                   const RegisterResellerScreen(inShell: true),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/sub-admins',
+          name: 'sub_admins',
+          builder: (context, state) => const SubAdminListScreen(inShell: true),
+          routes: [
+            GoRoute(
+              path: 'add',
+              name: 'sub_admin_add',
+              builder: (context, state) =>
+                  const AddSubAdminScreen(inShell: true),
             ),
           ],
         ),
@@ -891,6 +921,11 @@ class AppRouter {
       context.go('/goods-companies/add');
   void goToGoodsCompanyLogin(BuildContext context) =>
       context.go('/goods-fleet/login');
+
+  void goToSubAdmins(BuildContext context) => context.go('/sub-admins');
+  void goToAddSubAdmin(BuildContext context) => context.go('/sub-admins/add');
+  void goToSubAdminLogin(BuildContext context) =>
+      context.go('/sub-admin/login');
 
   void pop(BuildContext context) => context.pop();
 }
