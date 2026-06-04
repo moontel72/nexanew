@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -28,79 +27,75 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $this->createAuditTable('audit_log_security', function (Blueprint $table) {
-            $table->string('event_type', 80);
-            $table->uuid('actor_global_identity_id')->nullable();
-            $table->uuid('target_global_identity_id')->nullable();
-            $table->string('claim_type', 40)->nullable();
-            $table->uuid('claim_id')->nullable();
-            $table->string('ip_address', 45)->nullable();
-            $table->text('user_agent')->nullable();
+        $this->createAuditTable('audit_log_security', [
+            'event_type VARCHAR(80) NOT NULL',
+            'actor_global_identity_id UUID',
+            'target_global_identity_id UUID',
+            'claim_type VARCHAR(40)',
+            'claim_id UUID',
+            'ip_address VARCHAR(45)',
+            'user_agent TEXT',
+        ], ['event_type', 'actor_global_identity_id']);
 
-            $table->index('event_type');
-            $table->index('actor_global_identity_id');
-        });
+        $this->createAuditTable('audit_log_financial', [
+            'event_type VARCHAR(80) NOT NULL',
+            'actor_global_identity_id UUID',
+            'target_global_identity_id UUID',
+            'reference_type VARCHAR(80)',
+            'reference_id UUID',
+            'amount DECIMAL(18, 4)',
+            'currency VARCHAR(8)',
+        ], ['event_type', 'actor_global_identity_id', 'reference_type']);
 
-        $this->createAuditTable('audit_log_financial', function (Blueprint $table) {
-            $table->string('event_type', 80);
-            $table->uuid('actor_global_identity_id')->nullable();
-            $table->uuid('target_global_identity_id')->nullable();
-            $table->string('reference_type', 80)->nullable();
-            $table->uuid('reference_id')->nullable();
-            $table->decimal('amount', 18, 4)->nullable();
-            $table->string('currency', 8)->nullable();
+        $this->createAuditTable('audit_log_operational', [
+            'event_type VARCHAR(80) NOT NULL',
+            'actor_global_identity_id UUID',
+            'target_global_identity_id UUID',
+            'entity_type VARCHAR(80)',
+            'entity_id UUID',
+            'operation VARCHAR(20)',
+        ], ['event_type', 'actor_global_identity_id', 'entity_type']);
 
-            $table->index('event_type');
-            $table->index('actor_global_identity_id');
-            $table->index('reference_type');
-        });
-
-        $this->createAuditTable('audit_log_operational', function (Blueprint $table) {
-            $table->string('event_type', 80);
-            $table->uuid('actor_global_identity_id')->nullable();
-            $table->uuid('target_global_identity_id')->nullable();
-            $table->string('entity_type', 80)->nullable();
-            $table->uuid('entity_id')->nullable();
-            $table->string('operation', 20)->nullable();
-
-            $table->index('event_type');
-            $table->index('actor_global_identity_id');
-            $table->index('entity_type');
-        });
-
-        $this->createAuditTable('audit_log_compliance', function (Blueprint $table) {
-            $table->string('event_type', 80);
-            $table->uuid('actor_global_identity_id')->nullable();
-            $table->uuid('target_global_identity_id')->nullable();
-            $table->string('compliance_domain', 80)->nullable();
-            $table->uuid('reference_id')->nullable();
-
-            $table->index('event_type');
-            $table->index('actor_global_identity_id');
-            $table->index('compliance_domain');
-        });
+        $this->createAuditTable('audit_log_compliance', [
+            'event_type VARCHAR(80) NOT NULL',
+            'actor_global_identity_id UUID',
+            'target_global_identity_id UUID',
+            'compliance_domain VARCHAR(80)',
+            'reference_id UUID',
+        ], ['event_type', 'actor_global_identity_id', 'compliance_domain']);
     }
 
-    private function createAuditTable(string $tableName, callable $addStreamColumns): void
+    private function createAuditTable(string $tableName, array $streamColumns, array $indexColumns): void
     {
         if (Schema::hasTable($tableName)) {
             return;
         }
 
-        Schema::create($tableName, function (Blueprint $table) use ($addStreamColumns) {
-            $table->uuid('id')->primary();
-            $addStreamColumns($table);
-            $table->jsonb('payload')->nullable();
-            $table->string('payload_hash', 64);
-            $table->string('prev_chain_hash', 64);
-            $table->string('chain_hash', 64);
-            $table->timestampTz('event_time')->useCurrent();
-            $table->timestampTz('created_at')->useCurrent();
-            $table->index('event_time');
-            $table->index('chain_hash');
-        });
+        // PostgreSQL requires the parent to be created WITH PARTITION BY RANGE
+        // before any child partitions can be attached. Schema builder does not
+        // support this natively, so we use raw DDL.
 
-        DB::statement("ALTER TABLE {$tableName} ALTER COLUMN id SET DEFAULT gen_random_uuid()");
+        $cols = implode(",\n            ", array_merge([
+            'id UUID PRIMARY KEY DEFAULT gen_random_uuid()',
+        ], $streamColumns, [
+            'payload JSONB',
+            'payload_hash VARCHAR(64) NOT NULL',
+            'prev_chain_hash VARCHAR(64) NOT NULL',
+            'chain_hash VARCHAR(64) NOT NULL',
+            'event_time TIMESTAMPTZ NOT NULL DEFAULT NOW()',
+            'created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()',
+        ]));
+
+        DB::statement("CREATE TABLE {$tableName} ({$cols}) PARTITION BY RANGE (event_time)");
+
+        // Add indexes on the specified columns plus chain_hash
+        $allIndexes = array_merge($indexColumns, ['event_time', 'chain_hash']);
+        foreach ($allIndexes as $col) {
+            $idxName = $tableName . '_' . $col . '_idx';
+            DB::statement("CREATE INDEX IF NOT EXISTS {$idxName} ON {$tableName} ({$col})");
+        }
+
+        // Create initial monthly partition
         $this->createInitialPartition($tableName);
     }
 
