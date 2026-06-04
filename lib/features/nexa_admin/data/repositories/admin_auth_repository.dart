@@ -25,6 +25,43 @@ class AuthResponse {
     required this.needsPasswordChange,
   });
 
+  /// Parse from GlobalAuthController's flat response format:
+  /// { status, token, data: { global_identity_id, display_name, ... } }
+  factory AuthResponse.fromGlobalAuthResponse(
+    Map<String, dynamic> fullResponse,
+  ) {
+    final data = (fullResponse['data'] is Map<String, dynamic>)
+        ? fullResponse['data'] as Map<String, dynamic>
+        : <String, dynamic>{};
+
+    final token = (fullResponse['token'] ?? '').toString();
+
+    // Build AdminUser from flat data fields
+    final now = DateTime.now();
+    final user = AdminUser(
+      id: (data['global_identity_id'] ?? data['tenant_account_id'] ?? '')
+          .toString(),
+      name: (data['display_name'] ?? 'Admin').toString(),
+      email: (data['claim_value'] ?? '').toString(),
+      phone: null,
+      role: (data['identity_type'] ?? 'admin').toString(),
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+      isSuperAdmin: (data['identity_type'] ?? '') == 'admin',
+      isActive: true,
+      avatarUrl: null,
+    );
+
+    return AuthResponse(
+      user: user,
+      token: token,
+      tokenExpiry: DateTime.now().add(const Duration(hours: 8)),
+      needsPasswordChange: false,
+    );
+  }
+
+  /// Legacy parser for nested format { user: {...}, token, token_expiry }
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     return AuthResponse(
       user: AdminUser.fromJson(json['user']),
@@ -132,7 +169,9 @@ class AdminAuthRepository {
         requiresAuth: false,
       );
 
-      final authResponse = AuthResponse.fromJson(response['data']);
+      final authResponse = AuthResponse.fromGlobalAuthResponse(
+        response as Map<String, dynamic>,
+      );
 
       await apiClient.setAuthToken(authResponse.token);
 
@@ -285,7 +324,9 @@ class AdminAuthRepository {
         body: {'refresh_token': refreshToken},
       );
 
-      final authResponse = AuthResponse.fromJson(response['data']);
+      final authResponse = AuthResponse.fromGlobalAuthResponse(
+        response as Map<String, dynamic>,
+      );
 
       await apiClient.setAuthToken(authResponse.token);
       await _writeString('admin_auth_token', authResponse.token);
