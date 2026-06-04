@@ -2,7 +2,7 @@
 //
 // Two-field login: Email/Phone + Password → Sub-Admin Dashboard
 // Sub-admins log in to their vertical-specific dashboard.
-// Hits: POST /api/v1/sub-admin/auth/login
+// Hits: POST /api/v1/auth/login (unified endpoint — same as super admin)
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -49,7 +49,7 @@ class _SubAdminLoginScreenState extends State<SubAdminLoginScreen> {
       final identifier = _identifierController.text.trim();
 
       final res = await api.post(
-        '/api/v1/sub-admin/auth/login',
+        '/api/v1/auth/login',
         body: {'identifier': identifier, 'password': _passwordController.text},
         requiresAuth: false,
       );
