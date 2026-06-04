@@ -48,7 +48,7 @@ return new class extends Migration
                 $table->jsonb('default_feature_bundle_codes')->nullable();
                 $table->timestamps();
             });
-            DB::statement("ALTER TABLE sub_admin_verticals ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+            DB::statement("ALTER TABLE sub_admin_verticals ALTER COLUMN id SET DEFAULT gen_random_uuid()");
         }
 
         if (!Schema::hasTable('master_admin_assignments')) {
@@ -60,7 +60,7 @@ return new class extends Migration
                 $table->timestampTz('revoked_at')->nullable();
                 $table->timestamps();
             });
-            DB::statement("ALTER TABLE master_admin_assignments ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+            DB::statement("ALTER TABLE master_admin_assignments ALTER COLUMN id SET DEFAULT gen_random_uuid()");
         }
 
         if (!Schema::hasTable('sub_admin_assignments')) {
@@ -77,7 +77,7 @@ return new class extends Migration
                     ->references('id')->on('sub_admin_verticals')
                     ->onDelete('restrict');
             });
-            DB::statement("ALTER TABLE sub_admin_assignments ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+            DB::statement("ALTER TABLE sub_admin_assignments ALTER COLUMN id SET DEFAULT gen_random_uuid()");
 
             DB::statement("CREATE UNIQUE INDEX IF NOT EXISTS uq_active_sub_admin_assignment
                 ON sub_admin_assignments (global_identity_id, vertical_id)
@@ -102,7 +102,7 @@ return new class extends Migration
                     ->references('code')->on('feature_registry')
                     ->onDelete('restrict');
             });
-            DB::statement("ALTER TABLE sub_admin_feature_grants ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+            DB::statement("ALTER TABLE sub_admin_feature_grants ALTER COLUMN id SET DEFAULT gen_random_uuid()");
 
             DB::statement("CREATE UNIQUE INDEX IF NOT EXISTS uq_active_feature_grant
                 ON sub_admin_feature_grants (sub_admin_assignment_id, feature_code)

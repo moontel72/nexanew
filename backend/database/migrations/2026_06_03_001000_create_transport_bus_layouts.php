@@ -45,7 +45,7 @@ return new class extends Migration
             $table->index('status');
         });
 
-        DB::statement("ALTER TABLE transport_bus_layouts ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+        DB::statement("ALTER TABLE transport_bus_layouts ALTER COLUMN id SET DEFAULT gen_random_uuid()");
     }
 
     public function down(): void

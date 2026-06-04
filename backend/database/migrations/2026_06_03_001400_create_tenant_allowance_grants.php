@@ -46,7 +46,7 @@ return new class extends Migration
             $table->index('carrier_company_id');
         });
 
-        DB::statement("ALTER TABLE tenant_allowance_grants ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+        DB::statement("ALTER TABLE tenant_allowance_grants ALTER COLUMN id SET DEFAULT gen_random_uuid()");
 
         // Active-lookup acceleration indexes (Section 10.4.3)
         DB::statement("CREATE INDEX idx_grants_owner_resource

@@ -63,7 +63,7 @@ return new class extends Migration
             $table->index('expires_at');
         });
 
-        DB::statement("ALTER TABLE transport_seat_bookings ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+        DB::statement("ALTER TABLE transport_seat_bookings ALTER COLUMN id SET DEFAULT gen_random_uuid()");
 
         // ── Atomic seat hold guard (Section 6.5) ──────────────────
         DB::statement("CREATE UNIQUE INDEX idx_atomic_seat_hold

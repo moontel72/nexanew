@@ -60,7 +60,7 @@ return new class extends Migration
                     WHERE settlement_status NOT IN ('refunded', 'reversed')");
             });
 
-            DB::statement("ALTER TABLE split_transactions ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+            DB::statement("ALTER TABLE split_transactions ALTER COLUMN id SET DEFAULT gen_random_uuid()");
         }
 
         // ── split_transaction_recipients ─────────────────────
@@ -89,7 +89,7 @@ return new class extends Migration
                 $table->index('state');
             });
 
-            DB::statement("ALTER TABLE split_transaction_recipients ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+            DB::statement("ALTER TABLE split_transaction_recipients ALTER COLUMN id SET DEFAULT gen_random_uuid()");
 
             DB::statement("CREATE UNIQUE INDEX idx_recipient_one_credit_per_split
                 ON split_transaction_recipients (split_transaction_id, recipient_role)

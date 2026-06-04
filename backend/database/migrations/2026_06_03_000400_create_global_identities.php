@@ -55,7 +55,7 @@ return new class extends Migration
             $table->index('identity_type');
         });
 
-        DB::statement("ALTER TABLE global_identities ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+        DB::statement("ALTER TABLE global_identities ALTER COLUMN id SET DEFAULT gen_random_uuid()");
     }
 
     public function down(): void

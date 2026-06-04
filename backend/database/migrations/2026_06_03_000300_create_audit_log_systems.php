@@ -71,12 +71,11 @@ return new class extends Migration
             return;
         }
 
-        // PostgreSQL requires the parent to be created WITH PARTITION BY RANGE
-        // before any child partitions can be attached. Schema builder does not
-        // support this natively, so we use raw DDL.
+        // PostgreSQL requires PRIMARY KEY to include ALL partition key columns.
+        // Since we partition by event_time, the PK must be (id, event_time).
 
         $cols = implode(",\n            ", array_merge([
-            'id UUID PRIMARY KEY DEFAULT gen_random_uuid()',
+            'id UUID NOT NULL DEFAULT gen_random_uuid()',
         ], $streamColumns, [
             'payload JSONB',
             'payload_hash VARCHAR(64) NOT NULL',
@@ -86,7 +85,7 @@ return new class extends Migration
             'created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()',
         ]));
 
-        DB::statement("CREATE TABLE {$tableName} ({$cols}) PARTITION BY RANGE (event_time)");
+        DB::statement("CREATE TABLE {$tableName} ({$cols}, PRIMARY KEY (id, event_time)) PARTITION BY RANGE (event_time)");
 
         // Add indexes on the specified columns plus chain_hash
         $allIndexes = array_merge($indexColumns, ['event_time', 'chain_hash']);
