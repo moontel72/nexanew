@@ -57,13 +57,15 @@ class IdentityClaim extends Model
                 $model->id = $model->id ?? (string) Str::orderedUuid();
             }
             if (!empty($model->claim_value) && empty($model->claim_value_hash)) {
-                $model->claim_value_hash = hash('sha256', strtolower($model->claim_value), true);
+                $raw = hash('sha256', strtolower($model->claim_value), true);
+                $model->claim_value_hash = DB::raw("decode('" . bin2hex($raw) . "', 'hex')");
             }
         });
 
         static::updating(function (self $model) {
             if ($model->isDirty('claim_value') && !empty($model->claim_value)) {
-                $model->claim_value_hash = hash('sha256', strtolower($model->claim_value), true);
+                $raw = hash('sha256', strtolower($model->claim_value), true);
+                $model->claim_value_hash = DB::raw("decode('" . bin2hex($raw) . "', 'hex')");
             }
         });
     }
