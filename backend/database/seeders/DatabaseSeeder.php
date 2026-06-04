@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
      *   1. NexaBootstrapSeeder      — legacy bootstrap (kept for backward compat)
      *   2. FeatureRegistrySeeder    — Wave 1.1: 4 verticals + 30+ features
      *   3. MasterAdminSeeder        — Wave 2: Master Admin identity + assignments
+     *   4. SubAdminSeeder           — Wave 2: 4 sub-admin vertical profiles
+     *   5. SubscriptionPlansSeeder  — Baseline production tier plans
      */
     public function run(): void
     {
@@ -23,6 +25,8 @@ class DatabaseSeeder extends Seeder
             NexaBootstrapSeeder::class,
             FeatureRegistrySeeder::class,
             MasterAdminSeeder::class,
+            SubAdminSeeder::class,
+            SubscriptionPlansSeeder::class,
         ]);
     }
 }
