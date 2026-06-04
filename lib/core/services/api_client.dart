@@ -75,6 +75,9 @@ class ApiClient {
 
   Future<void> setAuthToken(String token) async {
     await _setAuthToken(token);
+    // Immediately set the header so the next API call doesn't wait for
+    // a SharedPreferences round-trip (prevents race-condition 401s on web)
+    _headers['Authorization'] = 'Bearer $token';
   }
 
   Future<void> clearAuthToken() async {
@@ -114,9 +117,9 @@ class ApiClient {
 
     if (token != null && token.trim().isNotEmpty) {
       _headers['Authorization'] = 'Bearer $token';
-    } else {
-      _headers.remove('Authorization');
     }
+    // Do NOT remove the header here — setAuthToken may have already
+    // injected it directly to avoid a SharedPreferences race on web.
   }
 
   // Make GET request
