@@ -100,7 +100,7 @@ return new class extends Migration
             $table->index('chain_hash');
         });
 
-        DB::statement("ALTER TABLE {$tableName} ALTER COLUMN id SET DEFAULT uuid_generate_v4()");
+        DB::statement("ALTER TABLE {$tableName} ALTER COLUMN id SET DEFAULT gen_random_uuid()");
         $this->createInitialPartition($tableName);
     }
 

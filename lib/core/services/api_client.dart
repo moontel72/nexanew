@@ -183,7 +183,11 @@ class ApiClient {
         return response.bodyBytes;
       }
 
-      _handleErrorResponse(response.statusCode, response.body);
+      _handleErrorResponse(
+        response.statusCode,
+        response.body,
+        'Download failed',
+      );
       throw Exception('Failed to download bytes');
     } catch (error) {
       throw _handleError(error);
@@ -543,12 +547,38 @@ class ApiClient {
         throw FormatException('Invalid JSON response: ${e.toString()}');
       }
     } else {
-      _handleErrorResponse(statusCode, responseBody);
+      // Extract server error detail before throwing
+      String? serverDetail;
+      try {
+        final errBody = jsonDecode(responseBody);
+        if (errBody is Map) {
+          serverDetail =
+              errBody['message']?.toString() ?? errBody['error']?.toString();
+          // Laravel debug mode may include file/line in 'exception' key
+          if (serverDetail == null && errBody['exception'] is String) {
+            serverDetail = errBody['exception'];
+          }
+          // Laravel validation errors may be under 'errors'
+          if (serverDetail == null && errBody['errors'] is Map) {
+            final errs = errBody['errors'] as Map;
+            serverDetail = errs.values
+                .map((v) => v is List ? v.first.toString() : v.toString())
+                .join('; ');
+          }
+        }
+      } catch (_) {}
+
+      final effectiveMessage = serverDetail ?? 'HTTP Error $statusCode';
+      _handleErrorResponse(statusCode, responseBody, effectiveMessage);
     }
   }
 
   // Handle error response
-  void _handleErrorResponse(int statusCode, String responseBody) {
+  void _handleErrorResponse(
+    int statusCode,
+    String responseBody,
+    String fallbackMessage,
+  ) {
     Map<String, dynamic>? errorResponse;
 
     try {
@@ -563,7 +593,7 @@ class ApiClient {
     final message =
         errorResponse?['message']?.toString() ??
         errorResponse?['error']?.toString() ??
-        'HTTP Error $statusCode';
+        fallbackMessage;
 
     // ── Safe error-map extraction (guards against non-Map types) ──
     Map<String, String>? _safeExtractErrors(dynamic errorsNode) {

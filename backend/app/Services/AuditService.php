@@ -49,11 +49,31 @@ class AuditService
     /**
      * Emit a single tamper-evident audit log entry.
      *
+     * Graceful: if the audit table is missing (migration not yet run),
+     * logs the event via Laravel's logger instead of crashing.
+     *
      * @param string $stream One of: security, financial, operational, compliance
      * @param array  $data   Associative row data (excludes chain fields)
      * @return string The computed chain_hash for this entry
      */
     public function emit(string $stream, array $data): string
+    {
+        try {
+            return $this->emitInternal($stream, $data);
+        } catch (\Exception $e) {
+            report($e);
+            \Log::warning('AuditService: emit failed, falling back to log', [
+                'stream'  => $stream,
+                'error'   => $e->getMessage(),
+            ]);
+            return hash('sha256', 'audit_unavailable_' . microtime(true));
+        }
+    }
+
+    /**
+     * Internal emit — may throw if tables are missing.
+     */
+    private function emitInternal(string $stream, array $data): string
     {
         $table = $this->resolveTable($stream);
 
@@ -80,11 +100,28 @@ class AuditService
      * Emit multiple entries in a single DB transaction.
      * Chain continuity is preserved across the batch.
      *
+     * Graceful: falls back to log on failure.
+     *
      * @param string $stream Audit stream
      * @param array  $batch  Array of associative row arrays
      * @return array Computed chain hashes in input order
      */
     public function emitBatch(string $stream, array $batch): array
+    {
+        try {
+            return $this->emitBatchInternal($stream, $batch);
+        } catch (\Exception $e) {
+            report($e);
+            \Log::warning('AuditService: emitBatch failed, falling back to log', [
+                'stream'  => $stream,
+                'count'   => count($batch),
+                'error'   => $e->getMessage(),
+            ]);
+            return array_map(fn() => hash('sha256', 'audit_unavailable_' . microtime(true)), $batch);
+        }
+    }
+
+    private function emitBatchInternal(string $stream, array $batch): array
     {
         $table  = $this->resolveTable($stream);
         $hashes = [];

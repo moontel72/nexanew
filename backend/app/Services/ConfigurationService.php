@@ -71,19 +71,30 @@ class ConfigurationService
      *
      * Hot path — called on every authenticated request.
      * 24h Redis cache prevents Postgres hammering.
+     *
+     * Graceful degradation: if Redis is unavailable, reads directly
+     * from Postgres and skips the Redis cache write.
      */
     public function currentVersion(): int
     {
-        $cached = Redis::get(self::REDIS_VERSION_KEY);
-
-        if ($cached !== null) {
-            return (int) $cached;
+        try {
+            $cached = Redis::get(self::REDIS_VERSION_KEY);
+            if ($cached !== null) {
+                return (int) $cached;
+            }
+        } catch (\Exception $e) {
+            // Redis unavailable — fall through to database read
+            report($e);
         }
 
         $row = DB::table(self::COUNTER_TABLE)->where('id', 1)->first();
         $version = $row ? (int) $row->version : 1;
 
-        Redis::setex(self::REDIS_VERSION_KEY, self::REDIS_VERSION_TTL, $version);
+        try {
+            Redis::setex(self::REDIS_VERSION_KEY, self::REDIS_VERSION_TTL, $version);
+        } catch (\Exception $e) {
+            // Redis write failed — non-fatal; next request will hit DB again
+        }
 
         return $version;
     }
@@ -94,11 +105,18 @@ class ConfigurationService
      * Per Section 10.3.3 AFTER COMMIT:
      *   Redis: SET feat:current_version <new_version> EX 86400
      *   Redis Pub/Sub: PUBLISH feat:version:bumped <new_version>
+     *
+     * Graceful: if Redis is unavailable, version bump still committed
+     * in Postgres — cache will be lazily repopulated on next read.
      */
     public function publishVersionBump(int $newVersion): void
     {
-        Redis::setex(self::REDIS_VERSION_KEY, self::REDIS_VERSION_TTL, $newVersion);
-        Redis::publish('feat:version:bumped', (string) $newVersion);
+        try {
+            Redis::setex(self::REDIS_VERSION_KEY, self::REDIS_VERSION_TTL, $newVersion);
+            Redis::publish('feat:version:bumped', (string) $newVersion);
+        } catch (\Exception $e) {
+            report($e);
+        }
     }
 
     /**

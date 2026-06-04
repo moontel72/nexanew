@@ -116,9 +116,13 @@ class AdminAuthRepository {
         );
         debugPrint('AUTH_LOGIN endpoint=${ApiConfig.apiBaseUrl}/auth/login');
       }
+      // Send BOTH 'email' and 'identifier' so the backend finds the field
+      // it expects regardless of whether validation or processing logic
+      // uses the legacy key ('email') or the Wave-2 unified key ('identifier').
       final response = await apiClient.post(
         '${ApiConfig.apiBaseUrl}/auth/login',
         body: {
+          'email': sanitizedEmail,
           'identifier': sanitizedEmail,
           'password': password,
           'remember_me': rememberMe,
@@ -146,15 +150,29 @@ class AdminAuthRepository {
       return authResponse;
     } catch (error) {
       if (kDebugMode) {
-        debugPrint('AUTH_LOGIN error=${error.runtimeType}');
+        debugPrint('AUTH_LOGIN error=${error.runtimeType}: $error');
+      }
+      // Preserve specific exception types so the UI can show
+      // targeted messages instead of generic "Login failed"
+      if (error is ValidationException) {
+        throw AuthException(
+          error.formattedErrors.isNotEmpty
+              ? error.formattedErrors
+              : 'Validation failed — please check your input',
+        );
       }
       if (error is UnauthorizedException) {
         throw AuthException('Invalid email or password');
-      } else if (error is NetworkException) {
-        throw NetworkException('Network error occurred');
-      } else {
-        throw AuthException('Login failed: ${error.toString()}');
       }
+      if (error is ServerException) {
+        throw AuthException(
+          'Server error (${error.statusCode}): ${error.message}',
+        );
+      }
+      if (error is NetworkException) {
+        throw NetworkException('Network error occurred');
+      }
+      throw AuthException('Login failed: ${error.toString()}');
     }
   }
 

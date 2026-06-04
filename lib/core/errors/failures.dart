@@ -100,11 +100,7 @@ class ValidationFailure extends Failure {
 class DataParsingFailure extends Failure {
   final dynamic data;
 
-  const DataParsingFailure(
-    super.message, {
-    this.data,
-    super.stackTrace,
-  });
+  const DataParsingFailure(super.message, {this.data, super.stackTrace});
 
   @override
   List<Object?> get props => [message, data, stackTrace];
@@ -178,8 +174,12 @@ class PaymentFailure extends Failure {
   });
 
   @override
-  List<Object?> get props =>
-      [message, paymentMethodId, transactionId, stackTrace];
+  List<Object?> get props => [
+    message,
+    paymentMethodId,
+    transactionId,
+    stackTrace,
+  ];
 }
 
 /// Subscription failure
@@ -240,8 +240,10 @@ Failure mapExceptionToFailure(dynamic exception, StackTrace stackTrace) {
     return NetworkFailure('Network error: $exception', stackTrace: stackTrace);
   } else if (errorMessage.contains('timeout') ||
       errorMessage.contains('timed out')) {
-    return TimeoutFailure('Request timed out: $exception',
-        stackTrace: stackTrace);
+    return TimeoutFailure(
+      'Request timed out: $exception',
+      stackTrace: stackTrace,
+    );
   } else if (errorMessage.contains('404') ||
       errorMessage.contains('not found')) {
     // Try to extract resource type from the message
@@ -252,8 +254,9 @@ Failure mapExceptionToFailure(dynamic exception, StackTrace stackTrace) {
     if (errorMessage.contains('factory')) {
       resourceType = 'factory';
       // Try to extract ID if present
-      final idMatch =
-          RegExp(r'[a-f0-9]{8,}|factory[_\s]?(\d+)').firstMatch(errorMessage);
+      final idMatch = RegExp(
+        r'[a-f0-9]{8,}|factory[_\s]?(\d+)',
+      ).firstMatch(errorMessage);
       if (idMatch != null) {
         resourceId = idMatch.group(0);
       }
@@ -274,16 +277,22 @@ Failure mapExceptionToFailure(dynamic exception, StackTrace stackTrace) {
     );
   } else if (errorMessage.contains('401') ||
       errorMessage.contains('unauthorized')) {
-    return AuthenticationFailure('Authentication failed: $exception',
-        stackTrace: stackTrace);
+    return AuthenticationFailure(
+      'Authentication failed: $exception',
+      stackTrace: stackTrace,
+    );
   } else if (errorMessage.contains('403') ||
       errorMessage.contains('forbidden')) {
-    return AuthorizationFailure('Access denied: $exception',
-        stackTrace: stackTrace);
+    return AuthorizationFailure(
+      'Access denied: $exception',
+      stackTrace: stackTrace,
+    );
   } else if (errorMessage.contains('409') ||
       errorMessage.contains('conflict')) {
-    return ConflictFailure('Conflict error: $exception',
-        stackTrace: stackTrace);
+    return ConflictFailure(
+      'Conflict error: $exception',
+      stackTrace: stackTrace,
+    );
   } else if (errorMessage.contains('422') ||
       errorMessage.contains('validation') ||
       errorMessage.contains('invalid')) {
@@ -313,7 +322,7 @@ Failure mapExceptionToFailure(dynamic exception, StackTrace stackTrace) {
     // If no structured errors found, create a default one
     if (errors.isEmpty) {
       errors = {
-        'general': ['Validation error occurred']
+        'general': ['Validation error occurred'],
       };
     }
 
@@ -345,6 +354,14 @@ Failure mapExceptionToFailure(dynamic exception, StackTrace stackTrace) {
     );
   } else if (errorMessage.contains('500') ||
       errorMessage.contains('server error')) {
+    // Surface the actual server error message, not the wrapper class name
+    if (exception is ServerException) {
+      return ServerFailure(
+        exception.message,
+        statusCode: exception.statusCode,
+        stackTrace: stackTrace,
+      );
+    }
     return ServerFailure('Server error: $exception', stackTrace: stackTrace);
   }
 

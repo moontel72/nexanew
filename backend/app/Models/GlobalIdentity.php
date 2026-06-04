@@ -23,6 +23,7 @@ class GlobalIdentity extends Model
     protected $fillable = [
         'identity_token',
         'display_name',
+        'password',
         'password_hash',
         'kyc_status',
         'kyc_tier',
