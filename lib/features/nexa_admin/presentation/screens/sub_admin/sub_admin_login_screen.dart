@@ -54,21 +54,27 @@ class _SubAdminLoginScreenState extends State<SubAdminLoginScreen> {
         requiresAuth: false,
       );
 
-      final token = res['data']?['token'] as String? ?? '';
+      // Backend returns { status, token, data: { display_name, identity_token, ... } }
+      final token = (res['token'] ?? '').toString();
       if (token.isNotEmpty) {
+        final data = (res['data'] is Map<String, dynamic>)
+            ? res['data'] as Map<String, dynamic>
+            : <String, dynamic>{};
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('sub_admin_token', token);
         await prefs.setString(
           'sub_admin_name',
-          res['data']?['name'] as String? ?? 'Sub-Admin',
+          (data['display_name'] ?? 'Sub-Admin').toString(),
         );
+        // Derive vertical from identity_token prefix (TRC-SA- = sub_admin)
         await prefs.setString(
           'sub_admin_vertical',
-          res['data']?['vertical'] as String? ?? '',
+          (data['identity_type'] ?? '').toString(),
         );
         await prefs.setString(
           'sub_admin_email',
-          res['data']?['email'] as String? ?? identifier,
+          (data['claim_value'] ?? identifier).toString(),
         );
 
         if (mounted) {
