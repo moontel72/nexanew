@@ -67,4 +67,10 @@ class TenantAccount extends Model
     {
         return $query->whereNull('parent_account_id');
     }
+
+    /** Check if this tenant account belongs to a master admin. */
+    public function isAdmin(): bool
+    {
+        return $this->account_type === 'master_admin';
+    }
 }

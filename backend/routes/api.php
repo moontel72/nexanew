@@ -57,7 +57,7 @@ $registerRoutes = function (): void {
     });
 
     Route::prefix("admin")
-        ->middleware(["auth:admin", "admin"])
+        ->middleware(["auth:sanctum", "admin"])
         ->group(function (): void {
             /// Wave 3 — Sub-Admin Feature Toggle Management (Section 10.3)
             Route::prefix("sub-admins")->group(function (): void {
@@ -905,7 +905,7 @@ $registerRoutes = function (): void {
     Route::get("status", [\App\Http\Controllers\OfflineSyncController::class, "status"]);
     });
     Route::prefix("transport")
-        ->middleware(["auth:admin", "admin"])
+        ->middleware(["auth:sanctum", "admin"])
         ->group(function (): void {
             Route::prefix("fraud")->group(function (): void {
                 Route::get("stats", [
