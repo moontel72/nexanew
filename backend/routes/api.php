@@ -56,6 +56,16 @@ $registerRoutes = function (): void {
         });
     });
 
+    // ─── Sub-Admin Auth (unified GlobalAuthController login) ─────
+    Route::prefix("sub-admin/auth")->group(function (): void {
+        Route::post("login", [\App\Http\Controllers\Auth\GlobalAuthController::class, "login"]);
+        Route::middleware("auth:sanctum")->group(function (): void {
+            Route::post("refresh", [\App\Http\Controllers\Auth\GlobalAuthController::class, "refresh"]);
+            Route::post("logout", [\App\Http\Controllers\Auth\GlobalAuthController::class, "logout"]);
+            Route::get("me", [\App\Http\Controllers\Auth\GlobalAuthController::class, "me"]);
+        });
+    });
+
     Route::prefix("admin")
         ->middleware(["auth:sanctum", "admin"])
         ->group(function (): void {
