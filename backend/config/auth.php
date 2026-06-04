@@ -47,7 +47,7 @@ return [
         ],
         'sanctum' => [
             'driver' => 'sanctum',
-            'provider' => null,
+            'provider' => 'tenant_accounts',
         ],
         'admin' => [
             'driver' => 'sanctum',
@@ -88,6 +88,10 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+        'tenant_accounts' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\TenantAccount::class,
         ],
         'admin_users' => [
             'driver' => 'eloquent',
