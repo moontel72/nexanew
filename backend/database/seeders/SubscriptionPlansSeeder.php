@@ -133,11 +133,26 @@ class SubscriptionPlansSeeder extends Seeder
 
         foreach ($plans as $plan) {
             $plan['id'] = (string) Str::orderedUuid();
-            DB::table('subscription_plans')->upsert(
-                $plan,
-                ['name', 'type'],
-                ['description', 'monthly_price', 'yearly_price', 'setup_fee', 'features', 'is_recommended', 'status', 'updated_at']
-            );
+
+            $existing = DB::table('subscription_plans')
+                ->where('name', $plan['name'])
+                ->where('type', $plan['type'])
+                ->first();
+
+            if ($existing) {
+                DB::table('subscription_plans')->where('id', $existing->id)->update([
+                    'description'    => $plan['description'],
+                    'monthly_price'  => $plan['monthly_price'],
+                    'yearly_price'   => $plan['yearly_price'],
+                    'setup_fee'      => $plan['setup_fee'],
+                    'features'       => $plan['features'],
+                    'is_recommended' => $plan['is_recommended'],
+                    'status'         => $plan['status'],
+                    'updated_at'     => now(),
+                ]);
+            } else {
+                DB::table('subscription_plans')->insert($plan);
+            }
         }
 
         $count = DB::table('subscription_plans')->count();
