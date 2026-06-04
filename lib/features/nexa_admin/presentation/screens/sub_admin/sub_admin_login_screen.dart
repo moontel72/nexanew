@@ -63,6 +63,9 @@ class _SubAdminLoginScreenState extends State<SubAdminLoginScreen> {
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('sub_admin_token', token);
+        await api.setAuthToken(
+          token,
+        ); // Inject into API client for dashboard requests
         await prefs.setString(
           'sub_admin_name',
           (data['display_name'] ?? 'Sub-Admin').toString(),
