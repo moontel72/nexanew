@@ -517,8 +517,14 @@ class ApiClient {
         ? baseUrl.substring(0, baseUrl.length - 1)
         : baseUrl;
 
-    if (endpoint.startsWith('/api/') && normalizedBaseUrl.endsWith('/api')) {
-      return '$normalizedBaseUrl${endpoint.substring(4)}';
+    // If the endpoint already starts with /api/, strip the overlapping
+    // /api prefix from the base URL to avoid double-prefix like
+    // http://host/api/v1/api/v1/auth/refresh
+    if (endpoint.startsWith('/api/')) {
+      final apiIndex = normalizedBaseUrl.indexOf('/api/');
+      if (apiIndex != -1) {
+        return '${normalizedBaseUrl.substring(0, apiIndex)}$endpoint';
+      }
     }
 
     if (endpoint.startsWith('/')) {
