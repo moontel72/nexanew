@@ -140,12 +140,14 @@ class GlobalIdentity extends Model
     public static function generateToken(?string $identityType = null): string
     {
         $prefix = match ($identityType) {
-            'driver'    => 'TRC-DR-',
-            'owner'     => 'TRC-OW-',
-            'conductor' => 'TRC-CO-',
-            'mixed'     => 'TRC-MX-',
-            'customer'  => 'TRC-CU-',
-            default     => 'TRC-GL-',
+            'admin'      => 'TRC-AD-',
+            'sub_admin'  => 'TRC-SA-',
+            'driver'     => 'TRC-DR-',
+            'owner'      => 'TRC-OW-',
+            'conductor'  => 'TRC-CO-',
+            'mixed'      => 'TRC-MX-',
+            'customer'   => 'TRC-CU-',
+            default      => 'TRC-GL-',
         };
         return $prefix . strtoupper(Str::random(5));
     }

@@ -81,6 +81,7 @@ class SubAdminSeeder extends Seeder
 
         if (!$identity) {
             $identity = GlobalIdentity::create([
+                'identity_token' => GlobalIdentity::generateToken('sub_admin'),
                 'display_name'   => $name,
                 'password'       => self::DEFAULT_PASSWORD,
                 'identity_type'  => 'sub_admin',
