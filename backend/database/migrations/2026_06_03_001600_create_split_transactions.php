@@ -53,14 +53,14 @@ return new class extends Migration
                 $table->index('settlement_status');
                 $table->index('source_event_type');
                 $table->index('created_at');
-
-                // Prevent double-split: one active split per booking
-                DB::statement("CREATE UNIQUE INDEX idx_one_active_split_per_booking
-                    ON split_transactions (trip_booking_id)
-                    WHERE settlement_status NOT IN ('refunded', 'reversed')");
             });
 
             DB::statement("ALTER TABLE split_transactions ALTER COLUMN id SET DEFAULT gen_random_uuid()");
+
+            // Prevent double-split: one active split per booking (MUST run AFTER Schema::create)
+            DB::statement("CREATE UNIQUE INDEX idx_one_active_split_per_booking
+                ON split_transactions (trip_booking_id)
+                WHERE settlement_status NOT IN ('refunded', 'reversed')");
         }
 
         // ── split_transaction_recipients ─────────────────────
