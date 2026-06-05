@@ -7,7 +7,10 @@
 // Designed per MODULE 2 — SUB-ADMIN PANELS (QUAD SUB-ADMIN HIERARCHY)
 // from the NEXATRACE_SUPREME_MASTER_SPEC.md
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -297,10 +300,12 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
               color: AppColors.secondary,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
-              Icons.admin_panel_settings_rounded,
-              color: Colors.white,
-              size: 20,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SvgPicture.asset(
+                'assets/logo/logo-company-name.svg',
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           const Gap(10),
@@ -1104,8 +1109,18 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
 
   Widget _busCompanyCard(Map<String, dynamic> c) {
     final isActive = c['status'] == 'active';
-    final meta = c['metadata'];
-    final fleetSize = meta is Map ? (meta['fleet_size'] ?? 0) : 0;
+    final isDeleted = c['status'] == 'deleted';
+    // Safe metadata parsing — API may return JSON string or Map
+    Map<String, dynamic> meta = {};
+    final rawMeta = c['metadata'];
+    if (rawMeta is Map) {
+      meta = rawMeta.cast<String, dynamic>();
+    } else if (rawMeta is String && rawMeta.isNotEmpty) {
+      try {
+        meta = jsonDecode(rawMeta) as Map<String, dynamic>;
+      } catch (_) {}
+    }
+    final fleetSize = meta['fleet_size']?.toString() ?? '0';
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1127,34 +1142,81 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: isActive
+                color: isDeleted
+                    ? Colors.red.withValues(alpha: 0.1)
+                    : isActive
                     ? Colors.green.withValues(alpha: 0.1)
                     : Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                isActive ? 'ACTIVE' : 'SUSPENDED',
+                isDeleted ? 'DELETED' : (isActive ? 'ACTIVE' : 'SUSPENDED'),
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: isActive ? Colors.green : Colors.orange,
+                  color: isDeleted
+                      ? Colors.red
+                      : isActive
+                      ? Colors.green
+                      : Colors.orange,
                 ),
               ),
             ),
             PopupMenuButton<String>(
-              itemBuilder: (ctx) => [
-                PopupMenuItem(
-                  value: 'toggle',
-                  child: Text(isActive ? 'Suspend' : 'Activate'),
-                ),
-              ],
-              onSelected: (action) async {
-                try {
-                  await ApiClient().patch(
-                    '${ApiConfig.apiBaseUrl}/admin/bus-companies/${c['id']}/status',
-                  );
-                  _fetchBusCompanies();
-                } catch (_) {}
+              onSelected: (action) => _handleBusCompanyAction(action, c),
+              itemBuilder: (ctx) {
+                if (isDeleted) {
+                  return [
+                    const PopupMenuItem(
+                      value: 'restore',
+                      child: ListTile(
+                        leading: Icon(Icons.restore, color: Colors.green),
+                        title: Text('Restore'),
+                        dense: true,
+                      ),
+                    ),
+                  ];
+                }
+                return [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit),
+                      title: Text('Edit'),
+                      dense: true,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'toggle_status',
+                    child: ListTile(
+                      leading: Icon(
+                        isActive ? Icons.block : Icons.check_circle,
+                        color: isActive ? Colors.orange : Colors.green,
+                      ),
+                      title: Text(isActive ? 'Suspend' : 'Activate'),
+                      dense: true,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'reset_password',
+                    child: ListTile(
+                      leading: Icon(Icons.lock_reset),
+                      title: Text('Reset Password'),
+                      dense: true,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete, color: Colors.red),
+                      title: Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      dense: true,
+                    ),
+                  ),
+                ];
               },
             ),
           ],
@@ -1170,5 +1232,224 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
     } catch (_) {
       return d.toString();
     }
+  }
+
+  // ── Bus Company Actions ────────────────────────────────
+
+  void _handleBusCompanyAction(String action, Map<String, dynamic> c) {
+    switch (action) {
+      case 'edit':
+        _showEditBusCompanyDialog(c);
+        break;
+      case 'toggle_status':
+        _toggleBusCompanyStatus(c);
+        break;
+      case 'reset_password':
+        _showResetBusCompanyPasswordDialog(c);
+        break;
+      case 'delete':
+        _confirmDeleteBusCompany(c);
+        break;
+      case 'restore':
+        _restoreBusCompany(c);
+        break;
+    }
+  }
+
+  Future<void> _toggleBusCompanyStatus(Map<String, dynamic> c) async {
+    try {
+      await ApiClient().patch(
+        '${ApiConfig.apiBaseUrl}/admin/bus-companies/${c['id']}/status',
+      );
+      _fetchBusCompanies();
+    } catch (_) {}
+  }
+
+  void _showEditBusCompanyDialog(Map<String, dynamic> c) {
+    final meta = _parseMeta(c['metadata']);
+    final nameCtrl = TextEditingController(text: c['account_name']);
+    final emailCtrl = TextEditingController(text: c['email']);
+    final regCtrl = TextEditingController(
+      text: meta['registration_code']?.toString() ?? '',
+    );
+    final fleetCtrl = TextEditingController(
+      text: meta['fleet_size']?.toString() ?? '',
+    );
+    final licCtrl = TextEditingController(
+      text: meta['transit_license']?.toString() ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Bus Company'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Company Name'),
+              ),
+              const Gap(10),
+              TextField(
+                controller: emailCtrl,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              const Gap(10),
+              TextField(
+                controller: regCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Registration Code',
+                ),
+              ),
+              const Gap(10),
+              TextField(
+                controller: fleetCtrl,
+                decoration: const InputDecoration(labelText: 'Fleet Size'),
+                keyboardType: TextInputType.number,
+              ),
+              const Gap(10),
+              TextField(
+                controller: licCtrl,
+                decoration: const InputDecoration(labelText: 'Transit License'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await ApiClient().put(
+                  '${ApiConfig.apiBaseUrl}/admin/bus-companies/${c['id']}',
+                  body: {
+                    'company_name': nameCtrl.text.trim(),
+                    'email': emailCtrl.text.trim(),
+                    'registration_code': regCtrl.text.trim(),
+                    'fleet_size': int.tryParse(fleetCtrl.text.trim()) ?? 0,
+                    'transit_license': licCtrl.text.trim(),
+                  },
+                );
+                Navigator.pop(ctx);
+                _fetchBusCompanies();
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetBusCompanyPasswordDialog(Map<String, dynamic> c) {
+    final passCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: TextField(
+          controller: passCtrl,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'New Password (min 8 chars)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (passCtrl.text.length < 8) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Minimum 8 characters')),
+                );
+                return;
+              }
+              try {
+                await ApiClient().put(
+                  '${ApiConfig.apiBaseUrl}/admin/bus-companies/${c['id']}',
+                  body: {'password': passCtrl.text},
+                );
+                Navigator.pop(ctx);
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+              }
+            },
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteBusCompany(Map<String, dynamic> c) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Bus Company?'),
+        content: Text(
+          'This will soft-delete ${c['account_name']}. Restorable for 30 days.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ApiClient().delete(
+                  '${ApiConfig.apiBaseUrl}/admin/bus-companies/${c['id']}',
+                );
+                _fetchBusCompanies();
+              } catch (e) {
+                if (mounted)
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _restoreBusCompany(Map<String, dynamic> c) async {
+    try {
+      await ApiClient().patch(
+        '${ApiConfig.apiBaseUrl}/admin/bus-companies/${c['id']}/restore',
+      );
+      _fetchBusCompanies();
+    } catch (_) {}
+  }
+
+  Map<String, dynamic> _parseMeta(dynamic rawMeta) {
+    if (rawMeta is Map) return rawMeta.cast<String, dynamic>();
+    if (rawMeta is String && rawMeta.isNotEmpty) {
+      try {
+        return jsonDecode(rawMeta) as Map<String, dynamic>;
+      } catch (_) {}
+    }
+    return {};
   }
 }

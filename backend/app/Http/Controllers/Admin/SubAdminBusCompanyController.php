@@ -178,4 +178,112 @@ class SubAdminBusCompanyController extends Controller
             'data'    => ['status' => $newStatus],
         ]);
     }
+
+    /**
+     * Update bus company details.
+     */
+    public function update(Request $request, string $id): JsonResponse
+    {
+        $company = TenantAccount::where('id', $id)
+            ->where('account_type', 'bus_company')
+            ->first();
+
+        if (!$company) {
+            return response()->json(['message' => 'Bus company not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'company_name'      => ['sometimes', 'string', 'max:160'],
+            'email'             => ['sometimes', 'email', 'max:255'],
+            'password'          => ['sometimes', 'string', 'min:8'],
+            'phone'             => ['nullable', 'string', 'max:30'],
+            'registration_code' => ['nullable', 'string', 'max:50'],
+            'fleet_size'        => ['nullable', 'integer', 'min:0'],
+            'transit_license'   => ['nullable', 'string', 'max:100'],
+        ]);
+
+        // Update account name
+        if (isset($validated['company_name'])) {
+            $company->update(['account_name' => $validated['company_name']]);
+            if ($company->global_identity_id) {
+                GlobalIdentity::where('id', $company->global_identity_id)
+                    ->update(['display_name' => $validated['company_name']]);
+            }
+        }
+
+        // Update email
+        if (isset($validated['email'])) {
+            $company->update(['email' => $validated['email']]);
+            if ($company->global_identity_id) {
+                IdentityClaim::updateOrCreate(
+                    ['global_identity_id' => $company->global_identity_id, 'claim_type' => 'email', 'is_revoked' => false],
+                    ['claim_value' => IdentityClaim::normalize('email', $validated['email']), 'is_primary' => true, 'verified_via' => 'admin_updated', 'verified_at' => now()]
+                );
+            }
+        }
+
+        // Update password
+        if (isset($validated['password'])) {
+            if ($company->global_identity_id) {
+                GlobalIdentity::where('id', $company->global_identity_id)
+                    ->update(['password' => $validated['password']]);
+            }
+        }
+
+        // Update metadata fields
+        $meta = json_decode($company->metadata ?? '{}', true) ?: [];
+        if (isset($validated['registration_code'])) $meta['registration_code'] = $validated['registration_code'];
+        if (isset($validated['fleet_size'])) $meta['fleet_size'] = (int) $validated['fleet_size'];
+        if (isset($validated['transit_license'])) $meta['transit_license'] = $validated['transit_license'];
+        $company->update(['metadata' => json_encode($meta)]);
+
+        return response()->json(['success' => true, 'message' => 'Bus company updated']);
+    }
+
+    /**
+     * Soft-delete a bus company.
+     */
+    public function destroy(string $id): JsonResponse
+    {
+        $company = TenantAccount::where('id', $id)
+            ->where('account_type', 'bus_company')
+            ->first();
+
+        if (!$company) {
+            return response()->json(['message' => 'Bus company not found'], 404);
+        }
+
+        $company->update(['status' => 'deleted', 'deleted_at' => now()]);
+
+        if ($company->global_identity_id) {
+            GlobalIdentity::where('id', $company->global_identity_id)
+                ->update(['status' => 'deleted', 'deleted_at' => now()]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Bus company deleted (restorable for 30 days)']);
+    }
+
+    /**
+     * Restore a soft-deleted bus company.
+     */
+    public function restore(string $id): JsonResponse
+    {
+        $company = TenantAccount::where('id', $id)
+            ->where('account_type', 'bus_company')
+            ->where('status', 'deleted')
+            ->first();
+
+        if (!$company) {
+            return response()->json(['message' => 'Bus company not found or not deleted'], 404);
+        }
+
+        $company->update(['status' => 'active', 'deleted_at' => null]);
+
+        if ($company->global_identity_id) {
+            GlobalIdentity::where('id', $company->global_identity_id)
+                ->update(['status' => 'active', 'deleted_at' => null]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Bus company restored']);
+    }
 }

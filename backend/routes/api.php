@@ -87,7 +87,10 @@ $registerRoutes = function (): void {
                 Route::get("", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "index"]);
                 Route::post("create", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "store"]);
                 Route::get("{id}", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "show"]);
+                Route::put("{id}", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "update"]);
+                Route::delete("{id}", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "destroy"]);
                 Route::patch("{id}/status", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "toggleStatus"]);
+                Route::patch("{id}/restore", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "restore"]);
             });
 
             Route::prefix("dashboard")->group(function (): void {
