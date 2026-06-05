@@ -307,7 +307,7 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
                           ),
                         ),
                         const Gap(8),
-                        _statusChip(isActive),
+                        _statusChip(sa['status'] as String? ?? 'active'),
                       ],
                     ),
                   ],
@@ -316,54 +316,96 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: AppColors.gray500),
                 onSelected: (action) => _handleAction(action, sa),
-                itemBuilder: (ctx) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: ListTile(
-                      leading: Icon(Icons.edit),
-                      title: Text('Edit'),
-                      dense: true,
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'toggle_status',
-                    child: ListTile(
-                      leading: Icon(
-                        isActive ? Icons.block : Icons.check_circle,
-                        color: isActive ? AppColors.warning : AppColors.success,
+                itemBuilder: (ctx) {
+                  final menuItems = <PopupMenuEntry<String>>[];
+                  if (isActive) {
+                    menuItems.addAll([
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: ListTile(
+                          leading: Icon(Icons.edit),
+                          title: Text('Edit'),
+                          dense: true,
+                        ),
                       ),
-                      title: Text(isActive ? 'Suspend' : 'Activate'),
-                      dense: true,
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'change_vertical',
-                    child: ListTile(
-                      leading: Icon(Icons.swap_horiz),
-                      title: Text('Change Vertical'),
-                      dense: true,
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'reset_password',
-                    child: ListTile(
-                      leading: Icon(Icons.lock_reset),
-                      title: Text('Reset Password'),
-                      dense: true,
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: ListTile(
-                      leading: Icon(Icons.delete, color: AppColors.error),
-                      title: Text(
-                        'Delete',
-                        style: TextStyle(color: AppColors.error),
+                      PopupMenuItem(
+                        value: 'toggle_status',
+                        child: ListTile(
+                          leading: Icon(Icons.block, color: AppColors.warning),
+                          title: const Text('Suspend'),
+                          dense: true,
+                        ),
                       ),
-                      dense: true,
-                    ),
-                  ),
-                ],
+                      const PopupMenuItem(
+                        value: 'change_vertical',
+                        child: ListTile(
+                          leading: Icon(Icons.swap_horiz),
+                          title: Text('Change Vertical'),
+                          dense: true,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'reset_password',
+                        child: ListTile(
+                          leading: Icon(Icons.lock_reset),
+                          title: Text('Reset Password'),
+                          dense: true,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: ListTile(
+                          leading: Icon(Icons.delete, color: AppColors.error),
+                          title: Text(
+                            'Delete',
+                            style: TextStyle(color: AppColors.error),
+                          ),
+                          dense: true,
+                        ),
+                      ),
+                    ]);
+                  } else if (sa['status'] == 'suspended') {
+                    menuItems.addAll([
+                      PopupMenuItem(
+                        value: 'toggle_status',
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.check_circle,
+                            color: AppColors.success,
+                          ),
+                          title: const Text('Activate'),
+                          dense: true,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: ListTile(
+                          leading: Icon(Icons.delete, color: AppColors.error),
+                          title: Text(
+                            'Delete',
+                            style: TextStyle(color: AppColors.error),
+                          ),
+                          dense: true,
+                        ),
+                      ),
+                    ]);
+                  } else if (sa['status'] == 'deleted') {
+                    menuItems.addAll([
+                      PopupMenuItem(
+                        value: 'restore',
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.restore,
+                            color: AppColors.success,
+                          ),
+                          title: const Text('Restore'),
+                          dense: true,
+                        ),
+                      ),
+                    ]);
+                  }
+                  return menuItems;
+                },
               ),
             ],
           ),
@@ -372,22 +414,37 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
     );
   }
 
-  Widget _statusChip(bool active) {
+  Widget _statusChip(String status) {
+    final isActive = status == 'active';
+    final isDeleted = status == 'deleted';
+    final isSuspended = status == 'suspended';
+
+    final Color chipColor;
+    final String label;
+    if (isDeleted) {
+      chipColor = AppColors.error;
+      label = 'DELETED';
+    } else if (isSuspended) {
+      chipColor = AppColors.warning;
+      label = 'SUSPENDED';
+    } else {
+      chipColor = AppColors.success;
+      label = 'ACTIVE';
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: active
-            ? AppColors.success.withValues(alpha: 0.1)
-            : AppColors.warning.withValues(alpha: 0.1),
+        color: chipColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        active ? 'ACTIVE' : 'SUSPENDED',
+        label,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
-          color: active ? AppColors.success : AppColors.warning,
+          color: chipColor,
         ),
       ),
     );
@@ -411,6 +468,9 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
         break;
       case 'delete':
         _confirmDelete(sa);
+        break;
+      case 'restore':
+        _restoreSubAdmin(sa);
         break;
     }
   }
@@ -637,5 +697,26 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _restoreSubAdmin(Map<String, dynamic> sa) async {
+    try {
+      final api = ApiClient();
+      await api.patch(
+        '${ApiConfig.apiBaseUrl}/admin/sub-admins/${sa['id']}/restore',
+      );
+      _fetchSubAdmins();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Sub-admin restored')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Restore failed: $e')));
+      }
+    }
   }
 }

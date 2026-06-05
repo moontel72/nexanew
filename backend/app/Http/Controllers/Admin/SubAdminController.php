@@ -279,7 +279,17 @@ class SubAdminController extends Controller
     }
 
     /**
-     * Delete/revoke a sub-admin (soft-delete by revoking assignments + deactivating).
+     * Soft-delete a sub-admin.
+     *
+     * Does NOT hard-delete. Instead:
+     *   - Revokes all vertical assignments
+     *   - Revokes all identity claims (email, phone)
+     *   - Sets status to 'deleted' with timestamp
+     *   - Deactivates tenant account
+     *   - Revokes all API tokens
+     *
+     * Deleted accounts remain restorable for 30 days, then a scheduled
+     * command (PurgeDeletedSubAdmins) permanently removes them.
      */
     public function destroy(string $id): JsonResponse
     {
@@ -289,6 +299,11 @@ class SubAdminController extends Controller
 
         if (!$identity) {
             return response()->json(['message' => 'Sub-admin not found'], 404);
+        }
+
+        // Don't re-delete
+        if ($identity->status === 'deleted') {
+            return response()->json(['message' => 'Already deleted'], 409);
         }
 
         // Revoke all assignments
@@ -302,20 +317,72 @@ class SubAdminController extends Controller
             ->where('is_revoked', false)
             ->update(['is_revoked' => true, 'revoked_at' => now()]);
 
-        // Deactivate identity
-        $identity->update(['status' => 'deleted']);
+        // Soft-delete identity
+        $identity->update([
+            'status'     => 'deleted',
+            'deleted_at' => now(),
+        ]);
 
         // Deactivate tenant account
-        TenantAccount::where('global_identity_id', $id)->update(['status' => 'deleted']);
+        TenantAccount::where('global_identity_id', $id)->update([
+            'status'     => 'deleted',
+            'deleted_at' => now(),
+        ]);
 
-        // Delete API tokens
-        DB::table('personal_access_tokens')
-            ->where('tokenable_type', 'App\Models\TenantAccount')
-            ->whereIn('tokenable_id', function ($q) use ($id) {
-                $q->select('id')->from('tenant_accounts')->where('global_identity_id', $id);
-            })
-            ->delete();
+        // Revoke API tokens (safe — catches column-type mismatches)
+        try {
+            $tenantIds = TenantAccount::where('global_identity_id', $id)->pluck('id');
+            if ($tenantIds->isNotEmpty()) {
+                DB::table('personal_access_tokens')
+                    ->where('tokenable_type', 'App\Models\TenantAccount')
+                    ->whereIn('tokenable_id', $tenantIds->toArray())
+                    ->delete();
+            }
+        } catch (\Exception $e) {
+            report($e);
+        }
 
-        return response()->json(['success' => true, 'message' => 'Sub-admin deleted']);
+        return response()->json(['success' => true, 'message' => 'Sub-admin deleted (restorable for 30 days)']);
+    }
+
+    /**
+     * Restore a soft-deleted sub-admin.
+     */
+    public function restore(string $id): JsonResponse
+    {
+        $identity = GlobalIdentity::where('id', $id)
+            ->where('identity_type', 'sub_admin')
+            ->where('status', 'deleted')
+            ->first();
+
+        if (!$identity) {
+            return response()->json(['message' => 'Sub-admin not found or not deleted'], 404);
+        }
+
+        // Reactivate identity
+        $identity->update(['status' => 'active', 'deleted_at' => null]);
+
+        // Reactivate tenant account
+        TenantAccount::where('global_identity_id', $id)->update([
+            'status'     => 'active',
+            'deleted_at' => null,
+        ]);
+
+        // Re-activate the most recent claim per type
+        $types = IdentityClaim::where('global_identity_id', $id)
+            ->where('is_revoked', true)
+            ->distinct('claim_type')
+            ->pluck('claim_type');
+
+        foreach ($types as $type) {
+            IdentityClaim::where('global_identity_id', $id)
+                ->where('claim_type', $type)
+                ->where('is_revoked', true)
+                ->orderBy('revoked_at', 'desc')
+                ->take(1)
+                ->update(['is_revoked' => false, 'revoked_at' => null]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Sub-admin restored']);
     }
 }
