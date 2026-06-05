@@ -176,74 +176,31 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
                 child: Column(
                   children: [
                     _sectionLabel('BUS COMPANY'),
-                    const Gap(4),
-                    // Nested expandable Bus Company menu
-                    Container(
-                      margin: const EdgeInsets.symmetric(vertical: 3),
-                      decoration: BoxDecoration(
-                        color: _busCompanyExpanded
-                            ? Colors.white.withValues(alpha: 0.06)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(
-                        children: [
-                          InkWell(
-                            borderRadius: BorderRadius.circular(10),
-                            onTap: () => setState(
-                              () => _busCompanyExpanded = !_busCompanyExpanded,
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 10,
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.directions_bus_rounded,
-                                    color: SubAdminButtonColors.tenants,
-                                    size: 20,
-                                  ),
-                                  const Gap(10),
-                                  Expanded(
-                                    child: Text(
-                                      'Bus Company',
-                                      style: TextStyle(
-                                        color: _currentPage.startsWith('bus_')
-                                            ? Colors.white
-                                            : const Color(0xFFBDD8DB),
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                  Icon(
-                                    _busCompanyExpanded
-                                        ? Icons.keyboard_arrow_down
-                                        : Icons.keyboard_arrow_right,
-                                    color: const Color(0xFFBDD8DB),
-                                    size: 18,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          if (_busCompanyExpanded) ...[
-                            _sidebarSubItem(
-                              'Add Bus Company',
-                              Icons.add_business_rounded,
-                              'add_bus_company',
-                            ),
-                            _sidebarSubItem(
-                              'View All Bus Companies',
-                              Icons.list_alt_rounded,
-                              'view_bus_companies',
-                            ),
-                          ],
-                        ],
-                      ),
+                    const Gap(6),
+                    // Parent — pencil-shaped expand/collapse
+                    Missile3DButton(
+                      label: 'Bus Company',
+                      icon: Icons.directions_bus_rounded,
+                      color: SubAdminButtonColors.tenants,
+                      onTap: () => setState(() => _busCompanyExpanded = !_busCompanyExpanded),
                     ),
+                    // Sub-items — pencil-shaped, slightly smaller, unique colors
+                    if (_busCompanyExpanded) ...[
+                      Missile3DButton(
+                        label: 'Add Bus Company',
+                        icon: Icons.add_business_rounded,
+                        color: const Color(0xFFD97706),
+                        height: 66,
+                        onTap: () => setState(() => _currentPage = 'add_bus_company'),
+                      ),
+                      Missile3DButton(
+                        label: 'View All Bus Companies',
+                        icon: Icons.list_alt_rounded,
+                        color: const Color(0xFF0891B2),
+                        height: 66,
+                        onTap: () => setState(() => _currentPage = 'view_bus_companies'),
+                      ),
+                    ],
                     const Gap(8),
                     _sectionLabel('PERMISSIONS'),
                     const Gap(6),
