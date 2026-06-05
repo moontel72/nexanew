@@ -612,17 +612,24 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
+              Navigator.pop(ctx); // Close dialog immediately
               try {
                 final api = ApiClient();
                 await api.delete(
                   '${ApiConfig.apiBaseUrl}/admin/sub-admins/${sa['id']}',
                 );
-                Navigator.pop(ctx);
                 _fetchSubAdmins();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Sub-admin deleted')),
+                  );
+                }
               } catch (e) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                if (mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+                }
               }
             },
             child: const Text('Delete'),
