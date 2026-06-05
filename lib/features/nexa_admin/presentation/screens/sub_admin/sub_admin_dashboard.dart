@@ -11,24 +11,27 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:trace_odd/core/config/api_config.dart';
+import 'package:trace_odd/core/services/api_client.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 // ─── Sub-Admin Module Color Spectrum ──────────────────────
 class SubAdminButtonColors {
-  static const Color tenants = Color(0xFF7C3AED);     // Purple
-  static const Color features = Color(0xFFDB2777);     // Pink
-  static const Color finance = Color(0xFF2563EB);      // Blue
-  static const Color fleet = Color(0xFF16A34A);         // Green
-  static const Color reports = Color(0xFFD97706);       // Gold/Bronze
-  static const Color settings = Color(0xFF0891B2);      // Cyan/Teal
+  static const Color tenants = Color(0xFF7C3AED); // Purple
+  static const Color features = Color(0xFFDB2777); // Pink
+  static const Color finance = Color(0xFF2563EB); // Blue
+  static const Color fleet = Color(0xFF16A34A); // Green
+  static const Color reports = Color(0xFFD97706); // Gold/Bronze
+  static const Color settings = Color(0xFF0891B2); // Cyan/Teal
 }
 
 class SubAdminDashboardScreen extends StatefulWidget {
   const SubAdminDashboardScreen({super.key});
 
   @override
-  State<SubAdminDashboardScreen> createState() => _SubAdminDashboardScreenState();
+  State<SubAdminDashboardScreen> createState() =>
+      _SubAdminDashboardScreenState();
 }
 
 class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
@@ -36,6 +39,9 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
   String _vertical = '';
   String _token = '';
   bool _isSidebarOpen = true;
+  String _currentPage =
+      'dashboard'; // 'dashboard' | 'add_bus_company' | 'view_bus_companies'
+  bool _busCompanyExpanded = false;
 
   // ── Dashboard metrics
   int _tenantCount = 0;
@@ -70,16 +76,24 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
 
   String get _verticalLabel {
     switch (_vertical) {
-      case 'bus_transit': return 'Bus Transit';
-      case 'goods_logistics': return 'Goods & Logistics';
-      case 'commercial_marketplace': return 'Commercial Marketplace';
-      case 'financial_auditor': return 'Financial Auditor';
-      default: return 'Sub-Admin';
+      case 'bus_transit':
+        return 'Bus Transit';
+      case 'goods_logistics':
+        return 'Goods & Logistics';
+      case 'commercial_marketplace':
+        return 'Commercial Marketplace';
+      case 'financial_auditor':
+        return 'Financial Auditor';
+      default:
+        return 'Sub-Admin';
     }
   }
 
   Future<void> _loadDashboardData() async {
-    setState(() { _isLoading = true; _error = null; });
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
       // Simulate data load (replace with real API calls)
       await Future.delayed(const Duration(milliseconds: 800));
@@ -92,7 +106,10 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.toString(); _isLoading = false; });
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
     }
   }
 
@@ -146,26 +163,86 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
             const Gap(8),
             _buildSubAdminBadge(),
             const Gap(12),
-            const Divider(color: Color(0x20FFFFFF), height: 1, indent: 20, endIndent: 20),
+            const Divider(
+              color: Color(0x20FFFFFF),
+              height: 1,
+              indent: 20,
+              endIndent: 20,
+            ),
             const Gap(12),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Column(
                   children: [
-                    _sectionLabel('COMMAND CENTER'),
-                    const Gap(6),
-                    Missile3DButton(
-                      label: 'Tenant Companies',
-                      icon: Icons.business_rounded,
-                      color: SubAdminButtonColors.tenants,
-                      onTap: () {},
-                    ),
-                    Missile3DButton(
-                      label: 'Onboard New Tenant',
-                      icon: Icons.add_business_rounded,
-                      color: SubAdminButtonColors.tenants,
-                      onTap: () {},
+                    _sectionLabel('BUS COMPANY'),
+                    const Gap(4),
+                    // Nested expandable Bus Company menu
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _busCompanyExpanded
+                            ? Colors.white.withValues(alpha: 0.06)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        children: [
+                          InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () => setState(
+                              () => _busCompanyExpanded = !_busCompanyExpanded,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.directions_bus_rounded,
+                                    color: SubAdminButtonColors.tenants,
+                                    size: 20,
+                                  ),
+                                  const Gap(10),
+                                  Expanded(
+                                    child: Text(
+                                      'Bus Company',
+                                      style: TextStyle(
+                                        color: _currentPage.startsWith('bus_')
+                                            ? Colors.white
+                                            : const Color(0xFFBDD8DB),
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    _busCompanyExpanded
+                                        ? Icons.keyboard_arrow_down
+                                        : Icons.keyboard_arrow_right,
+                                    color: const Color(0xFFBDD8DB),
+                                    size: 18,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (_busCompanyExpanded) ...[
+                            _sidebarSubItem(
+                              'Add Bus Company',
+                              Icons.add_business_rounded,
+                              'add_bus_company',
+                            ),
+                            _sidebarSubItem(
+                              'View All Bus Companies',
+                              Icons.list_alt_rounded,
+                              'view_bus_companies',
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                     const Gap(8),
                     _sectionLabel('PERMISSIONS'),
@@ -259,7 +336,11 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
               color: AppColors.secondary,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.admin_panel_settings_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const Gap(10),
           Flexible(
@@ -269,20 +350,31 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
               children: [
                 const Text(
                   'Trace Odd',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   '$_verticalLabel Terminal',
-                  style: const TextStyle(color: Color(0xFFBDD8DB), fontSize: 11),
+                  style: const TextStyle(
+                    color: Color(0xFFBDD8DB),
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
           ),
           if (!isWide)
             IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+              icon: const Icon(
+                Icons.close_rounded,
+                color: Colors.white70,
+                size: 20,
+              ),
               onPressed: () => setState(() => _isSidebarOpen = false),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -307,7 +399,11 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
             backgroundColor: AppColors.secondary,
             child: Text(
               _subAdminName.characters.first.toUpperCase(),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
             ),
           ),
           const Gap(8),
@@ -318,13 +414,20 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
               children: [
                 Text(
                   _subAdminName,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   _verticalLabel,
-                  style: const TextStyle(color: Color(0xFFBDD8DB), fontSize: 10),
+                  style: const TextStyle(
+                    color: Color(0xFFBDD8DB),
+                    fontSize: 10,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -354,6 +457,46 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
     );
   }
 
+  Widget _sidebarSubItem(String label, IconData icon, String page) {
+    final isSelected = _currentPage == page;
+    return Padding(
+      padding: const EdgeInsets.only(left: 16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => setState(() => _currentPage = page),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : const Color(0xFFBDD8DB),
+                size: 16,
+              ),
+              const Gap(8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : const Color(0xFFBDD8DB),
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSidebarBottom() {
     return Padding(
       padding: const EdgeInsets.all(10),
@@ -370,7 +513,10 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
                 children: [
                   Icon(Icons.refresh_rounded, size: 18, color: Colors.white60),
                   Gap(8),
-                  Text('Refresh Data', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                  Text(
+                    'Refresh Data',
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -384,7 +530,10 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
                 children: [
                   Icon(Icons.logout_rounded, size: 18, color: Colors.white60),
                   Gap(8),
-                  Text('Logout', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                  Text(
+                    'Logout',
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -406,28 +555,39 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? _buildErrorView()
-                    : RefreshIndicator(
-                        onRefresh: _loadDashboardData,
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildGreeting(),
-                              const Gap(20),
-                              _buildKpiCards(isWide),
-                              const Gap(24),
-                              _buildQuickActions(),
-                              const Gap(24),
-                              _buildRecentActivity(),
-                            ],
-                          ),
-                        ),
-                      ),
+                ? _buildErrorView()
+                : _currentPage == 'add_bus_company'
+                ? _buildAddBusCompanyPage()
+                : _currentPage == 'view_bus_companies'
+                ? _buildBusCompanyListPage()
+                : _buildDashboardHome(),
           ),
         ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // DASHBOARD HOME (original KPI + quick actions)
+  // ═══════════════════════════════════════════════════════
+  Widget _buildDashboardHome() {
+    return RefreshIndicator(
+      onRefresh: _loadDashboardData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildGreeting(),
+            const Gap(20),
+            _buildKpiCards(true),
+            const Gap(24),
+            _buildQuickActions(),
+            const Gap(24),
+            _buildRecentActivity(),
+          ],
+        ),
       ),
     );
   }
@@ -438,7 +598,11 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
@@ -451,7 +615,11 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
           Expanded(
             child: Text(
               '$_verticalLabel Dashboard',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
           IconButton(
@@ -470,7 +638,11 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
       children: [
         Text(
           'Welcome back, $_subAdminName',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
         ),
         const Gap(4),
         Text(
@@ -484,7 +656,9 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
   Widget _buildKpiCards(bool isWide) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 700 ? 3 : (constraints.maxWidth > 400 ? 2 : 1);
+        final crossAxisCount = constraints.maxWidth > 700
+            ? 3
+            : (constraints.maxWidth > 400 ? 2 : 1);
         return GridView.count(
           crossAxisCount: crossAxisCount,
           shrinkWrap: true,
@@ -493,9 +667,24 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
           crossAxisSpacing: 14,
           childAspectRatio: 1.6,
           children: [
-            _kpiCard('Tenant Companies', '$_tenantCount', Icons.business_rounded, SubAdminButtonColors.tenants),
-            _kpiCard('Active Features', '$_activeFeatures', Icons.toggle_on_rounded, SubAdminButtonColors.features),
-            _kpiCard('Monthly Revenue', 'PKR ${_monthlyRevenue.toStringAsFixed(0)}', Icons.trending_up_rounded, SubAdminButtonColors.finance),
+            _kpiCard(
+              'Tenant Companies',
+              '$_tenantCount',
+              Icons.business_rounded,
+              SubAdminButtonColors.tenants,
+            ),
+            _kpiCard(
+              'Active Features',
+              '$_activeFeatures',
+              Icons.toggle_on_rounded,
+              SubAdminButtonColors.features,
+            ),
+            _kpiCard(
+              'Monthly Revenue',
+              'PKR ${_monthlyRevenue.toStringAsFixed(0)}',
+              Icons.trending_up_rounded,
+              SubAdminButtonColors.finance,
+            ),
           ],
         );
       },
@@ -513,7 +702,8 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 36, height: 36,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
@@ -523,9 +713,19 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
             const Spacer(),
             Text(
               value,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
             ),
-            Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
           ],
         ),
       ),
@@ -536,20 +736,42 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Quick Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        const Text(
+          'Quick Actions',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
         const Gap(12),
         Row(
           children: [
             Expanded(
-              child: _actionCard('Onboard Tenant', Icons.add_business_rounded, SubAdminButtonColors.tenants, () {}),
+              child: _actionCard(
+                'Onboard Tenant',
+                Icons.add_business_rounded,
+                SubAdminButtonColors.tenants,
+                () {},
+              ),
             ),
             const Gap(12),
             Expanded(
-              child: _actionCard('Feature Grid', Icons.grid_view_rounded, SubAdminButtonColors.features, () {}),
+              child: _actionCard(
+                'Feature Grid',
+                Icons.grid_view_rounded,
+                SubAdminButtonColors.features,
+                () {},
+              ),
             ),
             const Gap(12),
             Expanded(
-              child: _actionCard('View Reports', Icons.description_rounded, SubAdminButtonColors.reports, () {}),
+              child: _actionCard(
+                'View Reports',
+                Icons.description_rounded,
+                SubAdminButtonColors.reports,
+                () {},
+              ),
             ),
           ],
         ),
@@ -557,7 +779,12 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
     );
   }
 
-  Widget _actionCard(String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _actionCard(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -573,7 +800,15 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
             children: [
               Icon(icon, color: color, size: 28),
               const Gap(8),
-              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color), textAlign: TextAlign.center),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
@@ -585,11 +820,20 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Recent Activity', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        const Text(
+          'Recent Activity',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
         const Gap(12),
         Card(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           child: const Padding(
             padding: EdgeInsets.all(40),
             child: Center(
@@ -597,7 +841,10 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
                 children: [
                   Icon(Icons.inbox_rounded, size: 40, color: AppColors.gray300),
                   Gap(8),
-                  Text('Activity feed will appear here', style: TextStyle(color: AppColors.textTertiary)),
+                  Text(
+                    'Activity feed will appear here',
+                    style: TextStyle(color: AppColors.textTertiary),
+                  ),
                 ],
               ),
             ),
@@ -616,9 +863,365 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
           const Gap(12),
           Text(_error!, style: const TextStyle(color: AppColors.textSecondary)),
           const Gap(12),
-          ElevatedButton(onPressed: _loadDashboardData, child: const Text('Retry')),
+          ElevatedButton(
+            onPressed: _loadDashboardData,
+            child: const Text('Retry'),
+          ),
         ],
       ),
     );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // ADD BUS COMPANY PAGE
+  // ═══════════════════════════════════════════════════════
+  final _busFormKey = GlobalKey<FormState>();
+  final _companyNameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _regCodeCtrl = TextEditingController();
+  final _fleetSizeCtrl = TextEditingController();
+  final _licenseCtrl = TextEditingController();
+  bool _busFormLoading = false;
+
+  Widget _buildAddBusCompanyPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Form(
+        key: _busFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: SubAdminButtonColors.tenants.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.add_business_rounded,
+                    color: Color(0xFF7C3AED),
+                    size: 22,
+                  ),
+                ),
+                const Gap(12),
+                const Expanded(
+                  child: Text(
+                    'Register New Bus Company',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const Gap(20),
+            _busField('Company Name', _companyNameCtrl, Icons.business),
+            const Gap(14),
+            _busField(
+              'Corporate Email',
+              _emailCtrl,
+              Icons.email,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const Gap(14),
+            _busField(
+              'Password',
+              _passwordCtrl,
+              Icons.lock,
+              keyboardType: TextInputType.visiblePassword,
+              obscure: true,
+              minLen: 8,
+            ),
+            const Gap(14),
+            _busField(
+              'Phone / Support Contact',
+              _phoneCtrl,
+              Icons.phone,
+              keyboardType: TextInputType.phone,
+              required: false,
+            ),
+            const Gap(24),
+            const Text(
+              'System Assignment',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+            const Gap(10),
+            _busField(
+              'Registration Code',
+              _regCodeCtrl,
+              Icons.qr_code,
+              required: false,
+            ),
+            const Gap(14),
+            _busField(
+              'Fleet Size (vehicles)',
+              _fleetSizeCtrl,
+              Icons.directions_bus,
+              keyboardType: TextInputType.number,
+              required: false,
+            ),
+            const Gap(14),
+            _busField(
+              'Transit License Ref',
+              _licenseCtrl,
+              Icons.assignment,
+              required: false,
+            ),
+            const Gap(24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SubAdminButtonColors.tenants,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: _busFormLoading ? null : _submitBusCompany,
+                child: _busFormLoading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Create Bus Company',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _busField(
+    String label,
+    TextEditingController ctrl,
+    IconData icon, {
+    TextInputType? keyboardType,
+    bool obscure = false,
+    bool required = true,
+    int? minLen,
+  }) {
+    return TextFormField(
+      controller: ctrl,
+      keyboardType: keyboardType,
+      obscureText: obscure,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      validator: (v) {
+        if (!required) return null;
+        if (v == null || v.trim().isEmpty) return '$label is required';
+        if (minLen != null && v.length < minLen)
+          return 'Minimum $minLen characters';
+        return null;
+      },
+    );
+  }
+
+  Future<void> _submitBusCompany() async {
+    if (!_busFormKey.currentState!.validate()) return;
+    setState(() => _busFormLoading = true);
+    try {
+      final api = ApiClient();
+      await api.post(
+        '${ApiConfig.apiBaseUrl}/admin/bus-companies/create',
+        body: {
+          'company_name': _companyNameCtrl.text.trim(),
+          'email': _emailCtrl.text.trim(),
+          'password': _passwordCtrl.text,
+          'phone': _phoneCtrl.text.trim(),
+          'registration_code': _regCodeCtrl.text.trim(),
+          'fleet_size': int.tryParse(_fleetSizeCtrl.text.trim()) ?? 0,
+          'transit_license': _licenseCtrl.text.trim(),
+        },
+      );
+      _clearBusForm();
+      setState(() {
+        _busFormLoading = false;
+        _currentPage = 'view_bus_companies';
+      });
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bus company created!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+    } catch (e) {
+      setState(() => _busFormLoading = false);
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red),
+        );
+    }
+  }
+
+  void _clearBusForm() {
+    _companyNameCtrl.clear();
+    _emailCtrl.clear();
+    _passwordCtrl.clear();
+    _phoneCtrl.clear();
+    _regCodeCtrl.clear();
+    _fleetSizeCtrl.clear();
+    _licenseCtrl.clear();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // VIEW ALL BUS COMPANIES PAGE
+  // ═══════════════════════════════════════════════════════
+  List<Map<String, dynamic>> _busCompanies = [];
+  bool _busListLoading = false;
+
+  Widget _buildBusCompanyListPage() {
+    if (_busCompanies.isEmpty && !_busListLoading) _fetchBusCompanies();
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          color: Colors.white,
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Bus Companies',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () =>
+                    setState(() => _currentPage = 'add_bus_company'),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add New'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SubAdminButtonColors.tenants,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _busListLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _busCompanies.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No bus companies yet',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _fetchBusCompanies,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _busCompanies.length,
+                    itemBuilder: (ctx, i) => _busCompanyCard(_busCompanies[i]),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _fetchBusCompanies() async {
+    setState(() => _busListLoading = true);
+    try {
+      final api = ApiClient();
+      final res = await api.get('${ApiConfig.apiBaseUrl}/admin/bus-companies');
+      final data = res['data'];
+      setState(() {
+        _busCompanies = (data is List) ? data.cast<Map<String, dynamic>>() : [];
+        _busListLoading = false;
+      });
+    } catch (e) {
+      setState(() => _busListLoading = false);
+    }
+  }
+
+  Widget _busCompanyCard(Map<String, dynamic> c) {
+    final isActive = c['status'] == 'active';
+    final meta = c['metadata'];
+    final fleetSize = meta is Map ? (meta['fleet_size'] ?? 0) : 0;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: SubAdminButtonColors.tenants.withValues(alpha: 0.12),
+          child: const Icon(Icons.directions_bus, color: Color(0xFF7C3AED)),
+        ),
+        title: Text(
+          c['account_name'] ?? '',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          '${c['email'] ?? ''}  •  Fleet: $fleetSize  •  ${_formatDate(c['created_at'])}',
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                isActive ? 'ACTIVE' : 'SUSPENDED',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: isActive ? Colors.green : Colors.orange,
+                ),
+              ),
+            ),
+            PopupMenuButton<String>(
+              itemBuilder: (ctx) => [
+                PopupMenuItem(
+                  value: 'toggle',
+                  child: Text(isActive ? 'Suspend' : 'Activate'),
+                ),
+              ],
+              onSelected: (action) async {
+                try {
+                  await ApiClient().patch(
+                    '${ApiConfig.apiBaseUrl}/admin/bus-companies/${c['id']}/status',
+                  );
+                  _fetchBusCompanies();
+                } catch (_) {}
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(dynamic d) {
+    if (d == null) return '';
+    try {
+      return DateTime.parse(d.toString()).toString().substring(0, 10);
+    } catch (_) {
+      return d.toString();
+    }
   }
 }

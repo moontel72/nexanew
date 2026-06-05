@@ -82,6 +82,14 @@ $registerRoutes = function (): void {
                 Route::get("grants/{assignmentId}", [\App\Http\Controllers\Admin\SubAdminFeatureToggleController::class, "listGrants"]);
             });
 
+            /// Bus Company Management (Sub-Admin jurisdiction)
+            Route::prefix("bus-companies")->group(function (): void {
+                Route::get("", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "index"]);
+                Route::post("create", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "store"]);
+                Route::get("{id}", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "show"]);
+                Route::patch("{id}/status", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "toggleStatus"]);
+            });
+
             Route::prefix("dashboard")->group(function (): void {
                 Route::get("", [
                     \App\Http\Controllers\Admin\AdminDashboardController::class,
