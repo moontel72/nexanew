@@ -182,7 +182,9 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
                       label: 'Bus Company',
                       icon: Icons.directions_bus_rounded,
                       color: SubAdminButtonColors.tenants,
-                      onTap: () => setState(() => _busCompanyExpanded = !_busCompanyExpanded),
+                      onTap: () => setState(
+                        () => _busCompanyExpanded = !_busCompanyExpanded,
+                      ),
                     ),
                     // Sub-items — pencil-shaped, slightly smaller, unique colors
                     if (_busCompanyExpanded) ...[
@@ -191,14 +193,16 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
                         icon: Icons.add_business_rounded,
                         color: const Color(0xFFD97706),
                         height: 66,
-                        onTap: () => setState(() => _currentPage = 'add_bus_company'),
+                        onTap: () =>
+                            setState(() => _currentPage = 'add_bus_company'),
                       ),
                       Missile3DButton(
                         label: 'View All Bus Companies',
                         icon: Icons.list_alt_rounded,
                         color: const Color(0xFF0891B2),
                         height: 66,
-                        onTap: () => setState(() => _currentPage = 'view_bus_companies'),
+                        onTap: () =>
+                            setState(() => _currentPage = 'view_bus_companies'),
                       ),
                     ],
                     const Gap(8),
@@ -408,46 +412,6 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
             fontSize: 10,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sidebarSubItem(String label, IconData icon, String page) {
-    final isSelected = _currentPage == page;
-    return Padding(
-      padding: const EdgeInsets.only(left: 16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => setState(() => _currentPage = page),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? Colors.white : const Color(0xFFBDD8DB),
-                size: 16,
-              ),
-              const Gap(8),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : const Color(0xFFBDD8DB),
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -841,6 +805,7 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
   final _fleetSizeCtrl = TextEditingController();
   final _licenseCtrl = TextEditingController();
   bool _busFormLoading = false;
+  bool _obscurePassword = true;
 
   Widget _buildAddBusCompanyPage() {
     return SingleChildScrollView(
@@ -884,13 +849,31 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
               keyboardType: TextInputType.emailAddress,
             ),
             const Gap(14),
-            _busField(
-              'Password',
-              _passwordCtrl,
-              Icons.lock,
+            // Password field with visibility toggle
+            TextFormField(
+              controller: _passwordCtrl,
+              obscureText: _obscurePassword,
               keyboardType: TextInputType.visiblePassword,
-              obscure: true,
-              minLen: 8,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                prefixIcon: const Icon(Icons.lock),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty)
+                  return 'Password is required';
+                if (v.length < 8) return 'Minimum 8 characters';
+                return null;
+              },
             ),
             const Gap(14),
             _busField(
@@ -1038,6 +1021,7 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
     _regCodeCtrl.clear();
     _fleetSizeCtrl.clear();
     _licenseCtrl.clear();
+    _obscurePassword = true;
   }
 
   // ═══════════════════════════════════════════════════════
@@ -1055,12 +1039,18 @@ class _SubAdminDashboardScreenState extends State<SubAdminDashboardScreen> {
           color: Colors.white,
           child: Row(
             children: [
-              const Expanded(
+              Flexible(
                 child: Text(
                   'Bus Companies',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const Gap(12),
               ElevatedButton.icon(
                 onPressed: () =>
                     setState(() => _currentPage = 'add_bus_company'),
