@@ -415,7 +415,6 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
   }
 
   Widget _statusChip(String status) {
-    final isActive = status == 'active';
     final isDeleted = status == 'deleted';
     final isSuspended = status == 'suspended';
 
@@ -481,11 +480,6 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
       final api = ApiClient();
       await api.patch('${ApiConfig.apiBaseUrl}/admin/sub-admins/$id/status');
       _fetchSubAdmins();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Status updated')));
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -672,18 +666,13 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              Navigator.pop(ctx); // Close dialog immediately
+              Navigator.pop(ctx);
               try {
                 final api = ApiClient();
                 await api.delete(
                   '${ApiConfig.apiBaseUrl}/admin/sub-admins/${sa['id']}',
                 );
                 _fetchSubAdmins();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Sub-admin deleted')),
-                  );
-                }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(
@@ -706,11 +695,6 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
         '${ApiConfig.apiBaseUrl}/admin/sub-admins/${sa['id']}/restore',
       );
       _fetchSubAdmins();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Sub-admin restored')));
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
