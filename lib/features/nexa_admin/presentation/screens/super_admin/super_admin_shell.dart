@@ -35,7 +35,7 @@ class SuperAdminShell extends StatelessWidget {
           final crumbs = _breadcrumbsForLocation(location);
 
           return Scaffold(
-            backgroundColor: AppColors.adminContentBackground,
+            backgroundColor: const Color(0xFFE6F7F4),
             drawer: isNarrow ? Drawer(child: sidebar) : null,
             body: Row(
               children: [
@@ -96,6 +96,7 @@ class SuperAdminShell extends StatelessWidget {
     return const [
       AdminSidebarSection(
         title: 'Overview',
+        color: Color(0xFF7C3AED),
         items: [
           AdminSidebarItem(
             label: 'Command Center',
@@ -106,6 +107,7 @@ class SuperAdminShell extends StatelessWidget {
       ),
       AdminSidebarSection(
         title: 'Companies',
+        color: Color(0xFF2563EB),
         items: [
           AdminSidebarItem(
             label: 'View All Companies',
@@ -121,6 +123,7 @@ class SuperAdminShell extends StatelessWidget {
       ),
       AdminSidebarSection(
         title: 'Bus Fleet',
+        color: Color(0xFF16A34A),
         items: [
           AdminSidebarItem(
             label: 'View Bus Companies',
@@ -136,6 +139,7 @@ class SuperAdminShell extends StatelessWidget {
       ),
       AdminSidebarSection(
         title: 'Goods Fleet',
+        color: Color(0xFFDC2626),
         items: [
           AdminSidebarItem(
             label: 'View Goods Companies',
@@ -151,6 +155,7 @@ class SuperAdminShell extends StatelessWidget {
       ),
       AdminSidebarSection(
         title: 'Subscriptions',
+        color: Color(0xFFDB2777),
         items: [
           AdminSidebarItem(
             label: 'View All Plans',
@@ -171,6 +176,7 @@ class SuperAdminShell extends StatelessWidget {
       ),
       AdminSidebarSection(
         title: 'Sub Admins',
+        color: Color(0xFFD97706),
         items: [
           AdminSidebarItem(
             label: 'View All Sub-Admins',
@@ -186,6 +192,7 @@ class SuperAdminShell extends StatelessWidget {
       ),
       AdminSidebarSection(
         title: 'Resellers',
+        color: Color(0xFF0891B2),
         items: [
           AdminSidebarItem(
             label: 'View All Resellers',
@@ -201,6 +208,7 @@ class SuperAdminShell extends StatelessWidget {
       ),
       AdminSidebarSection(
         title: 'Transport',
+        color: Color(0xFF4F46E5),
         items: [
           AdminSidebarItem(
             label: 'Wallet',

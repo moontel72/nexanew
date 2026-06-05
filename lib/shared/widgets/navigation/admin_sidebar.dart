@@ -2,13 +2,19 @@
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class AdminSidebarSection {
   final String title;
   final List<AdminSidebarItem> items;
+  final Color? color;
 
-  const AdminSidebarSection({required this.title, required this.items});
+  const AdminSidebarSection({
+    required this.title,
+    required this.items,
+    this.color,
+  });
 }
 
 class AdminSidebarItem {
@@ -16,15 +22,22 @@ class AdminSidebarItem {
   final IconData icon;
   final String? route;
   final List<AdminSidebarItem> children;
+  final Color? color;
 
   const AdminSidebarItem({
     required this.label,
     required this.icon,
     this.route,
     this.children = const [],
+    this.color,
   });
 
   bool get hasChildren => children.isNotEmpty;
+}
+
+/// Sidebar color palette — matches Sub-Admin spectrum
+class _SidebarColors {
+  static const Color purple = Color(0xFF7C3AED);
 }
 
 class AdminSidebar extends StatelessWidget {
@@ -43,76 +56,86 @@ class AdminSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const expandedWidth = 268.0;
-    const collapsedWidth = 76.0;
+    const expandedWidth = 260.0;
+    const collapsedWidth = 60.0;
     final width = collapsed ? collapsedWidth : expandedWidth;
     final location = GoRouterState.of(context).uri.toString();
 
     return Material(
-      color: AppColors.adminSidebarBackground,
-      elevation: 1,
+      color: const Color(0xFF1A3A5C),
       child: SizedBox(
         width: width,
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 16,
+              if (!collapsed)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
+                  child: SvgPicture.asset(
+                    'assets/logo/logo-company-name.svg',
+                    width: 160,
+                    height: 91,
+                  ),
                 ),
-                child: SvgPicture.asset(
-                  'assets/logo/logo-company-name.svg',
-                  width: collapsed ? 48 : 176,
-                  height: collapsed ? 28 : 101,
+              if (collapsed)
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Icon(
+                    Icons.admin_panel_settings,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
-              ),
-              Divider(height: 1, color: AppColors.adminSidebarBorder),
+              const Divider(height: 1, color: Color(0x20FFFFFF)),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   children: [
                     for (final section in sections) ...[
                       if (!collapsed)
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                          padding: const EdgeInsets.fromLTRB(14, 12, 16, 4),
                           child: Text(
                             section.title.toUpperCase(),
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: AppColors.adminSidebarTextMuted,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.8,
-                                ),
+                            style: const TextStyle(
+                              color: Color(0xFFBDD8DB),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.0,
+                            ),
                           ),
                         ),
                       for (final item in section.items)
-                        _SidebarTile(
+                        _PencilTile(
                           collapsed: collapsed,
                           item: item,
                           location: location,
+                          sectionColor: section.color,
                         ),
-                      const Gap(6),
+                      const Gap(4),
                     ],
                   ],
                 ),
               ),
-              Divider(height: 1, color: AppColors.adminSidebarBorder),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: AppColors.primary.withOpacity(0.12),
-                      child: Icon(
-                        Icons.admin_panel_settings,
-                        size: 18,
-                        color: AppColors.primary,
+              const Divider(height: 1, color: Color(0x20FFFFFF)),
+              if (!collapsed)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppColors.secondary.withOpacity(0.2),
+                        child: const Icon(
+                          Icons.admin_panel_settings,
+                          size: 18,
+                          color: AppColors.secondary,
+                        ),
                       ),
-                    ),
-                    if (!collapsed) ...[
                       const Gap(10),
                       Expanded(
                         child: Column(
@@ -120,27 +143,26 @@ class AdminSidebar extends StatelessWidget {
                           children: [
                             Text(
                               footerTitle,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.adminSidebarText,
-                                  ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
                             ),
                             if (footerSubtitle != null)
                               Text(
                                 footerSubtitle!,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: AppColors.adminSidebarTextMuted,
-                                    ),
+                                style: const TextStyle(
+                                  color: Color(0xFFBDD8DB),
+                                  fontSize: 11,
+                                ),
                               ),
                           ],
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -149,19 +171,20 @@ class AdminSidebar extends StatelessWidget {
   }
 }
 
-class _SidebarTile extends StatelessWidget {
+class _PencilTile extends StatelessWidget {
   final bool collapsed;
   final AdminSidebarItem item;
   final String location;
+  final Color? sectionColor;
 
-  const _SidebarTile({
+  const _PencilTile({
     required this.collapsed,
     required this.item,
     required this.location,
+    this.sectionColor,
   });
 
-  bool _isSelected(BuildContext context, String? route) {
-    final location = this.location;
+  bool _isSelected(String? route) {
     if (route == null) return false;
     if (location == route) return true;
     if (route == '/dashboard' && location.startsWith('/dashboard')) return true;
@@ -171,166 +194,79 @@ class _SidebarTile extends StatelessWidget {
 
   bool _isAnyChildSelected() {
     for (final child in item.children) {
-      final route = child.route;
-      if (route != null && location.startsWith(route)) return true;
+      if (child.route != null && location.startsWith(child.route!)) return true;
     }
     return false;
   }
 
+  Color _resolveColor() {
+    if (item.color != null) return item.color!;
+    if (sectionColor != null) return sectionColor!;
+    // Cycle through palette based on label hash for visual variety
+    return _SidebarColors.purple;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final selected = _isSelected(context, item.route) || _isAnyChildSelected();
-    final bg = selected ? Colors.white.withOpacity(0.10) : Colors.transparent;
-    final fg = selected ? AppColors.white : AppColors.adminSidebarText;
-    final iconColor = selected ? AppColors.white : AppColors.adminSidebarText;
+    final selected = _isSelected(item.route) || _isAnyChildSelected();
+    final color = _resolveColor();
 
-    if (!collapsed && item.hasChildren) {
-      final isExpanded = _isAnyChildSelected();
+    if (collapsed) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            dividerColor: Colors.transparent,
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-          ),
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: GestureDetector(
+          onTap: item.route != null ? () => context.go(item.route!) : null,
           child: Container(
+            width: 44,
+            height: 44,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: selected
-                    ? AppColors.primary.withOpacity(0.35)
-                    : Colors.transparent,
-              ),
+              color: selected ? color.withOpacity(0.2) : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: ExpansionTile(
-              initiallyExpanded: isExpanded,
-              tilePadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
-              ),
-              childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-              collapsedIconColor: iconColor,
-              iconColor: iconColor,
-              leading: Icon(item.icon, color: iconColor, size: 20),
-              title: Text(
-                item.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: fg,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              children: [
-                for (final child in item.children)
-                  _ChildTile(
-                    child: child,
-                    selected: child.route != null && location == child.route,
-                  ),
-              ],
+            child: Icon(
+              item.icon,
+              color: selected ? Colors.white : const Color(0xFFBDD8DB),
+              size: 20,
             ),
           ),
         ),
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: item.route == null ? null : () => context.go(item.route!),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: selected
-                    ? AppColors.primary.withOpacity(0.35)
-                    : Colors.transparent,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(item.icon, color: iconColor, size: 20),
-                if (!collapsed) ...[
-                  const Gap(10),
-                  Expanded(
-                    child: Text(
-                      item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: fg,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+    if (item.hasChildren) {
+      final isExpanded = _isAnyChildSelected();
+      return Column(
+        children: [
+          Missile3DButton(
+            label: item.label,
+            icon: item.icon,
+            color: color,
+            onTap: () {},
+            height: 72,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ChildTile extends StatelessWidget {
-  final AdminSidebarItem child;
-  final bool selected;
-
-  const _ChildTile({required this.child, required this.selected});
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = selected ? AppColors.white : AppColors.adminSidebarText;
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: child.route == null ? null : () => context.go(child.route!),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: selected
-                ? Colors.white.withOpacity(0.10)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected
-                  ? AppColors.primary.withOpacity(0.35)
-                  : Colors.transparent,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                child.icon,
-                size: 18,
-                color: selected ? AppColors.white : AppColors.adminSidebarText,
-              ),
-              const Gap(8),
-              Expanded(
-                child: Text(
-                  child.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: fg,
-                    fontWeight: FontWeight.w600,
-                  ),
+          if (isExpanded)
+            ...item.children.map(
+              (c) => Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Missile3DButton(
+                  label: c.label,
+                  icon: c.icon,
+                  color: c.color ?? color.withAlpha(200),
+                  height: 60,
+                  onTap: c.route != null ? () => context.go(c.route!) : () {},
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
+        ],
+      );
+    }
+
+    return Missile3DButton(
+      label: item.label,
+      icon: item.icon,
+      color: color,
+      onTap: item.route != null ? () => context.go(item.route!) : () {},
     );
   }
 }
