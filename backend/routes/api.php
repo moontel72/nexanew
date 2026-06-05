@@ -73,6 +73,10 @@ $registerRoutes = function (): void {
             Route::prefix("sub-admins")->group(function (): void {
                 Route::get("", [\App\Http\Controllers\Admin\SubAdminController::class, "index"]);
                 Route::post("create", [\App\Http\Controllers\Admin\SubAdminController::class, "store"]);
+                Route::get("{id}", [\App\Http\Controllers\Admin\SubAdminController::class, "show"]);
+                Route::put("{id}", [\App\Http\Controllers\Admin\SubAdminController::class, "update"]);
+                Route::delete("{id}", [\App\Http\Controllers\Admin\SubAdminController::class, "destroy"]);
+                Route::patch("{id}/status", [\App\Http\Controllers\Admin\SubAdminController::class, "toggleStatus"]);
                 Route::post("toggle-feature", [\App\Http\Controllers\Admin\SubAdminFeatureToggleController::class, "toggleFeature"]);
                 Route::get("grants/{assignmentId}", [\App\Http\Controllers\Admin\SubAdminFeatureToggleController::class, "listGrants"]);
             });

@@ -26,10 +26,10 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
 
   // ── Vertical color scheme (matching Bus Owner pencil palette)
   static const _verticalColors = {
-    'bus_transit': Color(0xFF7C3AED),        // Purple
-    'goods_logistics': Color(0xFFDB2777),     // Pink
+    'bus_transit': Color(0xFF7C3AED), // Purple
+    'goods_logistics': Color(0xFFDB2777), // Pink
     'commercial_marketplace': Color(0xFF2563EB), // Blue
-    'financial_auditor': Color(0xFFD97706),   // Gold/Bronze
+    'financial_auditor': Color(0xFFD97706), // Gold/Bronze
   };
 
   static const _verticalLabels = {
@@ -53,7 +53,10 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
   }
 
   Future<void> _fetchSubAdmins() async {
-    setState(() { _isLoading = true; _error = null; });
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
       final api = ApiClient();
       final res = await api.get('${ApiConfig.apiBaseUrl}/admin/sub-admins');
@@ -64,7 +67,10 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
           _isLoading = false;
         });
       } else {
-        setState(() { _subAdmins = []; _isLoading = false; });
+        setState(() {
+          _subAdmins = [];
+          _isLoading = false;
+        });
       }
     } catch (e) {
       // Fallback: use mock data until backend endpoint is ready
@@ -135,8 +141,8 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildError()
-              : _buildContent(),
+          ? _buildError()
+          : _buildContent(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/sub-admins/add'),
         icon: const Icon(Icons.person_add_alt_rounded),
@@ -156,7 +162,10 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
           const Gap(12),
           Text(_error!, style: const TextStyle(color: AppColors.textSecondary)),
           const Gap(12),
-          ElevatedButton(onPressed: _fetchSubAdmins, child: const Text('Retry')),
+          ElevatedButton(
+            onPressed: _fetchSubAdmins,
+            child: const Text('Retry'),
+          ),
         ],
       ),
     );
@@ -304,7 +313,58 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.gray400),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: AppColors.gray500),
+                onSelected: (action) => _handleAction(action, sa),
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit),
+                      title: Text('Edit'),
+                      dense: true,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'toggle_status',
+                    child: ListTile(
+                      leading: Icon(
+                        isActive ? Icons.block : Icons.check_circle,
+                        color: isActive ? AppColors.warning : AppColors.success,
+                      ),
+                      title: Text(isActive ? 'Suspend' : 'Activate'),
+                      dense: true,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'change_vertical',
+                    child: ListTile(
+                      leading: Icon(Icons.swap_horiz),
+                      title: Text('Change Vertical'),
+                      dense: true,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'reset_password',
+                    child: ListTile(
+                      leading: Icon(Icons.lock_reset),
+                      title: Text('Reset Password'),
+                      dense: true,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete, color: AppColors.error),
+                      title: Text(
+                        'Delete',
+                        style: TextStyle(color: AppColors.error),
+                      ),
+                      dense: true,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -329,6 +389,245 @@ class _SubAdminListScreenState extends State<SubAdminListScreen> {
           letterSpacing: 0.5,
           color: active ? AppColors.success : AppColors.warning,
         ),
+      ),
+    );
+  }
+
+  // ── Actions ────────────────────────────────────────────
+
+  void _handleAction(String action, Map<String, dynamic> sa) {
+    switch (action) {
+      case 'edit':
+        _showEditDialog(sa);
+        break;
+      case 'toggle_status':
+        _toggleStatus(sa);
+        break;
+      case 'change_vertical':
+        _showChangeVerticalDialog(sa);
+        break;
+      case 'reset_password':
+        _showResetPasswordDialog(sa);
+        break;
+      case 'delete':
+        _confirmDelete(sa);
+        break;
+    }
+  }
+
+  Future<void> _toggleStatus(Map<String, dynamic> sa) async {
+    final id = sa['id'] as String;
+    try {
+      final api = ApiClient();
+      await api.patch('${ApiConfig.apiBaseUrl}/admin/sub-admins/$id/status');
+      _fetchSubAdmins();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Status updated')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+  }
+
+  void _showEditDialog(Map<String, dynamic> sa) {
+    final nameCtrl = TextEditingController(text: sa['name']);
+    final emailCtrl = TextEditingController(text: sa['email']);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Sub-Admin'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            const Gap(12),
+            TextField(
+              controller: emailCtrl,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final api = ApiClient();
+                await api.put(
+                  '${ApiConfig.apiBaseUrl}/admin/sub-admins/${sa['id']}',
+                  body: {
+                    'name': nameCtrl.text.trim(),
+                    'email': emailCtrl.text.trim(),
+                  },
+                );
+                Navigator.pop(ctx);
+                _fetchSubAdmins();
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangeVerticalDialog(Map<String, dynamic> sa) {
+    String selected = sa['vertical'] ?? 'bus_transit';
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Change Vertical'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final v in [
+                {'code': 'bus_transit', 'label': 'Bus Transit'},
+                {'code': 'goods_logistics', 'label': 'Goods & Logistics'},
+                {
+                  'code': 'commercial_marketplace',
+                  'label': 'Commercial Marketplace',
+                },
+                {'code': 'financial_auditor', 'label': 'Financial Auditor'},
+              ])
+                RadioListTile<String>(
+                  title: Text(v['label'] as String),
+                  value: v['code'] as String,
+                  groupValue: selected,
+                  onChanged: (v) => setDialogState(() => selected = v!),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  final api = ApiClient();
+                  await api.put(
+                    '${ApiConfig.apiBaseUrl}/admin/sub-admins/${sa['id']}',
+                    body: {'vertical': selected},
+                  );
+                  Navigator.pop(ctx);
+                  _fetchSubAdmins();
+                } catch (e) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                }
+              },
+              child: const Text('Change'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showResetPasswordDialog(Map<String, dynamic> sa) {
+    final passCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: TextField(
+          controller: passCtrl,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'New Password (min 8 chars)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final pass = passCtrl.text.trim();
+              if (pass.length < 8) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Minimum 8 characters')),
+                );
+                return;
+              }
+              try {
+                final api = ApiClient();
+                await api.put(
+                  '${ApiConfig.apiBaseUrl}/admin/sub-admins/${sa['id']}',
+                  body: {'password': pass},
+                );
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Password reset')));
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+              }
+            },
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(Map<String, dynamic> sa) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Sub-Admin?'),
+        content: Text(
+          'This will revoke all access for ${sa['name']}. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              try {
+                final api = ApiClient();
+                await api.delete(
+                  '${ApiConfig.apiBaseUrl}/admin/sub-admins/${sa['id']}',
+                );
+                Navigator.pop(ctx);
+                _fetchSubAdmins();
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

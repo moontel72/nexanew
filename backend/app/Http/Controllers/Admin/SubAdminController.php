@@ -142,4 +142,180 @@ class SubAdminController extends Controller
             ],
         ], 201);
     }
+
+    /**
+     * Show a single sub-admin with full details.
+     */
+    public function show(string $id): JsonResponse
+    {
+        $subAdmin = DB::table('global_identities')
+            ->where('global_identities.id', $id)
+            ->where('identity_type', 'sub_admin')
+            ->leftJoin('sub_admin_assignments', function ($join) {
+                $join->on('global_identities.id', '=', 'sub_admin_assignments.global_identity_id')
+                    ->whereNull('sub_admin_assignments.revoked_at');
+            })
+            ->leftJoin('sub_admin_verticals', 'sub_admin_assignments.vertical_id', '=', 'sub_admin_verticals.id')
+            ->leftJoin('identity_claims', function ($join) {
+                $join->on('global_identities.id', '=', 'identity_claims.global_identity_id')
+                    ->where('identity_claims.claim_type', 'email')
+                    ->where('identity_claims.is_revoked', false);
+            })
+            ->select(
+                'global_identities.*',
+                'sub_admin_verticals.code as vertical',
+                'identity_claims.claim_value as email'
+            )
+            ->first();
+
+        if (!$subAdmin) {
+            return response()->json(['message' => 'Sub-admin not found'], 404);
+        }
+
+        return response()->json(['success' => true, 'data' => $subAdmin]);
+    }
+
+    /**
+     * Update a sub-admin's details (name, email, vertical, password).
+     */
+    public function update(Request $request, string $id): JsonResponse
+    {
+        $identity = GlobalIdentity::where('id', $id)
+            ->where('identity_type', 'sub_admin')
+            ->first();
+
+        if (!$identity) {
+            return response()->json(['message' => 'Sub-admin not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'name'     => ['sometimes', 'string', 'max:160'],
+            'email'    => ['sometimes', 'email', 'max:255'],
+            'phone'    => ['nullable', 'string', 'max:30'],
+            'vertical' => ['sometimes', 'string', 'in:bus_transit,goods_logistics,commercial_marketplace,financial_auditor'],
+            'password' => ['sometimes', 'string', 'min:8'],
+        ]);
+
+        // Update name
+        if (isset($validated['name'])) {
+            $identity->update(['display_name' => $validated['name']]);
+            // Also update TenantAccount name
+            TenantAccount::where('global_identity_id', $id)->update(['account_name' => $validated['name']]);
+        }
+
+        // Update password
+        if (isset($validated['password'])) {
+            $identity->update(['password' => $validated['password']]);
+        }
+
+        // Update email claim
+        if (isset($validated['email'])) {
+            IdentityClaim::updateOrCreate(
+                [
+                    'global_identity_id' => $id,
+                    'claim_type'         => 'email',
+                    'is_revoked'         => false,
+                ],
+                [
+                    'claim_value'  => IdentityClaim::normalize('email', $validated['email']),
+                    'is_primary'   => true,
+                    'verified_via' => 'admin_updated',
+                    'verified_at'  => now(),
+                ]
+            );
+            TenantAccount::where('global_identity_id', $id)->update(['email' => $validated['email']]);
+        }
+
+        // Change vertical assignment
+        if (isset($validated['vertical'])) {
+            $vertical = DB::table('sub_admin_verticals')->where('code', $validated['vertical'])->first();
+            if ($vertical) {
+                // Revoke current assignment
+                DB::table('sub_admin_assignments')
+                    ->where('global_identity_id', $id)
+                    ->whereNull('revoked_at')
+                    ->update(['revoked_at' => now()]);
+
+                // Create new assignment
+                DB::table('sub_admin_assignments')->insert([
+                    'id'                           => (string) Str::orderedUuid(),
+                    'global_identity_id'           => $id,
+                    'vertical_id'                  => $vertical->id,
+                    'appointed_by_master_admin_id' => $identity->id,
+                    'appointed_at'                 => now(),
+                    'created_at'                   => now(),
+                    'updated_at'                   => now(),
+                ]);
+            }
+        }
+
+        return response()->json(['success' => true, 'message' => 'Sub-admin updated']);
+    }
+
+    /**
+     * Toggle sub-admin status (active ↔ suspended).
+     */
+    public function toggleStatus(string $id): JsonResponse
+    {
+        $identity = GlobalIdentity::where('id', $id)
+            ->where('identity_type', 'sub_admin')
+            ->first();
+
+        if (!$identity) {
+            return response()->json(['message' => 'Sub-admin not found'], 404);
+        }
+
+        $newStatus = $identity->status === 'active' ? 'suspended' : 'active';
+        $identity->update(['status' => $newStatus]);
+
+        // Also update TenantAccount status
+        TenantAccount::where('global_identity_id', $id)->update(['status' => $newStatus]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Sub-admin {$newStatus}",
+            'data'    => ['status' => $newStatus],
+        ]);
+    }
+
+    /**
+     * Delete/revoke a sub-admin (soft-delete by revoking assignments + deactivating).
+     */
+    public function destroy(string $id): JsonResponse
+    {
+        $identity = GlobalIdentity::where('id', $id)
+            ->where('identity_type', 'sub_admin')
+            ->first();
+
+        if (!$identity) {
+            return response()->json(['message' => 'Sub-admin not found'], 404);
+        }
+
+        // Revoke all assignments
+        DB::table('sub_admin_assignments')
+            ->where('global_identity_id', $id)
+            ->whereNull('revoked_at')
+            ->update(['revoked_at' => now()]);
+
+        // Revoke all claims
+        IdentityClaim::where('global_identity_id', $id)
+            ->where('is_revoked', false)
+            ->update(['is_revoked' => true, 'revoked_at' => now()]);
+
+        // Deactivate identity
+        $identity->update(['status' => 'deleted']);
+
+        // Deactivate tenant account
+        TenantAccount::where('global_identity_id', $id)->update(['status' => 'deleted']);
+
+        // Delete API tokens
+        DB::table('personal_access_tokens')
+            ->where('tokenable_type', 'App\Models\TenantAccount')
+            ->whereIn('tokenable_id', function ($q) use ($id) {
+                $q->select('id')->from('tenant_accounts')->where('global_identity_id', $id);
+            })
+            ->delete();
+
+        return response()->json(['success' => true, 'message' => 'Sub-admin deleted']);
+    }
 }
