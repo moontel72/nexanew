@@ -37,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // Built-in guards
             'auth'         => \App\Http\Middleware\Authenticate::class,
             'admin'        => \App\Http\Middleware\AdminMiddleware::class,
+            'sub.admin'    => \App\Http\Middleware\SubAdminMiddleware::class,
             'driver.type'  => \App\Http\Middleware\EnsureDriverType::class,
             'chat.filter'  => \App\Http\Middleware\AIChatLeakFilter::class,
 

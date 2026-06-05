@@ -42,13 +42,18 @@ class AdminMiddleware
             return response()->json(['message' => 'Forbidden — no identity spine link'], 403);
         }
 
-        // Verify an active Master Admin assignment exists
+        // Verify an active Master Admin OR Sub-Admin assignment exists
         $isMasterAdmin = DB::table('master_admin_assignments')
             ->where('global_identity_id', $globalIdentityId)
             ->whereNull('revoked_at')
             ->exists();
 
-        if (!$isMasterAdmin) {
+        $isSubAdmin = DB::table('sub_admin_assignments')
+            ->where('global_identity_id', $globalIdentityId)
+            ->whereNull('revoked_at')
+            ->exists();
+
+        if (!$isMasterAdmin && !$isSubAdmin) {
             return response()->json(['message' => 'Forbidden — not a system administrator'], 403);
         }
 
