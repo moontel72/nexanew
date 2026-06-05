@@ -1,5 +1,6 @@
 ﻿// Bus Fleet Dashboard — Company Admin Panel (Module 13)
 // Management hub: Owners, Drivers, Conductors, Fleet Overview
+// 3D Pencil Sidebar Layout (unified with Sub-Admin theme)
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -8,7 +9,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
-import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/nexa_admin/data/models/company/bus_company_model.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
@@ -18,6 +18,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/b
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_conductors_screen.dart';
 import 'package:trace_odd/shared/models/company/company_model.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 
 class BusFleetDashboardScreen extends StatefulWidget {
   final String? companyId;
@@ -33,12 +34,12 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   Map<String, dynamic>? _profile;
   String? _error;
   bool _isLoading = true;
+  String _currentPage = 'dashboard';
+  bool _sidebarOpen = true;
 
   int _ownerCount = 0;
   int _driverCount = 0;
   int _conductorCount = 0;
-  String _currentPage = 'dashboard';
-  bool _sidebarOpen = true;
 
   @override
   void initState() {
@@ -68,44 +69,37 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
       final data = res['data'] as Map<String, dynamic>?;
       if (data == null) throw Exception('No data');
       _profile = data;
-
       final cJson = data['company'] as Map<String, dynamic>?;
-      Company? comp;
-      if (cJson != null) comp = Company.fromJson(cJson);
-
-      // Fetch counts
+      if (cJson != null) _company = Company.fromJson(cJson);
       int owners = 0, drivers = 0, conductors = 0;
       try {
-        final oRes = await api.get(
+        final o = await api.get(
           '/bus-fleet/owners',
           queryParams: {'per_page': '1'},
         );
-        owners = (oRes['data'] as Map?)?['total'] as int? ?? 0;
+        owners = (o['data'] as Map?)?['total'] as int? ?? 0;
       } catch (_) {}
       try {
-        final dRes = await api.get(
+        final d = await api.get(
           '/bus-fleet/drivers/manage',
           queryParams: {'per_page': '1'},
         );
-        drivers = (dRes['data'] as Map?)?['total'] as int? ?? 0;
+        drivers = (d['data'] as Map?)?['total'] as int? ?? 0;
       } catch (_) {}
       try {
-        final cRes = await api.get(
+        final c = await api.get(
           '/bus-fleet/conductors',
           queryParams: {'per_page': '1'},
         );
-        conductors = (cRes['data'] as Map?)?['total'] as int? ?? 0;
+        conductors = (c['data'] as Map?)?['total'] as int? ?? 0;
       } catch (_) {}
-
-      if (mounted) {
+      if (mounted)
         setState(() {
-          _company = comp;
           _ownerCount = owners;
           _driverCount = drivers;
           _conductorCount = conductors;
           _isLoading = false;
         });
-      }
     } catch (e) {
       if (mounted)
         setState(() {
@@ -123,115 +117,256 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 900;
-    if (_isLoading) return _loadingView();
-    if (_error != null) return _errorView();
-
+    if (_isLoading)
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_error != null)
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 12),
+              Text(_error!),
+              const SizedBox(height: 12),
+              ElevatedButton(onPressed: _loadAll, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
     return Scaffold(
       backgroundColor: const Color(0xFFE6F7F4),
-      body: Row(children: [
-        if (_sidebarOpen || isWide) _buildSidebar(isWide),
-        Expanded(child: _buildMainContent()),
-      ]),
+      body: Row(
+        children: [
+          if (_sidebarOpen || isWide) _sidebar(isWide),
+          Expanded(child: _mainContent()),
+        ],
+      ),
     );
   }
 
-  Widget _loadingView() => const Scaffold(body: Center(child: CircularProgressIndicator()));
-  Widget _errorView() => Scaffold(body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.error_outline, size: 48, color: Colors.red), const SizedBox(height: 12), Text(_error ?? 'Error'), const SizedBox(height: 12), ElevatedButton(onPressed: _loadAll, child: const Text('Retry'))])));
-
-  // ═══════════════════════════════════════════════════════
-  // SIDEBAR — 3D Pencil Style
-  // ═══════════════════════════════════════════════════════
-  Widget _buildSidebar(bool isWide) {
-    return Container(
-      width: 240,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF1A3A5C), Color(0xFF0F2B3F)]),
-        boxShadow: [BoxShadow(color: Color(0x30144055), blurRadius: 16, offset: Offset(4, 0))],
+  Widget _sidebar(bool isWide) => Container(
+    width: 240,
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF1A3A5C), Color(0xFF0F2B3F)],
       ),
-      child: SafeArea(
-        child: Column(children: [
-          // Header
+      boxShadow: [
+        BoxShadow(
+          color: Color(0x30144055),
+          blurRadius: 16,
+          offset: Offset(4, 0),
+        ),
+      ],
+    ),
+    child: SafeArea(
+      child: Column(
+        children: [
           Padding(
             padding: const EdgeInsets.all(14),
-            child: Row(children: [
-              Container(width: 36, height: 36, decoration: BoxDecoration(color: const Color(0xFF00C49F), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.directions_bus, color: Colors.white, size: 20)),
-              const SizedBox(width: 10),
-              Expanded(child: Text(_company?.name ?? 'Bus Fleet', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              if (!isWide) IconButton(icon: const Icon(Icons.close, color: Colors.white70, size: 18), onPressed: () => setState(() => _sidebarOpen = false), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 30, minHeight: 30)),
-            ]),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00C49F),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.directions_bus,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _company?.name ?? 'Bus Fleet',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (!isWide)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
+                    onPressed: () => setState(() => _sidebarOpen = false),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 30,
+                      minHeight: 30,
+                    ),
+                  ),
+              ],
+            ),
           ),
-          const Divider(color: Color(0x20FFFFFF), height: 1, indent: 12, endIndent: 12),
+          const Divider(
+            color: Color(0x20FFFFFF),
+            height: 1,
+            indent: 12,
+            endIndent: 12,
+          ),
           const SizedBox(height: 8),
           Expanded(
-            child: ListView(padding: const EdgeInsets.symmetric(horizontal: 10), children: [
-              _sideLabel('MAIN'),
-              Missile3DButton(label: 'Dashboard', icon: Icons.dashboard_rounded, color: const Color(0xFF7C3AED), onTap: () => setState(() => _currentPage = 'dashboard')),
-              const SizedBox(height: 10),
-              _sideLabel('FLEET'),
-              Missile3DButton(label: 'Owners', icon: Icons.badge_rounded, color: const Color(0xFFDB2777), onTap: () => setState(() => _currentPage = 'owners')),
-              Missile3DButton(label: 'Drivers', icon: Icons.person_rounded, color: const Color(0xFF2563EB), onTap: () => setState(() => _currentPage = 'drivers')),
-              Missile3DButton(label: 'Conductors', icon: Icons.group_rounded, color: const Color(0xFF16A34A), onTap: () => setState(() => _currentPage = 'conductors')),
-              const SizedBox(height: 10),
-              _sideLabel('SYSTEM'),
-              Missile3DButton(label: 'Refresh', icon: Icons.refresh_rounded, color: const Color(0xFF0891B2), onTap: _loadAll),
-              Missile3DButton(label: 'Logout', icon: Icons.logout_rounded, color: const Color(0xFFDC2626), onTap: _logout),
-            ]),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              children: [
+                _sl('MAIN'),
+                Missile3DButton(
+                  label: 'Dashboard',
+                  icon: Icons.dashboard_rounded,
+                  color: const Color(0xFF7C3AED),
+                  onTap: () => setState(() => _currentPage = 'dashboard'),
+                ),
+                const SizedBox(height: 8),
+                _sl('FLEET'),
+                Missile3DButton(
+                  label: 'Owners',
+                  icon: Icons.badge_rounded,
+                  color: const Color(0xFFDB2777),
+                  onTap: () => setState(() => _currentPage = 'owners'),
+                ),
+                Missile3DButton(
+                  label: 'Drivers',
+                  icon: Icons.person_rounded,
+                  color: const Color(0xFF2563EB),
+                  onTap: () => setState(() => _currentPage = 'drivers'),
+                ),
+                Missile3DButton(
+                  label: 'Conductors',
+                  icon: Icons.group_rounded,
+                  color: const Color(0xFF16A34A),
+                  onTap: () => setState(() => _currentPage = 'conductors'),
+                ),
+                const SizedBox(height: 8),
+                _sl('SYSTEM'),
+                Missile3DButton(
+                  label: 'Refresh',
+                  icon: Icons.refresh_rounded,
+                  color: const Color(0xFF0891B2),
+                  onTap: _loadAll,
+                ),
+                Missile3DButton(
+                  label: 'Logout',
+                  icon: Icons.logout_rounded,
+                  color: const Color(0xFFDC2626),
+                  onTap: _logout,
+                ),
+              ],
+            ),
           ),
-        ]),
+        ],
       ),
-    );
-  }
+    ),
+  );
 
-  Widget _sideLabel(String t) => Padding(padding: const EdgeInsets.only(left: 4, bottom: 4), child: Text(t, style: const TextStyle(color: Color(0xFFBDD8DB), fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2))));
+  Widget _sl(String t) => Padding(
+    padding: const EdgeInsets.only(left: 4, bottom: 4),
+    child: Text(
+      t,
+      style: const TextStyle(
+        color: Color(0xFFBDD8DB),
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
 
-  Widget _buildMainContent() {
-    return SafeArea(
-      child: Column(children: [
+  Widget _mainContent() => SafeArea(
+    child: Column(
+      children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4)]),
-          child: Row(children: [
-            if (!_sidebarOpen) IconButton(icon: const Icon(Icons.menu), onPressed: () => setState(() => _sidebarOpen = true)),
-            Expanded(child: Text(_currentPage == 'owners' ? 'Fleet Owners' : _currentPage == 'drivers' ? 'Fleet Drivers' : _currentPage == 'conductors' ? 'Fleet Conductors' : 'Dashboard', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
-            IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAll),
-          ]),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4),
+            ],
+          ),
+          child: Row(
+            children: [
+              if (!_sidebarOpen)
+                IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => setState(() => _sidebarOpen = true),
+                ),
+              Expanded(
+                child: Text(
+                  _currentPage == 'owners'
+                      ? 'Fleet Owners'
+                      : _currentPage == 'drivers'
+                      ? 'Fleet Drivers'
+                      : _currentPage == 'conductors'
+                      ? 'Fleet Conductors'
+                      : 'Dashboard',
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAll),
+            ],
+          ),
         ),
         Expanded(
-          child: _currentPage == 'owners' ? _placeholderPage('Owners', Icons.badge_rounded) :
-                 _currentPage == 'drivers' ? _placeholderPage('Drivers', Icons.person_rounded) :
-                 _currentPage == 'conductors' ? _placeholderPage('Conductors', Icons.group_rounded) :
-                 _buildDashboardHome(),
+          child: _currentPage == 'owners'
+              ? _page('Owners', Icons.badge_rounded)
+              : _currentPage == 'drivers'
+              ? _page('Drivers', Icons.person_rounded)
+              : _currentPage == 'conductors'
+              ? _page('Conductors', Icons.group_rounded)
+              : _home(),
         ),
-      ]),
-    );
-  }
+      ],
+    ),
+  );
 
-  Widget _placeholderPage(String title, IconData icon) {
-    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Icon(icon, size: 48, color: Colors.grey[400]),
-      const SizedBox(height: 12),
-      Text(title, style: TextStyle(fontSize: 18, color: Colors.grey[600])),
-      const SizedBox(height: 8),
-      Text('Coming soon', style: TextStyle(fontSize: 13, color: Colors.grey[400])),
-    ]));
-  }
+  Widget _page(String t, IconData i) => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(i, size: 48, color: Colors.grey[400]),
+        const SizedBox(height: 12),
+        Text(t, style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+        const SizedBox(height: 8),
+        Text(
+          'Coming soon',
+          style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+        ),
+      ],
+    ),
+  );
 
-  Widget _buildDashboardHome() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  Widget _home() => SingleChildScrollView(
+    padding: EdgeInsets.all(16.w),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         if (_company != null) _companyHeader(),
-        const SizedBox(height: 20),
+        SizedBox(height: 20.h),
         _sectionTitle('Fleet Management'),
-        const SizedBox(height: 12),
+        SizedBox(height: 12.h),
         _managementGrid(),
-        const SizedBox(height: 24),
+        SizedBox(height: 24.h),
         _sectionTitle('Quick Stats'),
-        const SizedBox(height: 12),
+        SizedBox(height: 12.h),
         _statsRow(),
-      ]),
-    );
-  }
+      ],
+    ),
+  );
 
   // ── Company header ─────────────────────────────────────
   Widget _companyHeader() {
@@ -277,274 +412,118 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                 ],
               ),
             ),
-            _badge(
-              c.status.name,
-              c.status == CompanyStatus.active
-                  ? AppColors.success
-                  : AppColors.warning,
-            ),
           ],
         ),
       ),
     );
   }
 
-  // ── Management grid ────────────────────────────────────
-  Widget _managementGrid() => GridView.count(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    crossAxisCount: 2,
-    crossAxisSpacing: 12.w,
-    mainAxisSpacing: 12.h,
-    childAspectRatio: 1.4,
-    children: [
-      _mgmtCard(
-        'Bus Owners',
-        '$_ownerCount',
-        Icons.person,
-        AppColors.primary,
-        () {
-          context.push('/bus-fleet/dashboard/owners');
-        },
-      ),
-      _mgmtCard(
-        'Bus Drivers',
-        '$_driverCount',
-        Icons.badge,
-        AppColors.success,
-        () {
-          context.push('/bus-fleet/dashboard/drivers');
-        },
-      ),
-      _mgmtCard(
-        'Conductors',
-        '$_conductorCount',
-        Icons.group,
-        AppColors.warning,
-        () {
-          context.push('/bus-fleet/dashboard/conductors');
-        },
-      ),
-      _mgmtCard('Fleet Routes', '—', Icons.alt_route, AppColors.info, () {}),
-    ],
+  Widget _sectionTitle(String t) => Padding(
+    padding: EdgeInsets.only(bottom: 4.h),
+    child: Text(
+      t,
+      style: Theme.of(
+        context,
+      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+    ),
   );
 
+  Widget _managementGrid() {
+    return Row(
+      children: [
+        Expanded(
+          child: _mgmtCard(
+            'Owners',
+            '$_ownerCount',
+            Icons.badge_rounded,
+            const Color(0xFFDB2777),
+            () {},
+          ),
+        ),
+        SizedBox(width: 10.w),
+        Expanded(
+          child: _mgmtCard(
+            'Drivers',
+            '$_driverCount',
+            Icons.person_rounded,
+            const Color(0xFF2563EB),
+            () {},
+          ),
+        ),
+        SizedBox(width: 10.w),
+        Expanded(
+          child: _mgmtCard(
+            'Conductors',
+            '$_conductorCount',
+            Icons.group_rounded,
+            const Color(0xFF16A34A),
+            () {},
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _mgmtCard(
-    String title,
+    String label,
     String count,
     IconData icon,
     Color color,
     VoidCallback onTap,
   ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14.r),
-      child: Container(
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, size: 28.w, color: color),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 14.w,
-                  color: AppColors.gray400,
-                ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  count,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  title,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.gray600),
-                ),
-              ],
-            ),
-          ],
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12.r),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.all(14.w),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 26.w),
+              SizedBox(height: 8.h),
+              Text(
+                count,
+                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w800),
+              ),
+              Text(
+                label,
+                style: TextStyle(fontSize: 11.sp, color: AppColors.gray500),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ── Stats row ──────────────────────────────────────────
-  Widget _statsRow() => Row(
-    children: [
-      Expanded(
-        child: _statBox(
-          'Fleet Size',
-          '${_profile?['fleet_size'] ?? 0}',
-          Icons.directions_bus,
-          AppColors.info,
+  Widget _statsRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: _stat('Fleet Size', '${_profile?['active_buses'] ?? 0}'),
         ),
-      ),
-      SizedBox(width: 12.w),
-      Expanded(
-        child: _statBox(
-          'Routes',
-          '${_profile?['active_routes'] ?? 0}',
-          Icons.alt_route,
-          AppColors.success,
-        ),
-      ),
-      SizedBox(width: 12.w),
-      Expanded(
-        child: _statBox(
-          'Staff',
-          '${_ownerCount + _driverCount + _conductorCount}',
-          Icons.people,
-          AppColors.warning,
-        ),
-      ),
-    ],
-  );
+        SizedBox(width: 10.w),
+        Expanded(child: _stat('Daily Revenue', 'PKR 0')),
+      ],
+    );
+  }
 
-  Widget _statBox(String label, String value, IconData icon, Color color) =>
-      Container(
-        padding: EdgeInsets.all(14.w),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: color.withValues(alpha: 0.12)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 22.w, color: color),
-            SizedBox(height: 6.h),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
-            ),
-          ],
-        ),
-      );
-
-  // ── Quick links ────────────────────────────────────────
-  Widget _quickLinks() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _sectionTitle('Quick Actions'),
-      SizedBox(height: 8.h),
-      Wrap(
-        spacing: 10.w,
-        runSpacing: 10.h,
-        children: [
-          _qLink(
-            'Add Owner',
-            Icons.person_add,
-            AppColors.primary,
-            () => context.push('/bus-fleet/dashboard/owners/add'),
-          ),
-          _qLink(
-            'Add Driver',
-            Icons.badge_outlined,
-            AppColors.success,
-            () => context.push('/bus-fleet/dashboard/drivers/add'),
-          ),
-          _qLink(
-            'Add Conductor',
-            Icons.group_add,
-            AppColors.warning,
-            () => context.push('/bus-fleet/dashboard/conductors/add'),
-          ),
-        ],
-      ),
-    ],
-  );
-
-  Widget _qLink(String label, IconData icon, Color color, VoidCallback onTap) =>
-      InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10.r),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10.r),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18.w, color: color),
-              SizedBox(width: 6.w),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13.sp,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-
-  // ── Helpers ────────────────────────────────────────────
-  Widget _sectionTitle(String t) => Text(
-    t,
-    style: Theme.of(
-      context,
-    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-  );
-  Widget _badge(String t, Color c) => Container(
-    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-    decoration: BoxDecoration(
-      color: c.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(20.r),
-      border: Border.all(color: c.withValues(alpha: 0.3)),
-    ),
-    child: Text(
-      t.toUpperCase(),
-      style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600, color: c),
-    ),
-  );
-  Widget _errorView() => Center(
+  Widget _stat(String label, String value) => Card(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
     child: Padding(
-      padding: EdgeInsets.all(24.w),
+      padding: EdgeInsets.all(14.w),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.error_outline, size: 48, color: AppColors.error),
-          SizedBox(height: 16.h),
-          Text(_error!, textAlign: TextAlign.center),
-          SizedBox(height: 16.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(onPressed: _loadAll, child: const Text('Retry')),
-              SizedBox(width: 12.w),
-              OutlinedButton(onPressed: _logout, child: const Text('Logout')),
-            ],
+          Text(
+            label,
+            style: TextStyle(fontSize: 12.sp, color: AppColors.gray500),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            value,
+            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800),
           ),
         ],
       ),
