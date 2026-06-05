@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/nexa_admin/data/models/company/bus_company_model.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
@@ -39,6 +40,16 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    if (token == null || token.isEmpty) {
+      if (mounted) context.go('/bus-fleet/login');
+      return;
+    }
     _loadAll();
   }
 

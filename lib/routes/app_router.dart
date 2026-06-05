@@ -226,6 +226,8 @@ class AppRouter {
     if (path.startsWith('/reseller')) return null;
     // Bus Fleet login — public access for bus company owners
     if (path == '/bus-fleet/login') return null;
+    if (path == '/bus-fleet/dashboard') return null;
+    if (path.startsWith('/bus-fleet/')) return null;
     // Sub-Admin login + dashboard — separate auth from super-admin
     if (path == '/sub-admin/login') return null;
     if (path == '/sub-admin/dashboard') return null;

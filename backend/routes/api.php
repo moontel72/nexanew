@@ -71,6 +71,7 @@ $registerRoutes = function (): void {
         ->middleware("auth:sanctum")
         ->group(function (): void {
             Route::get("owner/profile", [\App\Http\Controllers\Admin\BusFleetOwnerController::class, "profile"]);
+            Route::get("profile", [\App\Http\Controllers\Admin\BusFleetOwnerController::class, "profile"]);
         });
 
     Route::prefix("admin")
