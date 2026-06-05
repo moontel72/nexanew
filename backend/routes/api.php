@@ -69,8 +69,10 @@ $registerRoutes = function (): void {
     Route::prefix("admin")
         ->middleware(["auth:sanctum", "admin"])
         ->group(function (): void {
-            /// Wave 3 — Sub-Admin Feature Toggle Management (Section 10.3)
+            /// Wave 3 — Sub-Admin Management (Section 10.2)
             Route::prefix("sub-admins")->group(function (): void {
+                Route::get("", [\App\Http\Controllers\Admin\SubAdminController::class, "index"]);
+                Route::post("create", [\App\Http\Controllers\Admin\SubAdminController::class, "store"]);
                 Route::post("toggle-feature", [\App\Http\Controllers\Admin\SubAdminFeatureToggleController::class, "toggleFeature"]);
                 Route::get("grants/{assignmentId}", [\App\Http\Controllers\Admin\SubAdminFeatureToggleController::class, "listGrants"]);
             });
