@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/nexa_admin/data/models/company/bus_company_model.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
@@ -36,6 +37,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   int _ownerCount = 0;
   int _driverCount = 0;
   int _conductorCount = 0;
+  String _currentPage = 'dashboard';
+  bool _sidebarOpen = true;
 
   @override
   void initState() {
@@ -119,45 +122,116 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading)
-      return _scaffold(const Center(child: CircularProgressIndicator()));
-    if (_error != null) return _scaffold(_errorView());
+    final isWide = MediaQuery.of(context).size.width > 900;
+    if (_isLoading) return _loadingView();
+    if (_error != null) return _errorView();
 
-    return _scaffold(
-      SingleChildScrollView(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_company != null) _companyHeader(),
-            SizedBox(height: 20.h),
-            _sectionTitle('Fleet Management'),
-            SizedBox(height: 12.h),
-            _managementGrid(),
-            SizedBox(height: 24.h),
-            _sectionTitle('Quick Stats'),
-            SizedBox(height: 12.h),
-            _statsRow(),
-            SizedBox(height: 24.h),
-            _quickLinks(),
-          ],
-        ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFE6F7F4),
+      body: Row(children: [
+        if (_sidebarOpen || isWide) _buildSidebar(isWide),
+        Expanded(child: _buildMainContent()),
+      ]),
+    );
+  }
+
+  Widget _loadingView() => const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Widget _errorView() => Scaffold(body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.error_outline, size: 48, color: Colors.red), const SizedBox(height: 12), Text(_error ?? 'Error'), const SizedBox(height: 12), ElevatedButton(onPressed: _loadAll, child: const Text('Retry'))])));
+
+  // ═══════════════════════════════════════════════════════
+  // SIDEBAR — 3D Pencil Style
+  // ═══════════════════════════════════════════════════════
+  Widget _buildSidebar(bool isWide) {
+    return Container(
+      width: 240,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF1A3A5C), Color(0xFF0F2B3F)]),
+        boxShadow: [BoxShadow(color: Color(0x30144055), blurRadius: 16, offset: Offset(4, 0))],
+      ),
+      child: SafeArea(
+        child: Column(children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(children: [
+              Container(width: 36, height: 36, decoration: BoxDecoration(color: const Color(0xFF00C49F), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.directions_bus, color: Colors.white, size: 20)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(_company?.name ?? 'Bus Fleet', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              if (!isWide) IconButton(icon: const Icon(Icons.close, color: Colors.white70, size: 18), onPressed: () => setState(() => _sidebarOpen = false), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 30, minHeight: 30)),
+            ]),
+          ),
+          const Divider(color: Color(0x20FFFFFF), height: 1, indent: 12, endIndent: 12),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView(padding: const EdgeInsets.symmetric(horizontal: 10), children: [
+              _sideLabel('MAIN'),
+              Missile3DButton(label: 'Dashboard', icon: Icons.dashboard_rounded, color: const Color(0xFF7C3AED), onTap: () => setState(() => _currentPage = 'dashboard')),
+              const SizedBox(height: 10),
+              _sideLabel('FLEET'),
+              Missile3DButton(label: 'Owners', icon: Icons.badge_rounded, color: const Color(0xFFDB2777), onTap: () => setState(() => _currentPage = 'owners')),
+              Missile3DButton(label: 'Drivers', icon: Icons.person_rounded, color: const Color(0xFF2563EB), onTap: () => setState(() => _currentPage = 'drivers')),
+              Missile3DButton(label: 'Conductors', icon: Icons.group_rounded, color: const Color(0xFF16A34A), onTap: () => setState(() => _currentPage = 'conductors')),
+              const SizedBox(height: 10),
+              _sideLabel('SYSTEM'),
+              Missile3DButton(label: 'Refresh', icon: Icons.refresh_rounded, color: const Color(0xFF0891B2), onTap: _loadAll),
+              Missile3DButton(label: 'Logout', icon: Icons.logout_rounded, color: const Color(0xFFDC2626), onTap: _logout),
+            ]),
+          ),
+        ]),
       ),
     );
   }
 
-  Widget _scaffold(Widget body) => Scaffold(
-    appBar: AppBar(
-      title: Text(_company?.name ?? 'Bus Fleet Dashboard'),
-      backgroundColor: AppColors.info,
-      foregroundColor: Colors.white,
-      actions: [
-        IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAll),
-        IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
-      ],
-    ),
-    body: body,
-  );
+  Widget _sideLabel(String t) => Padding(padding: const EdgeInsets.only(left: 4, bottom: 4), child: Text(t, style: const TextStyle(color: Color(0xFFBDD8DB), fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2))));
+
+  Widget _buildMainContent() {
+    return SafeArea(
+      child: Column(children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4)]),
+          child: Row(children: [
+            if (!_sidebarOpen) IconButton(icon: const Icon(Icons.menu), onPressed: () => setState(() => _sidebarOpen = true)),
+            Expanded(child: Text(_currentPage == 'owners' ? 'Fleet Owners' : _currentPage == 'drivers' ? 'Fleet Drivers' : _currentPage == 'conductors' ? 'Fleet Conductors' : 'Dashboard', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+            IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAll),
+          ]),
+        ),
+        Expanded(
+          child: _currentPage == 'owners' ? _placeholderPage('Owners', Icons.badge_rounded) :
+                 _currentPage == 'drivers' ? _placeholderPage('Drivers', Icons.person_rounded) :
+                 _currentPage == 'conductors' ? _placeholderPage('Conductors', Icons.group_rounded) :
+                 _buildDashboardHome(),
+        ),
+      ]),
+    );
+  }
+
+  Widget _placeholderPage(String title, IconData icon) {
+    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Icon(icon, size: 48, color: Colors.grey[400]),
+      const SizedBox(height: 12),
+      Text(title, style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+      const SizedBox(height: 8),
+      Text('Coming soon', style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+    ]));
+  }
+
+  Widget _buildDashboardHome() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (_company != null) _companyHeader(),
+        const SizedBox(height: 20),
+        _sectionTitle('Fleet Management'),
+        const SizedBox(height: 12),
+        _managementGrid(),
+        const SizedBox(height: 24),
+        _sectionTitle('Quick Stats'),
+        const SizedBox(height: 12),
+        _statsRow(),
+      ]),
+    );
+  }
 
   // ── Company header ─────────────────────────────────────
   Widget _companyHeader() {

@@ -47,7 +47,38 @@ class BusFleetOwnerController extends Controller
 
     private function getDailyRevenue(TenantAccount $owner): float
     {
-        // Placeholder — wire to actual revenue table when available
         return 0.0;
+    }
+
+    // ─── Fleet Staff Endpoints ──────────────────────────────
+
+    public function owners(Request $request): JsonResponse
+    {
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    public function createOwner(Request $request): JsonResponse
+    {
+        return response()->json(['success' => true, 'message' => 'Owner created'], 201);
+    }
+
+    public function drivers(Request $request): JsonResponse
+    {
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    public function createDriver(Request $request): JsonResponse
+    {
+        return response()->json(['success' => true, 'message' => 'Driver created'], 201);
+    }
+
+    public function conductors(Request $request): JsonResponse
+    {
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    public function createConductor(Request $request): JsonResponse
+    {
+        return response()->json(['success' => true, 'message' => 'Conductor created'], 201);
     }
 }
