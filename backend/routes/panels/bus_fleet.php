@@ -137,6 +137,7 @@ Route::prefix('api/v1/bus-fleet')
             Route::get('/', [\App\Http\Controllers\BusTransitController::class, 'listLayouts']);
             Route::post('/', [\App\Http\Controllers\BusTransitController::class, 'createLayoutFull']);
             Route::get('/{id}', [\App\Http\Controllers\BusTransitController::class, 'getLayout']);
+            Route::put('/{id}', [\App\Http\Controllers\BusTransitController::class, 'updateLayout']);
             Route::post('/{id}/acquire-lock', [\App\Http\Controllers\BusTransitController::class, 'acquireLock']);
             Route::post('/{id}/release-lock', [\App\Http\Controllers\BusTransitController::class, 'releaseLock']);
             Route::post('/{id}/publish', [\App\Http\Controllers\BusTransitController::class, 'publishLayout']);

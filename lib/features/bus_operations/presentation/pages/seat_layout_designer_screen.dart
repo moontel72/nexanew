@@ -211,6 +211,10 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
   // Auto seat numbering
   int _seatCounter = 0;
 
+  // Name field controller (persistent to avoid rebuild-reset)
+  final _nameController = TextEditingController();
+  bool _nameSaved = true;
+
   // ── Init ───────────────────────────────────────────
   @override
   void initState() {
@@ -220,6 +224,12 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
     } else {
       setState(() => _isLoading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 
   List<List<GridCell>> get _activeGrid =>
@@ -246,6 +256,7 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
       final data = res['data'] as Map<String, dynamic>;
       _layoutId = data['id'] as String;
       _displayName = data['display_name'] as String?;
+      _nameController.text = _displayName ?? '';
       _versionNumber = (data['version_number'] as int?) ?? 1;
 
       final vc = data['vehicle_class'] as String?;
@@ -277,16 +288,16 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
 
     final matrix = List.generate(
       rows,
-      (r) => List.generate(
-        cols,
-        (c) => GridCell(row: r + 1, col: c + 1),
-      ),
+      (r) => List.generate(cols, (c) => GridCell(row: r + 1, col: c + 1)),
     );
 
     for (final item in gridList) {
       if (item is Map<String, dynamic>) {
         final cell = GridCell.fromJson(item);
-        if (cell.row > 0 && cell.row <= rows && cell.col > 0 && cell.col <= cols) {
+        if (cell.row > 0 &&
+            cell.row <= rows &&
+            cell.col > 0 &&
+            cell.col <= cols) {
           matrix[cell.row - 1][cell.col - 1] = cell;
         }
       }
@@ -302,10 +313,7 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
 
     final matrix = List.generate(
       rows,
-      (r) => List.generate(
-        cols,
-        (c) => GridCell(row: r + 1, col: c + 1),
-      ),
+      (r) => List.generate(cols, (c) => GridCell(row: r + 1, col: c + 1)),
     );
 
     // Mark aisle column (middle column(s) when 4 cols)
@@ -415,13 +423,15 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
     for (final row in _lowerGrid) {
       for (final cell in row) {
         if (cell.type == CellType.sleeperLower ||
-            cell.type == CellType.sleeperUpper) count++;
+            cell.type == CellType.sleeperUpper)
+          count++;
       }
     }
     for (final row in _upperGrid) {
       for (final cell in row) {
         if (cell.type == CellType.sleeperLower ||
-            cell.type == CellType.sleeperUpper) count++;
+            cell.type == CellType.sleeperUpper)
+          count++;
       }
     }
     return count;
@@ -434,7 +444,8 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
         if (cell.bookable &&
             (cell.type == CellType.seat ||
                 cell.type == CellType.sleeperLower ||
-                cell.type == CellType.sleeperUpper)) count++;
+                cell.type == CellType.sleeperUpper))
+          count++;
       }
     }
     for (final row in _upperGrid) {
@@ -442,7 +453,8 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
         if (cell.bookable &&
             (cell.type == CellType.seat ||
                 cell.type == CellType.sleeperLower ||
-                cell.type == CellType.sleeperUpper)) count++;
+                cell.type == CellType.sleeperUpper))
+          count++;
       }
     }
     return count;
@@ -502,6 +514,39 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
         },
       ),
     );
+  }
+
+  // ── Save layout name ──────────────────────────────
+  Future<void> _saveLayoutName() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty || _layoutId == null) return;
+    try {
+      await ApiService().put(
+        '/bus-fleet/layouts/$_layoutId',
+        data: {'display_name': name},
+      );
+      setState(() {
+        _displayName = name;
+        _nameSaved = true;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Name saved'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   // ── Publish ────────────────────────────────────────
@@ -640,7 +685,11 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
         colors: [Color(0xFF1A2A3A), Color(0xFF0D1B2A)],
       ),
       boxShadow: [
-        BoxShadow(color: Color(0x30000000), blurRadius: 16, offset: Offset(4, 0)),
+        BoxShadow(
+          color: Color(0x30000000),
+          blurRadius: 16,
+          offset: Offset(4, 0),
+        ),
       ],
     ),
     child: SafeArea(
@@ -655,10 +704,15 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: _selectedPreset?.accentColor ?? const Color(0xFF7C3AED),
+                    color:
+                        _selectedPreset?.accentColor ?? const Color(0xFF7C3AED),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.event_seat, color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.event_seat,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
                 const Gap(10),
                 Expanded(
@@ -675,10 +729,17 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
                 ),
                 if (!isWide)
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
                     onPressed: () => setState(() => _sidebarOpen = false),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                    constraints: const BoxConstraints(
+                      minWidth: 30,
+                      minHeight: 30,
+                    ),
                   ),
               ],
             ),
@@ -694,69 +755,92 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
               thickness: 8,
               radius: const Radius.circular(4),
               child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              children: [
-                _sectionLabel('PRESETS'),
-                ...LayoutPreset.builtIn.map(
-                  (p) => Missile3DButton(
-                    label: p.label,
-                    icon: p.key == 'sleeper_custom'
-                        ? Icons.airline_seat_flat_angled
-                        : Icons.event_seat,
-                    color: p.accentColor,
-                    height: 62,
-                    onTap: () => _initGridFromPreset(p),
-                    subtitle: '${p.rows} rows × ${p.cols} cols',
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                children: [
+                  _sectionLabel('PRESETS'),
+                  ...LayoutPreset.builtIn.map(
+                    (p) => Missile3DButton(
+                      label: p.label,
+                      icon: p.key == 'sleeper_custom'
+                          ? Icons.airline_seat_flat_angled
+                          : Icons.event_seat,
+                      color: p.accentColor,
+                      height: 62,
+                      onTap: () => _initGridFromPreset(p),
+                      subtitle: '${p.rows} rows × ${p.cols} cols',
+                    ),
                   ),
-                ),
-                const Gap(12),
-                _sectionLabel('DECK'),
-                if (_selectedPreset?.hasUpperDeck == true) ...[
+                  const Gap(12),
+                  _sectionLabel('DECK'),
+                  if (_selectedPreset?.hasUpperDeck == true) ...[
+                    Missile3DButton(
+                      label: 'Lower Deck',
+                      icon: Icons.layers,
+                      color: _activeDeck == DeckLevel.lower
+                          ? const Color(0xFF7C3AED)
+                          : const Color(0xFF4A5568),
+                      height: 56,
+                      onTap: () =>
+                          setState(() => _activeDeck = DeckLevel.lower),
+                    ),
+                    Missile3DButton(
+                      label: 'Upper Deck (Berths)',
+                      icon: Icons.layers_outlined,
+                      color: _activeDeck == DeckLevel.upper
+                          ? const Color(0xFFDB2777)
+                          : const Color(0xFF4A5568),
+                      height: 56,
+                      onTap: () =>
+                          setState(() => _activeDeck = DeckLevel.upper),
+                    ),
+                  ],
+                  const Gap(12),
+                  _sectionLabel('LIVE METRICS'),
+                  _metricCard(
+                    'Total Seats',
+                    '${_countAllSeats()}',
+                    Icons.event_seat,
+                    const Color(0xFF7C3AED),
+                  ),
+                  _metricCard(
+                    'Sleeper Berths',
+                    '${_countSleeperBerths()}',
+                    Icons.airline_seat_flat,
+                    const Color(0xFFDB2777),
+                  ),
+                  _metricCard(
+                    'Bookable Units',
+                    '${_countBookableUnits()}',
+                    Icons.check_circle_outline,
+                    const Color(0xFF16A34A),
+                  ),
+                  _metricCard(
+                    'Version',
+                    'v$_versionNumber',
+                    Icons.history,
+                    const Color(0xFFD97706),
+                  ),
+                  const Gap(12),
+                  _sectionLabel('ACTIONS'),
                   Missile3DButton(
-                    label: 'Lower Deck',
-                    icon: Icons.layers,
-                    color: _activeDeck == DeckLevel.lower
-                        ? const Color(0xFF7C3AED)
-                        : const Color(0xFF4A5568),
+                    label: _isDirty ? 'Publish Layout ✦' : 'Published ✓',
+                    icon: Icons.cloud_upload_rounded,
+                    color: const Color(0xFF16A34A),
                     height: 56,
-                    onTap: () => setState(() => _activeDeck = DeckLevel.lower),
+                    onTap: _isDirty ? _publishLayout : () {},
                   ),
                   Missile3DButton(
-                    label: 'Upper Deck (Berths)',
-                    icon: Icons.layers_outlined,
-                    color: _activeDeck == DeckLevel.upper
-                        ? const Color(0xFFDB2777)
-                        : const Color(0xFF4A5568),
-                    height: 56,
-                    onTap: () => setState(() => _activeDeck = DeckLevel.upper),
+                    label: 'Reset Grid',
+                    icon: Icons.refresh_rounded,
+                    color: const Color(0xFFDC2626),
+                    height: 48,
+                    onTap: () {
+                      if (_selectedPreset != null)
+                        _initGridFromPreset(_selectedPreset!);
+                    },
                   ),
                 ],
-                const Gap(12),
-                _sectionLabel('LIVE METRICS'),
-                _metricCard('Total Seats', '${_countAllSeats()}', Icons.event_seat, const Color(0xFF7C3AED)),
-                _metricCard('Sleeper Berths', '${_countSleeperBerths()}', Icons.airline_seat_flat, const Color(0xFFDB2777)),
-                _metricCard('Bookable Units', '${_countBookableUnits()}', Icons.check_circle_outline, const Color(0xFF16A34A)),
-                _metricCard('Version', 'v$_versionNumber', Icons.history, const Color(0xFFD97706)),
-                const Gap(12),
-                _sectionLabel('ACTIONS'),
-                Missile3DButton(
-                  label: _isDirty ? 'Publish Layout ✦' : 'Published ✓',
-                  icon: Icons.cloud_upload_rounded,
-                  color: const Color(0xFF16A34A),
-                  height: 56,
-                  onTap: _isDirty ? _publishLayout : () {},
-                ),
-                Missile3DButton(
-                  label: 'Reset Grid',
-                  icon: Icons.refresh_rounded,
-                  color: const Color(0xFFDC2626),
-                  height: 48,
-                  onTap: () {
-                    if (_selectedPreset != null) _initGridFromPreset(_selectedPreset!);
-                  },
-                ),
-              ],
-            ),
+              ),
             ),
           ),
         ],
@@ -791,11 +875,18 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
             Icon(icon, size: 16, color: color),
             const Gap(8),
             Expanded(
-              child: Text(label, style: const TextStyle(color: Color(0xFFAABBCC), fontSize: 12)),
+              child: Text(
+                label,
+                style: const TextStyle(color: Color(0xFFAABBCC), fontSize: 12),
+              ),
             ),
             Text(
               value,
-              style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                color: color,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),
@@ -831,10 +922,18 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
           message: 'Back to Dashboard',
           child: TextButton.icon(
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFFAABBCC), size: 20),
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: Color(0xFFAABBCC),
+              size: 20,
+            ),
             label: const Text(
               'Back',
-              style: TextStyle(color: Color(0xFFAABBCC), fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Color(0xFFAABBCC),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -863,31 +962,67 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
             ),
           ),
         ),
-        // Name editor
+        // Name editor with persistent controller + Save button
         if (_selectedPreset != null)
-          SizedBox(
-            width: 160,
-            child: TextField(
-              controller: TextEditingController(text: _displayName ?? ''),
-              onChanged: (v) => _displayName = v,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'Layout name...',
-                hintStyle: const TextStyle(color: Color(0xFF556677), fontSize: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF334455)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 140,
+                child: TextField(
+                  controller: _nameController,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Layout name...',
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF556677),
+                      fontSize: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF334455)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF334455)),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    isDense: true,
+                    filled: true,
+                    fillColor: const Color(0xFF0D1B2A),
+                  ),
+                  onChanged: (v) {
+                    _displayName = v;
+                    _nameSaved = false;
+                  },
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF334455)),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                isDense: true,
-                filled: true,
-                fillColor: const Color(0xFF0D1B2A),
               ),
-            ),
+              if (!_nameSaved)
+                Tooltip(
+                  message: 'Save name',
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.check,
+                      color: Color(0xFF4ADE80),
+                      size: 20,
+                    ),
+                    onPressed: _saveLayoutName,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(
+                        0xFF16A34A,
+                      ).withValues(alpha: 0.15),
+                    ),
+                  ),
+                ),
+            ],
           ),
         const Gap(8),
         Container(
@@ -906,7 +1041,9 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
           child: Text(
             _isDirty ? 'UNSAVED' : 'SAVED',
             style: TextStyle(
-              color: _isDirty ? const Color(0xFFFBBF24) : const Color(0xFF4ADE80),
+              color: _isDirty
+                  ? const Color(0xFFFBBF24)
+                  : const Color(0xFF4ADE80),
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 1,
@@ -949,12 +1086,20 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: _activeDeck == deck ? const Color(0xFFA78BFA) : const Color(0xFF556677)),
+            Icon(
+              icon,
+              size: 16,
+              color: _activeDeck == deck
+                  ? const Color(0xFFA78BFA)
+                  : const Color(0xFF556677),
+            ),
             const Gap(6),
             Text(
               label,
               style: TextStyle(
-                color: _activeDeck == deck ? const Color(0xFFE2E8F0) : const Color(0xFF556677),
+                color: _activeDeck == deck
+                    ? const Color(0xFFE2E8F0)
+                    : const Color(0xFF556677),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -983,67 +1128,67 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
       thickness: 8,
       radius: const Radius.circular(4),
       child: SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          // Column headers (A, B, C, D...)
-          Row(
-            children: [
-              // Row number spacer
-              const SizedBox(width: 40),
-              for (int c = 0; c < cols; c++)
-                SizedBox(
-                  width: 60,
-                  child: Center(
-                    child: Text(
-                      String.fromCharCode(65 + c),
-                      style: const TextStyle(
-                        color: Color(0xFFAABBCC),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const Gap(4),
-          // Grid rows
-          ...List.generate(rows, (r) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  // Row number
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // Column headers (A, B, C, D...)
+            Row(
+              children: [
+                // Row number spacer
+                const SizedBox(width: 40),
+                for (int c = 0; c < cols; c++)
                   SizedBox(
-                    width: 40,
+                    width: 60,
                     child: Center(
                       child: Text(
-                        '${r + 1}',
+                        String.fromCharCode(65 + c),
                         style: const TextStyle(
-                          color: Color(0xFF8899AA),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFAABBCC),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                   ),
-                  // Cells
-                  for (int c = 0; c < cols; c++)
-                    GestureDetector(
-                      onTap: () => _onCellTap(r, c),
-                      child: _buildGridCell(grid[r][c]),
+              ],
+            ),
+            const Gap(4),
+            // Grid rows
+            ...List.generate(rows, (r) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    // Row number
+                    SizedBox(
+                      width: 40,
+                      child: Center(
+                        child: Text(
+                          '${r + 1}',
+                          style: const TextStyle(
+                            color: Color(0xFF8899AA),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ),
-                ],
-              ),
-            );
-          }),
-          const Gap(20),
-          // Legend
-          _buildLegend(),
-        ],
+                    // Cells
+                    for (int c = 0; c < cols; c++)
+                      GestureDetector(
+                        onTap: () => _onCellTap(r, c),
+                        child: _buildGridCell(grid[r][c]),
+                      ),
+                  ],
+                ),
+              );
+            }),
+            const Gap(20),
+            // Legend
+            _buildLegend(),
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -1075,7 +1220,13 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 18, color: cell.type == CellType.empty ? const Color(0xFF445566) : color),
+          Icon(
+            icon,
+            size: 18,
+            color: cell.type == CellType.empty
+                ? const Color(0xFF445566)
+                : color,
+          ),
           if (label.isNotEmpty)
             Text(
               label,
@@ -1117,7 +1268,11 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.event_seat, size: 64, color: Colors.white.withValues(alpha: 0.1)),
+        Icon(
+          Icons.event_seat,
+          size: 64,
+          color: Colors.white.withValues(alpha: 0.1),
+        ),
         const Gap(16),
         const Text(
           'Select a vehicle preset from the sidebar',
@@ -1169,7 +1324,10 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
         child: Icon(_cellIcon(type), size: 8, color: _cellColor(type)),
       ),
       const Gap(4),
-      Text(label, style: const TextStyle(color: Color(0xFF8899AA), fontSize: 11)),
+      Text(
+        label,
+        style: const TextStyle(color: Color(0xFF8899AA), fontSize: 11),
+      ),
     ],
   );
 }
@@ -1260,7 +1418,10 @@ class _CellInspectorSheetState extends State<_CellInspectorSheet> {
               _selectedType == CellType.sleeperLower ||
               _selectedType == CellType.sleeperUpper)
             SwitchListTile(
-              title: const Text('Bookable', style: TextStyle(color: Colors.white70)),
+              title: const Text(
+                'Bookable',
+                style: TextStyle(color: Colors.white70),
+              ),
               value: _bookable,
               onChanged: (v) => setState(() => _bookable = v),
               activeColor: const Color(0xFF16A34A),
@@ -1353,13 +1514,17 @@ class _CellInspectorSheetState extends State<_CellInspectorSheet> {
           Icon(
             _cellInspectorIcon(type),
             size: 16,
-            color: _selectedType == type ? _cellInspectorColor(type) : const Color(0xFF667788),
+            color: _selectedType == type
+                ? _cellInspectorColor(type)
+                : const Color(0xFF667788),
           ),
           const Gap(6),
           Text(
             label,
             style: TextStyle(
-              color: _selectedType == type ? _cellInspectorColor(type) : const Color(0xFF8899AA),
+              color: _selectedType == type
+                  ? _cellInspectorColor(type)
+                  : const Color(0xFF8899AA),
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),

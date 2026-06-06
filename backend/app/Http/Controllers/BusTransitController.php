@@ -216,6 +216,35 @@ class BusTransitController extends Controller
     }
 
     /**
+     * PUT /api/v1/bus-fleet/layouts/{id}
+     *
+     * Update layout metadata (display_name).
+     */
+    public function updateLayout(string $id, Request $request): JsonResponse
+    {
+        try {
+            $data = $request->validate([
+                'display_name' => ['required', 'string', 'max:160'],
+            ]);
+
+            \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+                ->where('id', $id)
+                ->update([
+                    'display_name' => $data['display_name'],
+                    'updated_at'   => now(),
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Layout updated.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - updateLayout Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * POST /api/v1/bus-fleet/layouts/{id}/acquire-lock
      *
      * Acquire a 5-minute edit lock on a layout.
