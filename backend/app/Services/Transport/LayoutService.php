@@ -151,7 +151,6 @@ class LayoutService
         DB::table('transport_bus_layouts')->insert([
             'id'                  => $id,
             'bus_id'              => $id,  // self-reference for backward compat
-            'owner_id'            => null, // old FK — left null for Wave 4
             'owner_identity_id'   => $ownerIdentityId,
             'carrier_company_id'  => $companyId,
             'vehicle_class'       => $vehicleClass,
