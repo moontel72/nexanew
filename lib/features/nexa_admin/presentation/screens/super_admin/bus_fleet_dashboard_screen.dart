@@ -1145,22 +1145,22 @@ class _LayoutListViewState extends State<_LayoutListView> {
       }
       final data = res['data'];
       if (data == null) {
-        setState(() {
-          _layouts = [];
-          _loading = false;
-        });
+        setState(() { _layouts = []; _loading = false; });
         return;
       }
-      if (data is Map) {
+      // LayoutService returns data as a flat array, not nested {data: [...], pagination}
+      if (data is List) {
+        setState(() {
+          _layouts = List<Map<String, dynamic>>.from(data);
+          _loading = false;
+        });
+      } else if (data is Map) {
         setState(() {
           _layouts = List<Map<String, dynamic>>.from(data['data'] ?? []);
           _loading = false;
         });
       } else {
-        setState(() {
-          _layouts = [];
-          _loading = false;
-        });
+        setState(() { _layouts = []; _loading = false; });
       }
     } catch (e) {
       setState(() {
