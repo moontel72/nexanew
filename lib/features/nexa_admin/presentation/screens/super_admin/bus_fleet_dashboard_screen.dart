@@ -38,6 +38,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   bool _sidebarOpen = true;
   bool _staffExpanded = false;
   bool _assetsExpanded = false;
+  String? _pendingAddDialog; // auto-open add dialog on next build
 
   int _ownerCount = 0;
   int _driverCount = 0;
@@ -433,8 +434,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   }
 
   void _showStaffAddDialog(String type) {
-    setState(() => _currentPage = type);
-    // The FleetListView will show with the Add button visible
+    setState(() {
+      _pendingAddDialog = type;
+      _currentPage = type;
+    });
   }
 
   void _openLayoutDesigner() {
@@ -508,8 +511,11 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   // LIVE FLEET LIST (Owners / Drivers / Conductors)
   // ═══════════════════════════════════════════════════
   Widget _buildFleetList(String type) {
+    final autoOpen = _pendingAddDialog == type;
+    if (autoOpen) _pendingAddDialog = null;
     return _FleetListView(
       type: type,
+      autoOpenAddDialog: autoOpen,
       companyName: _company?.name,
       companyId: widget.companyId ?? _company?.id.toString(),
       onDataChanged: _loadAll,
@@ -727,16 +733,18 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 // ═══════════════════════════════════════════════════════
 
 class _FleetListView extends StatefulWidget {
-  final String type; // 'owners', 'drivers', 'conductors'
+  final String type;
   final String? companyName;
   final String? companyId;
   final VoidCallback onDataChanged;
+  final bool autoOpenAddDialog;
 
   const _FleetListView({
     required this.type,
     this.companyName,
     this.companyId,
     required this.onDataChanged,
+    this.autoOpenAddDialog = false,
   });
 
   @override
@@ -753,6 +761,9 @@ class _FleetListViewState extends State<_FleetListView> {
   void initState() {
     super.initState();
     _load();
+    if (widget.autoOpenAddDialog) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showAddDialog());
+    }
   }
 
   String get _endpoint => switch (widget.type) {
