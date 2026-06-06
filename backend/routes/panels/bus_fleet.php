@@ -18,42 +18,54 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::prefix('api/v1/bus-fleet')
-    ->middleware(['auth:admin'])
+    ->middleware(['auth:sanctum', 'bus.fleet'])
     ->group(function (): void {
 
-        // Company Profile (Dashboard)
+        // Company Profile (Dashboard) — resolved via identity spine
         Route::get('profile', function (\Illuminate\Http\Request $request) {
             $user = $request->user();
-            $email = $user->email;
+            $carrierId = $request->get('_carrier_company_id');
 
-            $company = \App\Models\Company::query()
-                ->where('email', $email)
-                ->orWhere('contact_person_email', $email)
-                ->with(['documents', 'activeSubscription.plan'])
-                ->first();
+            $company = null;
+            if ($carrierId) {
+                $company = \Illuminate\Support\Facades\DB::table('tenant_accounts')
+                    ->where('id', $carrierId)
+                    ->first();
+            }
 
             if (!$company) {
                 return response()->json(['message' => 'No company found for this account'], 404);
             }
 
-            $meta = $company->metadata ?? [];
-            $notes = $meta['notes'] ?? null;
-            $busMeta = null;
-            if ($notes && is_string($notes)) {
-                $decoded = json_decode($notes, true);
-                if (is_array($decoded) && ($decoded['company_type_tag'] ?? null) === 'bus_fleet') {
-                    $busMeta = $decoded;
-                }
-            }
+            $fleetSize = \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+                ->where('carrier_company_id', $carrierId)
+                ->where('layout_status', '!=', 'archived')
+                ->count();
+
+            $staffCount = \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                ->where('carrier_company_id', $carrierId)
+                ->where('fleet_type', 'bus')
+                ->whereIn('status', ['active', 'pending_acceptance'])
+                ->count();
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'company' => (new \App\Http\Resources\CompanyResource($company))->toArray($request),
-                    'fleet_size' => $busMeta['fleet_size'] ?? 0,
-                    'active_routes' => $busMeta['active_routes'] ?? 0,
-                    'owner_name' => $busMeta['owner_name'] ?? null,
-                    'is_bus_fleet' => $busMeta !== null,
+                    'company' => [
+                        'id'    => $company->id,
+                        'name'  => $company->account_name ?? 'Bus Company',
+                        'email' => $company->email ?? '',
+                        'phone' => $company->phone_number ?? '',
+                        'status'=> $company->status ?? 'active',
+                        'city'  => null,
+                        'country' => null,
+                    ],
+                    'fleet_size'    => $fleetSize,
+                    'active_routes' => 0,
+                    'owner_name'    => $company->account_name ?? null,
+                    'is_bus_fleet'  => true,
+                    'active_buses'  => $fleetSize,
+                    'staff_count'   => $staffCount,
                 ],
             ]);
         });
@@ -61,37 +73,34 @@ Route::prefix('api/v1/bus-fleet')
         // Fleet Dashboard Stats
         Route::get('dashboard', function (\Illuminate\Http\Request $request) {
             $user = $request->user();
-            $email = $user->email;
+            $carrierId = $request->get('_carrier_company_id');
 
-            $company = \App\Models\Company::query()
-                ->where('email', $email)
-                ->orWhere('contact_person_email', $email)
-                ->first();
+            $company = null;
+            if ($carrierId) {
+                $company = \Illuminate\Support\Facades\DB::table('tenant_accounts')
+                    ->where('id', $carrierId)
+                    ->first();
+            }
 
             if (!$company) {
                 return response()->json(['message' => 'No company found for this account'], 404);
             }
 
-            $meta = $company->metadata ?? [];
-            $notes = $meta['notes'] ?? null;
-            $busMeta = null;
-            if ($notes && is_string($notes)) {
-                $decoded = json_decode($notes, true);
-                if (is_array($decoded) && ($decoded['company_type_tag'] ?? null) === 'bus_fleet') {
-                    $busMeta = $decoded;
-                }
-            }
+            $fleetSize = \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+                ->where('carrier_company_id', $carrierId)
+                ->where('layout_status', '!=', 'archived')
+                ->count();
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'company_id' => $company->id,
-                    'company_name' => $company->name,
-                    'status' => $company->status,
-                    'fleet_size' => $busMeta['fleet_size'] ?? 0,
-                    'active_routes' => $busMeta['active_routes'] ?? 0,
-                    'owner_name' => $busMeta['owner_name'] ?? $company->contact_person_name,
-                    'total_trips' => 0,
+                    'company_id'   => $company->id,
+                    'company_name' => $company->account_name ?? 'Bus Company',
+                    'status'       => $company->status ?? 'active',
+                    'fleet_size'   => $fleetSize,
+                    'active_routes'=> 0,
+                    'owner_name'   => $company->account_name ?? null,
+                    'total_trips'  => 0,
                     'active_trips' => 0,
                 ],
             ]);

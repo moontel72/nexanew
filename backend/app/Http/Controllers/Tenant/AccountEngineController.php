@@ -148,104 +148,20 @@ class AccountEngineController extends Controller
                 ->first();
         }
 
-        // 2. Fallback: drivers table (registered via admin panel)
+        // 2. No tenant account found — reject
         if (!$tenant) {
-            $driver = DB::table('drivers')
-                ->where('staff_type', $staffType)
-                ->where('driver_type', $driverType)
-                ->where(function ($q) use ($email, $phone) {
-                    if ($email) $q->where('email', $email);
-                    if ($phone) $q->orWhere('phone', $phone);
-                })
-                ->first();
-
-            if ($driver && Hash::check($validated['password'], $driver->password)) {
-                // Auto-sync to tenant_accounts for Sanctum tokens
-                $existing = null;
-                if ($driver->email) {
-                    $existing = TenantAccount::where('email', $driver->email)
-                        ->where('account_type', $accountType)
-                        ->first();
-                }
-                // Fallback: lookup by phone when email is null or not found
-                if (!$existing && $driver->phone) {
-                    $existing = TenantAccount::where('phone_number', $driver->phone)
-                        ->where('account_type', $accountType)
-                        ->first();
-                }
-                if ($existing) {
-                    if ($phone && $existing->phone_number !== $phone) {
-                        $existing->update(['phone_number' => $phone]);
-                    }
-                    if ($driver->email && $existing->email !== $driver->email) {
-                        $existing->update(['email' => $driver->email]);
-                    }
-                    $tenant = $existing;
-                } else {
-                    try {
-                        $tenant = TenantAccount::create([
-                            'account_name'      => $driver->name,
-                            'email'             => $driver->email ?? ($driver->phone . '@placeholder.local'),
-                            'password'          => $driver->password,
-                            'phone_number'      => $driver->phone,
-                            'parent_account_id' => null,
-                            'is_independent'    => false,
-                            'account_type'      => $accountType,
-                            'status'            => $driver->status ?? 'active',
-                        ]);
-                    } catch (\Exception $e) {
-                        return response()->json([
-                            'status'  => 'error',
-                            'message' => 'Account sync failed. Please contact support.',
-                        ], 500);
-                    }
-                }
-
-                $token = $tenant->createToken('tenant-token')->plainTextToken;
-                return response()->json([
-                    'status' => 'success',
-                    'token'  => $token,
-                    'data'   => [
-                        'id'           => $tenant->id,
-                        'account_name' => $driver->name,
-                        'email'        => $driver->email,
-                        'phone'        => $driver->phone,
-                        'account_type' => $accountType,
-                        'staff_type'   => $staffType,
-                        'driver_type'  => $driverType,
-                        'company_name' => $driver->company_id ?? null,
-                    ],
-                ]);
-            }
-
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Invalid credentials.',
             ], 401);
         }
 
-        // 3. Tenant account found — verify password
+        // 3. Tenant account found — verify password against global_identities
         if (!Hash::check($validated['password'], $tenant->password)) {
-            // Password mismatch on tenant_accounts — check drivers table as
-            // the admin panel may have reset the password there without syncing.
-            $driverFallback = DB::table('drivers')
-                ->where('staff_type', $staffType)
-                ->where('driver_type', $driverType)
-                ->where(function ($q) use ($email, $phone) {
-                    if ($email) $q->where('email', $email);
-                    if ($phone) $q->orWhere('phone', $phone);
-                })
-                ->first();
-
-            if ($driverFallback && Hash::check($validated['password'], $driverFallback->password)) {
-                // Re-sync: update tenant_accounts password to match drivers table
-                $tenant->update(['password' => $driverFallback->password]);
-            } else {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Invalid credentials.',
-                ], 401);
-            }
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Invalid credentials.',
+            ], 401);
         }
         if ($tenant->status !== 'active') {
             return response()->json([

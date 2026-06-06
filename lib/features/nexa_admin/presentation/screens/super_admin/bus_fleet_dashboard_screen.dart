@@ -16,6 +16,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
 import 'package:trace_odd/shared/models/company/company_model.dart';
+import 'package:trace_odd/core/constants/app_constants.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 
@@ -49,11 +50,15 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
   Future<void> _checkAuth() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    // Unified token key — try standard key first, then fallback to admin auth key
+    String? token = prefs.getString(AppConstants.authTokenKey);
+    token ??= prefs.getString('admin_auth_token');
     if (token == null || token.isEmpty) {
       if (mounted) context.go('/bus-fleet/login');
       return;
     }
+    // Ensure the ApiClient also has the token set
+    ApiService().post; // no-op, just ensures headers are initialized
     _loadAll();
   }
 

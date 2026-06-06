@@ -5,494 +5,623 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 /**
- * NEXATRACE — FLEET MANAGEMENT CONTROLLER (v2)
- * Uses DB facade directly to avoid Eloquent model fillable/column issues.
+ * NEXATRACE — FLEET MANAGEMENT CONTROLLER (v3 — Identity Spine)
+ *
+ * All CRUD for Owners, Drivers, and Conductors now routes through
+ * the Wave 2 identity spine: global_identities → identity_claims →
+ * fleet_assignments → tenant_accounts.
+ *
+ * Legacy drivers table references COMPLETELY REMOVED.
+ * Deletion is soft-revoke (fleet_assignments.status = 'revoked').
+ * No hard-deletes on identity rows.
+ *
+ * Section 10.1: Global Identity & Claims Spine.
+ * Section 10.11.2: FleetAssignment state machine.
  */
 
 class FleetManagementController extends Controller
 {
-    private function companyId(Request $request): ?string
+    // ═══════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════
+
+    /** Resolve the carrier company ID from the authenticated user's assignment. */
+    private function carrierCompanyId(Request $request): ?string
     {
-        $user = $request->user();
-        if (!$user) return null;
-        $meta = $user->metadata;
-        if (is_string($meta)) $meta = json_decode($meta, true);
-        return is_array($meta) ? ($meta['company_id'] ?? null) : null;
+        // BusFleetGate middleware attaches this
+        return $request->get('_carrier_company_id');
     }
 
-    /**
-     * Detect driver_type from request path.
-     * /bus-fleet/* → 'bus'  |  /goods-fleet/* → 'truck'
-     */
-    private function driverType(Request $request): string
+    /** Detect fleet_type from request path. */
+    private function fleetType(Request $request): string
     {
         return str_contains($request->path(), 'goods-fleet') ? 'truck' : 'bus';
     }
 
-    // ═══════════════════ OWNERS ═══════════════════
+    /** Map a staff-type string to the fleet_assignments role enum. */
+    private function roleFor(string $staffType): string
+    {
+        return match ($staffType) {
+            'owners'      => 'owner',
+            'drivers'     => 'driver',
+            'conductors'  => 'conductor',
+            default       => $staffType,
+        };
+    }
+
+    /** Build a safe display payload from a joined query row. */
+    private function formatRow($row): array
+    {
+        return [
+            'id'                  => $row->assignment_id ?? $row->id ?? null,
+            'global_identity_id'  => $row->global_identity_id ?? null,
+            'identity_token'      => $row->identity_token ?? null,
+            'name'                => $row->display_name ?? $row->account_name ?? '—',
+            'email'               => $row->email ?? null,
+            'phone'               => $row->phone ?? null,
+            'cnic'                => $row->cnic ?? null,
+            'address'             => $row->address ?? null,
+            'role'                => $row->role ?? null,
+            'fleet_type'          => $row->fleet_type ?? null,
+            'status'              => $row->status ?? 'active',
+            'license_number'      => $row->license_number ?? null,
+            'vehicle_plate'       => $row->vehicle_plate ?? null,
+            'salary'              => $row->salary ?? null,
+            'hire_date'           => $row->hire_date ?? null,
+            'kyc_status'          => $row->kyc_status ?? 'unverified',
+            'kyc_tier'            => $row->kyc_tier ?? 0,
+            'created_at'          => $row->created_at ?? null,
+            'updated_at'          => $row->updated_at ?? null,
+        ];
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // BASE QUERY — fleet_assignments JOIN global_identities
+    // ═══════════════════════════════════════════════════════
+
+    private function baseQuery(Request $request, string $staffType)
+    {
+        $role = $this->roleFor($staffType);
+        $fleetType = $this->fleetType($request);
+        $cid = $this->carrierCompanyId($request);
+
+        $query = DB::table('fleet_assignments AS fa')
+            ->join('global_identities AS gi', 'fa.global_identity_id', '=', 'gi.id')
+            ->leftJoin('tenant_accounts AS ta', 'gi.id', '=', 'ta.global_identity_id')
+            ->where('fa.role', $role)
+            ->where('fa.fleet_type', $fleetType)
+            ->whereIn('fa.status', ['active', 'pending_acceptance', 'suspended']);
+
+        if ($cid) {
+            $query->where('fa.carrier_company_id', $cid);
+        }
+
+        return $query->select(
+            'fa.id AS assignment_id',
+            'gi.id AS global_identity_id',
+            'gi.identity_token',
+            'gi.display_name',
+            'gi.kyc_status',
+            'gi.kyc_tier',
+            'fa.role',
+            'fa.fleet_type',
+            'fa.status',
+            'fa.assignment_meta',
+            'fa.created_at',
+            'fa.updated_at',
+            'ta.email',
+            'ta.phone_number AS phone',
+            'ta.account_name',
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // LIST
+    // ═══════════════════════════════════════════════════════
 
     public function listOwners(Request $request): JsonResponse
     {
-        try {
-            $cid = $this->companyId($request);
-            $perPage = (int) $request->input('per_page', 20);
-            $perPage = max(1, min(100, $perPage));
-
-            $query = DB::table('drivers')
-                ->where('driver_type', $this->driverType($request))
-                ->where('staff_type', 'owner');
-            if ($cid) $query->where('company_id', $cid);
-            if ($request->filled('search')) {
-                $s = $request->search;
-                $query->where(function($q) use ($s) {
-                    $q->where('name', 'ilike', "%{$s}%")
-                      ->orWhere('phone', 'ilike', "%{$s}%")
-                      ->orWhere('email', 'ilike', "%{$s}%");
-                });
-            }
-            $result = $query->orderBy('created_at', 'desc')->paginate($perPage);
-            return response()->json(['success' => true, 'data' => $result]);
-        } catch (\Exception $e) {
-            Log::error('Fleet Management - listOwners Error: ' . $e->getMessage(), [
-                'sql' => $e->getTraceAsString(),
-                'user_id' => $request->user()?->id,
-            ]);
-            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
-        }
+        return $this->listStaff($request, 'owners');
     }
-
-    public function storeOwner(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:drivers,email',
-            'phone' => 'required|string|max:50',
-            'password' => 'required|string|min:8',
-            'cnic' => 'nullable|string|max:30',
-            'address' => 'nullable|string',
-        ]);
-
-        $id = (string) Str::uuid();
-        DB::table('drivers')->insert([
-            'id' => $id,
-            'company_id' => $this->companyId($request),
-            'driver_type' => $this->driverType($request),
-            'staff_type' => 'owner',
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'],
-            'password' => bcrypt($data['password']),
-            'cnic' => $data['cnic'] ?? null,
-            'address' => $data['address'] ?? null,
-            'status' => 'active',
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $owner = DB::table('drivers')->find($id);
-        return response()->json(['success' => true, 'data' => $owner], 201);
-    }
-
-    public function showOwner(string $id): JsonResponse
-    {
-        $owner = DB::table('drivers')->where('staff_type', 'owner')->find($id);
-        if (!$owner) return response()->json(['message' => 'Not found'], 404);
-        return response()->json(['success' => true, 'data' => $owner]);
-    }
-
-    public function updateOwner(string $id, Request $request): JsonResponse
-    {
-        $owner = DB::table('drivers')->where('staff_type', 'owner')->where('id', $id)->first();
-        if (!$owner) return response()->json(['message' => 'Not found'], 404);
-
-        // Owners (Type A) — no salary, vehicle_plate, license, or hire_date
-        $data = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:drivers,email,'.$id,
-            'phone' => 'sometimes|string|max:50',
-            'password' => 'sometimes|string|min:8',
-            'cnic' => 'nullable|string|max:30',
-            'address' => 'nullable|string',
-            'status' => 'sometimes|in:active,inactive,suspended',
-        ]);
-
-        $update = ['updated_at' => now()];
-        foreach (['name','email','phone','cnic','address','status'] as $f) {
-            if (array_key_exists($f, $data)) $update[$f] = $data[$f];
-        }
-        if (isset($data['password'])) $update['password'] = bcrypt($data['password']);
-
-        DB::table('drivers')->where('id', $id)->update($update);
-
-        // Sync password change to tenant_accounts (prevents login desync)
-        if (isset($data['password']) && $owner->email) {
-            $accountType = $this->driverType($request) === 'truck' ? 'truck_owner' : 'bus_owner';
-            DB::table('tenant_accounts')
-                ->where('email', $owner->email)
-                ->where('account_type', $accountType)
-                ->update(['password' => $update['password'], 'updated_at' => now()]);
-        }
-
-        return response()->json(['success' => true, 'data' => DB::table('drivers')->find($id)]);
-    }
-
-    public function destroyOwner(string $id): JsonResponse
-    {
-        DB::table('drivers')->where('staff_type', 'owner')->where('id', $id)->delete();
-        return response()->json(['success' => true]);
-    }
-
-    // ═══════════════════ DRIVERS ═══════════════════
 
     public function listDrivers(Request $request): JsonResponse
     {
+        return $this->listStaff($request, 'drivers');
+    }
+
+    public function listConductors(Request $request): JsonResponse
+    {
+        return $this->listStaff($request, 'conductors');
+    }
+
+    private function listStaff(Request $request, string $type): JsonResponse
+    {
         try {
-            $cid = $this->companyId($request);
             $perPage = (int) $request->input('per_page', 20);
             $perPage = max(1, min(100, $perPage));
 
-            $query = DB::table('drivers')
-                ->where('driver_type', $this->driverType($request))
-                ->where('staff_type', 'driver');
-            if ($cid) $query->where('company_id', $cid);
-
-            // owner_id filter: B (null) vs D (specific owner UUID)
-            if ($request->has('owner_id')) {
-                $oid = $request->input('owner_id');
-                if ($oid === 'null' || $oid === '' || $oid === 'company') {
-                    $query->whereNull('owner_id'); // Type B — Company Direct Drivers
-                } else {
-                    $query->where('owner_id', $oid); // Type D — Owner's Drivers
-                }
-            }
+            $query = $this->baseQuery($request, $type);
 
             if ($request->filled('search')) {
                 $s = $request->search;
-                $query->where(function($q) use ($s) {
-                    $q->where('name', 'ilike', "%{$s}%")
-                      ->orWhere('phone', 'ilike', "%{$s}%");
+                $query->where(function ($q) use ($s) {
+                    $q->where('gi.display_name', 'ilike', "%{$s}%")
+                      ->orWhere('ta.phone_number', 'ilike', "%{$s}%")
+                      ->orWhere('ta.email', 'ilike', "%{$s}%");
                 });
             }
-            $result = $query->orderBy('created_at', 'desc')->paginate($perPage);
-            return response()->json(['success' => true, 'data' => $result]);
+
+            $result = $query->orderBy('fa.created_at', 'desc')->paginate($perPage);
+
+            $data = $result->getCollection()->map(fn ($row) => $this->formatRow($row))->toArray();
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'data'  => $data,
+                    'total' => $result->total(),
+                    'current_page' => $result->currentPage(),
+                    'per_page'     => $result->perPage(),
+                    'last_page'    => $result->lastPage(),
+                ],
+            ]);
         } catch (\Exception $e) {
-            Log::error('Fleet Management - listDrivers Error: ' . $e->getMessage(), [
-                'sql' => $e->getTraceAsString(),
+            Log::error('FleetManagement - listStaff Error: ' . $e->getMessage(), [
+                'type'    => $type,
                 'user_id' => $request->user()?->id,
+                'trace'   => $e->getTraceAsString(),
             ]);
             return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // STORE (Create) — identity spine onboarding
+    // ═══════════════════════════════════════════════════════
+
+    public function storeOwner(Request $request): JsonResponse
+    {
+        return $this->storeStaff($request, 'owner');
     }
 
     public function storeDriver(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:50',
-            'license_number' => 'required|string|max:100',
-            'password' => 'required|string|min:8',
-            'email' => 'nullable|email|unique:drivers,email',
-            'cnic' => 'nullable|string|max:30',
-            'address' => 'nullable|string',
-            'vehicle_plate_number' => 'nullable|string|max:50',
-            'salary' => 'nullable|numeric',
-            'hire_date' => 'nullable|date',
-            'owner_id' => 'nullable|uuid|exists:drivers,id', // D = Owner's Driver
-        ]);
-
-        $cid = $this->companyId($request);
-        $ownerId = $data['owner_id'] ?? null;
-
-        // If owner_id is provided (Type D), validate ownership scoping
-        if ($ownerId) {
-            $owner = DB::table('drivers')
-                ->where('id', $ownerId)
-                ->where('staff_type', 'owner')
-                ->first();
-            if (!$owner) {
-                return response()->json(['message' => 'Invalid owner_id: not a bus owner'], 422);
-            }
-        }
-
-        $id = (string) Str::uuid();
-        DB::table('drivers')->insert([
-            'id' => $id,
-            'company_id' => $cid,
-            'owner_id' => $ownerId,
-            'driver_type' => $this->driverType($request),
-            'staff_type' => 'driver',
-            'name' => $data['name'],
-            'phone' => $data['phone'],
-            'email' => $data['email'] ?? null,
-            'password' => bcrypt($data['password']),
-            'license_number' => $data['license_number'],
-            'cnic' => $data['cnic'] ?? null,
-            'address' => $data['address'] ?? null,
-            'vehicle_plate_number' => $data['vehicle_plate_number'] ?? null,
-            'salary' => $data['salary'] ?? null,
-            'hire_date' => $data['hire_date'] ?? null,
-            'status' => 'active',
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return response()->json(['success' => true, 'data' => DB::table('drivers')->find($id)], 201);
+        return $this->storeStaff($request, 'driver');
     }
 
-    public function showDriver(string $id): JsonResponse
+    public function storeConductor(Request $request): JsonResponse
     {
-        $d = DB::table('drivers')->where('staff_type', 'driver')->find($id);
-        if (!$d) return response()->json(['message' => 'Not found'], 404);
-        return response()->json(['success' => true, 'data' => $d]);
+        return $this->storeStaff($request, 'conductor');
     }
 
-    public function updateDriver(string $id, Request $request): JsonResponse
-    {
-        $driver = DB::table('drivers')->where('staff_type', 'driver')->where('id', $id)->first();
-        if (!$driver) return response()->json(['message' => 'Not found'], 404);
-
-        $data = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'phone' => 'sometimes|string|max:50',
-            'license_number' => 'sometimes|string|max:100',
-            'password' => 'sometimes|string|min:8',
-            'email' => 'nullable|email|unique:drivers,email,'.$id,
-            'cnic' => 'nullable|string|max:30',
-            'address' => 'nullable|string',
-            'vehicle_plate_number' => 'nullable|string|max:50',
-            'salary' => 'nullable|numeric',
-            'hire_date' => 'nullable|date',
-            'owner_id' => 'nullable|uuid|exists:drivers,id',
-            'status' => 'sometimes|in:active,inactive,suspended',
-        ]);
-
-        // If owner_id is provided, validate it references a valid owner
-        if ($ownerId = ($data['owner_id'] ?? null)) {
-            $owner = DB::table('drivers')
-                ->where('id', $ownerId)
-                ->where('staff_type', 'owner')
-                ->first();
-            if (!$owner) {
-                return response()->json(['message' => 'Invalid owner_id: not a bus owner'], 422);
-            }
-        }
-
-        $update = ['updated_at' => now()];
-        foreach (['name','phone','email','license_number','cnic','address','vehicle_plate_number','salary','hire_date','owner_id','status'] as $f) {
-            if (array_key_exists($f, $data)) $update[$f] = $data[$f];
-        }
-        if (isset($data['password'])) $update['password'] = bcrypt($data['password']);
-
-        DB::table('drivers')->where('id', $id)->update($update);
-
-        // Sync password change to tenant_accounts (prevents login desync)
-        if (isset($data['password'])) {
-            $driverEmail = $driver->email ?? ($data['email'] ?? null);
-            $accountType = $this->driverType($request) === 'truck' ? 'truck_driver' : 'bus_driver';
-            if ($driverEmail) {
-                DB::table('tenant_accounts')
-                    ->where('email', $driverEmail)
-                    ->where('account_type', $accountType)
-                    ->update(['password' => $update['password'], 'updated_at' => now()]);
-            }
-            // Also sync by phone (for drivers without email)
-            if ($driver->phone) {
-                DB::table('tenant_accounts')
-                    ->where('phone_number', $driver->phone)
-                    ->where('account_type', $accountType)
-                    ->update(['password' => $update['password'], 'updated_at' => now()]);
-            }
-        }
-
-        return response()->json(['success' => true, 'data' => DB::table('drivers')->find($id)]);
-    }
-
-    public function destroyDriver(string $id): JsonResponse
-    {
-        DB::table('drivers')->where('staff_type', 'driver')->where('id', $id)->delete();
-        return response()->json(['success' => true]);
-    }
-
-    // ═══════════════════ CONDUCTORS ═══════════════════
-
-    public function listConductors(Request $request): JsonResponse
+    private function storeStaff(Request $request, string $role): JsonResponse
     {
         try {
-            $cid = $this->companyId($request);
-            $perPage = (int) $request->input('per_page', 20);
-            $perPage = max(1, min(100, $perPage));
+            $isDriver = ($role === 'driver');
+            $isOwner  = ($role === 'owner');
 
-            $query = DB::table('drivers')
-                ->where('driver_type', $this->driverType($request))
-                ->where('staff_type', 'conductor');
-            if ($cid) $query->where('company_id', $cid);
+            $rules = [
+                'name'     => ['required', 'string', 'max:255'],
+                'email'    => ['required', 'email'],
+                'phone'    => ['required', 'string', 'max:50'],
+                'password' => ['required', 'string', 'min:8'],
+                'cnic'     => ['nullable', 'string', 'max:30'],
+                'address'  => ['nullable', 'string', 'max:500'],
+            ];
+            if ($isDriver) {
+                $rules['license_number'] = ['required', 'string', 'max:100];
+                $rules['vehicle_plate']  = ['nullable', 'string', 'max:50];
+                $rules['salary']         = ['nullable', 'numeric', 'min:0'];
+            }
 
-            // owner_id filter: C (null) vs E (specific owner UUID)
-            if ($request->has('owner_id')) {
-                $oid = $request->input('owner_id');
-                if ($oid === 'null' || $oid === '' || $oid === 'company') {
-                    $query->whereNull('owner_id'); // Type C — Company Direct Conductors
-                } else {
-                    $query->where('owner_id', $oid); // Type E — Owner's Conductors
+            $data = $request->validate($rules);
+
+            $cid   = $this->carrierCompanyId($request);
+            $fleet = $this->fleetType($request);
+
+            // Use DB transaction to guarantee atomic spine creation
+            DB::beginTransaction();
+            try {
+
+                // 1. Create GlobalIdentity (Layer 1)
+                $identityId = (string) Str::orderedUuid();
+                $token = \App\Models\GlobalIdentity::generateToken(
+                    match ($role) {
+                        'owner'      => 'owner',
+                        'driver'     => 'driver',
+                        'conductor'  => 'conductor',
+                        default      => null,
+                    }
+                );
+
+                DB::table('global_identities')->insert([
+                    'id'             => $identityId,
+                    'identity_token' => $token,
+                    'display_name'   => $data['name'],
+                    'password_hash'  => Hash::make($data['password']),
+                    'kyc_status'     => 'unverified',
+                    'kyc_tier'       => 0,
+                    'status'         => 'active',
+                    'identity_type'  => match ($role) {
+                        'owner'      => 'owner',
+                        'driver'     => 'driver',
+                        'conductor'  => 'conductor',
+                        default      => 'mixed',
+                    },
+                    'risk_score'     => 0.00,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
+
+                // 2. Create IdentityClaim — email (Layer 2)
+                $claimId = (string) Str::orderedUuid();
+                $rawHash = hash('sha256', strtolower($data['email']), true);
+
+                DB::table('identity_claims')->insert([
+                    'id'                 => $claimId,
+                    'global_identity_id' => $identityId,
+                    'claim_type'         => 'email',
+                    'claim_value'        => strtolower(trim($data['email'])),
+                    'claim_value_hash'   => DB::raw("decode('" . bin2hex($rawHash) . "', 'hex')"),
+                    'is_primary'         => true,
+                    'is_revoked'         => false,
+                    'verified_via'       => 'manual_kyc',
+                    'verified_at'        => now(),
+                    'created_at'         => now(),
+                    'updated_at'         => now(),
+                ]);
+
+                // 3. Create IdentityClaim — phone
+                if (!empty($data['phone'])) {
+                    $phoneClaimId = (string) Str::orderedUuid();
+                    $phoneHash = hash('sha256', $data['phone'], true);
+                    DB::table('identity_claims')->insert([
+                        'id'                 => $phoneClaimId,
+                        'global_identity_id' => $identityId,
+                        'claim_type'         => 'phone',
+                        'claim_value'        => preg_replace('/[^0-9+]/', '', $data['phone']),
+                        'claim_value_hash'   => DB::raw("decode('" . bin2hex($phoneHash) . "', 'hex')"),
+                        'is_primary'         => true,
+                        'is_revoked'         => false,
+                        'verified_via'       => 'manual_kyc',
+                        'verified_at'        => now(),
+                        'created_at'         => now(),
+                        'updated_at'         => now(),
+                    ]);
                 }
-            }
 
-            if ($request->filled('search')) {
-                $s = $request->search;
-                $query->where(function($q) use ($s) {
-                    $q->where('name', 'ilike', "%{$s}%")
-                      ->orWhere('phone', 'ilike', "%{$s}%");
-                });
+                // 4. Create TenantAccount (organizational bridge)
+                $tenantId = (string) Str::orderedUuid();
+                DB::table('tenant_accounts')->insert([
+                    'id'                  => $tenantId,
+                    'global_identity_id'  => $identityId,
+                    'account_name'        => $data['name'],
+                    'email'               => $data['email'],
+                    'password'            => Hash::make($data['password']),
+                    'phone_number'        => $data['phone'],
+                    'is_independent'      => $isOwner,
+                    'account_type'        => $fleet === 'bus'
+                        ? ($isOwner ? 'bus_owner' : ($isDriver ? 'bus_driver' : 'bus_conductor'))
+                        : ($isOwner ? 'truck_owner' : ($isDriver ? 'truck_driver' : 'truck_conductor')),
+                    'status'              => 'active',
+                    'created_at'          => now(),
+                    'updated_at'          => now(),
+                ]);
+
+                // 5. Create FleetAssignment (Layer 3 — the binding)
+                $assignmentId = (string) Str::orderedUuid();
+                $meta = [];
+                if ($isDriver) {
+                    $meta['license_number'] = $data['license_number'] ?? null;
+                    $meta['vehicle_plate']  = $data['vehicle_plate'] ?? null;
+                    $meta['salary']         = $data['salary'] ?? null;
+                }
+                if (!empty($data['cnic'])) {
+                    $meta['cnic'] = $data['cnic'];
+                }
+                if (!empty($data['address'])) {
+                    $meta['address'] = $data['address'];
+                }
+
+                DB::table('fleet_assignments')->insert([
+                    'id'                  => $assignmentId,
+                    'global_identity_id'  => $identityId,
+                    'carrier_company_id'  => $cid,
+                    'role'                => $role,
+                    'fleet_type'          => $fleet,
+                    'status'              => 'active',
+                    'assignment_meta'     => json_encode($meta),
+                    'accepted_at'         => now(),
+                    'created_at'          => now(),
+                    'updated_at'          => now(),
+                ]);
+
+                DB::commit();
+
+                Log::info('FleetManagement: staff created via identity spine', [
+                    'identity_id'  => $identityId,
+                    'assignment_id'=> $assignmentId,
+                    'role'         => $role,
+                    'fleet'        => $fleet,
+                    'company_id'   => $cid,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'data'    => [
+                        'id'                 => $assignmentId,
+                        'global_identity_id' => $identityId,
+                        'identity_token'     => $token,
+                        'name'               => $data['name'],
+                        'email'              => $data['email'],
+                        'phone'              => $data['phone'],
+                        'role'               => $role,
+                        'fleet_type'         => $fleet,
+                        'status'             => 'active',
+                    ],
+                ], 201);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
             }
-            $result = $query->orderBy('created_at', 'desc')->paginate($perPage);
-            return response()->json(['success' => true, 'data' => $result]);
         } catch (\Exception $e) {
-            Log::error('Fleet Management - listConductors Error: ' . $e->getMessage(), [
-                'sql' => $e->getTraceAsString(),
+            Log::error('FleetManagement - storeStaff Error: ' . $e->getMessage(), [
+                'role'    => $role,
                 'user_id' => $request->user()?->id,
+                'trace'   => $e->getTraceAsString(),
             ]);
             return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
     }
 
+    // ═══════════════════════════════════════════════════════
+    // SHOW (single)
+    // ═══════════════════════════════════════════════════════
 
-
-    public function storeConductor(Request $request): JsonResponse
+    public function showOwner(string $id): JsonResponse
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:50|unique:drivers,phone', // Phone-based login key
-            'password' => 'required|string|min:6',                    // App auth password
-            'email' => 'nullable|email|unique:drivers,email',         // Optional — conductors often lack corporate email
-            'cnic' => 'nullable|string|max:30',
-            'address' => 'nullable|string',
-            'salary' => 'required|numeric|min:0',
-            'hire_date' => 'nullable|date',
-            'owner_id' => 'nullable|uuid|exists:drivers,id',          // E = Owner's Conductor
-        ]);
+        return $this->showStaff($id, 'owner');
+    }
 
-        $cid = $this->companyId($request);
-        $ownerId = $data['owner_id'] ?? null;
-
-        // If owner_id is provided (Type E), validate ownership scoping
-        if ($ownerId) {
-            $owner = DB::table('drivers')
-                ->where('id', $ownerId)
-                ->where('staff_type', 'owner')
-                ->first();
-            if (!$owner) {
-                return response()->json(['message' => 'Invalid owner_id: not a bus owner'], 422);
-            }
-        }
-
-        // Normalise empty-string email to null for DB compatibility
-        $email = !empty($data['email']) ? $data['email'] : null;
-
-        $id = (string) Str::uuid();
-        DB::table('drivers')->insert([
-            'id' => $id,
-            'company_id' => $cid,
-            'owner_id' => $ownerId,
-            'driver_type' => $this->driverType($request),
-            'staff_type' => 'conductor',
-            'name' => $data['name'],
-            'phone' => $data['phone'],
-            'email' => $email,
-            'password' => bcrypt($data['password']),
-            'cnic' => $data['cnic'] ?? null,
-            'address' => $data['address'] ?? null,
-            'salary' => $data['salary'],
-            'hire_date' => $data['hire_date'] ?? null,
-            'status' => 'active',
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return response()->json(['success' => true, 'data' => DB::table('drivers')->find($id)], 201);
+    public function showDriver(string $id): JsonResponse
+    {
+        return $this->showStaff($id, 'driver');
     }
 
     public function showConductor(string $id): JsonResponse
     {
-        $c = DB::table('drivers')->where('staff_type', 'conductor')->find($id);
-        if (!$c) return response()->json(['message' => 'Not found'], 404);
-        return response()->json(['success' => true, 'data' => $c]);
+        return $this->showStaff($id, 'conductor');
+    }
+
+    private function showStaff(string $assignmentId, string $role): JsonResponse
+    {
+        try {
+            $row = DB::table('fleet_assignments AS fa')
+                ->join('global_identities AS gi', 'fa.global_identity_id', '=', 'gi.id')
+                ->leftJoin('tenant_accounts AS ta', 'gi.id', '=', 'ta.global_identity_id')
+                ->where('fa.id', $assignmentId)
+                ->where('fa.role', $role)
+                ->select(
+                    'fa.id AS assignment_id',
+                    'gi.id AS global_identity_id',
+                    'gi.identity_token',
+                    'gi.display_name',
+                    'gi.kyc_status',
+                    'gi.kyc_tier',
+                    'fa.role',
+                    'fa.fleet_type',
+                    'fa.status',
+                    'fa.assignment_meta',
+                    'fa.accepted_at',
+                    'fa.unassigned_at',
+                    'fa.unassign_reason',
+                    'fa.created_at',
+                    'fa.updated_at',
+                    'ta.email',
+                    'ta.phone_number AS phone',
+                    'ta.account_name',
+                )
+                ->first();
+
+            if (!$row) {
+                return response()->json(['message' => 'Not found'], 404);
+            }
+
+            return response()->json(['success' => true, 'data' => $this->formatRow($row)]);
+        } catch (\Exception $e) {
+            Log::error('FleetManagement - showStaff Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // UPDATE
+    // ═══════════════════════════════════════════════════════
+
+    public function updateOwner(string $id, Request $request): JsonResponse
+    {
+        return $this->updateStaff($id, $request, 'owner');
+    }
+
+    public function updateDriver(string $id, Request $request): JsonResponse
+    {
+        return $this->updateStaff($id, $request, 'driver');
     }
 
     public function updateConductor(string $id, Request $request): JsonResponse
     {
-        $conductor = DB::table('drivers')->where('staff_type', 'conductor')->where('id', $id)->first();
-        if (!$conductor) return response()->json(['message' => 'Not found'], 404);
+        return $this->updateStaff($id, $request, 'conductor');
+    }
 
-        $data = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'phone' => 'sometimes|string|max:50|unique:drivers,phone,'.$id,
-            'password' => 'sometimes|string|min:6',
-            'email' => 'nullable|email|unique:drivers,email,'.$id,
-            'cnic' => 'nullable|string|max:30',
-            'address' => 'nullable|string',
-            'salary' => 'sometimes|numeric|min:0',
-            'hire_date' => 'nullable|date',
-            'owner_id' => 'nullable|uuid|exists:drivers,id',
-            'status' => 'sometimes|in:active,inactive,suspended',
-        ]);
-
-        // If owner_id is provided, validate it references a valid owner
-        if ($ownerId = ($data['owner_id'] ?? null)) {
-            $owner = DB::table('drivers')
-                ->where('id', $ownerId)
-                ->where('staff_type', 'owner')
+    private function updateStaff(string $assignmentId, Request $request, string $role): JsonResponse
+    {
+        try {
+            $assignment = DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->where('role', $role)
                 ->first();
-            if (!$owner) {
-                return response()->json(['message' => 'Invalid owner_id: not a bus owner'], 422);
+
+            if (!$assignment) {
+                return response()->json(['message' => 'Not found'], 404);
             }
-        }
 
-        // Normalise empty-string email to null for DB compatibility
-        if (array_key_exists('email', $data) && empty($data['email'])) {
-            $data['email'] = null;
-        }
+            $isDriver = ($role === 'driver');
+            $rules = [
+                'name'    => ['sometimes', 'string', 'max:255'],
+                'email'   => ['sometimes', 'email'],
+                'phone'   => ['sometimes', 'string', 'max:50'],
+                'password'=> ['sometimes', 'string', 'min:8],
+                'cnic'    => ['nullable', 'string', 'max:30'],
+                'address' => ['nullable', 'string', 'max:500'],
+                'status'  => ['sometimes', 'string', 'in:active,suspended,pending_acceptance'],
+            ];
+            if ($isDriver) {
+                $rules['license_number'] = ['sometimes', 'string', 'max:100];
+                $rules['vehicle_plate']  = ['nullable', 'string', 'max:50];
+                $rules['salary']         = ['nullable', 'numeric', 'min:0'];
+            }
+            $data = $request->validate($rules);
 
-        $update = ['updated_at' => now()];
-        foreach (['name','phone','email','cnic','address','salary','hire_date','owner_id','status'] as $f) {
-            if (array_key_exists($f, $data)) $update[$f] = $data[$f];
-        }
-        if (isset($data['password'])) $update['password'] = bcrypt($data['password']);
+            DB::beginTransaction();
+            try {
+                $identityId = $assignment->global_identity_id;
 
-        DB::table('drivers')->where('id', $id)->update($update);
+                // Update global_identities display_name
+                if (isset($data['name'])) {
+                    DB::table('global_identities')
+                        ->where('id', $identityId)
+                        ->update([
+                            'display_name' => $data['name'],
+                            'updated_at'   => now(),
+                        ]);
+                }
 
-        // Sync password change to tenant_accounts (prevents login desync)
-        if (isset($data['password'])) {
-            $conductorEmail = $conductor->email ?? ($data['email'] ?? null);
-            $accountType = $this->driverType($request) === 'truck' ? 'truck_conductor' : 'bus_conductor';
-            if ($conductorEmail) {
+                // Update password on global_identities
+                if (isset($data['password'])) {
+                    DB::table('global_identities')
+                        ->where('id', $identityId)
+                        ->update([
+                            'password_hash' => Hash::make($data['password']),
+                            'updated_at'    => now(),
+                        ]);
+                }
+
+                // Sync to tenant_accounts
+                $taUpdates = ['updated_at' => now()];
+                if (isset($data['name'])) $taUpdates['account_name'] = $data['name'];
+                if (isset($data['email'])) $taUpdates['email'] = $data['email'];
+                if (isset($data['phone'])) $taUpdates['phone_number'] = $data['phone'];
+                if (isset($data['password'])) $taUpdates['password'] = Hash::make($data['password']);
+                if (isset($data['status'])) $taUpdates['status'] = $data['status'];
+
                 DB::table('tenant_accounts')
-                    ->where('email', $conductorEmail)
-                    ->where('account_type', $accountType)
-                    ->update(['password' => $update['password'], 'updated_at' => now()]);
-            }
-            // Also sync by phone (conductors often don't have email)
-            if ($conductor->phone) {
-                DB::table('tenant_accounts')
-                    ->where('phone_number', $conductor->phone)
-                    ->where('account_type', $accountType)
-                    ->update(['password' => $update['password'], 'updated_at' => now()]);
-            }
-        }
+                    ->where('global_identity_id', $identityId)
+                    ->update($taUpdates);
 
-        return response()->json(['success' => true, 'data' => DB::table('drivers')->find($id)]);
+                // Update fleet_assignments assignment_meta
+                $meta = json_decode($assignment->assignment_meta ?? '{}', true) ?: [];
+                if ($isDriver) {
+                    if (isset($data['license_number'])) $meta['license_number'] = $data['license_number'];
+                    if (isset($data['vehicle_plate']))  $meta['vehicle_plate']  = $data['vehicle_plate'];
+                    if (isset($data['salary']))         $meta['salary']         = $data['salary'];
+                }
+                if (isset($data['cnic']))    $meta['cnic']    = $data['cnic'];
+                if (isset($data['address'])) $meta['address'] = $data['address'];
+
+                $faUpdates = [
+                    'assignment_meta' => json_encode($meta),
+                    'updated_at'      => now(),
+                ];
+                if (isset($data['status'])) {
+                    $faUpdates['status'] = $data['status'];
+                }
+
+                DB::table('fleet_assignments')
+                    ->where('id', $assignmentId)
+                    ->update($faUpdates);
+
+                DB::commit();
+
+                Log::info('FleetManagement: staff updated', [
+                    'assignment_id' => $assignmentId,
+                    'identity_id'   => $identityId,
+                    'role'          => $role,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'data'    => ['id' => $assignmentId, 'message' => 'Updated'],
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Exception $e) {
+            Log::error('FleetManagement - updateStaff Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // DESTROY — Soft-revoke (NOT hard-delete)
+    // ═══════════════════════════════════════════════════════
+
+    public function destroyOwner(string $id): JsonResponse
+    {
+        return $this->destroyStaff($id, 'owner');
+    }
+
+    public function destroyDriver(string $id): JsonResponse
+    {
+        return $this->destroyStaff($id, 'driver');
     }
 
     public function destroyConductor(string $id): JsonResponse
     {
-        DB::table('drivers')->where('staff_type', 'conductor')->where('id', $id)->delete();
-        return response()->json(['success' => true]);
+        return $this->destroyStaff($id, 'conductor');
+    }
+
+    private function destroyStaff(string $assignmentId, string $role): JsonResponse
+    {
+        try {
+            $assignment = DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->where('role', $role)
+                ->first();
+
+            if (!$assignment) {
+                return response()->json(['message' => 'Not found'], 404);
+            }
+
+            // Soft-revoke: set status to 'revoked' — identity spine is NEVER hard-deleted
+            DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->update([
+                    'status'          => 'revoked',
+                    'unassigned_at'   => now(),
+                    'unassign_reason' => 'Revoked by fleet admin',
+                    'updated_at'      => now(),
+                ]);
+
+            Log::info('FleetManagement: staff assignment revoked', [
+                'assignment_id' => $assignmentId,
+                'identity_id'   => $assignment->global_identity_id,
+                'role'          => $role,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Staff assignment revoked. Identity preserved.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('FleetManagement - destroyStaff Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
     }
 }

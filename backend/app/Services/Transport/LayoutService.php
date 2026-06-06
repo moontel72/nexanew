@@ -196,43 +196,45 @@ class LayoutService
      */
     public function acquireEditLock(string $layoutId, string $identityId): bool
     {
-        $layout = DB::table('transport_bus_layouts')
-            ->where('id', $layoutId)
-            ->lockForUpdate()
-            ->first();
+        return DB::transaction(function () use ($layoutId, $identityId) {
+            $layout = DB::table('transport_bus_layouts')
+                ->where('id', $layoutId)
+                ->lockForUpdate()
+                ->first();
 
-        if (! $layout) {
-            throw new \RuntimeException('Layout not found.');
-        }
-
-        // Check if someone else holds a valid lock
-        if ($layout->edit_lock_held_by && $layout->edit_lock_held_by !== $identityId) {
-            $expires = $layout->edit_lock_expires_at
-                ? Carbon::parse($layout->edit_lock_expires_at)
-                : null;
-            if ($expires && $expires->isFuture()) {
-                return false; // Lock held by another user
+            if (! $layout) {
+                throw new \RuntimeException('Layout not found.');
             }
-            // Lock expired — fall through to acquire
-        }
 
-        $expiresAt = Carbon::now()->addMinutes(self::EDIT_LOCK_TTL_MINUTES);
+            // Check if someone else holds a valid lock
+            if ($layout->edit_lock_held_by && $layout->edit_lock_held_by !== $identityId) {
+                $expires = $layout->edit_lock_expires_at
+                    ? Carbon::parse($layout->edit_lock_expires_at)
+                    : null;
+                if ($expires && $expires->isFuture()) {
+                    return false; // Lock held by another user
+                }
+                // Lock expired — fall through to acquire
+            }
 
-        DB::table('transport_bus_layouts')
-            ->where('id', $layoutId)
-            ->update([
-                'edit_lock_held_by'    => $identityId,
-                'edit_lock_expires_at' => $expiresAt,
-                'updated_at'           => now(),
+            $expiresAt = Carbon::now()->addMinutes(self::EDIT_LOCK_TTL_MINUTES);
+
+            DB::table('transport_bus_layouts')
+                ->where('id', $layoutId)
+                ->update([
+                    'edit_lock_held_by'    => $identityId,
+                    'edit_lock_expires_at' => $expiresAt,
+                    'updated_at'           => now(),
+                ]);
+
+            Log::info('LayoutService: edit lock acquired', [
+                'layout_id'   => $layoutId,
+                'identity_id' => $identityId,
+                'expires_at'  => $expiresAt->toIso8601String(),
             ]);
 
-        Log::info('LayoutService: edit lock acquired', [
-            'layout_id'   => $layoutId,
-            'identity_id' => $identityId,
-            'expires_at'  => $expiresAt->toIso8601String(),
-        ]);
-
-        return true;
+            return true;
+        });
     }
 
     /**
