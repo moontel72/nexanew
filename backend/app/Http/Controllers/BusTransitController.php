@@ -392,13 +392,15 @@ class BusTransitController extends Controller
     /**
      * Resolve the company_id from the authenticated user via identity spine.
      *
-     * Primary: _carrier_company_id set by middleware.
-     * Secondary: query fleet_assignments for carrier_company_id.
-     * Fallback: master_admin uses own tenant account id.
+     * Priority chain:
+     *  1. _carrier_company_id set by middleware
+     *  2. fleet_assignments lookup (for fleet owners)
+     *  3. User IS the company (account_type = bus_company) → own tenant id
+     *  4. master_admin fallback
      */
     private function resolveCompanyId(Request $request): string
     {
-        // First try the carrier_company_id set by middleware
+        // 1. Try the carrier_company_id set by middleware
         $carrierId = $request->get('_carrier_company_id');
         if ($carrierId) {
             return (string) $carrierId;
@@ -409,7 +411,7 @@ class BusTransitController extends Controller
             throw new \RuntimeException('Authenticated user required.');
         }
 
-        // Resolve via identity spine: fleet_assignments
+        // 2. Resolve via identity spine: fleet_assignments (for fleet owners)
         $globalId = $user->global_identity_id ?? null;
         if ($globalId) {
             $cid = \Illuminate\Support\Facades\DB::table('fleet_assignments')
@@ -423,8 +425,8 @@ class BusTransitController extends Controller
             }
         }
 
-        // Fallback for master_admin: use their own tenant account id as company context
-        if ($user->account_type === 'master_admin') {
+        // 3. User IS the bus company → their own tenant_accounts.id is the company context
+        if (in_array($user->account_type, ['bus_company', 'master_admin'], true)) {
             return (string) ($user->id ?? '');
         }
 

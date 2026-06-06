@@ -37,16 +37,24 @@ class FleetManagementController extends Controller
         $cid = $request->get('_carrier_company_id');
         if ($cid) return $cid;
 
-        // Self-resolve from user's fleet_assignments
+        // Self-resolve from user's fleet_assignments (for fleet owners)
         $user = $request->user();
-        if (!$user || !($user->global_identity_id ?? null)) return null;
+        if ($user && ($user->global_identity_id ?? null)) {
+            $cid = DB::table('fleet_assignments')
+                ->where('global_identity_id', $user->global_identity_id)
+                ->where('role', 'owner')
+                ->where('fleet_type', $this->fleetType($request))
+                ->whereIn('status', ['active', 'pending_acceptance'])
+                ->value('carrier_company_id');
+            if ($cid) return $cid;
+        }
 
-        return DB::table('fleet_assignments')
-            ->where('global_identity_id', $user->global_identity_id)
-            ->where('role', 'owner')
-            ->where('fleet_type', $this->fleetType($request))
-            ->whereIn('status', ['active', 'pending_acceptance'])
-            ->value('carrier_company_id');
+        // User IS the bus company → own tenant account id is the company context
+        if ($user && in_array($user->account_type ?? '', ['bus_company', 'master_admin'], true)) {
+            return $user->id;
+        }
+
+        return null;
     }
 
     /** Detect fleet_type from request path. */
