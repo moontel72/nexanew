@@ -390,66 +390,58 @@ class BusTransitController extends Controller
     // ─── HELPERS ────────────────────────────────────────
 
     /**
-     * Resolve the company_id from the authenticated admin user.
-     * Mirrors FleetManagementController::companyId().
+     * Resolve the company_id from the authenticated user via identity spine.
+     *
+     * Primary: _carrier_company_id set by middleware.
+     * Secondary: query fleet_assignments for carrier_company_id.
+     * Fallback: master_admin uses own tenant account id.
      */
     private function resolveCompanyId(Request $request): string
     {
+        // First try the carrier_company_id set by middleware
+        $carrierId = $request->get('_carrier_company_id');
+        if ($carrierId) {
+            return (string) $carrierId;
+        }
+
         $user = $request->user();
-        if (! $user) {
+        if (!$user) {
             throw new \RuntimeException('Authenticated user required.');
         }
 
-        $meta = $user->metadata ?? null;
-        if (is_string($meta)) {
-            $meta = json_decode($meta, true);
+        // Resolve via identity spine: fleet_assignments
+        $globalId = $user->global_identity_id ?? null;
+        if ($globalId) {
+            $cid = \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                ->where('global_identity_id', $globalId)
+                ->where('role', 'owner')
+                ->where('fleet_type', 'bus')
+                ->whereIn('status', ['active', 'pending_acceptance'])
+                ->value('carrier_company_id');
+            if ($cid) {
+                return (string) $cid;
+            }
         }
 
-        $companyId = is_array($meta) ? ($meta['company_id'] ?? null) : null;
-
-        if (! $companyId) {
-            throw new \RuntimeException('No company_id found on user metadata.');
+        // Fallback for master_admin: use their own tenant account id as company context
+        if ($user->account_type === 'master_admin') {
+            return (string) ($user->id ?? '');
         }
 
-        return (string) $companyId;
+        throw new \RuntimeException('No company context found.');
     }
 
     /**
      * Resolve the owner_identity_id (global_identity_id) from the
-     * authenticated admin user's metadata or identity claims.
+     * authenticated user.
      */
     private function resolveOwnerIdentityId(Request $request): string
     {
         $user = $request->user();
-        if (! $user) {
+        if (!$user) {
             throw new \RuntimeException('Authenticated user required.');
         }
 
-        $meta = $user->metadata ?? null;
-        if (is_string($meta)) {
-            $meta = json_decode($meta, true);
-        }
-
-        // Try metadata first
-        $identityId = is_array($meta) ? ($meta['identity_id'] ?? $meta['owner_identity_id'] ?? null) : null;
-
-        if ($identityId) {
-            return (string) $identityId;
-        }
-
-        // Fall back to identity_claims lookup by email
-        $email = $user->email ?? null;
-        if ($email) {
-            $claim = \App\Models\IdentityClaim::where('claim_type', 'email')
-                ->where('claim_value', strtolower($email))
-                ->where('is_revoked', false)
-                ->first();
-
-            if ($claim && $claim->global_identity_id) {
-                return $claim->global_identity_id;
-            }
-        }
-
-        throw new \RuntimeException('Cannot resolve owner_identity_id for this user.');
+        return (string) ($user->global_identity_id ?? $user->id);
     }
 }

@@ -231,7 +231,11 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: ListView(
+            child: Scrollbar(
+              thumbVisibility: true,
+              trackVisibility: true,
+              thickness: 6,
+              child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               children: [
                 _sl('MAIN'),
@@ -322,6 +326,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                   onTap: _logout,
                 ),
               ],
+            ),
             ),
           ),
         ],

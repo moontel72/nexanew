@@ -688,7 +688,12 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
 
           // Preset selector
           Expanded(
-            child: ListView(
+            child: Scrollbar(
+              thumbVisibility: true,
+              trackVisibility: true,
+              thickness: 8,
+              radius: const Radius.circular(4),
+              child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               children: [
                 _sectionLabel('PRESETS'),
@@ -752,6 +757,7 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
                 ),
               ],
             ),
+            ),
           ),
         ],
       ),
@@ -807,7 +813,7 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
   );
 
   Widget _buildTopBar(bool isWide) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
     decoration: BoxDecoration(
       color: const Color(0xFF162438),
       boxShadow: [
@@ -820,6 +826,26 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
     ),
     child: Row(
       children: [
+        // ← Back to Dashboard button
+        Tooltip(
+          message: 'Back to Dashboard',
+          child: TextButton.icon(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFFAABBCC), size: 20),
+            label: const Text(
+              'Back',
+              style: TextStyle(color: Color(0xFFAABBCC), fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: Color(0xFF334455)),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
         if (!_sidebarOpen)
           IconButton(
             icon: const Icon(Icons.menu, color: Colors.white70),
@@ -951,7 +977,12 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
     final rows = grid.length;
     final cols = grid[0].length;
 
-    return SingleChildScrollView(
+    return Scrollbar(
+      thumbVisibility: true,
+      trackVisibility: true,
+      thickness: 8,
+      radius: const Radius.circular(4),
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
@@ -1012,6 +1043,7 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
           _buildLegend(),
         ],
       ),
+    ),
     );
   }
 
