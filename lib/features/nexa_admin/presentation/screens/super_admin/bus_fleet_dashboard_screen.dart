@@ -231,102 +231,109 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: Scrollbar(
-              thumbVisibility: true,
-              trackVisibility: true,
-              thickness: 6,
-              child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              children: [
-                _sl('MAIN'),
-                Missile3DButton(
-                  label: 'Dashboard',
-                  icon: Icons.dashboard_rounded,
-                  color: const Color(0xFF7C3AED),
-                  onTap: () => setState(() => _currentPage = 'dashboard'),
-                ),
-                const SizedBox(height: 8),
-                _sl('FLEET STAFF'),
-                _expandableSection(
-                  'STAFF MANAGEMENT',
-                  _staffExpanded,
-                  () => setState(() => _staffExpanded = !_staffExpanded),
-                  [
-                    _subButton(
-                      'Add New Owner',
-                      Icons.person_add,
-                      const Color(0xFFDB2777),
-                      () => _showStaffAddDialog('owners'),
+            child: ScrollbarTheme(
+              data: ScrollbarThemeData(
+                thumbVisibility: WidgetStateProperty.all(true),
+                trackVisibility: WidgetStateProperty.all(true),
+                thickness: WidgetStateProperty.all(8),
+                radius: Radius.circular(4),
+                thumbColor: WidgetStateProperty.all(Color(0xFF00C49F)),
+                trackColor: WidgetStateProperty.all(Color(0x20FFFFFF)),
+              ),
+              child: Scrollbar(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  children: [
+                    _sl('MAIN'),
+                    Missile3DButton(
+                      label: 'Dashboard',
+                      icon: Icons.dashboard_rounded,
+                      color: const Color(0xFF7C3AED),
+                      onTap: () => setState(() => _currentPage = 'dashboard'),
                     ),
-                    _subButton(
-                      'View Owners ($_ownerCount)',
-                      Icons.badge_rounded,
-                      const Color(0xFFDB2777),
-                      () => setState(() => _currentPage = 'owners'),
+                    const SizedBox(height: 8),
+                    _sl('FLEET STAFF'),
+                    _expandableSection(
+                      'STAFF MANAGEMENT',
+                      _staffExpanded,
+                      () => setState(() => _staffExpanded = !_staffExpanded),
+                      [
+                        _subButton(
+                          'Add New Owner',
+                          Icons.person_add,
+                          const Color(0xFFDB2777),
+                          () => _showStaffAddDialog('owners'),
+                        ),
+                        _subButton(
+                          'View Owners ($_ownerCount)',
+                          Icons.badge_rounded,
+                          const Color(0xFFDB2777),
+                          () => setState(() => _currentPage = 'owners'),
+                        ),
+                        _subButton(
+                          'Add New Driver',
+                          Icons.person_add_alt,
+                          const Color(0xFF2563EB),
+                          () => _showStaffAddDialog('drivers'),
+                        ),
+                        _subButton(
+                          'View Drivers ($_driverCount)',
+                          Icons.person_rounded,
+                          const Color(0xFF2563EB),
+                          () => setState(() => _currentPage = 'drivers'),
+                        ),
+                        _subButton(
+                          'Add New Conductor',
+                          Icons.group_add,
+                          const Color(0xFF16A34A),
+                          () => _showStaffAddDialog('conductors'),
+                        ),
+                        _subButton(
+                          'View Conductors ($_conductorCount)',
+                          Icons.group_rounded,
+                          const Color(0xFF16A34A),
+                          () => setState(() => _currentPage = 'conductors'),
+                        ),
+                      ],
                     ),
-                    _subButton(
-                      'Add New Driver',
-                      Icons.person_add_alt,
-                      const Color(0xFF2563EB),
-                      () => _showStaffAddDialog('drivers'),
+                    const SizedBox(height: 8),
+                    _sl('FLEET ASSETS'),
+                    _expandableSection(
+                      'FLEET ASSETS',
+                      _assetsExpanded,
+                      () => setState(() => _assetsExpanded = !_assetsExpanded),
+                      [
+                        _subButton(
+                          'New Seat Layout',
+                          Icons.add,
+                          const Color(0xFF0891B2),
+                          () => _openLayoutDesigner(),
+                        ),
+                        _subButton(
+                          'View Layouts ($_layoutCount)',
+                          Icons.event_seat,
+                          const Color(0xFF0891B2),
+                          () => setState(() => _currentPage = 'layouts'),
+                        ),
+                      ],
                     ),
-                    _subButton(
-                      'View Drivers ($_driverCount)',
-                      Icons.person_rounded,
-                      const Color(0xFF2563EB),
-                      () => setState(() => _currentPage = 'drivers'),
+                    const SizedBox(height: 8),
+                    _sl('SYSTEM'),
+                    Missile3DButton(
+                      label: 'Refresh',
+                      icon: Icons.refresh_rounded,
+                      color: const Color(0xFF0891B2),
+                      onTap: _loadAll,
                     ),
-                    _subButton(
-                      'Add New Conductor',
-                      Icons.group_add,
-                      const Color(0xFF16A34A),
-                      () => _showStaffAddDialog('conductors'),
-                    ),
-                    _subButton(
-                      'View Conductors ($_conductorCount)',
-                      Icons.group_rounded,
-                      const Color(0xFF16A34A),
-                      () => setState(() => _currentPage = 'conductors'),
+                    Missile3DButton(
+                      label: 'Logout',
+                      icon: Icons.logout_rounded,
+                      color: const Color(0xFFDC2626),
+                      onTap: _logout,
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                _sl('FLEET ASSETS'),
-                _expandableSection(
-                  'FLEET ASSETS',
-                  _assetsExpanded,
-                  () => setState(() => _assetsExpanded = !_assetsExpanded),
-                  [
-                    _subButton(
-                      'New Seat Layout',
-                      Icons.add,
-                      const Color(0xFF0891B2),
-                      () => _openLayoutDesigner(),
-                    ),
-                    _subButton(
-                      'View Layouts ($_layoutCount)',
-                      Icons.event_seat,
-                      const Color(0xFF0891B2),
-                      () => setState(() => _currentPage = 'layouts'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _sl('SYSTEM'),
-                Missile3DButton(
-                  label: 'Refresh',
-                  icon: Icons.refresh_rounded,
-                  color: const Color(0xFF0891B2),
-                  onTap: _loadAll,
-                ),
-                Missile3DButton(
-                  label: 'Logout',
-                  icon: Icons.logout_rounded,
-                  color: const Color(0xFFDC2626),
-                  onTap: _logout,
-                ),
-              ],
-            ),
+              ),
             ),
           ),
         ],
@@ -523,21 +530,33 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   // ═══════════════════════════════════════════════════
   // DASHBOARD HOME
   // ═══════════════════════════════════════════════════
-  Widget _home() => SingleChildScrollView(
-    padding: EdgeInsets.all(16.w),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_company != null) _companyHeader(),
-        SizedBox(height: 20.h),
-        _sectionTitle('Fleet Management'),
-        SizedBox(height: 12.h),
-        _managementGrid(),
-        SizedBox(height: 24.h),
-        _sectionTitle('Quick Stats'),
-        SizedBox(height: 12.h),
-        _statsRow(),
-      ],
+  Widget _home() => ScrollbarTheme(
+    data: ScrollbarThemeData(
+      thumbVisibility: WidgetStateProperty.all(true),
+      trackVisibility: WidgetStateProperty.all(true),
+      thickness: WidgetStateProperty.all(10),
+      radius: const Radius.circular(5),
+      thumbColor: WidgetStateProperty.all(Color(0xFF1F5E6B)),
+      trackColor: WidgetStateProperty.all(Color(0xFFD4EFEA)),
+    ),
+    child: Scrollbar(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_company != null) _companyHeader(),
+            SizedBox(height: 20.h),
+            _sectionTitle('Fleet Management'),
+            SizedBox(height: 12.h),
+            _managementGrid(),
+            SizedBox(height: 24.h),
+            _sectionTitle('Quick Stats'),
+            SizedBox(height: 12.h),
+            _statsRow(),
+          ],
+        ),
+      ),
     ),
   );
 
@@ -998,11 +1017,23 @@ class _FleetListViewState extends State<_FleetListView> {
                     style: TextStyle(color: AppColors.gray400),
                   ),
                 )
-              : ListView.separated(
-                  padding: EdgeInsets.all(16.w),
-                  itemCount: _items.length,
-                  separatorBuilder: (_, __) => SizedBox(height: 8.h),
-                  itemBuilder: (_, i) => _itemCard(_items[i]),
+              : ScrollbarTheme(
+                  data: ScrollbarThemeData(
+                    thumbVisibility: WidgetStateProperty.all(true),
+                    trackVisibility: WidgetStateProperty.all(true),
+                    thickness: WidgetStateProperty.all(10),
+                    radius: Radius.circular(5),
+                    thumbColor: WidgetStateProperty.all(Color(0xFF1F5E6B)),
+                    trackColor: WidgetStateProperty.all(Color(0xFFD4EFEA)),
+                  ),
+                  child: Scrollbar(
+                    child: ListView.separated(
+                      padding: EdgeInsets.all(16.w),
+                      itemCount: _items.length,
+                      separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                      itemBuilder: (_, i) => _itemCard(_items[i]),
+                    ),
+                  ),
                 ),
         ),
       ],
@@ -1145,7 +1176,10 @@ class _LayoutListViewState extends State<_LayoutListView> {
       }
       final data = res['data'];
       if (data == null) {
-        setState(() { _layouts = []; _loading = false; });
+        setState(() {
+          _layouts = [];
+          _loading = false;
+        });
         return;
       }
       // LayoutService returns data as a flat array, not nested {data: [...], pagination}
@@ -1160,7 +1194,10 @@ class _LayoutListViewState extends State<_LayoutListView> {
           _loading = false;
         });
       } else {
-        setState(() { _layouts = []; _loading = false; });
+        setState(() {
+          _layouts = [];
+          _loading = false;
+        });
       }
     } catch (e) {
       setState(() {
@@ -1251,11 +1288,23 @@ class _LayoutListViewState extends State<_LayoutListView> {
                     ],
                   ),
                 )
-              : ListView.separated(
-                  padding: EdgeInsets.all(16.w),
-                  itemCount: _layouts.length,
-                  separatorBuilder: (_, __) => SizedBox(height: 8.h),
-                  itemBuilder: (_, i) => _layoutCard(_layouts[i]),
+              : ScrollbarTheme(
+                  data: ScrollbarThemeData(
+                    thumbVisibility: WidgetStateProperty.all(true),
+                    trackVisibility: WidgetStateProperty.all(true),
+                    thickness: WidgetStateProperty.all(10),
+                    radius: Radius.circular(5),
+                    thumbColor: WidgetStateProperty.all(Color(0xFF1F5E6B)),
+                    trackColor: WidgetStateProperty.all(Color(0xFFD4EFEA)),
+                  ),
+                  child: Scrollbar(
+                    child: ListView.separated(
+                      padding: EdgeInsets.all(16.w),
+                      itemCount: _layouts.length,
+                      separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                      itemBuilder: (_, i) => _layoutCard(_layouts[i]),
+                    ),
+                  ),
                 ),
         ),
       ],
