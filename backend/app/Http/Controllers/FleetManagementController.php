@@ -234,8 +234,8 @@ class FleetManagementController extends Controller
                 'address'  => ['nullable', 'string', 'max:500'],
             ];
             if ($isDriver) {
-                $rules['license_number'] = ['required', 'string', 'max:100];
-                $rules['vehicle_plate']  = ['nullable', 'string', 'max:50];
+                $rules['license_number'] = ['required', 'string', 'max:100'];
+                $rules['vehicle_plate']  = ['nullable', 'string', 'max:50'];
                 $rules['salary']         = ['nullable', 'numeric', 'min:0'];
             }
 
@@ -496,14 +496,14 @@ class FleetManagementController extends Controller
                 'name'    => ['sometimes', 'string', 'max:255'],
                 'email'   => ['sometimes', 'email'],
                 'phone'   => ['sometimes', 'string', 'max:50'],
-                'password'=> ['sometimes', 'string', 'min:8],
+                'password'=> ['sometimes', 'string', 'min:8'],
                 'cnic'    => ['nullable', 'string', 'max:30'],
                 'address' => ['nullable', 'string', 'max:500'],
                 'status'  => ['sometimes', 'string', 'in:active,suspended,pending_acceptance'],
             ];
             if ($isDriver) {
-                $rules['license_number'] = ['sometimes', 'string', 'max:100];
-                $rules['vehicle_plate']  = ['nullable', 'string', 'max:50];
+                $rules['license_number'] = ['sometimes', 'string', 'max:100'];
+                $rules['vehicle_plate']  = ['nullable', 'string', 'max:50'];
                 $rules['salary']         = ['nullable', 'numeric', 'min:0'];
             }
             $data = $request->validate($rules);
