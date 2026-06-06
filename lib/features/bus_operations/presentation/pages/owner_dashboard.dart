@@ -1,8 +1,9 @@
-// Bus Owner Interactive 3D Dashboard (Module 14)
+// Bus Owner Dashboard (Module 14) — Wave 2 Identity Spine
 //
-// • Sidebar: fixed 260px, no screenutil scaling inside (prevents text collapse)
-// • Brand: dynamic parent company from login response
-// • Auth: token verified BEFORE any API call, redirects to login if missing
+// Dark gradient sidebar (Sub-Admin style: #1A3A5C → #0F2B3F)
+// 3D pencil navigation buttons
+// Live data: fleet layouts, drivers, conductors, seat manifest
+// ScrollbarTheme wrappers on all scrollable areas
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -12,14 +13,15 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
-// ─── Mizaeel Color Spectrum ──────────────────────────────
+// ─── Button Color Spectrum ────────────────────────────
 class OwnerButtonColors {
-  static const Color timeline = Color(0xFF7C3AED);
+  static const Color dashboard = Color(0xFF7C3AED);
+  static const Color buses = Color(0xFF2563EB);
   static const Color drivers = Color(0xFFDB2777);
   static const Color conductors = Color(0xFFDC2626);
-  static const Color seats = Color(0xFF2563EB);
-  static const Color earnings = Color(0xFF16A34A);
-  static const Color alerts = Color(0xFFD97706);
+  static const Color seats = Color(0xFF16A34A);
+  static const Color earnings = Color(0xFFD97706);
+  static const Color alerts = Color(0xFF0891B2);
 }
 
 class OwnerDashboardScreen extends StatefulWidget {
@@ -30,23 +32,22 @@ class OwnerDashboardScreen extends StatefulWidget {
 }
 
 class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
-  // ── Identity (loaded from SharedPreferences before anything else)
-  String _token = '';
+  // ── State
   String _ownerName = 'Owner';
-  String _parentCompanyName = '';
-  String _customDisplayName = '';
-
-  // ── Dashboard data
+  String _companyName = '';
   bool _isSidebarOpen = true;
-  int _activeBuses = 0;
-  double _dailyRevenue = 0.0;
-  List<Map<String, dynamic>> _seatManifest = [];
+  String _currentPage = 'dashboard';
   bool _isLoading = true;
   String? _error;
 
-  // ── Editing
-  final _displayNameController = TextEditingController();
-  bool _isEditingName = false;
+  // ── Counts
+  int _busCount = 0;
+  int _driverCount = 0;
+  int _conductorCount = 0;
+  int _layoutCount = 0;
+
+  // ── Layout list data
+  List<Map<String, dynamic>> _layouts = [];
 
   @override
   void initState() {
@@ -54,70 +55,85 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     _bootstrap();
   }
 
-  @override
-  void dispose() {
-    _displayNameController.dispose();
-    super.dispose();
-  }
-
-  // ────────────────────────────────────────────────────────
-  // BOOTSTRAP: load identity & token, then fetch fleet data
-  // ────────────────────────────────────────────────────────
   Future<void> _bootstrap() async {
     final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('auth_token') ?? '';
+    final token = prefs.getString('auth_token') ?? '';
 
     if (!mounted) return;
-    if (_token.isEmpty) {
-      // No token → redirect to login immediately
+    if (token.isEmpty) {
       context.go('/bus-owner/login');
       return;
     }
 
     setState(() {
       _ownerName = prefs.getString('bus_owner_name') ?? 'Owner';
-      _parentCompanyName = prefs.getString('bus_owner_company') ?? '';
-      _customDisplayName = prefs.getString('bus_owner_display_name') ?? '';
+      _companyName = prefs.getString('bus_owner_company') ?? '';
     });
 
-    await _loadDashboardData();
+    await _loadAll();
   }
 
-  /// Brand name: custom > parent company > fallback
-  String get _brandName {
-    if (_customDisplayName.isNotEmpty) return _customDisplayName;
-    if (_parentCompanyName.isNotEmpty) return _parentCompanyName;
-    return 'NexaTrace';
-  }
-
-  // ────────────────────────────────────────────────────────
-  // DATA FETCH — only called after token is confirmed
-  // ────────────────────────────────────────────────────────
-  Future<void> _loadDashboardData() async {
+  Future<void> _loadAll() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
-
     try {
       final api = ApiService();
 
+      // Owner profile
       final profileRes = await api.get('/bus-fleet/owner/profile');
-      final data = profileRes['data'] as Map<String, dynamic>? ?? {};
+      final profile = (profileRes['data'] as Map<String, dynamic>?) ?? {};
+      final ownerIdentityId = profile['id'] as String? ?? '';
 
-      if (!mounted) return;
-      setState(() {
-        _activeBuses = (data['active_buses'] as num?)?.toInt() ?? 0;
-        _dailyRevenue = (data['daily_revenue'] as num?)?.toDouble() ?? 0.0;
-        _seatManifest = [];
-        _isLoading = false;
-      });
-    } on Exception catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      // Dashboard stats
+      final results = await Future.wait([
+        _safeCount(api, '/bus-fleet/layouts'),
+        _safeCount(api, '/bus-fleet/drivers/manage'),
+        _safeCount(api, '/bus-fleet/conductors'),
+      ], eagerError: false);
+
+      // Load layouts list
+      List<Map<String, dynamic>> layouts = [];
+      try {
+        final lr = await api.get('/bus-fleet/layouts');
+        final d = lr['data'];
+        if (d is List) {
+          layouts = List<Map<String, dynamic>>.from(d);
+        } else if (d is Map) {
+          layouts = List<Map<String, dynamic>>.from(d['data'] ?? []);
+        }
+      } catch (_) {}
+
+      if (mounted)
+        setState(() {
+          _busCount = (profile['active_buses'] as int?) ?? layouts.length;
+          _layoutCount = results[0];
+          _driverCount = results[1];
+          _conductorCount = results[2];
+          _layouts = layouts;
+          _ownerName = (profile['account_name'] as String?) ?? _ownerName;
+          _isLoading = false;
+        });
+    } catch (e) {
+      if (mounted)
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+    }
+  }
+
+  Future<int> _safeCount(ApiService api, String endpoint) async {
+    try {
+      final res = await api.get(endpoint, queryParams: {'per_page': '1'});
+      if (res == null || res is! Map) return 0;
+      final data = res['data'];
+      if (data is Map) return (data['total'] as int?) ?? 0;
+      if (data is List) return data.length;
+      return 0;
+    } catch (_) {
+      return 0;
     }
   }
 
@@ -127,15 +143,20 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     if (mounted) context.go('/bus-owner/login');
   }
 
-  // ═══════════════════════════════════════════════════════
-  // BUILD
-  // ═══════════════════════════════════════════════════════
+  // ── Build ──────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 900;
 
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0D1B2A),
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFF0D1B2A),
       body: Row(
         children: [
           if (_isSidebarOpen || isWide) _buildSidebar(isWide),
@@ -145,815 +166,599 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════
-  // SIDEBAR — 260px fixed, NO .w/.sp scaling inside
-  // ═══════════════════════════════════════════════════════
-  Widget _buildSidebar(bool isWide) {
-    return Container(
-      width: 260,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF256B77), Color(0xFF14434D)],
+  // ── Sidebar (Sub-Admin dark theme) ─────────────────
+  Widget _buildSidebar(bool isWide) => Container(
+    width: 260,
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF1A3A5C), Color(0xFF0F2B3F)],
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Color(0x30144055),
+          blurRadius: 16,
+          offset: Offset(4, 0),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x30144A55),
-            blurRadius: 16,
-            offset: Offset(4, 0),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            _buildSidebarHeader(isWide),
-            const Gap(8),
-            _buildOwnerBadge(),
-            const Gap(12),
-            const Divider(
-              color: Color(0x20FFFFFF),
-              height: 1,
-              indent: 20,
-              endIndent: 20,
-            ),
-            const Gap(12),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Column(
-                  children: [
-                    _sectionLabel('NAVIGATION'),
-                    const Gap(6),
-                    Missile3DButton(
-                      label: 'Project / Fleet Timeline',
-                      icon: Icons.timeline_rounded,
-                      color: OwnerButtonColors.timeline,
-                      onTap: () {},
-                    ),
-                    Missile3DButton(
-                      label: 'My Drivers Ledger',
-                      icon: Icons.badge_rounded,
-                      color: OwnerButtonColors.drivers,
-                      onTap: () {},
-                    ),
-                    Missile3DButton(
-                      label: 'My Conductors Ledger',
-                      icon: Icons.group_rounded,
-                      color: OwnerButtonColors.conductors,
-                      onTap: () {},
-                    ),
-                    Missile3DButton(
-                      label: 'Active Bus Seats',
-                      icon: Icons.event_seat_rounded,
-                      color: OwnerButtonColors.seats,
-                      onTap: () {},
-                    ),
-                    Missile3DButton(
-                      label: 'Daily Earnings',
-                      icon: Icons.account_balance_wallet_rounded,
-                      color: OwnerButtonColors.earnings,
-                      onTap: () {},
-                    ),
-                    Missile3DButton(
-                      label: 'Alerts & Maintenance',
-                      icon: Icons.warning_amber_rounded,
-                      color: OwnerButtonColors.alerts,
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            _buildSidebarBottom(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidebarHeader(bool isWide) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 14, 10, 8),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: AppColors.secondary,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.directions_bus_filled,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-          const Gap(10),
-          // FLEXIBLE prevents text from collapsing vertically
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _brandName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const Text(
-                  'Owner Terminal',
-                  style: TextStyle(color: Color(0xFFBDD8DB), fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          if (!isWide)
-            IconButton(
-              icon: const Icon(
-                Icons.close_rounded,
-                color: Colors.white70,
-                size: 20,
-              ),
-              onPressed: () => setState(() => _isSidebarOpen = false),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOwnerBadge() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: AppColors.secondary,
-            child: Text(
-              _ownerName.characters.first.toUpperCase(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          const Gap(8),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _ownerName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (_parentCompanyName.isNotEmpty)
-                  Text(
-                    'under $_parentCompanyName',
-                    style: const TextStyle(
-                      color: Color(0xFFBDD8DB),
-                      fontSize: 10,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionLabel(String text) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 4, bottom: 2),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Color(0xFFBDD8DB),
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidebarBottom() {
-    return Padding(
-      padding: const EdgeInsets.all(10),
+      ],
+    ),
+    child: SafeArea(
       child: Column(
         children: [
-          const Divider(color: Color(0x20FFFFFF), height: 1),
-          const Gap(8),
-          InkWell(
-            onTap: _loadDashboardData,
-            borderRadius: BorderRadius.circular(8),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                children: [
-                  Icon(Icons.refresh_rounded, size: 18, color: Colors.white60),
-                  Gap(8),
-                  Text(
-                    'Refresh Data',
-                    style: TextStyle(color: Colors.white60, fontSize: 12),
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 10, 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00C49F),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
-              ),
-            ),
-          ),
-          InkWell(
-            onTap: _logout,
-            borderRadius: BorderRadius.circular(8),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                children: [
-                  Icon(Icons.logout_rounded, size: 18, color: Colors.white60),
-                  Gap(8),
-                  Text(
-                    'Logout',
-                    style: TextStyle(color: Colors.white60, fontSize: 12),
+                  child: const Icon(
+                    Icons.directions_bus,
+                    color: Colors.white,
+                    size: 20,
                   ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // MAIN CONTENT
-  // ═══════════════════════════════════════════════════════
-  Widget _buildMainContent(bool isWide) {
-    return SafeArea(
-      child: Column(
-        children: [
-          _buildTopBar(isWide),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                ? _buildErrorView()
-                : RefreshIndicator(
-                    onRefresh: _loadDashboardData,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildGreeting(),
-                          const Gap(20),
-                          _buildAnalyticsCards(isWide),
-                          const Gap(24),
-                          _buildSeatManifestSection(),
-                          const Gap(24),
-                          _buildStaffManagementCards(),
-                        ],
+                ),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _ownerName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (_companyName.isNotEmpty)
+                        Text(
+                          _companyName,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                if (!isWide)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
+                    onPressed: () => setState(() => _isSidebarOpen = false),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 30,
+                      minHeight: 30,
                     ),
                   ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTopBar(bool isWide) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          if (!_isSidebarOpen || !isWide)
-            IconButton(
-              icon: const Icon(Icons.menu_rounded),
-              onPressed: () => setState(() => _isSidebarOpen = true),
-            ),
-          const Expanded(
-            child: Text(
-              'Owner Dashboard',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+              ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            color: AppColors.gray500,
-            onPressed: () {},
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGreeting() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Welcome back, $_ownerName',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            IconButton(
-              icon: Icon(
-                _isEditingName ? Icons.check_rounded : Icons.edit_rounded,
-                size: 20,
-                color: AppColors.gray400,
-              ),
-              onPressed: _isEditingName
-                  ? _saveDisplayName
-                  : _startEditDisplayName,
-              tooltip: _isEditingName
-                  ? 'Save brand name'
-                  : 'Edit fleet display name',
-            ),
-          ],
-        ),
-        if (_isEditingName) ...[
           const Gap(8),
-          TextFormField(
-            controller: _displayNameController,
-            decoration: InputDecoration(
-              hintText: _parentCompanyName.isNotEmpty
-                  ? _parentCompanyName
-                  : 'Enter fleet brand name',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              isDense: true,
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            onFieldSubmitted: (_) => _saveDisplayName(),
-          ),
-        ] else ...[
-          const Gap(4),
-          Text(
-            _parentCompanyName.isNotEmpty
-                ? 'Fleet under $_parentCompanyName'
-                : 'Here\'s your fleet overview for today',
-            style: const TextStyle(fontSize: 13, color: AppColors.gray500),
-          ),
-          if (_customDisplayName.isNotEmpty)
-            Text(
-              'Branding: $_customDisplayName',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.secondary,
-                fontWeight: FontWeight.w500,
+          // Owner badge
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00C49F).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF00C49F).withValues(alpha: 0.3),
               ),
             ),
-        ],
-      ],
-    );
-  }
-
-  void _startEditDisplayName() {
-    setState(() {
-      _isEditingName = true;
-      _displayNameController.text = _customDisplayName;
-    });
-  }
-
-  Future<void> _saveDisplayName() async {
-    final name = _displayNameController.text.trim();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('bus_owner_display_name', name);
-    setState(() {
-      _customDisplayName = name;
-      _isEditingName = false;
-    });
-  }
-
-  // ─── Analytics ─────────────────────────────────────────
-  Widget _buildAnalyticsCards(bool isWide) {
-    return Flex(
-      direction: isWide ? Axis.horizontal : Axis.vertical,
-      children: [
-        Expanded(
-          child: _analyticsCard(
-            'Active Buses',
-            '$_activeBuses',
-            'Total owned',
-            Icons.directions_bus,
-            AppColors.primary,
-          ),
-        ),
-        const Gap(12),
-        Expanded(
-          child: _analyticsCard(
-            'Daily Revenue',
-            'Rs. ${_dailyRevenue.toStringAsFixed(0)}',
-            'Earnings',
-            Icons.trending_up_rounded,
-            OwnerButtonColors.earnings,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _analyticsCard(
-    String title,
-    String value,
-    String subtitle,
-    IconData icon,
-    Color accent,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
-        ],
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.verified_user,
+                  size: 14,
+                  color: const Color(0xFF00C49F).withValues(alpha: 0.8),
                 ),
-                child: Icon(icon, color: accent, size: 20),
-              ),
-              const Icon(Icons.more_horiz, color: AppColors.gray300, size: 18),
-            ],
+                const Gap(6),
+                Text(
+                  'Fleet Owner',
+                  style: TextStyle(
+                    color: const Color(0xFF00C49F).withValues(alpha: 0.8),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '$_busCount buses',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
           ),
           const Gap(12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-            ),
+          const Divider(
+            color: Color(0x20FFFFFF),
+            height: 1,
+            indent: 20,
+            endIndent: 20,
           ),
-          const Gap(2),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 11, color: AppColors.gray400),
-          ),
-        ],
-      ),
-    );
-  }
+          const Gap(12),
 
-  // ─── Seat Manifest ─────────────────────────────────────
-  Widget _buildSeatManifestSection() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Live Seat Manifest',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+          // Navigation
+          Expanded(
+            child: ScrollbarTheme(
+              data: ScrollbarThemeData(
+                thumbVisibility: WidgetStateProperty.all(true),
+                trackVisibility: WidgetStateProperty.all(true),
+                thickness: WidgetStateProperty.all(8),
+                radius: const Radius.circular(4),
+                thumbColor: WidgetStateProperty.all(const Color(0xFF00C49F)),
+                trackColor: WidgetStateProperty.all(const Color(0x20FFFFFF)),
+              ),
+              child: Scrollbar(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Column(
+                    children: [
+                      _sectionLabel('FLEET'),
+                      Missile3DButton(
+                        label: 'Dashboard',
+                        icon: Icons.dashboard_rounded,
+                        color: OwnerButtonColors.dashboard,
+                        onTap: () => setState(() => _currentPage = 'dashboard'),
+                      ),
+                      Missile3DButton(
+                        label: 'My Buses ($_busCount)',
+                        icon: Icons.directions_bus,
+                        color: OwnerButtonColors.buses,
+                        onTap: () => setState(() => _currentPage = 'buses'),
+                      ),
+                      Missile3DButton(
+                        label: 'Seat Layouts ($_layoutCount)',
+                        icon: Icons.event_seat,
+                        color: OwnerButtonColors.seats,
+                        onTap: () => setState(() => _currentPage = 'layouts'),
+                      ),
+                      const Gap(8),
+                      _sectionLabel('STAFF'),
+                      Missile3DButton(
+                        label: 'My Drivers ($_driverCount)',
+                        icon: Icons.badge_rounded,
+                        color: OwnerButtonColors.drivers,
+                        onTap: () => setState(() => _currentPage = 'drivers'),
+                      ),
+                      Missile3DButton(
+                        label: 'My Conductors ($_conductorCount)',
+                        icon: Icons.group_rounded,
+                        color: OwnerButtonColors.conductors,
+                        onTap: () =>
+                            setState(() => _currentPage = 'conductors'),
+                      ),
+                      const Gap(8),
+                      _sectionLabel('FINANCE'),
+                      Missile3DButton(
+                        label: 'Earnings',
+                        icon: Icons.account_balance_wallet_rounded,
+                        color: OwnerButtonColors.earnings,
+                        onTap: () {},
+                      ),
+                      const Gap(8),
+                      _sectionLabel('SYSTEM'),
+                      Missile3DButton(
+                        label: 'Refresh',
+                        icon: Icons.refresh_rounded,
+                        color: OwnerButtonColors.alerts,
+                        onTap: _loadAll,
+                      ),
+                      Missile3DButton(
+                        label: 'Logout',
+                        icon: Icons.logout_rounded,
+                        color: const Color(0xFFDC2626),
+                        onTap: _logout,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              Row(
-                children: [
-                  _legendDot(OwnerButtonColors.seats, 'Booked'),
-                  const Gap(10),
-                  _legendDot(Colors.grey.shade300, 'Vacant'),
-                ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _sectionLabel(String t) => Padding(
+    padding: const EdgeInsets.only(left: 4, top: 4, bottom: 2),
+    child: Text(
+      t,
+      style: const TextStyle(
+        color: Color(0xFFBDD8DB),
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
+
+  // ── Main Content ──────────────────────────────────
+  Widget _buildMainContent(bool isWide) => SafeArea(
+    child: Column(
+      children: [
+        // Top bar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF162438),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 4,
               ),
             ],
           ),
-          const Gap(14),
-          if (_seatManifest.isEmpty)
-            _buildEmptyManifest()
-          else
-            ..._seatManifest.map(_buildTripSeatCard),
-        ],
-      ),
-    );
-  }
-
-  Widget _legendDot(Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          child: Row(
+            children: [
+              if (!_isSidebarOpen)
+                IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white70),
+                  onPressed: () => setState(() => _isSidebarOpen = true),
+                ),
+              Expanded(
+                child: Text(
+                  _currentPage == 'buses'
+                      ? 'My Buses'
+                      : _currentPage == 'layouts'
+                      ? 'Seat Layouts'
+                      : _currentPage == 'drivers'
+                      ? 'My Drivers'
+                      : _currentPage == 'conductors'
+                      ? 'My Conductors'
+                      : 'Dashboard',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Colors.white60),
+                onPressed: _loadAll,
+              ),
+            ],
+          ),
         ),
-        const Gap(4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, color: AppColors.gray500),
+        // Content area
+        Expanded(
+          child: _currentPage == 'layouts'
+              ? _buildLayoutPage()
+              : _currentPage == 'buses'
+              ? _buildBusesPage()
+              : _currentPage == 'drivers'
+              ? _buildDriversPage()
+              : _currentPage == 'conductors'
+              ? _buildConductorsPage()
+              : _buildHomePage(),
         ),
       ],
-    );
-  }
+    ),
+  );
 
-  Widget _buildEmptyManifest() {
-    return SizedBox(
-      height: 100,
-      child: Center(
+  // ── Dashboard Home ────────────────────────────────
+  Widget _buildHomePage() => ScrollbarTheme(
+    data: ScrollbarThemeData(
+      thumbVisibility: WidgetStateProperty.all(true),
+      trackVisibility: WidgetStateProperty.all(true),
+      thickness: WidgetStateProperty.all(10),
+      radius: const Radius.circular(5),
+      thumbColor: WidgetStateProperty.all(const Color(0xFF00C49F)),
+      trackColor: WidgetStateProperty.all(const Color(0xFF1A2A3A)),
+    ),
+    child: Scrollbar(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Greeting
+            Text(
+              'Welcome back, $_ownerName',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const Gap(4),
+            Text(
+              '$_busCount buses • $_driverCount drivers • $_conductorCount conductors',
+              style: const TextStyle(color: Color(0xFF8899AA), fontSize: 13),
+            ),
+            const Gap(24),
+
+            // KPI cards
+            Row(
+              children: [
+                _kpiCard(
+                  'Active Buses',
+                  '$_busCount',
+                  Icons.directions_bus,
+                  const Color(0xFF2563EB),
+                ),
+                const Gap(12),
+                _kpiCard(
+                  'Seat Layouts',
+                  '$_layoutCount',
+                  Icons.event_seat,
+                  const Color(0xFF16A34A),
+                ),
+                const Gap(12),
+                _kpiCard(
+                  'Staff Total',
+                  '${_driverCount + _conductorCount}',
+                  Icons.people,
+                  const Color(0xFF7C3AED),
+                ),
+              ],
+            ),
+            const Gap(24),
+
+            // Layout preview
+            if (_layouts.isNotEmpty) ...[
+              const Text(
+                'Recent Layouts',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Gap(12),
+              ..._layouts.take(3).map((l) => _layoutCard(l)),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+
+  // ── Layout Page ────────────────────────────────────
+  Widget _buildLayoutPage() {
+    if (_layouts.isEmpty) {
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.event_seat, size: 40, color: AppColors.gray300),
-            const Gap(8),
-            const Text(
-              'No active trips',
-              style: TextStyle(color: AppColors.gray400, fontSize: 13),
-            ),
-            Text(
-              'Manifests appear when trips are in progress',
-              style: TextStyle(color: AppColors.gray300, fontSize: 11),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTripSeatCard(Map<String, dynamic> trip) {
-    final route = trip['route_name']?.toString() ?? 'Unknown Route';
-    final plate =
-        trip['plate_number']?.toString() ??
-        trip['bus_plate']?.toString() ??
-        '--';
-    final total = (trip['total_seats'] as num?)?.toInt() ?? 0;
-    final booked = (trip['booked_seats'] as num?)?.toInt() ?? 0;
-    final vacant = (trip['vacant_seats'] as num?)?.toInt() ?? (total - booked);
-    final safeTotal = total > 0 ? total : 1;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Text(
-                  route,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: AppColors.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  plate,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const Gap(8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(5),
-            child: SizedBox(
-              height: 10,
-              child: Row(
-                children: [
-                  Flexible(
-                    flex: booked.clamp(0, safeTotal),
-                    child: Container(color: OwnerButtonColors.seats),
-                  ),
-                  Flexible(
-                    flex: vacant.clamp(0, safeTotal),
-                    child: Container(color: Colors.grey.shade200),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Gap(6),
-          Text(
-            '$booked / $total seats',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Staff ─────────────────────────────────────────────
-  Widget _buildStaffManagementCards() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Staff Management',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const Gap(12),
-        Row(
-          children: [
-            Expanded(
-              child: _staffCard(
-                'My Drivers',
-                'Type D',
-                Icons.badge_rounded,
-                OwnerButtonColors.drivers,
-              ),
+            Icon(
+              Icons.event_seat,
+              size: 48,
+              color: Colors.white.withValues(alpha: 0.15),
             ),
             const Gap(12),
-            Expanded(
-              child: _staffCard(
-                'My Conductors',
-                'Type E',
-                Icons.group_rounded,
-                OwnerButtonColors.conductors,
+            Text(
+              'No seat layouts yet',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.4),
+                fontSize: 15,
               ),
             ),
           ],
         ),
-      ],
+      );
+    }
+    return ScrollbarTheme(
+      data: ScrollbarThemeData(
+        thumbVisibility: WidgetStateProperty.all(true),
+        trackVisibility: WidgetStateProperty.all(true),
+        thickness: WidgetStateProperty.all(10),
+        radius: const Radius.circular(5),
+        thumbColor: WidgetStateProperty.all(const Color(0xFF00C49F)),
+        trackColor: WidgetStateProperty.all(const Color(0xFF1A2A3A)),
+      ),
+      child: Scrollbar(
+        child: ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: _layouts.length,
+          separatorBuilder: (_, __) => const Gap(8),
+          itemBuilder: (_, i) => _layoutCard(_layouts[i]),
+        ),
+      ),
     );
   }
 
-  Widget _staffCard(String title, String subtitle, IconData icon, Color color) {
+  Widget _layoutCard(Map<String, dynamic> layout) {
+    final vc = layout['vehicle_class'] as String? ?? 'unknown';
+    final name = layout['display_name'] as String? ?? 'Untitled';
+    final status = layout['layout_status'] as String? ?? 'draft';
+    final version = layout['version_number'] as int? ?? 1;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF1A2A3A),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6),
-        ],
+        border: Border.all(color: const Color(0xFF2A3A4A)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: const Color(0xFF16A34A).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const Gap(10),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+            child: const Icon(
+              Icons.event_seat,
+              color: Color(0xFF16A34A),
+              size: 20,
             ),
           ),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 11, color: AppColors.gray500),
+          const Gap(12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Gap(2),
+                Text(
+                  '$vc • v$version • $status',
+                  style: const TextStyle(
+                    color: Color(0xFF667788),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const Gap(6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Icon(Icons.arrow_forward_rounded, size: 16, color: color),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: status == 'published'
+                  ? const Color(0xFF16A34A).withValues(alpha: 0.15)
+                  : const Color(0xFFD97706).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              status.toUpperCase(),
+              style: TextStyle(
+                color: status == 'published'
+                    ? const Color(0xFF4ADE80)
+                    : const Color(0xFFFBBF24),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ─── Error ─────────────────────────────────────────────
-  Widget _buildErrorView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-            const Gap(16),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.gray600, fontSize: 13),
-            ),
-            const Gap(20),
-            ElevatedButton.icon(
-              onPressed: _loadDashboardData,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-            const Gap(8),
-            TextButton(onPressed: _logout, child: const Text('Back to Login')),
-          ],
+  // ── Buses Page ─────────────────────────────────────
+  Widget _buildBusesPage() => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.directions_bus,
+          size: 48,
+          color: Colors.white.withValues(alpha: 0.15),
         ),
-      ),
-    );
-  }
+        const Gap(12),
+        Text(
+          '$_busCount buses registered',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.4),
+            fontSize: 15,
+          ),
+        ),
+        const Gap(8),
+        Text(
+          'Connected to $_companyName',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.25),
+            fontSize: 13,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  // ── Drivers Page ───────────────────────────────────
+  Widget _buildDriversPage() => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.badge_rounded,
+          size: 48,
+          color: Colors.white.withValues(alpha: 0.15),
+        ),
+        const Gap(12),
+        Text(
+          '$_driverCount drivers assigned',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.4),
+            fontSize: 15,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  // ── Conductors Page ────────────────────────────────
+  Widget _buildConductorsPage() => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.group_rounded,
+          size: 48,
+          color: Colors.white.withValues(alpha: 0.15),
+        ),
+        const Gap(12),
+        Text(
+          '$_conductorCount conductors assigned',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.4),
+            fontSize: 15,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  // ── KPI Card ──────────────────────────────────────
+  Widget _kpiCard(String label, String value, IconData icon, Color color) =>
+      Expanded(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A2A3A),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF2A3A4A)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color, size: 24),
+              const Gap(10),
+              Text(
+                value,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Gap(4),
+              Text(
+                label,
+                style: const TextStyle(color: Color(0xFF667788), fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      );
 }

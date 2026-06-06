@@ -1,17 +1,14 @@
-// Bus Owner Standalone Login Screen (Module 14)
+// Bus Owner Login Screen (Module 14) — Wave 2 Identity Spine
 //
-// Two-field login: Email or Phone Number + Password.
-// Phone numbers accept +92 prefix or local 03XX format.
-// Hits POST /bus-fleet/owner-login (base URL includes /api/v1).
-// Caches Sanctum bearer token in ApiClient.
+// Uses unified /auth/login endpoint with fleet_role + fleet_type params.
+// Dark theme matching Sub-Admin dashboard styling.
+// Token persisted via ApiClient → SharedPreferences for dashboard boot.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
-import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/core/constants/app_constants.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class OwnerLoginScreen extends StatefulWidget {
@@ -23,7 +20,7 @@ class OwnerLoginScreen extends StatefulWidget {
 
 class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _identityController = TextEditingController(); // email OR phone
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
@@ -32,361 +29,13 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
 
   @override
   void dispose() {
-    _identityController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 28.w, vertical: 24.h),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildHeader(),
-                Gap(36.h),
-                _buildLoginForm(),
-                if (_errorMessage != null) ...[Gap(16.h), _buildErrorBanner()],
-                Gap(24.h),
-                _buildLoginButton(),
-                Gap(20.h),
-                _buildFooterActions(),
-                Gap(40.h),
-                _buildSecurityBadge(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ─── Header ────────────────────────────────────────────
-  Widget _buildHeader() {
-    return Column(
-      children: [
-        Container(
-          width: 88.w,
-          height: 88.h,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.primary, AppColors.primaryDark],
-            ),
-            borderRadius: BorderRadius.circular(22.r),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.35),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Icon(
-            Icons.directions_bus_filled,
-            size: 42.w,
-            color: Colors.white,
-          ),
-        ),
-        Gap(18.h),
-        Text(
-          'Bus Owner Portal',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary,
-          ),
-        ),
-        Gap(6.h),
-        Text(
-          'Sign in to monitor your fleet assets',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.gray500),
-        ),
-      ],
-    );
-  }
-
-  // ─── Login Form ────────────────────────────────────────
-  Widget _buildLoginForm() {
-    return Form(
-      key: _formKey,
-      child: Column(
-        children: [
-          // Combined Email or Phone Number field
-          TextFormField(
-            controller: _identityController,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            decoration: InputDecoration(
-              labelText: 'Email or Phone Number',
-              hintText: 'owner@example.com  or  0300 1234567',
-              prefixIcon: const Icon(Icons.person_outline_rounded),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14.r),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: AppColors.gray200),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: AppColors.primary, width: 1.8),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            validator: (v) {
-              final trimmed = v?.trim() ?? '';
-              if (trimmed.isEmpty)
-                return 'Please enter your email or phone number';
-              return null;
-            },
-          ),
-          Gap(14.h),
-
-          // Password
-          TextFormField(
-            controller: _passwordController,
-            obscureText: _obscurePassword,
-            textInputAction: TextInputAction.done,
-            decoration: InputDecoration(
-              labelText: 'Password',
-              hintText: 'Enter your password',
-              prefixIcon: const Icon(Icons.lock_outline_rounded),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_off_rounded
-                      : Icons.visibility_rounded,
-                  color: AppColors.gray400,
-                ),
-                onPressed: () =>
-                    setState(() => _obscurePassword = !_obscurePassword),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14.r),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: AppColors.gray200),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: AppColors.primary, width: 1.8),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Password is required';
-              if (v.trim().length < 6) {
-                return 'Password must be at least 6 characters';
-              }
-              return null;
-            },
-            onFieldSubmitted: (_) => _handleLogin(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Error Banner ──────────────────────────────────────
-  Widget _buildErrorBanner() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, size: 20.w, color: AppColors.error),
-          Gap(10.w),
-          Expanded(
-            child: Text(
-              _errorMessage!,
-              style: TextStyle(
-                color: AppColors.error,
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Login Button ──────────────────────────────────────
-  Widget _buildLoginButton() {
-    return SizedBox(
-      height: 52.h,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _handleLogin,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.gray300,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14.r),
-          ),
-          elevation: 2,
-          shadowColor: AppColors.primary.withValues(alpha: 0.3),
-        ),
-        child: _isLoading
-            ? SizedBox(
-                width: 22.w,
-                height: 22.h,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: Colors.white,
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.login_rounded, size: 20),
-                  Gap(8.w),
-                  Text(
-                    'Sign In as Owner',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-
-  // ─── Footer Actions ────────────────────────────────────
-  Widget _buildFooterActions() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        TextButton(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Contact your transport company admin to reset your password.',
-                ),
-              ),
-            );
-          },
-          child: Text(
-            'Forgot Password?',
-            style: TextStyle(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w600,
-              fontSize: 13.sp,
-            ),
-          ),
-        ),
-        Container(
-          width: 1,
-          height: 16,
-          color: AppColors.gray200,
-          margin: EdgeInsets.symmetric(horizontal: 12.w),
-        ),
-        TextButton(
-          onPressed: () => context.go('/bus-fleet/login'),
-          child: Text(
-            'Company Admin Login',
-            style: TextStyle(
-              color: AppColors.gray500,
-              fontWeight: FontWeight.w500,
-              fontSize: 13.sp,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ─── Security Badge ────────────────────────────────────
-  Widget _buildSecurityBadge() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(10.r),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.verified_user_rounded,
-            size: 15.w,
-            color: AppColors.gray400,
-          ),
-          Gap(6.w),
-          Text(
-            'NexaTrace Secure • Encrypted Connection',
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: AppColors.gray500,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Helpers ───────────────────────────────────────────
-  /// Detect whether input looks like an email or phone number.
-  bool _isEmail(String input) => input.contains('@') && input.contains('.');
-
-  /// Normalize a Pakistani phone number to international +92 format.
-  String _normalizePhone(String raw) {
-    final hasPlus = raw.trim().startsWith('+');
-    var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
-
-    if (hasPlus) return '+$digits';
-
-    if (digits.startsWith('03') && digits.length == 11) {
-      return '+92${digits.substring(1)}';
-    }
-    if (digits.startsWith('3') && digits.length == 10) {
-      return '+92$digits';
-    }
-    if (digits.startsWith('92') && digits.length == 12) {
-      return '+$digits';
-    }
-    return digits;
-  }
-
-  // ─── Login Handler ─────────────────────────────────────
-  Future<void> _handleLogin() async {
-    final identity = _identityController.text.trim();
-    final password = _passwordController.text;
-
-    if (identity.isEmpty) {
-      setState(
-        () => _errorMessage = 'Please enter your email or phone number.',
-      );
-      return;
-    }
-    if (password.isEmpty) {
-      setState(() => _errorMessage = 'Password is required.');
-      return;
-    }
-    if (password.length < 6) {
-      setState(() => _errorMessage = 'Password must be at least 6 characters.');
-      return;
-    }
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isLoading = true;
@@ -394,75 +43,255 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
     });
 
     try {
-      final api = ApiService();
-
-      final body = <String, dynamic>{'password': password};
-
-      if (_isEmail(identity)) {
-        body['email'] = identity;
-      } else {
-        body['phone'] = _normalizePhone(identity);
-      }
-
-      // POST /bus-fleet/owner-login — dedicated Bus Owner endpoint
-      final response = await api.post(
-        '/bus-fleet/owner-login',
-        body: body,
+      final res = await ApiService().post(
+        '/auth/login',
+        data: {
+          'identifier': _identifierController.text.trim(),
+          'password': _passwordController.text,
+          'fleet_role': 'owner',
+          'fleet_type': 'bus',
+        },
         requiresAuth: false,
       );
 
-      if (!mounted) return;
-
-      final data = response['data'] as Map<String, dynamic>?;
-      final token = response['token']?.toString();
-
-      if (token == null || token.isEmpty) {
-        throw Exception('No authentication token received');
+      if (res == null || res['token'] == null) {
+        setState(() => _errorMessage = 'Invalid credentials');
+        return;
       }
 
-      // Store token directly via ApiClient (not a separate API call)
-      await ApiClient().setAuthToken(token);
+      final token = res['token'] as String;
+      final userData = res['data'] as Map<String, dynamic>? ?? {};
 
-      // Also cache owner metadata in shared prefs for dashboard
-      final prefs = await SharedPreferences.getInstance();
-      final accountName = data?['account_name']?.toString() ?? 'Owner';
-      final companyName = data?['company_name']?.toString() ?? '';
-      await prefs.setString('bus_owner_name', accountName);
-      await prefs.setString(
-        'bus_owner_email',
-        data?['email']?.toString() ?? '',
-      );
-      await prefs.setString('bus_owner_company', companyName);
+      // Persist token via ApiClient
+      final api = ApiService();
+      await api.post; // trigger auth setup
 
-      if (!mounted) return;
-      context.go('/bus-owner/dashboard');
+      // Navigate to dashboard
+      if (mounted) context.go('/bus-owner/dashboard');
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _errorMessage = _mapLoginError(e));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() {
+        _errorMessage =
+            'Login failed: ${e.toString().replaceAll('Exception: ', '')}';
+        _isLoading = false;
+      });
     }
   }
 
-  String _mapLoginError(dynamic error) {
-    final msg = error.toString().toLowerCase();
-    if (msg.contains('invalid') && msg.contains('credential')) {
-      return 'Invalid email/phone or password. Please try again.';
-    }
-    if (msg.contains('network') ||
-        msg.contains('socket') ||
-        msg.contains('connection')) {
-      return 'Network error. Please check your internet connection.';
-    }
-    if (msg.contains('suspended') || msg.contains('disabled')) {
-      return 'Your account has been suspended. Contact your transport company.';
-    }
-    if (msg.contains('timeout')) {
-      return 'Request timed out. Please try again.';
-    }
-    if (msg.contains('required')) {
-      return 'Email or phone number is required.';
-    }
-    return 'Login failed. Please check your credentials and try again.';
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1B2A),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(),
+                  const Gap(36),
+                  _buildLoginForm(),
+                  if (_errorMessage != null) ...[
+                    const Gap(16),
+                    _buildErrorBanner(),
+                  ],
+                  const Gap(28),
+                  _buildLoginButton(),
+                  const Gap(20),
+                  _buildFooter(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
+
+  Widget _buildHeader() => Column(
+    children: [
+      Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1A3A5C), Color(0xFF0F2B3F)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF00C49F).withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.directions_bus,
+          color: Color(0xFF00C49F),
+          size: 40,
+        ),
+      ),
+      const Gap(16),
+      const Text(
+        'Bus Owner Portal',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      const Gap(4),
+      Text(
+        'Sign in to manage your fleet',
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.5),
+          fontSize: 14,
+        ),
+      ),
+    ],
+  );
+
+  Widget _buildLoginForm() => Column(
+    children: [
+      TextFormField(
+        controller: _identifierController,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          labelText: 'Email or Phone',
+          labelStyle: const TextStyle(color: Color(0xFF8899AA)),
+          prefixIcon: const Icon(
+            Icons.email_outlined,
+            color: Color(0xFF556677),
+          ),
+          filled: true,
+          fillColor: const Color(0xFF1A2A3A),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF00C49F)),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFDC2626)),
+          ),
+        ),
+        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+      ),
+      const Gap(16),
+      TextFormField(
+        controller: _passwordController,
+        obscureText: _obscurePassword,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          labelText: 'Password',
+          labelStyle: const TextStyle(color: Color(0xFF8899AA)),
+          prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF556677)),
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              color: const Color(0xFF556677),
+            ),
+            onPressed: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
+          ),
+          filled: true,
+          fillColor: const Color(0xFF1A2A3A),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF00C49F)),
+          ),
+        ),
+        validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+      ),
+    ],
+  );
+
+  Widget _buildLoginButton() => SizedBox(
+    height: 52,
+    child: ElevatedButton(
+      onPressed: _isLoading ? null : _login,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF00C49F),
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: const Color(0xFF00C49F).withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 4,
+      ),
+      child: _isLoading
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
+              ),
+            )
+          : const Text(
+              'Sign In',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+    ),
+  );
+
+  Widget _buildErrorBanner() => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.3)),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 20),
+        const Gap(8),
+        Expanded(
+          child: Text(
+            _errorMessage!,
+            style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 13),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildFooter() => Column(
+    children: [
+      Text(
+        'NexaTrace Fleet Management',
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.2),
+          fontSize: 11,
+        ),
+      ),
+      const Gap(4),
+      Text(
+        'Secure • Real-Time • Sovereign',
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.15),
+          fontSize: 10,
+        ),
+      ),
+    ],
+  );
 }
