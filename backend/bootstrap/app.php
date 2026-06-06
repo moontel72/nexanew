@@ -53,6 +53,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // Wave 3 — Section 10.10 Step 12: Response Mask Serializer (Defect F-4 fix)
             'response.mask' => \App\Http\Middleware\ResponseMaskSerializer::class,
+
+            // Wave 3 — Bus Fleet Panel Gate (Defect #1 fix)
+            'bus.fleet' => \App\Http\Middleware\BusFleetGate::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

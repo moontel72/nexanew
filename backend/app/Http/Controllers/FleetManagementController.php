@@ -33,8 +33,20 @@ class FleetManagementController extends Controller
     /** Resolve the carrier company ID from the authenticated user's assignment. */
     private function carrierCompanyId(Request $request): ?string
     {
-        // BusFleetGate middleware attaches this
-        return $request->get('_carrier_company_id');
+        // Try middleware-provided value first
+        $cid = $request->get('_carrier_company_id');
+        if ($cid) return $cid;
+
+        // Self-resolve from user's fleet_assignments
+        $user = $request->user();
+        if (!$user || !($user->global_identity_id ?? null)) return null;
+
+        return DB::table('fleet_assignments')
+            ->where('global_identity_id', $user->global_identity_id)
+            ->where('role', 'owner')
+            ->where('fleet_type', $this->fleetType($request))
+            ->whereIn('status', ['active', 'pending_acceptance'])
+            ->value('carrier_company_id');
     }
 
     /** Detect fleet_type from request path. */

@@ -18,13 +18,19 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::prefix('api/v1/bus-fleet')
-    ->middleware(['auth:sanctum', 'bus.fleet'])
+    ->middleware(['auth:sanctum'])
     ->group(function (): void {
 
         // Company Profile (Dashboard) — resolved via identity spine
         Route::get('profile', function (\Illuminate\Http\Request $request) {
             $user = $request->user();
-            $carrierId = $request->get('_carrier_company_id');
+            $carrierId = $request->get('_carrier_company_id')
+                ?? \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                    ->where('global_identity_id', $user->global_identity_id ?? null)
+                    ->where('role', 'owner')
+                    ->where('fleet_type', 'bus')
+                    ->whereIn('status', ['active', 'pending_acceptance'])
+                    ->value('carrier_company_id');
 
             $company = null;
             if ($carrierId) {
@@ -73,7 +79,13 @@ Route::prefix('api/v1/bus-fleet')
         // Fleet Dashboard Stats
         Route::get('dashboard', function (\Illuminate\Http\Request $request) {
             $user = $request->user();
-            $carrierId = $request->get('_carrier_company_id');
+            $carrierId = $request->get('_carrier_company_id')
+                ?? \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                    ->where('global_identity_id', $user->global_identity_id ?? null)
+                    ->where('role', 'owner')
+                    ->where('fleet_type', 'bus')
+                    ->whereIn('status', ['active', 'pending_acceptance'])
+                    ->value('carrier_company_id');
 
             $company = null;
             if ($carrierId) {

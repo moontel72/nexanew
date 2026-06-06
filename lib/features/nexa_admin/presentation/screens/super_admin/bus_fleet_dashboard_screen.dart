@@ -36,6 +36,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   bool _isLoading = true;
   String _currentPage = 'dashboard';
   bool _sidebarOpen = true;
+  bool _staffExpanded = false;
+  bool _assetsExpanded = false;
 
   int _ownerCount = 0;
   int _driverCount = 0;
@@ -105,11 +107,15 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   Future<int> _safeCount(ApiService api, String endpoint) async {
     try {
       final res = await api.get(endpoint, queryParams: {'per_page': '1'});
-      final data = res['data'] as Map?;
-      // Layouts endpoint returns pagination.total
-      return (data?['total'] as int?) ??
-          (data?['pagination']?['total'] as int?) ??
-          0;
+      if (res == null || res is! Map) return 0;
+      final data = res['data'];
+      if (data == null) return 0;
+      if (data is Map) {
+        return (data['total'] as int?) ??
+            (data['pagination']?['total'] as int?) ??
+            0;
+      }
+      return 0;
     } catch (_) {
       return 0;
     }
@@ -202,15 +208,27 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                 ),
                 if (!isWide)
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
                     onPressed: () => setState(() => _sidebarOpen = false),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                    constraints: const BoxConstraints(
+                      minWidth: 30,
+                      minHeight: 30,
+                    ),
                   ),
               ],
             ),
           ),
-          const Divider(color: Color(0x20FFFFFF), height: 1, indent: 12, endIndent: 12),
+          const Divider(
+            color: Color(0x20FFFFFF),
+            height: 1,
+            indent: 12,
+            endIndent: 12,
+          ),
           const SizedBox(height: 8),
           Expanded(
             child: ListView(
@@ -225,31 +243,69 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                 ),
                 const SizedBox(height: 8),
                 _sl('FLEET STAFF'),
-                Missile3DButton(
-                  label: 'Owners ($_ownerCount)',
-                  icon: Icons.badge_rounded,
-                  color: const Color(0xFFDB2777),
-                  onTap: () => setState(() => _currentPage = 'owners'),
-                ),
-                Missile3DButton(
-                  label: 'Drivers ($_driverCount)',
-                  icon: Icons.person_rounded,
-                  color: const Color(0xFF2563EB),
-                  onTap: () => setState(() => _currentPage = 'drivers'),
-                ),
-                Missile3DButton(
-                  label: 'Conductors ($_conductorCount)',
-                  icon: Icons.group_rounded,
-                  color: const Color(0xFF16A34A),
-                  onTap: () => setState(() => _currentPage = 'conductors'),
+                _expandableSection(
+                  'STAFF MANAGEMENT',
+                  _staffExpanded,
+                  () => setState(() => _staffExpanded = !_staffExpanded),
+                  [
+                    _subButton(
+                      'Add New Owner',
+                      Icons.person_add,
+                      const Color(0xFFDB2777),
+                      () => _showStaffAddDialog('owners'),
+                    ),
+                    _subButton(
+                      'View Owners ($_ownerCount)',
+                      Icons.badge_rounded,
+                      const Color(0xFFDB2777),
+                      () => setState(() => _currentPage = 'owners'),
+                    ),
+                    _subButton(
+                      'Add New Driver',
+                      Icons.person_add_alt,
+                      const Color(0xFF2563EB),
+                      () => _showStaffAddDialog('drivers'),
+                    ),
+                    _subButton(
+                      'View Drivers ($_driverCount)',
+                      Icons.person_rounded,
+                      const Color(0xFF2563EB),
+                      () => setState(() => _currentPage = 'drivers'),
+                    ),
+                    _subButton(
+                      'Add New Conductor',
+                      Icons.group_add,
+                      const Color(0xFF16A34A),
+                      () => _showStaffAddDialog('conductors'),
+                    ),
+                    _subButton(
+                      'View Conductors ($_conductorCount)',
+                      Icons.group_rounded,
+                      const Color(0xFF16A34A),
+                      () => setState(() => _currentPage = 'conductors'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 _sl('FLEET ASSETS'),
-                Missile3DButton(
-                  label: 'Seat Layouts ($_layoutCount)',
-                  icon: Icons.event_seat,
-                  color: const Color(0xFF0891B2),
-                  onTap: () => setState(() => _currentPage = 'layouts'),
+                _expandableSection(
+                  'FLEET ASSETS',
+                  _assetsExpanded,
+                  () => setState(() => _assetsExpanded = !_assetsExpanded),
+                  [
+                    _subButton(
+                      'New Seat Layout',
+                      Icons.add,
+                      const Color(0xFF0891B2),
+                      () => _openLayoutDesigner(),
+                    ),
+                    _subButton(
+                      'View Layouts ($_layoutCount)',
+                      Icons.event_seat,
+                      const Color(0xFF0891B2),
+                      () => setState(() => _currentPage = 'layouts'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 _sl('SYSTEM'),
@@ -286,6 +342,102 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     ),
   );
 
+  // ── Expandable section (Issue #3 fix) ─────────────
+  Widget _expandableSection(
+    String label,
+    bool isExpanded,
+    VoidCallback onToggle,
+    List<Widget> children,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: onToggle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            child: Row(
+              children: [
+                Icon(
+                  isExpanded ? Icons.keyboard_arrow_down : Icons.chevron_right,
+                  color: const Color(0xFFBDD8DB),
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFFBDD8DB),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (isExpanded) ...children,
+      ],
+    );
+  }
+
+  Widget _subButton(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 4),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showStaffAddDialog(String type) {
+    setState(() => _currentPage = type);
+    // The FleetListView will show with the Add button visible
+  }
+
+  void _openLayoutDesigner() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => SeatLayoutDesignerScreen(
+              companyId: widget.companyId ?? _company?.id.toString(),
+              companyName: _company?.name,
+            ),
+          ),
+        )
+        .then((_) => _loadAll());
+  }
+
   Widget _mainContent() => SafeArea(
     child: Column(
       children: [
@@ -293,7 +445,9 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: Colors.white,
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4)],
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4),
+            ],
           ),
           child: Row(
             children: [
@@ -313,7 +467,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       : _currentPage == 'layouts'
                       ? 'Seat Layouts'
                       : 'Dashboard',
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAll),
@@ -395,7 +552,11 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                 color: AppColors.info,
                 borderRadius: BorderRadius.circular(14.r),
               ),
-              child: Icon(Icons.directions_bus, size: 26.w, color: Colors.white),
+              child: Icon(
+                Icons.directions_bus,
+                size: 26.w,
+                color: Colors.white,
+              ),
             ),
             SizedBox(width: 14.w),
             Expanded(
@@ -411,9 +572,9 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                   SizedBox(height: 2.h),
                   Text(
                     '${c.city}, ${c.country}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.gray500,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
                   ),
                 ],
               ),
@@ -428,9 +589,9 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     padding: EdgeInsets.only(bottom: 4.h),
     child: Text(
       t,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-        fontWeight: FontWeight.w700,
-      ),
+      style: Theme.of(
+        context,
+      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
     ),
   );
 
@@ -438,24 +599,45 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     return Row(
       children: [
         Expanded(
-          child: _mgmtCard('Owners', '$_ownerCount', Icons.badge_rounded, const Color(0xFFDB2777),
-              () => setState(() => _currentPage = 'owners')),
+          child: _mgmtCard(
+            'Owners',
+            '$_ownerCount',
+            Icons.badge_rounded,
+            const Color(0xFFDB2777),
+            () => setState(() => _currentPage = 'owners'),
+          ),
         ),
         SizedBox(width: 10.w),
         Expanded(
-          child: _mgmtCard('Drivers', '$_driverCount', Icons.person_rounded, const Color(0xFF2563EB),
-              () => setState(() => _currentPage = 'drivers')),
+          child: _mgmtCard(
+            'Drivers',
+            '$_driverCount',
+            Icons.person_rounded,
+            const Color(0xFF2563EB),
+            () => setState(() => _currentPage = 'drivers'),
+          ),
         ),
         SizedBox(width: 10.w),
         Expanded(
-          child: _mgmtCard('Conductors', '$_conductorCount', Icons.group_rounded, const Color(0xFF16A34A),
-              () => setState(() => _currentPage = 'conductors')),
+          child: _mgmtCard(
+            'Conductors',
+            '$_conductorCount',
+            Icons.group_rounded,
+            const Color(0xFF16A34A),
+            () => setState(() => _currentPage = 'conductors'),
+          ),
         ),
       ],
     );
   }
 
-  Widget _mgmtCard(String label, String count, IconData icon, Color color, VoidCallback onTap) {
+  Widget _mgmtCard(
+    String label,
+    String count,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: InkWell(
@@ -467,8 +649,14 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
             children: [
               Icon(icon, color: color, size: 26.w),
               SizedBox(height: 8.h),
-              Text(count, style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w800)),
-              Text(label, style: TextStyle(fontSize: 11.sp, color: AppColors.gray500)),
+              Text(
+                count,
+                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w800),
+              ),
+              Text(
+                label,
+                style: TextStyle(fontSize: 11.sp, color: AppColors.gray500),
+              ),
             ],
           ),
         ),
@@ -479,7 +667,9 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   Widget _statsRow() {
     return Row(
       children: [
-        Expanded(child: _stat('Fleet Size', '${_profile?['active_buses'] ?? 0}')),
+        Expanded(
+          child: _stat('Fleet Size', '${_profile?['active_buses'] ?? 0}'),
+        ),
         SizedBox(width: 10.w),
         Expanded(child: _stat('Daily Revenue', 'PKR 0')),
       ],
@@ -493,9 +683,15 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 12.sp, color: AppColors.gray500)),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12.sp, color: AppColors.gray500),
+          ),
           SizedBox(height: 4.h),
-          Text(value, style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800)),
+          Text(
+            value,
+            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800),
+          ),
         ],
       ),
     ),
@@ -549,12 +745,35 @@ class _FleetListViewState extends State<_FleetListView> {
     });
     try {
       final res = await ApiService().get(_endpoint);
-      final data = res['data'] as Map<String, dynamic>;
-      setState(() {
-        _items = List<Map<String, dynamic>>.from(data['data'] ?? []);
-        _total = (data['total'] as int?) ?? _items.length;
-        _loading = false;
-      });
+      if (res == null || res is! Map) {
+        setState(() {
+          _error = 'Invalid response';
+          _loading = false;
+        });
+        return;
+      }
+      final data = res['data'];
+      if (data == null) {
+        setState(() {
+          _items = [];
+          _total = 0;
+          _loading = false;
+        });
+        return;
+      }
+      if (data is Map) {
+        setState(() {
+          _items = List<Map<String, dynamic>>.from(data['data'] ?? []);
+          _total = (data['total'] as int?) ?? _items.length;
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _items = [];
+          _total = 0;
+          _loading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -608,8 +827,14 @@ class _FleetListViewState extends State<_FleetListView> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
         ],
       ),
     );
@@ -626,8 +851,10 @@ class _FleetListViewState extends State<_FleetListView> {
     };
     if (isDriver) {
       body['license_number'] = licenseCtrl.text.trim();
-      if (plateCtrl.text.isNotEmpty) body['vehicle_plate'] = plateCtrl.text.trim();
-      if (salaryCtrl.text.isNotEmpty) body['salary'] = double.tryParse(salaryCtrl.text);
+      if (plateCtrl.text.isNotEmpty)
+        body['vehicle_plate'] = plateCtrl.text.trim();
+      if (salaryCtrl.text.isNotEmpty)
+        body['salary'] = double.tryParse(salaryCtrl.text);
     }
 
     try {
@@ -644,7 +871,10 @@ class _FleetListViewState extends State<_FleetListView> {
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
     }
   }
@@ -656,7 +886,10 @@ class _FleetListViewState extends State<_FleetListView> {
         title: const Text('Confirm Delete'),
         content: Text('Remove "$name"? This action cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
@@ -672,25 +905,43 @@ class _FleetListViewState extends State<_FleetListView> {
       widget.onDataChanged();
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Deleted'), backgroundColor: AppColors.success),
+          const SnackBar(
+            content: Text('Deleted'),
+            backgroundColor: AppColors.success,
+          ),
         );
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
     }
   }
 
-  Widget _field(TextEditingController ctrl, String label, {
-    bool obscure = false, bool email = false, bool phone = false,
-    bool number = false, int maxLines = 1,
+  Widget _field(
+    TextEditingController ctrl,
+    String label, {
+    bool obscure = false,
+    bool email = false,
+    bool phone = false,
+    bool number = false,
+    int maxLines = 1,
   }) => TextField(
-    controller: ctrl, obscureText: obscure, maxLines: maxLines,
+    controller: ctrl,
+    obscureText: obscure,
+    maxLines: maxLines,
     keyboardType: email
         ? TextInputType.emailAddress
-        : phone || number ? TextInputType.phone : TextInputType.text,
-    decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+        : phone || number
+        ? TextInputType.phone
+        : TextInputType.text,
+    decoration: InputDecoration(
+      labelText: label,
+      border: const OutlineInputBorder(),
+    ),
   );
 
   String _capitalize(String s) => s[0].toUpperCase() + s.substring(1);
@@ -703,7 +954,8 @@ class _FleetListViewState extends State<_FleetListView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(_error!), const SizedBox(height: 12),
+            Text(_error!),
+            const SizedBox(height: 12),
             ElevatedButton(onPressed: _load, child: const Text('Retry')),
           ],
         ),
@@ -719,7 +971,9 @@ class _FleetListViewState extends State<_FleetListView> {
             children: [
               Text(
                 'Total: $_total',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
               ),
               const Spacer(),
               ElevatedButton.icon(
@@ -767,11 +1021,15 @@ class _FleetListViewState extends State<_FleetListView> {
               children: [
                 Text(
                   item['name'] ?? '—',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 Text(
                   item['email'] ?? '',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
                 ),
                 SizedBox(height: 4.h),
                 Row(
@@ -808,14 +1066,21 @@ class _FleetListViewState extends State<_FleetListView> {
     children: [
       Icon(ic, size: 14, color: AppColors.gray400),
       SizedBox(width: 4),
-      Text(t, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.gray500)),
+      Text(
+        t,
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+      ),
     ],
   );
 
   Widget _badge(String s) => Container(
     padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
     decoration: BoxDecoration(
-      color: s == 'active' ? AppColors.success.withValues(alpha: 0.1) : AppColors.warning.withValues(alpha: 0.1),
+      color: s == 'active'
+          ? AppColors.success.withValues(alpha: 0.1)
+          : AppColors.warning.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(12.r),
     ),
     child: Text(
@@ -866,11 +1131,32 @@ class _LayoutListViewState extends State<_LayoutListView> {
     });
     try {
       final res = await ApiService().get('/bus-fleet/layouts');
-      final data = res['data'] as Map<String, dynamic>;
-      setState(() {
-        _layouts = List<Map<String, dynamic>>.from(data['data'] ?? []);
-        _loading = false;
-      });
+      if (res == null || res is! Map) {
+        setState(() {
+          _error = 'Invalid response';
+          _loading = false;
+        });
+        return;
+      }
+      final data = res['data'];
+      if (data == null) {
+        setState(() {
+          _layouts = [];
+          _loading = false;
+        });
+        return;
+      }
+      if (data is Map) {
+        setState(() {
+          _layouts = List<Map<String, dynamic>>.from(data['data'] ?? []);
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _layouts = [];
+          _loading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -880,18 +1166,20 @@ class _LayoutListViewState extends State<_LayoutListView> {
   }
 
   void _openDesigner({String? layoutId}) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => SeatLayoutDesignerScreen(
-          layoutId: layoutId,
-          companyId: widget.companyId,
-          companyName: widget.companyName,
-        ),
-      ),
-    ).then((_) {
-      _load();
-      widget.onDataChanged();
-    });
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => SeatLayoutDesignerScreen(
+              layoutId: layoutId,
+              companyId: widget.companyId,
+              companyName: widget.companyName,
+            ),
+          ),
+        )
+        .then((_) {
+          _load();
+          widget.onDataChanged();
+        });
   }
 
   @override
@@ -902,7 +1190,8 @@ class _LayoutListViewState extends State<_LayoutListView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(_error!), const SizedBox(height: 12),
+            Text(_error!),
+            const SizedBox(height: 12),
             ElevatedButton(onPressed: _load, child: const Text('Retry')),
           ],
         ),
@@ -917,14 +1206,18 @@ class _LayoutListViewState extends State<_LayoutListView> {
             children: [
               Text(
                 'Total: ${_layouts.length} layouts',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
               ),
               const Spacer(),
               ElevatedButton.icon(
                 onPressed: () => _openDesigner(),
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('New Layout'),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0891B2)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0891B2),
+                ),
               ),
             ],
           ),
@@ -935,9 +1228,16 @@ class _LayoutListViewState extends State<_LayoutListView> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.event_seat, size: 48, color: AppColors.gray300),
+                      Icon(
+                        Icons.event_seat,
+                        size: 48,
+                        color: AppColors.gray300,
+                      ),
                       const SizedBox(height: 12),
-                      Text('No seat layouts yet', style: TextStyle(color: AppColors.gray400)),
+                      Text(
+                        'No seat layouts yet',
+                        style: TextStyle(color: AppColors.gray400),
+                      ),
                       const SizedBox(height: 8),
                       ElevatedButton(
                         onPressed: () => _openDesigner(),
@@ -982,7 +1282,9 @@ class _LayoutListViewState extends State<_LayoutListView> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
-                vc == 'sleeper_custom' ? Icons.airline_seat_flat_angled : Icons.event_seat,
+                vc == 'sleeper_custom'
+                    ? Icons.airline_seat_flat_angled
+                    : Icons.event_seat,
                 color: preset.accentColor,
                 size: 22,
               ),
@@ -992,11 +1294,18 @@ class _LayoutListViewState extends State<_LayoutListView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    name,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   SizedBox(height: 2.h),
                   Text(
                     '${preset.label}  •  v$version  •  ${deck == 0 ? 'Lower Deck' : 'Upper Deck'}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
                   ),
                 ],
               ),
@@ -1006,7 +1315,10 @@ class _LayoutListViewState extends State<_LayoutListView> {
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, size: 20),
               itemBuilder: (_) => [
-                const PopupMenuItem(value: 'edit', child: Text('Design Layout')),
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Text('Design Layout'),
+                ),
                 const PopupMenuItem(value: 'delete', child: Text('Archive')),
               ],
               onSelected: (v) {
@@ -1045,7 +1357,10 @@ class _LayoutListViewState extends State<_LayoutListView> {
         title: const Text('Archive Layout'),
         content: const Text('Archive this layout? It can be restored later.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
@@ -1061,12 +1376,18 @@ class _LayoutListViewState extends State<_LayoutListView> {
       widget.onDataChanged();
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Layout archived'), backgroundColor: AppColors.success),
+          const SnackBar(
+            content: Text('Layout archived'),
+            backgroundColor: AppColors.success,
+          ),
         );
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
     }
   }
