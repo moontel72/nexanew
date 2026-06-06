@@ -6,8 +6,10 @@ use App\Models\Transport\BusLayout;
 use App\Models\Transport\BusQrCode;
 use App\Models\Transport\NexatraceVoucher;
 use App\Services\Transport\BusInventoryService;
+use App\Services\Transport\LayoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -23,7 +25,8 @@ use Illuminate\Support\Str;
 class BusTransitController extends Controller
 {
     public function __construct(
-        private BusInventoryService $bus
+        private BusInventoryService $bus,
+        private LayoutService $layouts,
     ) {}
 
     // ─── BUS OWNER: Seat Layout Builder (14E) ───────────
@@ -131,6 +134,227 @@ class BusTransitController extends Controller
         return response()->json(['success' => true, 'data' => $result], 201);
     }
 
+    // ─── WAVE 4: SEAT LAYOUT DESIGNER (14E) ─────────────
+
+    /**
+     * GET /api/v1/bus-fleet/layouts
+     *
+     * List all layouts for the authenticated user's company.
+     */
+    public function listLayouts(Request $request): JsonResponse
+    {
+        try {
+            $companyId = $this->resolveCompanyId($request);
+            $vehicleClass = $request->query('vehicle_class');
+            $perPage = (int) $request->query('per_page', 20);
+
+            $result = $this->layouts->listLayouts($companyId, $vehicleClass, $perPage);
+
+            return response()->json(['success' => true, ...$result]);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - listLayouts Error: ' . $e->getMessage(), [
+                'user_id' => $request->user()?->id,
+            ]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/v1/bus-fleet/layouts/{id}
+     *
+     * Get a single layout with current snapshot and revision info.
+     */
+    public function getLayout(string $id): JsonResponse
+    {
+        try {
+            $result = $this->layouts->getLayout($id);
+            return response()->json(['success' => true, ...$result]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - getLayout Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/v1/bus-fleet/layouts
+     *
+     * Create a new layout from a vehicle-class preset.
+     */
+    public function createLayoutFull(Request $request): JsonResponse
+    {
+        try {
+            $data = $request->validate([
+                'vehicle_class'   => ['required', 'string', 'in:coach_54,standard_45,coaster_34,hiace_13,sleeper_custom'],
+                'display_name'    => ['required', 'string', 'max:160'],
+                'deck_level'      => ['nullable', 'integer', 'in:0,1'],
+                'owner_identity_id' => ['nullable', 'string', 'max:100'],
+                'company_id'      => ['nullable', 'string', 'max:100'],
+            ]);
+
+            $ownerIdentityId = $data['owner_identity_id'] ?? $this->resolveOwnerIdentityId($request);
+            $companyId = $data['company_id'] ?? $this->resolveCompanyId($request);
+
+            $result = $this->layouts->createLayout(
+                ownerIdentityId: $ownerIdentityId,
+                companyId: $companyId,
+                vehicleClass: $data['vehicle_class'],
+                displayName: $data['display_name'],
+                deckLevel: (int) ($data['deck_level'] ?? 0),
+            );
+
+            return response()->json(['success' => true, 'data' => $result], 201);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - createLayoutFull Error: ' . $e->getMessage(), [
+                'user_id' => $request->user()?->id,
+            ]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/v1/bus-fleet/layouts/{id}/acquire-lock
+     *
+     * Acquire a 5-minute edit lock on a layout.
+     */
+    public function acquireLock(string $id, Request $request): JsonResponse
+    {
+        try {
+            $identityId = $this->resolveOwnerIdentityId($request);
+
+            $acquired = $this->layouts->acquireEditLock($id, $identityId);
+
+            if ($acquired) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Edit lock acquired.',
+                    'data'    => ['layout_id' => $id, 'expires_in_minutes' => 5],
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Edit lock is currently held by another user.',
+            ], 409);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - acquireLock Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/v1/bus-fleet/layouts/{id}/release-lock
+     *
+     * Release the edit lock on a layout.
+     */
+    public function releaseLock(string $id): JsonResponse
+    {
+        try {
+            $this->layouts->releaseEditLock($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Edit lock released.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - releaseLock Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/v1/bus-fleet/layouts/{id}/publish
+     *
+     * Publish a layout revision with optimistic concurrency.
+     */
+    public function publishLayout(string $id, Request $request): JsonResponse
+    {
+        try {
+            $data = $request->validate([
+                'grid_snapshot'      => ['required', 'array'],
+                'expected_version'   => ['required', 'integer', 'min:1'],
+                'change_description' => ['nullable', 'string', 'max:1000'],
+            ]);
+
+            $identityId = $this->resolveOwnerIdentityId($request);
+
+            $result = $this->layouts->publishLayout(
+                layoutId: $id,
+                identityId: $identityId,
+                gridSnapshot: $data['grid_snapshot'],
+                expectedVersion: (int) $data['expected_version'],
+                changeDescription: $data['change_description'] ?? null,
+            );
+
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (\RuntimeException $e) {
+            $code = str_contains($e->getMessage(), 'Version conflict') ? 409 : 422;
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $code);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - publishLayout Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/v1/bus-fleet/layouts/{id}/revisions
+     *
+     * Get revision history for a layout, newest first.
+     */
+    public function listRevisions(string $id): JsonResponse
+    {
+        try {
+            $result = $this->layouts->listRevisions($id);
+            return response()->json(['success' => true, ...$result]);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - listRevisions Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/v1/bus-fleet/layout-presets
+     *
+     * Return the static vehicle-class preset definitions.
+     */
+    public function listPresets(): JsonResponse
+    {
+        try {
+            $presets = $this->layouts->getPresets();
+            return response()->json(['success' => true, 'presets' => $presets]);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - listPresets Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * DELETE /api/v1/bus-fleet/layouts/{id}
+     *
+     * Soft-delete (archive) a layout.
+     */
+    public function archiveLayout(string $id): JsonResponse
+    {
+        try {
+            $this->layouts->archiveLayout($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Layout archived.',
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - archiveLayout Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
     // ─── VOUCHERS ───────────────────────────────────────
 
     /**
@@ -161,5 +385,71 @@ class BusTransitController extends Controller
             'message' => 'Voucher created. Give the physical code to the customer.',
             'data' => ['voucher_id' => $voucher->id, 'amount' => $voucher->amount],
         ], 201);
+    }
+
+    // ─── HELPERS ────────────────────────────────────────
+
+    /**
+     * Resolve the company_id from the authenticated admin user.
+     * Mirrors FleetManagementController::companyId().
+     */
+    private function resolveCompanyId(Request $request): string
+    {
+        $user = $request->user();
+        if (! $user) {
+            throw new \RuntimeException('Authenticated user required.');
+        }
+
+        $meta = $user->metadata ?? null;
+        if (is_string($meta)) {
+            $meta = json_decode($meta, true);
+        }
+
+        $companyId = is_array($meta) ? ($meta['company_id'] ?? null) : null;
+
+        if (! $companyId) {
+            throw new \RuntimeException('No company_id found on user metadata.');
+        }
+
+        return (string) $companyId;
+    }
+
+    /**
+     * Resolve the owner_identity_id (global_identity_id) from the
+     * authenticated admin user's metadata or identity claims.
+     */
+    private function resolveOwnerIdentityId(Request $request): string
+    {
+        $user = $request->user();
+        if (! $user) {
+            throw new \RuntimeException('Authenticated user required.');
+        }
+
+        $meta = $user->metadata ?? null;
+        if (is_string($meta)) {
+            $meta = json_decode($meta, true);
+        }
+
+        // Try metadata first
+        $identityId = is_array($meta) ? ($meta['identity_id'] ?? $meta['owner_identity_id'] ?? null) : null;
+
+        if ($identityId) {
+            return (string) $identityId;
+        }
+
+        // Fall back to identity_claims lookup by email
+        $email = $user->email ?? null;
+        if ($email) {
+            $claim = \App\Models\IdentityClaim::where('claim_type', 'email')
+                ->where('claim_value', strtolower($email))
+                ->where('is_revoked', false)
+                ->first();
+
+            if ($claim && $claim->global_identity_id) {
+                return $claim->global_identity_id;
+            }
+        }
+
+        throw new \RuntimeException('Cannot resolve owner_identity_id for this user.');
     }
 }

@@ -108,8 +108,21 @@ Route::prefix('api/v1/bus-fleet')
             Route::post('complete-trip/{id}', [\App\Http\Controllers\BusDispatchController::class, 'completeTrip']);
         });
 
-        // Bus Owner: Seat Layout Builder (14E)
+        // Bus Owner: Seat Layout Builder (14E) — legacy backward compat
         Route::post('owners/layouts', [\App\Http\Controllers\BusTransitController::class, 'createLayout']);
+
+        // Seat Layout Designer (14E) — Wave 4
+        Route::prefix('layouts')->group(function (): void {
+            Route::get('/', [\App\Http\Controllers\BusTransitController::class, 'listLayouts']);
+            Route::post('/', [\App\Http\Controllers\BusTransitController::class, 'createLayoutFull']);
+            Route::get('/{id}', [\App\Http\Controllers\BusTransitController::class, 'getLayout']);
+            Route::post('/{id}/acquire-lock', [\App\Http\Controllers\BusTransitController::class, 'acquireLock']);
+            Route::post('/{id}/release-lock', [\App\Http\Controllers\BusTransitController::class, 'releaseLock']);
+            Route::post('/{id}/publish', [\App\Http\Controllers\BusTransitController::class, 'publishLayout']);
+            Route::get('/{id}/revisions', [\App\Http\Controllers\BusTransitController::class, 'listRevisions']);
+            Route::delete('/{id}', [\App\Http\Controllers\BusTransitController::class, 'archiveLayout']);
+        });
+        Route::get('layout-presets', [\App\Http\Controllers\BusTransitController::class, 'listPresets']);
 
         // Bus Door QR Codes (15E)
         Route::post('qr/register', [\App\Http\Controllers\BusTransitController::class, 'registerQr']);
