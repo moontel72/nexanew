@@ -833,13 +833,13 @@ class _FleetListViewState extends State<_FleetListView> {
         passCtrl = TextEditingController(),
         cnicCtrl = TextEditingController(),
         addrCtrl = TextEditingController(),
-        final licenseCtrl = TextEditingController();
-        final plateCtrl = TextEditingController();
-        final salaryCtrl = TextEditingController();
+        licenseCtrl = TextEditingController(),
+        plateCtrl = TextEditingController(),
+        salaryCtrl = TextEditingController();
 
-        final isOwner = widget.type == 'owners';
-        final isDriver = widget.type == 'drivers';
-        final isConductor = widget.type == 'conductors';
+    final isOwner = widget.type == 'owners';
+    final isDriver = widget.type == 'drivers';
+    final isConductor = widget.type == 'conductors';
 
     final ok = await showDialog<bool>(
       context: context,
