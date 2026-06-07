@@ -49,8 +49,13 @@ class FleetManagementController extends Controller
             if ($cid) return $cid;
         }
 
+        // Master admin sees ALL — no company filter
+        if ($user && $user->account_type === 'master_admin') {
+            return null; // null = no filter, show all staff
+        }
+
         // User IS the bus company → own tenant account id is the company context
-        if ($user && in_array($user->account_type ?? '', ['bus_company', 'master_admin'], true)) {
+        if ($user && $user->account_type === 'bus_company') {
             return $user->id;
         }
 
