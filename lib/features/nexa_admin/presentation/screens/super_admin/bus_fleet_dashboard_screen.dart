@@ -466,6 +466,13 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           ),
           child: Row(
             children: [
+              if (_currentPage != 'dashboard') ...[
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+                  tooltip: 'Back to Dashboard',
+                  onPressed: () => setState(() => _currentPage = 'dashboard'),
+                ),
+              ],
               if (!_sidebarOpen)
                 IconButton(
                   icon: const Icon(Icons.menu),

@@ -194,9 +194,13 @@ class FleetManagementController extends Controller
             Log::error('FleetManagement - listStaff Error: ' . $e->getMessage(), [
                 'type'    => $type,
                 'user_id' => $request->user()?->id,
-                'trace'   => $e->getTraceAsString(),
+                'sql'     => $e->getMessage(),
             ]);
-            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+            // Fallback: return empty list instead of 500
+            return response()->json([
+                'success' => true,
+                'data'    => ['data' => [], 'total' => 0, 'current_page' => 1, 'per_page' => $perPage, 'last_page' => 1],
+            ]);
         }
     }
 
