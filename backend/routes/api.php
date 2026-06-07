@@ -66,20 +66,6 @@ $registerRoutes = function (): void {
         });
     });
 
-    // ─── Bus Fleet Owner API (auth:sanctum) ────────────────────
-    Route::prefix("bus-fleet")
-        ->middleware("auth:sanctum")
-        ->group(function (): void {
-            Route::get("owner/profile", [\App\Http\Controllers\Admin\BusFleetOwnerController::class, "profile"]);
-            Route::get("profile", [\App\Http\Controllers\Admin\BusFleetOwnerController::class, "profile"]);
-            Route::get("owners", [\App\Http\Controllers\Admin\BusFleetOwnerController::class, "owners"]);
-            Route::post("owners/create", [\App\Http\Controllers\Admin\BusFleetOwnerController::class, "createOwner"]);
-            Route::get("drivers/manage", [\App\Http\Controllers\Admin\BusFleetOwnerController::class, "drivers"]);
-            Route::post("drivers/create", [\App\Http\Controllers\Admin\BusFleetOwnerController::class, "createDriver"]);
-            Route::get("conductors", [\App\Http\Controllers\Admin\BusFleetOwnerController::class, "conductors"]);
-            Route::post("conductors/create", [\App\Http\Controllers\Admin\BusFleetOwnerController::class, "createConductor"]);
-        });
-
     Route::prefix("admin")
         ->middleware(["auth:sanctum", "admin"])
         ->group(function (): void {
