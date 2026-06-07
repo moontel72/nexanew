@@ -50,6 +50,7 @@ jobs:
 
       - name: Deploy Admin Panel to /frontend/
         run: |
+          sleep 3
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/frontend/
 
       # ──────────────────────────────────────────────────────────────
@@ -60,7 +61,9 @@ jobs:
         run: flutter build web --release --target=lib/main_reseller.dart --base-href "/reseller/"
 
       - name: Deploy Reseller App to /reseller/
+        continue-on-error: true
         run: |
+          sleep 3
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/reseller/
 
       # ──────────────────────────────────────────────────────────────
@@ -71,7 +74,9 @@ jobs:
         run: flutter build web --release --target=lib/main_driver.dart --base-href "/driver/"
 
       - name: Deploy Driver App to /driver/
+        continue-on-error: true
         run: |
+          sleep 3
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/driver/
 
       # ──────────────────────────────────────────────────────────────
