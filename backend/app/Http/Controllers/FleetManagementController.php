@@ -85,6 +85,8 @@ class FleetManagementController extends Controller
     /** Build a safe display payload from a joined query row. */
     private function formatRow($row): array
     {
+        $meta = json_decode($row->assignment_meta ?? '{}', true) ?: [];
+
         return [
             'id'                  => $row->assignment_id ?? $row->id ?? null,
             'global_identity_id'  => $row->global_identity_id ?? null,
@@ -92,14 +94,14 @@ class FleetManagementController extends Controller
             'name'                => $row->display_name ?? $row->account_name ?? '—',
             'email'               => $row->email ?? null,
             'phone'               => $row->phone ?? null,
-            'cnic'                => $row->cnic ?? null,
-            'address'             => $row->address ?? null,
+            'cnic'                => $meta['cnic'] ?? null,
+            'address'             => $meta['address'] ?? null,
             'role'                => $row->role ?? null,
             'fleet_type'          => $row->fleet_type ?? null,
             'status'              => $row->status ?? 'active',
-            'license_number'      => $row->license_number ?? null,
-            'vehicle_plate'       => $row->vehicle_plate ?? null,
-            'salary'              => $row->salary ?? null,
+            'license_number'      => $meta['license_number'] ?? null,
+            'vehicle_plate'       => $meta['vehicle_plate'] ?? null,
+            'salary'              => $meta['salary'] ?? null,
             'hire_date'           => $row->hire_date ?? null,
             'kyc_status'          => $row->kyc_status ?? 'unverified',
             'kyc_tier'            => $row->kyc_tier ?? 0,
