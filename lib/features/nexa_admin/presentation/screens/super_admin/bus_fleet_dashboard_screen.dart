@@ -856,9 +856,11 @@ class _FleetListViewState extends State<_FleetListView> {
               _field(phoneCtrl, 'Phone *', phone: true),
               SizedBox(height: 10.h),
               _field(passCtrl, 'Password *', obscure: true),
-              if (isDriver || isConductor) ...[
+              if (isDriver) ...[
                 SizedBox(height: 10.h),
                 _field(licenseCtrl, 'License Number *'),
+              ],
+              if (isDriver || isConductor) ...[
                 SizedBox(height: 10.h),
                 _field(plateCtrl, 'Vehicle Plate'),
                 SizedBox(height: 10.h),
@@ -960,9 +962,11 @@ class _FleetListViewState extends State<_FleetListView> {
                 'New Password (leave blank to keep)',
                 obscure: true,
               ),
-              if (isDriver || isConductor) ...[
+              if (isDriver) ...[
                 SizedBox(height: 10.h),
                 _field(licenseCtrl, 'License Number'),
+              ],
+              if (isDriver || isConductor) ...[
                 SizedBox(height: 10.h),
                 _field(plateCtrl, 'Vehicle Plate'),
                 SizedBox(height: 10.h),
