@@ -748,6 +748,7 @@ class _FleetListView extends StatefulWidget {
   final bool autoOpenAddDialog;
 
   const _FleetListView({
+    super.key,
     required this.type,
     this.companyName,
     this.companyId,
@@ -928,9 +929,15 @@ class _FleetListViewState extends State<_FleetListView> {
     final phoneCtrl = TextEditingController(text: item['phone'] ?? '');
     final passCtrl = TextEditingController();
     final isDriver = widget.type == 'drivers';
-    final licenseCtrl = TextEditingController(text: isDriver ? item['license_number'] ?? '' : '');
-    final plateCtrl = TextEditingController(text: isDriver ? item['vehicle_plate'] ?? '' : '');
-    final salaryCtrl = TextEditingController(text: isDriver ? '${item['salary'] ?? ''}' : '');
+    final licenseCtrl = TextEditingController(
+      text: isDriver ? item['license_number'] ?? '' : '',
+    );
+    final plateCtrl = TextEditingController(
+      text: isDriver ? item['vehicle_plate'] ?? '' : '',
+    );
+    final salaryCtrl = TextEditingController(
+      text: isDriver ? '${item['salary'] ?? ''}' : '',
+    );
 
     final ok = await showDialog<bool>(
       context: context,
@@ -946,7 +953,11 @@ class _FleetListViewState extends State<_FleetListView> {
               SizedBox(height: 10.h),
               _field(phoneCtrl, 'Phone', phone: true),
               SizedBox(height: 10.h),
-              _field(passCtrl, 'New Password (leave blank to keep)', obscure: true),
+              _field(
+                passCtrl,
+                'New Password (leave blank to keep)',
+                obscure: true,
+              ),
               if (isDriver) ...[
                 SizedBox(height: 10.h),
                 _field(licenseCtrl, 'License Number'),
@@ -959,8 +970,14 @@ class _FleetListViewState extends State<_FleetListView> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
         ],
       ),
     );
@@ -975,8 +992,10 @@ class _FleetListViewState extends State<_FleetListView> {
     if (passCtrl.text.isNotEmpty) body['password'] = passCtrl.text;
     if (isDriver) {
       body['license_number'] = licenseCtrl.text.trim();
-      if (plateCtrl.text.isNotEmpty) body['vehicle_plate'] = plateCtrl.text.trim();
-      if (salaryCtrl.text.isNotEmpty) body['salary'] = double.tryParse(salaryCtrl.text);
+      if (plateCtrl.text.isNotEmpty)
+        body['vehicle_plate'] = plateCtrl.text.trim();
+      if (salaryCtrl.text.isNotEmpty)
+        body['salary'] = double.tryParse(salaryCtrl.text);
     }
 
     try {
@@ -986,12 +1005,18 @@ class _FleetListViewState extends State<_FleetListView> {
       widget.onDataChanged();
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${_capitalize(widget.type)} updated'), backgroundColor: AppColors.success),
+          SnackBar(
+            content: Text('${_capitalize(widget.type)} updated'),
+            backgroundColor: AppColors.success,
+          ),
         );
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
     }
   }
@@ -1185,7 +1210,10 @@ class _FleetListViewState extends State<_FleetListView> {
               if (v == 'edit') {
                 _showEditDialog(item);
               } else if (v == 'delete') {
-                _confirmDelete(item['id'] as String, item['name'] as String? ?? '');
+                _confirmDelete(
+                  item['id'] as String,
+                  item['name'] as String? ?? '',
+                );
               }
             },
           ),
