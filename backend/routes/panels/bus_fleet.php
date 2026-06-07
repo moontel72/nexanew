@@ -32,43 +32,45 @@ Route::prefix('api/v1/bus-fleet')
                     ->whereIn('status', ['active', 'pending_acceptance'])
                     ->value('carrier_company_id');
 
-            $company = null;
-            if ($carrierId) {
-                $company = \Illuminate\Support\Facades\DB::table('tenant_accounts')
-                    ->where('id', $carrierId)
-                    ->first();
-            }
+            $isMasterAdmin = ($user->account_type ?? null) === 'master_admin';
 
-            if (!$company) {
+            // For master admin or when no specific carrier: show aggregated stats
+            if (!$carrierId && !$isMasterAdmin) {
                 return response()->json(['message' => 'No company found for this account'], 404);
             }
 
             $fleetSize = \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
-                ->where('carrier_company_id', $carrierId)
+                ->when($carrierId, fn($q) => $q->where('carrier_company_id', $carrierId))
                 ->where('layout_status', '!=', 'archived')
                 ->count();
 
             $staffCount = \Illuminate\Support\Facades\DB::table('fleet_assignments')
-                ->where('carrier_company_id', $carrierId)
+                ->when($carrierId, fn($q) => $q->where('carrier_company_id', $carrierId))
                 ->where('fleet_type', 'bus')
                 ->whereIn('status', ['active', 'pending_acceptance'])
                 ->count();
+
+            $companyName = 'NexaTrace Fleet';
+            if ($carrierId) {
+                $company = \Illuminate\Support\Facades\DB::table('tenant_accounts')->where('id', $carrierId)->first();
+                $companyName = $company->account_name ?? 'Bus Company';
+            }
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'company' => [
-                        'id'    => $company->id,
-                        'name'  => $company->account_name ?? 'Bus Company',
-                        'email' => $company->email ?? '',
-                        'phone' => $company->phone_number ?? '',
-                        'status'=> $company->status ?? 'active',
+                        'id'    => $carrierId ?? 'admin',
+                        'name'  => $companyName,
+                        'email' => $user->email ?? '',
+                        'phone' => $user->phone_number ?? '',
+                        'status'=> 'active',
                         'city'  => null,
                         'country' => null,
                     ],
                     'fleet_size'    => $fleetSize,
                     'active_routes' => 0,
-                    'owner_name'    => $company->account_name ?? null,
+                    'owner_name'    => $companyName,
                     'is_bus_fleet'  => true,
                     'active_buses'  => $fleetSize,
                     'staff_count'   => $staffCount,
@@ -87,31 +89,32 @@ Route::prefix('api/v1/bus-fleet')
                     ->whereIn('status', ['active', 'pending_acceptance'])
                     ->value('carrier_company_id');
 
-            $company = null;
-            if ($carrierId) {
-                $company = \Illuminate\Support\Facades\DB::table('tenant_accounts')
-                    ->where('id', $carrierId)
-                    ->first();
-            }
+            $isMasterAdmin = ($user->account_type ?? null) === 'master_admin';
 
-            if (!$company) {
+            if (!$carrierId && !$isMasterAdmin) {
                 return response()->json(['message' => 'No company found for this account'], 404);
             }
 
             $fleetSize = \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
-                ->where('carrier_company_id', $carrierId)
+                ->when($carrierId, fn($q) => $q->where('carrier_company_id', $carrierId))
                 ->where('layout_status', '!=', 'archived')
                 ->count();
+
+            $companyName = 'NexaTrace Fleet';
+            if ($carrierId) {
+                $company = \Illuminate\Support\Facades\DB::table('tenant_accounts')->where('id', $carrierId)->first();
+                $companyName = $company->account_name ?? 'Bus Company';
+            }
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'company_id'   => $company->id,
-                    'company_name' => $company->account_name ?? 'Bus Company',
-                    'status'       => $company->status ?? 'active',
+                    'company_id'   => $carrierId ?? 'admin',
+                    'company_name' => $companyName,
+                    'status'       => 'active',
                     'fleet_size'   => $fleetSize,
                     'active_routes'=> 0,
-                    'owner_name'   => $company->account_name ?? null,
+                    'owner_name'   => $companyName,
                     'total_trips'  => 0,
                     'active_trips' => 0,
                 ],
