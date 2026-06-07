@@ -104,7 +104,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     final token = prefs.getString('auth_token') ?? '';
     if (!mounted) return;
     if (token.isEmpty) {
-      context.go('/login');
+      context.go('/bus-owner/login');
       return;
     }
     setState(() {
@@ -215,7 +215,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   void _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
-    if (mounted) context.go('/login');
+    if (mounted) context.go('/bus-owner/login');
   }
 
   // ═══════════════════════════════════════════════════════

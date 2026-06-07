@@ -78,7 +78,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
       );
 
       // Navigate to dashboard
-      if (mounted) context.go('/dashboard');
+      if (mounted) context.go('/bus-owner/dashboard');
     } catch (e) {
       setState(() {
         _errorMessage =

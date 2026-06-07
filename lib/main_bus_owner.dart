@@ -41,11 +41,14 @@ class BusOwnerApp extends StatelessWidget {
 }
 
 final _router = GoRouter(
-  initialLocation: '/login',
+  initialLocation: '/bus-owner/login',
   routes: [
-    GoRoute(path: '/login', builder: (_, __) => const OwnerLoginScreen()),
     GoRoute(
-      path: '/dashboard',
+      path: '/bus-owner/login',
+      builder: (_, __) => const OwnerLoginScreen(),
+    ),
+    GoRoute(
+      path: '/bus-owner/dashboard',
       builder: (_, __) => const OwnerDashboardScreen(),
     ),
   ],
