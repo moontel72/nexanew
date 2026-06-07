@@ -36,8 +36,8 @@ class BusFleetGate
             return $next($request);
         }
 
-        // The user IS a bus company tenant — carrier_company_id = own id
-        if (($user->account_type ?? null) === 'bus_company') {
+        // The user IS a fleet tenant/owner — carrier_company_id = own id
+        if (in_array($user->account_type ?? null, ['bus_company', 'bus_owner', 'truck_company', 'truck_owner'], true)) {
             $request->merge(['_carrier_company_id' => $user->id]);
             return $next($request);
         }

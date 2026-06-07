@@ -9,6 +9,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/core/constants/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class OwnerLoginScreen extends StatefulWidget {
@@ -62,12 +63,22 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
       final token = res['token'] as String;
       final userData = res['data'] as Map<String, dynamic>? ?? {};
 
-      // Persist token via ApiClient
-      final api = ApiService();
-      await api.post; // trigger auth setup
+      // Persist token and user info
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', token);
+      await prefs.setString(
+        'bus_owner_name',
+        userData['account_name']?.toString() ??
+            userData['display_name']?.toString() ??
+            'Owner',
+      );
+      await prefs.setString(
+        'bus_owner_company',
+        userData['company_name']?.toString() ?? '',
+      );
 
       // Navigate to dashboard
-      if (mounted) context.go('/bus-owner/dashboard');
+      if (mounted) context.go('/dashboard');
     } catch (e) {
       setState(() {
         _errorMessage =
