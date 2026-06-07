@@ -619,11 +619,19 @@ class BusOwnerController extends Controller
 
             DB::table('transport_bus_layouts')->insert([
                 'id'                  => $layoutId,
+                'bus_id'              => $layoutId,         // legacy NOT NULL — self-reference
+                'owner_id'            => 1,                 // legacy FK — made nullable by 2026_06_07 migration
                 'owner_identity_id'   => $identityId,
                 'carrier_company_id'  => $tenantId,
                 'vehicle_class'       => $data['vehicle_class'],
                 'display_name'        => $data['display_name'],
-                'is_locked_sovereign' => true,
+                'total_rows'          => $preset['rows'] ?? 0,
+                'left_columns'        => $preset['left_cols'] ?? 0,
+                'right_columns'       => $preset['right_cols'] ?? 0,
+                'driver_seats'        => 1,
+                'raw_grid_json'       => json_encode([]),
+                'is_active'           => true,
+                'is_locked_sovereign'  => true,
                 'version_number'      => 1,
                 'layout_status'       => 'draft',
                 'current_snapshot'    => json_encode($snapshot),
