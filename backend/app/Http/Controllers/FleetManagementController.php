@@ -238,6 +238,7 @@ class FleetManagementController extends Controller
         try {
             $isDriver = ($role === 'driver');
             $isOwner  = ($role === 'owner');
+            $isConductor = ($role === 'conductor');
 
             $rules = [
                 'name'     => ['required', 'string', 'max:255'],
@@ -247,10 +248,12 @@ class FleetManagementController extends Controller
                 'cnic'     => ['nullable', 'string', 'max:30'],
                 'address'  => ['nullable', 'string', 'max:500'],
             ];
-            if ($isDriver) {
-                $rules['license_number'] = ['required', 'string', 'max:100'];
-                $rules['vehicle_plate']  = ['nullable', 'string', 'max:50'];
-                $rules['salary']         = ['nullable', 'numeric', 'min:0'];
+            if ($isDriver || $isConductor) {
+                if ($isDriver) {
+                    $rules['license_number'] = ['required', 'string', 'max:100'];
+                }
+                $rules['vehicle_plate'] = ['nullable', 'string', 'max:50'];
+                $rules['salary']        = ['nullable', 'numeric', 'min:0'];
             }
 
             $data = $request->validate($rules);
@@ -350,8 +353,10 @@ class FleetManagementController extends Controller
                 // 5. Create FleetAssignment (Layer 3 — the binding)
                 $assignmentId = (string) Str::orderedUuid();
                 $meta = [];
-                if ($isDriver) {
-                    $meta['license_number'] = $data['license_number'] ?? null;
+                if ($isDriver || $isConductor) {
+                    if ($isDriver) {
+                        $meta['license_number'] = $data['license_number'] ?? null;
+                    }
                     $meta['vehicle_plate']  = $data['vehicle_plate'] ?? null;
                     $meta['salary']         = $data['salary'] ?? null;
                 }
@@ -515,10 +520,12 @@ class FleetManagementController extends Controller
                 'address' => ['nullable', 'string', 'max:500'],
                 'status'  => ['sometimes', 'string', 'in:active,suspended,pending_acceptance'],
             ];
-            if ($isDriver) {
-                $rules['license_number'] = ['sometimes', 'string', 'max:100'];
-                $rules['vehicle_plate']  = ['nullable', 'string', 'max:50'];
-                $rules['salary']         = ['nullable', 'numeric', 'min:0'];
+            if ($isDriver || $role === 'conductor') {
+                if ($isDriver) {
+                    $rules['license_number'] = ['sometimes', 'string', 'max:100'];
+                }
+                $rules['vehicle_plate'] = ['nullable', 'string', 'max:50'];
+                $rules['salary']        = ['nullable', 'numeric', 'min:0'];
             }
             $data = $request->validate($rules);
 
@@ -560,8 +567,8 @@ class FleetManagementController extends Controller
 
                 // Update fleet_assignments assignment_meta
                 $meta = json_decode($assignment->assignment_meta ?? '{}', true) ?: [];
-                if ($isDriver) {
-                    if (isset($data['license_number'])) $meta['license_number'] = $data['license_number'];
+                if ($isDriver || $role === 'conductor') {
+                    if ($isDriver && isset($data['license_number'])) $meta['license_number'] = $data['license_number'];
                     if (isset($data['vehicle_plate']))  $meta['vehicle_plate']  = $data['vehicle_plate'];
                     if (isset($data['salary']))         $meta['salary']         = $data['salary'];
                 }

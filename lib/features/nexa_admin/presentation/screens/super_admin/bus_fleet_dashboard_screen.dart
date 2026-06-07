@@ -839,6 +839,7 @@ class _FleetListViewState extends State<_FleetListView> {
 
     final isOwner = widget.type == 'owners';
     final isDriver = widget.type == 'drivers';
+    final isConductor = widget.type == 'conductors';
 
     final ok = await showDialog<bool>(
       context: context,
@@ -855,7 +856,7 @@ class _FleetListViewState extends State<_FleetListView> {
               _field(phoneCtrl, 'Phone *', phone: true),
               SizedBox(height: 10.h),
               _field(passCtrl, 'Password *', obscure: true),
-              if (isDriver) ...[
+              if (isDriver || isConductor) ...[
                 SizedBox(height: 10.h),
                 _field(licenseCtrl, 'License Number *'),
                 SizedBox(height: 10.h),
@@ -893,8 +894,8 @@ class _FleetListViewState extends State<_FleetListView> {
       if (cnicCtrl.text.isNotEmpty) 'cnic': cnicCtrl.text.trim(),
       if (addrCtrl.text.isNotEmpty) 'address': addrCtrl.text.trim(),
     };
-    if (isDriver) {
-      body['license_number'] = licenseCtrl.text.trim();
+    if (isDriver || isConductor) {
+      if (isDriver) body['license_number'] = licenseCtrl.text.trim();
       if (plateCtrl.text.isNotEmpty)
         body['vehicle_plate'] = plateCtrl.text.trim();
       if (salaryCtrl.text.isNotEmpty)
@@ -929,6 +930,7 @@ class _FleetListViewState extends State<_FleetListView> {
     final phoneCtrl = TextEditingController(text: item['phone'] ?? '');
     final passCtrl = TextEditingController();
     final isDriver = widget.type == 'drivers';
+    final isConductor = widget.type == 'conductors';
     final licenseCtrl = TextEditingController(
       text: isDriver ? item['license_number'] ?? '' : '',
     );
@@ -958,7 +960,7 @@ class _FleetListViewState extends State<_FleetListView> {
                 'New Password (leave blank to keep)',
                 obscure: true,
               ),
-              if (isDriver) ...[
+              if (isDriver || isConductor) ...[
                 SizedBox(height: 10.h),
                 _field(licenseCtrl, 'License Number'),
                 SizedBox(height: 10.h),
@@ -990,8 +992,8 @@ class _FleetListViewState extends State<_FleetListView> {
       'phone': phoneCtrl.text.trim(),
     };
     if (passCtrl.text.isNotEmpty) body['password'] = passCtrl.text;
-    if (isDriver) {
-      body['license_number'] = licenseCtrl.text.trim();
+    if (isDriver || isConductor) {
+      if (isDriver) body['license_number'] = licenseCtrl.text.trim();
       if (plateCtrl.text.isNotEmpty)
         body['vehicle_plate'] = plateCtrl.text.trim();
       if (salaryCtrl.text.isNotEmpty)
