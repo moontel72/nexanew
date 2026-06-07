@@ -833,13 +833,13 @@ class _FleetListViewState extends State<_FleetListView> {
         passCtrl = TextEditingController(),
         cnicCtrl = TextEditingController(),
         addrCtrl = TextEditingController(),
-        licenseCtrl = TextEditingController(),
-        plateCtrl = TextEditingController(),
-        salaryCtrl = TextEditingController();
+        final licenseCtrl = TextEditingController();
+        final plateCtrl = TextEditingController();
+        final salaryCtrl = TextEditingController();
 
-    final isOwner = widget.type == 'owners';
-    final isDriver = widget.type == 'drivers';
-    final isConductor = widget.type == 'conductors';
+        final isOwner = widget.type == 'owners';
+        final isDriver = widget.type == 'drivers';
+        final isConductor = widget.type == 'conductors';
 
     final ok = await showDialog<bool>(
       context: context,
@@ -935,10 +935,10 @@ class _FleetListViewState extends State<_FleetListView> {
       text: isDriver ? item['license_number'] ?? '' : '',
     );
     final plateCtrl = TextEditingController(
-      text: isDriver ? item['vehicle_plate'] ?? '' : '',
+      text: (isDriver || isConductor) ? item['vehicle_plate'] ?? '' : '',
     );
     final salaryCtrl = TextEditingController(
-      text: isDriver ? '${item['salary'] ?? ''}' : '',
+      text: (isDriver || isConductor) ? '${item['salary'] ?? ''}' : '',
     );
 
     final ok = await showDialog<bool>(
