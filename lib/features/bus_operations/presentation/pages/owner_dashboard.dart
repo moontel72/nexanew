@@ -1,12 +1,10 @@
-// Bus Owner Dashboard (Module 14) — Wave 2 Identity Spine
-//
-// Dark gradient sidebar (Sub-Admin style: #1A3A5C → #0F2B3F)
-// 3D pencil navigation buttons
-// Full CRUD: Drivers, Conductors, Bus Seat Layouts
-// Edit forms pre-populate ALL registration data 100%
-// ScrollbarTheme wrappers on all scrollable areas
+// Bus Owner Dashboard — cloned from Bus Fleet Dashboard (Module 13/14)
+// Card-based drivers & conductors (matching FleetDriversScreen / FleetConductorsScreen)
+// Visual grid canvas for seat layout designer
+// Dark sidebar with 3D pencil buttons
 
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,36 +12,53 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
-// ─── Button Color Spectrum ────────────────────────────
 class OwnerButtonColors {
   static const Color dashboard = Color(0xFF7C3AED);
   static const Color buses = Color(0xFF2563EB);
   static const Color drivers = Color(0xFFDB2777);
   static const Color conductors = Color(0xFFDC2626);
   static const Color seats = Color(0xFF16A34A);
-  static const Color earnings = Color(0xFFD97706);
   static const Color alerts = Color(0xFF0891B2);
 }
 
-// ─── Layout Presets ───────────────────────────────────
-const List<Map<String, String>> _layoutPresets = [
-  {'key': 'coach_54', 'label': 'Coach 54-Seater'},
-  {'key': 'standard_45', 'label': 'Standard 45-Seater'},
-  {'key': 'coaster_34', 'label': 'Coaster 34-Seater'},
-  {'key': 'hiace_13', 'label': 'Hiace 13-Seater'},
-  {'key': 'sleeper_custom', 'label': 'Sleeper Custom'},
+// Layout presets
+const _presets = [
+  {
+    'key': 'coach_54',
+    'label': '54-Seat Coach',
+    'rows': 14,
+    'leftCols': 2,
+    'rightCols': 2,
+  },
+  {
+    'key': 'standard_45',
+    'label': '45-Seat Standard',
+    'rows': 12,
+    'leftCols': 2,
+    'rightCols': 2,
+  },
+  {
+    'key': 'coaster_34',
+    'label': '34-Seat Coaster',
+    'rows': 9,
+    'leftCols': 2,
+    'rightCols': 2,
+  },
+  {
+    'key': 'hiace_13',
+    'label': '13-Seat HiAce',
+    'rows': 4,
+    'leftCols': 2,
+    'rightCols': 2,
+  },
+  {
+    'key': 'sleeper_custom',
+    'label': 'Sleeper Custom',
+    'rows': 10,
+    'leftCols': 1,
+    'rightCols': 1,
+  },
 ];
-
-// ─── Non-const colors using .withValues() ─────────────
-final Color _mint15 = const Color(0xFF00C49F).withValues(alpha: 0.15);
-final Color _mint3 = const Color(0xFF00C49F).withValues(alpha: 0.3);
-final Color _mint8 = const Color(0xFF00C49F).withValues(alpha: 0.8);
-final Color _green15 = const Color(0xFF16A34A).withValues(alpha: 0.15);
-final Color _green3 = const Color(0xFF16A34A).withValues(alpha: 0.3);
-final Color _amber15 = const Color(0xFFD97706).withValues(alpha: 0.15);
-const Color _closeIconColor = Color(0x66FFFFFF);
-const Color _white10 = Color(0x1AFFFFFF);
-const Color _white40 = Color(0x66FFFFFF);
 
 class OwnerDashboardScreen extends StatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -52,52 +67,28 @@ class OwnerDashboardScreen extends StatefulWidget {
 }
 
 class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
-  // ── Auth state
   String _ownerName = 'Owner';
-  String _companyName = '';
-  bool _isSidebarOpen = true;
   String _currentPage = 'dashboard';
+  bool _sidebarOpen = true;
   bool _isLoading = true;
-  String? _error;
 
-  // ── Counts
-  int _busCount = 0;
-  int _driverCount = 0;
-  int _conductorCount = 0;
-  int _layoutCount = 0;
+  int _driverCount = 0, _conductorCount = 0, _layoutCount = 0;
 
-  // ── Data lists
-  List<Map<String, dynamic>> _layouts = [];
+  // Drivers
   List<Map<String, dynamic>> _drivers = [];
+  bool _driversLoading = true;
+  // Conductors
   List<Map<String, dynamic>> _conductors = [];
-  int _driversTotal = 0;
-  int _conductorsTotal = 0;
-
-  // ── Pagination
-  int _driversPage = 1;
-  int _conductorsPage = 1;
-  final int _perPage = 20;
-
-  // ── Search
-  final _driverSearchCtl = TextEditingController();
-  final _conductorSearchCtl = TextEditingController();
+  bool _conductorsLoading = true;
+  // Layouts
+  List<Map<String, dynamic>> _layouts = [];
+  bool _layoutsLoading = true;
 
   @override
   void initState() {
     super.initState();
     _bootstrap();
   }
-
-  @override
-  void dispose() {
-    _driverSearchCtl.dispose();
-    _conductorSearchCtl.dispose();
-    super.dispose();
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // BOOTSTRAP & DATA LOADING
-  // ═══════════════════════════════════════════════════════
 
   Future<void> _bootstrap() async {
     final prefs = await SharedPreferences.getInstance();
@@ -107,109 +98,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       context.go('/bus-owner/login');
       return;
     }
-    setState(() {
-      _ownerName = prefs.getString('bus_owner_name') ?? 'Owner';
-      _companyName = prefs.getString('bus_owner_company') ?? '';
-    });
-    await _loadAll();
-  }
-
-  Future<void> _loadAll() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      final api = ApiService();
-      final dash = await api.get('/bus-owner/dashboard');
-      final d = (dash['data'] as Map<String, dynamic>?) ?? {};
-
-      List<Map<String, dynamic>> layouts = [];
-      try {
-        final lr = await api.get('/bus-owner/layouts');
-        final ld = lr['data'];
-        if (ld is List) layouts = List<Map<String, dynamic>>.from(ld);
-      } catch (_) {}
-
-      if (mounted)
-        setState(() {
-          _busCount = (d['fleet_size'] as int?) ?? layouts.length;
-          _driverCount = (d['driver_count'] as int?) ?? 0;
-          _conductorCount = (d['conductor_count'] as int?) ?? 0;
-          _layoutCount = layouts.length;
-          _layouts = layouts;
-          _companyName = (d['company_name'] as String?) ?? _companyName;
-          _isLoading = false;
-        });
-
-      _loadDrivers();
-      _loadConductors();
-    } catch (e) {
-      if (mounted)
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
-    }
-  }
-
-  Future<void> _loadDrivers() async {
-    try {
-      final api = ApiService();
-      final res = await api.get(
-        '/bus-owner/drivers',
-        queryParams: {
-          'page': _driversPage.toString(),
-          'per_page': _perPage.toString(),
-          if (_driverSearchCtl.text.isNotEmpty) 'search': _driverSearchCtl.text,
-        },
-      );
-      final d = res['data'];
-      if (d is Map && mounted)
-        setState(() {
-          _drivers = List<Map<String, dynamic>>.from(d['data'] ?? []);
-          _driversTotal = (d['total'] as int?) ?? _drivers.length;
-          _driverCount = _driversTotal;
-        });
-    } catch (_) {}
-  }
-
-  Future<void> _loadConductors() async {
-    try {
-      final api = ApiService();
-      final res = await api.get(
-        '/bus-owner/conductors',
-        queryParams: {
-          'page': _conductorsPage.toString(),
-          'per_page': _perPage.toString(),
-          if (_conductorSearchCtl.text.isNotEmpty)
-            'search': _conductorSearchCtl.text,
-        },
-      );
-      final d = res['data'];
-      if (d is Map && mounted)
-        setState(() {
-          _conductors = List<Map<String, dynamic>>.from(d['data'] ?? []);
-          _conductorsTotal = (d['total'] as int?) ?? _conductors.length;
-          _conductorCount = _conductorsTotal;
-        });
-    } catch (_) {}
-  }
-
-  Future<void> _loadLayouts() async {
-    try {
-      final api = ApiService();
-      final lr = await api.get('/bus-owner/layouts');
-      final ld = lr['data'];
-      if (ld is List && mounted)
-        setState(() {
-          _layouts = List<Map<String, dynamic>>.from(ld);
-          _layoutCount = _layouts.length;
-          _busCount = _layouts
-              .where((l) => l['layout_status'] != 'archived')
-              .length;
-        });
-    } catch (_) {}
+    _ownerName = prefs.getString('bus_owner_name') ?? 'Owner';
+    setState(() => _isLoading = false);
   }
 
   void _logout() async {
@@ -218,35 +108,25 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     if (mounted) context.go('/bus-owner/login');
   }
 
-  // ═══════════════════════════════════════════════════════
-  // BUILD
-  // ═══════════════════════════════════════════════════════
-
+  // ═══ BUILD ═══
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 900;
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0D1B2A),
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
-      );
-    }
+    if (_isLoading)
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
       body: Row(
         children: [
-          if (_isSidebarOpen || isWide) _buildSidebar(isWide),
-          Expanded(child: _buildMainContent(isWide)),
+          if (_sidebarOpen || isWide) _sidebar(isWide),
+          Expanded(child: _content(isWide)),
         ],
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════
-  // SIDEBAR
-  // ═══════════════════════════════════════════════════════
-
-  Widget _buildSidebar(bool isWide) => Container(
+  // ═══ SIDEBAR ═══
+  Widget _sidebar(bool isWide) => Container(
     width: 260,
     decoration: const BoxDecoration(
       gradient: LinearGradient(
@@ -284,30 +164,15 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 ),
                 const Gap(10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _ownerName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (_companyName.isNotEmpty)
-                        Text(
-                          _companyName,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.5),
-                            fontSize: 11,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
+                  child: Text(
+                    _ownerName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (!isWide)
@@ -317,7 +182,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                       color: Colors.white70,
                       size: 18,
                     ),
-                    onPressed: () => setState(() => _isSidebarOpen = false),
+                    onPressed: () => setState(() => _sidebarOpen = false),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(
                       minWidth: 30,
@@ -327,120 +192,59 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               ],
             ),
           ),
-          const Gap(8),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 14),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: _mint15,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _mint3),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.verified_user, size: 14, color: _mint8),
-                const Gap(6),
-                Text(
-                  'Fleet Owner',
-                  style: TextStyle(
-                    color: _mint8,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '$_busCount buses',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            ),
-          ),
           const Gap(12),
-          const Divider(
-            color: Color(0x20FFFFFF),
-            height: 1,
-            indent: 20,
-            endIndent: 20,
-          ),
+          const Divider(color: Color(0x20FFFFFF), indent: 20, endIndent: 20),
           const Gap(12),
           Expanded(
-            child: ScrollbarTheme(
-              data: ScrollbarThemeData(
-                thumbVisibility: WidgetStateProperty.all(true),
-                trackVisibility: WidgetStateProperty.all(true),
-                thickness: WidgetStateProperty.all(8),
-                radius: const Radius.circular(4),
-                thumbColor: WidgetStateProperty.all(const Color(0xFF00C49F)),
-                trackColor: WidgetStateProperty.all(const Color(0x20FFFFFF)),
-              ),
-              child: Scrollbar(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Column(
-                    children: [
-                      _sectionLabel('FLEET'),
-                      Missile3DButton(
-                        label: 'Dashboard',
-                        icon: Icons.dashboard_rounded,
-                        color: OwnerButtonColors.dashboard,
-                        onTap: () => setState(() => _currentPage = 'dashboard'),
-                      ),
-                      Missile3DButton(
-                        label: 'My Buses ($_busCount)',
-                        icon: Icons.directions_bus,
-                        color: OwnerButtonColors.buses,
-                        onTap: () => setState(() => _currentPage = 'buses'),
-                      ),
-                      Missile3DButton(
-                        label: 'Seat Layouts ($_layoutCount)',
-                        icon: Icons.event_seat,
-                        color: OwnerButtonColors.seats,
-                        onTap: () {
-                          setState(() => _currentPage = 'layouts');
-                          _loadLayouts();
-                        },
-                      ),
-                      const Gap(8),
-                      _sectionLabel('STAFF'),
-                      Missile3DButton(
-                        label: 'My Drivers ($_driverCount)',
-                        icon: Icons.badge_rounded,
-                        color: OwnerButtonColors.drivers,
-                        onTap: () {
-                          setState(() => _currentPage = 'drivers');
-                          _loadDrivers();
-                        },
-                      ),
-                      Missile3DButton(
-                        label: 'My Conductors ($_conductorCount)',
-                        icon: Icons.group_rounded,
-                        color: OwnerButtonColors.conductors,
-                        onTap: () {
-                          setState(() => _currentPage = 'conductors');
-                          _loadConductors();
-                        },
-                      ),
-                      const Gap(8),
-                      _sectionLabel('SYSTEM'),
-                      Missile3DButton(
-                        label: 'Refresh',
-                        icon: Icons.refresh_rounded,
-                        color: OwnerButtonColors.alerts,
-                        onTap: _loadAll,
-                      ),
-                      Missile3DButton(
-                        label: 'Logout',
-                        icon: Icons.logout_rounded,
-                        color: const Color(0xFFDC2626),
-                        onTap: _logout,
-                      ),
-                    ],
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                children: [
+                  _sec('FLEET'),
+                  Missile3DButton(
+                    label: 'Dashboard',
+                    icon: Icons.dashboard_rounded,
+                    color: OwnerButtonColors.dashboard,
+                    onTap: () => setState(() => _currentPage = 'dashboard'),
                   ),
-                ),
+                  Missile3DButton(
+                    label: 'Seat Layouts',
+                    icon: Icons.event_seat,
+                    color: OwnerButtonColors.seats,
+                    onTap: () => setState(() {
+                      _currentPage = 'layouts';
+                      if (_layouts.isEmpty) _loadLayouts();
+                    }),
+                  ),
+                  const Gap(8),
+                  _sec('STAFF'),
+                  Missile3DButton(
+                    label: 'Drivers',
+                    icon: Icons.badge_rounded,
+                    color: OwnerButtonColors.drivers,
+                    onTap: () => setState(() {
+                      _currentPage = 'drivers';
+                      if (_drivers.isEmpty) _loadDrivers();
+                    }),
+                  ),
+                  Missile3DButton(
+                    label: 'Conductors',
+                    icon: Icons.group_rounded,
+                    color: OwnerButtonColors.conductors,
+                    onTap: () => setState(() {
+                      _currentPage = 'conductors';
+                      if (_conductors.isEmpty) _loadConductors();
+                    }),
+                  ),
+                  const Gap(8),
+                  _sec('SYSTEM'),
+                  Missile3DButton(
+                    label: 'Logout',
+                    icon: Icons.logout_rounded,
+                    color: const Color(0xFFDC2626),
+                    onTap: _logout,
+                  ),
+                ],
               ),
             ),
           ),
@@ -449,7 +253,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     ),
   );
 
-  Widget _sectionLabel(String t) => Padding(
+  Widget _sec(String t) => Padding(
     padding: const EdgeInsets.only(left: 4, top: 4, bottom: 2),
     child: Text(
       t,
@@ -462,11 +266,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     ),
   );
 
-  // ═══════════════════════════════════════════════════════
-  // MAIN CONTENT
-  // ═══════════════════════════════════════════════════════
-
-  Widget _buildMainContent(bool isWide) => SafeArea(
+  // ═══ MAIN CONTENT ═══
+  Widget _content(bool isWide) => SafeArea(
     child: Column(
       children: [
         Container(
@@ -482,22 +283,14 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           ),
           child: Row(
             children: [
-              if (!_isSidebarOpen)
+              if (!_sidebarOpen)
                 IconButton(
                   icon: const Icon(Icons.menu, color: Colors.white70),
-                  onPressed: () => setState(() => _isSidebarOpen = true),
+                  onPressed: () => setState(() => _sidebarOpen = true),
                 ),
               Expanded(
                 child: Text(
-                  _currentPage == 'buses'
-                      ? 'My Buses'
-                      : _currentPage == 'layouts'
-                      ? 'Seat Layouts'
-                      : _currentPage == 'drivers'
-                      ? 'My Drivers'
-                      : _currentPage == 'conductors'
-                      ? 'My Conductors'
-                      : 'Dashboard',
+                  _pageTitle,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,
@@ -509,102 +302,105 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 icon: const Icon(Icons.refresh, color: Colors.white60),
                 onPressed: () {
                   _loadAll();
-                  _loadDrivers();
-                  _loadConductors();
-                  _loadLayouts();
                 },
               ),
             ],
           ),
         ),
         Expanded(
-          child: _currentPage == 'layouts'
-              ? _buildLayoutsPage()
-              : _currentPage == 'buses'
-              ? _buildBusesPage()
-              : _currentPage == 'drivers'
-              ? _buildStaffPage('driver')
+          child: _currentPage == 'drivers'
+              ? _driversPage()
               : _currentPage == 'conductors'
-              ? _buildStaffPage('conductor')
-              : _buildHomePage(),
+              ? _conductorsPage()
+              : _currentPage == 'layouts'
+              ? _layoutsPage()
+              : _homePage(),
         ),
       ],
     ),
   );
 
-  // ═══════════════════════════════════════════════════════
-  // HOME
-  // ═══════════════════════════════════════════════════════
+  String get _pageTitle => _currentPage == 'drivers'
+      ? 'Bus Drivers'
+      : _currentPage == 'conductors'
+      ? 'Bus Conductors'
+      : _currentPage == 'layouts'
+      ? 'Seat Layouts'
+      : 'Dashboard';
 
-  Widget _buildHomePage() => ScrollbarTheme(
-    data: _scrollbarTheme(),
-    child: Scrollbar(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Future<void> _loadAll() {
+    _loadDrivers();
+    _loadConductors();
+    _loadLayouts();
+    return Future.value();
+  }
+
+  // ═══ HOME ═══
+  Widget _homePage() {
+    _loadCounts();
+    return ListView(
+      padding: EdgeInsets.all(16.w),
+      children: [
+        Text(
+          'Welcome, $_ownerName',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const Gap(4),
+        Text(
+          '$_driverCount drivers \u2022 $_conductorCount conductors \u2022 $_layoutCount layouts',
+          style: const TextStyle(color: Color(0xFF8899AA), fontSize: 13),
+        ),
+        const Gap(24),
+        Row(
           children: [
-            Text(
-              'Welcome back, $_ownerName',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
+            _kpi(
+              'Drivers',
+              '$_driverCount',
+              Icons.badge,
+              OwnerButtonColors.drivers,
             ),
-            const Gap(4),
-            Text(
-              '$_busCount buses \u2022 $_driverCount drivers \u2022 $_conductorCount conductors',
-              style: const TextStyle(color: Color(0xFF8899AA), fontSize: 13),
+            SizedBox(width: 12.w),
+            _kpi(
+              'Conductors',
+              '$_conductorCount',
+              Icons.group,
+              OwnerButtonColors.conductors,
             ),
-            const Gap(24),
-            Row(
-              children: [
-                _kpiCard(
-                  'Active Buses',
-                  '$_busCount',
-                  Icons.directions_bus,
-                  const Color(0xFF2563EB),
-                ),
-                const Gap(12),
-                _kpiCard(
-                  'Seat Layouts',
-                  '$_layoutCount',
-                  Icons.event_seat,
-                  const Color(0xFF16A34A),
-                ),
-                const Gap(12),
-                _kpiCard(
-                  'Staff Total',
-                  '${_driverCount + _conductorCount}',
-                  Icons.people,
-                  const Color(0xFF7C3AED),
-                ),
-              ],
+            SizedBox(width: 12.w),
+            _kpi(
+              'Layouts',
+              '$_layoutCount',
+              Icons.event_seat,
+              OwnerButtonColors.seats,
             ),
-            const Gap(24),
-            if (_layouts.isNotEmpty) ...[
-              const Text(
-                'Recent Layouts',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Gap(12),
-              ..._layouts.take(3).map((l) => _layoutCard(l)),
-            ],
           ],
         ),
-      ),
-    ),
-  );
+        const Gap(24),
+        ElevatedButton.icon(
+          onPressed: () => setState(() {
+            _currentPage = 'layouts';
+            _loadLayouts();
+          }),
+          icon: const Icon(Icons.add),
+          label: const Text('Create Seat Layout'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: OwnerButtonColors.seats,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+          ),
+        ),
+      ],
+    );
+  }
 
-  Widget _kpiCard(String label, String value, IconData icon, Color color) =>
+  Widget _kpi(String label, String value, IconData icon, Color color) =>
       Expanded(
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
             color: const Color(0xFF1A2A3A),
             borderRadius: BorderRadius.circular(14),
@@ -614,7 +410,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(icon, color: color, size: 24),
-              const Gap(10),
+              Gap(10.h),
               Text(
                 value,
                 style: TextStyle(
@@ -623,7 +419,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const Gap(4),
+              Gap(4.h),
               Text(
                 label,
                 style: const TextStyle(color: Color(0xFF667788), fontSize: 12),
@@ -633,1241 +429,862 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         ),
       );
 
-  // ═══════════════════════════════════════════════════════
-  // BUSES
-  // ═══════════════════════════════════════════════════════
-
-  Widget _buildBusesPage() => Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.directions_bus,
-          size: 48,
-          color: Colors.white.withValues(alpha: 0.15),
-        ),
-        const Gap(12),
-        Text(
-          '$_busCount buses registered',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.4),
-            fontSize: 15,
-          ),
-        ),
-        const Gap(8),
-        Text(
-          'Create seat layouts to define your bus configurations',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.25),
-            fontSize: 13,
-          ),
-        ),
-      ],
-    ),
-  );
+  void _loadCounts() {
+    _loadDrivers();
+    _loadConductors();
+    _loadLayouts();
+  }
 
   // ═══════════════════════════════════════════════════════
-  // STAFF PAGE (Drivers / Conductors)
+  // DRIVERS (cloned from FleetDriversScreen)
   // ═══════════════════════════════════════════════════════
 
-  Widget _buildStaffPage(String role) {
-    final isDriver = role == 'driver';
-    final list = isDriver ? _drivers : _conductors;
-    final total = isDriver ? _driversTotal : _conductorsTotal;
-    final searchCtl = isDriver ? _driverSearchCtl : _conductorSearchCtl;
-    final page = isDriver ? _driversPage : _conductorsPage;
-    final title = isDriver ? 'Driver' : 'Conductor';
-    final icon = isDriver ? Icons.badge_rounded : Icons.group_rounded;
-    final color = isDriver ? const Color(0xFFDB2777) : const Color(0xFFDC2626);
+  Future<void> _loadDrivers() async {
+    setState(() => _driversLoading = true);
+    try {
+      final res = await ApiService().get('/bus-owner/drivers');
+      final d = res['data'] as Map<String, dynamic>?;
+      if (mounted)
+        setState(() {
+          _drivers = List<Map<String, dynamic>>.from(d?['data'] ?? []);
+          _driverCount = d?['total'] ?? _drivers.length;
+          _driversLoading = false;
+        });
+    } catch (_) {
+      if (mounted) setState(() => _driversLoading = false);
+    }
+  }
 
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          color: const Color(0xFF162438),
-          child: Row(
+  Future<void> _showAddDriver() async {
+    final name = TextEditingController(), phone = TextEditingController();
+    final license = TextEditingController(), pass = TextEditingController();
+    final cnic = TextEditingController(), addr = TextEditingController();
+    final plate = TextEditingController(), salary = TextEditingController();
+    final email = TextEditingController();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Bus Driver'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: SizedBox(
-                  height: 40,
-                  child: TextField(
-                    controller: searchCtl,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Search $title...',
-                      hintStyle: const TextStyle(
-                        color: Color(0xFF556677),
-                        fontSize: 13,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: Color(0xFF556677),
-                        size: 18,
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFF0D1B2A),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: color),
-                      ),
-                    ),
-                    onSubmitted: (_) {
-                      if (isDriver)
-                        _loadDrivers();
-                      else
-                        _loadConductors();
-                    },
-                  ),
-                ),
-              ),
-              const Gap(8),
-              _actionButton(
-                'Add $title',
-                Icons.add,
-                color,
-                () => _showStaffForm(role, null),
-              ),
+              _tf(name, 'Full Name *'),
+              SizedBox(height: 10.h),
+              _tf(phone, 'Phone *', phone: true),
+              SizedBox(height: 10.h),
+              _tf(license, 'License Number *'),
+              SizedBox(height: 10.h),
+              _tf(pass, 'Password *', obscure: true),
+              SizedBox(height: 10.h),
+              _tf(email, 'Email', email: true),
+              SizedBox(height: 10.h),
+              _tf(cnic, 'CNIC'),
+              SizedBox(height: 10.h),
+              _tf(addr, 'Address', maxLines: 2),
+              SizedBox(height: 10.h),
+              _tf(plate, 'Vehicle Plate'),
+              SizedBox(height: 10.h),
+              _tf(salary, 'Salary', number: true),
             ],
           ),
         ),
-        Expanded(
-          child: list.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        icon,
-                        size: 48,
-                        color: Colors.white.withValues(alpha: 0.15),
-                      ),
-                      const Gap(12),
-                      Text(
-                        'No ${title.toLowerCase()}s yet',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.4),
-                          fontSize: 15,
-                        ),
-                      ),
-                      const Gap(8),
-                      _actionButton(
-                        'Add First $title',
-                        Icons.add,
-                        color,
-                        () => _showStaffForm(role, null),
-                      ),
-                    ],
-                  ),
-                )
-              : ScrollbarTheme(
-                  data: _scrollbarTheme(),
-                  child: Scrollbar(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(12),
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(
-                            const Color(0xFF1A2A3A),
-                          ),
-                          dataRowColor: WidgetStateProperty.all(
-                            const Color(0xFF162438),
-                          ),
-                          dividerThickness: 0.5,
-                          columns: [
-                            _col('#', 50),
-                            _col('Name', 150),
-                            _col('Email', 180),
-                            _col('Phone', 120),
-                            if (isDriver) _col('License', 120),
-                            _col('Plate', 100),
-                            _col('Salary', 80),
-                            _col('Status', 80),
-                            _col('Actions', 120),
-                          ],
-                          rows: list
-                              .map(
-                                (item) => DataRow(
-                                  cells: [
-                                    DataCell(
-                                      Text(
-                                        item['id']?.toString().substring(
-                                              0,
-                                              8,
-                                            ) ??
-                                            '\u2014',
-                                        style: const TextStyle(
-                                          color: Color(0xFF8899AA),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text(
-                                        item['name']?.toString() ?? '\u2014',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text(
-                                        item['email']?.toString() ?? '\u2014',
-                                        style: const TextStyle(
-                                          color: Color(0xFF8899AA),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text(
-                                        item['phone']?.toString() ?? '\u2014',
-                                        style: const TextStyle(
-                                          color: Color(0xFF8899AA),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ),
-                                    if (isDriver)
-                                      DataCell(
-                                        Text(
-                                          item['license_number']?.toString() ??
-                                              '\u2014',
-                                          style: const TextStyle(
-                                            color: Color(0xFF8899AA),
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ),
-                                    DataCell(
-                                      Text(
-                                        item['vehicle_plate']?.toString() ??
-                                            '\u2014',
-                                        style: const TextStyle(
-                                          color: Color(0xFF8899AA),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text(
-                                        item['salary']?.toString() ?? '\u2014',
-                                        style: const TextStyle(
-                                          color: Color(0xFF8899AA),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      _statusBadge(
-                                        item['status']?.toString() ?? 'active',
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          _iconBtn(
-                                            Icons.edit,
-                                            const Color(0xFF3B82F6),
-                                            () => _showStaffForm(role, item),
-                                          ),
-                                          const Gap(4),
-                                          _iconBtn(
-                                            Icons.delete,
-                                            const Color(0xFFEF4444),
-                                            () => _confirmDeleteStaff(
-                                              role,
-                                              item['id']?.toString() ?? '',
-                                              item['name']?.toString() ?? '',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-        ),
-        if (total > _perPage)
-          Container(
-            padding: const EdgeInsets.all(8),
-            color: const Color(0xFF162438),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService().post(
+        '/bus-owner/drivers',
+        data: {
+          'name': name.text.trim(),
+          'phone': phone.text.trim(),
+          'license_number': license.text.trim(),
+          'password': pass.text,
+          if (email.text.isNotEmpty) 'email': email.text.trim(),
+          if (cnic.text.isNotEmpty) 'cnic': cnic.text.trim(),
+          if (addr.text.isNotEmpty) 'address': addr.text.trim(),
+          if (plate.text.isNotEmpty) 'vehicle_plate': plate.text.trim(),
+          if (salary.text.isNotEmpty)
+            'salary': double.tryParse(salary.text) ?? 0,
+        },
+      );
+      _loadDrivers();
+      _snack('Driver added', AppColors.success);
+    } catch (e) {
+      _snack('Error: $e', AppColors.error);
+    }
+  }
+
+  Widget _driversPage() => Scaffold(
+    backgroundColor: const Color(0xFF0D1B2A),
+    appBar: AppBar(
+      title: const Text('Bus Drivers'),
+      backgroundColor: OwnerButtonColors.drivers,
+      foregroundColor: Colors.white,
+      actions: [
+        IconButton(icon: const Icon(Icons.add), onPressed: _showAddDriver),
+      ],
+    ),
+    body: _driversLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _drivers.isEmpty
+        ? const Center(
+            child: Text(
+              'No drivers registered',
+              style: TextStyle(color: Color(0xFF8899AA)),
+            ),
+          )
+        : ListView.separated(
+            padding: EdgeInsets.all(16.w),
+            itemCount: _drivers.length,
+            separatorBuilder: (_, __) => SizedBox(height: 8.h),
+            itemBuilder: (_, i) => _driverCard(_drivers[i]),
+          ),
+  );
+
+  Widget _driverCard(Map<String, dynamic> d) => Card(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+    color: const Color(0xFF1A2A3A),
+    child: Padding(
+      padding: EdgeInsets.all(14.w),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: OwnerButtonColors.drivers.withValues(alpha: 0.15),
+            child: Icon(Icons.badge, color: OwnerButtonColors.drivers),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _pageBtn(Icons.chevron_left, page > 1, () {
-                  if (isDriver) {
-                    _driversPage--;
-                    _loadDrivers();
-                  } else {
-                    _conductorsPage--;
-                    _loadConductors();
-                  }
-                }),
-                const Gap(8),
                 Text(
-                  'Page $page',
+                  d['name'] ?? '\u2014',
                   style: const TextStyle(
-                    color: Color(0xFF8899AA),
-                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Gap(8),
-                _pageBtn(Icons.chevron_right, (page * _perPage) < total, () {
-                  if (isDriver) {
-                    _driversPage++;
-                    _loadDrivers();
-                  } else {
-                    _conductorsPage++;
-                    _loadConductors();
-                  }
-                }),
+                _chip(Icons.phone, d['phone'] ?? '\u2014'),
+                SizedBox(width: 12.w),
+                _chip(Icons.credit_card, d['license_number'] ?? '\u2014'),
+                if (d['salary'] != null) ...[
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Salary: Rs. ${d['salary']}',
+                    style: TextStyle(color: AppColors.gray500, fontSize: 11),
+                  ),
+                ],
               ],
             ),
           ),
-      ],
-    );
+          _badge(d['status'] ?? 'active', OwnerButtonColors.drivers),
+        ],
+        crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    ),
+  );
+
+  // ═══════════════════════════════════════════════════════
+  // CONDUCTORS (cloned from FleetConductorsScreen)
+  // ═══════════════════════════════════════════════════════
+
+  Future<void> _loadConductors() async {
+    setState(() => _conductorsLoading = true);
+    try {
+      final res = await ApiService().get('/bus-owner/conductors');
+      final d = res['data'] as Map<String, dynamic>?;
+      if (mounted)
+        setState(() {
+          _conductors = List<Map<String, dynamic>>.from(d?['data'] ?? []);
+          _conductorCount = d?['total'] ?? _conductors.length;
+          _conductorsLoading = false;
+        });
+    } catch (_) {
+      if (mounted) setState(() => _conductorsLoading = false);
+    }
   }
 
-  DataColumn _col(String label, double w) => DataColumn(
-    label: SizedBox(
-      width: w,
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFF8899AA),
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
+  Future<void> _showAddConductor() async {
+    final name = TextEditingController(), phone = TextEditingController();
+    final cnic = TextEditingController(), addr = TextEditingController();
+    final salary = TextEditingController(), pass = TextEditingController();
+    final email = TextEditingController();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Bus Conductor'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _tf(name, 'Full Name *'),
+              SizedBox(height: 10.h),
+              _tf(phone, 'Phone *', phone: true),
+              SizedBox(height: 10.h),
+              _tf(pass, 'Password *', obscure: true),
+              SizedBox(height: 10.h),
+              _tf(email, 'Email', email: true),
+              SizedBox(height: 10.h),
+              _tf(cnic, 'CNIC'),
+              SizedBox(height: 10.h),
+              _tf(addr, 'Address', maxLines: 2),
+              SizedBox(height: 10.h),
+              _tf(salary, 'Salary *', number: true),
+            ],
+          ),
         ),
-      ),
-    ),
-  );
-
-  Widget _statusBadge(String status) {
-    final c = status == 'active'
-        ? const Color(0xFF16A34A)
-        : status == 'suspended'
-        ? const Color(0xFFD97706)
-        : const Color(0xFF667788);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.w600),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
+    if (ok != true) return;
+    try {
+      await ApiService().post(
+        '/bus-owner/conductors',
+        data: {
+          'name': name.text.trim(),
+          'phone': phone.text.trim(),
+          'password': pass.text,
+          if (email.text.isNotEmpty) 'email': email.text.trim(),
+          if (cnic.text.isNotEmpty) 'cnic': cnic.text.trim(),
+          if (addr.text.isNotEmpty) 'address': addr.text.trim(),
+          'salary': double.tryParse(salary.text) ?? 0,
+        },
+      );
+      _loadConductors();
+      _snack('Conductor added', AppColors.success);
+    } catch (e) {
+      _snack('Error: $e', AppColors.error);
+    }
   }
 
-  Widget _iconBtn(IconData icon, Color color, VoidCallback onTap) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(4),
-    child: Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Icon(icon, color: color, size: 16),
+  Widget _conductorsPage() => Scaffold(
+    backgroundColor: const Color(0xFF0D1B2A),
+    appBar: AppBar(
+      title: const Text('Bus Conductors'),
+      backgroundColor: OwnerButtonColors.conductors,
+      foregroundColor: Colors.white,
+      actions: [
+        IconButton(icon: const Icon(Icons.add), onPressed: _showAddConductor),
+      ],
     ),
+    body: _conductorsLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _conductors.isEmpty
+        ? const Center(
+            child: Text(
+              'No conductors registered',
+              style: TextStyle(color: Color(0xFF8899AA)),
+            ),
+          )
+        : ListView.separated(
+            padding: EdgeInsets.all(16.w),
+            itemCount: _conductors.length,
+            separatorBuilder: (_, __) => SizedBox(height: 8.h),
+            itemBuilder: (_, i) => _conductorCard(_conductors[i]),
+          ),
   );
 
-  Widget _pageBtn(IconData icon, bool enabled, VoidCallback onTap) => InkWell(
-    onTap: enabled ? onTap : null,
-    child: Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: enabled ? const Color(0xFF1A2A3A) : const Color(0xFF0D1B2A),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Icon(
-        icon,
-        color: enabled ? Colors.white : const Color(0xFF334455),
-        size: 18,
-      ),
-    ),
-  );
-
-  Widget _actionButton(
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) => SizedBox(
-    height: 40,
-    child: ElevatedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: 16),
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+  Widget _conductorCard(Map<String, dynamic> c) => Card(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+    color: const Color(0xFF1A2A3A),
+    child: Padding(
+      padding: EdgeInsets.all(14.w),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: OwnerButtonColors.conductors.withValues(
+              alpha: 0.15,
+            ),
+            child: Icon(Icons.group, color: OwnerButtonColors.conductors),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  c['name'] ?? '\u2014',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                _chip(Icons.phone, c['phone'] ?? '\u2014'),
+                if (c['salary'] != null) ...[
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Salary: Rs. ${c['salary']}',
+                    style: TextStyle(color: AppColors.gray500, fontSize: 11),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          _badge(c['status'] ?? 'active', OwnerButtonColors.conductors),
+        ],
+        crossAxisAlignment: CrossAxisAlignment.start,
       ),
     ),
   );
 
   // ═══════════════════════════════════════════════════════
-  // STAFF FORM (Add/Edit — 100% pre-populated)
+  // SEAT LAYOUTS (grid canvas designer)
   // ═══════════════════════════════════════════════════════
 
-  void _showStaffForm(String role, Map<String, dynamic>? existing) {
-    final isDriver = role == 'driver';
-    final isEdit = existing != null;
-    final title =
-        '${isEdit ? "Edit" : "Add"} ${isDriver ? "Driver" : "Conductor"}';
-    final color = isDriver ? const Color(0xFFDB2777) : const Color(0xFFDC2626);
+  Future<void> _loadLayouts() async {
+    setState(() => _layoutsLoading = true);
+    try {
+      final res = await ApiService().get('/bus-owner/layouts');
+      final d = res['data'];
+      if (mounted)
+        setState(() {
+          if (d is List) _layouts = List<Map<String, dynamic>>.from(d);
+          _layoutCount = _layouts.length;
+          _layoutsLoading = false;
+        });
+    } catch (_) {
+      if (mounted) setState(() => _layoutsLoading = false);
+    }
+  }
 
-    final nameCtl = TextEditingController(
-      text: existing?['name']?.toString() ?? '',
+  String? _designerPreset;
+  int _designerRows = 12, _designerLeftCols = 2, _designerRightCols = 2;
+  List<List<String>> _designerGrid = []; // 'seat', 'aisle', 'empty'
+
+  void _initDesigner(String presetKey) {
+    final p = _presets.firstWhere(
+      (x) => x['key'] == presetKey,
+      orElse: () => _presets[0],
     );
-    final emailCtl = TextEditingController(
-      text: existing?['email']?.toString() ?? '',
-    );
-    final phoneCtl = TextEditingController(
-      text: existing?['phone']?.toString() ?? '',
-    );
-    final cnicCtl = TextEditingController(
-      text: existing?['cnic']?.toString() ?? '',
-    );
-    final addressCtl = TextEditingController(
-      text: existing?['address']?.toString() ?? '',
-    );
-    final licenseCtl = TextEditingController(
-      text: existing?['license_number']?.toString() ?? '',
-    );
-    final plateCtl = TextEditingController(
-      text: existing?['vehicle_plate']?.toString() ?? '',
-    );
-    final salaryCtl = TextEditingController(
-      text: existing?['salary']?.toString() ?? '',
-    );
-    final passCtl = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    bool isLoading = false;
+    _designerPreset = presetKey;
+    _designerRows = p['rows'] as int;
+    _designerLeftCols = p['leftCols'] as int;
+    _designerRightCols = p['rightCols'] as int;
+    final totalCols =
+        _designerLeftCols + 1 + _designerRightCols; // +1 for aisle
+    _designerGrid = List.generate(_designerRows, (r) {
+      final row = <String>[];
+      for (int c = 0; c < totalCols; c++) {
+        if (c == _designerLeftCols) {
+          row.add('aisle');
+        } else {
+          row.add('seat');
+        }
+      }
+      return row;
+    });
+  }
+
+  String _cellLabel(int row, int col) {
+    final letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    final l = row < letters.length ? letters[row] : '${row + 1}';
+    return '$l${col + 1}';
+  }
+
+  int _totalSeats() {
+    int count = 0;
+    for (final row in _designerGrid) {
+      for (final cell in row) {
+        if (cell == 'seat') count++;
+      }
+    }
+    return count;
+  }
+
+  Widget _layoutsPage() => Scaffold(
+    backgroundColor: const Color(0xFF0D1B2A),
+    appBar: AppBar(
+      title: const Text('Seat Layouts'),
+      backgroundColor: OwnerButtonColors.seats,
+      foregroundColor: Colors.white,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () => _showLayoutDesigner(),
+        ),
+      ],
+    ),
+    body: _layoutsLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _layouts.isEmpty
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.event_seat,
+                  size: 48,
+                  color: Colors.white.withValues(alpha: 0.15),
+                ),
+                const Gap(12),
+                const Text(
+                  'No seat layouts yet',
+                  style: TextStyle(color: Color(0xFF8899AA)),
+                ),
+                const Gap(12),
+                ElevatedButton.icon(
+                  onPressed: () => _showLayoutDesigner(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Layout'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: OwnerButtonColors.seats,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          )
+        : ListView.builder(
+            padding: EdgeInsets.all(16.w),
+            itemCount: _layouts.length,
+            itemBuilder: (_, i) => _layoutCard(_layouts[i]),
+          ),
+  );
+
+  Widget _layoutCard(Map<String, dynamic> l) => Card(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+    color: const Color(0xFF1A2A3A),
+    child: Padding(
+      padding: EdgeInsets.all(14.w),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: OwnerButtonColors.seats.withValues(alpha: 0.15),
+            child: Icon(Icons.event_seat, color: OwnerButtonColors.seats),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l['display_name'] ?? 'Untitled',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  '${l['vehicle_class']} \u2022 ${l['total_seats'] ?? 0} seats \u2022 v${l['version_number'] ?? 1}',
+                  style: TextStyle(color: AppColors.gray500, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          _badge(l['layout_status'] ?? 'draft', OwnerButtonColors.seats),
+        ],
+        crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    ),
+  );
+
+  void _showLayoutDesigner() {
+    if (_designerGrid.isEmpty) _initDesigner('standard_45');
+    final nameCtl = TextEditingController();
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlgState) => AlertDialog(
-          backgroundColor: const Color(0xFF162438),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: color.withValues(alpha: 0.3)),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                isDriver ? Icons.badge_rounded : Icons.group_rounded,
-                color: color,
-                size: 24,
-              ),
-              const Gap(8),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+        builder: (ctx, setDlg) {
+          final seats = _totalSeats();
+          final totalCols = _designerLeftCols + 1 + _designerRightCols;
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF162438),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                const Icon(
+                  Icons.event_seat,
+                  color: Color(0xFF16A34A),
+                  size: 24,
                 ),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.close, color: _closeIconColor, size: 20),
-                onPressed: () => Navigator.pop(ctx),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 500,
-            child: Form(
-              key: formKey,
+                const Gap(8),
+                const Text(
+                  'Seat Layout Designer',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 700,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _formField(
-                      'Full Name *',
-                      nameCtl,
-                      Icons.person,
-                      required: true,
+                    // Preset selector
+                    Row(
+                      children: [
+                        const Text(
+                          'Preset:',
+                          style: TextStyle(
+                            color: Color(0xFF8899AA),
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Gap(8),
+                        DropdownButton<String>(
+                          value: _designerPreset,
+                          dropdownColor: const Color(0xFF162438),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                          items: _presets
+                              .map(
+                                (p) => DropdownMenuItem(
+                                  value: p['key'] as String,
+                                  child: Text(p['label'] as String),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) => setDlg(() => _initDesigner(v!)),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '$seats seats',
+                          style: const TextStyle(
+                            color: Color(0xFF00C49F),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    const Gap(10),
-                    _formField(
-                      'Email *',
-                      emailCtl,
-                      Icons.email,
-                      required: true,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const Gap(10),
-                    _formField(
-                      'Phone *',
-                      phoneCtl,
-                      Icons.phone,
-                      required: true,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const Gap(10),
-                    _formField('CNIC', cnicCtl, Icons.credit_card),
-                    const Gap(10),
-                    _formField(
-                      'Address',
-                      addressCtl,
-                      Icons.location_on,
-                      maxLines: 2,
-                    ),
-                    const Gap(10),
-                    if (isDriver) ...[
-                      _formField(
-                        'License Number *',
-                        licenseCtl,
-                        Icons.document_scanner,
-                        required: true,
+                    const Gap(4),
+                    Text(
+                      'Tap cells to toggle: Seat → Aisle → Empty',
+                      style: const TextStyle(
+                        color: Color(0xFF556677),
+                        fontSize: 11,
                       ),
-                      const Gap(10),
-                    ],
-                    _formField('Vehicle Plate', plateCtl, Icons.directions_bus),
-                    const Gap(10),
-                    _formField(
-                      'Salary',
-                      salaryCtl,
-                      Icons.attach_money,
-                      keyboardType: TextInputType.number,
                     ),
-                    const Gap(10),
-                    _formField(
-                      isEdit
-                          ? 'New Password (leave blank to keep)'
-                          : 'Password *',
-                      passCtl,
-                      Icons.lock,
-                      required: !isEdit,
-                      obscure: true,
+                    const Gap(12),
+                    // Legend
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _legend('Seat', OwnerButtonColors.seats),
+                        const Gap(16),
+                        _legend('Aisle', AppColors.gray500),
+                        const Gap(16),
+                        _legend('Empty', const Color(0xFF334455)),
+                      ],
+                    ),
+                    const Gap(12),
+                    // Grid canvas
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D1B2A),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF2A3A4A)),
+                      ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Column(
+                          children: [
+                            // Column headers
+                            Row(
+                              children: [
+                                const SizedBox(width: 40),
+                                for (int c = 0; c < totalCols; c++)
+                                  SizedBox(
+                                    width: c == _designerLeftCols ? 48 : 44,
+                                    child: Center(
+                                      child: Text(
+                                        c == _designerLeftCols
+                                            ? '\u2195'
+                                            : '${c + 1}',
+                                        style: const TextStyle(
+                                          color: Color(0xFF667788),
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const Gap(4),
+                            // Rows
+                            for (int r = 0; r < _designerRows; r++)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 3),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 40,
+                                      child: Center(
+                                        child: Text(
+                                          '${r + 1}',
+                                          style: const TextStyle(
+                                            color: Color(0xFF667788),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    for (int c = 0; c < totalCols; c++)
+                                      GestureDetector(
+                                        onTap: () => setDlg(() {
+                                          final cur = _designerGrid[r][c];
+                                          if (cur == 'seat') {
+                                            _designerGrid[r][c] = 'aisle';
+                                          } else if (cur == 'aisle') {
+                                            _designerGrid[r][c] = 'empty';
+                                          } else {
+                                            _designerGrid[r][c] = 'seat';
+                                          }
+                                        }),
+                                        child: Container(
+                                          width: c == _designerLeftCols
+                                              ? 48
+                                              : 44,
+                                          height: 36,
+                                          margin: const EdgeInsets.all(1.5),
+                                          decoration: BoxDecoration(
+                                            color: _designerGrid[r][c] == 'seat'
+                                                ? OwnerButtonColors.seats
+                                                      .withValues(alpha: 0.6)
+                                                : _designerGrid[r][c] == 'aisle'
+                                                ? AppColors.gray500.withValues(
+                                                    alpha: 0.3,
+                                                  )
+                                                : const Color(
+                                                    0xFF334455,
+                                                  ).withValues(alpha: 0.2),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            border: Border.all(
+                                              color:
+                                                  _designerGrid[r][c] == 'seat'
+                                                  ? OwnerButtonColors.seats
+                                                  : _designerGrid[r][c] ==
+                                                        'aisle'
+                                                  ? AppColors.gray500
+                                                        .withValues(alpha: 0.5)
+                                                  : const Color(
+                                                      0xFF334455,
+                                                    ).withValues(alpha: 0.3),
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: _designerGrid[r][c] == 'seat'
+                                                ? Text(
+                                                    _cellLabel(r, c),
+                                                    style: TextStyle(
+                                                      color: Colors.white
+                                                          .withValues(
+                                                            alpha: 0.8,
+                                                          ),
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  )
+                                                : _designerGrid[r][c] == 'aisle'
+                                                ? const Icon(
+                                                    Icons.remove,
+                                                    size: 10,
+                                                    color: Color(0xFF667788),
+                                                  )
+                                                : null,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Gap(12),
+                    // Layout name
+                    TextField(
+                      controller: nameCtl,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Layout Name *',
+                        labelStyle: const TextStyle(color: Color(0xFF8899AA)),
+                        filled: true,
+                        fillColor: const Color(0xFF0D1B2A),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF2A3A4A),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Color(0xFF8899AA)),
-              ),
-            ),
-            const Gap(8),
-            ElevatedButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) return;
-                      setDlgState(() => isLoading = true);
-                      try {
-                        final api = ApiService();
-                        final body = <String, dynamic>{
-                          'name': nameCtl.text.trim(),
-                          'email': emailCtl.text.trim(),
-                          'phone': phoneCtl.text.trim(),
-                          if (cnicCtl.text.isNotEmpty)
-                            'cnic': cnicCtl.text.trim(),
-                          if (addressCtl.text.isNotEmpty)
-                            'address': addressCtl.text.trim(),
-                          if (isDriver)
-                            'license_number': licenseCtl.text.trim(),
-                          if (plateCtl.text.isNotEmpty)
-                            'vehicle_plate': plateCtl.text.trim(),
-                          if (salaryCtl.text.isNotEmpty)
-                            'salary':
-                                double.tryParse(salaryCtl.text.trim()) ?? 0,
-                        };
-                        if (!isEdit || passCtl.text.isNotEmpty)
-                          body['password'] = passCtl.text;
-
-                        final endpoint = isEdit
-                            ? '/bus-owner/$role/${existing!['id']}'
-                            : '/bus-owner/$role';
-                        final res = isEdit
-                            ? await api.put(endpoint, body: body)
-                            : await api.post(endpoint, body: body);
-
-                        if (res != null && res['success'] == true) {
-                          Navigator.pop(ctx);
-                          if (isDriver)
-                            _loadDrivers();
-                          else
-                            _loadConductors();
-                          _loadAll();
-                          _showSnack(
-                            '${isEdit ? "Updated" : "Created"} successfully',
-                            Colors.green,
-                          );
-                        } else {
-                          _showSnack(res?['message'] ?? 'Failed', Colors.red);
-                        }
-                      } catch (e) {
-                        _showSnack(
-                          'Error: ${e.toString().replaceAll("Exception: ", "")}',
-                          Colors.red,
-                        );
-                      }
-                      setDlgState(() => isLoading = false);
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Color(0xFF8899AA)),
                 ),
               ),
-              child: isLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text(
-                      'Save',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-            ),
-          ],
-        ),
+              ElevatedButton(
+                onPressed: () async {
+                  final name = nameCtl.text.trim();
+                  if (name.isEmpty) {
+                    _snack('Please enter a layout name', AppColors.error);
+                    return;
+                  }
+                  try {
+                    await ApiService().post(
+                      '/bus-owner/layouts',
+                      data: {
+                        'display_name': name,
+                        'vehicle_class': _designerPreset ?? 'standard_45',
+                      },
+                    );
+                    Navigator.pop(ctx);
+                    _loadLayouts();
+                    _snack('Layout created', AppColors.success);
+                  } catch (e) {
+                    _snack('Error: $e', AppColors.error);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: OwnerButtonColors.seats,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Save Layout'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _formField(
-    String label,
-    TextEditingController ctl,
-    IconData icon, {
-    bool required = false,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-    bool obscure = false,
-  }) => TextFormField(
-    controller: ctl,
-    obscureText: obscure,
-    maxLines: maxLines,
-    keyboardType: keyboardType,
-    style: const TextStyle(color: Colors.white, fontSize: 13),
-    decoration: InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Color(0xFF8899AA), fontSize: 12),
-      prefixIcon: Icon(icon, color: const Color(0xFF556677), size: 18),
-      filled: true,
-      fillColor: const Color(0xFF0D1B2A),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFF00C49F)),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFEF4444)),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-    ),
-    validator: required
-        ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
-        : null,
-  );
-
-  void _confirmDeleteStaff(String role, String id, String name) => showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: const Color(0xFF162438),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
-        'Confirm Delete',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      content: Text(
-        'Delete "$name"? This is reversible (soft-delete).',
-        style: const TextStyle(color: Color(0xFF8899AA), fontSize: 13),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text(
-            'Cancel',
-            style: TextStyle(color: Color(0xFF8899AA)),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(ctx);
-            try {
-              final api = ApiService();
-              final res = await api.delete('/bus-owner/$role/$id');
-              if (res != null && res['success'] == true) {
-                if (role == 'driver')
-                  _loadDrivers();
-                else
-                  _loadConductors();
-                _loadAll();
-                _showSnack('Deleted', Colors.green);
-              }
-            } catch (e) {
-              _showSnack('Error: ${e.toString()}', Colors.red);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFEF4444),
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Delete'),
-        ),
-      ],
-    ),
-  );
-
-  // ═══════════════════════════════════════════════════════
-  // LAYOUTS PAGE
-  // ═══════════════════════════════════════════════════════
-
-  Widget _buildLayoutsPage() => Column(
+  Widget _legend(String label, Color color) => Row(
+    mainAxisSize: MainAxisSize.min,
     children: [
       Container(
-        padding: const EdgeInsets.all(12),
-        color: const Color(0xFF162438),
-        child: Row(
-          children: [
-            const Expanded(child: SizedBox()),
-            _actionButton(
-              'Add Layout',
-              Icons.add,
-              const Color(0xFF16A34A),
-              () => _showLayoutForm(null),
-            ),
-          ],
+        width: 14,
+        height: 14,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(3),
         ),
       ),
-      Expanded(
-        child: _layouts.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.event_seat,
-                      size: 48,
-                      color: Colors.white.withValues(alpha: 0.15),
-                    ),
-                    const Gap(12),
-                    Text(
-                      'No seat layouts yet',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
-                        fontSize: 15,
-                      ),
-                    ),
-                    const Gap(8),
-                    _actionButton(
-                      'Create First Layout',
-                      Icons.add,
-                      const Color(0xFF16A34A),
-                      () => _showLayoutForm(null),
-                    ),
-                  ],
-                ),
-              )
-            : ScrollbarTheme(
-                data: _scrollbarTheme(),
-                child: Scrollbar(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _layouts.length,
-                    itemBuilder: (_, i) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _layoutCardExt(_layouts[i]),
-                    ),
-                  ),
-                ),
-              ),
+      const Gap(4),
+      Text(
+        label,
+        style: const TextStyle(color: Color(0xFF8899AA), fontSize: 10),
       ),
     ],
   );
 
-  Widget _layoutCardExt(Map<String, dynamic> layout) {
-    final vc = layout['vehicle_class']?.toString() ?? 'unknown';
-    final name = layout['display_name']?.toString() ?? 'Untitled';
-    final status = layout['layout_status']?.toString() ?? 'draft';
-    final version = layout['version_number'] ?? 1;
-    final seats = layout['total_seats'] ?? 0;
-    final id = layout['id']?.toString() ?? '';
+  // ═══ SHARED WIDGETS ═══
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2A3A),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF2A3A4A)),
+  Widget _tf(
+    TextEditingController c,
+    String l, {
+    bool obscure = false,
+    bool email = false,
+    bool phone = false,
+    bool number = false,
+    int maxLines = 1,
+  }) => TextField(
+    controller: c,
+    obscureText: obscure,
+    maxLines: maxLines,
+    keyboardType: email
+        ? TextInputType.emailAddress
+        : phone || number
+        ? TextInputType.phone
+        : TextInputType.text,
+    style: const TextStyle(color: Colors.white),
+    decoration: InputDecoration(
+      labelText: l,
+      labelStyle: const TextStyle(color: Color(0xFF8899AA)),
+      border: const OutlineInputBorder(),
+      enabledBorder: const OutlineInputBorder(
+        borderSide: BorderSide(color: Color(0xFF2A3A4A)),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: _green15,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.event_seat,
-              color: Color(0xFF16A34A),
-              size: 22,
-            ),
-          ),
-          const Gap(12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Gap(2),
-                Text(
-                  '$vc \u2022 $seats seats \u2022 v$version',
-                  style: const TextStyle(
-                    color: Color(0xFF667788),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: status == 'published' ? _green15 : _amber15,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              status.toUpperCase(),
-              style: TextStyle(
-                color: status == 'published'
-                    ? const Color(0xFF4ADE80)
-                    : const Color(0xFFFBBF24),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const Gap(8),
-          _iconBtn(
-            Icons.edit,
-            const Color(0xFF3B82F6),
-            () => _showLayoutForm(layout),
-          ),
-          const Gap(4),
-          _iconBtn(
-            Icons.delete,
-            const Color(0xFFEF4444),
-            () => _confirmDeleteLayout(id, name),
-          ),
-        ],
+      focusedBorder: const OutlineInputBorder(
+        borderSide: BorderSide(color: Color(0xFF00C49F)),
       ),
-    );
-  }
-
-  void _showLayoutForm(Map<String, dynamic>? existing) {
-    final isEdit = existing != null;
-    final nameCtl = TextEditingController(
-      text: existing?['display_name']?.toString() ?? '',
-    );
-    String selectedPreset =
-        existing?['vehicle_class']?.toString() ?? 'coach_54';
-    final formKey = GlobalKey<FormState>();
-    bool isLoading = false;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlgState) => AlertDialog(
-          backgroundColor: const Color(0xFF162438),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: _green3),
-          ),
-          title: Row(
-            children: [
-              const Icon(Icons.event_seat, color: Color(0xFF16A34A), size: 24),
-              const Gap(8),
-              Text(
-                isEdit ? 'Edit Layout' : 'Add Layout',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.close, color: _closeIconColor, size: 20),
-                onPressed: () => Navigator.pop(ctx),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 450,
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _formField(
-                    'Layout Name *',
-                    nameCtl,
-                    Icons.label,
-                    required: true,
-                  ),
-                  const Gap(14),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Bus Type',
-                      style: TextStyle(color: Color(0xFF8899AA), fontSize: 12),
-                    ),
-                  ),
-                  const Gap(6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D1B2A),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF2A3A4A)),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value:
-                            _layoutPresets.any(
-                              (p) => p['key'] == selectedPreset,
-                            )
-                            ? selectedPreset
-                            : 'coach_54',
-                        dropdownColor: const Color(0xFF162438),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                        ),
-                        isExpanded: true,
-                        items: _layoutPresets
-                            .map(
-                              (p) => DropdownMenuItem(
-                                value: p['key'],
-                                child: Text(
-                                  p['label']!,
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: isEdit
-                            ? null
-                            : (v) => setDlgState(() => selectedPreset = v!),
-                      ),
-                    ),
-                  ),
-                  if (_presetInfo(selectedPreset) != null) ...[
-                    const Gap(8),
-                    Text(
-                      _presetInfo(selectedPreset)!,
-                      style: const TextStyle(
-                        color: Color(0xFF667788),
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Color(0xFF8899AA)),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) return;
-                      setDlgState(() => isLoading = true);
-                      try {
-                        final api = ApiService();
-                        final body = <String, dynamic>{
-                          'display_name': nameCtl.text.trim(),
-                          'vehicle_class': selectedPreset,
-                        };
-                        final endpoint = isEdit
-                            ? '/bus-owner/layouts/${existing!['id']}'
-                            : '/bus-owner/layouts';
-                        final res = isEdit
-                            ? await api.put(endpoint, body: body)
-                            : await api.post(endpoint, body: body);
-                        if (res != null && res['success'] == true) {
-                          Navigator.pop(ctx);
-                          _loadLayouts();
-                          _loadAll();
-                          _showSnack(
-                            '${isEdit ? "Updated" : "Created"} successfully',
-                            Colors.green,
-                          );
-                        } else {
-                          _showSnack(res?['message'] ?? 'Failed', Colors.red);
-                        }
-                      } catch (e) {
-                        _showSnack(
-                          'Error: ${e.toString().replaceAll("Exception: ", "")}',
-                          Colors.red,
-                        );
-                      }
-                      setDlgState(() => isLoading = false);
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF16A34A),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: isLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text(
-                      'Save',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String? _presetInfo(String key) {
-    const map = {
-      'coach_54': '14 rows \u00d7 4 cols = 54 seats',
-      'standard_45': '12 rows \u00d7 4 cols = 45 seats',
-      'coaster_34': '9 rows \u00d7 4 cols = 34 seats',
-      'hiace_13': '4 rows \u00d7 3 cols = 13 seats',
-      'sleeper_custom': '10 rows \u00d7 2 cols = 20 sleeper berths',
-    };
-    return map[key];
-  }
-
-  void _confirmDeleteLayout(String id, String name) => showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: const Color(0xFF162438),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
-        'Archive Layout',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      content: Text(
-        'Archive "$name"? It can be restored later.',
-        style: const TextStyle(color: Color(0xFF8899AA), fontSize: 13),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text(
-            'Cancel',
-            style: TextStyle(color: Color(0xFF8899AA)),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(ctx);
-            try {
-              final api = ApiService();
-              final res = await api.delete('/bus-owner/layouts/$id');
-              if (res != null && res['success'] == true) {
-                _loadLayouts();
-                _loadAll();
-                _showSnack('Archived', Colors.green);
-              }
-            } catch (e) {
-              _showSnack('Error: ${e.toString()}', Colors.red);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFEF4444),
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Archive'),
-        ),
-      ],
     ),
   );
 
-  // ═══════════════════════════════════════════════════════
-  // LAYOUT CARD (compact, dashboard)
-  // ═══════════════════════════════════════════════════════
-
-  Widget _layoutCard(Map<String, dynamic> layout) {
-    final vc = layout['vehicle_class']?.toString() ?? 'unknown';
-    final name = layout['display_name']?.toString() ?? 'Untitled';
-    final status = layout['layout_status']?.toString() ?? 'draft';
-    final version = layout['version_number'] ?? 1;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2A3A),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF2A3A4A)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: _green15,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.event_seat,
-              color: Color(0xFF16A34A),
-              size: 20,
-            ),
-          ),
-          const Gap(12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Gap(2),
-                Text(
-                  '$vc \u2022 v$version \u2022 $status',
-                  style: const TextStyle(
-                    color: Color(0xFF667788),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: status == 'published' ? _green15 : _amber15,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              status.toUpperCase(),
-              style: TextStyle(
-                color: status == 'published'
-                    ? const Color(0xFF4ADE80)
-                    : const Color(0xFFFBBF24),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // HELPERS
-  // ═══════════════════════════════════════════════════════
-
-  ScrollbarThemeData _scrollbarTheme() => ScrollbarThemeData(
-    thumbVisibility: WidgetStateProperty.all(true),
-    trackVisibility: WidgetStateProperty.all(true),
-    thickness: WidgetStateProperty.all(10),
-    radius: const Radius.circular(5),
-    thumbColor: WidgetStateProperty.all(const Color(0xFF00C49F)),
-    trackColor: WidgetStateProperty.all(const Color(0xFF1A2A3A)),
+  Widget _chip(IconData i, String t) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(i, size: 13, color: AppColors.gray400),
+      SizedBox(width: 3.w),
+      Text(t, style: TextStyle(color: AppColors.gray500, fontSize: 11)),
+    ],
   );
 
-  void _showSnack(String msg, [Color? color]) {
+  Widget _badge(String s, Color color) => Container(
+    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(12.r),
+    ),
+    child: Text(
+      s.toUpperCase(),
+      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+    ),
+  );
+
+  void _snack(String msg, Color bg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          msg,
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-        ),
-        backgroundColor: color ?? const Color(0xFF333333),
+        content: Text(msg),
+        backgroundColor: bg,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         duration: const Duration(seconds: 3),
       ),
     );
