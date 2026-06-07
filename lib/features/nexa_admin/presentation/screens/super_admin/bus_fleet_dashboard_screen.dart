@@ -521,6 +521,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     final autoOpen = _pendingAddDialog == type;
     if (autoOpen) _pendingAddDialog = null;
     return _FleetListView(
+      key: ValueKey('fleet_$type'),
       type: type,
       autoOpenAddDialog: autoOpen,
       companyName: _company?.name,
@@ -921,6 +922,80 @@ class _FleetListViewState extends State<_FleetListView> {
     }
   }
 
+  Future<void> _showEditDialog(Map<String, dynamic> item) async {
+    final nameCtrl = TextEditingController(text: item['name'] ?? '');
+    final emailCtrl = TextEditingController(text: item['email'] ?? '');
+    final phoneCtrl = TextEditingController(text: item['phone'] ?? '');
+    final passCtrl = TextEditingController();
+    final isDriver = widget.type == 'drivers';
+    final licenseCtrl = TextEditingController(text: isDriver ? item['license_number'] ?? '' : '');
+    final plateCtrl = TextEditingController(text: isDriver ? item['vehicle_plate'] ?? '' : '');
+    final salaryCtrl = TextEditingController(text: isDriver ? '${item['salary'] ?? ''}' : '');
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Edit ${_capitalize(widget.type)}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _field(nameCtrl, 'Full Name'),
+              SizedBox(height: 10.h),
+              _field(emailCtrl, 'Email', email: true),
+              SizedBox(height: 10.h),
+              _field(phoneCtrl, 'Phone', phone: true),
+              SizedBox(height: 10.h),
+              _field(passCtrl, 'New Password (leave blank to keep)', obscure: true),
+              if (isDriver) ...[
+                SizedBox(height: 10.h),
+                _field(licenseCtrl, 'License Number'),
+                SizedBox(height: 10.h),
+                _field(plateCtrl, 'Vehicle Plate'),
+                SizedBox(height: 10.h),
+                _field(salaryCtrl, 'Salary', number: true),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    final body = <String, dynamic>{
+      'name': nameCtrl.text.trim(),
+      'email': emailCtrl.text.trim(),
+      'phone': phoneCtrl.text.trim(),
+    };
+    if (passCtrl.text.isNotEmpty) body['password'] = passCtrl.text;
+    if (isDriver) {
+      body['license_number'] = licenseCtrl.text.trim();
+      if (plateCtrl.text.isNotEmpty) body['vehicle_plate'] = plateCtrl.text.trim();
+      if (salaryCtrl.text.isNotEmpty) body['salary'] = double.tryParse(salaryCtrl.text);
+    }
+
+    try {
+      final id = item['id'] as String;
+      await ApiService().put('$_endpoint/$id', data: body);
+      _load();
+      widget.onDataChanged();
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${_capitalize(widget.type)} updated'), backgroundColor: AppColors.success),
+        );
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+        );
+    }
+  }
+
   Future<void> _confirmDelete(String id, String name) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -1107,7 +1182,11 @@ class _FleetListViewState extends State<_FleetListView> {
               const PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
             onSelected: (v) {
-              if (v == 'delete') _confirmDelete(item['id'], item['name'] ?? '');
+              if (v == 'edit') {
+                _showEditDialog(item);
+              } else if (v == 'delete') {
+                _confirmDelete(item['id'] as String, item['name'] as String? ?? '');
+              }
             },
           ),
         ],
