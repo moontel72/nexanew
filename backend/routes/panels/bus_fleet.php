@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::prefix('api/v1/bus-fleet')
-    ->middleware(['auth:sanctum'])
+    ->middleware(['auth:sanctum', 'bus.fleet'])
     ->group(function (): void {
 
         // Company Profile (Dashboard) — resolved via identity spine
@@ -192,55 +192,3 @@ Route::prefix('api/v1/bus-fleet')
             Route::get('{plate}', [\App\Http\Controllers\BusShiftController::class, 'getShiftRoster']);
         });
     });
-
-// ================================================================
-// PUBLIC: Bus Fleet Staff Login gates (no auth) — independent apps
-// Each endpoint is its own Flutter build login gate.
-// staff_type + driver_type are hardcoded by the route, not sent by the client.
-// ================================================================
-Route::post('api/v1/bus-fleet/owner-login',     [\App\Http\Controllers\Tenant\AccountEngineController::class, 'busOwnerLogin']);
-Route::post('api/v1/bus-fleet/driver-login',    [\App\Http\Controllers\Tenant\AccountEngineController::class, 'busDriverLogin']);
-Route::post('api/v1/bus-fleet/conductor-login', [\App\Http\Controllers\Tenant\AccountEngineController::class, 'busConductorLogin']);
-
-// PUBLIC: Owner dashboard profile - validates Bearer token manually
-Route::get('api/v1/bus-fleet/owner/profile', function (\Illuminate\Http\Request $request) {
-    $token = $request->bearerToken();
-    if (!$token) {
-        return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
-    }
-    $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
-    if (!$accessToken || !$accessToken->tokenable) {
-        return response()->json(['status' => 'error', 'message' => 'Invalid token.'], 401);
-    }
-    $owner = $accessToken->tokenable;
-    return response()->json([
-        'status' => 'success',
-        'data' => [
-            'id' => $owner->id,
-            'account_name' => $owner->account_name,
-            'email' => $owner->email ?? '',
-            'phone' => $owner->phone_number ?? '',
-            'account_type' => $owner->account_type ?? 'bus_owner',
-            'status' => $owner->status ?? 'active',
-            'active_buses' => 0,
-            'daily_revenue' => 0,
-        ],
-    ]);
-});
-
-// PUBLIC: Driver/Conductor profile - validates Bearer token for any staff
-Route::get('api/v1/bus-fleet/staff/profile', function (\Illuminate\Http\Request $request) {
-    $token = $request->bearerToken();
-    if (!$token) return response()->json(['status'=>'error','message'=>'Unauthenticated.'], 401);
-    $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
-    if (!$accessToken || !$accessToken->tokenable) return response()->json(['status'=>'error','message'=>'Invalid token.'], 401);
-    $staff = $accessToken->tokenable;
-    return response()->json([
-        'status'=>'success',
-        'data'=>[
-            'id'=>$staff->id,'account_name'=>$staff->account_name,
-            'email'=>$staff->email??'','phone'=>$staff->phone_number??'',
-            'account_type'=>$staff->account_type??'staff','status'=>$staff->status??'active',
-        ],
-    ]);
-});

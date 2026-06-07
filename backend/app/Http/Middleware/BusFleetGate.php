@@ -8,22 +8,21 @@ use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * NEXATRACE — BUS FLEET GATE MIDDLEWARE
- * ======================================
+ * NEXATRACE — BUS FLEET GATE MIDDLEWARE (v2)
+ * ===========================================
  *
- * Ensures the authenticated user has a valid bus fleet assignment
+ * Ensures the authenticated user has a valid bus fleet context
  * before allowing access to bus-fleet panel routes.
  *
  * - Master admins pass through unconditionally.
- * - Other users must have an active/pending fleet_assignments row
- *   with role='owner' and fleet_type='bus'.
+ * - Bus company tenants pass through with carrier_company_id = own id.
+ * - Owner/driver/conductor users must have active fleet_assignments.
  * - Attaches _carrier_company_id to the request for downstream controllers.
+ *
+ * Per §10.1 / §10.4 of NEXATRACE_SUPREME_MASTER_SPEC.md
  */
 class BusFleetGate
 {
-    /**
-     * Handle an incoming request.
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
@@ -32,16 +31,22 @@ class BusFleetGate
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        // Allow master admins through
-        if ($user->account_type === 'master_admin') {
+        // Master admin passes through (sees all)
+        if (($user->account_type ?? null) === 'master_admin') {
             return $next($request);
         }
 
-        // Check if user has a bus fleet owner assignment
+        // The user IS a bus company tenant — carrier_company_id = own id
+        if (($user->account_type ?? null) === 'bus_company') {
+            $request->merge(['_carrier_company_id' => $user->id]);
+            return $next($request);
+        }
+
+        // Otherwise must hold an owner/driver/conductor assignment in bus fleet
         $assignment = DB::table('fleet_assignments')
             ->where('global_identity_id', $user->global_identity_id)
-            ->where('role', 'owner')
             ->where('fleet_type', 'bus')
+            ->whereIn('role', ['owner', 'driver', 'conductor'])
             ->whereIn('status', ['active', 'pending_acceptance'])
             ->first();
 
@@ -52,9 +57,7 @@ class BusFleetGate
             ], 403);
         }
 
-        // Attach carrier_company_id for downstream use
         $request->merge(['_carrier_company_id' => $assignment->carrier_company_id]);
-
         return $next($request);
     }
 }

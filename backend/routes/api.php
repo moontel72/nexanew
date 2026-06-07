@@ -107,6 +107,13 @@ $registerRoutes = function (): void {
                 Route::patch("{id}/restore", [\App\Http\Controllers\Admin\SubAdminBusCompanyController::class, "restore"]);
             });
 
+            /// Identity Portability — Assignment Transfer (§10.11.2)
+            Route::prefix("assignments")->group(function (): void {
+                Route::post("{id}/transfer", [\App\Http\Controllers\Tenant\AssignmentTransferController::class, "transfer"]);
+                Route::post("{id}/accept",   [\App\Http\Controllers\Tenant\AssignmentTransferController::class, "accept"]);
+                Route::get("history/{globalIdentityId}", [\App\Http\Controllers\Tenant\AssignmentTransferController::class, "history"]);
+            });
+
             Route::prefix("dashboard")->group(function (): void {
                 Route::get("", [
                     \App\Http\Controllers\Admin\AdminDashboardController::class,

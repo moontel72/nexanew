@@ -33,13 +33,25 @@ class FleetManagementController extends Controller
     /** Resolve the carrier company ID from the authenticated user's assignment. */
     private function carrierCompanyId(Request $request): ?string
     {
-        // Try middleware-provided value first
+        // 1. Middleware-provided value wins
         $cid = $request->get('_carrier_company_id');
         if ($cid) return $cid;
 
-        // Self-resolve from user's fleet_assignments (for fleet owners)
         $user = $request->user();
-        if ($user && ($user->global_identity_id ?? null)) {
+        if (!$user) return null;
+
+        // 2. Master admin sees ALL — no filter
+        if (($user->account_type ?? null) === 'master_admin') {
+            return null;
+        }
+
+        // 3. The user IS the carrier company tenant
+        if (in_array($user->account_type ?? null, ['bus_company', 'truck_company'], true)) {
+            return $user->id;
+        }
+
+        // 4. The user is an OWNER assigned TO a carrier — show that carrier's staff
+        if (($user->global_identity_id ?? null)) {
             $cid = DB::table('fleet_assignments')
                 ->where('global_identity_id', $user->global_identity_id)
                 ->where('role', 'owner')
@@ -49,17 +61,8 @@ class FleetManagementController extends Controller
             if ($cid) return $cid;
         }
 
-        // Master admin sees ALL — no company filter
-        if ($user && $user->account_type === 'master_admin') {
-            return null; // null = no filter, show all staff
-        }
-
-        // User IS the bus company → own tenant account id is the company context
-        if ($user && $user->account_type === 'bus_company') {
-            return $user->id;
-        }
-
-        return null;
+        // 5. No resolution → DENY (returns zero rows, not all rows)
+        return '00000000-0000-0000-0000-000000000000';
     }
 
     /** Detect fleet_type from request path. */

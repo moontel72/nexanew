@@ -11,34 +11,16 @@ use Illuminate\Support\Facades\Hash;
 
 class AccountEngineController extends Controller
 {
-    /** POST /api/v1/tenants/register-sub-owner */
+    /**
+     * DEPRECATED — Greenfield purge per spec §10.1.
+     * Use FleetManagementController::storeOwner instead.
+     */
     public function registerSubOwner(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $parentId = $request->input('parent_account_id') ?? $user->tenant_account_id;
-
-        $validated = $request->validate([
-            'account_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:tenant_accounts,email'],
-            'password' => ['required', 'string', 'min:8'],
-            'phone_number' => ['nullable', 'string', 'max:50'],
-        ]);
-
-        $tenant = TenantAccount::create([
-            'account_name' => $validated['account_name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'phone_number' => $validated['phone_number'] ?? null,
-            'parent_account_id' => $parentId,
-            'is_independent' => false,
-            'account_type' => 'bus_owner',
-            'status' => 'active',
-        ]);
-
         return response()->json([
-            'status' => 'success', 'message' => 'Sub-owner registered.',
-            'data' => ['id' => $tenant->id, 'account_name' => $tenant->account_name],
-        ], 201);
+            'status'  => 'error',
+            'message' => 'This endpoint has been deprecated. Use /api/v1/bus-fleet/owners to register fleet staff via the identity spine.',
+        ], 410);
     }
 
     /** GET /api/v1/tenants/fleet-data */
