@@ -599,21 +599,115 @@ class BusOwnerController extends Controller
     public function storeLayout(Request $request): JsonResponse
     {
         try {
+            // Detect format: preset-based or grid-based
+            if ($request->has('vehicle_class')) {
+                // Preset format — delegate to LayoutService
+                $data = $request->validate([
+                    'vehicle_class' => ['required', 'string', 'in:coach_54,standard_45,coaster_34,hiace_13,sleeper_custom'],
+                    'display_name'  => ['required', 'string', 'max:160'],
+                    'deck_level'    => ['nullable', 'integer', 'in:0,1'],
+                ]);
+
+                $result = $this->layouts->createLayout(
+                    ownerIdentityId: $this->ownerIdentityId($request),
+                    companyId: $this->ownerTenantId($request),
+                    vehicleClass: $data['vehicle_class'],
+                    displayName: $data['display_name'],
+                    deckLevel: (int) ($data['deck_level'] ?? 0),
+                );
+
+                return response()->json(['success' => true, 'data' => $result], 201);
+            }
+
+            // Grid-based format (custom blank-slate builder)
             $data = $request->validate([
-                'vehicle_class' => ['required', 'string', 'in:coach_54,standard_45,coaster_34,hiace_13,sleeper_custom'],
-                'display_name'  => ['required', 'string', 'max:160'],
-                'deck_level'    => ['nullable', 'integer', 'in:0,1'],
+                'bus_plate'        => ['required', 'string', 'max:50'],
+                'bus_brand'        => ['required', 'string', 'max:100'],
+                'bus_category'     => ['required', 'string', 'max:50'],
+                'total_rows'       => ['required', 'integer', 'min:3', 'max:20'],
+                'total_cols'       => ['required', 'integer', 'min:2', 'max:8'],
+                'aisle_after_col'  => ['required', 'integer', 'min:0'],
+                'grid'             => ['required', 'array'],
             ]);
 
-            $result = $this->layouts->createLayout(
-                ownerIdentityId: $this->ownerIdentityId($request),
-                companyId: $this->ownerTenantId($request),
-                vehicleClass: $data['vehicle_class'],
-                displayName: $data['display_name'],
-                deckLevel: (int) ($data['deck_level'] ?? 0),
-            );
+            $identityId = $this->ownerIdentityId($request);
+            $tenantId   = $this->ownerTenantId($request);
 
-            return response()->json(['success' => true, 'data' => $result], 201);
+            $seatCount = 0;
+            $driverCount = 0;
+            $cells = [];
+            foreach ($data['grid'] as $row) {
+                $rowCells = [];
+                foreach ((array) $row as $cell) {
+                    $type = $cell['type'] ?? 'empty';
+                    if ($type === 'seat' || $type === 'folding') $seatCount++;
+                    if ($type === 'driver') $driverCount++;
+                    $rowCells[] = [
+                        'type'   => $type,
+                        'label'  => $cell['label'] ?? '',
+                        'seat_id'=> $cell['seat_id'] ?? null,
+                    ];
+                }
+                $cells[] = $rowCells;
+            }
+
+            $snapshot = [
+                'bus_plate'       => $data['bus_plate'],
+                'bus_brand'       => $data['bus_brand'],
+                'bus_category'    => $data['bus_category'],
+                'total_rows'      => (int) $data['total_rows'],
+                'total_cols'      => (int) $data['total_cols'],
+                'aisle_after_col' => (int) $data['aisle_after_col'],
+                'total_seats'     => $seatCount,
+                'driver_seats'    => $driverCount,
+                'grid'            => $cells,
+                'created_from'    => 'custom_builder',
+            ];
+
+            $displayName = $data['bus_plate'] . ' — ' . $data['bus_brand'] . ' ' . $data['bus_category'];
+            $layoutId = (string) Str::orderedUuid();
+
+            DB::table('transport_bus_layouts')->insert([
+                'id'                  => $layoutId,
+                'bus_id'              => $layoutId,
+                'owner_id'            => 1,
+                'owner_identity_id'   => $identityId,
+                'carrier_company_id'  => $tenantId,
+                'vehicle_class'       => $data['bus_category'],
+                'display_name'        => $displayName,
+                'total_rows'          => (int) $data['total_rows'],
+                'left_columns'        => (int) $data['aisle_after_col'],
+                'right_columns'       => (int) $data['total_cols'] - (int) $data['aisle_after_col'] - 1,
+                'driver_seats'        => $driverCount,
+                'raw_grid_json'       => json_encode($cells),
+                'is_active'           => true,
+                'is_locked_sovereign' => true,
+                'version_number'      => 1,
+                'layout_status'       => 'draft',
+                'current_snapshot'    => json_encode($snapshot),
+                'deck_level'          => 0,
+                'created_at'          => now(),
+                'updated_at'          => now(),
+            ]);
+
+            Log::info('BusOwner: custom layout created', [
+                'layout_id' => $layoutId,
+                'plate'     => $data['bus_plate'],
+                'seats'     => $seatCount,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'id'              => $layoutId,
+                    'display_name'    => $displayName,
+                    'bus_plate'       => $data['bus_plate'],
+                    'layout_status'   => 'draft',
+                    'version_number'  => 1,
+                    'total_seats'     => $seatCount,
+                ],
+            ], 201);
+
         } catch (\RuntimeException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
