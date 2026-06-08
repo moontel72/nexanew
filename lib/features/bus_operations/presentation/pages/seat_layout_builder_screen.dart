@@ -80,7 +80,8 @@ class SeatLayoutBuilderScreen extends StatefulWidget {
   });
 
   @override
-  State<SeatLayoutBuilderScreen> createState() => _SeatLayoutBuilderScreenState();
+  State<SeatLayoutBuilderScreen> createState() =>
+      _SeatLayoutBuilderScreenState();
 }
 
 class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
@@ -108,7 +109,13 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
       appBar: AppBar(
-        title: Text(_step == 0 ? 'New Seat Layout' : _step == 1 ? 'Assign Seats' : 'Saving...'),
+        title: Text(
+          _step == 0
+              ? 'New Seat Layout'
+              : _step == 1
+              ? 'Assign Seats'
+              : 'Saving...',
+        ),
         backgroundColor: const Color(0xFF162438),
         foregroundColor: Colors.white,
         leading: IconButton(
@@ -126,7 +133,10 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             TextButton.icon(
               onPressed: _saving ? null : _saveLayout,
               icon: const Icon(Icons.save, color: Color(0xFF4ADE80)),
-              label: const Text('Save', style: TextStyle(color: Color(0xFF4ADE80))),
+              label: const Text(
+                'Save',
+                style: TextStyle(color: Color(0xFF4ADE80)),
+              ),
             ),
         ],
       ),
@@ -141,32 +151,79 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Bus Information',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+          const Text(
+            'Bus Information',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
-          const Text('Enter the details of your vehicle',
-              style: TextStyle(color: Color(0xFF8899AA), fontSize: 13)),
+          const Text(
+            'Enter the details of your vehicle',
+            style: TextStyle(color: Color(0xFF8899AA), fontSize: 13),
+          ),
           const SizedBox(height: 24),
 
-          _inputField(_plateCtl, 'Bus Registration / Number Plate *', 'e.g. LES-26-1122', Icons.directions_bus),
+          _inputField(
+            _plateCtl,
+            'Bus Registration / Number Plate *',
+            'e.g. LES-26-1122',
+            Icons.directions_bus,
+          ),
           const SizedBox(height: 14),
-          _inputField(_brandCtl, 'Manufacturer / Brand', 'e.g. Daewoo, Yutong, Higer', Icons.factory),
+          _inputField(
+            _brandCtl,
+            'Manufacturer / Brand',
+            'e.g. Daewoo, Yutong, Higer',
+            Icons.factory,
+          ),
           const SizedBox(height: 14),
-          _inputField(_modelCtl, 'Bus Model / Category', 'e.g. Executive 2+1, Business 3+2, Luxury Sleeper', Icons.category),
+          _inputField(
+            _modelCtl,
+            'Bus Model / Category',
+            'e.g. Executive 2+1, Business 3+2, Luxury Sleeper',
+            Icons.category,
+          ),
           const SizedBox(height: 24),
 
-          const Text('Canvas Dimensions',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+          const Text(
+            'Canvas Dimensions',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
-          const Text('Define your grid size (e.g. 12 rows × 5 cols for 3+2)',
-              style: TextStyle(color: Color(0xFF8899AA), fontSize: 13)),
+          const Text(
+            'Define your grid size (e.g. 12 rows × 5 cols for 3+2)',
+            style: TextStyle(color: Color(0xFF8899AA), fontSize: 13),
+          ),
           const SizedBox(height: 16),
 
           Row(
             children: [
-              Expanded(child: _numberField('Rows', _rows, 3, 20, (v) => setState(() => _rows = v))),
+              Expanded(
+                child: _numberField(
+                  'Rows',
+                  _rows,
+                  3,
+                  20,
+                  (v) => setState(() => _rows = v),
+                ),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: _numberField('Columns', _cols, 2, 8, (v) => setState(() => _cols = v))),
+              Expanded(
+                child: _numberField(
+                  'Columns',
+                  _cols,
+                  2,
+                  8,
+                  (v) => setState(() => _cols = v),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -177,8 +234,10 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFF2A3A4A)),
             ),
-            child: Text('Grid: $_rows rows × $_cols columns = ${_rows * _cols} total cells',
-                style: const TextStyle(color: Color(0xFF8899AA), fontSize: 13)),
+            child: Text(
+              'Grid: $_rows rows × $_cols columns = ${_rows * _cols} total cells',
+              style: const TextStyle(color: Color(0xFF8899AA), fontSize: 13),
+            ),
           ),
           const SizedBox(height: 32),
 
@@ -197,11 +256,16 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                 setState(() => _step = 1);
               },
               icon: const Icon(Icons.grid_view),
-              label: const Text('Generate Blank Canvas', style: TextStyle(fontSize: 16)),
+              label: const Text(
+                'Generate Blank Canvas',
+                style: TextStyle(fontSize: 16),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF7C3AED),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -214,6 +278,28 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   Widget _buildGridStep() {
     return Column(
       children: [
+        // Back button row
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            children: [
+              TextButton.icon(
+                onPressed: () => setState(() => _step = 0),
+                icon: const Icon(Icons.arrow_back, size: 18),
+                label: const Text('Back to Details'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFAABBCC),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${_plateCtl.text} — ${_brandCtl.text} ${_modelCtl.text}',
+                style: const TextStyle(color: Color(0xFF667788), fontSize: 11),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
         // Legend bar
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -222,25 +308,39 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                const Text('Tap cells to assign →   ',
-                    style: TextStyle(color: Color(0xFF8899AA), fontSize: 11)),
+                const Text(
+                  'Tap cells to assign →   ',
+                  style: TextStyle(color: Color(0xFF8899AA), fontSize: 11),
+                ),
                 ...BuilderCellType.values
                     .where((t) => t != BuilderCellType.empty)
-                    .map((t) => Padding(
-                          padding: const EdgeInsets.only(right: 10),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    .map(
+                      (t) => Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             Container(
-                              width: 12, height: 12,
+                              width: 12,
+                              height: 12,
                               decoration: BoxDecoration(
-                                color: (_cellColors[t] ?? Colors.grey).withAlpha(180),
+                                color: (_cellColors[t] ?? Colors.grey)
+                                    .withAlpha(180),
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
                             const SizedBox(width: 3),
-                            Text(_cellLabels[t]?.split('(').first.trim() ?? '',
-                                style: const TextStyle(color: Color(0xFFAABBCC), fontSize: 10)),
-                          ]),
-                        )),
+                            Text(
+                              _cellLabels[t]?.split('(').first.trim() ?? '',
+                              style: const TextStyle(
+                                color: Color(0xFFAABBCC),
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
               ],
             ),
           ),
@@ -249,17 +349,39 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           color: const Color(0xFF0A1625),
-          child: Row(children: [
-            _statBadge('Seats', _countType(BuilderCellType.seat), const Color(0xFF7C3AED)),
-            const SizedBox(width: 12),
-            _statBadge('Folding', _countType(BuilderCellType.foldingSeat), const Color(0xFF06B6D4)),
-            const SizedBox(width: 12),
-            _statBadge('Berths', _countType(BuilderCellType.sleeperLower) + _countType(BuilderCellType.sleeperUpper), const Color(0xFFDB2777)),
-            const SizedBox(width: 12),
-            _statBadge('Aisle cols', _countType(BuilderCellType.aisle), const Color(0xFF64748B)),
-            const Spacer(),
-            Text('${_rows}×$_cols', style: const TextStyle(color: Color(0xFF667788), fontSize: 11)),
-          ]),
+          child: Row(
+            children: [
+              _statBadge(
+                'Seats',
+                _countType(BuilderCellType.seat),
+                const Color(0xFF7C3AED),
+              ),
+              const SizedBox(width: 12),
+              _statBadge(
+                'Folding',
+                _countType(BuilderCellType.foldingSeat),
+                const Color(0xFF06B6D4),
+              ),
+              const SizedBox(width: 12),
+              _statBadge(
+                'Berths',
+                _countType(BuilderCellType.sleeperLower) +
+                    _countType(BuilderCellType.sleeperUpper),
+                const Color(0xFFDB2777),
+              ),
+              const SizedBox(width: 12),
+              _statBadge(
+                'Aisle cols',
+                _countType(BuilderCellType.aisle),
+                const Color(0xFF64748B),
+              ),
+              const Spacer(),
+              Text(
+                '${_rows}×$_cols',
+                style: const TextStyle(color: Color(0xFF667788), fontSize: 11),
+              ),
+            ],
+          ),
         ),
         // Grid
         Expanded(
@@ -283,7 +405,11 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                             child: Center(
                               child: Text(
                                 String.fromCharCode(65 + c),
-                                style: const TextStyle(color: Color(0xFFAABBCC), fontSize: 13, fontWeight: FontWeight.w700),
+                                style: const TextStyle(
+                                  color: Color(0xFFAABBCC),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),
@@ -299,8 +425,13 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                             SizedBox(
                               width: 48,
                               child: Center(
-                                child: Text('${r + 1}',
-                                    style: const TextStyle(color: Color(0xFF8899AA), fontSize: 12)),
+                                child: Text(
+                                  '${r + 1}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF8899AA),
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
                             ),
                             for (int c = 0; c < _cols; c++)
@@ -343,79 +474,86 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (isEmpty)
-            Icon(Icons.add_circle_outline, size: 16, color: const Color(0xFF445566))
+            Icon(
+              Icons.add_circle_outline,
+              size: 16,
+              color: const Color(0xFF445566),
+            )
           else
             Icon(icon, size: 16, color: color),
           if (cell.label != null && cell.label!.isNotEmpty)
-            Text(cell.label!, style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w700)),
+            Text(
+              cell.label!,
+              style: TextStyle(
+                color: color,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
         ],
       ),
     );
   }
 
-  // ── Cell Assignment Sheet ──────────────────────────
+  // ── Cell Assignment Dialog (centered, fully scrollable) ──
   void _openCellPicker(int row, int col) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.55,
-        minChildSize: 0.3,
-        maxChildSize: 0.85,
-        builder: (ctx, scrollCtrl) => Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF1A2A3A),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Handle
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(color: const Color(0xFF445566), borderRadius: BorderRadius.circular(2)),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A2A3A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.touch_app, color: Color(0xFF7C3AED), size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Assign Row $row, Col ${String.fromCharCode(65 + col)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(children: [
-                  const Icon(Icons.touch_app, color: Color(0xFF7C3AED), size: 20),
-                  const SizedBox(width: 8),
-                  Text('Assign Row $row, Column ${String.fromCharCode(65 + col)}',
-                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
-                  const Spacer(),
-                  if (_grid[row][col].type != BuilderCellType.empty)
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _grid[row][col] = _GridCell();
-                        });
-                        _renumberSeats();
-                        Navigator.pop(ctx);
-                      },
-                      child: const Text('Clear', style: TextStyle(color: Color(0xFFEF4444))),
-                    ),
-                ]),
-              ),
-              const Divider(color: Color(0x20FFFFFF)),
-              // Scrollable options list
-              Expanded(
-                child: ListView(
-                  controller: scrollCtrl,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  children: [
-                    for (final type in BuilderCellType.values)
-                      if (type != BuilderCellType.empty)
-                        _optionTile(ctx, type, row, col),
-                    const SizedBox(height: 16),
-                  ],
+            ),
+            if (_grid[row][col].type != BuilderCellType.empty)
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _grid[row][col] = _GridCell();
+                    _renumberSeats();
+                  });
+                  Navigator.pop(ctx);
+                },
+                child: const Text(
+                  'Clear',
+                  style: TextStyle(color: Color(0xFFEF4444)),
                 ),
               ),
-            ],
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+        content: SizedBox(
+          width: 380,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 500),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final type in BuilderCellType.values)
+                    if (type != BuilderCellType.empty)
+                      _optionTile(ctx, type, row, col),
+                ],
+              ),
+            ),
           ),
         ),
+        contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
       ),
     );
   }
@@ -430,7 +568,9 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       color: isSelected ? color.withAlpha(25) : const Color(0xFF112233),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: isSelected ? color.withAlpha(100) : const Color(0xFF2A3A4A)),
+        side: BorderSide(
+          color: isSelected ? color.withAlpha(100) : const Color(0xFF2A3A4A),
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -444,33 +584,72 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(children: [
-            Container(
-              width: 38, height: 38,
-              decoration: BoxDecoration(color: color.withAlpha(30), borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, size: 20, color: color),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label, style: TextStyle(color: isSelected ? color : Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                if (type == BuilderCellType.foldingSeat)
-                  const Text('2-in-1 Coaster seat — foldable for aisle access',
-                      style: TextStyle(color: Color(0xFF667788), fontSize: 11)),
-                if (type == BuilderCellType.sleeperLower || type == BuilderCellType.sleeperUpper)
-                  const Text('Long-distance berth — place across multiple rows',
-                      style: TextStyle(color: Color(0xFF667788), fontSize: 11)),
-                if (type == BuilderCellType.aisle)
-                  const Text('Walkway/path — not a bookable seat',
-                      style: TextStyle(color: Color(0xFF667788), fontSize: 11)),
-                if (type == BuilderCellType.driverCabin || type == BuilderCellType.exitDoor || type == BuilderCellType.emergency || type == BuilderCellType.lavatory)
-                  const Text('Structural — not bookable',
-                      style: TextStyle(color: Color(0xFF667788), fontSize: 11)),
-              ]),
-            ),
-            if (isSelected)
-              Icon(Icons.check_circle, color: color, size: 22),
-          ]),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(30),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 20, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: isSelected ? color : Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (type == BuilderCellType.foldingSeat)
+                      const Text(
+                        '2-in-1 Coaster seat — foldable for aisle access',
+                        style: TextStyle(
+                          color: Color(0xFF667788),
+                          fontSize: 11,
+                        ),
+                      ),
+                    if (type == BuilderCellType.sleeperLower ||
+                        type == BuilderCellType.sleeperUpper)
+                      const Text(
+                        'Long-distance berth — place across multiple rows',
+                        style: TextStyle(
+                          color: Color(0xFF667788),
+                          fontSize: 11,
+                        ),
+                      ),
+                    if (type == BuilderCellType.aisle)
+                      const Text(
+                        'Walkway/path — not a bookable seat',
+                        style: TextStyle(
+                          color: Color(0xFF667788),
+                          fontSize: 11,
+                        ),
+                      ),
+                    if (type == BuilderCellType.driverCabin ||
+                        type == BuilderCellType.exitDoor ||
+                        type == BuilderCellType.emergency ||
+                        type == BuilderCellType.lavatory)
+                      const Text(
+                        'Structural — not bookable',
+                        style: TextStyle(
+                          color: Color(0xFF667788),
+                          fontSize: 11,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (isSelected) Icon(Icons.check_circle, color: color, size: 22),
+            ],
+          ),
         ),
       ),
     );
@@ -545,8 +724,12 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         '/bus-owner/layouts',
         data: {
           'bus_plate': _plateCtl.text.trim(),
-          'bus_brand': _brandCtl.text.trim().isEmpty ? 'Other' : _brandCtl.text.trim(),
-          'bus_category': _modelCtl.text.trim().isEmpty ? 'Standard' : _modelCtl.text.trim(),
+          'bus_brand': _brandCtl.text.trim().isEmpty
+              ? 'Other'
+              : _brandCtl.text.trim(),
+          'bus_category': _modelCtl.text.trim().isEmpty
+              ? 'Standard'
+              : _modelCtl.text.trim(),
           'total_rows': _rows,
           'total_cols': _cols,
           'aisle_after_col': 0,
@@ -560,7 +743,10 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           Navigator.pop(context, true);
         }
       } else {
-        _snack((res is Map ? res['message'] : null) ?? 'Failed to save', AppColors.error);
+        _snack(
+          (res is Map ? res['message'] : null) ?? 'Failed to save',
+          AppColors.error,
+        );
       }
     } catch (e) {
       _snack('Error: $e', AppColors.error);
@@ -584,7 +770,12 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     BuilderCellType.lavatory => 'lavatory',
   };
 
-  Widget _inputField(TextEditingController ctl, String label, String hint, IconData icon) {
+  Widget _inputField(
+    TextEditingController ctl,
+    String label,
+    String hint,
+    IconData icon,
+  ) {
     return TextField(
       controller: ctl,
       style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -596,19 +787,41 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         prefixIcon: Icon(icon, color: const Color(0xFF556677)),
         filled: true,
         fillColor: const Color(0xFF0D1B2A),
-        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF2A3A4A))),
-        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF7C3AED))),
-        border: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF2A3A4A))),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        enabledBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Color(0xFF2A3A4A)),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Color(0xFF7C3AED)),
+        ),
+        border: const OutlineInputBorder(
+          borderSide: BorderSide(color: Color(0xFF2A3A4A)),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
       ),
     );
   }
 
-  Widget _numberField(String label, int value, int min, int max, ValueChanged<int> onChange) {
+  Widget _numberField(
+    String label,
+    int value,
+    int min,
+    int max,
+    ValueChanged<int> onChange,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFFAABBCC), fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFAABBCC),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
@@ -624,8 +837,14 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
               ),
               Expanded(
                 child: Center(
-                  child: Text('$value',
-                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    '$value',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
               IconButton(
@@ -640,17 +859,38 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   }
 
   Widget _statBadge(String label, int count, Color color) {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 8, height: 8, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
-      const SizedBox(width: 4),
-      Text('$label: $count', style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
-    ]);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$label: $count',
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 
   void _snack(String msg, Color bg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: bg, behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: bg,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }
