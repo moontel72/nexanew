@@ -90,6 +90,9 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   final _modelCtl = TextEditingController();
   int _rows = 12, _cols = 4;
   List<List<_GridCell>> _grid = [];
+  List<List<_GridCell>> _upperGrid = []; // upper deck
+  bool _isUpperDeck = false;
+  bool _hasUpperDeck = false;
   bool _saving = false;
   final _scrollController = ScrollController();
 
@@ -275,26 +278,36 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
 
   // ── Step 1: Grid Assignment ────────────────────────
   Widget _buildGridStep() {
+    final activeGrid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
     return Column(
       children: [
-        // Back button row
+        // Back button row + Deck switcher
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Row(
             children: [
               TextButton.icon(
                 onPressed: () => setState(() => _step = 0),
                 icon: const Icon(Icons.arrow_back, size: 18),
-                label: const Text('Back to Details'),
+                label: const Text('Back'),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFAABBCC),
                 ),
               ),
               const Spacer(),
+              // Deck toggle
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _deckTab('Lower Deck', false),
+                  const SizedBox(width: 4),
+                  _deckTab('Upper Deck', true),
+                ],
+              ),
+              const Spacer(),
               Text(
-                '${_plateCtl.text} — ${_brandCtl.text} ${_modelCtl.text}',
+                '${_plateCtl.text}',
                 style: const TextStyle(color: Color(0xFF667788), fontSize: 11),
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -308,7 +321,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             child: Row(
               children: [
                 const Text(
-                  'Tap cells to assign →   ',
+                  'Tap cells to assign ↓   ',
                   style: TextStyle(color: Color(0xFF8899AA), fontSize: 11),
                 ),
                 ...BuilderCellType.values
@@ -352,31 +365,31 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             children: [
               _statBadge(
                 'Seats',
-                _countType(BuilderCellType.seat),
+                _countTypeIn(activeGrid, BuilderCellType.seat),
                 const Color(0xFF7C3AED),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               _statBadge(
                 'Folding',
-                _countType(BuilderCellType.foldingSeat),
+                _countTypeIn(activeGrid, BuilderCellType.foldingSeat),
                 const Color(0xFF06B6D4),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               _statBadge(
                 'Berths',
-                _countType(BuilderCellType.sleeperLower) +
-                    _countType(BuilderCellType.sleeperUpper),
+                _countTypeIn(activeGrid, BuilderCellType.sleeperLower) +
+                    _countTypeIn(activeGrid, BuilderCellType.sleeperUpper),
                 const Color(0xFFDB2777),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               _statBadge(
-                'Aisle cols',
-                _countType(BuilderCellType.aisle),
+                'Aisle',
+                _countTypeIn(activeGrid, BuilderCellType.aisle),
                 const Color(0xFF64748B),
               ),
               const Spacer(),
               Text(
-                '${_rows}×$_cols',
+                '${_rows}×$_cols ${_isUpperDeck ? 'UPPER' : 'LOWER'}',
                 style: const TextStyle(color: Color(0xFF667788), fontSize: 11),
               ),
             ],
@@ -436,11 +449,12 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                             for (int c = 0; c < _cols; c++)
                               GestureDetector(
                                 onTap: () => _openCellPicker(r, c),
-                                child: _buildCell(_grid[r][c]),
+                                child: _buildCell(activeGrid[r][c]),
                               ),
                           ],
                         ),
                       ),
+                    const SizedBox(height: 60),
                   ],
                 ),
               ),
@@ -494,8 +508,54 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     );
   }
 
+  // ── Deck tab toggle ──────────────────────────────
+  Widget _deckTab(String label, bool isUpper) {
+    final isActive = isUpper ? _isUpperDeck : !_isUpperDeck;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (isUpper) {
+            _hasUpperDeck = true;
+            if (_upperGrid.isEmpty) {
+              _upperGrid = List.generate(
+                _rows,
+                (_) => List.generate(_cols, (_) => _GridCell()),
+              );
+            }
+            _isUpperDeck = !_isUpperDeck;
+          } else {
+            _isUpperDeck = false;
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? const Color(0xFF7C3AED).withAlpha(40)
+              : const Color(0xFF1A2533),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isActive
+                ? const Color(0xFF7C3AED).withAlpha(120)
+                : const Color(0xFF2A3A4A),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? const Color(0xFF7C3AED) : const Color(0xFF8899AA),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Cell Assignment Dialog (centered, fully scrollable) ──
   void _openCellPicker(int row, int col) {
+    final grid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -515,11 +575,11 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                 ),
               ),
             ),
-            if (_grid[row][col].type != BuilderCellType.empty)
+            if (grid[row][col].type != BuilderCellType.empty)
               TextButton(
                 onPressed: () {
                   setState(() {
-                    _grid[row][col] = _GridCell();
+                    grid[row][col] = _GridCell();
                     _renumberSeats();
                   });
                   Navigator.pop(ctx);
@@ -558,10 +618,11 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   }
 
   Widget _optionTile(BuildContext ctx, BuilderCellType type, int row, int col) {
+    final grid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
     final color = _cellColors[type] ?? Colors.grey;
     final icon = _cellIcons[type] ?? Icons.help;
     final label = _cellLabels[type] ?? type.name;
-    final isSelected = _grid[row][col].type == type;
+    final isSelected = grid[row][col].type == type;
 
     return Card(
       color: isSelected ? color.withAlpha(25) : const Color(0xFF112233),
@@ -580,8 +641,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             if (!_markBerthArea(row, col, type)) return;
           } else {
             setState(() {
-              _grid[row][col].type = type;
-              _grid[row][col].label = null;
+              grid[row][col].type = type;
+              grid[row][col].label = null;
             });
           }
           _renumberSeats();
@@ -667,11 +728,16 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       _rows,
       (_) => List.generate(_cols, (_) => _GridCell()),
     );
+    _upperGrid = List.generate(
+      _rows,
+      (_) => List.generate(_cols, (_) => _GridCell()),
+    );
   }
 
   // ── Mark berth area (3 rows × 2 cols) ──────────────
   /// Returns true if the berth was successfully placed.
   bool _markBerthArea(int startRow, int startCol, BuilderCellType berthType) {
+    final grid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
     // Bounds check: need 3 rows × 2 columns
     if (startRow + 2 >= _rows || startCol + 1 >= _cols) {
       _snack(
@@ -683,7 +749,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     // Overlap check: all 6 cells must be empty
     for (int r = startRow; r < startRow + 3; r++) {
       for (int c = startCol; c < startCol + 2; c++) {
-        if (_grid[r][c].type != BuilderCellType.empty) {
+        if (grid[r][c].type != BuilderCellType.empty) {
           _snack('Berth area overlaps existing cells', AppColors.error);
           return false;
         }
@@ -692,8 +758,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     setState(() {
       for (int r = startRow; r < startRow + 3; r++) {
         for (int c = startCol; c < startCol + 2; c++) {
-          _grid[r][c].type = berthType;
-          _grid[r][c].label = null;
+          grid[r][c].type = berthType;
+          grid[r][c].label = null;
         }
       }
     });
@@ -706,8 +772,9 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     int startCol,
     String label,
     Map<int, Set<int>> visited,
+    List<List<_GridCell>> grid,
   ) {
-    final targetType = _grid[startRow][startCol].type;
+    final targetType = grid[startRow][startCol].type;
     final queue = <List<int>>[
       [startRow, startCol],
     ];
@@ -717,7 +784,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     while (queue.isNotEmpty) {
       final cur = queue.removeAt(0);
       final r = cur[0], c = cur[1];
-      _grid[r][c].label = label;
+      grid[r][c].label = label;
 
       // 4-directional neighbours
       const deltas = [
@@ -731,7 +798,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         final nc = c + delta[1];
         if (nr < 0 || nr >= _rows || nc < 0 || nc >= _cols) continue;
         if ((visited[nr]?.contains(nc) ?? false)) continue;
-        if (_grid[nr][nc].type != targetType) continue;
+        if (grid[nr][nc].type != targetType) continue;
         visited.putIfAbsent(nr, () => {});
         visited[nr]!.add(nc);
         queue.add([nr, nc]);
@@ -741,31 +808,38 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
 
   // ── Renumber seats & label berths (airline style) ───
   void _renumberSeats() {
+    _renumberGrid(_grid);
+    if (_hasUpperDeck) {
+      _renumberGrid(_upperGrid);
+    }
+  }
+
+  void _renumberGrid(List<List<_GridCell>> grid) {
     final visited = <int, Set<int>>{};
     int lowerCount = 0;
     int upperCount = 0;
 
     // ── First pass: find & label contiguous berth blocks ──
-    for (int r = 0; r < _grid.length; r++) {
-      for (int c = 0; c < _grid[r].length; c++) {
+    for (int r = 0; r < grid.length; r++) {
+      for (int c = 0; c < grid[r].length; c++) {
         if ((visited[r]?.contains(c) ?? false)) continue;
-        final type = _grid[r][c].type;
+        final type = grid[r][c].type;
         if (type == BuilderCellType.sleeperLower) {
           lowerCount++;
-          _labelBerthBlock(r, c, 'L$lowerCount', visited);
+          _labelBerthBlock(r, c, 'L$lowerCount', visited, grid);
         } else if (type == BuilderCellType.sleeperUpper) {
           upperCount++;
-          _labelBerthBlock(r, c, 'U$upperCount', visited);
+          _labelBerthBlock(r, c, 'U$upperCount', visited, grid);
         }
       }
     }
 
     // ── Second pass: airline-style seat numbering (row‑letter) ──
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (int r = 0; r < _grid.length; r++) {
+    for (int r = 0; r < grid.length; r++) {
       int letterIdx = 0;
-      for (int c = 0; c < _grid[r].length; c++) {
-        final cell = _grid[r][c];
+      for (int c = 0; c < grid[r].length; c++) {
+        final cell = grid[r][c];
         // Skip non‑ticketable / non‑seat cells + already‑labeled berths
         if (cell.type == BuilderCellType.empty ||
             cell.type == BuilderCellType.aisle ||
@@ -786,10 +860,10 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     }
   }
 
-  // ── Count cells of a type ──────────────────────────
-  int _countType(BuilderCellType type) {
+  // ── Count cells of a type in a specific grid ────────
+  int _countTypeIn(List<List<_GridCell>> grid, BuilderCellType type) {
     int count = 0;
-    for (final row in _grid) {
+    for (final row in grid) {
       for (final cell in row) {
         if (cell.type == type) count++;
       }
@@ -817,6 +891,24 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         cells.add(row);
       }
 
+      // Build upper deck data if present
+      List<List<Map<String, dynamic>>>? upperCells;
+      if (_hasUpperDeck) {
+        upperCells = [];
+        for (int r = 0; r < _upperGrid.length; r++) {
+          final row = <Map<String, dynamic>>[];
+          for (int c = 0; c < _upperGrid[r].length; c++) {
+            final cell = _upperGrid[r][c];
+            row.add({
+              'type': _backendTypeName(cell.type),
+              'label': cell.label ?? '',
+              'seat_id': cell.label,
+            });
+          }
+          upperCells.add(row);
+        }
+      }
+
       final res = await ApiService().post(
         '/bus-owner/layouts',
         data: {
@@ -831,6 +923,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           'total_cols': _cols,
           'aisle_after_col': 0,
           'grid': cells,
+          if (_hasUpperDeck) 'upper_grid': upperCells,
+          'has_upper_deck': _hasUpperDeck,
         },
       );
 
