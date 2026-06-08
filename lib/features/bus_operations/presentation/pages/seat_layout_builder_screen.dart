@@ -6,7 +6,6 @@
 //
 // Pakistani transport support: 3+2, 2+1, any row/col config.
 
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
@@ -575,10 +574,16 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
         onTap: () {
-          setState(() {
-            _grid[row][col].type = type;
-            _grid[row][col].label = null;
-          });
+          if (type == BuilderCellType.sleeperLower ||
+              type == BuilderCellType.sleeperUpper) {
+            // Auto-expand berth: 3 rows × 2 cols
+            if (!_markBerthArea(row, col, type)) return;
+          } else {
+            setState(() {
+              _grid[row][col].type = type;
+              _grid[row][col].label = null;
+            });
+          }
           _renumberSeats();
           Navigator.pop(ctx);
         },
@@ -619,7 +624,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                     if (type == BuilderCellType.sleeperLower ||
                         type == BuilderCellType.sleeperUpper)
                       const Text(
-                        'Long-distance berth — place across multiple rows',
+                        'Auto-expands 3 rows × 2 cols (6 cells)\n'
+                        'Labeled L1, L2… (Lower) or U1, U2… (Upper)',
                         style: TextStyle(
                           color: Color(0xFF667788),
                           fontSize: 11,
@@ -663,28 +669,119 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     );
   }
 
-  // ── Renumber seats (aisle-exclusion rule) ───────────
-  void _renumberSeats() {
-    final letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    int seatNum = 0;
+  // ── Mark berth area (3 rows × 2 cols) ──────────────
+  /// Returns true if the berth was successfully placed.
+  bool _markBerthArea(int startRow, int startCol, BuilderCellType berthType) {
+    // Bounds check: need 3 rows × 2 columns
+    if (startRow + 2 >= _rows || startCol + 1 >= _cols) {
+      _snack(
+        'Not enough space for berth (needs 3 rows × 2 cols)',
+        AppColors.error,
+      );
+      return false;
+    }
+    // Overlap check: all 6 cells must be empty
+    for (int r = startRow; r < startRow + 3; r++) {
+      for (int c = startCol; c < startCol + 2; c++) {
+        if (_grid[r][c].type != BuilderCellType.empty) {
+          _snack('Berth area overlaps existing cells', AppColors.error);
+          return false;
+        }
+      }
+    }
+    setState(() {
+      for (int r = startRow; r < startRow + 3; r++) {
+        for (int c = startCol; c < startCol + 2; c++) {
+          _grid[r][c].type = berthType;
+          _grid[r][c].label = null;
+        }
+      }
+    });
+    return true;
+  }
 
+  // ── Label a contiguous berth block (BFS) ────────────
+  void _labelBerthBlock(
+    int startRow,
+    int startCol,
+    String label,
+    Map<int, Set<int>> visited,
+  ) {
+    final targetType = _grid[startRow][startCol].type;
+    final queue = <List<int>>[
+      [startRow, startCol],
+    ];
+    visited.putIfAbsent(startRow, () => {});
+    visited[startRow]!.add(startCol);
+
+    while (queue.isNotEmpty) {
+      final cur = queue.removeAt(0);
+      final r = cur[0], c = cur[1];
+      _grid[r][c].label = label;
+
+      // 4-directional neighbours
+      const deltas = [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1],
+      ];
+      for (final delta in deltas) {
+        final nr = r + delta[0];
+        final nc = c + delta[1];
+        if (nr < 0 || nr >= _rows || nc < 0 || nc >= _cols) continue;
+        if ((visited[nr]?.contains(nc) ?? false)) continue;
+        if (_grid[nr][nc].type != targetType) continue;
+        visited.putIfAbsent(nr, () => {});
+        visited[nr]!.add(nc);
+        queue.add([nr, nc]);
+      }
+    }
+  }
+
+  // ── Renumber seats & label berths (airline style) ───
+  void _renumberSeats() {
+    final visited = <int, Set<int>>{};
+    int lowerCount = 0;
+    int upperCount = 0;
+
+    // ── First pass: find & label contiguous berth blocks ──
     for (int r = 0; r < _grid.length; r++) {
-      int posInRow = 0;
+      for (int c = 0; c < _grid[r].length; c++) {
+        if ((visited[r]?.contains(c) ?? false)) continue;
+        final type = _grid[r][c].type;
+        if (type == BuilderCellType.sleeperLower) {
+          lowerCount++;
+          _labelBerthBlock(r, c, 'L$lowerCount', visited);
+        } else if (type == BuilderCellType.sleeperUpper) {
+          upperCount++;
+          _labelBerthBlock(r, c, 'U$upperCount', visited);
+        }
+      }
+    }
+
+    // ── Second pass: airline-style seat numbering (row‑letter) ──
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (int r = 0; r < _grid.length; r++) {
+      int letterIdx = 0;
       for (int c = 0; c < _grid[r].length; c++) {
         final cell = _grid[r][c];
-        // Structural types: no number
+        // Skip non‑ticketable / non‑seat cells + already‑labeled berths
         if (cell.type == BuilderCellType.empty ||
             cell.type == BuilderCellType.aisle ||
             cell.type == BuilderCellType.driverCabin ||
             cell.type == BuilderCellType.exitDoor ||
             cell.type == BuilderCellType.emergency ||
-            cell.type == BuilderCellType.lavatory) {
+            cell.type == BuilderCellType.lavatory ||
+            cell.type == BuilderCellType.sleeperLower ||
+            cell.type == BuilderCellType.sleeperUpper) {
           cell.label = null;
           continue;
         }
-        seatNum++;
-        posInRow++;
-        cell.label = '${letters[r < 26 ? r : 0]}$seatNum';
+        // Ticketable seat-type cells (seat, foldingSeat)
+        cell.label =
+            '${r + 1}${letters[letterIdx < letters.length ? letterIdx : 0]}';
+        letterIdx++;
       }
     }
   }
