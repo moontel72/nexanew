@@ -406,35 +406,19 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
           if (_findSelectedPreset(state)?.hasUpperDeck == true)
             _buildDeckSwitcher(state),
 
-          // Canvas area with drop target
+          // Canvas area — no outer DragTarget so pan/scroll works
           Expanded(
             child: state.isCanvasReady
-                ? DragTarget<ComponentType>(
-                    onWillAcceptWithDetails: (_) => true,
-                    onAcceptWithDetails: (details) {
-                      // Component dropped from palette onto canvas.
-                      // We show a simple dialog to ask for target cell.
-                      _showDropTargetDialog(context, details.data);
+                ? CanvasGrid(
+                    canvasState: state.activeCanvas!,
+                    onComponentTap: (id) {
+                      setState(() {
+                        _inspectorComponentId = id;
+                        _inspectorOpen = true;
+                      });
                     },
-                    builder: (context, candidateData, rejectedData) {
-                      return Container(
-                        color: candidateData.isNotEmpty
-                            ? const Color(0xFF7C3AED).withValues(alpha: 0.05)
-                            : null,
-                        child: CanvasGrid(
-                          canvasState: state.activeCanvas!,
-                          onComponentTap: (id) {
-                            setState(() {
-                              _inspectorComponentId = id;
-                              _inspectorOpen = true;
-                            });
-                          },
-                          onEmptyCellTap: (row, col) {
-                            // Tap on an empty cell → prompt to add
-                            _showAddComponentDialog(context, row, col);
-                          },
-                        ),
-                      );
+                    onEmptyCellTap: (row, col) {
+                      _showAddComponentDialog(context, row, col);
                     },
                   )
                 : _buildEmptyState(),
@@ -600,17 +584,6 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
                 letterSpacing: 1,
               ),
             ),
-          ),
-          const Gap(6),
-          // Palette toggle
-          IconButton(
-            icon: const Icon(
-              Icons.widgets_outlined,
-              color: Color(0xFFAABBCC),
-              size: 20,
-            ),
-            onPressed: () => _showPaletteDrawer(context),
-            tooltip: 'Component Palette',
           ),
         ],
       ),
