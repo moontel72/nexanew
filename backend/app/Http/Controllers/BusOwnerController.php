@@ -570,6 +570,11 @@ class BusOwnerController extends Controller
                         'deck_level'        => $l->deck_level ?? 0,
                         'is_locked_sovereign' => $l->is_locked_sovereign ?? true,
                         'total_seats'       => $snap['total_seats'] ?? 0,
+                        'total_rows'        => $snap['total_rows'] ?? $l->total_rows ?? 0,
+                        'total_cols'        => $snap['total_cols'] ?? 0,
+                        'bus_plate'         => $snap['bus_plate'] ?? null,
+                        'bus_brand'         => $snap['bus_brand'] ?? null,
+                        'current_snapshot'  => $snap,
                         'created_at'        => $l->created_at,
                         'updated_at'        => $l->updated_at,
                     ];
@@ -586,75 +591,110 @@ class BusOwnerController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════
-    // SEAT LAYOUTS — STORE
+    // SEAT LAYOUTS — STORE (Dynamic Grid)
+    // Accepts bus details + custom grid matrix definition
     // ═══════════════════════════════════════════════════════
 
     public function storeLayout(Request $request): JsonResponse
     {
         try {
             $data = $request->validate([
-                'vehicle_class'   => ['required', 'string', 'in:coach_54,standard_45,coaster_34,hiace_13,sleeper_custom'],
-                'display_name'    => ['required', 'string', 'max:160'],
-                'deck_level'      => ['nullable', 'integer', 'in:0,1'],
+                // Bus details
+                'bus_plate'        => ['required', 'string', 'max:50'],
+                'bus_brand'        => ['required', 'string', 'max:100'],
+                'bus_category'     => ['required', 'string', 'max:50'],
+                // Grid dimensions
+                'total_rows'       => ['required', 'integer', 'min:3', 'max:20'],
+                'total_cols'       => ['required', 'integer', 'min:2', 'max:7'],
+                'aisle_after_col'  => ['required', 'integer', 'min:0'],
+                // Grid cells (array of arrays: 'seat' | 'aisle' | 'empty' | 'folding')
+                'grid'             => ['required', 'array'],
             ]);
 
             $identityId = $this->ownerIdentityId($request);
             $tenantId   = $this->ownerTenantId($request);
 
-            $preset = $this->getPreset($data['vehicle_class']);
-            $totalSeats = $preset['total_seats'] ?? 0;
+            // Count actual seats
+            $seatCount = 0;
+            $driverCount = 0;
+            $cells = [];
+            foreach ($data['grid'] as $row) {
+                $rowCells = [];
+                foreach ((array) $row as $cell) {
+                    $type = $cell['type'] ?? 'empty';
+                    if ($type === 'seat' || $type === 'folding') $seatCount++;
+                    if ($type === 'driver') $driverCount++;
+                    $rowCells[] = [
+                        'type'   => $type,
+                        'label'  => $cell['label'] ?? '',
+                        'seat_id'=> $cell['seat_id'] ?? null,
+                    ];
+                }
+                $cells[] = $rowCells;
+            }
 
+            // Build comprehensive snapshot
             $snapshot = [
-                'vehicle_class'  => $data['vehicle_class'],
-                'total_seats'    => $totalSeats,
-                'total_rows'     => $preset['rows'] ?? 0,
-                'left_columns'   => $preset['left_cols'] ?? 0,
-                'right_columns'  => $preset['right_cols'] ?? 0,
-                'grid'           => [],
-                'created_from'   => 'preset',
-                'deck_level'     => $data['deck_level'] ?? 0,
+                'bus_plate'       => $data['bus_plate'],
+                'bus_brand'       => $data['bus_brand'],
+                'bus_category'    => $data['bus_category'],
+                'total_rows'      => (int) $data['total_rows'],
+                'total_cols'      => (int) $data['total_cols'],
+                'aisle_after_col' => (int) $data['aisle_after_col'],
+                'total_seats'     => $seatCount,
+                'driver_seats'    => $driverCount,
+                'grid'            => $cells,
+                'created_from'    => 'dynamic',
             ];
+
+            $displayName = $data['bus_plate'] . ' — ' . $data['bus_brand'] . ' ' . $data['bus_category'];
 
             $layoutId = (string) Str::orderedUuid();
 
             DB::table('transport_bus_layouts')->insert([
                 'id'                  => $layoutId,
-                'bus_id'              => $layoutId,         // legacy NOT NULL — self-reference
-                'owner_id'            => 1,                 // legacy FK — made nullable by 2026_06_07 migration
+                'bus_id'              => $layoutId,
+                'owner_id'            => 1,
                 'owner_identity_id'   => $identityId,
                 'carrier_company_id'  => $tenantId,
-                'vehicle_class'       => $data['vehicle_class'],
-                'display_name'        => $data['display_name'],
-                'total_rows'          => $preset['rows'] ?? 0,
-                'left_columns'        => $preset['left_cols'] ?? 0,
-                'right_columns'       => $preset['right_cols'] ?? 0,
-                'driver_seats'        => 1,
-                'raw_grid_json'       => json_encode([]),
+                'vehicle_class'       => $data['bus_category'],
+                'display_name'        => $displayName,
+                'total_rows'          => (int) $data['total_rows'],
+                'left_columns'        => (int) $data['aisle_after_col'],
+                'right_columns'       => (int) $data['total_cols'] - (int) $data['aisle_after_col'] - 1,
+                'driver_seats'        => $driverCount,
+                'raw_grid_json'       => json_encode($cells),
                 'is_active'           => true,
                 'is_locked_sovereign'  => true,
                 'version_number'      => 1,
                 'layout_status'       => 'draft',
                 'current_snapshot'    => json_encode($snapshot),
-                'deck_level'          => $data['deck_level'] ?? 0,
+                'deck_level'          => 0,
                 'created_at'          => now(),
                 'updated_at'          => now(),
             ]);
 
-            Log::info('BusOwner: layout created', [
+            Log::info('BusOwner: dynamic layout created', [
                 'layout_id'  => $layoutId,
                 'owner_id'   => $identityId,
-                'class'      => $data['vehicle_class'],
+                'plate'      => $data['bus_plate'],
+                'seats'      => $seatCount,
             ]);
 
             return response()->json([
                 'success' => true,
                 'data'    => [
-                    'id'                => $layoutId,
-                    'display_name'      => $data['display_name'],
-                    'vehicle_class'     => $data['vehicle_class'],
-                    'layout_status'     => 'draft',
-                    'version_number'    => 1,
-                    'total_seats'       => $totalSeats,
+                    'id'              => $layoutId,
+                    'display_name'    => $displayName,
+                    'bus_plate'       => $data['bus_plate'],
+                    'bus_brand'       => $data['bus_brand'],
+                    'bus_category'    => $data['bus_category'],
+                    'layout_status'   => 'draft',
+                    'version_number'  => 1,
+                    'total_seats'     => $seatCount,
+                    'total_rows'      => (int) $data['total_rows'],
+                    'total_cols'      => (int) $data['total_cols'],
+                    'grid'            => $cells,
                 ],
             ], 201);
 
@@ -756,15 +796,24 @@ class BusOwnerController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════
-    // SEAT LAYOUTS — DESTROY (archive)
+    // SEAT LAYOUTS — DESTROY (archive or hard-delete)
+    // Add ?permanent=true to query string for hard delete
     // ═══════════════════════════════════════════════════════
 
-    public function destroyLayout(string $id): JsonResponse
+    public function destroyLayout(string $id, Request $request): JsonResponse
     {
         try {
             $layout = DB::table('transport_bus_layouts')->where('id', $id)->first();
             if (!$layout) {
                 return response()->json(['message' => 'Layout not found'], 404);
+            }
+
+            $permanent = $request->query('permanent') === 'true';
+
+            if ($permanent) {
+                DB::table('transport_bus_layouts')->where('id', $id)->delete();
+                Log::info('BusOwner: layout permanently deleted', ['layout_id' => $id]);
+                return response()->json(['success' => true, 'message' => 'Layout permanently deleted.']);
             }
 
             DB::table('transport_bus_layouts')
