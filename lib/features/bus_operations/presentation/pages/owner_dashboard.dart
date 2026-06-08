@@ -107,7 +107,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _showAddDriver() async {
     final n=TextEditingController(),p=TextEditingController(),l=TextEditingController(),pw=TextEditingController(),cn=TextEditingController(),ad=TextEditingController(),pl=TextEditingController(),s=TextEditingController(),e=TextEditingController();
     final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text('Add Bus Driver'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      _tf(n,'Full Name *'),SizedBox(height:10.h),_tf(p,'Phone *',phone:true),SizedBox(height:10.h),_tf(l,'License Number *'),SizedBox(height:10.h),_tf(pw,'Password *',obscure:true),SizedBox(height:10.h),_tf(e,'Email',email:true),SizedBox(height:10.h),_tf(cn,'CNIC'),SizedBox(height:10.h),_tf(ad,'Address',maxLines:2),SizedBox(height:10.h),_tf(pl,'Vehicle Plate'),SizedBox(height:10.h),_tf(s,'Salary',number:true)
+      _tf(n,'Full Name *'),SizedBox(height:10.h),_tf(p,'Phone *',isPhone:true),SizedBox(height:10.h),_tf(l,'License Number *'),SizedBox(height:10.h),_tf(pw,'Password *',isPassword:true),SizedBox(height:10.h),_tf(e,'Email',isEmail:true),SizedBox(height:10.h),_tf(cn,'CNIC'),SizedBox(height:10.h),_tf(ad,'Address',maxLines:2),SizedBox(height:10.h),_tf(pl,'Vehicle Plate'),SizedBox(height:10.h),_tf(s,'Salary',isNumber:true)
     ])),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text('Cancel')),ElevatedButton(onPressed:()=>Navigator.pop(c,true),child:Text('Save'))]));
     if(ok!=true)return;
     try{await ApiService().post('/bus-owner/drivers',data:{'name':n.text.trim(),'phone':p.text.trim(),'license_number':l.text.trim(),'password':pw.text,if(e.text.isNotEmpty)'email':e.text.trim(),if(cn.text.isNotEmpty)'cnic':cn.text.trim(),if(ad.text.isNotEmpty)'address':ad.text.trim(),if(pl.text.isNotEmpty)'vehicle_plate':pl.text.trim(),if(s.text.isNotEmpty)'salary':double.tryParse(s.text)??0});_loadDrivers();_snack('Driver added',AppColors.success);}catch(e){_snack('Error: $e',AppColors.error);}
@@ -120,7 +120,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _showAddConductor() async {
     final n=TextEditingController(),p=TextEditingController(),cn=TextEditingController(),ad=TextEditingController(),s=TextEditingController(),pw=TextEditingController(),e=TextEditingController();
     final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text('Add Bus Conductor'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      _tf(n,'Full Name *'),SizedBox(height:10.h),_tf(p,'Phone *',phone:true),SizedBox(height:10.h),_tf(pw,'Password *',obscure:true),SizedBox(height:10.h),_tf(e,'Email',email:true),SizedBox(height:10.h),_tf(cn,'CNIC'),SizedBox(height:10.h),_tf(ad,'Address',maxLines:2),SizedBox(height:10.h),_tf(s,'Salary *',number:true)
+      _tf(n,'Full Name *'),SizedBox(height:10.h),_tf(p,'Phone *',isPhone:true),SizedBox(height:10.h),_tf(pw,'Password *',isPassword:true),SizedBox(height:10.h),_tf(e,'Email',isEmail:true),SizedBox(height:10.h),_tf(cn,'CNIC'),SizedBox(height:10.h),_tf(ad,'Address',maxLines:2),SizedBox(height:10.h),_tf(s,'Salary *',isNumber:true)
     ])),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text('Cancel')),ElevatedButton(onPressed:()=>Navigator.pop(c,true),child:Text('Save'))]));
     if(ok!=true)return;
     try{await ApiService().post('/bus-owner/conductors',data:{'name':n.text.trim(),'phone':p.text.trim(),'password':pw.text,if(e.text.isNotEmpty)'email':e.text.trim(),if(cn.text.isNotEmpty)'cnic':cn.text.trim(),if(ad.text.isNotEmpty)'address':ad.text.trim(),'salary':double.tryParse(s.text)??0});_loadConductors();_snack('Conductor added',AppColors.success);}catch(e){_snack('Error: $e',AppColors.error);}
@@ -217,7 +217,22 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   ButtonStyle get _nxt=>ElevatedButton.styleFrom(backgroundColor:OwnerButtonColors.seats,foregroundColor:Colors.white,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(8)));
 
   // ═══ SHARED ═══
-  Widget _tf(TextEditingController c,String l,{bool obscure=false,bool email=false,bool phone=false,bool number=false,int maxLines=1})=>TextField(controller:c,obscureText:obscure,maxLines:maxLines,keyboardType:email?TextInputType.emailAddress:phone||number?TextInputType.phone:TextInputType.text,style:TextStyle(color:Colors.white),decoration:InputDecoration(labelText:l,labelStyle:TextStyle(color:Color(0xFF8899AA)),border:OutlineInputBorder(),enabledBorder:OutlineInputBorder(borderSide:BorderSide(color:Color(0xFF2A3A4A))),focusedBorder:OutlineInputBorder(borderSide:BorderSide(color:Color(0xFF00C49F)))));
+  Widget _tf(TextEditingController ctrl, String label, {bool isPassword = false, bool isEmail = false, bool isPhone = false, bool isNumber = false, int maxLines = 1}) {
+    return TextField(
+      controller: ctrl,
+      obscureText: isPassword,
+      maxLines: maxLines,
+      keyboardType: isEmail ? TextInputType.emailAddress : (isPhone || isNumber) ? TextInputType.phone : TextInputType.text,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Color(0xFF8899AA)),
+        border: const OutlineInputBorder(),
+        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF2A3A4A))),
+        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF00C49F))),
+      ),
+    );
+  }
   Widget _chip(IconData i,String t)=>Row(mainAxisSize:MainAxisSize.min,children:[Icon(i,size:13,color:AppColors.gray400),SizedBox(width:3.w),Text(t,style:TextStyle(color:AppColors.gray500,fontSize:11))]);
   Widget _badge(String s,Color c)=>Container(padding:EdgeInsets.symmetric(horizontal:8.w,vertical:3.h),decoration:BoxDecoration(color:c.withValues(alpha:.15),borderRadius:BorderRadius.circular(12.r)),child:Text(s.toUpperCase(),style:TextStyle(fontSize:10,fontWeight:FontWeight.w600,color:c)));
   void _snack(String m,Color b){if(!mounted)return;ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m),backgroundColor:b,behavior:SnackBarBehavior.floating,duration:Duration(seconds:3)));}
