@@ -393,7 +393,10 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       final d = r['data'] as Map<String, dynamic>?;
       if (mounted)
         setState(() {
-          _drivers = List<Map<String, dynamic>>.from(d?['data'] ?? []);
+          _drivers = (d?['data'] as List? ?? [])
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
           _driverCount = d?['total'] ?? _drivers.length;
           _driversLoading = false;
         });
@@ -550,7 +553,10 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       final d = r['data'] as Map<String, dynamic>?;
       if (mounted)
         setState(() {
-          _conductors = List<Map<String, dynamic>>.from(d?['data'] ?? []);
+          _conductors = (d?['data'] as List? ?? [])
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
           _conductorCount = d?['total'] ?? _conductors.length;
           _conductorsLoading = false;
         });
@@ -701,25 +707,32 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       if (!mounted) return;
       final d = r?['data'];
       if (d is List) {
-        _layouts = d.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      } else if (d is Map && d['data'] is List) {
-        _layouts = (d['data'] as List)
-            .map((e) => Map<String, dynamic>.from(e as Map))
+        // Old API format: {success: true, data: [...]}
+        _layouts = d
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
             .toList();
+      } else if (d is Map) {
+        // New paginated format: {success: true, data: {data: [...], ...}}
+        final list = d['data'];
+        if (list is List) {
+          _layouts = list
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        } else {
+          _layouts = [];
+        }
       } else {
         _layouts = [];
       }
       _layoutCount = _layouts.length;
+    } catch (e) {
+      _layouts = [];
+      _layoutCount = 0;
+    } finally {
       _layoutsLoading = false;
       if (mounted) setState(() {});
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _layoutsLoading = false;
-          _layouts = [];
-          _layoutCount = 0;
-        });
-      }
     }
   }
 
@@ -945,7 +958,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   ),
                   Gap(20),
                   if (step == 0)
-                    Flexible(
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: 320),
                       child: SingleChildScrollView(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -975,7 +989,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                       ),
                     ),
                   if (step == 1)
-                    Flexible(
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: 360),
                       child: SingleChildScrollView(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1038,7 +1053,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                       ),
                     ),
                   if (step == 2 && built)
-                    Flexible(
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: 420),
                       child: SingleChildScrollView(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1266,13 +1282,14 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                                 'grid': cells,
                               },
                             );
-                            if (res != null && res['success'] == true) {
+                            if (res is Map && res['success'] == true) {
                               Navigator.pop(ctx);
                               _loadLayouts();
                               _snack('Layout created!', AppColors.success);
                             } else {
                               _snack(
-                                res?['message'] ?? 'Failed',
+                                (res is Map ? res['message'] : null) ??
+                                    'Failed',
                                 AppColors.error,
                               );
                             }
@@ -1301,7 +1318,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   }
 
   // ═══ WIZARD HELPERS ═══
-  Widget _wiz(String lbl, String hint, IconData ic, TextEditingController ctl, {List<String>? dd}) {
+  Widget _wiz(
+    String lbl,
+    String hint,
+    IconData ic,
+    TextEditingController ctl, {
+    List<String>? dd,
+  }) {
     return Padding(
       padding: EdgeInsets.only(bottom: 12),
       child: TextField(
@@ -1315,10 +1338,19 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           prefixIcon: Icon(ic, color: const Color(0xFF556677)),
           filled: true,
           fillColor: const Color(0xFF0D1B2A),
-          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF2A3A4A))),
-          focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF00C49F))),
-          border: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF2A3A4A))),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          enabledBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF2A3A4A)),
+          ),
+          focusedBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF00C49F)),
+          ),
+          border: const OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF2A3A4A)),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 14,
+          ),
         ),
       ),
     );
