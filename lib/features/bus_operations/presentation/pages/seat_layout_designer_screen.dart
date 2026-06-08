@@ -192,8 +192,7 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
           }
         },
         builder: (context, state) {
-          if (state.status == CanvasStatus.loading ||
-              state.status == CanvasStatus.initial) {
+          if (state.status == CanvasStatus.loading) {
             return const Scaffold(
               backgroundColor: Color(0xFF0D1B2A),
               body: Center(

@@ -25,7 +25,7 @@ class OwnerDashboardScreen extends StatefulWidget {
 }
 
 class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
-  String _ownerName = 'Owner', _currentPage = 'dashboard';
+  String _ownerName = 'Owner', _currentPage = 'dashboard', _companyId = '';
   bool _sidebarOpen = true, _isLoading = true;
   int _driverCount = 0, _conductorCount = 0, _layoutCount = 0;
   List<Map<String, dynamic>> _drivers = [], _conductors = [], _layouts = [];
@@ -48,6 +48,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       return;
     }
     _ownerName = p.getString('bus_owner_name') ?? 'Owner';
+    // Fetch company ID from profile
+    try {
+      final r = await ApiService().get('/bus-owner/profile');
+      _companyId = r?['data']?['id']?.toString() ?? '';
+    } catch (_) {
+      _companyId = '';
+    }
     setState(() => _isLoading = false);
   }
 
@@ -885,20 +892,15 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   // ═══ OPEN IN DESIGNER (reuses SeatLayoutDesignerScreen) ═══
   void _openLayoutDesigner({String? layoutId}) async {
-    String? cId;
-    try {
-      final r = await ApiService().get('/bus-owner/profile');
-      cId = r?['data']?['id']?.toString();
-    } catch (_) {}
-    final id = cId;
-    if (id == null || id.isEmpty) return;
-    if (!mounted) return;
-
+    if (_companyId.isEmpty) {
+      _snack('Company ID not available. Please reload.', AppColors.error);
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => SeatLayoutDesignerScreen(
           layoutId: layoutId,
-          companyId: id,
+          companyId: _companyId,
           companyName: _ownerName,
         ),
       ),
