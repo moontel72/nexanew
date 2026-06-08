@@ -698,15 +698,28 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     setState(() => _layoutsLoading = true);
     try {
       final r = await ApiService().get('/bus-owner/layouts');
-      final d = r['data'];
-      if (mounted)
+      if (!mounted) return;
+      final d = r?['data'];
+      if (d is List) {
+        _layouts = d.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      } else if (d is Map && d['data'] is List) {
+        _layouts = (d['data'] as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      } else {
+        _layouts = [];
+      }
+      _layoutCount = _layouts.length;
+      _layoutsLoading = false;
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) {
         setState(() {
-          if (d is List) _layouts = List<Map<String, dynamic>>.from(d);
-          _layoutCount = _layouts.length;
           _layoutsLoading = false;
+          _layouts = [];
+          _layoutCount = 0;
         });
-    } catch (_) {
-      if (mounted) setState(() => _layoutsLoading = false);
+      }
     }
   }
 
@@ -791,56 +804,68 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   );
 
   Widget _layoutCard(Map<String, dynamic> l) {
-    final sn = l['current_snapshot'] is Map
-        ? l['current_snapshot'] as Map<String, dynamic>
-        : null;
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      color: Color(0xFF1A2A3A),
-      child: Padding(
-        padding: EdgeInsets.all(14.w),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              backgroundColor: OwnerButtonColors.seats.withValues(alpha: .15),
-              child: Icon(Icons.event_seat, color: OwnerButtonColors.seats),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l['display_name'] ?? 'Untitled',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    '${l['bus_plate'] ?? sn?['bus_plate'] ?? l['vehicle_class']} \u2022 ${l['total_seats'] ?? 0} seats \u2022 ${l['total_rows'] ?? 0}\u00d7${l['total_cols'] ?? 0}',
-                    style: TextStyle(color: AppColors.gray500, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-            _badge(l['layout_status'] ?? 'draft', OwnerButtonColors.seats),
-            SizedBox(width: 4.w),
-            IconButton(
-              icon: Icon(Icons.delete, color: Colors.redAccent, size: 20),
-              onPressed: () => _deleteLayout(
-                l['id']?.toString() ?? '',
-                l['display_name']?.toString() ?? '',
-              ),
-              padding: EdgeInsets.zero,
-              constraints: BoxConstraints(minWidth: 32, minHeight: 32),
-            ),
-          ],
+    try {
+      final sn = l['current_snapshot'] is Map
+          ? l['current_snapshot'] as Map<String, dynamic>
+          : null;
+      final plate =
+          (l['bus_plate'] ?? sn?['bus_plate'] ?? l['vehicle_class'] ?? '')
+              .toString();
+      final seats = l['total_seats'] ?? 0;
+      final rows = l['total_rows'] ?? sn?['total_rows'] ?? 0;
+      final cols = l['total_cols'] ?? sn?['total_cols'] ?? 0;
+      final name = (l['display_name'] ?? 'Untitled').toString();
+      final status = (l['layout_status'] ?? 'draft').toString();
+      final id = (l['id'] ?? '').toString();
+      return Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
         ),
-      ),
-    );
+        color: Color(0xFF1A2A3A),
+        child: Padding(
+          padding: EdgeInsets.all(14.w),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                backgroundColor: OwnerButtonColors.seats.withValues(alpha: .15),
+                child: Icon(Icons.event_seat, color: OwnerButtonColors.seats),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '$plate \u2022 $seats seats \u2022 ${rows}\u00d7$cols',
+                      style: TextStyle(color: AppColors.gray500, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              _badge(status, OwnerButtonColors.seats),
+              SizedBox(width: 4.w),
+              IconButton(
+                icon: Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                onPressed: () => _deleteLayout(id, name),
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
   }
 
   // ═══════════════════════ LAYOUT WIZARD ═══════════════════════
@@ -896,267 +921,17 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ),
             content: SizedBox(
               width: w ? 720 : 500,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: List.generate(
-                      3,
-                      (i) => Expanded(
-                        child: Container(
-                          height: 4,
-                          margin: EdgeInsets.symmetric(
-                            horizontal: i == 1 ? 3 : 0,
-                          ),
-                          decoration: BoxDecoration(
-                            color: i <= step
-                                ? OwnerButtonColors.seats
-                                : Color(0xFF2A3A4A),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Gap(20),
-                  // ── STEP 0: BUS DETAILS ──
-                  if (step == 0)
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _wiz(
-                              'Bus Registration / Plate Number *',
-                              'e.g. LES-26-1122',
-                              Icons.directions_bus,
-                              plateCtl,
-                            ),
-                            Gap(12),
-                            _wiz(
-                              'Bus Brand / Manufacturer',
-                              'e.g. Daewoo, Yutong',
-                              Icons.factory,
-                              brandCtl,
-                              dd: _brands,
-                            ),
-                            Gap(12),
-                            _wiz(
-                              'Bus Category / Type',
-                              'e.g. Luxury Coach, Coaster',
-                              Icons.category,
-                              catCtl,
-                              dd: _categories,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  // ── STEP 1: GRID SETUP ──
-                  if (step == 1)
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _num(
-                                    'Horizontal Rows',
-                                    rows,
-                                    3,
-                                    20,
-                                    (v) => setDlg(() => rows = v),
-                                  ),
-                                ),
-                                Gap(12),
-                                Expanded(
-                                  child: _num(
-                                    'Total Columns',
-                                    cols,
-                                    2,
-                                    7,
-                                    (v) => setDlg(() => cols = v),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Gap(12),
-                            _num(
-                              'Aisle (Walking Path) After Column',
-                              aisle,
-                              0,
-                              cols - 1,
-                              (v) => setDlg(() => aisle = v),
-                              hint:
-                                  '0=first col is aisle. $cols cols:0..${cols - 1}',
-                            ),
-                            Gap(16),
-                            Container(
-                              padding: EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Color(0xFF0D1B2A),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Color(0xFF2A3A4A)),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'Preview: $rows rows \u00d7 $cols cols (aisle after col $aisle)',
-                                    style: TextStyle(
-                                      color: Color(0xFF8899AA),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Gap(8),
-                                  _mini(rows, cols, aisle),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  // ── STEP 2: GRID PREVIEW ──
-                  if (step == 2 && built)
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Tap cells to toggle: Seat \u2192 Aisle \u2192 Empty \u2192 Folding',
-                              style: TextStyle(
-                                color: Color(0xFF556677),
-                                fontSize: 11,
-                              ),
-                            ),
-                            Gap(6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _leg('Seat', OwnerButtonColors.seats),
-                                Gap(12),
-                                _leg('Aisle', AppColors.gray500),
-                                Gap(12),
-                                _leg('Empty', Color(0xFF334455)),
-                                Gap(12),
-                                _leg('Folding', Color(0xFFD97706)),
-                              ],
-                            ),
-                            Gap(8),
-                            Text(
-                              () {
-                                int s = 0, f = 0;
-                                for (var r in grid)
-                                  for (var c in r) {
-                                    if (c == 'seat') s++;
-                                    if (c == 'folding') f++;
-                                  }
-                                return '$s seats + $f folding';
-                              }(),
-                              style: TextStyle(
-                                color: Color(0xFF00C49F),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Gap(10),
-                            Container(
-                              padding: EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Color(0xFF0D1B2A),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Color(0xFF2A3A4A)),
-                              ),
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        SizedBox(width: 44),
-                                        for (int c = 0; c < cols; c++)
-                                          SizedBox(
-                                            width: c == aisle ? 52 : 44,
-                                            child: Center(
-                                              child: Text(
-                                                c == aisle
-                                                    ? '\u2195 Aisle'
-                                                    : 'Col ${c + 1}',
-                                                style: TextStyle(
-                                                  color: c == aisle
-                                                      ? AppColors.gray500
-                                                      : Color(0xFF667788),
-                                                  fontSize: 10,
-                                                  fontWeight: c == aisle
-                                                      ? FontWeight.w600
-                                                      : FontWeight.normal,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    Gap(4),
-                                    for (int r = 0; r < rows; r++)
-                                      Padding(
-                                        padding: EdgeInsets.only(bottom: 3),
-                                        child: Row(
-                                          children: [
-                                            SizedBox(
-                                              width: 44,
-                                              child: Center(
-                                                child: Text(
-                                                  'Row ${r + 1}',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF667788),
-                                                    fontSize: 10,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            for (int c = 0; c < cols; c++)
-                                              GestureDetector(
-                                                onTap: () => setDlg(() {
-                                                  final t = grid[r][c];
-                                                  grid[r][c] = t == 'seat'
-                                                      ? 'aisle'
-                                                      : t == 'aisle'
-                                                      ? 'empty'
-                                                      : t == 'empty'
-                                                      ? 'folding'
-                                                      : 'seat';
-                                                }),
-                                                child: _gc(
-                                                  grid[r][c],
-                                                  grid[r][c] == 'seat' ||
-                                                          grid[r][c] ==
-                                                              'folding'
-                                                      ? _lbl(
-                                                          r,
-                                                          c,
-                                                          cols: cols,
-                                                          aisle: aisle,
-                                                        )
-                                                      : '',
-                                                  c == aisle,
-                                                  w: c == aisle ? 52 : 44,
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
+              child: _buildWizardContent(
+                step,
+                plateCtl,
+                brandCtl,
+                catCtl,
+                rows,
+                cols,
+                aisle,
+                grid,
+                built,
+                setDlg,
               ),
             ),
             actions: [
@@ -1281,6 +1056,293 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  // ═══ WIZARD HELPERS ═══
+  Widget _buildWizardContent(
+    int step,
+    TextEditingController plateCtl,
+    TextEditingController brandCtl,
+    TextEditingController catCtl,
+    int rows,
+    int cols,
+    int aisle,
+    List<List<String>> grid,
+    bool built,
+    void Function(VoidCallback) setDlg,
+  ) {
+    try {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Progress bar
+          Row(
+            children: List.generate(
+              3,
+              (i) => Expanded(
+                child: Container(
+                  height: 4,
+                  margin: EdgeInsets.symmetric(horizontal: i == 1 ? 3 : 0),
+                  decoration: BoxDecoration(
+                    color: i <= step
+                        ? OwnerButtonColors.seats
+                        : Color(0xFF2A3A4A),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Gap(20),
+          if (step == 0) _step0(plateCtl, brandCtl, catCtl),
+          if (step == 1) _step1(rows, cols, aisle, setDlg),
+          if (step == 2 && built) _step2(grid, rows, cols, aisle, setDlg),
+        ],
+      );
+    } catch (_) {
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Text('Loading...', style: TextStyle(color: Color(0xFF8899AA))),
+      );
+    }
+  }
+
+  Widget _step0(
+    TextEditingController plate,
+    TextEditingController brand,
+    TextEditingController cat,
+  ) {
+    return Flexible(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _wiz(
+              'Bus Registration / Plate Number *',
+              'e.g. LES-26-1122',
+              Icons.directions_bus,
+              plate,
+            ),
+            Gap(12),
+            _wiz(
+              'Bus Brand / Manufacturer',
+              'e.g. Daewoo, Yutong',
+              Icons.factory,
+              brand,
+            ),
+            Gap(12),
+            _wiz(
+              'Bus Category / Type',
+              'e.g. Luxury Coach, Coaster',
+              Icons.category,
+              cat,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _step1(
+    int rows,
+    int cols,
+    int aisle,
+    void Function(VoidCallback) setDlg,
+  ) {
+    return Flexible(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _num(
+                    'Horizontal Rows',
+                    rows,
+                    3,
+                    20,
+                    (v) => setDlg(() => rows = v),
+                  ),
+                ),
+                Gap(12),
+                Expanded(
+                  child: _num(
+                    'Total Columns',
+                    cols,
+                    2,
+                    7,
+                    (v) => setDlg(() => cols = v),
+                  ),
+                ),
+              ],
+            ),
+            Gap(12),
+            _num(
+              'Aisle (Walking Path) After Column',
+              aisle,
+              0,
+              cols - 1,
+              (v) => setDlg(() => aisle = v),
+              hint: '0=first col is aisle',
+            ),
+            Gap(16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Color(0xFF0D1B2A),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Color(0xFF2A3A4A)),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Preview: $rows rows × $cols cols',
+                    style: TextStyle(color: Color(0xFF8899AA), fontSize: 12),
+                  ),
+                  Gap(8),
+                  _mini(rows, cols, aisle),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _step2(
+    List<List<String>> grid,
+    int rows,
+    int cols,
+    int aisle,
+    void Function(VoidCallback) setDlg,
+  ) {
+    return Flexible(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Tap cells to toggle: Seat → Aisle → Empty → Folding',
+              style: TextStyle(color: Color(0xFF556677), fontSize: 11),
+            ),
+            Gap(6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _leg('Seat', OwnerButtonColors.seats),
+                Gap(12),
+                _leg('Aisle', AppColors.gray500),
+                Gap(12),
+                _leg('Empty', Color(0xFF334455)),
+                Gap(12),
+                _leg('Folding', Color(0xFFD97706)),
+              ],
+            ),
+            Gap(8),
+            Text(
+              () {
+                int s = 0, f = 0;
+                for (var r in grid)
+                  for (var c in r) {
+                    if (c == 'seat') s++;
+                    if (c == 'folding') f++;
+                  }
+                return '$s seats + $f folding';
+              }(),
+              style: TextStyle(
+                color: Color(0xFF00C49F),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Gap(10),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Color(0xFF0D1B2A),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Color(0xFF2A3A4A)),
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(width: 44),
+                        for (int c = 0; c < cols; c++)
+                          SizedBox(
+                            width: c == aisle ? 52 : 44,
+                            child: Center(
+                              child: Text(
+                                c == aisle ? '\u2195 Aisle' : 'Col ${c + 1}',
+                                style: TextStyle(
+                                  color: c == aisle
+                                      ? AppColors.gray500
+                                      : Color(0xFF667788),
+                                  fontSize: 10,
+                                  fontWeight: c == aisle
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    Gap(4),
+                    for (int r = 0; r < rows; r++)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: 3),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 44,
+                              child: Center(
+                                child: Text(
+                                  'Row ${r + 1}',
+                                  style: TextStyle(
+                                    color: Color(0xFF667788),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            for (int c = 0; c < cols; c++)
+                              GestureDetector(
+                                onTap: () => setDlg(() {
+                                  final t = grid[r][c];
+                                  grid[r][c] = t == 'seat'
+                                      ? 'aisle'
+                                      : t == 'aisle'
+                                      ? 'empty'
+                                      : t == 'empty'
+                                      ? 'folding'
+                                      : 'seat';
+                                }),
+                                child: _gc(
+                                  grid[r][c],
+                                  grid[r][c] == 'seat' ||
+                                          grid[r][c] == 'folding'
+                                      ? _lbl(r, c, cols: cols, aisle: aisle)
+                                      : '',
+                                  c == aisle,
+                                  w: c == aisle ? 52 : 44,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
