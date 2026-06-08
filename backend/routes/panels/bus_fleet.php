@@ -144,6 +144,7 @@ Route::prefix('api/v1/bus-fleet')
             Route::post('/{id}/acquire-lock', [\App\Http\Controllers\BusTransitController::class, 'acquireLock']);
             Route::post('/{id}/release-lock', [\App\Http\Controllers\BusTransitController::class, 'releaseLock']);
             Route::post('/{id}/publish', [\App\Http\Controllers\BusTransitController::class, 'publishLayout']);
+            Route::patch('/{id}/components', [\App\Http\Controllers\BusTransitController::class, 'updateComponent']);
             Route::get('/{id}/revisions', [\App\Http\Controllers\BusTransitController::class, 'listRevisions']);
             Route::delete('/{id}', [\App\Http\Controllers\BusTransitController::class, 'archiveLayout']);
         });

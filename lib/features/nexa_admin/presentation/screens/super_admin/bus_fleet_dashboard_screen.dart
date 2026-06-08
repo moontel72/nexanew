@@ -441,11 +441,13 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   }
 
   void _openLayoutDesigner() {
+    final cId = widget.companyId ?? _company?.id.toString() ?? '';
+    if (cId.isEmpty) return;
     Navigator.of(context)
         .push(
           MaterialPageRoute(
             builder: (_) => SeatLayoutDesignerScreen(
-              companyId: widget.companyId ?? _company?.id.toString(),
+              companyId: cId,
               companyName: _company?.name,
             ),
           ),
@@ -1339,12 +1341,14 @@ class _LayoutListViewState extends State<_LayoutListView> {
   }
 
   void _openDesigner({String? layoutId}) {
+    final cId = widget.companyId ?? '';
+    if (cId.isEmpty) return;
     Navigator.of(context)
         .push(
           MaterialPageRoute(
             builder: (_) => SeatLayoutDesignerScreen(
               layoutId: layoutId,
-              companyId: widget.companyId,
+              companyId: cId,
               companyName: widget.companyName,
             ),
           ),

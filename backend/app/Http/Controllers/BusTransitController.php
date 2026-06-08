@@ -331,6 +331,40 @@ class BusTransitController extends Controller
     }
 
     /**
+     * PATCH /api/v1/bus-fleet/layouts/{id}/components
+     *
+     * Partial component update — add, move, resize, or delete
+     * a single component and atomically merge into the current snapshot.
+     */
+    public function updateComponent(string $id, Request $request): JsonResponse
+    {
+        try {
+            $data = $request->validate([
+                'component_id'   => ['required', 'string', 'max:100'],
+                'action'         => ['required', 'string', 'in:add,move,resize,delete,update'],
+                'component_data' => ['required', 'array'],
+            ]);
+
+            $identityId = $this->resolveOwnerIdentityId($request);
+
+            $result = $this->layouts->updateComponent(
+                layoutId: $id,
+                identityId: $identityId,
+                componentId: $data['component_id'],
+                action: $data['action'],
+                componentData: $data['component_data'],
+            );
+
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - updateComponent Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * GET /api/v1/bus-fleet/layouts/{id}/revisions
      *
      * Get revision history for a layout, newest first.
