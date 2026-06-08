@@ -1301,42 +1301,28 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   }
 
   // ═══ WIZARD HELPERS ═══
-  Widget _wiz(
-    String lbl,
-    String hint,
-    IconData ic,
-    TextEditingController ctl, {
-    List<String>? dd,
-  }) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        lbl,
-        style: TextStyle(
-          color: Color(0xFF8899AA),
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      Gap(4),
-      TextField(
+  Widget _wiz(String lbl, String hint, IconData ic, TextEditingController ctl, {List<String>? dd}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12),
+      child: TextField(
         controller: ctl,
-        style: TextStyle(color: Colors.white, fontSize: 14),
+        style: const TextStyle(color: Colors.white, fontSize: 14),
         decoration: InputDecoration(
+          labelText: lbl,
           hintText: hint,
-          hintStyle: TextStyle(color: Color(0xFF556677)),
-          prefixIcon: Icon(ic, color: Color(0xFF556677)),
+          labelStyle: const TextStyle(color: Color(0xFF8899AA)),
+          hintStyle: const TextStyle(color: Color(0xFF556677)),
+          prefixIcon: Icon(ic, color: const Color(0xFF556677)),
           filled: true,
-          fillColor: Color(0xFF0D1B2A),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Color(0xFF2A3A4A)),
-          ),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          fillColor: const Color(0xFF0D1B2A),
+          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF2A3A4A))),
+          focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF00C49F))),
+          border: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF2A3A4A))),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         ),
       ),
-    ],
-  );
+    );
+  }
 
   Widget _num(
     String lbl,
