@@ -6,7 +6,7 @@
 // booking mode, span dimensions (for multi-cell objects).
 
 import 'package:flutter/material.dart';
-import 'package:trace_odd/features/bus_operations/domain/models/layout_component.dart';
+import 'package:trace_odd/shared/models/transport/layout_component.dart';
 
 class CellInspectorPanel extends StatefulWidget {
   final LayoutComponent component;

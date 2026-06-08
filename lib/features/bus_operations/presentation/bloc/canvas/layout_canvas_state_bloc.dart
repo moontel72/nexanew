@@ -2,7 +2,7 @@
 // ======================================
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:trace_odd/features/bus_operations/domain/models/layout_canvas_state.dart';
+import 'package:trace_odd/shared/models/transport/layout_canvas_state.dart';
 
 enum CanvasStatus {
   initial,

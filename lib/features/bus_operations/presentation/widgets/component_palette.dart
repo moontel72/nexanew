@@ -6,7 +6,7 @@
 // Section 14E: Component Palette.
 
 import 'package:flutter/material.dart';
-import 'package:trace_odd/features/bus_operations/domain/models/layout_component.dart';
+import 'package:trace_odd/shared/models/transport/layout_component.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/canvas_grid.dart';
 
 /// Metadata for palette items.

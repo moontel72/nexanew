@@ -8,8 +8,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:trace_odd/features/bus_operations/domain/models/layout_component.dart';
-import 'package:trace_odd/features/bus_operations/domain/models/layout_canvas_state.dart';
+import 'package:trace_odd/shared/models/transport/layout_component.dart';
+import 'package:trace_odd/shared/models/transport/layout_canvas_state.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/canvas/layout_canvas_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/canvas/layout_canvas_state_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/canvas/layout_canvas_event.dart';
