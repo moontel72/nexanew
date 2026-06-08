@@ -56,7 +56,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     ]));
   }
 
-  Widget _sidebar(bool w) => Container(width:260, decoration:const BoxDecoration(
+  Widget _sidebar(bool w) => Container(width:260, decoration: BoxDecoration(
     gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Color(0xFF1A3A5C),Color(0xFF0F2B3F)]),
     boxShadow:[BoxShadow(color:Color(0x30144055),blurRadius:16,offset:Offset(4,0))]),
     child:SafeArea(child:Column(children:[
@@ -228,8 +228,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         labelText: label,
         labelStyle: const TextStyle(color: Color(0xFF8899AA)),
         border: const OutlineInputBorder(),
-        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF2A3A4A))),
-        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF00C49F))),
+        enabledBorder: const OutlineInputBorder(borderSide: const BorderSide(color: const Color(0xFF2A3A4A))),
+        focusedBorder: const OutlineInputBorder(borderSide: const BorderSide(color: const Color(0xFF00C49F))),
       ),
     );
   }
