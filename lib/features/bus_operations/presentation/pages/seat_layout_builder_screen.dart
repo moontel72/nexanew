@@ -487,6 +487,20 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     final totalW = cols * (cellW + gap) + 48;
     final totalH = rows * (cellH + gap) + 20 + 60;
 
+    // Determine overlapping cells (both decks occupied at same position)
+    final hasOverlap = _hasUpperDeck && !_isUpperDeck;
+    final overlapCells = <int>{};
+    if (hasOverlap) {
+      for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < cols; c++) {
+          if (grid[r][c].type != BuilderCellType.empty &&
+              _upperGrid[r][c].type != BuilderCellType.empty) {
+            overlapCells.add(r * 100 + c);
+          }
+        }
+      }
+    }
+
     return SizedBox(
       width: totalW,
       height: totalH,
@@ -529,24 +543,11 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
               ),
             ),
 
-          // Determine overlapping cells (both decks occupied at same position)
-          final hasOverlap = _hasUpperDeck && !_isUpperDeck;
-          final overlapCells = <int>{};
-          if (hasOverlap) {
-            for (int r = 0; r < rows; r++) {
-              for (int c = 0; c < cols; c++) {
-                if (grid[r][c].type != BuilderCellType.empty &&
-                    _upperGrid[r][c].type != BuilderCellType.empty) {
-                  overlapCells.add(r * 100 + c);
-                }
-              }
-            }
-          }
-
           // Single cells (not part of any multi-cell region, not overlapped)
           for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
-              if (!visited.contains(r * 100 + c) && !overlapCells.contains(r * 100 + c))
+              if (!visited.contains(r * 100 + c) &&
+                  !overlapCells.contains(r * 100 + c))
                 Positioned(
                   left: 48 + c * (cellW + gap),
                   top: 20 + r * (cellH + gap),
@@ -559,19 +560,20 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                 ),
 
           // Split-view overlapped cells (75/25 or 50/50)
-          for (final key in overlapCells) {
+          ...overlapCells.map((key) {
             final r = key ~/ 100;
             final c = key % 100;
             final lowerCell = grid[r][c];
             final upperCell = _upperGrid[r][c];
-            final isBerthOverlap = lowerCell.type == BuilderCellType.sleeperLower ||
+            final isBerthOverlap =
+                lowerCell.type == BuilderCellType.sleeperLower ||
                 lowerCell.type == BuilderCellType.sleeperUpper;
             final lowerW = isBerthOverlap ? 0.50 : 0.75;
             final upperW = isBerthOverlap ? 0.50 : 0.25;
             final lowerColor = _cellColors[lowerCell.type] ?? Colors.grey;
             final upperColor = _cellColors[upperCell.type] ?? Colors.orange;
 
-            Positioned(
+            return Positioned(
               left: 48 + c * (cellW + gap),
               top: 20 + r * (cellH + gap),
               width: cellW,
@@ -581,41 +583,75 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: upperColor.withAlpha(180), width: 1.5),
+                    border: Border.all(
+                      color: upperColor.withAlpha(180),
+                      width: 1.5,
+                    ),
                   ),
                   child: Row(
                     children: [
-                      // Lower component (aisle side)
                       Expanded(
                         flex: (lowerW * 100).round(),
                         child: Container(
                           decoration: BoxDecoration(
                             color: lowerColor.withAlpha(45),
-                            borderRadius: const BorderRadius.horizontal(left: Radius.circular(5)),
+                            borderRadius: const BorderRadius.horizontal(
+                              left: Radius.circular(5),
+                            ),
                           ),
                           child: Center(
-                            child: Column(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(_cellIcons[lowerCell.type] ?? Icons.help, size: 13, color: lowerColor),
-                              if (lowerCell.label?.isNotEmpty == true)
-                                Text(lowerCell.label!, style: TextStyle(color: lowerColor, fontSize: 8, fontWeight: FontWeight.w700)),
-                            ]),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _cellIcons[lowerCell.type] ?? Icons.help,
+                                  size: 13,
+                                  color: lowerColor,
+                                ),
+                                if (lowerCell.label?.isNotEmpty == true)
+                                  Text(
+                                    lowerCell.label!,
+                                    style: TextStyle(
+                                      color: lowerColor,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                      // Upper component (wall/window side)
                       Expanded(
                         flex: (upperW * 100).round(),
                         child: Container(
                           decoration: BoxDecoration(
                             color: upperColor.withAlpha(55),
-                            borderRadius: const BorderRadius.horizontal(right: Radius.circular(5)),
+                            borderRadius: const BorderRadius.horizontal(
+                              right: Radius.circular(5),
+                            ),
                           ),
                           child: Center(
-                            child: Column(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(_cellIcons[upperCell.type] ?? Icons.airline_seat_flat, size: 13, color: upperColor),
-                              if (upperCell.label?.isNotEmpty == true)
-                                Text(upperCell.label!, style: TextStyle(color: upperColor, fontSize: 8, fontWeight: FontWeight.w700)),
-                            ]),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _cellIcons[upperCell.type] ??
+                                      Icons.airline_seat_flat,
+                                  size: 13,
+                                  color: upperColor,
+                                ),
+                                if (upperCell.label?.isNotEmpty == true)
+                                  Text(
+                                    upperCell.label!,
+                                    style: TextStyle(
+                                      color: upperColor,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -624,7 +660,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                 ),
               ),
             );
-          }
+          }),
 
           // Unified multi-cell components
           for (final region in regions)
