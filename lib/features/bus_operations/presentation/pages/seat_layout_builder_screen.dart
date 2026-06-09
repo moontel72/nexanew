@@ -536,8 +536,40 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       }
     }
 
-    // Split-view overlapped cells: detect upper grid regions and render unified strips
-    final splitWidgets = <Widget>[];
+    // Determine aisle column (first column containing any aisle cell)
+    int? firstAisleCol;
+    for (int c = 0; c < cols; c++) {
+      bool hasAisle = false;
+      for (int r = 0; r < rows; r++) {
+        if (grid[r][c].type == BuilderCellType.aisle) {
+          hasAisle = true;
+          break;
+        }
+      }
+      if (hasAisle) {
+        firstAisleCol = c;
+        break;
+      }
+    }
+
+    // Remove overlapping cells from visited so they render individually
+    // and filter out regions that overlap with upper berth
+    if (hasOverlap) {
+      for (final key in overlapCells) {
+        visited.remove(key);
+      }
+      regions.removeWhere((region) {
+        for (int rr = region.r; rr < region.r + region.sr; rr++) {
+          for (int cc = region.c; cc < region.c + region.sc; cc++) {
+            if (overlapCells.contains(rr * 100 + cc)) return true;
+          }
+        }
+        return false;
+      });
+    }
+
+    // Upper berth strips: one continuous strip per upper grid region on the window side
+    final upperStripWidgets = <Widget>[];
     if (hasOverlap) {
       final upperVisited = <int>{};
       for (int r = 0; r < rows; r++) {
@@ -556,121 +588,56 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             for (int cc = c; cc < c + spanC; cc++)
               upperVisited.add(rr * 100 + cc);
 
-          // Mark lower cells as covered so they're skipped in single-cell rendering
-          for (int rr = r; rr < r + spanR; rr++)
-            for (int cc = c; cc < c + spanC; cc++)
-              overlapCells.add(rr * 100 + cc);
-
-          // Determine widths based on whether lower grid has berth content
-          final lowerType = grid[r][c].type;
-          final isBerthOverlap =
-              lowerType == BuilderCellType.sleeperLower ||
-              lowerType == BuilderCellType.sleeperUpper;
-          final lowerW = isBerthOverlap ? 0.50 : 0.75;
-          final upperW = isBerthOverlap ? 0.50 : 0.25;
-          final lowerColor = _cellColors[lowerType] ?? Colors.grey;
           final upperColor = _cellColors[uType] ?? Colors.orange;
           final upperLabel = _upperGrid[r][c].label ?? '';
+          final regionFullW = spanC * cellW + (spanC - 1) * gap;
+          final regionH = spanR * cellH + (spanR - 1) * gap;
+          final stripW = regionFullW * 0.25;
+          final bool isLeftSection = c < (firstAisleCol ?? cols);
 
-          // Build unified split-view block per region
-          splitWidgets.add(
+          upperStripWidgets.add(
             Positioned(
-              left: 48 + c * (cellW + gap),
+              left: isLeftSection
+                  ? 48 + c * (cellW + gap)
+                  : 48 + c * (cellW + gap) + regionFullW - stripW,
               top: 20 + r * (cellH + gap),
-              width: spanC * cellW + (spanC - 1) * gap,
-              height: spanR * cellH + (spanR - 1) * gap,
-              child: GestureDetector(
-                onTap: () => _openCellPicker(r, c),
+              width: stripW,
+              height: regionH,
+              child: IgnorePointer(
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
+                    color: upperColor.withAlpha(60),
+                    borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: upperColor.withAlpha(180),
-                      width: 2,
+                      color: upperColor.withAlpha(140),
+                      width: 1.5,
                     ),
                   ),
-                  child: Row(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Lower component (aisle side — 75% or 50%)
-                      Expanded(
-                        flex: (lowerW * 100).round(),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: lowerColor.withAlpha(35),
-                            borderRadius: const BorderRadius.horizontal(
-                              left: Radius.circular(6),
-                            ),
-                          ),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _cellIcons[lowerType] ?? Icons.help,
-                                  size: spanR > 1 ? 22 : 16,
-                                  color: lowerColor,
-                                ),
-                                if (grid[r][c].label?.isNotEmpty == true)
-                                  Text(
-                                    grid[r][c].label!,
-                                    style: TextStyle(
-                                      color: lowerColor,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                Text(
-                                  '${lowerType.name}',
-                                  style: TextStyle(
-                                    color: lowerColor.withAlpha(150),
-                                    fontSize: 8,
-                                  ),
-                                ),
-                              ],
+                      Icon(
+                        _cellIcons[uType] ?? Icons.airline_seat_flat,
+                        size: spanR > 1 ? 24 : 16,
+                        color: upperColor,
+                      ),
+                      if (upperLabel.isNotEmpty)
+                        Flexible(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: Text(
+                              upperLabel,
+                              style: TextStyle(
+                                color: upperColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ),
-                      ),
-                      // Upper berth (window/wall side — 25% or 50%)
-                      Expanded(
-                        flex: (upperW * 100).round(),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: upperColor.withAlpha(50),
-                            borderRadius: const BorderRadius.horizontal(
-                              right: Radius.circular(6),
-                            ),
-                          ),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _cellIcons[uType] ?? Icons.airline_seat_flat,
-                                  size: spanR > 1 ? 28 : 18,
-                                  color: upperColor,
-                                ),
-                                if (upperLabel.isNotEmpty)
-                                  Text(
-                                    upperLabel,
-                                    style: TextStyle(
-                                      color: upperColor,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                Text(
-                                  '${spanR}×${spanC} upper berth',
-                                  style: TextStyle(
-                                    color: upperColor.withAlpha(160),
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -723,37 +690,39 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
               ),
             ),
 
-          // Single cells (not part of any multi-cell region, not overlapped)
+          // Single cells (not part of any multi-cell region)
           for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
-              if (!visited.contains(r * 100 + c) &&
-                  !overlapCells.contains(r * 100 + c))
-                Positioned(
-                  left: 48 + c * (cellW + gap),
-                  top: 20 + r * (cellH + gap),
-                  width: cellW,
-                  height: cellH,
-                  child: GestureDetector(
-                    onTap: () {
-                      if (_selectMode) {
-                        setState(() {
-                          final key = r * 100 + c;
-                          if (_selectedCells.contains(key)) {
-                            _selectedCells.remove(key);
-                          } else {
-                            _selectedCells.add(key);
-                          }
-                        });
-                      } else {
-                        _openCellPicker(r, c);
-                      }
-                    },
-                    child: _buildSelectableCell(grid[r][c], r, c),
+              if (!visited.contains(r * 100 + c))
+                if (overlapCells.contains(r * 100 + c))
+                  _buildOverlayCell(grid, r, c, cellW, cellH, gap, firstAisleCol, cols)
+                else
+                  Positioned(
+                    left: 48 + c * (cellW + gap),
+                    top: 20 + r * (cellH + gap),
+                    width: cellW,
+                    height: cellH,
+                    child: GestureDetector(
+                      onTap: () {
+                        if (_selectMode) {
+                          setState(() {
+                            final key = r * 100 + c;
+                            if (_selectedCells.contains(key)) {
+                              _selectedCells.remove(key);
+                            } else {
+                              _selectedCells.add(key);
+                            }
+                          });
+                        } else {
+                          _openCellPicker(r, c);
+                        }
+                      },
+                      child: _buildSelectableCell(grid[r][c], r, c),
+                    ),
                   ),
-                ),
 
-          // Split-view overlapped cells
-          ...splitWidgets,
+          // Upper berth strips (window side, taps pass through)
+          ...upperStripWidgets,
 
           // Unified multi-cell components
           for (final region in regions)
@@ -844,6 +813,49 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  // ── Overlay cell: lower seat at 75% width shifted toward aisle ──
+  Widget _buildOverlayCell(
+    List<List<_GridCell>> grid,
+    int r,
+    int c,
+    double cellW,
+    double cellH,
+    double gap,
+    int? firstAisleCol,
+    int totalCols,
+  ) {
+    final bool isLeftSection = c < (firstAisleCol ?? totalCols);
+    // Upper berth is on the window side; lower cell shifts toward the aisle
+    final double left = 48 +
+        c * (cellW + gap) +
+        (isLeftSection ? cellW * 0.25 : 0);
+    final double width = cellW * 0.75; // 75% of cellW
+
+    return Positioned(
+      left: left,
+      top: 20 + r * (cellH + gap),
+      width: width,
+      height: cellH,
+      child: GestureDetector(
+        onTap: () {
+          if (_selectMode) {
+            setState(() {
+              final key = r * 100 + c;
+              if (_selectedCells.contains(key)) {
+                _selectedCells.remove(key);
+              } else {
+                _selectedCells.add(key);
+              }
+            });
+          } else {
+            _openCellPicker(r, c);
+          }
+        },
+        child: _buildSelectableCell(grid[r][c], r, c),
+      ),
     );
   }
 
