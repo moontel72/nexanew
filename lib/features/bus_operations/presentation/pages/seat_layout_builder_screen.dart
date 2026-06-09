@@ -402,8 +402,18 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
               const SizedBox(width: 10),
               _statBadge(
                 'Berths',
-                _countTypeIn(activeGrid, BuilderCellType.sleeperLower) +
-                    _countTypeIn(activeGrid, BuilderCellType.sleeperUpper),
+                _countTypeIn(_grid, BuilderCellType.sleeperLower) +
+                    _countTypeIn(_grid, BuilderCellType.sleeperUpper) +
+                    (_hasUpperDeck
+                        ? _countTypeIn(
+                                _upperGrid,
+                                BuilderCellType.sleeperLower,
+                              ) +
+                              _countTypeIn(
+                                _upperGrid,
+                                BuilderCellType.sleeperUpper,
+                              )
+                        : 0),
                 const Color(0xFFDB2777),
               ),
               const SizedBox(width: 10),
@@ -526,6 +536,151 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       }
     }
 
+    // Split-view overlapped cells: detect upper grid regions and render unified strips
+    final splitWidgets = <Widget>[];
+    if (hasOverlap) {
+      final upperVisited = <int>{};
+      for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < cols; c++) {
+          if (upperVisited.contains(r * 100 + c)) continue;
+          if (_upperGrid[r][c].type == BuilderCellType.empty) continue;
+          // Found start of an upper region — find its extent
+          final uType = _upperGrid[r][c].type;
+          int spanR = 1, spanC = 1;
+          while (r + spanR < rows && _upperGrid[r + spanR][c].type == uType)
+            spanR++;
+          while (c + spanC < cols && _upperGrid[r][c + spanC].type == uType)
+            spanC++;
+          // Mark visited
+          for (int rr = r; rr < r + spanR; rr++)
+            for (int cc = c; cc < c + spanC; cc++)
+              upperVisited.add(rr * 100 + cc);
+
+          // Mark lower cells as covered so they're skipped in single-cell rendering
+          for (int rr = r; rr < r + spanR; rr++)
+            for (int cc = c; cc < c + spanC; cc++)
+              overlapCells.add(rr * 100 + cc);
+
+          // Determine widths based on whether lower grid has berth content
+          final lowerType = grid[r][c].type;
+          final isBerthOverlap =
+              lowerType == BuilderCellType.sleeperLower ||
+              lowerType == BuilderCellType.sleeperUpper;
+          final lowerW = isBerthOverlap ? 0.50 : 0.75;
+          final upperW = isBerthOverlap ? 0.50 : 0.25;
+          final lowerColor = _cellColors[lowerType] ?? Colors.grey;
+          final upperColor = _cellColors[uType] ?? Colors.orange;
+          final upperLabel = _upperGrid[r][c].label ?? '';
+
+          // Build unified split-view block per region
+          splitWidgets.add(
+            Positioned(
+              left: 48 + c * (cellW + gap),
+              top: 20 + r * (cellH + gap),
+              width: spanC * cellW + (spanC - 1) * gap,
+              height: spanR * cellH + (spanR - 1) * gap,
+              child: GestureDetector(
+                onTap: () => _openCellPicker(r, c),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: upperColor.withAlpha(180),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Lower component (aisle side — 75% or 50%)
+                      Expanded(
+                        flex: (lowerW * 100).round(),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: lowerColor.withAlpha(35),
+                            borderRadius: const BorderRadius.horizontal(
+                              left: Radius.circular(6),
+                            ),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _cellIcons[lowerType] ?? Icons.help,
+                                  size: spanR > 1 ? 22 : 16,
+                                  color: lowerColor,
+                                ),
+                                if (grid[r][c].label?.isNotEmpty == true)
+                                  Text(
+                                    grid[r][c].label!,
+                                    style: TextStyle(
+                                      color: lowerColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                Text(
+                                  '${lowerType.name}',
+                                  style: TextStyle(
+                                    color: lowerColor.withAlpha(150),
+                                    fontSize: 8,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Upper berth (window/wall side — 25% or 50%)
+                      Expanded(
+                        flex: (upperW * 100).round(),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: upperColor.withAlpha(50),
+                            borderRadius: const BorderRadius.horizontal(
+                              right: Radius.circular(6),
+                            ),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _cellIcons[uType] ?? Icons.airline_seat_flat,
+                                  size: spanR > 1 ? 28 : 18,
+                                  color: upperColor,
+                                ),
+                                if (upperLabel.isNotEmpty)
+                                  Text(
+                                    upperLabel,
+                                    style: TextStyle(
+                                      color: upperColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                Text(
+                                  '${spanR}×${spanC} upper berth',
+                                  style: TextStyle(
+                                    color: upperColor.withAlpha(160),
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      }
+    }
+
     return SizedBox(
       width: totalW,
       height: totalH,
@@ -597,108 +752,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                   ),
                 ),
 
-          // Split-view overlapped cells (75/25 or 50/50)
-          ...overlapCells.map((key) {
-            final r = key ~/ 100;
-            final c = key % 100;
-            final lowerCell = grid[r][c];
-            final upperCell = _upperGrid[r][c];
-            final isBerthOverlap =
-                lowerCell.type == BuilderCellType.sleeperLower ||
-                lowerCell.type == BuilderCellType.sleeperUpper;
-            final lowerW = isBerthOverlap ? 0.50 : 0.75;
-            final upperW = isBerthOverlap ? 0.50 : 0.25;
-            final lowerColor = _cellColors[lowerCell.type] ?? Colors.grey;
-            final upperColor = _cellColors[upperCell.type] ?? Colors.orange;
-
-            return Positioned(
-              left: 48 + c * (cellW + gap),
-              top: 20 + r * (cellH + gap),
-              width: cellW,
-              height: cellH,
-              child: GestureDetector(
-                onTap: () => _openCellPicker(r, c),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: upperColor.withAlpha(180),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: (lowerW * 100).round(),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: lowerColor.withAlpha(45),
-                            borderRadius: const BorderRadius.horizontal(
-                              left: Radius.circular(5),
-                            ),
-                          ),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _cellIcons[lowerCell.type] ?? Icons.help,
-                                  size: 13,
-                                  color: lowerColor,
-                                ),
-                                if (lowerCell.label?.isNotEmpty == true)
-                                  Text(
-                                    lowerCell.label!,
-                                    style: TextStyle(
-                                      color: lowerColor,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: (upperW * 100).round(),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: upperColor.withAlpha(55),
-                            borderRadius: const BorderRadius.horizontal(
-                              right: Radius.circular(5),
-                            ),
-                          ),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _cellIcons[upperCell.type] ??
-                                      Icons.airline_seat_flat,
-                                  size: 13,
-                                  color: upperColor,
-                                ),
-                                if (upperCell.label?.isNotEmpty == true)
-                                  Text(
-                                    upperCell.label!,
-                                    style: TextStyle(
-                                      color: upperColor,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
+          // Split-view overlapped cells
+          ...splitWidgets,
 
           // Unified multi-cell components
           for (final region in regions)
