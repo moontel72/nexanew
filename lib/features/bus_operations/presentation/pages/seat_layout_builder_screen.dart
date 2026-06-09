@@ -125,18 +125,37 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         '/bus-owner/layouts/${widget.layoutId}',
       );
       if (!mounted) return;
-      final data = res?['data'];
-      if (data == null || data is! Map) return;
-      final snap = data['current_snapshot'];
-      if (snap == null || snap is! Map) return;
-      final gridData = snap['grid'] as List?;
-      if (gridData == null || gridData.isEmpty) return;
 
-      _plateCtl.text = (snap['bus_plate'] ?? data['display_name'] ?? '')
-          .toString();
-      _brandCtl.text = (snap['bus_brand'] ?? '').toString();
-      _modelCtl.text = (snap['bus_category'] ?? data['vehicle_class'] ?? '')
-          .toString();
+      // Try to parse the response — accept multiple shapes
+      Map<String, dynamic>? snap;
+      final data = res?['data'];
+      if (data is Map) {
+        snap = data['current_snapshot'];
+        if (snap is! Map) snap = Map<String, dynamic>.from(data); // fallback
+        _plateCtl.text = (snap?['bus_plate'] ?? data['display_name'] ?? '')
+            .toString();
+        _brandCtl.text = (snap?['bus_brand'] ?? '').toString();
+        _modelCtl.text = (snap?['bus_category'] ?? data['vehicle_class'] ?? '')
+            .toString();
+      } else if (data is List && data.isNotEmpty) {
+        // Direct list response
+        snap = null;
+      } else {
+        if (mounted) setState(() => _loadingLayout = false);
+        return;
+      }
+
+      if (snap == null || snap.isEmpty) {
+        if (mounted) setState(() => _loadingLayout = false);
+        return;
+      }
+
+      final gridData = snap['grid'] as List?;
+      if (gridData == null || gridData.isEmpty) {
+        if (mounted) setState(() => _loadingLayout = false);
+        return;
+      }
+
       _rows = (snap['total_rows'] as int?) ?? gridData.length;
       _cols =
           (snap['total_cols'] as int?) ??
@@ -229,6 +248,13 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           },
         ),
         actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Dashboard',
+              style: TextStyle(color: Color(0xFFAABBCC), fontSize: 12),
+            ),
+          ),
           if (_step == 1)
             TextButton.icon(
               onPressed: _saving ? null : _saveLayout,
