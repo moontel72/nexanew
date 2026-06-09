@@ -98,6 +98,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   bool _selectMode = false;
   final _selectedCells = <int>{}; // keys: r*100+c
   bool _saving = false;
+  bool _loadingLayout = false;
   final _scrollController = ScrollController();
 
   @override
@@ -113,6 +114,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   void initState() {
     super.initState();
     if (widget.layoutId != null) {
+      _loadingLayout = true;
       _loadExistingLayout();
     }
   }
@@ -186,13 +188,24 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         _renumberGrid(_upperGrid);
       }
 
-      setState(() => _step = 1);
-    } catch (_) {}
+      setState(() {
+        _step = 1;
+        _loadingLayout = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _loadingLayout = false);
+    }
   }
 
   // ── Build ──────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    if (_loadingLayout) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0D1B2A),
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
       appBar: AppBar(

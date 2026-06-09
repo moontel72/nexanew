@@ -825,9 +825,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       final plate =
           (l['bus_plate'] ?? sn?['bus_plate'] ?? l['vehicle_class'] ?? '')
               .toString();
-      final seats = l['total_seats'] ?? 0;
-      final rows = l['total_rows'] ?? sn?['total_rows'] ?? 0;
-      final cols = l['total_cols'] ?? sn?['total_cols'] ?? 0;
+      final seats =
+          (sn?['total_seats'] ??
+          sn?['metadata']?['total_bookable_seats'] ??
+          l['total_seats'] ??
+          0);
+      final rows = (sn?['total_rows'] ?? l['total_rows'] ?? 0);
+      final cols = (sn?['total_cols'] ?? l['total_cols'] ?? 0);
       final name = (l['display_name'] ?? 'Untitled').toString();
       final status = (l['layout_status'] ?? 'draft').toString();
       final id = (l['id'] ?? '').toString();
