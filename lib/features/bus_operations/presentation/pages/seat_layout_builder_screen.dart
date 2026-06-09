@@ -643,6 +643,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     final isEmpty = type == BuilderCellType.empty;
 
     return Container(
+      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: isEmpty ? const Color(0xFF1A2533) : color.withAlpha(40),
         borderRadius: BorderRadius.circular(6),
@@ -755,82 +756,84 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       });
     }
 
-    // Upper berth strips: one continuous strip per upper grid region on the window side
+    // Upper berth strips: per-cell strips on the window side
     final upperStripWidgets = <Widget>[];
     if (hasOverlap) {
+      // Group contiguous upper cells by region so the label appears once per region
       final upperVisited = <int>{};
       for (int r = 0; r < rows; r++) {
         for (int c = 0; c < cols; c++) {
           if (upperVisited.contains(r * 100 + c)) continue;
           if (_upperGrid[r][c].type == BuilderCellType.empty) continue;
-          // Found start of an upper region — find its extent
           final uType = _upperGrid[r][c].type;
           int spanR = 1, spanC = 1;
           while (r + spanR < rows && _upperGrid[r + spanR][c].type == uType)
             spanR++;
           while (c + spanC < cols && _upperGrid[r][c + spanC].type == uType)
             spanC++;
-          // Mark visited
           for (int rr = r; rr < r + spanR; rr++)
             for (int cc = c; cc < c + spanC; cc++)
               upperVisited.add(rr * 100 + cc);
 
           final upperColor = _cellColors[uType] ?? Colors.orange;
           final upperLabel = _upperGrid[r][c].label ?? '';
-          final regionFullW = spanC * cellW + (spanC - 1) * gap;
-          final regionH = spanR * cellH + (spanR - 1) * gap;
-          final stripW = regionFullW * 0.25;
-          final bool isLeftSection = c < (firstAisleCol ?? cols);
 
-          upperStripWidgets.add(
-            Positioned(
-              left: isLeftSection
-                  ? 48 + c * (cellW + gap)
-                  : 48 + c * (cellW + gap) + regionFullW - stripW,
-              top: 20 + r * (cellH + gap),
-              width: stripW,
-              height: regionH,
-              child: IgnorePointer(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: upperColor.withAlpha(60),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: upperColor.withAlpha(140),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _cellIcons[uType] ?? Icons.airline_seat_flat,
-                        size: spanR > 1 ? 24 : 16,
-                        color: upperColor,
+          // Render a strip per column within the region, spanning all rows
+          for (int cc = c; cc < c + spanC; cc++) {
+            final bool isLeftCol = cc < (firstAisleCol ?? cols);
+            upperStripWidgets.add(
+              Positioned(
+                left: isLeftCol
+                    ? 48 + cc * (cellW + gap)
+                    : 48 + cc * (cellW + gap) + cellW * 0.75,
+                top: 20 + r * (cellH + gap),
+                width: cellW * 0.25,
+                height: spanR * cellH + (spanR - 1) * gap,
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: upperColor.withAlpha(60),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: upperColor.withAlpha(140),
+                        width: 1.5,
                       ),
-                      if (upperLabel.isNotEmpty)
-                        Flexible(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: Text(
-                              upperLabel,
-                              style: TextStyle(
-                                color: upperColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _cellIcons[uType] ?? Icons.airline_seat_flat,
+                          size: spanR > 1 ? 24 : 16,
+                          color: upperColor,
+                        ),
+                        // Show label only on the first column strip of the region
+                        if (cc == c && upperLabel.isNotEmpty)
+                          Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
                               ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                              child: Text(
+                                upperLabel,
+                                style: TextStyle(
+                                  color: upperColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
+            );
+          }
         }
       }
     }
@@ -1024,10 +1027,11 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     int totalCols,
   ) {
     final bool isLeftSection = c < (firstAisleCol ?? totalCols);
-    // Upper berth is on the window side; lower cell shifts toward the aisle
-    final double left =
-        48 + c * (cellW + gap) + (isLeftSection ? cellW * 0.25 : 0);
-    final double width = cellW * 0.75; // 75% of cellW
+    // Upper berth is on the window side; lower cell shifts toward the aisle.
+    // Clamp exactly within [48 + c*(cellW+gap), 48 + c*(cellW+gap) + cellW]
+    final double cellLeft = 48 + c * (cellW + gap);
+    final double left = cellLeft + (isLeftSection ? cellW * 0.25 : 0);
+    final double width = cellW * 0.75; // 75% of cellW, stays within bounds
 
     return Positioned(
       left: left,
@@ -1191,10 +1195,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             if (grid[row][col].type != BuilderCellType.empty)
               TextButton(
                 onPressed: () {
-                  setState(() {
-                    grid[row][col] = _GridCell();
-                    _renumberSeats();
-                  });
+                  _clearBerthRegion(row, col);
                   Navigator.pop(ctx);
                 },
                 child: const Text(
@@ -1379,7 +1380,11 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     return true;
   }
 
-  // ── Label a contiguous berth block (BFS) ────────────
+  // ── Label a contiguous berth block (span-based) ─────
+  /// Uses the same span-scan logic as region discovery:
+  /// scans right + down from the start cell to find the
+  /// rectangular extent. Adjacent blocks of the same type
+  /// are NOT merged — each block keeps its own label.
   void _labelBerthBlock(
     int startRow,
     int startCol,
@@ -1388,35 +1393,71 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     List<List<_GridCell>> grid,
   ) {
     final targetType = grid[startRow][startCol].type;
-    final queue = <List<int>>[
-      [startRow, startCol],
-    ];
-    visited.putIfAbsent(startRow, () => {});
-    visited[startRow]!.add(startCol);
+    final rows = grid.length;
+    final cols = grid[0].length;
 
-    while (queue.isNotEmpty) {
-      final cur = queue.removeAt(0);
-      final r = cur[0], c = cur[1];
-      grid[r][c].label = label;
+    // Scan contiguous span right + down (same as region discovery)
+    int spanR = 1;
+    while (startRow + spanR < rows &&
+        grid[startRow + spanR][startCol].type == targetType) {
+      spanR++;
+    }
+    int spanC = 1;
+    while (startCol + spanC < cols &&
+        grid[startRow][startCol + spanC].type == targetType) {
+      spanC++;
+    }
 
-      // 4-directional neighbours
-      const deltas = [
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-        [0, 1],
-      ];
-      for (final delta in deltas) {
-        final nr = r + delta[0];
-        final nc = c + delta[1];
-        if (nr < 0 || nr >= _rows || nc < 0 || nc >= _cols) continue;
-        if ((visited[nr]?.contains(nc) ?? false)) continue;
-        if (grid[nr][nc].type != targetType) continue;
-        visited.putIfAbsent(nr, () => {});
-        visited[nr]!.add(nc);
-        queue.add([nr, nc]);
+    // Label and mark visited for all cells in the rectangular block
+    for (int r = startRow; r < startRow + spanR; r++) {
+      for (int c = startCol; c < startCol + spanC; c++) {
+        if (grid[r][c].type == targetType) {
+          grid[r][c].label = label;
+          visited.putIfAbsent(r, () => {});
+          visited[r]!.add(c);
+        }
       }
     }
+  }
+
+  // ── Clear an entire berth region ────────────────────
+  /// Scans up/down/left/right for contiguous cells of the same
+  /// berth type and clears them all. Falls back to single-cell
+  /// clear for non-berth types.
+  void _clearBerthRegion(int row, int col) {
+    final grid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
+    final type = grid[row][col].type;
+    if (type != BuilderCellType.sleeperLower &&
+        type != BuilderCellType.sleeperUpper) {
+      // Not a berth — clear just this cell
+      setState(() {
+        grid[row][col] = _GridCell();
+        _renumberSeats();
+      });
+      return;
+    }
+
+    // Find full extent: scan up/down for rows, left/right for cols
+    int top = row;
+    while (top > 0 && grid[top - 1][col].type == type) top--;
+    int bottom = row;
+    while (bottom < _rows - 1 && grid[bottom + 1][col].type == type) bottom++;
+
+    int left = col;
+    while (left > 0 && grid[top][left - 1].type == type) left--;
+    int right = col;
+    while (right < _cols - 1 && grid[top][right + 1].type == type) right++;
+
+    setState(() {
+      for (int r = top; r <= bottom; r++) {
+        for (int c = left; c <= right; c++) {
+          if (grid[r][c].type == type) {
+            grid[r][c] = _GridCell();
+          }
+        }
+      }
+      _renumberSeats();
+    });
   }
 
   // ── Renumber seats & label berths (airline style) ───
