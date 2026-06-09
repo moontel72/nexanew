@@ -974,6 +974,14 @@ class LayoutService
             $originCol = $comp['origin_col'] ?? $comp['col'] ?? 0;
             $spanRows = $comp['span_rows'] ?? 1;
             $spanCols = $comp['span_cols'] ?? 1;
+            $layoutMode = $comp['layout_mode'] ?? 'standard';
+            $compId = $comp['id'] ?? 'unknown';
+
+            // Composite/stacked components contain lower+upper elements in same space.
+            // They are allowed to share coordinates — skip strict collision check.
+            if ($layoutMode !== 'standard') {
+                continue;
+            }
 
             for ($r = $originRow; $r < $originRow + $spanRows; $r++) {
                 for ($c = $originCol; $c < $originCol + $spanCols; $c++) {
@@ -981,10 +989,10 @@ class LayoutService
                     if (isset($occupied[$key])) {
                         throw new \RuntimeException(
                             "Collision detected at row {$r}, col {$c}: " .
-                            "component '{$comp['id']}' overlaps with '{$occupied[$key]}'"
+                            "component '{$compId}' overlaps with '{$occupied[$key]}'"
                         );
                     }
-                    $occupied[$key] = $comp['id'] ?? 'unknown';
+                    $occupied[$key] = $compId;
                 }
             }
         }
