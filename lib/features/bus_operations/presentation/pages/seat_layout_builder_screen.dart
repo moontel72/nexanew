@@ -101,6 +101,23 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   bool _loadingLayout = false;
   final _scrollController = ScrollController();
 
+  void _resetState() {
+    _selectedCells.clear();
+    _selectMode = false;
+    _grid.clear();
+    _upperGrid.clear();
+    _hasUpperDeck = false;
+    _isUpperDeck = false;
+    _step = 0;
+    _plateCtl.clear();
+    _brandCtl.clear();
+    _modelCtl.clear();
+    _rows = 12;
+    _cols = 4;
+    _saving = false;
+    _loadingLayout = false;
+  }
+
   @override
   void dispose() {
     _plateCtl.dispose();
@@ -271,7 +288,10 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              _resetState();
+              Navigator.pop(context);
+            },
             child: const Text(
               'Dashboard',
               style: TextStyle(color: Color(0xFFAABBCC), fontSize: 12),
@@ -541,18 +561,24 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
               const SizedBox(width: 8),
               _statBadge(
                 'Lower Berth',
-                _countTypeIn(_grid, BuilderCellType.sleeperLower) +
+                _countUniqueLabels(_grid, BuilderCellType.sleeperLower) +
                     (_hasUpperDeck
-                        ? _countTypeIn(_upperGrid, BuilderCellType.sleeperLower)
+                        ? _countUniqueLabels(
+                            _upperGrid,
+                            BuilderCellType.sleeperLower,
+                          )
                         : 0),
                 const Color(0xFFDB2777),
               ),
               const SizedBox(width: 8),
               _statBadge(
                 'Upper Berth',
-                _countTypeIn(_grid, BuilderCellType.sleeperUpper) +
+                _countUniqueLabels(_grid, BuilderCellType.sleeperUpper) +
                     (_hasUpperDeck
-                        ? _countTypeIn(_upperGrid, BuilderCellType.sleeperUpper)
+                        ? _countUniqueLabels(
+                            _upperGrid,
+                            BuilderCellType.sleeperUpper,
+                          )
                         : 0),
                 const Color(0xFFF97316),
               ),
@@ -1437,6 +1463,19 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     return count;
   }
 
+  /// Count unique non-null labels for cells of the given type.
+  int _countUniqueLabels(List<List<_GridCell>> grid, BuilderCellType type) {
+    final labels = <String>{};
+    for (final row in grid) {
+      for (final cell in row) {
+        if (cell.type == type && cell.label != null && cell.label!.isNotEmpty) {
+          labels.add(cell.label!);
+        }
+      }
+    }
+    return labels.length;
+  }
+
   // ── Save Layout ────────────────────────────────────
   Future<void> _saveLayout() async {
     if (_saving) return;
@@ -1475,24 +1514,29 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         }
       }
 
-      final res = await ApiService().post(
-        '/bus-owner/layouts',
-        data: {
-          'bus_plate': _plateCtl.text.trim(),
-          'bus_brand': _brandCtl.text.trim().isEmpty
-              ? 'Other'
-              : _brandCtl.text.trim(),
-          'bus_category': _modelCtl.text.trim().isEmpty
-              ? 'Standard'
-              : _modelCtl.text.trim(),
-          'total_rows': _rows,
-          'total_cols': _cols,
-          'aisle_after_col': 0,
-          'grid': cells,
-          if (_hasUpperDeck) 'upper_grid': upperCells,
-          'has_upper_deck': _hasUpperDeck,
-        },
-      );
+      final payload = {
+        'bus_plate': _plateCtl.text.trim(),
+        'bus_brand': _brandCtl.text.trim(),
+        'bus_category': _modelCtl.text.trim().isEmpty
+            ? 'Standard'
+            : _modelCtl.text.trim(),
+        'total_rows': _rows,
+        'total_cols': _cols,
+        'aisle_after_col': 0,
+        'grid': cells,
+        if (_hasUpperDeck) 'upper_grid': upperCells,
+        'has_upper_deck': _hasUpperDeck,
+      };
+
+      final dynamic res;
+      if (widget.layoutId != null) {
+        res = await ApiService().put(
+          '/bus-owner/layouts/${widget.layoutId}',
+          data: payload,
+        );
+      } else {
+        res = await ApiService().post('/bus-owner/layouts', data: payload);
+      }
 
       if (res is Map && res['success'] == true) {
         if (mounted) {
@@ -1524,6 +1568,16 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       rows,
       (_) => List.generate(cols, (_) => <String, dynamic>{'type': 'empty'}),
     );
+
+    /// Fill a rectangular span of cells with the given type + label.
+    void fillSpan(int r, int c, int sr, int sc, String cellType, String label) {
+      for (int rr = r; rr < r + sr && rr < rows; rr++) {
+        for (int cc = c; cc < c + sc && cc < cols; cc++) {
+          grid[rr][cc] = {'type': cellType, 'label': label};
+        }
+      }
+    }
+
     for (final comp in components) {
       if (comp is! Map) continue;
       final r =
@@ -1535,25 +1589,61 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       final type = (comp['type'] ?? 'seat').toString();
       final label = (comp['seat_label'] ?? comp['seat_id'] ?? '').toString();
 
-      // Map composite type names back to grid cell type strings
-      String cellType = type;
-      if (type == 'sleeper_berth') {
-        final meta = comp['meta'] as Map?;
-        final tier = meta?['berth_tier']?.toString() ?? 'lower';
-        cellType = tier == 'upper' ? 'sleeperUpper' : 'sleeperLower';
-      } else if (type == 'driver') {
-        cellType = 'driver';
+      // Handle composite / stacked types that carry two deck elements
+      if (type == 'seat_plus_upper_berth' || type == 'split_deck_stacked') {
+        final lower = comp['lower_deck_element'] as Map?;
+        final upper = comp['upper_deck_element'] as Map?;
+        final lowerType = lower?['type']?.toString() ?? 'seat';
+        final upperType = upper?['type']?.toString() ?? 'sleeperUpper';
+        final lowerLabel = (lower?['seat_label'] ?? lower?['seat_id'] ?? label)
+            .toString();
+        final upperLabel = (upper?['seat_label'] ?? upper?['seat_id'] ?? label)
+            .toString();
+        // Use the upper type as the dominant cell type but embed both types
+        // and labels in metadata (pipe-delimited)
+        final combinedLabel = '$lowerType:$lowerLabel|$upperType:$upperLabel';
+        fillSpan(r, c, sr, sc, _mapBackendType(upperType), combinedLabel);
+        continue;
+      }
+
+      // Map backend type strings to grid cell type strings
+      final cellType = _mapBackendType(type);
+
+      // Also check structural_strips for aisle components
+      if (cellType == 'empty') {
+        final strips = comp['structural_strips'] as List?;
+        if (strips != null && strips.isNotEmpty) {
+          for (final strip in strips) {
+            if (strip is! Map) continue;
+            final st = strip['type']?.toString() ?? '';
+            if (st == 'aisle') {
+              fillSpan(r, c, sr, sc, 'aisle', label);
+            }
+          }
+          continue;
+        }
       }
 
       // Fill the span
-      for (int rr = r; rr < r + sr && rr < rows; rr++) {
-        for (int cc = c; cc < c + sc && cc < cols; cc++) {
-          grid[rr][cc] = {'type': cellType, 'label': label};
-        }
-      }
+      fillSpan(r, c, sr, sc, cellType, label);
     }
     return grid;
   }
+
+  /// Map backend component type strings to grid cell type strings.
+  String _mapBackendType(String type) => switch (type) {
+    'seat' => 'seat',
+    'aisle' => 'aisle',
+    'folding' => 'folding',
+    'exitDoor' => 'exitDoor',
+    'emergency' => 'emergency',
+    'lavatory' => 'lavatory',
+    'sleeperLower' => 'sleeperLower',
+    'sleeperUpper' => 'sleeperUpper',
+    'driver' => 'driver',
+    'sleeper_berth' => 'sleeperLower', // legacy fallback
+    _ => 'empty',
+  };
 
   /// Map builder enum names to backend-expected strings.
   String _backendTypeName(BuilderCellType type) => switch (type) {

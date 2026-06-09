@@ -747,7 +747,7 @@ class BusOwnerController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════
-    // SEAT LAYOUTS — UPDATE (metadata only)
+    // SEAT LAYOUTS — UPDATE (full grid + metadata)
     // ═══════════════════════════════════════════════════════
 
     public function updateLayout(string $id, Request $request): JsonResponse
@@ -758,16 +758,73 @@ class BusOwnerController extends Controller
                 return response()->json(['message' => 'Layout not found'], 404);
             }
 
-            $data = $request->validate([
-                'display_name'  => ['sometimes', 'string', 'max:160'],
-                'vehicle_class' => ['sometimes', 'string', 'in:coach_54,standard_45,coaster_34,hiace_13,sleeper_custom'],
-                'layout_status' => ['sometimes', 'string', 'in:draft,published,archived'],
-            ]);
-
             $updates = ['updated_at' => now()];
-            if (isset($data['display_name']))  $updates['display_name']  = $data['display_name'];
-            if (isset($data['vehicle_class'])) $updates['vehicle_class'] = $data['vehicle_class'];
-            if (isset($data['layout_status'])) $updates['layout_status'] = $data['layout_status'];
+
+            // Metadata updates
+            if ($request->has('display_name'))  $updates['display_name']  = $request->display_name;
+            if ($request->has('vehicle_class')) $updates['vehicle_class'] = $request->vehicle_class;
+            if ($request->has('layout_status')) $updates['layout_status'] = $request->layout_status;
+
+            // Full grid update (from builder save)
+            if ($request->has('grid')) {
+                $grid = $request->grid;
+                $totalRows = (int) ($request->total_rows ?? count($grid));
+                $totalCols = (int) ($request->total_cols ?? (count($grid[0] ?? [])));
+
+                $seatCount = 0; $driverCount = 0;
+                $cells = [];
+                foreach ($grid as $row) {
+                    $rowCells = [];
+                    foreach ((array) $row as $cell) {
+                        $type = $cell['type'] ?? 'empty';
+                        if ($type === 'seat' || $type === 'folding') $seatCount++;
+                        if ($type === 'driver') $driverCount++;
+                        $rowCells[] = [
+                            'type'   => $type,
+                            'label'  => $cell['label'] ?? '',
+                            'seat_id'=> $cell['seat_id'] ?? null,
+                        ];
+                    }
+                    $cells[] = $rowCells;
+                }
+
+                $snapshot = [
+                    'bus_plate'       => $request->bus_plate ?? '',
+                    'bus_brand'       => $request->bus_brand ?? '',
+                    'bus_category'    => $request->bus_category ?? '',
+                    'total_rows'      => $totalRows,
+                    'total_cols'      => $totalCols,
+                    'aisle_after_col' => (int) ($request->aisle_after_col ?? 0),
+                    'total_seats'     => $seatCount,
+                    'driver_seats'    => $driverCount,
+                    'grid'            => $cells,
+                    'created_from'    => 'custom_builder',
+                ];
+
+                // Include upper deck if present
+                if ($request->has('upper_grid')) {
+                    $upperCells = [];
+                    foreach ($request->upper_grid as $row) {
+                        $rowCells = [];
+                        foreach ((array) $row as $cell) {
+                            $rowCells[] = [
+                                'type'   => $cell['type'] ?? 'empty',
+                                'label'  => $cell['label'] ?? '',
+                                'seat_id'=> $cell['seat_id'] ?? null,
+                            ];
+                        }
+                        $upperCells[] = $rowCells;
+                    }
+                    $snapshot['upper_grid'] = $upperCells;
+                }
+
+                $updates['current_snapshot'] = json_encode($snapshot);
+                $updates['raw_grid_json'] = json_encode($cells);
+                $updates['total_rows'] = $totalRows;
+                $updates['left_columns'] = (int) ($request->aisle_after_col ?? 0);
+                $updates['right_columns'] = $totalCols - (int) ($request->aisle_after_col ?? 0) - 1;
+                $updates['driver_seats'] = $driverCount;
+            }
 
             DB::table('transport_bus_layouts')
                 ->where('id', $id)
