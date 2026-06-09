@@ -150,15 +150,37 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         return;
       }
 
-      final gridData = snap['grid'] as List?;
+      // Parse grid data — handles both old 'grid' (matrix) and new 'components' (flat)
+      List? gridData = snap['grid'] as List?;
+      final components = snap['components'] as List?;
+
+      // If composite format, convert components to grid matrix
+      if ((gridData == null || gridData.isEmpty) &&
+          components != null &&
+          components.isNotEmpty) {
+        _rows =
+            (snap['canvas']?['max_rows'] as int?) ??
+            (snap['total_rows'] as int?) ??
+            14;
+        _cols =
+            (snap['canvas']?['max_cols'] as int?) ??
+            (snap['total_cols'] as int?) ??
+            5;
+        gridData = _componentsToGrid(components, _rows, _cols);
+      }
+
       if (gridData == null || gridData.isEmpty) {
         if (mounted) setState(() => _loadingLayout = false);
         return;
       }
 
-      _rows = (snap['total_rows'] as int?) ?? gridData.length;
+      _rows =
+          (snap['total_rows'] as int?) ??
+          (snap['canvas']?['max_rows'] as int?) ??
+          gridData.length;
       _cols =
           (snap['total_cols'] as int?) ??
+          (snap['canvas']?['max_cols'] as int?) ??
           (gridData.isNotEmpty ? (gridData[0] as List?)?.length ?? 4 : 4);
 
       _generateBlankGrid();
@@ -1491,6 +1513,48 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   }
 
   // ── Helpers ────────────────────────────────────────
+  /// Convert flat components array to grid matrix.
+  List<List<Map<String, dynamic>>> _componentsToGrid(
+    List components,
+    int rows,
+    int cols,
+  ) {
+    // Initialize empty grid
+    final grid = List.generate(
+      rows,
+      (_) => List.generate(cols, (_) => <String, dynamic>{'type': 'empty'}),
+    );
+    for (final comp in components) {
+      if (comp is! Map) continue;
+      final r =
+          ((comp['origin_row'] as int?) ?? (comp['row'] as int?) ?? 1) - 1;
+      final c =
+          ((comp['origin_col'] as int?) ?? (comp['col'] as int?) ?? 1) - 1;
+      final sr = (comp['span_rows'] as int?) ?? 1;
+      final sc = (comp['span_cols'] as int?) ?? 1;
+      final type = (comp['type'] ?? 'seat').toString();
+      final label = (comp['seat_label'] ?? comp['seat_id'] ?? '').toString();
+
+      // Map composite type names back to grid cell type strings
+      String cellType = type;
+      if (type == 'sleeper_berth') {
+        final meta = comp['meta'] as Map?;
+        final tier = meta?['berth_tier']?.toString() ?? 'lower';
+        cellType = tier == 'upper' ? 'sleeperUpper' : 'sleeperLower';
+      } else if (type == 'driver') {
+        cellType = 'driver';
+      }
+
+      // Fill the span
+      for (int rr = r; rr < r + sr && rr < rows; rr++) {
+        for (int cc = c; cc < c + sc && cc < cols; cc++) {
+          grid[rr][cc] = {'type': cellType, 'label': label};
+        }
+      }
+    }
+    return grid;
+  }
+
   /// Map builder enum names to backend-expected strings.
   String _backendTypeName(BuilderCellType type) => switch (type) {
     BuilderCellType.empty => 'empty',
