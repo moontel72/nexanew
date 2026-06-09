@@ -869,7 +869,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               SizedBox(width: 4.w),
               IconButton(
                 icon: Icon(Icons.edit, color: Color(0xFF0891B2), size: 20),
-                onPressed: () => _openLayoutDesigner(),
+                onPressed: () => _openLayoutDesigner(layoutId: id),
                 tooltip: 'Open in Designer',
                 padding: EdgeInsets.zero,
                 constraints: BoxConstraints(minWidth: 32, minHeight: 32),
@@ -901,6 +901,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         builder: (_) => SeatLayoutBuilderScreen(
           companyId: _companyId,
           companyName: _ownerName,
+          layoutId: layoutId,
         ),
       ),
     );

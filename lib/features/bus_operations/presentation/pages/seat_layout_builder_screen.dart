@@ -71,11 +71,13 @@ class _GridCell {
 class SeatLayoutBuilderScreen extends StatefulWidget {
   final String companyId;
   final String? companyName;
+  final String? layoutId; // for editing existing layouts
 
   const SeatLayoutBuilderScreen({
     super.key,
     required this.companyId,
     this.companyName,
+    this.layoutId,
   });
 
   @override
@@ -105,6 +107,87 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     _modelCtl.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.layoutId != null) {
+      _loadExistingLayout();
+    }
+  }
+
+  Future<void> _loadExistingLayout() async {
+    try {
+      final res = await ApiService().get(
+        '/bus-owner/layouts/${widget.layoutId}',
+      );
+      if (!mounted) return;
+      final data = res?['data'];
+      if (data == null || data is! Map) return;
+      final snap = data['current_snapshot'];
+      if (snap == null || snap is! Map) return;
+      final gridData = snap['grid'] as List?;
+      if (gridData == null || gridData.isEmpty) return;
+
+      _plateCtl.text = (snap['bus_plate'] ?? data['display_name'] ?? '')
+          .toString();
+      _brandCtl.text = (snap['bus_brand'] ?? '').toString();
+      _modelCtl.text = (snap['bus_category'] ?? data['vehicle_class'] ?? '')
+          .toString();
+      _rows = (snap['total_rows'] as int?) ?? gridData.length;
+      _cols =
+          (snap['total_cols'] as int?) ??
+          (gridData.isNotEmpty ? (gridData[0] as List?)?.length ?? 4 : 4);
+
+      _generateBlankGrid();
+      for (int r = 0; r < gridData.length && r < _rows; r++) {
+        final row = gridData[r] as List?;
+        if (row == null) continue;
+        for (int c = 0; c < row.length && c < _cols; c++) {
+          final cell = row[c];
+          if (cell is! Map) continue;
+          final typeStr = (cell['type'] ?? 'empty').toString();
+          final type = BuilderCellType.values.firstWhere(
+            (t) => t.name == typeStr || _backendTypeName(t) == typeStr,
+            orElse: () => BuilderCellType.empty,
+          );
+          _grid[r][c].type = type;
+          _grid[r][c].label = (cell['label'] ?? cell['seat_id'] ?? '')
+              .toString();
+          if (_grid[r][c].label!.isEmpty) _grid[r][c].label = null;
+        }
+      }
+      _renumberGrid(_grid);
+
+      final upperGridData = snap['upper_grid'] as List?;
+      if (upperGridData != null && upperGridData.isNotEmpty) {
+        _hasUpperDeck = true;
+        _upperGrid = List.generate(
+          _rows,
+          (_) => List.generate(_cols, (_) => _GridCell()),
+        );
+        for (int r = 0; r < upperGridData.length && r < _rows; r++) {
+          final row = upperGridData[r] as List?;
+          if (row == null) continue;
+          for (int c = 0; c < row.length && c < _cols; c++) {
+            final cell = row[c];
+            if (cell is! Map) continue;
+            final typeStr = (cell['type'] ?? 'empty').toString();
+            final type = BuilderCellType.values.firstWhere(
+              (t) => t.name == typeStr || _backendTypeName(t) == typeStr,
+              orElse: () => BuilderCellType.empty,
+            );
+            _upperGrid[r][c].type = type;
+            _upperGrid[r][c].label = (cell['label'] ?? '').toString();
+            if (_upperGrid[r][c].label!.isEmpty) _upperGrid[r][c].label = null;
+          }
+        }
+        _renumberGrid(_upperGrid);
+      }
+
+      setState(() => _step = 1);
+    } catch (_) {}
   }
 
   // ── Build ──────────────────────────────────────────
@@ -390,33 +473,29 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             children: [
               _statBadge(
                 'Seats',
-                _countTypeIn(activeGrid, BuilderCellType.seat),
+                _countTypeIn(_grid, BuilderCellType.seat) +
+                    _countTypeIn(_grid, BuilderCellType.foldingSeat),
                 const Color(0xFF7C3AED),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               _statBadge(
-                'Folding',
-                _countTypeIn(activeGrid, BuilderCellType.foldingSeat),
-                const Color(0xFF06B6D4),
-              ),
-              const SizedBox(width: 10),
-              _statBadge(
-                'Berths',
+                'Lower Berth',
                 _countTypeIn(_grid, BuilderCellType.sleeperLower) +
-                    _countTypeIn(_grid, BuilderCellType.sleeperUpper) +
                     (_hasUpperDeck
-                        ? _countTypeIn(
-                                _upperGrid,
-                                BuilderCellType.sleeperLower,
-                              ) +
-                              _countTypeIn(
-                                _upperGrid,
-                                BuilderCellType.sleeperUpper,
-                              )
+                        ? _countTypeIn(_upperGrid, BuilderCellType.sleeperLower)
                         : 0),
                 const Color(0xFFDB2777),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
+              _statBadge(
+                'Upper Berth',
+                _countTypeIn(_grid, BuilderCellType.sleeperUpper) +
+                    (_hasUpperDeck
+                        ? _countTypeIn(_upperGrid, BuilderCellType.sleeperUpper)
+                        : 0),
+                const Color(0xFFF97316),
+              ),
+              const SizedBox(width: 8),
               _statBadge(
                 'Aisle',
                 _countTypeIn(activeGrid, BuilderCellType.aisle),
@@ -495,7 +574,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     final cols = grid.isNotEmpty ? grid[0].length : 0;
     if (rows == 0 || cols == 0) return const SizedBox.shrink();
 
-    const cellW = 56.0, cellH = 46.0, gap = 3.0;
+    const cellW = 56.0, cellH = 46.0, gap = 0.0;
 
     // Phase 1: Discover multi-cell regions
     final visited = <int>{};
@@ -695,7 +774,16 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             for (int c = 0; c < cols; c++)
               if (!visited.contains(r * 100 + c))
                 if (overlapCells.contains(r * 100 + c))
-                  _buildOverlayCell(grid, r, c, cellW, cellH, gap, firstAisleCol, cols)
+                  _buildOverlayCell(
+                    grid,
+                    r,
+                    c,
+                    cellW,
+                    cellH,
+                    gap,
+                    firstAisleCol,
+                    cols,
+                  )
                 else
                   Positioned(
                     left: 48 + c * (cellW + gap),
@@ -829,9 +917,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   ) {
     final bool isLeftSection = c < (firstAisleCol ?? totalCols);
     // Upper berth is on the window side; lower cell shifts toward the aisle
-    final double left = 48 +
-        c * (cellW + gap) +
-        (isLeftSection ? cellW * 0.25 : 0);
+    final double left =
+        48 + c * (cellW + gap) + (isLeftSection ? cellW * 0.25 : 0);
     final double width = cellW * 0.75; // 75% of cellW
 
     return Positioned(
