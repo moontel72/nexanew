@@ -644,12 +644,12 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
 
     return Container(
       margin: EdgeInsets.zero,
+      padding: EdgeInsets.zero,
       decoration: BoxDecoration(
-        color: isEmpty ? const Color(0xFF1A2533) : color.withAlpha(40),
-        borderRadius: BorderRadius.circular(6),
+        color: isEmpty ? const Color(0xFF1A2533) : color.withAlpha(35),
         border: Border.all(
-          color: isEmpty ? const Color(0xFF2A3A4A) : color.withAlpha(120),
-          width: isEmpty ? 1 : 1.5,
+          color: isEmpty ? const Color(0xFF1A2533) : color.withAlpha(100),
+          width: 0.5,
         ),
       ),
       child: Column(
@@ -955,32 +955,34 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         type == BuilderCellType.sleeperLower ||
         type == BuilderCellType.sleeperUpper;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: color.withAlpha(230),
+        color: color.withAlpha(255),
         borderRadius: BorderRadius.circular(4),
         boxShadow: [
-          BoxShadow(color: color.withAlpha(60), blurRadius: 6, spreadRadius: 1),
+          BoxShadow(color: color.withAlpha(80), blurRadius: 6, spreadRadius: 0),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: isBerth ? 36 : 28, color: color),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: isBerth ? 16 : 13,
-              fontWeight: FontWeight.w800,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: isBerth ? 36 : 28, color: Colors.white),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isBerth ? 16 : 13,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-          Text(
-            '${region.sr}×${region.sc} berth',
-            style: TextStyle(color: color.withAlpha(150), fontSize: 10),
-          ),
-        ],
+            Text(
+              '${region.sr}×${region.sc} berth',
+              style: TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+          ],
+        ),
       ),
     );
   }
