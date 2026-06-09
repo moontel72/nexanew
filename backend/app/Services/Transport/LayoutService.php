@@ -604,6 +604,197 @@ class LayoutService
     }
 
     // ═══════════════════════════════════════════════════════════
+    // COMPOSITE COMPONENT SUPPORT (v2 — Multi-tier layouts)
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Build a snapshot from a grid array that may contain composite
+     * (multi-tier / stacked) components alongside regular cells.
+     *
+     * Supports 3 layout_modes:
+     *   - 'standard'            : regular 1×1 cell
+     *   - 'seat_plus_upper_berth': 75% lower seat + 25% upper berth overlay
+     *   - 'split_deck_stacked'  : 50% lower berth + 50% upper berth overlay
+     */
+    public function buildCompositeSnapshot(array $input): array
+    {
+        $components = [];
+        $structuralStrips = [];
+        $rows = (int) ($input['total_rows'] ?? 0);
+        $cols = (int) ($input['total_cols'] ?? 0);
+
+        $grid = $input['grid'] ?? [];
+        $upperGrid = $input['upper_grid'] ?? null;
+        $hasUpperDeck = !empty($upperGrid);
+
+        $seatCounter = 0;
+        $berthLowerCounter = 0;
+        $berthUpperCounter = 0;
+
+        // Process lower deck grid
+        foreach ($grid as $rowIdx => $row) {
+            foreach ((array) $row as $colIdx => $cell) {
+                $type = $cell['type'] ?? 'empty';
+                $label = $cell['label'] ?? null;
+                $r = $rowIdx + 1;
+                $c = $colIdx + 1;
+
+                if ($type === 'empty') continue;
+
+                $comp = [
+                    'id'           => 'cmp_' . uniqid(),
+                    'origin_row'   => $r,
+                    'origin_col'   => $c,
+                    'span_rows'    => 1,
+                    'span_cols'    => 1,
+                    'seat_label'   => $label,
+                    'layout_mode'  => 'standard',
+                ];
+
+                switch ($type) {
+                    case 'seat':
+                    case 'folding':
+                        $comp['type'] = $type;
+                        $comp['bookable'] = true;
+                        $comp['booking_mode'] = $type === 'folding' ? 'conditional' : 'standard';
+                        $comp['seat_number'] = ++$seatCounter;
+                        break;
+
+                    case 'aisle':
+                        $structuralStrips[] = ['type' => 'aisle', 'col' => $c, 'from_row' => $r, 'to_row' => $r];
+                        continue 2; // skip adding as component
+
+                    case 'driver':
+                    case 'driverCabin':
+                        $comp['type'] = 'driver';
+                        $comp['bookable'] = false;
+                        $comp['booking_mode'] = 'none';
+                        break;
+
+                    case 'exitDoor':
+                    case 'emergency':
+                        $comp['type'] = $type;
+                        $comp['bookable'] = false;
+                        $comp['booking_mode'] = 'none';
+                        break;
+
+                    case 'lavatory':
+                        $comp['type'] = 'lavatory';
+                        $comp['span_rows'] = 2;
+                        $comp['span_cols'] = 2;
+                        $comp['bookable'] = false;
+                        $comp['booking_mode'] = 'none';
+                        break;
+
+                    case 'sleeperLower':
+                        $comp['type'] = 'sleeper_berth';
+                        $comp['span_rows'] = 3;
+                        $comp['span_cols'] = 2;
+                        $comp['bookable'] = true;
+                        $comp['booking_mode'] = 'berth';
+                        $comp['seat_label'] = $label ?: ('L' . (++$berthLowerCounter));
+                        $comp['meta'] = ['berth_tier' => 'lower'];
+                        break;
+
+                    case 'sleeperUpper':
+                        $comp['type'] = 'sleeper_berth';
+                        $comp['span_rows'] = 3;
+                        $comp['span_cols'] = 2;
+                        $comp['bookable'] = true;
+                        $comp['booking_mode'] = 'berth';
+                        $comp['seat_label'] = $label ?: ('U' . (++$berthUpperCounter));
+                        $comp['meta'] = ['berth_tier' => 'upper'];
+                        break;
+
+                    default:
+                        continue 2;
+                }
+
+                $components[] = $comp;
+            }
+        }
+
+        // Process upper deck grid if present (stacked components)
+        if ($hasUpperDeck) {
+            foreach ($upperGrid as $rowIdx => $row) {
+                foreach ((array) $row as $colIdx => $cell) {
+                    $type = $cell['type'] ?? 'empty';
+                    if ($type === 'empty') continue;
+
+                    $r = $rowIdx + 1;
+                    $c = $colIdx + 1;
+                    $label = $cell['label'] ?? null;
+
+                    // Find matching lower component at same position
+                    $lowerCompIdx = null;
+                    foreach ($components as $idx => $lowerComp) {
+                        $lr = $lowerComp['origin_row'] ?? 0;
+                        $lc = $lowerComp['origin_col'] ?? 0;
+                        $lsr = $lowerComp['span_rows'] ?? 1;
+                        $lsc = $lowerComp['span_cols'] ?? 1;
+                        if ($r >= $lr && $r < $lr + $lsr && $c >= $lc && $c < $lc + $lsc) {
+                            $lowerCompIdx = $idx;
+                            break;
+                        }
+                    }
+
+                    if ($lowerCompIdx !== null) {
+                        // Convert to stacked/composite component
+                        $lower = $components[$lowerCompIdx];
+                        $lowerType = $lower['type'] ?? 'seat';
+                        $isBerth = ($lowerType === 'sleeper_berth');
+
+                        $components[$lowerCompIdx] = [
+                            'id'           => 'stack_' . uniqid(),
+                            'type'         => 'sleeper_berth',
+                            'origin_row'   => $lower['origin_row'],
+                            'origin_col'   => $lower['origin_col'],
+                            'span_rows'    => $lower['span_rows'],
+                            'span_cols'    => $lower['span_cols'],
+                            'layout_mode'  => $isBerth ? 'split_deck_stacked' : 'seat_plus_upper_berth',
+                            'lower_deck_element' => [
+                                'id'               => $lower['id'],
+                                'type'             => $isBerth ? 'lower_berth' : ($lower['type'] ?? 'seat'),
+                                'visual_width_pct' => $isBerth ? 50 : 75,
+                                'bookable'         => $lower['bookable'] ?? true,
+                                'seat_label'       => $lower['seat_label'] ?? $lower['seat_id'] ?? '',
+                            ],
+                            'upper_deck_element' => [
+                                'id'               => 'up_' . uniqid(),
+                                'type'             => 'upper_berth',
+                                'visual_width_pct' => $isBerth ? 50 : 25,
+                                'bookable'         => true,
+                                'seat_label'       => $label ?: 'U' . (++$berthUpperCounter),
+                            ],
+                            'bookable'     => true,
+                            'booking_mode' => 'berth',
+                            'meta'         => ['stacked' => true],
+                        ];
+                    }
+                }
+            }
+        }
+
+        $totalBookable = count(array_filter($components, fn($c) => $c['bookable'] ?? false));
+
+        return [
+            'canvas' => [
+                'max_rows'  => $rows,
+                'max_cols'  => $cols,
+                'seat_cols' => $cols,
+            ],
+            'components'       => array_values($components),
+            'structural_strips' => $structuralStrips,
+            'metadata' => [
+                'total_bookable_seats' => $totalBookable,
+                'has_upper_deck'       => $hasUpperDeck,
+                'layout_version'       => 1,
+                'preset_origin'        => $input['bus_category'] ?? 'custom',
+            ],
+        ];
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // HELPERS
     // ═══════════════════════════════════════════════════════════
 

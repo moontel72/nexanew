@@ -395,7 +395,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             ],
           ),
         ),
-        // Grid
+        // Grid — unified component renderer
         Expanded(
           child: Scrollbar(
             controller: _scrollController,
@@ -405,58 +405,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
               padding: const EdgeInsets.all(16),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: Column(
-                  children: [
-                    // Column headers
-                    Row(
-                      children: [
-                        const SizedBox(width: 48),
-                        for (int c = 0; c < _cols; c++)
-                          SizedBox(
-                            width: 58,
-                            child: Center(
-                              child: Text(
-                                String.fromCharCode(65 + c),
-                                style: const TextStyle(
-                                  color: Color(0xFFAABBCC),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    // Grid rows
-                    for (int r = 0; r < _rows; r++)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 48,
-                              child: Center(
-                                child: Text(
-                                  '${r + 1}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF8899AA),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            for (int c = 0; c < _cols; c++)
-                              GestureDetector(
-                                onTap: () => _openCellPicker(r, c),
-                                child: _buildCell(activeGrid[r][c]),
-                              ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 60),
-                  ],
-                ),
+                child: _buildUnifiedGrid(activeGrid),
               ),
             ),
           ),
@@ -472,9 +421,6 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     final isEmpty = type == BuilderCellType.empty;
 
     return Container(
-      width: 54,
-      height: 44,
-      margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: isEmpty ? const Color(0xFF1A2533) : color.withAlpha(40),
         borderRadius: BorderRadius.circular(6),
@@ -503,6 +449,159 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  // ── Unified grid renderer (Stack + Positioned) ─────
+  Widget _buildUnifiedGrid(List<List<_GridCell>> grid) {
+    final rows = grid.length;
+    final cols = grid.isNotEmpty ? grid[0].length : 0;
+    if (rows == 0 || cols == 0) return const SizedBox.shrink();
+
+    const cellW = 56.0, cellH = 46.0, gap = 3.0;
+
+    // Phase 1: Discover multi-cell regions
+    final visited = <int>{};
+    final regions = <_Region>[];
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < cols; c++) {
+        if (visited.contains(r * 100 + c)) continue;
+        final type = grid[r][c].type;
+        if (!_isMultiCellType(type)) continue;
+        // Scan contiguous block
+        int spanR = 1, spanC = 1;
+        while (r + spanR < rows && grid[r + spanR][c].type == type) spanR++;
+        while (c + spanC < cols && grid[r][c + spanC].type == type) spanC++;
+        // Mark all cells in this block as visited
+        for (int rr = r; rr < r + spanR; rr++) {
+          for (int cc = c; cc < c + spanC; cc++) {
+            visited.add(rr * 100 + cc);
+          }
+        }
+        regions.add(_Region(r, c, spanR, spanC, type));
+      }
+    }
+
+    final totalW = cols * (cellW + gap) + 48;
+    final totalH = rows * (cellH + gap) + 20 + 60;
+
+    return SizedBox(
+      width: totalW,
+      height: totalH,
+      child: Stack(
+        children: [
+          // Column headers (A, B, C, ...)
+          for (int c = 0; c < cols; c++)
+            Positioned(
+              left: 48 + c * (cellW + gap),
+              top: 0,
+              width: cellW,
+              height: 16,
+              child: Center(
+                child: Text(
+                  String.fromCharCode(65 + c),
+                  style: const TextStyle(
+                    color: Color(0xFFAABBCC),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+
+          // Row labels (1, 2, 3, ...)
+          for (int r = 0; r < rows; r++)
+            Positioned(
+              left: 0,
+              top: 20 + r * (cellH + gap),
+              width: 44,
+              height: cellH,
+              child: Center(
+                child: Text(
+                  '${r + 1}',
+                  style: const TextStyle(
+                    color: Color(0xFF8899AA),
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+
+          // Single cells (not part of any multi-cell region)
+          for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+              if (!visited.contains(r * 100 + c))
+                Positioned(
+                  left: 48 + c * (cellW + gap),
+                  top: 20 + r * (cellH + gap),
+                  width: cellW,
+                  height: cellH,
+                  child: GestureDetector(
+                    onTap: () => _openCellPicker(r, c),
+                    child: _buildCell(grid[r][c]),
+                  ),
+                ),
+
+          // Unified multi-cell components
+          for (final region in regions)
+            Positioned(
+              left: 48 + region.c * (cellW + gap),
+              top: 20 + region.r * (cellH + gap),
+              width: region.sc * cellW + (region.sc - 1) * gap,
+              height: region.sr * cellH + (region.sr - 1) * gap,
+              child: GestureDetector(
+                onTap: () => _openCellPicker(region.r, region.c),
+                child: _buildUnifiedRegion(region, grid),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  bool _isMultiCellType(BuilderCellType type) =>
+      type == BuilderCellType.sleeperLower ||
+      type == BuilderCellType.sleeperUpper ||
+      type == BuilderCellType.lavatory;
+
+  Widget _buildUnifiedRegion(_Region region, List<List<_GridCell>> grid) {
+    final cell = grid[region.r][region.c];
+    final type = cell.type;
+    final color = _cellColors[type] ?? Colors.grey;
+    final icon = _cellIcons[type] ?? Icons.help;
+    final label = cell.label ?? '';
+    final isBerth =
+        type == BuilderCellType.sleeperLower ||
+        type == BuilderCellType.sleeperUpper;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withAlpha(30),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withAlpha(160), width: 2),
+        boxShadow: [
+          BoxShadow(color: color.withAlpha(40), blurRadius: 8, spreadRadius: 1),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: isBerth ? 36 : 28, color: color),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: isBerth ? 16 : 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          Text(
+            '${region.sr}×${region.sc} berth',
+            style: TextStyle(color: color.withAlpha(150), fontSize: 10),
+          ),
         ],
       ),
     );
@@ -1084,4 +1183,11 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       ),
     );
   }
+}
+
+// ── Multi-cell region descriptor ───────────────────
+class _Region {
+  final int r, c, sr, sc;
+  final BuilderCellType t;
+  const _Region(this.r, this.c, this.sr, this.sc, this.t);
 }

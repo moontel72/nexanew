@@ -651,18 +651,31 @@ class BusOwnerController extends Controller
                 $cells[] = $rowCells;
             }
 
-            $snapshot = [
-                'bus_plate'       => $data['bus_plate'],
-                'bus_brand'       => $data['bus_brand'],
-                'bus_category'    => $data['bus_category'],
-                'total_rows'      => (int) $data['total_rows'],
-                'total_cols'      => (int) $data['total_cols'],
-                'aisle_after_col' => (int) $data['aisle_after_col'],
-                'total_seats'     => $seatCount,
-                'driver_seats'    => $driverCount,
-                'grid'            => $cells,
-                'created_from'    => 'custom_builder',
-            ];
+            $hasUpper = $request->has('has_upper_deck') || $request->has('upper_grid');
+
+            if ($hasUpper) {
+                // Use composite snapshot builder for multi-tier layouts
+                $snapshot = $this->layouts->buildCompositeSnapshot([
+                    'total_rows'   => (int) $data['total_rows'],
+                    'total_cols'   => (int) $data['total_cols'],
+                    'bus_category' => $data['bus_category'],
+                    'grid'         => $cells,
+                    'upper_grid'   => $request->input('upper_grid', []),
+                ]);
+            } else {
+                $snapshot = [
+                    'bus_plate'       => $data['bus_plate'],
+                    'bus_brand'       => $data['bus_brand'],
+                    'bus_category'    => $data['bus_category'],
+                    'total_rows'      => (int) $data['total_rows'],
+                    'total_cols'      => (int) $data['total_cols'],
+                    'aisle_after_col' => (int) $data['aisle_after_col'],
+                    'total_seats'     => $seatCount,
+                    'driver_seats'    => $driverCount,
+                    'grid'            => $cells,
+                    'created_from'    => 'custom_builder',
+                ];
+            }
 
             $displayName = $data['bus_plate'] . ' — ' . $data['bus_brand'] . ' ' . $data['bus_category'];
             $layoutId = (string) Str::orderedUuid();
