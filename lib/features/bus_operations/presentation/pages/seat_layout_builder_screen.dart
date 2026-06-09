@@ -93,6 +93,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   List<List<_GridCell>> _upperGrid = []; // upper deck
   bool _isUpperDeck = false;
   bool _hasUpperDeck = false;
+  bool _selectMode = false;
+  final _selectedCells = <int>{}; // keys: r*100+c
   bool _saving = false;
   final _scrollController = ScrollController();
 
@@ -281,7 +283,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     final activeGrid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
     return Column(
       children: [
-        // Back button row + Deck switcher
+        // Back button row + Deck switcher + Select toggle
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Row(
@@ -304,11 +306,34 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                   _deckTab('Upper Deck', true),
                 ],
               ),
-              const Spacer(),
-              Text(
-                '${_plateCtl.text}',
-                style: const TextStyle(color: Color(0xFF667788), fontSize: 11),
+              const SizedBox(width: 8),
+              // Select mode toggle
+              _toolBtn(
+                icon: _selectMode ? Icons.deselect : Icons.select_all,
+                label: _selectMode ? 'Done' : 'Select',
+                active: _selectMode,
+                onTap: () => setState(() {
+                  _selectMode = !_selectMode;
+                  _selectedCells.clear();
+                }),
               ),
+              const Spacer(),
+              if (_selectMode && _selectedCells.isNotEmpty)
+                _toolBtn(
+                  icon: Icons.layers,
+                  label: 'Overlay Berth',
+                  active: true,
+                  color: const Color(0xFFF97316),
+                  onTap: _applyUpperBerthOverlay,
+                ),
+              if (!_selectMode)
+                Text(
+                  '${_plateCtl.text}',
+                  style: const TextStyle(
+                    color: Color(0xFF667788),
+                    fontSize: 11,
+                  ),
+                ),
             ],
           ),
         ),
@@ -554,8 +579,21 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                   width: cellW,
                   height: cellH,
                   child: GestureDetector(
-                    onTap: () => _openCellPicker(r, c),
-                    child: _buildCell(grid[r][c]),
+                    onTap: () {
+                      if (_selectMode) {
+                        setState(() {
+                          final key = r * 100 + c;
+                          if (_selectedCells.contains(key)) {
+                            _selectedCells.remove(key);
+                          } else {
+                            _selectedCells.add(key);
+                          }
+                        });
+                      } else {
+                        _openCellPicker(r, c);
+                      }
+                    },
+                    child: _buildSelectableCell(grid[r][c], r, c),
                   ),
                 ),
 
@@ -722,6 +760,102 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── Selectable cell with highlight ──────────────────
+  Widget _buildSelectableCell(_GridCell cell, int r, int c) {
+    final isSelected = _selectMode && _selectedCells.contains(r * 100 + c);
+    final base = _buildCell(cell);
+    if (!_selectMode) return base;
+    return Stack(
+      children: [
+        base,
+        if (isSelected)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF97316).withAlpha(35),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFF97316), width: 2),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.check_circle,
+                  color: Color(0xFFF97316),
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ── Mini toolbar button ─────────────────────────────
+  Widget _toolBtn({
+    required IconData icon,
+    required String label,
+    required bool active,
+    Color? color,
+    VoidCallback? onTap,
+  }) {
+    final c = color ?? const Color(0xFF7C3AED);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? c.withAlpha(30) : const Color(0xFF1A2533),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: active ? c.withAlpha(120) : const Color(0xFF2A3A4A),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: active ? c : const Color(0xFF667788)),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: active ? c : const Color(0xFF667788),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Apply upper berth overlay on selected cells ──────
+  void _applyUpperBerthOverlay() {
+    if (_selectedCells.isEmpty) return;
+    final count = _selectedCells.length;
+    setState(() {
+      _hasUpperDeck = true;
+      if (_upperGrid.isEmpty) {
+        _upperGrid = List.generate(
+          _rows,
+          (_) => List.generate(_cols, (_) => _GridCell()),
+        );
+      }
+      for (final key in _selectedCells) {
+        final r = key ~/ 100;
+        final c = key % 100;
+        _upperGrid[r][c].type = BuilderCellType.sleeperUpper;
+        _upperGrid[r][c].label = null;
+      }
+      _renumberGrid(_upperGrid);
+      _selectMode = false;
+      _selectedCells.clear();
+    });
+    _snack(
+      'Upper berth overlaid on $count cells. Switch to Upper Deck to view.',
+      AppColors.success,
     );
   }
 
