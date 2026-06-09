@@ -218,6 +218,27 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           if (_grid[r][c].label!.isEmpty) _grid[r][c].label = null;
         }
       }
+
+      // Also process structural_strips (aisle columns from composite snapshots)
+      final strips = snap['structural_strips'] as List?;
+      if (strips != null) {
+        for (final strip in strips) {
+          if (strip is! Map) continue;
+          final stripType = (strip['type'] ?? '').toString();
+          if (stripType == 'aisle') {
+            final col = (strip['col'] as int?) ?? 0;
+            final fromRow = (strip['from_row'] as int?) ?? 1;
+            final toRow = (strip['to_row'] as int?) ?? _rows;
+            for (int r = fromRow - 1; r < toRow && r < _rows; r++) {
+              if (col > 0 && col <= _cols) {
+                _grid[r][col - 1].type = BuilderCellType.aisle;
+                _grid[r][col - 1].label = null;
+              }
+            }
+          }
+        }
+      }
+
       _renumberGrid(_grid);
 
       final upperGridData = snap['upper_grid'] as List?;
@@ -1432,17 +1453,19 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       int letterIdx = 0;
       for (int c = 0; c < grid[r].length; c++) {
         final cell = grid[r][c];
-        // Skip non‑ticketable / non‑seat cells + already‑labeled berths
+        // Skip non‑ticketable cells. Berths already have labels from pass 1.
         if (cell.type == BuilderCellType.empty ||
             cell.type == BuilderCellType.aisle ||
             cell.type == BuilderCellType.driverCabin ||
             cell.type == BuilderCellType.exitDoor ||
             cell.type == BuilderCellType.emergency ||
-            cell.type == BuilderCellType.lavatory ||
-            cell.type == BuilderCellType.sleeperLower ||
-            cell.type == BuilderCellType.sleeperUpper) {
+            cell.type == BuilderCellType.lavatory) {
           cell.label = null;
           continue;
+        }
+        if (cell.type == BuilderCellType.sleeperLower ||
+            cell.type == BuilderCellType.sleeperUpper) {
+          continue; // keep berth labels from pass 1
         }
         // Ticketable seat-type cells (seat, foldingSeat)
         cell.label =
