@@ -957,11 +957,10 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: color.withAlpha(30),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withAlpha(160), width: 2),
+        color: color.withAlpha(230),
+        borderRadius: BorderRadius.circular(4),
         boxShadow: [
-          BoxShadow(color: color.withAlpha(40), blurRadius: 8, spreadRadius: 1),
+          BoxShadow(color: color.withAlpha(60), blurRadius: 6, spreadRadius: 1),
         ],
       ),
       child: Column(
