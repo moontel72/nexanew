@@ -356,7 +356,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       );
       if (!mounted) return;
       if (r?['success'] == true) {
-        _snack('Link request sent to $carrierName', AppColors.success);
+        final token = r?['data']?['sender_identity_token'] ?? '?';
+        final sender = r?['data']?['sender_name'] ?? '?';
+        _snack(
+          'Link request sent to $carrierName. Sender: $sender ($token)',
+          AppColors.success,
+        );
         _linkMsgCtrl.clear();
         _loadLinkStatus();
       } else {

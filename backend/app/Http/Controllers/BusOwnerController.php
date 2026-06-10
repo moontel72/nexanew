@@ -604,6 +604,20 @@ class BusOwnerController extends Controller
                 ], 400);
             }
 
+            // Defensive: verify the authenticated user is NOT a sub-admin/admin
+            $accountType = $user->account_type ?? '';
+            if (in_array($accountType, ['master_admin', 'sub_admin', 'admin'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Admin accounts cannot send link requests. Please log in as a bus owner.',
+                ], 403);
+            }
+
+            // Resolve identity info for response verification
+            $identity = DB::table('global_identities')
+                ->where('id', $identityId)
+                ->first();
+
             // Verify target is a valid, active bus company
             $targetCompany = DB::table('tenant_accounts')
                 ->where('id', $data['carrier_company_id'])
@@ -685,6 +699,8 @@ class BusOwnerController extends Controller
                     'status'             => 'pending_acceptance',
                     'carrier_company_id' => $data['carrier_company_id'],
                     'carrier_name'       => $targetCompany->account_name,
+                    'sender_identity_token' => $identity->identity_token ?? null,
+                    'sender_name'           => $identity->display_name ?? null,
                     'message'            => 'Link request submitted. Awaiting approval from the bus company.',
                 ],
             ], 201);
