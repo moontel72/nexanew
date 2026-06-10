@@ -693,10 +693,17 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         if (visited.contains(r * 100 + c)) continue;
         final type = grid[r][c].type;
         if (!_isMultiCellType(type)) continue;
-        // Scan contiguous block
+        // Scan contiguous block by TYPE + LABEL (same label = same berth)
+        final startLabel = grid[r][c].label ?? '';
         int spanR = 1, spanC = 1;
-        while (r + spanR < rows && grid[r + spanR][c].type == type) spanR++;
-        while (c + spanC < cols && grid[r][c + spanC].type == type) spanC++;
+        while (r + spanR < rows &&
+            grid[r + spanR][c].type == type &&
+            (grid[r + spanR][c].label ?? '') == startLabel)
+          spanR++;
+        while (c + spanC < cols &&
+            grid[r][c + spanC].type == type &&
+            (grid[r][c + spanC].label ?? '') == startLabel)
+          spanC++;
         // Mark all cells in this block as visited
         for (int rr = r; rr < r + spanR; rr++) {
           for (int cc = c; cc < c + spanC; cc++) {
@@ -768,17 +775,22 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           if (upperVisited.contains(r * 100 + c)) continue;
           if (_upperGrid[r][c].type == BuilderCellType.empty) continue;
           final uType = _upperGrid[r][c].type;
+          final startLabel = _upperGrid[r][c].label ?? '';
           int spanR = 1, spanC = 1;
-          while (r + spanR < rows && _upperGrid[r + spanR][c].type == uType)
+          while (r + spanR < rows &&
+              _upperGrid[r + spanR][c].type == uType &&
+              (_upperGrid[r + spanR][c].label ?? '') == startLabel)
             spanR++;
-          while (c + spanC < cols && _upperGrid[r][c + spanC].type == uType)
+          while (c + spanC < cols &&
+              _upperGrid[r][c + spanC].type == uType &&
+              (_upperGrid[r][c + spanC].label ?? '') == startLabel)
             spanC++;
           for (int rr = r; rr < r + spanR; rr++)
             for (int cc = c; cc < c + spanC; cc++)
               upperVisited.add(rr * 100 + cc);
 
           final upperColor = _cellColors[uType] ?? Colors.orange;
-          final upperLabel = _upperGrid[r][c].label ?? '';
+          final upperLabel = startLabel;
           final bool isLeftBlock = c < (firstAisleCol ?? cols);
 
           // Determine ratio: check what is in the LOWER grid below
@@ -790,28 +802,31 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           final double stripLeft = isLeftBlock
               ? 48 + c * (cellW + gap)
               : 48 + (c + spanC) * (cellW + gap) - stripW;
-          final double stripHeight = spanR * cellH + (spanR - 1) * gap;
+          // 5% vertical shrink to create visible gap between stacked berths
+          final double fullH = spanR * cellH + (spanR - 1) * gap;
+          final double insetV = fullH * 0.025;
+          final double stripHeight = fullH * 0.95;
 
           upperStripWidgets.add(
             Positioned(
               left: stripLeft,
-              top: 20 + r * (cellH + gap),
+              top: 20 + r * (cellH + gap) + insetV,
               width: stripW,
               height: stripHeight,
               child: IgnorePointer(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: upperColor.withAlpha(60),
-                    borderRadius: BorderRadius.circular(6),
+                    color: upperColor.withAlpha(80),
+                    borderRadius: BorderRadius.circular(4),
                     border: Border.all(
-                      color: upperColor.withAlpha(190),
-                      width: 2,
+                      color: upperColor.withAlpha(220),
+                      width: 2.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: upperColor.withAlpha(50),
-                        blurRadius: 6,
-                        spreadRadius: 0,
+                        color: upperColor.withAlpha(60),
+                        blurRadius: 8,
+                        spreadRadius: 1,
                       ),
                     ],
                   ),
