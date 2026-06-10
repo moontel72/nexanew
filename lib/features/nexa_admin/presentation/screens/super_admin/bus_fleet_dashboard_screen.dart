@@ -45,6 +45,11 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   int _conductorCount = 0;
   int _layoutCount = 0;
 
+  // Link Requests state
+  int _linkRequestCount = 0;
+  List<Map<String, dynamic>> _linkRequests = [];
+  bool _linkRequestsLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +91,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
         _safeCount(api, '/bus-fleet/drivers/manage'),
         _safeCount(api, '/bus-fleet/conductors'),
         _safeCount(api, '/bus-fleet/layouts'),
+        _safeCount(api, '/bus-fleet/link-requests'),
       ], eagerError: false);
 
       if (mounted)
@@ -94,6 +100,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           _driverCount = results[1];
           _conductorCount = results[2];
           _layoutCount = results[3];
+          _linkRequestCount = results[4];
           _isLoading = false;
         });
     } catch (e) {
@@ -295,6 +302,16 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                           const Color(0xFF16A34A),
                           () => setState(() => _currentPage = 'conductors'),
                         ),
+                        const SizedBox(height: 4),
+                        _subButton(
+                          'Link Requests ($_linkRequestCount)',
+                          Icons.link_rounded,
+                          const Color(0xFFF59E0B),
+                          () {
+                            setState(() => _currentPage = 'linkreqs');
+                            _loadLinkRequests();
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -490,6 +507,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       ? 'Fleet Conductors'
                       : _currentPage == 'layouts'
                       ? 'Seat Layouts'
+                      : _currentPage == 'linkreqs'
+                      ? 'Pending Link Requests'
                       : 'Dashboard',
                   style: const TextStyle(
                     fontSize: 17,
@@ -510,6 +529,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
               ? _buildFleetList('conductors')
               : _currentPage == 'layouts'
               ? _buildLayoutList()
+              : _currentPage == 'linkreqs'
+              ? _linkRequestsPage()
               : _home(),
         ),
       ],
@@ -540,6 +561,387 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
       companyId: widget.companyId ?? _company?.id.toString(),
       companyName: _company?.name,
       onDataChanged: _loadAll,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // LINK REQUESTS PAGE — Pending Owner Approvals
+  // ═══════════════════════════════════════════════════
+
+  Future<void> _loadLinkRequests() async {
+    setState(() => _linkRequestsLoading = true);
+    try {
+      final r = await ApiService().get('/bus-fleet/link-requests');
+      if (!mounted) return;
+      final d = r?['data'];
+      List list = [];
+      if (d is Map) {
+        list = (d['data'] as List?) ?? [];
+        _linkRequestCount = d['total'] ?? list.length;
+      } else if (d is List) {
+        list = d;
+        _linkRequestCount = list.length;
+      }
+      setState(() {
+        _linkRequests = list
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        _linkRequestsLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _linkRequestsLoading = false);
+    }
+  }
+
+  Future<void> _acceptLink(String assignmentId, String ownerName) async {
+    try {
+      final r = await ApiService().post(
+        '/bus-fleet/link-requests/$assignmentId/accept',
+      );
+      if (!mounted) return;
+      if (r?['success'] == true) {
+        _snackBar(
+          'Owner \'$ownerName\' linked successfully. Sub-fleet staff and layouts are now visible.',
+          Colors.green,
+        );
+        _loadLinkRequests();
+        _loadAll();
+      } else {
+        _snackBar(r?['message'] ?? 'Failed to accept', Colors.red);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _snackBar('Error: $e', Colors.red);
+    }
+  }
+
+  Future<void> _rejectLink(String assignmentId, String ownerName) async {
+    final reasonCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('Reject \'$ownerName\'?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Provide a reason for rejection (optional):'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Incomplete documents',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService().post(
+        '/bus-fleet/link-requests/$assignmentId/reject',
+        data: {
+          if (reasonCtrl.text.trim().isNotEmpty)
+            'reason': reasonCtrl.text.trim(),
+        },
+      );
+      if (!mounted) return;
+      _snackBar('Link request from \'$ownerName\' rejected.', Colors.orange);
+      _loadLinkRequests();
+      _loadAll();
+    } catch (e) {
+      if (!mounted) return;
+      _snackBar('Error: $e', Colors.red);
+    }
+  }
+
+  Widget _linkRequestsPage() {
+    if (_linkRequestsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_linkRequests.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.link_off_rounded,
+              size: 48,
+              color: Colors.grey.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'No pending link requests',
+              style: TextStyle(color: AppColors.gray500),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Independent Bus Owners can request to link with your company via their app.',
+              style: TextStyle(color: AppColors.gray400, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ScrollbarTheme(
+      data: ScrollbarThemeData(
+        thumbVisibility: WidgetStateProperty.all(true),
+        thickness: WidgetStateProperty.all(8),
+        radius: const Radius.circular(4),
+        thumbColor: WidgetStateProperty.all(const Color(0xFFF59E0B)),
+        trackColor: WidgetStateProperty.all(const Color(0xFFF0F0F0)),
+      ),
+      child: Scrollbar(
+        child: ListView.builder(
+          padding: EdgeInsets.all(16.w),
+          itemCount: _linkRequests.length,
+          itemBuilder: (_, i) => _linkRequestCard(_linkRequests[i]),
+        ),
+      ),
+    );
+  }
+
+  Widget _linkRequestCard(Map<String, dynamic> req) {
+    final name = (req['name'] ?? '—').toString();
+    final token = (req['identity_token'] ?? '—').toString();
+    final email = (req['email'] ?? '').toString();
+    final phone = (req['phone'] ?? '').toString();
+    final message = (req['message'] ?? '').toString();
+    final requestedAt = (req['requested_at'] ?? '').toString();
+    final id = (req['assignment_id'] ?? '').toString();
+    final kycStatus = (req['kyc_status'] ?? 'unverified').toString();
+    final source = (req['source'] ?? 'unknown').toString();
+
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      margin: EdgeInsets.only(bottom: 10.h),
+      child: Padding(
+        padding: EdgeInsets.all(14.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  backgroundColor: const Color(
+                    0xFFF59E0B,
+                  ).withValues(alpha: 0.12),
+                  child: const Icon(
+                    Icons.person_rounded,
+                    color: Color(0xFFF59E0B),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        token,
+                        style: const TextStyle(
+                          color: AppColors.gray500,
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _linkBadge(kycStatus),
+              ],
+            ),
+
+            SizedBox(height: 10.h),
+
+            // Contact info row
+            if (email.isNotEmpty || phone.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(bottom: 8.h),
+                child: Row(
+                  children: [
+                    if (email.isNotEmpty) ...[
+                      const Icon(
+                        Icons.email_outlined,
+                        size: 13,
+                        color: AppColors.gray500,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        email,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+                    ],
+                    if (phone.isNotEmpty) ...[
+                      const Icon(
+                        Icons.phone_outlined,
+                        size: 13,
+                        color: AppColors.gray500,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        phone,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+            // Message
+            if (message.isNotEmpty)
+              Container(
+                width: double.infinity,
+                margin: EdgeInsets.only(bottom: 8.h),
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '\u201c$message\u201d',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF92400E),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+
+            // Meta row
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 12, color: AppColors.gray400),
+                SizedBox(width: 4.w),
+                Text(
+                  requestedAt.isNotEmpty ? 'Requested: $requestedAt' : '',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.gray400,
+                  ),
+                ),
+                if (source == 'bus_owner_app') ...[
+                  SizedBox(width: 8.w),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0E7FF),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'App',
+                      style: TextStyle(fontSize: 9, color: Color(0xFF4338CA)),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+
+            SizedBox(height: 10.h),
+
+            // Action buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _rejectLink(id, name),
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  label: const Text('Reject'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                ElevatedButton.icon(
+                  onPressed: () => _acceptLink(id, name),
+                  icon: const Icon(Icons.check_rounded, size: 16),
+                  label: const Text('Accept'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _linkBadge(String status) {
+    final color = status == 'verified'
+        ? const Color(0xFF16A34A)
+        : status == 'pending'
+        ? const Color(0xFFF59E0B)
+        : const Color(0xFF8899AA);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  void _snackBar(String msg, Color bg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: bg,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
     );
   }
 

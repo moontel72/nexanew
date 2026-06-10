@@ -93,7 +93,13 @@ class AssignmentTransferController extends Controller
     /**
      * POST /api/v1/admin/assignments/{id}/accept
      *
-     * Called by the new carrier's admin or the identity owner.
+     * Called by the new carrier's admin or Super Admin.
+     *
+     * Promotes pending_acceptance → active AND auto-creates
+     * tenant_allowance_grants so the new carrier can see the
+     * owner's staff, seat layouts, and operational data.
+     *
+     * Per §10.4, §10.6 and §10.11.2.
      */
     public function accept(string $assignmentId, Request $request): JsonResponse
     {
@@ -108,21 +114,107 @@ class AssignmentTransferController extends Controller
             return response()->json(['message' => 'Already finalized'], 422);
         }
 
-        DB::table('fleet_assignments')
-            ->where('id', $assignmentId)
-            ->update([
-                'status'      => 'active',
-                'accepted_at' => now(),
-                'updated_at'  => now(),
+        $ownerIdentityId = $row->global_identity_id;
+        $newCarrierId    = $row->carrier_company_id;
+
+        DB::beginTransaction();
+        try {
+            // Step 1: Promote assignment to active
+            DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->update([
+                    'status'      => 'active',
+                    'accepted_at' => now(),
+                    'updated_at'  => now(),
+                ]);
+
+            // Step 2: Auto-create allowance matrix for new carrier
+            // (so they can see the owner's staff + seat layouts)
+            $existingMatrix = DB::table('tenant_allowance_matrix')
+                ->where('owner_identity_id', $ownerIdentityId)
+                ->where('carrier_company_id', $newCarrierId)
+                ->first();
+
+            if (!$existingMatrix) {
+                $matrixId = (string) Str::orderedUuid();
+                DB::table('tenant_allowance_matrix')->insert([
+                    'id'                  => $matrixId,
+                    'owner_identity_id'   => $ownerIdentityId,
+                    'carrier_company_id'  => $newCarrierId,
+                    'permissions_blob'    => json_encode([
+                        'fleet.staff' => 'view',
+                        'seat_layout' => 'view',
+                    ]),
+                    'status'              => 'active',
+                    'created_at'          => now(),
+                    'updated_at'          => now(),
+                ]);
+
+                // Materialize into flat tenant_allowance_grants projection
+                $matrix = \App\Models\TenantAllowanceMatrix::find($matrixId);
+                if ($matrix) {
+                    $matrix->syncProjection();
+                }
+            }
+
+            // Step 3: Expire old carrier's grants (soft — set inactive)
+            // Find the previous active assignment to get the old carrier
+            $previousAssignment = DB::table('fleet_assignments')
+                ->where('global_identity_id', $ownerIdentityId)
+                ->where('role', $row->role)
+                ->where('status', 'unassigned')
+                ->where('id', '!=', $assignmentId)
+                ->orderBy('unassigned_at', 'desc')
+                ->first();
+
+            if ($previousAssignment && $previousAssignment->carrier_company_id !== $newCarrierId) {
+                // Deactivate old carrier's grants for this owner
+                DB::table('tenant_allowance_grants')
+                    ->where('owner_identity_id', $ownerIdentityId)
+                    ->where('carrier_company_id', $previousAssignment->carrier_company_id)
+                    ->update([
+                        'is_active'  => false,
+                        'updated_at' => now(),
+                    ]);
+
+                // Also mark old matrix rows inactive
+                DB::table('tenant_allowance_matrix')
+                    ->where('owner_identity_id', $ownerIdentityId)
+                    ->where('carrier_company_id', $previousAssignment->carrier_company_id)
+                    ->update([
+                        'status'     => 'inactive',
+                        'updated_at' => now(),
+                    ]);
+            }
+
+            DB::commit();
+
+            Log::info('AssignmentTransfer: accepted', [
+                'assignment_id'      => $assignmentId,
+                'owner_identity_id'  => $ownerIdentityId,
+                'new_carrier_id'     => $newCarrierId,
+                'old_carrier_id'     => $previousAssignment->carrier_company_id ?? null,
             ]);
 
-        return response()->json([
-            'success' => true,
-            'data'    => [
-                'id'     => $assignmentId,
-                'status' => 'active',
-            ],
-        ]);
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'id'                 => $assignmentId,
+                    'status'             => 'active',
+                    'grants_created'     => !$existingMatrix,
+                    'old_grants_expired' => isset($previousAssignment) && $previousAssignment->carrier_company_id !== $newCarrierId,
+                    'message'            => 'Transfer accepted. New carrier now has view access to owner staff and seat layouts.',
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('AssignmentTransfer - accept Error: ' . $e->getMessage(), [
+                'assignment_id' => $assignmentId,
+                'trace'         => $e->getTraceAsString(),
+            ]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
     }
 
     /**

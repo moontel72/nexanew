@@ -1937,14 +1937,24 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   /// Map backend component type strings to grid cell type strings.
   String _mapBackendType(String type) => switch (type) {
     'seat' => 'seat',
+    'disabledSeat' => 'disabledSeat',
+    'seniorSeat' => 'seniorSeat',
+    'ladiesSeat' => 'ladiesSeat',
+    'familySeat' => 'familySeat',
+    'reservedSeat' => 'reservedSeat',
+    'purchaseSeat' => 'purchaseSeat',
+    'terminalSeat' => 'terminalSeat',
     'aisle' => 'aisle',
     'folding' => 'folding',
     'exitDoor' => 'exitDoor',
+    'rearDoor' => 'rearDoor',
     'emergency' => 'emergency',
     'lavatory' => 'lavatory',
+    'kitchen' => 'kitchen',
     'sleeperLower' => 'sleeperLower',
     'sleeperUpper' => 'sleeperUpper',
     'driver' => 'driver',
+    'driverSeat' => 'driverSeat',
     'sleeper_berth' => 'sleeperLower', // legacy fallback
     _ => 'empty',
   };
@@ -1964,13 +1974,13 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     BuilderCellType.emergency => 'emergency',
     BuilderCellType.lavatory => 'lavatory',
     BuilderCellType.kitchen => 'kitchen',
-    BuilderCellType.disabledSeat => 'seat',
-    BuilderCellType.seniorSeat => 'seat',
-    BuilderCellType.ladiesSeat => 'seat',
-    BuilderCellType.familySeat => 'seat',
-    BuilderCellType.reservedSeat => 'seat',
-    BuilderCellType.purchaseSeat => 'seat',
-    BuilderCellType.terminalSeat => 'seat',
+    BuilderCellType.disabledSeat => 'disabledSeat',
+    BuilderCellType.seniorSeat => 'seniorSeat',
+    BuilderCellType.ladiesSeat => 'ladiesSeat',
+    BuilderCellType.familySeat => 'familySeat',
+    BuilderCellType.reservedSeat => 'reservedSeat',
+    BuilderCellType.purchaseSeat => 'purchaseSeat',
+    BuilderCellType.terminalSeat => 'terminalSeat',
   };
 
   Widget _inputField(

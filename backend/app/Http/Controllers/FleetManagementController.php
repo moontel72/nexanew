@@ -128,7 +128,24 @@ class FleetManagementController extends Controller
             ->whereIn('fa.status', ['active', 'pending_acceptance', 'suspended']);
 
         if ($cid) {
-            $query->where('fa.carrier_company_id', $cid);
+            // R-5 Fix: Expand carrier filter to include delegated owners'
+            // staff via active tenant_allowance_grants (Section 10.4).
+            // Radhnal admin sees: own staff + staff of all linked owners
+            // where an active 'fleet.staff' grant exists.
+            $delegatedTenantIds = DB::table('tenant_allowance_grants AS tag')
+                ->join('tenant_accounts AS ta', 'tag.owner_identity_id', '=', 'ta.global_identity_id')
+                ->where('tag.carrier_company_id', $cid)
+                ->where('tag.permission_key', 'fleet.staff')
+                ->where('tag.is_active', true)
+                ->where(function ($q) {
+                    $q->whereNull('tag.expires_at')
+                      ->orWhere('tag.expires_at', '>', now());
+                })
+                ->pluck('ta.id')
+                ->toArray();
+
+            $allCarrierIds = array_values(array_unique(array_merge([$cid], $delegatedTenantIds)));
+            $query->whereIn('fa.carrier_company_id', $allCarrierIds);
         }
 
         return $query->select(
@@ -605,6 +622,266 @@ class FleetManagementController extends Controller
             }
         } catch (\Exception $e) {
             Log::error('FleetManagement - updateStaff Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // IDENTITY PORTABILITY — LINK REQUEST MANAGEMENT (§10.11.2)
+    // ═══════════════════════════════════════════════════════
+
+    /**
+     * GET /api/v1/bus-fleet/link-requests
+     *
+     * List all pending owner link requests targeting this carrier.
+     * Used by Bus Company admins to review and approve/reject
+     * independent owners who want to join their fleet.
+     */
+    public function listLinkRequests(Request $request): JsonResponse
+    {
+        try {
+            $cid = $this->carrierCompanyId($request);
+            if (!$cid || $cid === '00000000-0000-0000-0000-000000000000') {
+                return response()->json(['message' => 'No carrier context'], 403);
+            }
+
+            $perPage = (int) $request->input('per_page', 20);
+            $perPage = max(1, min(100, $perPage));
+
+            $query = DB::table('fleet_assignments AS fa')
+                ->join('global_identities AS gi', 'fa.global_identity_id', '=', 'gi.id')
+                ->leftJoin('tenant_accounts AS ta', 'gi.id', '=', 'ta.global_identity_id')
+                ->where('fa.carrier_company_id', $cid)
+                ->where('fa.role', 'owner')
+                ->where('fa.fleet_type', 'bus')
+                ->where('fa.status', 'pending_acceptance')
+                ->select(
+                    'fa.id AS assignment_id',
+                    'gi.id AS global_identity_id',
+                    'gi.identity_token',
+                    'gi.display_name',
+                    'gi.kyc_status',
+                    'gi.kyc_tier',
+                    'fa.assignment_meta',
+                    'fa.created_at',
+                    'ta.email',
+                    'ta.phone_number AS phone',
+                    'ta.account_name',
+                );
+
+            if ($request->filled('search')) {
+                $s = $request->search;
+                $query->where(function ($q) use ($s) {
+                    $q->where('gi.display_name', 'ilike', "%{$s}%")
+                      ->orWhere('ta.phone_number', 'ilike', "%{$s}%")
+                      ->orWhere('ta.email', 'ilike', "%{$s}%");
+                });
+            }
+
+            $result = $query->orderBy('fa.created_at', 'desc')->paginate($perPage);
+
+            $data = $result->getCollection()->map(function ($row) {
+                $meta = json_decode($row->assignment_meta ?? '{}', true) ?: [];
+                return [
+                    'assignment_id'      => $row->assignment_id,
+                    'global_identity_id' => $row->global_identity_id,
+                    'identity_token'     => $row->identity_token,
+                    'name'               => $row->display_name ?? '—',
+                    'email'              => $row->email,
+                    'phone'              => $row->phone,
+                    'kyc_status'         => $row->kyc_status,
+                    'kyc_tier'           => $row->kyc_tier,
+                    'message'            => $meta['link_message'] ?? null,
+                    'source'             => $meta['source'] ?? 'unknown',
+                    'requested_at'       => $row->created_at,
+                ];
+            })->toArray();
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'data'         => $data,
+                    'total'        => $result->total(),
+                    'current_page' => $result->currentPage(),
+                    'per_page'     => $result->perPage(),
+                    'last_page'    => $result->lastPage(),
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('FleetManagement - listLinkRequests Error: ' . $e->getMessage());
+            return response()->json(['success' => true, 'data' => ['data' => [], 'total' => 0]]);
+        }
+    }
+
+    /**
+     * POST /api/v1/bus-fleet/link-requests/{id}/accept
+     *
+     * Bus Company admin accepts a pending owner link request.
+     * Promotes assignment from pending_acceptance → active and
+     * auto-creates tenant_allowance_grants so the carrier can
+     * see the delegated owner's staff and seat layouts.
+     */
+    public function acceptLinkRequest(string $assignmentId, Request $request): JsonResponse
+    {
+        try {
+            $cid = $this->carrierCompanyId($request);
+            if (!$cid || $cid === '00000000-0000-0000-0000-000000000000') {
+                return response()->json(['message' => 'No carrier context'], 403);
+            }
+
+            $assignment = DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->where('role', 'owner')
+                ->where('fleet_type', 'bus')
+                ->first();
+
+            if (!$assignment) {
+                return response()->json(['message' => 'Link request not found'], 404);
+            }
+
+            if ($assignment->carrier_company_id !== $cid) {
+                return response()->json(['message' => 'This link request is not for your company'], 403);
+            }
+
+            if ($assignment->status !== 'pending_acceptance') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This link request is no longer pending (current status: ' . $assignment->status . ').',
+                ], 422);
+            }
+
+            $ownerIdentityId = $assignment->global_identity_id;
+
+            DB::beginTransaction();
+            try {
+                // Step 1: Promote assignment to active
+                DB::table('fleet_assignments')
+                    ->where('id', $assignmentId)
+                    ->update([
+                        'status'      => 'active',
+                        'accepted_at' => now(),
+                        'updated_at'  => now(),
+                    ]);
+
+                // Step 2: Auto-create allowance matrix so carrier can see owner's staff & layouts
+                $existingMatrix = DB::table('tenant_allowance_matrix')
+                    ->where('owner_identity_id', $ownerIdentityId)
+                    ->where('carrier_company_id', $cid)
+                    ->first();
+
+                if (!$existingMatrix) {
+                    $matrixId = (string) Str::orderedUuid();
+                    DB::table('tenant_allowance_matrix')->insert([
+                        'id'                  => $matrixId,
+                        'owner_identity_id'   => $ownerIdentityId,
+                        'carrier_company_id'  => $cid,
+                        'permissions_blob'    => json_encode([
+                            'fleet.staff' => 'view',
+                            'seat_layout' => 'view',
+                        ]),
+                        'status'              => 'active',
+                        'created_at'          => now(),
+                        'updated_at'          => now(),
+                    ]);
+
+                    // Materialize grants via Eloquent model observer
+                    $matrix = \App\Models\TenantAllowanceMatrix::find($matrixId);
+                    if ($matrix) {
+                        $matrix->syncProjection();
+                    }
+                }
+
+                DB::commit();
+
+                Log::info('FleetManagement: link request accepted', [
+                    'assignment_id'      => $assignmentId,
+                    'owner_identity_id'  => $ownerIdentityId,
+                    'carrier_company_id' => $cid,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'data'    => [
+                        'assignment_id' => $assignmentId,
+                        'status'        => 'active',
+                        'message'       => 'Link request accepted. Owner is now linked to your company with view access to their staff and layouts.',
+                    ],
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
+        } catch (\Exception $e) {
+            Log::error('FleetManagement - acceptLinkRequest Error: ' . $e->getMessage(), [
+                'assignment_id' => $assignmentId,
+                'trace'         => $e->getTraceAsString(),
+            ]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/v1/bus-fleet/link-requests/{id}/reject
+     *
+     * Bus Company admin rejects a pending owner link request.
+     */
+    public function rejectLinkRequest(string $assignmentId, Request $request): JsonResponse
+    {
+        try {
+            $data = $request->validate([
+                'reason' => ['nullable', 'string', 'max:500'],
+            ]);
+
+            $cid = $this->carrierCompanyId($request);
+            if (!$cid || $cid === '00000000-0000-0000-0000-000000000000') {
+                return response()->json(['message' => 'No carrier context'], 403);
+            }
+
+            $assignment = DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->where('role', 'owner')
+                ->where('fleet_type', 'bus')
+                ->first();
+
+            if (!$assignment) {
+                return response()->json(['message' => 'Link request not found'], 404);
+            }
+
+            if ($assignment->carrier_company_id !== $cid) {
+                return response()->json(['message' => 'This link request is not for your company'], 403);
+            }
+
+            if ($assignment->status !== 'pending_acceptance') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This link request is no longer pending.',
+                ], 422);
+            }
+
+            DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->update([
+                    'status'          => 'revoked',
+                    'unassigned_at'   => now(),
+                    'unassign_reason' => $data['reason'] ?? 'Rejected by carrier admin',
+                    'updated_at'      => now(),
+                ]);
+
+            Log::info('FleetManagement: link request rejected', [
+                'assignment_id' => $assignmentId,
+                'reason'        => $data['reason'] ?? 'No reason provided',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Link request rejected.',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('FleetManagement - rejectLinkRequest Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
     }

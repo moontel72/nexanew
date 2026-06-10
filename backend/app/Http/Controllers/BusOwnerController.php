@@ -543,6 +543,242 @@ class BusOwnerController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════
+    // IDENTITY PORTABILITY — LINK REQUEST (§10.11.2)
+    // ═══════════════════════════════════════════════════════
+
+    /**
+     * POST /api/v1/bus-owner/link-request
+     *
+     * An independent Bus Owner requests to link with a Bus Company
+     * (carrier). Creates a fleet_assignments row with
+     * status='pending_acceptance' under the target carrier.
+     *
+     * The one_active_assignment_per_role partial unique index
+     * guarantees no double-linking or simultaneous active links.
+     */
+    public function linkRequest(Request $request): JsonResponse
+    {
+        try {
+            $data = $request->validate([
+                'carrier_company_id' => ['required', 'uuid'],
+                'message'            => ['nullable', 'string', 'max:500'],
+            ]);
+
+            $user = $request->user();
+            $identityId = $user->global_identity_id ?? null;
+            if (!$identityId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No identity found for this account.',
+                ], 400);
+            }
+
+            // Verify target is a valid, active bus company
+            $targetCompany = DB::table('tenant_accounts')
+                ->where('id', $data['carrier_company_id'])
+                ->where('account_type', 'bus_company')
+                ->where('status', 'active')
+                ->first();
+
+            if (!$targetCompany) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Target bus company not found or not active.',
+                ], 404);
+            }
+
+            // Don't link to yourself
+            $ownerTenantId = $this->ownerTenantId($request);
+            if ($ownerTenantId === $data['carrier_company_id']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You cannot link to your own account.',
+                ], 422);
+            }
+
+            // Guard: check for existing active/pending owner assignment
+            $existing = DB::table('fleet_assignments')
+                ->where('global_identity_id', $identityId)
+                ->where('role', 'owner')
+                ->whereIn('status', ['active', 'pending_acceptance'])
+                ->first();
+
+            if ($existing) {
+                $company = DB::table('tenant_accounts')
+                    ->where('id', $existing->carrier_company_id)
+                    ->value('account_name') ?? 'Unknown';
+
+                return response()->json([
+                    'success' => false,
+                    'message' => "You already have an {$existing->status} link with '{$company}'. Cancel it before requesting a new one.",
+                    'data'    => [
+                        'existing_assignment_id' => $existing->id,
+                        'existing_status'        => $existing->status,
+                        'existing_carrier_name'  => $company,
+                        'existing_carrier_id'    => $existing->carrier_company_id,
+                    ],
+                ], 409);
+            }
+
+            // Create pending_acceptance assignment
+            $assignmentId = (string) Str::orderedUuid();
+            $meta = [
+                'link_message'  => $data['message'] ?? null,
+                'requested_at'  => now()->toIso8601String(),
+                'source'        => 'bus_owner_app',
+            ];
+
+            DB::table('fleet_assignments')->insert([
+                'id'                  => $assignmentId,
+                'global_identity_id'  => $identityId,
+                'carrier_company_id'  => $data['carrier_company_id'],
+                'role'                => 'owner',
+                'fleet_type'          => 'bus',
+                'status'              => 'pending_acceptance',
+                'assignment_meta'     => json_encode($meta),
+                'created_at'          => now(),
+                'updated_at'          => now(),
+            ]);
+
+            Log::info('BusOwner: link request submitted', [
+                'identity_id'        => $identityId,
+                'assignment_id'      => $assignmentId,
+                'carrier_company_id' => $data['carrier_company_id'],
+                'carrier_name'       => $targetCompany->account_name,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'assignment_id'      => $assignmentId,
+                    'status'             => 'pending_acceptance',
+                    'carrier_company_id' => $data['carrier_company_id'],
+                    'carrier_name'       => $targetCompany->account_name,
+                    'message'            => 'Link request submitted. Awaiting approval from the bus company.',
+                ],
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('BusOwner - linkRequest Error: ' . $e->getMessage(), [
+                'user_id' => $request->user()?->id,
+                'trace'   => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Server error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * POST /api/v1/bus-owner/link-request/{id}/cancel
+     *
+     * Cancel a pending link request before it is accepted/rejected.
+     */
+    public function cancelLinkRequest(string $assignmentId, Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $identityId = $user->global_identity_id ?? null;
+            if (!$identityId) {
+                return response()->json(['success' => false, 'message' => 'No identity found.'], 400);
+            }
+
+            $assignment = DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->where('global_identity_id', $identityId)
+                ->where('role', 'owner')
+                ->first();
+
+            if (!$assignment) {
+                return response()->json(['message' => 'Link request not found'], 404);
+            }
+
+            if ($assignment->status !== 'pending_acceptance') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only pending requests can be cancelled.',
+                ], 422);
+            }
+
+            DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->update([
+                    'status'          => 'revoked',
+                    'unassigned_at'   => now(),
+                    'unassign_reason' => 'Cancelled by owner',
+                    'updated_at'      => now(),
+                ]);
+
+            Log::info('BusOwner: link request cancelled', [
+                'assignment_id' => $assignmentId,
+                'identity_id'   => $identityId,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Link request cancelled.',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('BusOwner - cancelLinkRequest Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/v1/bus-owner/link-status
+     *
+     * Returns the current linking status for the authenticated owner.
+     */
+    public function linkStatus(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $identityId = $user->global_identity_id ?? null;
+            if (!$identityId) {
+                return response()->json(['success' => false, 'message' => 'No identity found.'], 400);
+            }
+
+            $assignment = DB::table('fleet_assignments')
+                ->where('global_identity_id', $identityId)
+                ->where('role', 'owner')
+                ->whereIn('status', ['active', 'pending_acceptance'])
+                ->first();
+
+            if (!$assignment) {
+                return response()->json([
+                    'success' => true,
+                    'data'    => [
+                        'linked'    => false,
+                        'status'    => 'independent',
+                    ],
+                ]);
+            }
+
+            $carrier = DB::table('tenant_accounts')
+                ->where('id', $assignment->carrier_company_id)
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'linked'             => true,
+                    'status'             => $assignment->status,
+                    'assignment_id'      => $assignment->id,
+                    'carrier_company_id' => $assignment->carrier_company_id,
+                    'carrier_name'       => $carrier->account_name ?? 'Unknown',
+                    'linked_at'          => $assignment->accepted_at ?? $assignment->created_at,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('BusOwner - linkStatus Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
     // SEAT LAYOUTS — LIST (delegated to LayoutService)
     // ═══════════════════════════════════════════════════════
 

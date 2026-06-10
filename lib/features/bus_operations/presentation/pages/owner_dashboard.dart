@@ -33,6 +33,14 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       _conductorsLoading = true,
       _layoutsLoading = true;
 
+  // Carrier Link state
+  Map<String, dynamic>? _linkStatus;
+  bool _linkLoading = false;
+  List<Map<String, dynamic>> _busCompanies = [];
+  bool _companiesLoading = false;
+  String _companySearch = '';
+  final _linkMsgCtrl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -183,6 +191,17 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                     },
                   ),
                   Gap(8),
+                  _sec('CARRIER'),
+                  Missile3DButton(
+                    label: 'Carrier Link',
+                    icon: Icons.link_rounded,
+                    color: const Color(0xFFF59E0B),
+                    onTap: () {
+                      setState(() => _currentPage = 'carrier');
+                      _loadLinkStatus();
+                    },
+                  ),
+                  Gap(8),
                   _sec('SYSTEM'),
                   Missile3DButton(
                     label: 'Logout',
@@ -257,6 +276,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               ? _conductorsPage()
               : _currentPage == 'layouts'
               ? _layoutsPage()
+              : _currentPage == 'carrier'
+              ? _carrierLinkPage()
               : _homePage(),
         ),
       ],
@@ -269,11 +290,481 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       ? 'Bus Conductors'
       : _currentPage == 'layouts'
       ? 'Seat Layouts'
+      : _currentPage == 'carrier'
+      ? 'Carrier Link'
       : 'Dashboard';
   void _loadAll() {
     _loadDrivers();
     _loadConductors();
     _loadLayouts();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // CARRIER LINK
+  // ═══════════════════════════════════════════════════════
+
+  Future<void> _loadLinkStatus() async {
+    setState(() => _linkLoading = true);
+    try {
+      final r = await ApiService().get('/bus-owner/link-status');
+      if (!mounted) return;
+      setState(() {
+        _linkStatus = (r?['data'] as Map<String, dynamic>?) ?? {};
+        _linkLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _linkLoading = false);
+    }
+  }
+
+  Future<void> _loadBusCompanies({String search = ''}) async {
+    setState(() => _companiesLoading = true);
+    try {
+      // Search bus companies via admin endpoint or use a list approach
+      // We use the bus-fleet profile to get the current carrier if linked,
+      // but for search we query the admin bus-companies endpoint.
+      final r = await ApiService().get(
+        '/admin/bus-companies',
+        queryParams: {
+          'per_page': '50',
+          if (search.isNotEmpty) 'search': search,
+        },
+      );
+      if (!mounted) return;
+      final d = r?['data'];
+      List list = [];
+      if (d is Map) {
+        list = (d['data'] as List?) ?? [];
+      } else if (d is List) {
+        list = d;
+      }
+      setState(() {
+        _busCompanies = list
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        _companiesLoading = false;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _busCompanies = [];
+          _companiesLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _sendLinkRequest(String carrierId, String carrierName) async {
+    try {
+      final r = await ApiService().post(
+        '/bus-owner/link-request',
+        data: {
+          'carrier_company_id': carrierId,
+          'message': _linkMsgCtrl.text.trim().isNotEmpty
+              ? _linkMsgCtrl.text.trim()
+              : null,
+        },
+      );
+      if (!mounted) return;
+      if (r?['success'] == true) {
+        _snack('Link request sent to $carrierName', AppColors.success);
+        _linkMsgCtrl.clear();
+        _loadLinkStatus();
+      } else {
+        _snack(r?['message'] ?? 'Failed to send request', AppColors.error);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString();
+      if (msg.contains('409')) {
+        _snack('You already have a pending or active link', AppColors.warning);
+      } else {
+        _snack('Error: $msg', AppColors.error);
+      }
+    }
+  }
+
+  Future<void> _cancelLinkRequest(String assignmentId) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: const Color(0xFF162438),
+        title: const Text(
+          'Cancel Link Request?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Are you sure you want to cancel this pending link request?',
+          style: TextStyle(color: Color(0xFF8899AA)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('No, Keep It'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService().post('/bus-owner/link-request/$assignmentId/cancel');
+      if (!mounted) return;
+      _snack('Link request cancelled', AppColors.success);
+      _loadLinkStatus();
+    } catch (e) {
+      if (!mounted) return;
+      _snack('Error: $e', AppColors.error);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // CARRIER LINK PAGE
+  // ═══════════════════════════════════════════════════════
+
+  Widget _carrierLinkPage() {
+    if (_linkLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final linked = _linkStatus?['linked'] == true;
+    final status = _linkStatus?['status'] as String? ?? 'independent';
+    final carrierName = _linkStatus?['carrier_name'] as String? ?? '';
+    final assignmentId = _linkStatus?['assignment_id'] as String? ?? '';
+
+    return ListView(
+      padding: EdgeInsets.all(16.w),
+      children: [
+        // --- Status Banner ---
+        if (linked && status == 'active')
+          _linkStatusBanner(
+            icon: Icons.check_circle_rounded,
+            color: const Color(0xFF16A34A),
+            title: 'Linked with $carrierName',
+            subtitle:
+                'Your fleet staff and seat layouts are visible to this carrier.',
+            bgColor: const Color(0xFF052E16),
+          ),
+        if (linked && status == 'pending_acceptance')
+          _linkStatusBanner(
+            icon: Icons.hourglass_empty_rounded,
+            color: const Color(0xFFF59E0B),
+            title: 'Waiting for $carrierName approval...',
+            subtitle: 'Your link request is pending review by the bus company.',
+            bgColor: const Color(0xFF451A03),
+            action: TextButton.icon(
+              onPressed: () => _cancelLinkRequest(assignmentId),
+              icon: const Icon(Icons.close, size: 16),
+              label: const Text('Cancel Request'),
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            ),
+          ),
+        if (!linked)
+          _linkStatusBanner(
+            icon: Icons.link_off_rounded,
+            color: const Color(0xFF8899AA),
+            title: 'Not Linked to Any Carrier',
+            subtitle:
+                'Link with a Bus Company to have your fleet managed under their panel.',
+            bgColor: const Color(0xFF162438),
+          ),
+
+        Gap(24),
+
+        // --- Link to a Company (only when not linked) ---
+        if (!linked) ...[
+          Text(
+            'Select a Bus Company',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Gap(8),
+          Text(
+            'Search for an active Bus Company to send a link request.',
+            style: TextStyle(color: const Color(0xFF8899AA), fontSize: 12),
+          ),
+          Gap(12),
+
+          // Search input
+          TextField(
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Search bus company...',
+              hintStyle: const TextStyle(color: Color(0xFF556677)),
+              prefixIcon: const Icon(Icons.search, color: Color(0xFF556677)),
+              filled: true,
+              fillColor: const Color(0xFF1A2A3A),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFF00C49F)),
+              ),
+            ),
+            onChanged: (v) {
+              _companySearch = v;
+              _loadBusCompanies(search: v);
+            },
+          ),
+          Gap(8),
+
+          // Optional message
+          TextField(
+            controller: _linkMsgCtrl,
+            maxLines: 2,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Optional message to the company...',
+              hintStyle: const TextStyle(color: Color(0xFF556677)),
+              filled: true,
+              fillColor: const Color(0xFF1A2A3A),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFF2A3A4A)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFF00C49F)),
+              ),
+            ),
+          ),
+          Gap(12),
+
+          // Company list or loading
+          if (_companiesLoading)
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_busCompanies.isEmpty)
+            Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(
+                child: Text(
+                  _companySearch.isEmpty
+                      ? 'Tap search to find companies'
+                      : 'No bus companies found',
+                  style: const TextStyle(color: Color(0xFF667788)),
+                ),
+              ),
+            )
+          else
+            ...(_busCompanies.map((company) {
+              final cId = (company['id'] ?? '').toString();
+              final cName = (company['account_name'] ?? company['name'] ?? '—')
+                  .toString();
+              final cEmail = (company['email'] ?? '').toString();
+              final cStatus = (company['status'] ?? 'active').toString();
+
+              return Card(
+                color: const Color(0xFF1A2A3A),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                margin: EdgeInsets.only(bottom: 8.h),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(
+                      0xFFF59E0B,
+                    ).withValues(alpha: 0.15),
+                    child: const Icon(
+                      Icons.directions_bus,
+                      color: Color(0xFFF59E0B),
+                    ),
+                  ),
+                  title: Text(
+                    cName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    cEmail.isNotEmpty ? cEmail : 'No email',
+                    style: const TextStyle(
+                      color: Color(0xFF667788),
+                      fontSize: 11,
+                    ),
+                  ),
+                  trailing: ElevatedButton.icon(
+                    onPressed: () => _sendLinkRequest(cId, cName),
+                    icon: const Icon(Icons.send_rounded, size: 16),
+                    label: const Text('Link'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF59E0B),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            })),
+        ],
+
+        // --- Show linked info ---
+        if (linked) ...[
+          Gap(16),
+          Card(
+            color: const Color(0xFF1A2A3A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Link Details',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Gap(10),
+                  _linkDetailRow(
+                    Icons.business_rounded,
+                    'Carrier',
+                    carrierName,
+                  ),
+                  _linkDetailRow(
+                    Icons.info_outline,
+                    'Status',
+                    status.replaceAll('_', ' ').toUpperCase(),
+                  ),
+                  if (_linkStatus?['linked_at'] != null)
+                    _linkDetailRow(
+                      Icons.calendar_today_rounded,
+                      'Since',
+                      _linkStatus!['linked_at'].toString(),
+                    ),
+                  Gap(8),
+                  if (status == 'active')
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF052E16),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Color(0xFF16A34A),
+                            size: 16,
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Your drivers, conductors, and layouts are visible to this carrier via the Fleet Panel.',
+                              style: TextStyle(
+                                color: Color(0xFF86EFAC),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _linkStatusBanner({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required Color bgColor,
+    Widget? action,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 28),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Gap(4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: Color(0xFF8899AA),
+                    fontSize: 12,
+                  ),
+                ),
+                if (action != null) ...[Gap(8), action],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _linkDetailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 6.h),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF8899AA)),
+          SizedBox(width: 8.w),
+          Text(
+            '$label: ',
+            style: const TextStyle(color: Color(0xFF667788), fontSize: 12),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _homePage() {

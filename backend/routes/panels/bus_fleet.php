@@ -195,4 +195,11 @@ Route::prefix('api/v1/bus-fleet')
             Route::post('save', [\App\Http\Controllers\BusShiftController::class, 'saveShiftRoster']);
             Route::get('{plate}', [\App\Http\Controllers\BusShiftController::class, 'getShiftRoster']);
         });
+
+        // Identity Portability — Link Request Management (§10.11.2)
+        Route::prefix('link-requests')->group(function (): void {
+            Route::get('/', [\App\Http\Controllers\FleetManagementController::class, 'listLinkRequests']);
+            Route::post('{id}/accept', [\App\Http\Controllers\FleetManagementController::class, 'acceptLinkRequest']);
+            Route::post('{id}/reject', [\App\Http\Controllers\FleetManagementController::class, 'rejectLinkRequest']);
+        });
     });
