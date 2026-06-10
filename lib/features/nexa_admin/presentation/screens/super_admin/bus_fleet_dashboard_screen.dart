@@ -1452,10 +1452,17 @@ class _LayoutListViewState extends State<_LayoutListView> {
     final status = layout['layout_status'] as String? ?? 'draft';
     final version = layout['version_number'] as int? ?? 1;
     final deck = (layout['deck_level'] as int? ?? 0);
-    final preset = LayoutPreset.builtIn.firstWhere(
-      (p) => p.key == vc,
-      orElse: () => LayoutPreset.builtIn.first,
-    );
+    // Vehicle class → (label, accent color)
+    const _vcMeta = {
+      'coach_54': ('54-Seat Coach (Large)', Color(0xFF7C3AED)),
+      'standard_45': ('45-Seat Standard Coach', Color(0xFF2563EB)),
+      'coaster_34': ('34-Seat Coaster', Color(0xFF16A34A)),
+      'hiace_13': ('13-Seat HiAce', Color(0xFFD97706)),
+      'sleeper_custom': ('Custom Sleeper Coach', Color(0xFFDB2777)),
+    };
+    final vcInfo = _vcMeta[vc] ?? _vcMeta['standard_45']!;
+    final presetLabel = vcInfo.$1;
+    final presetColor = vcInfo.$2;
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
@@ -1467,14 +1474,14 @@ class _LayoutListViewState extends State<_LayoutListView> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: preset.accentColor.withValues(alpha: 0.15),
+                color: presetColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 vc == 'sleeper_custom'
                     ? Icons.airline_seat_flat_angled
                     : Icons.event_seat,
-                color: preset.accentColor,
+                color: presetColor,
                 size: 22,
               ),
             ),
@@ -1491,7 +1498,7 @@ class _LayoutListViewState extends State<_LayoutListView> {
                   ),
                   SizedBox(height: 2.h),
                   Text(
-                    '${preset.label}  •  v$version  •  ${deck == 0 ? 'Lower Deck' : 'Upper Deck'}',
+                    '${presetLabel}  •  v$version  •  ${deck == 0 ? 'Lower Deck' : 'Upper Deck'}',
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
