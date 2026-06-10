@@ -14,6 +14,13 @@ import 'package:trace_odd/shared/theme/colors.dart';
 enum BuilderCellType {
   empty,
   seat,
+  disabledSeat,
+  seniorSeat,
+  ladiesSeat,
+  familySeat,
+  reservedSeat,
+  purchaseSeat,
+  terminalSeat,
   aisle,
   foldingSeat,
   sleeperLower,
@@ -29,6 +36,13 @@ enum BuilderCellType {
 
 const _cellLabels = {
   BuilderCellType.seat: 'Seat',
+  BuilderCellType.disabledSeat: 'Disabled Person Seat',
+  BuilderCellType.seniorSeat: 'Senior Citizen Seat',
+  BuilderCellType.ladiesSeat: 'Ladies Seat',
+  BuilderCellType.familySeat: 'Family Seat',
+  BuilderCellType.reservedSeat: 'Reserved (COTA)',
+  BuilderCellType.purchaseSeat: 'Purchase Only (No Booking)',
+  BuilderCellType.terminalSeat: 'Terminal / On-Spot',
   BuilderCellType.aisle: 'Aisle (Walkway)',
   BuilderCellType.foldingSeat: 'Folding Seat (2-in-1)',
   BuilderCellType.sleeperLower: 'Sleeper Berth (Lower)',
@@ -44,6 +58,13 @@ const _cellLabels = {
 
 const _cellIcons = {
   BuilderCellType.seat: Icons.event_seat,
+  BuilderCellType.disabledSeat: Icons.accessible,
+  BuilderCellType.seniorSeat: Icons.elderly,
+  BuilderCellType.ladiesSeat: Icons.female,
+  BuilderCellType.familySeat: Icons.family_restroom,
+  BuilderCellType.reservedSeat: Icons.lock,
+  BuilderCellType.purchaseSeat: Icons.shopping_cart,
+  BuilderCellType.terminalSeat: Icons.store,
   BuilderCellType.aisle: Icons.remove,
   BuilderCellType.foldingSeat: Icons.chair_alt,
   BuilderCellType.sleeperLower: Icons.airline_seat_flat,
@@ -59,6 +80,13 @@ const _cellIcons = {
 
 const _cellColors = {
   BuilderCellType.seat: Color(0xFF7C3AED),
+  BuilderCellType.disabledSeat: Color(0xFF14B8A6),
+  BuilderCellType.seniorSeat: Color(0xFF8B5CF6),
+  BuilderCellType.ladiesSeat: Color(0xFFEC4899),
+  BuilderCellType.familySeat: Color(0xFFFB923C),
+  BuilderCellType.reservedSeat: Color(0xFFEAB308),
+  BuilderCellType.purchaseSeat: Color(0xFF22C55E),
+  BuilderCellType.terminalSeat: Color(0xFF9CA3AF),
   BuilderCellType.aisle: Color(0xFF64748B),
   BuilderCellType.foldingSeat: Color(0xFF06B6D4),
   BuilderCellType.sleeperLower: Color(0xFFDB2777),
@@ -588,7 +616,14 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
               _statBadge(
                 'Seats',
                 _countTypeIn(_grid, BuilderCellType.seat) +
-                    _countTypeIn(_grid, BuilderCellType.foldingSeat),
+                    _countTypeIn(_grid, BuilderCellType.foldingSeat) +
+                    _countTypeIn(_grid, BuilderCellType.disabledSeat) +
+                    _countTypeIn(_grid, BuilderCellType.seniorSeat) +
+                    _countTypeIn(_grid, BuilderCellType.ladiesSeat) +
+                    _countTypeIn(_grid, BuilderCellType.familySeat) +
+                    _countTypeIn(_grid, BuilderCellType.reservedSeat) +
+                    _countTypeIn(_grid, BuilderCellType.purchaseSeat) +
+                    _countTypeIn(_grid, BuilderCellType.terminalSeat),
                 const Color(0xFF7C3AED),
                 icon: Icons.event_seat,
               ),
@@ -1929,6 +1964,13 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     BuilderCellType.emergency => 'emergency',
     BuilderCellType.lavatory => 'lavatory',
     BuilderCellType.kitchen => 'kitchen',
+    BuilderCellType.disabledSeat => 'seat',
+    BuilderCellType.seniorSeat => 'seat',
+    BuilderCellType.ladiesSeat => 'seat',
+    BuilderCellType.familySeat => 'seat',
+    BuilderCellType.reservedSeat => 'seat',
+    BuilderCellType.purchaseSeat => 'seat',
+    BuilderCellType.terminalSeat => 'seat',
   };
 
   Widget _inputField(
