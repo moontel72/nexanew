@@ -19,9 +19,12 @@ enum BuilderCellType {
   sleeperLower,
   sleeperUpper,
   driverCabin,
+  driverSeat,
   exitDoor,
+  rearDoor,
   emergency,
   lavatory,
+  kitchen,
 }
 
 const _cellLabels = {
@@ -34,6 +37,9 @@ const _cellLabels = {
   BuilderCellType.exitDoor: 'Exit / Front Door',
   BuilderCellType.emergency: 'Emergency Exit',
   BuilderCellType.lavatory: 'Lavatory / Bathroom',
+  BuilderCellType.driverSeat: 'Driver Seat',
+  BuilderCellType.rearDoor: 'Rear Door',
+  BuilderCellType.kitchen: 'Kitchen',
 };
 
 const _cellIcons = {
@@ -46,6 +52,9 @@ const _cellIcons = {
   BuilderCellType.exitDoor: Icons.door_front_door,
   BuilderCellType.emergency: Icons.warning_amber_rounded,
   BuilderCellType.lavatory: Icons.wc,
+  BuilderCellType.driverSeat: Icons.airline_seat_recline_extra,
+  BuilderCellType.rearDoor: Icons.door_back_door,
+  BuilderCellType.kitchen: Icons.countertops,
 };
 
 const _cellColors = {
@@ -59,6 +68,9 @@ const _cellColors = {
   BuilderCellType.emergency: Color(0xFFDC2626),
   BuilderCellType.lavatory: Color(0xFF6366F1),
   BuilderCellType.empty: Color(0xFF334155),
+  BuilderCellType.driverSeat: Color(0xFF3B82F6),
+  BuilderCellType.rearDoor: Color(0xFFB91C1C),
+  BuilderCellType.kitchen: Color(0xFFF59E0B),
 };
 
 class _GridCell {
@@ -578,6 +590,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                 _countTypeIn(_grid, BuilderCellType.seat) +
                     _countTypeIn(_grid, BuilderCellType.foldingSeat),
                 const Color(0xFF7C3AED),
+                icon: Icons.event_seat,
               ),
               const SizedBox(width: 8),
               _statBadge(
@@ -590,6 +603,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                           )
                         : 0),
                 const Color(0xFFDB2777),
+                icon: Icons.airline_seat_flat,
               ),
               const SizedBox(width: 8),
               _statBadge(
@@ -602,12 +616,14 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                           )
                         : 0),
                 const Color(0xFFF97316),
+                icon: Icons.airline_seat_flat_angled,
               ),
               const SizedBox(width: 8),
               _statBadge(
                 'Aisle',
                 _countTypeIn(activeGrid, BuilderCellType.aisle),
                 const Color(0xFF64748B),
+                icon: Icons.remove,
               ),
               const Spacer(),
               Text(
@@ -972,7 +988,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   bool _isMultiCellType(BuilderCellType type) =>
       type == BuilderCellType.sleeperLower ||
       type == BuilderCellType.sleeperUpper ||
-      type == BuilderCellType.lavatory;
+      type == BuilderCellType.lavatory ||
+      type == BuilderCellType.kitchen;
 
   /// Returns the window-side shrink ratio based on what is below the upper berth.
   ///   0.50 = sleeperLower (50/50 split)
@@ -1683,9 +1700,12 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         if (cell.type == BuilderCellType.empty ||
             cell.type == BuilderCellType.aisle ||
             cell.type == BuilderCellType.driverCabin ||
+            cell.type == BuilderCellType.driverSeat ||
             cell.type == BuilderCellType.exitDoor ||
+            cell.type == BuilderCellType.rearDoor ||
             cell.type == BuilderCellType.emergency ||
-            cell.type == BuilderCellType.lavatory) {
+            cell.type == BuilderCellType.lavatory ||
+            cell.type == BuilderCellType.kitchen) {
           cell.label = null;
           continue;
         }
@@ -1903,9 +1923,12 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     BuilderCellType.sleeperLower => 'sleeperLower',
     BuilderCellType.sleeperUpper => 'sleeperUpper',
     BuilderCellType.driverCabin => 'driver',
+    BuilderCellType.driverSeat => 'driverSeat',
     BuilderCellType.exitDoor => 'exitDoor',
+    BuilderCellType.rearDoor => 'rearDoor',
     BuilderCellType.emergency => 'emergency',
     BuilderCellType.lavatory => 'lavatory',
+    BuilderCellType.kitchen => 'kitchen',
   };
 
   Widget _inputField(
@@ -1996,19 +2019,24 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     );
   }
 
-  Widget _statBadge(String label, int count, Color color) {
+  Widget _statBadge(String label, int count, Color color, {IconData? icon}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
+        if (icon != null) ...[
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 3),
+        ] else ...[
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-        ),
-        const SizedBox(width: 4),
+          const SizedBox(width: 4),
+        ],
         Text(
           '$label: $count',
           style: TextStyle(
