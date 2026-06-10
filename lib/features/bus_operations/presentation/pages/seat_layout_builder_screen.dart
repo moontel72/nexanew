@@ -740,26 +740,28 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       }
     }
 
-    // Remove overlapping cells from visited so they render individually
-    // and filter out regions that overlap with upper berth
+    // Track which regions have upper-berth overlap so they render
+    // as a single shrunken block (window-side -25%) instead of being
+    // demoted to individual cells.
+    final overlapRegionIndices = <int>{};
     if (hasOverlap) {
-      for (final key in overlapCells) {
-        visited.remove(key);
-      }
-      regions.removeWhere((region) {
+      for (int i = 0; i < regions.length; i++) {
+        final region = regions[i];
         for (int rr = region.r; rr < region.r + region.sr; rr++) {
           for (int cc = region.c; cc < region.c + region.sc; cc++) {
-            if (overlapCells.contains(rr * 100 + cc)) return true;
+            if (overlapCells.contains(rr * 100 + cc)) {
+              overlapRegionIndices.add(i);
+              break;
+            }
           }
         }
-        return false;
-      });
+      }
     }
 
-    // Upper berth strips: per-cell strips on the window side
+    // Upper berth blocks: one unified strip per contiguous region on
+    // the window side.  The strip is exactly 25% of ONE cell width.
     final upperStripWidgets = <Widget>[];
     if (hasOverlap) {
-      // Group contiguous upper cells by region so the label appears once per region
       final upperVisited = <int>{};
       for (int r = 0; r < rows; r++) {
         for (int c = 0; c < cols; c++) {
@@ -777,63 +779,62 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
 
           final upperColor = _cellColors[uType] ?? Colors.orange;
           final upperLabel = _upperGrid[r][c].label ?? '';
+          final bool isLeftBlock = c < (firstAisleCol ?? cols);
 
-          // Render a strip per column within the region, spanning all rows
-          for (int cc = c; cc < c + spanC; cc++) {
-            final bool isLeftCol = cc < (firstAisleCol ?? cols);
-            upperStripWidgets.add(
-              Positioned(
-                left: isLeftCol
-                    ? 48 + cc * (cellW + gap)
-                    : 48 + cc * (cellW + gap) + cellW * 0.75,
-                top: 20 + r * (cellH + gap),
-                width: cellW * 0.25,
-                height: spanR * cellH + (spanR - 1) * gap,
-                child: IgnorePointer(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: upperColor.withAlpha(60),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: upperColor.withAlpha(140),
-                        width: 1.5,
-                      ),
+          // ── Single unified strip for the ENTIRE region ──
+          final double stripW = cellW * 0.25;
+          final double stripLeft = isLeftBlock
+              ? 48 + c * (cellW + gap)
+              : 48 + (c + spanC) * (cellW + gap) - stripW;
+          final double stripHeight = spanR * cellH + (spanR - 1) * gap;
+
+          upperStripWidgets.add(
+            Positioned(
+              left: stripLeft,
+              top: 20 + r * (cellH + gap),
+              width: stripW,
+              height: stripHeight,
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: upperColor.withAlpha(60),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: upperColor.withAlpha(140),
+                      width: 1.5,
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _cellIcons[uType] ?? Icons.airline_seat_flat,
-                          size: spanR > 1 ? 24 : 16,
-                          color: upperColor,
-                        ),
-                        // Show label only on the first column strip of the region
-                        if (cc == c && upperLabel.isNotEmpty)
-                          Flexible(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 2,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _cellIcons[uType] ?? Icons.airline_seat_flat,
+                        size: spanR > 1 ? 24 : 16,
+                        color: upperColor,
+                      ),
+                      if (upperLabel.isNotEmpty)
+                        Flexible(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: Text(
+                              upperLabel,
+                              style: TextStyle(
+                                color: upperColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
                               ),
-                              child: Text(
-                                upperLabel,
-                                style: TextStyle(
-                                  color: upperColor,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
                 ),
               ),
-            );
-          }
+            ),
+          );
         }
       }
     }
@@ -923,18 +924,18 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           // Upper berth strips (window side, taps pass through)
           ...upperStripWidgets,
 
-          // Unified multi-cell components
-          for (final region in regions)
-            Positioned(
-              left: 48 + region.c * (cellW + gap),
-              top: 20 + region.r * (cellH + gap),
-              width: region.sc * cellW + (region.sc - 1) * gap,
-              height: region.sr * cellH + (region.sr - 1) * gap,
-              child: GestureDetector(
-                onTap: () => _openCellPicker(region.r, region.c),
-                child: _buildUnifiedRegion(region, grid),
-              ),
-            ),
+          // Unified multi-cell components (pre-built to avoid
+          // collection-for block-body syntax issue)
+          ..._buildRegionWidgets(
+            regions,
+            overlapRegionIndices,
+            grid,
+            cellW,
+            cellH,
+            gap,
+            firstAisleCol,
+            cols,
+          ),
         ],
       ),
     );
@@ -974,6 +975,103 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
               style: TextStyle(
                 color: Colors.white,
                 fontSize: isBerth ? 16 : 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              '${region.sr}×${region.sc} berth',
+              style: TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Build region widgets with overlap-aware sizing ────
+  List<Widget> _buildRegionWidgets(
+    List<_Region> regions,
+    Set<int> overlapRegionIndices,
+    List<List<_GridCell>> grid,
+    double cellW,
+    double cellH,
+    double gap,
+    int? firstAisleCol,
+    int totalCols,
+  ) {
+    final widgets = <Widget>[];
+    for (int i = 0; i < regions.length; i++) {
+      final region = regions[i];
+      final isOverlap = overlapRegionIndices.contains(i);
+      final bool isLeftBlock = region.c < (firstAisleCol ?? totalCols);
+
+      // ── Overlap mode: shrink ONLY the window-side boundary ──
+      final double regionLeft = isOverlap
+          ? (isLeftBlock
+                ? 48 + region.c * (cellW + gap) + cellW * 0.25
+                : 48 + region.c * (cellW + gap))
+          : 48 + region.c * (cellW + gap);
+
+      final double regionWidth = isOverlap
+          ? region.sc * cellW + (region.sc - 1) * gap - cellW * 0.25
+          : region.sc * cellW + (region.sc - 1) * gap;
+
+      final double regionHeight = region.sr * cellH + (region.sr - 1) * gap;
+
+      widgets.add(
+        Positioned(
+          left: regionLeft,
+          top: 20 + region.r * (cellH + gap),
+          width: regionWidth,
+          height: regionHeight,
+          child: GestureDetector(
+            onTap: () => _openCellPicker(region.r, region.c),
+            child: isOverlap
+                ? _buildOverlapUnifiedRegion(region, grid)
+                : _buildUnifiedRegion(region, grid),
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  // ── Overlap lower-berth region: seamless pink rectangle ────
+  /// Renders ONE continuous rectangle with NO internal grid lines,
+  /// solving the "6 pink fragments" visual bug.  The region has
+  /// already been shrunk from the window side by the caller.
+  Widget _buildOverlapUnifiedRegion(
+    _Region region,
+    List<List<_GridCell>> grid,
+  ) {
+    final cell = grid[region.r][region.c];
+    final type = cell.type;
+    final color = _cellColors[type] ?? Colors.grey;
+    final icon = _cellIcons[type] ?? Icons.help;
+    final label = cell.label ?? '';
+    final isBerth =
+        type == BuilderCellType.sleeperLower ||
+        type == BuilderCellType.sleeperUpper;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withAlpha(210),
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: [
+          BoxShadow(color: color.withAlpha(90), blurRadius: 8, spreadRadius: 1),
+        ],
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: isBerth ? 32 : 24, color: Colors.white),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isBerth ? 14 : 12,
                 fontWeight: FontWeight.w800,
               ),
             ),
