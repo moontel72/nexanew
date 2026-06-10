@@ -796,9 +796,11 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           final bool isLeftBlock = c < (firstAisleCol ?? cols);
 
           // Type 1 (seat below): 25%  |  Type 2 (lower berth below): 50%
+          // Apply ratio to TOTAL block width, not per-cell
           final double ratio = _berthOverlapRatio(grid[r][c].type);
+          final double totalBlockW = spanC * cellW + (spanC - 1) * gap;
 
-          final double stripW = cellW * ratio;
+          final double stripW = totalBlockW * ratio;
           final double stripLeft = isLeftBlock
               ? 48 + c * (cellW + gap)
               : 48 + (c + spanC) * (cellW + gap) - stripW;
@@ -1036,16 +1038,16 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       final bool isLeftBlock = region.c < (firstAisleCol ?? totalCols);
 
       // Type 1 (seat): 25%  |  Type 2 (lower berth): 50%  |  Type 3: no overlap → 100%
-      final double shrink = cellW * _berthOverlapRatio(region.t);
+      // Apply ratio to TOTAL block width, not per-cell
+      final double totalBlockW = region.sc * cellW + (region.sc - 1) * gap;
+      final double shrink = totalBlockW * _berthOverlapRatio(region.t);
       final double regionLeft = isOverlap
           ? (isLeftBlock
                 ? 48 + region.c * (cellW + gap) + shrink
                 : 48 + region.c * (cellW + gap))
           : 48 + region.c * (cellW + gap);
 
-      final double regionWidth = isOverlap
-          ? region.sc * cellW + (region.sc - 1) * gap - shrink
-          : region.sc * cellW + (region.sc - 1) * gap;
+      final double regionWidth = isOverlap ? totalBlockW - shrink : totalBlockW;
 
       final double regionHeight = region.sr * cellH + (region.sr - 1) * gap;
 
