@@ -765,8 +765,10 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       }
     }
 
-    // Upper berth blocks: ratio depends on what is below:
-    //   sleeperLower below -> 50/50 split  |  seat below -> 75/25 split
+    // Upper berth blocks — three width logics:
+    //   Type 1 (seat below):      seats 75% + upper 25%
+    //   Type 2 (lower berth below): lower 50% + upper 50%
+    //   Type 3 (no upper berth):    lower 100% (handled by isOverlap=false)
     final upperStripWidgets = <Widget>[];
     if (hasOverlap) {
       final upperVisited = <int>{};
@@ -793,10 +795,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           final upperLabel = startLabel;
           final bool isLeftBlock = c < (firstAisleCol ?? cols);
 
-          // Determine ratio: check what is in the LOWER grid below
-          final bool belowIsBerth =
-              grid[r][c].type == BuilderCellType.sleeperLower;
-          final double ratio = belowIsBerth ? 0.50 : 0.25;
+          // Type 1 (seat below): 25%  |  Type 2 (lower berth below): 50%
+          final double ratio = _berthOverlapRatio(grid[r][c].type);
 
           final double stripW = cellW * ratio;
           final double stripLeft = isLeftBlock
@@ -969,6 +969,13 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       type == BuilderCellType.sleeperUpper ||
       type == BuilderCellType.lavatory;
 
+  /// Returns the window-side shrink ratio based on what is below the upper berth.
+  ///   0.50 = sleeperLower (50/50 split)
+  ///   0.25 = seat / other (75/25 split)
+  ///   0.00 = no upper berth (100% width, handled by caller)
+  static double _berthOverlapRatio(BuilderCellType lowerType) =>
+      lowerType == BuilderCellType.sleeperLower ? 0.50 : 0.25;
+
   Widget _buildUnifiedRegion(_Region region, List<List<_GridCell>> grid) {
     final cell = grid[region.r][region.c];
     final type = cell.type;
@@ -1028,10 +1035,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       final isOverlap = overlapRegionIndices.contains(i);
       final bool isLeftBlock = region.c < (firstAisleCol ?? totalCols);
 
-      // 50% shrink for sleeperLower, 25% for other types
-      final double shrink = (region.t == BuilderCellType.sleeperLower)
-          ? cellW * 0.50
-          : cellW * 0.25;
+      // Type 1 (seat): 25%  |  Type 2 (lower berth): 50%  |  Type 3: no overlap → 100%
+      final double shrink = cellW * _berthOverlapRatio(region.t);
       final double regionLeft = isOverlap
           ? (isLeftBlock
                 ? 48 + region.c * (cellW + gap) + shrink
