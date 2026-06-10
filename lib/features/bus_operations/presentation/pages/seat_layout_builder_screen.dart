@@ -907,44 +907,47 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             ),
 
           // Single cells (not part of any multi-cell region)
+          // Overlap cells are grouped per-row to eliminate per-cell gaps
+          ..._buildOverlapCellGroups(
+            grid,
+            visited,
+            overlapCells,
+            rows,
+            cols,
+            cellW,
+            cellH,
+            gap,
+            firstAisleCol,
+          ),
+
+          // Non-overlap single cells
           for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
-              if (!visited.contains(r * 100 + c))
-                if (overlapCells.contains(r * 100 + c))
-                  _buildOverlayCell(
-                    grid,
-                    r,
-                    c,
-                    cellW,
-                    cellH,
-                    gap,
-                    firstAisleCol,
-                    cols,
-                  )
-                else
-                  Positioned(
-                    left: 48 + c * (cellW + gap),
-                    top: 20 + r * (cellH + gap),
-                    width: cellW,
-                    height: cellH,
-                    child: GestureDetector(
-                      onTap: () {
-                        if (_selectMode) {
-                          setState(() {
-                            final key = r * 100 + c;
-                            if (_selectedCells.contains(key)) {
-                              _selectedCells.remove(key);
-                            } else {
-                              _selectedCells.add(key);
-                            }
-                          });
-                        } else {
-                          _openCellPicker(r, c);
-                        }
-                      },
-                      child: _buildSelectableCell(grid[r][c], r, c),
-                    ),
+              if (!visited.contains(r * 100 + c) &&
+                  !overlapCells.contains(r * 100 + c))
+                Positioned(
+                  left: 48 + c * (cellW + gap),
+                  top: 20 + r * (cellH + gap),
+                  width: cellW,
+                  height: cellH,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_selectMode) {
+                        setState(() {
+                          final key = r * 100 + c;
+                          if (_selectedCells.contains(key)) {
+                            _selectedCells.remove(key);
+                          } else {
+                            _selectedCells.add(key);
+                          }
+                        });
+                      } else {
+                        _openCellPicker(r, c);
+                      }
+                    },
+                    child: _buildSelectableCell(grid[r][c], r, c),
                   ),
+                ),
 
           // Upper berth strips (window side, taps pass through)
           ...upperStripWidgets,
@@ -977,6 +980,81 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   ///   0.00 = no upper berth (100% width, handled by caller)
   static double _berthOverlapRatio(BuilderCellType lowerType) =>
       lowerType == BuilderCellType.sleeperLower ? 0.50 : 0.25;
+
+  /// Groups adjacent overlap cells per row into blocks so the 25% shrink
+  /// is applied once to the whole block, not per-cell (eliminates 12.5% gap).
+  List<Widget> _buildOverlapCellGroups(
+    List<List<_GridCell>> grid,
+    Set<int> visited,
+    Set<int> overlapCells,
+    int rows,
+    int cols,
+    double cellW,
+    double cellH,
+    double gap,
+    int? firstAisleCol,
+  ) {
+    final widgets = <Widget>[];
+    for (int r = 0; r < rows; r++) {
+      int c = 0;
+      while (c < cols) {
+        final key = r * 100 + c;
+        if (visited.contains(key) || !overlapCells.contains(key)) {
+          c++;
+          continue;
+        }
+        // Start of a group — find how many consecutive overlap cells
+        int groupC = c;
+        int spanC = 1;
+        while (c + spanC < cols) {
+          final nextKey = r * 100 + (c + spanC);
+          if (visited.contains(nextKey) || !overlapCells.contains(nextKey))
+            break;
+          spanC++;
+        }
+        final bool isLeft = groupC < (firstAisleCol ?? cols);
+        final double totalW = spanC * cellW + (spanC - 1) * gap;
+        final double shrink = totalW * 0.25;
+        final double left = 48 + groupC * (cellW + gap) + (isLeft ? shrink : 0);
+        final double width = totalW - shrink;
+
+        widgets.add(
+          Positioned(
+            left: left,
+            top: 20 + r * (cellH + gap),
+            width: width,
+            height: cellH,
+            child: Row(
+              children: List.generate(spanC, (i) {
+                final cc = groupC + i;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_selectMode) {
+                        setState(() {
+                          final k = r * 100 + cc;
+                          if (_selectedCells.contains(k)) {
+                            _selectedCells.remove(k);
+                          } else {
+                            _selectedCells.add(k);
+                          }
+                        });
+                      } else {
+                        _openCellPicker(r, cc);
+                      }
+                    },
+                    child: _buildSelectableCell(grid[r][cc], r, cc),
+                  ),
+                );
+              }),
+            ),
+          ),
+        );
+        c += spanC;
+      }
+    }
+    return widgets;
+  }
 
   Widget _buildUnifiedRegion(_Region region, List<List<_GridCell>> grid) {
     final cell = grid[region.r][region.c];
@@ -1144,49 +1222,6 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             ),
           ),
       ],
-    );
-  }
-
-  // ── Overlay cell: lower seat at 75% width shifted toward aisle ──
-  Widget _buildOverlayCell(
-    List<List<_GridCell>> grid,
-    int r,
-    int c,
-    double cellW,
-    double cellH,
-    double gap,
-    int? firstAisleCol,
-    int totalCols,
-  ) {
-    final bool isLeftSection = c < (firstAisleCol ?? totalCols);
-    // Upper berth is on the window side; lower cell shifts toward the aisle.
-    // Clamp exactly within [48 + c*(cellW+gap), 48 + c*(cellW+gap) + cellW]
-    final double cellLeft = 48 + c * (cellW + gap);
-    final double left = cellLeft + (isLeftSection ? cellW * 0.25 : 0);
-    final double width = cellW * 0.75; // 75% of cellW, stays within bounds
-
-    return Positioned(
-      left: left,
-      top: 20 + r * (cellH + gap),
-      width: width,
-      height: cellH,
-      child: GestureDetector(
-        onTap: () {
-          if (_selectMode) {
-            setState(() {
-              final key = r * 100 + c;
-              if (_selectedCells.contains(key)) {
-                _selectedCells.remove(key);
-              } else {
-                _selectedCells.add(key);
-              }
-            });
-          } else {
-            _openCellPicker(r, c);
-          }
-        },
-        child: _buildSelectableCell(grid[r][c], r, c),
-      ),
     );
   }
 
