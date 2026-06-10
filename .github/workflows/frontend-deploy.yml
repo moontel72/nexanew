@@ -80,6 +80,19 @@ jobs:
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/driver/
 
       # ──────────────────────────────────────────────────────────────
+      # STEP D: Build & Deploy Bus Owner App (main_bus_owner.dart)
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Bus Owner App (main_bus_owner.dart)
+        run: flutter build web --release --target=lib/main_bus_owner.dart --base-href "/bus-owner/"
+
+      - name: Deploy Bus Owner App to /bus-owner/
+        continue-on-error: true
+        run: |
+          sleep 3
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/bus-owner/
+
+      # ──────────────────────────────────────────────────────────────
       # Post-Deployment: Fix permissions for all apps
       # ──────────────────────────────────────────────────────────────
 
@@ -91,5 +104,7 @@ jobs:
             chown -R www-data:www-data /var/www/traceodd/reseller && \
             chmod -R 755 /var/www/traceodd/reseller && \
             chown -R www-data:www-data /var/www/traceodd/driver && \
-            chmod -R 755 /var/www/traceodd/driver
+            chmod -R 755 /var/www/traceodd/driver && \
+            chown -R www-data:www-data /var/www/traceodd/bus-owner && \
+            chmod -R 755 /var/www/traceodd/bus-owner
           "

@@ -385,6 +385,46 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     }
   }
 
+  Future<void> _leaveCarrier(String assignmentId, String carrierName) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: const Color(0xFF162438),
+        title: const Text(
+          'Leave Carrier?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Are you sure you want to leave \'$carrierName\'?\n\n'
+          'Your staff and layouts will no longer be visible to them. '
+          'You can link with another company afterwards.',
+          style: const TextStyle(color: Color(0xFF8899AA)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService().post('/bus-owner/link-request/$assignmentId/leave');
+      if (!mounted) return;
+      _snack('You have left $carrierName.', AppColors.success);
+      _loadLinkStatus();
+    } catch (e) {
+      if (!mounted) return;
+      _snack('Error: $e', AppColors.error);
+    }
+  }
+
   Future<void> _cancelLinkRequest(String assignmentId) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -449,6 +489,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             subtitle:
                 'Your fleet staff and seat layouts are visible to this carrier.',
             bgColor: const Color(0xFF052E16),
+            action: TextButton.icon(
+              onPressed: () => _leaveCarrier(assignmentId, carrierName),
+              icon: const Icon(Icons.logout_rounded, size: 16),
+              label: const Text('Leave Carrier'),
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            ),
           ),
         if (linked && status == 'pending_acceptance')
           _linkStatusBanner(

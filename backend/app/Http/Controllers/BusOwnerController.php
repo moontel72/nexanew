@@ -727,6 +727,94 @@ class BusOwnerController extends Controller
     }
 
     /**
+     * POST /api/v1/bus-owner/link-request/{id}/leave
+     *
+     * An already-linked owner voluntarily leaves their current carrier.
+     * Sets the active assignment to 'unassigned' and deactivates any
+     * tenant_allowance_grants the carrier held on this owner's resources.
+     */
+    public function leaveCarrier(string $assignmentId, Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $identityId = $user->global_identity_id ?? null;
+            if (!$identityId) {
+                return response()->json(['success' => false, 'message' => 'No identity found.'], 400);
+            }
+
+            $assignment = DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->where('global_identity_id', $identityId)
+                ->where('role', 'owner')
+                ->first();
+
+            if (!$assignment) {
+                return response()->json(['message' => 'Assignment not found'], 404);
+            }
+
+            if ($assignment->status !== 'active') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only active links can be terminated.',
+                ], 422);
+            }
+
+            $oldCarrierId = $assignment->carrier_company_id;
+
+            DB::beginTransaction();
+            try {
+                // Step 1: Unassign the fleet assignment
+                DB::table('fleet_assignments')
+                    ->where('id', $assignmentId)
+                    ->update([
+                        'status'          => 'unassigned',
+                        'unassigned_at'   => now(),
+                        'unassign_reason' => 'Voluntarily left by owner',
+                        'updated_at'      => now(),
+                    ]);
+
+                // Step 2: Deactivate old carrier's allowance grants
+                DB::table('tenant_allowance_grants')
+                    ->where('owner_identity_id', $identityId)
+                    ->where('carrier_company_id', $oldCarrierId)
+                    ->update([
+                        'is_active'  => false,
+                        'updated_at' => now(),
+                    ]);
+
+                DB::table('tenant_allowance_matrix')
+                    ->where('owner_identity_id', $identityId)
+                    ->where('carrier_company_id', $oldCarrierId)
+                    ->update([
+                        'status'     => 'inactive',
+                        'updated_at' => now(),
+                    ]);
+
+                DB::commit();
+
+                Log::info('BusOwner: left carrier', [
+                    'assignment_id'      => $assignmentId,
+                    'identity_id'        => $identityId,
+                    'old_carrier_id'     => $oldCarrierId,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'You have left the carrier. You can now link with another company.',
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
+        } catch (\Exception $e) {
+            Log::error('BusOwner - leaveCarrier Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * GET /api/v1/bus-owner/link-status
      *
      * Returns the current linking status for the authenticated owner.

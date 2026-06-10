@@ -140,6 +140,7 @@ Route::prefix('api/v1/bus-owner')
         Route::prefix('link-request')->group(function (): void {
             Route::post('/', [\App\Http\Controllers\BusOwnerController::class, 'linkRequest']);
             Route::post('/{id}/cancel', [\App\Http\Controllers\BusOwnerController::class, 'cancelLinkRequest']);
+            Route::post('/{id}/leave', [\App\Http\Controllers\BusOwnerController::class, 'leaveCarrier']);
         });
         Route::get('link-status', [\App\Http\Controllers\BusOwnerController::class, 'linkStatus']);
     });
