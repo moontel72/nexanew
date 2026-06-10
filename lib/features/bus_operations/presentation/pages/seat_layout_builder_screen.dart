@@ -758,8 +758,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       }
     }
 
-    // Upper berth blocks: one unified strip per contiguous region on
-    // the window side.  The strip is exactly 25% of ONE cell width.
+    // Upper berth blocks: ratio depends on what is below:
+    //   sleeperLower below -> 50/50 split  |  seat below -> 75/25 split
     final upperStripWidgets = <Widget>[];
     if (hasOverlap) {
       final upperVisited = <int>{};
@@ -781,8 +781,12 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           final upperLabel = _upperGrid[r][c].label ?? '';
           final bool isLeftBlock = c < (firstAisleCol ?? cols);
 
-          // ── Single unified strip for the ENTIRE region ──
-          final double stripW = cellW * 0.25;
+          // Determine ratio: check what is in the LOWER grid below
+          final bool belowIsBerth =
+              grid[r][c].type == BuilderCellType.sleeperLower;
+          final double ratio = belowIsBerth ? 0.50 : 0.25;
+
+          final double stripW = cellW * ratio;
           final double stripLeft = isLeftBlock
               ? 48 + c * (cellW + gap)
               : 48 + (c + spanC) * (cellW + gap) - stripW;
@@ -800,9 +804,16 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                     color: upperColor.withAlpha(60),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: upperColor.withAlpha(140),
-                      width: 1.5,
+                      color: upperColor.withAlpha(190),
+                      width: 2,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: upperColor.withAlpha(50),
+                        blurRadius: 6,
+                        spreadRadius: 0,
+                      ),
+                    ],
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1005,15 +1016,18 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       final isOverlap = overlapRegionIndices.contains(i);
       final bool isLeftBlock = region.c < (firstAisleCol ?? totalCols);
 
-      // ── Overlap mode: shrink ONLY the window-side boundary ──
+      // 50% shrink for sleeperLower, 25% for other types
+      final double shrink = (region.t == BuilderCellType.sleeperLower)
+          ? cellW * 0.50
+          : cellW * 0.25;
       final double regionLeft = isOverlap
           ? (isLeftBlock
-                ? 48 + region.c * (cellW + gap) + cellW * 0.25
+                ? 48 + region.c * (cellW + gap) + shrink
                 : 48 + region.c * (cellW + gap))
           : 48 + region.c * (cellW + gap);
 
       final double regionWidth = isOverlap
-          ? region.sc * cellW + (region.sc - 1) * gap - cellW * 0.25
+          ? region.sc * cellW + (region.sc - 1) * gap - shrink
           : region.sc * cellW + (region.sc - 1) * gap;
 
       final double regionHeight = region.sr * cellH + (region.sr - 1) * gap;
