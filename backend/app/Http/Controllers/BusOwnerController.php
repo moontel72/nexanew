@@ -547,6 +547,37 @@ class BusOwnerController extends Controller
     // ═══════════════════════════════════════════════════════
 
     /**
+     * GET /api/v1/bus-owner/available-companies
+     *
+     * Returns active bus companies that an owner can link with.
+     * No admin auth required — this is a bus-owner-scoped endpoint.
+     * Only returns id, name, email — no sub-admin data leaked.
+     */
+    public function availableCompanies(Request $request): JsonResponse
+    {
+        $search = $request->query('search', '');
+
+        $query = DB::table('tenant_accounts')
+            ->where('account_type', 'bus_company')
+            ->where('status', 'active')
+            ->select('id', 'account_name', 'email', 'phone_number', 'status');
+
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('account_name', 'ilike', "%{$search}%")
+                  ->orWhere('email', 'ilike', "%{$search}%");
+            });
+        }
+
+        $companies = $query->orderBy('account_name')->limit(30)->get();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $companies,
+        ]);
+    }
+
+    /**
      * POST /api/v1/bus-owner/link-request
      *
      * An independent Bus Owner requests to link with a Bus Company

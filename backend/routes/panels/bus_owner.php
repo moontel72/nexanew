@@ -137,6 +137,7 @@ Route::prefix('api/v1/bus-owner')
         Route::get('layout-presets', [\App\Http\Controllers\BusOwnerController::class, 'layoutPresets']);
 
         // ─── Identity Portability — Link Request (§10.11.2) ──
+        Route::get('available-companies', [\App\Http\Controllers\BusOwnerController::class, 'availableCompanies']);
         Route::prefix('link-request')->group(function (): void {
             Route::post('/', [\App\Http\Controllers\BusOwnerController::class, 'linkRequest']);
             Route::post('/{id}/cancel', [\App\Http\Controllers\BusOwnerController::class, 'cancelLinkRequest']);

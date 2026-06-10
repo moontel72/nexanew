@@ -320,24 +320,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _loadBusCompanies({String search = ''}) async {
     setState(() => _companiesLoading = true);
     try {
-      // Search bus companies via admin endpoint or use a list approach
-      // We use the bus-fleet profile to get the current carrier if linked,
-      // but for search we query the admin bus-companies endpoint.
       final r = await ApiService().get(
-        '/admin/bus-companies',
-        queryParams: {
-          'per_page': '50',
-          if (search.isNotEmpty) 'search': search,
-        },
+        '/bus-owner/available-companies',
+        queryParams: {if (search.isNotEmpty) 'search': search},
       );
       if (!mounted) return;
-      final d = r?['data'];
-      List list = [];
-      if (d is Map) {
-        list = (d['data'] as List?) ?? [];
-      } else if (d is List) {
-        list = d;
-      }
+      final list = (r?['data'] as List?) ?? [];
       setState(() {
         _busCompanies = list
             .whereType<Map>()
@@ -615,8 +603,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           else
             ...(_busCompanies.map((company) {
               final cId = (company['id'] ?? '').toString();
-              final cName = (company['account_name'] ?? company['name'] ?? '—')
-                  .toString();
+              final cName = (company['account_name'] ?? '—').toString();
               final cEmail = (company['email'] ?? '').toString();
               final cStatus = (company['status'] ?? 'active').toString();
 
