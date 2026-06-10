@@ -802,15 +802,12 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
           final double stripLeft = isLeftBlock
               ? 48 + c * (cellW + gap)
               : 48 + (c + spanC) * (cellW + gap) - stripW;
-          // 5% vertical shrink to create visible gap between stacked berths
-          final double fullH = spanR * cellH + (spanR - 1) * gap;
-          final double insetV = fullH * 0.025;
-          final double stripHeight = fullH * 0.95;
+          final double stripHeight = spanR * cellH + (spanR - 1) * gap;
 
           upperStripWidgets.add(
             Positioned(
               left: stripLeft,
-              top: 20 + r * (cellH + gap) + insetV,
+              top: 20 + r * (cellH + gap),
               width: stripW,
               height: stripHeight,
               child: IgnorePointer(
@@ -1524,15 +1521,20 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     final rows = grid.length;
     final cols = grid[0].length;
 
-    // Scan contiguous span right + down (same as region discovery)
+    // Scan contiguous span but STOP at already-visited cells
+    // and cap at standard berth dimensions (3×2 max).
     int spanR = 1;
     while (startRow + spanR < rows &&
-        grid[startRow + spanR][startCol].type == targetType) {
+        grid[startRow + spanR][startCol].type == targetType &&
+        !(visited[startRow + spanR]?.contains(startCol) ?? false) &&
+        spanR < 3) {
       spanR++;
     }
     int spanC = 1;
     while (startCol + spanC < cols &&
-        grid[startRow][startCol + spanC].type == targetType) {
+        grid[startRow][startCol + spanC].type == targetType &&
+        !(visited[startRow]?.contains(startCol + spanC) ?? false) &&
+        spanC < 2) {
       spanC++;
     }
 
@@ -1565,16 +1567,29 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       return;
     }
 
-    // Find full extent: scan up/down for rows, left/right for cols
+    // Find full extent but stop at label boundaries (different label = different berth)
+    final targetLabel = grid[row][col].label ?? '';
     int top = row;
-    while (top > 0 && grid[top - 1][col].type == type) top--;
+    while (top > 0 &&
+        grid[top - 1][col].type == type &&
+        (grid[top - 1][col].label ?? '') == targetLabel)
+      top--;
     int bottom = row;
-    while (bottom < _rows - 1 && grid[bottom + 1][col].type == type) bottom++;
+    while (bottom < _rows - 1 &&
+        grid[bottom + 1][col].type == type &&
+        (grid[bottom + 1][col].label ?? '') == targetLabel)
+      bottom++;
 
     int left = col;
-    while (left > 0 && grid[top][left - 1].type == type) left--;
+    while (left > 0 &&
+        grid[top][left - 1].type == type &&
+        (grid[top][left - 1].label ?? '') == targetLabel)
+      left--;
     int right = col;
-    while (right < _cols - 1 && grid[top][right + 1].type == type) right++;
+    while (right < _cols - 1 &&
+        grid[top][right + 1].type == type &&
+        (grid[top][right + 1].label ?? '') == targetLabel)
+      right++;
 
     setState(() {
       for (int r = top; r <= bottom; r++) {
