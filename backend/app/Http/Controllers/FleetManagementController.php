@@ -132,16 +132,16 @@ class FleetManagementController extends Controller
             // staff via active tenant_allowance_grants (Section 10.4).
             // Radhnal admin sees: own staff + staff of all linked owners
             // where an active 'fleet.staff' grant exists.
+            // Use inner join to tenant_accounts to resolve owner_identity_id → tenant_id
             $delegatedTenantIds = DB::table('tenant_allowance_grants AS tag')
-                ->join('tenant_accounts AS ta', 'tag.owner_identity_id', '=', 'ta.global_identity_id')
+                ->join('tenant_accounts AS ta2', 'tag.owner_identity_id', '=', 'ta2.global_identity_id')
                 ->where('tag.carrier_company_id', $cid)
                 ->where('tag.permission_key', 'fleet.staff')
-                ->where('tag.is_active', true)
                 ->where(function ($q) {
                     $q->whereNull('tag.expires_at')
                       ->orWhere('tag.expires_at', '>', now());
                 })
-                ->pluck('ta.id')
+                ->pluck('ta2.id')
                 ->toArray();
 
             $allCarrierIds = array_values(array_unique(array_merge([$cid], $delegatedTenantIds)));
