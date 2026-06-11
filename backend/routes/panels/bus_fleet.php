@@ -201,5 +201,6 @@ Route::prefix('api/v1/bus-fleet')
             Route::get('/', [\App\Http\Controllers\FleetManagementController::class, 'listLinkRequests']);
             Route::post('{id}/accept', [\App\Http\Controllers\FleetManagementController::class, 'acceptLinkRequest']);
             Route::post('{id}/reject', [\App\Http\Controllers\FleetManagementController::class, 'rejectLinkRequest']);
+            Route::post('{id}/hold', [\App\Http\Controllers\FleetManagementController::class, 'holdLinkRequest']);
         });
     });

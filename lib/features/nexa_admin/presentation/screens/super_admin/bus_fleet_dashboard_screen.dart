@@ -671,12 +671,26 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     }
   }
 
-  Future<void> _holdLink(String ownerName) async {
-    if (!mounted) return;
-    _snackBar(
-      'Request from \'$ownerName\' held for later review.',
-      const Color(0xFFF59E0B),
-    );
+  Future<void> _holdLink(String assignmentId, String ownerName) async {
+    try {
+      final r = await ApiService().post(
+        '/bus-fleet/link-requests/$assignmentId/hold',
+      );
+      if (!mounted) return;
+      if (r?['success'] == true) {
+        _snackBar(
+          'Request from \'$ownerName\' placed on hold.',
+          const Color(0xFFF59E0B),
+        );
+        _loadLinkRequests();
+        _loadAll();
+      } else {
+        _snackBar(r?['message'] ?? 'Failed to hold', Colors.red);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _snackBar('Error: $e', Colors.red);
+    }
   }
 
   // ═══════════════════════════════════════════════════
@@ -951,16 +965,16 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     );
   }
 
-  // ── Compact action buttons column (pinned right of name in header) ──
+  // ── Compact action buttons row (pinned right of name in header) ──
   Widget _actionButtonsColumn(String assignmentId, String ownerName) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      direction: Axis.horizontal,
+      spacing: 4.w,
+      runSpacing: 3.h,
       children: [
         _acceptBtn(assignmentId, ownerName),
-        SizedBox(height: 3.h),
         _rejectBtn(assignmentId, ownerName),
-        SizedBox(height: 3.h),
-        _holdBtn(ownerName),
+        _holdBtn(assignmentId, ownerName),
       ],
     );
   }
@@ -973,7 +987,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
       children: [
         _acceptBtn(assignmentId, ownerName),
         _rejectBtn(assignmentId, ownerName),
-        _holdBtn(ownerName),
+        _holdBtn(assignmentId, ownerName),
       ],
     );
   }
@@ -1034,11 +1048,11 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     );
   }
 
-  Widget _holdBtn(String ownerName) {
+  Widget _holdBtn(String assignmentId, String ownerName) {
     return SizedBox(
       height: 26.h,
       child: OutlinedButton(
-        onPressed: () => _holdLink(ownerName),
+        onPressed: () => _holdLink(assignmentId, ownerName),
         style: OutlinedButton.styleFrom(
           foregroundColor: const Color(0xFFD97706),
           side: const BorderSide(color: Color(0xFFD97706), width: 1.2),

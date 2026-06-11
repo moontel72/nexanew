@@ -878,7 +878,7 @@ class BusOwnerController extends Controller
             $assignment = DB::table('fleet_assignments')
                 ->where('global_identity_id', $identityId)
                 ->where('role', 'owner')
-                ->whereIn('status', ['active', 'pending_acceptance'])
+                ->whereIn('status', ['active', 'pending_acceptance', 'on_hold'])
                 ->first();
 
             if (!$assignment) {

@@ -39,8 +39,25 @@ class LayoutService
     ): array {
         $perPage = max(1, min(100, $perPage));
 
-        $query = DB::table('transport_bus_layouts')
+        // Collect owner_identity_ids that have granted seat_layout permission
+        // to this carrier via tenant_allowance_grants (R-5 delegated visibility).
+        $delegatedOwnerIds = DB::table('tenant_allowance_grants')
             ->where('carrier_company_id', $companyId)
+            ->where('permission_key', 'seat_layout')
+            ->where('status', 'active')
+            ->pluck('owner_identity_id')
+            ->filter()
+            ->toArray();
+
+        $query = DB::table('transport_bus_layouts')
+            ->where(function ($q) use ($companyId, $delegatedOwnerIds) {
+                // Carrier's own layouts
+                $q->where('carrier_company_id', $companyId);
+                // PLUS delegated owners' layouts (R-5 portability)
+                if (!empty($delegatedOwnerIds)) {
+                    $q->orWhereIn('owner_identity_id', $delegatedOwnerIds);
+                }
+            })
             ->where('layout_status', '!=', 'archived');
 
         if ($vehicleClass !== null && $vehicleClass !== '') {

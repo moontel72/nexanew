@@ -654,7 +654,7 @@ class FleetManagementController extends Controller
                 ->where('fa.carrier_company_id', $cid)
                 ->where('fa.role', 'owner')
                 ->where('fa.fleet_type', 'bus')
-                ->where('fa.status', 'pending_acceptance')
+                ->whereIn('fa.status', ['pending_acceptance', 'on_hold'])
                 ->select(
                     'fa.id AS assignment_id',
                     'gi.id AS global_identity_id',
@@ -821,6 +821,62 @@ class FleetManagementController extends Controller
                 'assignment_id' => $assignmentId,
                 'trace'         => $e->getTraceAsString(),
             ]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/v1/bus-fleet/link-requests/{id}/hold
+     *
+     * Bus Company admin places a pending link request on hold.
+     */
+    public function holdLinkRequest(string $assignmentId, Request $request): JsonResponse
+    {
+        try {
+            $cid = $this->carrierCompanyId($request);
+            if (!$cid || $cid === '00000000-0000-0000-0000-000000000000') {
+                return response()->json(['message' => 'No carrier context'], 403);
+            }
+
+            $assignment = DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->where('role', 'owner')
+                ->where('fleet_type', 'bus')
+                ->first();
+
+            if (!$assignment) {
+                return response()->json(['message' => 'Link request not found'], 404);
+            }
+
+            if ($assignment->carrier_company_id !== $cid) {
+                return response()->json(['message' => 'This link request is not for your company'], 403);
+            }
+
+            if ($assignment->status !== 'pending_acceptance') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This link request is no longer pending.',
+                ], 422);
+            }
+
+            DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->update([
+                    'status'     => 'on_hold',
+                    'updated_at' => now(),
+                ]);
+
+            Log::info('FleetManagement: link request put on hold', [
+                'assignment_id' => $assignmentId,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Link request placed on hold.',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('FleetManagement - holdLinkRequest Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
     }

@@ -503,6 +503,21 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
             ),
           ),
+        if (linked && status == 'on_hold')
+          _linkStatusBanner(
+            icon: Icons.pause_circle_rounded,
+            color: const Color(0xFFF59E0B),
+            title: 'Your link request is ON HOLD',
+            subtitle:
+                'The company has placed your request on hold. Please contact the company management for updates.',
+            bgColor: const Color(0xFF451A03),
+            action: TextButton.icon(
+              onPressed: () => _cancelLinkRequest(assignmentId),
+              icon: const Icon(Icons.close, size: 16),
+              label: const Text('Cancel Request'),
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            ),
+          ),
         if (!linked)
           _linkStatusBanner(
             icon: Icons.link_off_rounded,
@@ -618,41 +633,74 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 margin: EdgeInsets.only(bottom: 8.h),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(
-                      0xFFF59E0B,
-                    ).withValues(alpha: 0.15),
-                    child: const Icon(
-                      Icons.directions_bus,
-                      color: Color(0xFFF59E0B),
-                    ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 10.h,
                   ),
-                  title: Text(
-                    cName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: Text(
-                    cEmail.isNotEmpty ? cEmail : 'No email',
-                    style: const TextStyle(
-                      color: Color(0xFF667788),
-                      fontSize: 11,
-                    ),
-                  ),
-                  trailing: ElevatedButton.icon(
-                    onPressed: () => _sendLinkRequest(cId, cName),
-                    icon: const Icon(Icons.send_rounded, size: 16),
-                    label: const Text('Link'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF59E0B),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: const Color(
+                          0xFFF59E0B,
+                        ).withValues(alpha: 0.15),
+                        child: const Icon(
+                          Icons.directions_bus,
+                          color: Color(0xFFF59E0B),
+                          size: 20,
+                        ),
                       ),
-                    ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              cName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(height: 2.h),
+                            Text(
+                              cEmail.isNotEmpty ? cEmail : 'No email',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF667788),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      ElevatedButton.icon(
+                        onPressed: () => _sendLinkRequest(cId, cName),
+                        icon: const Icon(Icons.send_rounded, size: 14),
+                        label: const Text(
+                          'Link',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF59E0B),
+                          foregroundColor: Colors.white,
+                          minimumSize: Size.zero,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10.w,
+                            vertical: 6.h,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
