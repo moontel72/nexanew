@@ -993,6 +993,14 @@ class LayoutService
             $layoutMode = $comp['layout_mode'] ?? 'standard';
             $compId = $comp['id'] ?? 'unknown';
 
+            // Skip placeholder components that have no real coordinates
+            if (($originRow === 0 && $originCol === 0) || $compId === 'unknown') {
+                Log::warning('LayoutService: skipping placeholder component during collision check', [
+                    'comp_id' => $compId,
+                ]);
+                continue;
+            }
+
             // Composite/stacked components contain lower+upper elements in same space.
             // They are allowed to share coordinates — skip strict collision check.
             if ($layoutMode !== 'standard') {
