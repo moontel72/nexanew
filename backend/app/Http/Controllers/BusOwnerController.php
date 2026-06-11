@@ -1223,11 +1223,24 @@ class BusOwnerController extends Controller
             $user = $request->user();
             $identityId = $user->global_identity_id ?? null;
 
+            // If no snapshot sent, load existing from DB (standard publish flow)
+            $gridSnapshot = $request->input('grid_snapshot');
+            $expectedVersion = (int) $request->input('expected_version', 0);
+
+            if ($gridSnapshot === null) {
+                $layout = DB::table('transport_bus_layouts')->where('id', $id)->first();
+                if (!$layout) {
+                    return response()->json(['success' => false, 'message' => 'Layout not found'], 404);
+                }
+                $gridSnapshot = json_decode($layout->current_snapshot ?? '{}', true) ?: [];
+                $expectedVersion = $expectedVersion ?: (int) ($layout->version_number ?? 1);
+            }
+
             $this->layouts->publishLayout(
                 layoutId: $id,
                 identityId: $identityId,
-                gridSnapshot: $request->input('grid_snapshot'),
-                expectedVersion: (int) $request->input('expected_version', 0),
+                gridSnapshot: $gridSnapshot,
+                expectedVersion: $expectedVersion,
                 changeDescription: $request->input('change_description'),
             );
 

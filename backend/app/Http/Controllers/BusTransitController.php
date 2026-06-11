@@ -305,18 +305,32 @@ class BusTransitController extends Controller
     {
         try {
             $data = $request->validate([
-                'grid_snapshot'      => ['required', 'array'],
-                'expected_version'   => ['required', 'integer', 'min:1'],
+                'grid_snapshot'      => ['nullable', 'array'],
+                'expected_version'   => ['nullable', 'integer', 'min:0'],
                 'change_description' => ['nullable', 'string', 'max:1000'],
             ]);
+
+            // If no snapshot sent, load existing from DB (standard publish flow)
+            $gridSnapshot = $data['grid_snapshot'] ?? null;
+            $expectedVersion = (int) ($data['expected_version'] ?? 0);
+
+            if ($gridSnapshot === null) {
+                $layout = \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+                    ->where('id', $id)->first();
+                if (!$layout) {
+                    return response()->json(['success' => false, 'message' => 'Layout not found'], 404);
+                }
+                $gridSnapshot = json_decode($layout->current_snapshot ?? '{}', true) ?: [];
+                $expectedVersion = $expectedVersion ?: (int) ($layout->version_number ?? 1);
+            }
 
             $identityId = $this->resolveOwnerIdentityId($request);
 
             $result = $this->layouts->publishLayout(
                 layoutId: $id,
                 identityId: $identityId,
-                gridSnapshot: $data['grid_snapshot'],
-                expectedVersion: (int) $data['expected_version'],
+                gridSnapshot: $gridSnapshot,
+                expectedVersion: $expectedVersion,
                 changeDescription: $data['change_description'] ?? null,
             );
 
