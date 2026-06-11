@@ -995,7 +995,6 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   // ── Individual action button builders ──
   Widget _acceptBtn(String assignmentId, String ownerName) {
     return SizedBox(
-      width: 100.w,
       height: 28.h,
       child: ElevatedButton(
         onPressed: () => _acceptLink(assignmentId, ownerName),
@@ -1003,7 +1002,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           backgroundColor: const Color(0xFF16A34A),
           foregroundColor: Colors.white,
           minimumSize: Size.zero,
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
+          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 0),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(5.r),
           ),
@@ -1012,11 +1011,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.check_rounded, size: 13.sp),
             SizedBox(width: 4.w),
-            const Text('Accept'),
+            const Text('Accept', maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
@@ -1025,7 +1023,6 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
   Widget _rejectBtn(String assignmentId, String ownerName) {
     return SizedBox(
-      width: 100.w,
       height: 28.h,
       child: OutlinedButton(
         onPressed: () => _rejectLink(assignmentId, ownerName),
@@ -1033,7 +1030,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           foregroundColor: Colors.red,
           side: const BorderSide(color: Colors.red, width: 1.2),
           minimumSize: Size.zero,
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
+          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 0),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(5.r),
           ),
@@ -1041,11 +1038,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.close_rounded, size: 13.sp),
             SizedBox(width: 4.w),
-            const Text('Reject'),
+            const Text('Reject', maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
@@ -1054,7 +1050,6 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
   Widget _holdBtn(String assignmentId, String ownerName) {
     return SizedBox(
-      width: 100.w,
       height: 28.h,
       child: OutlinedButton(
         onPressed: () => _holdLink(assignmentId, ownerName),
@@ -1062,7 +1057,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           foregroundColor: const Color(0xFFD97706),
           side: const BorderSide(color: Color(0xFFD97706), width: 1.2),
           minimumSize: Size.zero,
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
+          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 0),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(5.r),
           ),
@@ -1070,11 +1065,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.pause_rounded, size: 13.sp),
             SizedBox(width: 4.w),
-            const Text('Hold'),
+            const Text('Hold', maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),

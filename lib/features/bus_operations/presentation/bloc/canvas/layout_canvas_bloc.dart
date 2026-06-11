@@ -100,6 +100,14 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
   // ═══════════════════════════════════════════════════════════
 
   void _onPresetSelected(PresetSelected event, Emitter emit) {
+    // Safe fallback: guard against empty presets list to prevent
+    // StateError (Bad state: No element) crash.
+    if (_builtInPresets.isEmpty) {
+      emit(state.copyWith(
+        errorMessage: 'No built-in presets available.',
+      ));
+      return;
+    }
     final preset = _builtInPresets.firstWhere(
       (p) => p['key'] == event.presetKey,
       orElse: () => _builtInPresets.first,
