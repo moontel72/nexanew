@@ -594,6 +594,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     }
   }
 
+  // ── Action handlers for link requests ──
+
   Future<void> _acceptLink(String assignmentId, String ownerName) async {
     try {
       final r = await ApiService().post(
@@ -669,6 +671,18 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     }
   }
 
+  Future<void> _holdLink(String ownerName) async {
+    if (!mounted) return;
+    _snackBar(
+      'Request from \'$ownerName\' held for later review.',
+      const Color(0xFFF59E0B),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // LINK REQUESTS PAGE — Pending Owner Approvals
+  // ═══════════════════════════════════════════════════
+
   Widget _linkRequestsPage() {
     if (_linkRequestsLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -700,25 +714,30 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
       );
     }
 
-    return ScrollbarTheme(
-      data: ScrollbarThemeData(
-        thumbVisibility: WidgetStateProperty.all(true),
-        thickness: WidgetStateProperty.all(8),
-        radius: const Radius.circular(4),
-        thumbColor: WidgetStateProperty.all(const Color(0xFFF59E0B)),
-        trackColor: WidgetStateProperty.all(const Color(0xFFF0F0F0)),
-      ),
-      child: Scrollbar(
-        child: ListView.builder(
-          padding: EdgeInsets.all(16.w),
-          itemCount: _linkRequests.length,
-          itemBuilder: (_, i) => _linkRequestCard(_linkRequests[i]),
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Scrollbar(
+          thumbVisibility: true,
+          thickness: 8,
+          radius: const Radius.circular(4),
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.all(16.w),
+            itemCount: _linkRequests.length,
+            itemBuilder: (_, i) => _linkRequestCard(
+              _linkRequests[i],
+              containerWidth: constraints.maxWidth,
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _linkRequestCard(Map<String, dynamic> req) {
+  Widget _linkRequestCard(
+    Map<String, dynamic> req, {
+    double containerWidth = 600,
+  }) {
     final name = (req['name'] ?? '—').toString();
     final token = (req['identity_token'] ?? '—').toString();
     final email = (req['email'] ?? '').toString();
@@ -729,32 +748,41 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     final kycStatus = (req['kyc_status'] ?? 'unverified').toString();
     final source = (req['source'] ?? 'unknown').toString();
 
+    // Compact layout on narrow screens: stack buttons below name
+    final isNarrow = containerWidth < 500;
+
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       margin: EdgeInsets.only(bottom: 10.h),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: EdgeInsets.all(14.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header row with buttons
+            // ═══ HEADER: Avatar | Name+Token | Action Buttons | Badge ═══
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
+                  radius: 18.r,
                   backgroundColor: const Color(
                     0xFFF59E0B,
                   ).withValues(alpha: 0.12),
                   child: const Icon(
                     Icons.person_rounded,
                     color: Color(0xFFF59E0B),
+                    size: 18,
                   ),
                 ),
                 SizedBox(width: 12.w),
+                // Name block
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
                         'SENDER',
@@ -772,6 +800,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       SizedBox(height: 2.h),
                       Text(
@@ -785,101 +815,84 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                     ],
                   ),
                 ),
+                SizedBox(width: 8.w),
+                // Action buttons — compact column pinned right of name
+                if (!isNarrow) _actionButtonsColumn(id, name),
+                SizedBox(width: 8.w),
                 _linkBadge(kycStatus),
               ],
             ),
 
-            SizedBox(height: 8.h),
+            // Narrow-screen fallback: action buttons below header
+            if (isNarrow) ...[
+              SizedBox(height: 8.h),
+              _actionButtonsRow(id, name),
+            ],
 
-            // ACTION BUTTONS — at top for visibility
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => _rejectLink(id, name),
-                  icon: const Icon(Icons.close_rounded, size: 16),
-                  label: const Text('Reject'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                ElevatedButton.icon(
-                  onPressed: () => _acceptLink(id, name),
-                  icon: const Icon(Icons.check_rounded, size: 16),
-                  label: const Text('Accept'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF16A34A),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            SizedBox(height: 10.h),
+            const Divider(height: 1),
+            SizedBox(height: 10.h),
 
-            const Divider(height: 20),
-
-            // Contact info
+            // ═══ CONTACT INFO ═══
             if (email.isNotEmpty || phone.isNotEmpty)
               Padding(
                 padding: EdgeInsets.only(bottom: 8.h),
-                child: Row(
+                child: Wrap(
+                  spacing: 12.w,
+                  runSpacing: 4.h,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    if (email.isNotEmpty) ...[
-                      const Icon(
-                        Icons.email_outlined,
-                        size: 13,
-                        color: AppColors.gray500,
+                    if (email.isNotEmpty)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.email_outlined,
+                            size: 13,
+                            color: AppColors.gray500,
+                          ),
+                          SizedBox(width: 4.w),
+                          Flexible(
+                            child: Text(
+                              email,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.gray500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        email,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.gray500,
-                        ),
+                    if (phone.isNotEmpty)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.phone_outlined,
+                            size: 13,
+                            color: AppColors.gray500,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            phone,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.gray500,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 12.w),
-                    ],
-                    if (phone.isNotEmpty) ...[
-                      const Icon(
-                        Icons.phone_outlined,
-                        size: 13,
-                        color: AppColors.gray500,
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        phone,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.gray500,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
 
-            // Message
+            // ═══ MESSAGE ═══
             if (message.isNotEmpty)
               Container(
                 width: double.infinity,
                 margin: EdgeInsets.only(bottom: 8.h),
-                padding: EdgeInsets.all(10),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(8),
@@ -894,22 +907,32 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                 ),
               ),
 
-            // Meta row
+            // ═══ META ROW ═══
             Row(
               children: [
-                Icon(Icons.access_time, size: 12, color: AppColors.gray400),
+                const Icon(
+                  Icons.access_time,
+                  size: 12,
+                  color: AppColors.gray400,
+                ),
                 SizedBox(width: 4.w),
-                Text(
-                  requestedAt.isNotEmpty ? 'Requested: $requestedAt' : '',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppColors.gray400,
+                Flexible(
+                  child: Text(
+                    requestedAt.isNotEmpty ? 'Requested: $requestedAt' : '',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.gray400,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (source == 'bus_owner_app') ...[
                   SizedBox(width: 8.w),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE0E7FF),
                       borderRadius: BorderRadius.circular(4),
@@ -922,40 +945,116 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                 ],
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            SizedBox(height: 10.h),
+  // ── Compact action buttons column (pinned right of name in header) ──
+  Widget _actionButtonsColumn(String assignmentId, String ownerName) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _acceptBtn(assignmentId, ownerName),
+        SizedBox(height: 4.h),
+        _rejectBtn(assignmentId, ownerName),
+        SizedBox(height: 4.h),
+        _holdBtn(ownerName),
+      ],
+    );
+  }
 
-            // Action buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => _rejectLink(id, name),
-                  icon: const Icon(Icons.close_rounded, size: 16),
-                  label: const Text('Reject'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                ElevatedButton.icon(
-                  onPressed: () => _acceptLink(id, name),
-                  icon: const Icon(Icons.check_rounded, size: 16),
-                  label: const Text('Accept'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF16A34A),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+  // ── Action buttons row (narrow-screen fallback) ──
+  Widget _actionButtonsRow(String assignmentId, String ownerName) {
+    return Wrap(
+      spacing: 6.w,
+      runSpacing: 4.h,
+      children: [
+        _acceptBtn(assignmentId, ownerName),
+        _rejectBtn(assignmentId, ownerName),
+        _holdBtn(ownerName),
+      ],
+    );
+  }
+
+  // ── Individual action button builders ──
+  Widget _acceptBtn(String assignmentId, String ownerName) {
+    return SizedBox(
+      height: 30.h,
+      child: ElevatedButton(
+        onPressed: () => _acceptLink(assignmentId, ownerName),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF16A34A),
+          foregroundColor: Colors.white,
+          minimumSize: Size.zero,
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6.r),
+          ),
+          textStyle: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+          elevation: 0,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_rounded, size: 14.sp),
+            SizedBox(width: 4.w),
+            const Text('Accept'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _rejectBtn(String assignmentId, String ownerName) {
+    return SizedBox(
+      height: 30.h,
+      child: OutlinedButton(
+        onPressed: () => _rejectLink(assignmentId, ownerName),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.red,
+          side: const BorderSide(color: Colors.red, width: 1.2),
+          minimumSize: Size.zero,
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6.r),
+          ),
+          textStyle: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.close_rounded, size: 14.sp),
+            SizedBox(width: 4.w),
+            const Text('Reject'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _holdBtn(String ownerName) {
+    return SizedBox(
+      height: 30.h,
+      child: OutlinedButton(
+        onPressed: () => _holdLink(ownerName),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFFD97706),
+          side: const BorderSide(color: Color(0xFFD97706), width: 1.2),
+          minimumSize: Size.zero,
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6.r),
+          ),
+          textStyle: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.pause_rounded, size: 14.sp),
+            SizedBox(width: 4.w),
+            const Text('Hold'),
           ],
         ),
       ),
