@@ -11,6 +11,8 @@ on:
       - "pubspec.yaml"
       - "pubspec.lock"
       - "rust/**"
+      - ".github/workflows/frontend-deploy.yml"
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -18,15 +20,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@v3
         with:
           channel: "stable"
+          cache: true
+
+      - name: Verify Flutter
+        run: flutter --version
 
       - name: Flutter clean
         run: flutter clean
@@ -35,11 +41,19 @@ jobs:
         run: flutter pub get
 
       # ──────────────────────────────────────────────────────────────
-      # STEP A: Build & Deploy Admin Panel (main.dart)
+      # STEP A: Build & Deploy Admin Panel (main.dart) — PRIMARY
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Admin Panel (main.dart)
         run: flutter build web --release
+
+      - name: Verify Admin Panel build
+        run: |
+          if [ ! -f "build/web/index.html" ]; then
+            echo "❌ Build failed: index.html not found"
+            exit 1
+          fi
+          echo "✅ Admin Panel build verified ($(du -sh build/web | cut -f1))"
 
       - name: Setup SSH
         run: |
@@ -50,7 +64,6 @@ jobs:
 
       - name: Deploy Admin Panel to /frontend/
         run: |
-          sleep 3
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/frontend/
 
       # ──────────────────────────────────────────────────────────────
@@ -63,7 +76,6 @@ jobs:
       - name: Deploy Reseller App to /reseller/
         continue-on-error: true
         run: |
-          sleep 3
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/reseller/
 
       # ──────────────────────────────────────────────────────────────
@@ -76,7 +88,6 @@ jobs:
       - name: Deploy Driver App to /driver/
         continue-on-error: true
         run: |
-          sleep 3
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/driver/
 
       # ──────────────────────────────────────────────────────────────
@@ -89,7 +100,6 @@ jobs:
       - name: Deploy Bus Owner App to /bus-owner/
         continue-on-error: true
         run: |
-          sleep 3
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/bus-owner/
 
       # ──────────────────────────────────────────────────────────────
@@ -97,6 +107,7 @@ jobs:
       # ──────────────────────────────────────────────────────────────
 
       - name: Post-Deployment Permissions Fix
+        if: always()
         run: |
           ssh root@135.181.46.27 "
             chown -R www-data:www-data /var/www/traceodd/frontend && \
@@ -106,5 +117,6 @@ jobs:
             chown -R www-data:www-data /var/www/traceodd/driver && \
             chmod -R 755 /var/www/traceodd/driver && \
             chown -R www-data:www-data /var/www/traceodd/bus-owner && \
-            chmod -R 755 /var/www/traceodd/bus-owner
+            chmod -R 755 /var/www/traceodd/bus-owner && \
+            systemctl reload nginx
           "
