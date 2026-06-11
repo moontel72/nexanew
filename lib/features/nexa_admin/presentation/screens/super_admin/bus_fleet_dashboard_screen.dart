@@ -738,7 +738,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row
+            // Header row with buttons
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -789,9 +789,51 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
               ],
             ),
 
-            SizedBox(height: 10.h),
+            SizedBox(height: 8.h),
 
-            // Contact info row
+            // ACTION BUTTONS — at top for visibility
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _rejectLink(id, name),
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  label: const Text('Reject'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                ElevatedButton.icon(
+                  onPressed: () => _acceptLink(id, name),
+                  icon: const Icon(Icons.check_rounded, size: 16),
+                  label: const Text('Accept'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const Divider(height: 20),
+
+            // Contact info
             if (email.isNotEmpty || phone.isNotEmpty)
               Padding(
                 padding: EdgeInsets.only(bottom: 8.h),
