@@ -746,7 +746,7 @@ class FleetManagementController extends Controller
                 return response()->json(['message' => 'This link request is not for your company'], 403);
             }
 
-            if ($assignment->status !== 'pending_acceptance') {
+            if (!in_array($assignment->status, ['pending_acceptance', 'on_hold'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'This link request is no longer pending (current status: ' . $assignment->status . ').',
@@ -912,7 +912,7 @@ class FleetManagementController extends Controller
                 return response()->json(['message' => 'This link request is not for your company'], 403);
             }
 
-            if ($assignment->status !== 'pending_acceptance') {
+            if (!in_array($assignment->status, ['pending_acceptance', 'on_hold'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'This link request is no longer pending.',

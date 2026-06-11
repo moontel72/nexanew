@@ -741,10 +741,10 @@ class BusOwnerController extends Controller
                 return response()->json(['message' => 'Link request not found'], 404);
             }
 
-            if ($assignment->status !== 'pending_acceptance') {
+            if (!in_array($assignment->status, ['pending_acceptance', 'on_hold'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Only pending requests can be cancelled.',
+                    'message' => 'Only pending or on-hold requests can be cancelled.',
                 ], 422);
             }
 
