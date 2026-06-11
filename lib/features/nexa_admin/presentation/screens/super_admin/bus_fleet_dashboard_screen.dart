@@ -756,6 +756,16 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const Text(
+                        'SENDER',
+                        style: TextStyle(
+                          color: Color(0xFFF59E0B),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
                       Text(
                         name,
                         style: const TextStyle(
