@@ -957,9 +957,9 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         _acceptBtn(assignmentId, ownerName),
-        SizedBox(height: 4.h),
+        SizedBox(height: 3.h),
         _rejectBtn(assignmentId, ownerName),
-        SizedBox(height: 4.h),
+        SizedBox(height: 3.h),
         _holdBtn(ownerName),
       ],
     );
@@ -981,25 +981,25 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   // ── Individual action button builders ──
   Widget _acceptBtn(String assignmentId, String ownerName) {
     return SizedBox(
-      height: 30.h,
+      height: 26.h,
       child: ElevatedButton(
         onPressed: () => _acceptLink(assignmentId, ownerName),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF16A34A),
           foregroundColor: Colors.white,
           minimumSize: Size.zero,
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 0),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6.r),
+            borderRadius: BorderRadius.circular(5.r),
           ),
-          textStyle: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+          textStyle: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w600),
           elevation: 0,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_rounded, size: 14.sp),
-            SizedBox(width: 4.w),
+            Icon(Icons.check_rounded, size: 12.sp),
+            SizedBox(width: 3.w),
             const Text('Accept'),
           ],
         ),
@@ -1009,24 +1009,24 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
   Widget _rejectBtn(String assignmentId, String ownerName) {
     return SizedBox(
-      height: 30.h,
+      height: 26.h,
       child: OutlinedButton(
         onPressed: () => _rejectLink(assignmentId, ownerName),
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.red,
           side: const BorderSide(color: Colors.red, width: 1.2),
           minimumSize: Size.zero,
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 0),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6.r),
+            borderRadius: BorderRadius.circular(5.r),
           ),
-          textStyle: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+          textStyle: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w600),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.close_rounded, size: 14.sp),
-            SizedBox(width: 4.w),
+            Icon(Icons.close_rounded, size: 12.sp),
+            SizedBox(width: 3.w),
             const Text('Reject'),
           ],
         ),
@@ -1036,24 +1036,24 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
   Widget _holdBtn(String ownerName) {
     return SizedBox(
-      height: 30.h,
+      height: 26.h,
       child: OutlinedButton(
         onPressed: () => _holdLink(ownerName),
         style: OutlinedButton.styleFrom(
           foregroundColor: const Color(0xFFD97706),
           side: const BorderSide(color: Color(0xFFD97706), width: 1.2),
           minimumSize: Size.zero,
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 0),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6.r),
+            borderRadius: BorderRadius.circular(5.r),
           ),
-          textStyle: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+          textStyle: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w600),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.pause_rounded, size: 14.sp),
-            SizedBox(width: 4.w),
+            Icon(Icons.pause_rounded, size: 12.sp),
+            SizedBox(width: 3.w),
             const Text('Hold'),
           ],
         ),
