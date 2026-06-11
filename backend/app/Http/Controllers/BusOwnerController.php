@@ -1214,6 +1214,37 @@ class BusOwnerController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════
+    // SEAT LAYOUTS — PUBLISH (delegated to LayoutService)
+    // ═══════════════════════════════════════════════════════
+
+    public function publishLayout(string $id, Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $identityId = $user->global_identity_id ?? null;
+
+            $this->layouts->publishLayout(
+                layoutId: $id,
+                identityId: $identityId,
+                gridSnapshot: $request->input('grid_snapshot'),
+                expectedVersion: (int) $request->input('expected_version', 0),
+                changeDescription: $request->input('change_description'),
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Layout published successfully.',
+            ]);
+        } catch (\RuntimeException $e) {
+            $code = ($e->getMessage() === 'Layout not found') ? 404 : 409;
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $code);
+        } catch (\Exception $e) {
+            Log::error('BusOwner - publishLayout Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
     // SEAT LAYOUTS — DESTROY (delegated to LayoutService)
     // ═══════════════════════════════════════════════════════
 

@@ -2051,10 +2051,19 @@ class _LayoutListViewState extends State<_LayoutListView> {
                   value: 'edit',
                   child: Text('Design Layout'),
                 ),
+                if (status == 'draft')
+                  const PopupMenuItem(
+                    value: 'publish',
+                    child: Text(
+                      'Publish',
+                      style: TextStyle(color: Color(0xFF16A34A)),
+                    ),
+                  ),
                 const PopupMenuItem(value: 'delete', child: Text('Archive')),
               ],
               onSelected: (v) {
                 if (v == 'edit') _openDesigner(layoutId: layout['id']);
+                if (v == 'publish') _publishLayout(layout['id'], name);
                 if (v == 'delete') _archiveLayout(layout['id']);
               },
             ),
@@ -2081,6 +2090,29 @@ class _LayoutListViewState extends State<_LayoutListView> {
       ),
     ),
   );
+
+  Future<void> _publishLayout(String id, String name) async {
+    try {
+      await ApiService().post('/bus-fleet/layouts/$id/publish');
+      _load();
+      widget.onDataChanged();
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$name published'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+    }
+  }
 
   Future<void> _archiveLayout(String id) async {
     final ok = await showDialog<bool>(

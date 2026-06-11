@@ -130,6 +130,7 @@ Route::prefix('api/v1/bus-owner')
             Route::post('/', [\App\Http\Controllers\BusOwnerController::class, 'storeLayout']);
             Route::get('/{id}', [\App\Http\Controllers\BusOwnerController::class, 'showLayout']);
             Route::put('/{id}', [\App\Http\Controllers\BusOwnerController::class, 'updateLayout']);
+            Route::post('/{id}/publish', [\App\Http\Controllers\BusOwnerController::class, 'publishLayout']);
             Route::delete('/{id}', [\App\Http\Controllers\BusOwnerController::class, 'destroyLayout']);
         });
 

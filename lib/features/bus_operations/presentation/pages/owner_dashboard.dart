@@ -1306,6 +1306,52 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     }
   }
 
+  Future<void> _publishLayout(String id, String name) async {
+    try {
+      await ApiService().post('/bus-owner/layouts/$id/publish');
+      _loadLayouts();
+      _snack('$name published', AppColors.success);
+    } catch (e) {
+      _snack('Error: $e', AppColors.error);
+    }
+  }
+
+  Future<void> _archiveLayout(String id, String name) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: const Color(0xFF162438),
+        title: const Text(
+          'Archive Layout?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Archive "$name"? It can be restored later.',
+          style: const TextStyle(color: Color(0xFF8899AA)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService().delete('/bus-owner/layouts/$id');
+      _loadLayouts();
+      _snack('$name archived', AppColors.success);
+    } catch (e) {
+      _snack('Error: $e', AppColors.error);
+    }
+  }
+
   Future<void> _deleteLayout(String id, String name) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -1446,21 +1492,46 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   ],
                 ),
               ),
-              _badge(status, OwnerButtonColors.seats),
-              SizedBox(width: 4.w),
-              IconButton(
-                icon: Icon(Icons.edit, color: Color(0xFF0891B2), size: 20),
-                onPressed: () => _openLayoutDesigner(layoutId: id),
-                tooltip: 'Open in Designer',
-                padding: EdgeInsets.zero,
-                constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+              _badge(
+                status,
+                status == 'published'
+                    ? const Color(0xFF16A34A)
+                    : status == 'draft'
+                    ? const Color(0xFFF59E0B)
+                    : const Color(0xFF8899AA),
               ),
               SizedBox(width: 4.w),
-              IconButton(
-                icon: Icon(Icons.delete, color: Colors.redAccent, size: 20),
-                onPressed: () => _deleteLayout(id, name),
-                padding: EdgeInsets.zero,
-                constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, color: Color(0xFF8899AA), size: 20),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Text(
+                      'Design Layout',
+                      style: TextStyle(color: Color(0xFF0891B2)),
+                    ),
+                  ),
+                  if (status == 'draft')
+                    PopupMenuItem(
+                      value: 'publish',
+                      child: Text(
+                        'Publish',
+                        style: TextStyle(color: Color(0xFF16A34A)),
+                      ),
+                    ),
+                  PopupMenuItem(
+                    value: 'archive',
+                    child: Text(
+                      'Archive',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
+                  ),
+                ],
+                onSelected: (v) {
+                  if (v == 'edit') _openLayoutDesigner(layoutId: id);
+                  if (v == 'publish') _publishLayout(id, name);
+                  if (v == 'archive') _archiveLayout(id, name);
+                },
               ),
             ],
           ),
