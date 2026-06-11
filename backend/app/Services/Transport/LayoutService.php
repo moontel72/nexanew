@@ -44,7 +44,6 @@ class LayoutService
         $delegatedOwnerIds = DB::table('tenant_allowance_grants')
             ->where('carrier_company_id', $companyId)
             ->where('permission_key', 'seat_layout')
-            ->where('status', 'active')
             ->pluck('owner_identity_id')
             ->filter()
             ->toArray();
