@@ -36,8 +36,9 @@ class BusFleetGate
             return $next($request);
         }
 
-        // The user IS a fleet tenant/owner — carrier_company_id = own id
-        if (in_array($user->account_type ?? null, ['bus_company', 'bus_owner', 'truck_company', 'truck_owner'], true)) {
+        // The user IS a bus/truck company — carrier_company_id = own id
+        // Bus OWNERS do NOT get access here — they use /bus-owner/ app.
+        if (in_array($user->account_type ?? null, ['bus_company', 'truck_company'], true)) {
             $request->merge(['_carrier_company_id' => $user->id]);
             return $next($request);
         }
