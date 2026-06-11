@@ -762,8 +762,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     final kycStatus = (req['kyc_status'] ?? 'unverified').toString();
     final source = (req['source'] ?? 'unknown').toString();
 
-    // Compact layout on narrow screens: stack buttons below name
-    final isNarrow = containerWidth < 500;
+    // Removed narrow-screen branching — single clean layout
 
     return Card(
       elevation: 1,
@@ -776,7 +775,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ═══ HEADER: Avatar | Name+Token | Action Buttons | Badge ═══
+            // ═══ HEADER: Avatar | Name+Token | Badge ═══
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -792,7 +791,6 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                   ),
                 ),
                 SizedBox(width: 12.w),
-                // Name block
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,18 +828,99 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                   ),
                 ),
                 SizedBox(width: 8.w),
-                // Action buttons — compact column pinned right of name
-                if (!isNarrow) _actionButtonsColumn(id, name),
-                SizedBox(width: 8.w),
                 _linkBadge(kycStatus),
               ],
             ),
 
-            // Narrow-screen fallback: action buttons below header
-            if (isNarrow) ...[
-              SizedBox(height: 8.h),
-              _actionButtonsRow(id, name),
-            ],
+            SizedBox(height: 8.h),
+
+            // ═══ ACTION BUTTON BAR — 3 equal-width buttons ═══
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: 4.w),
+                    child: ElevatedButton(
+                      onPressed: () => _acceptLink(id, name),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        foregroundColor: Colors.white,
+                        minimumSize: Size.zero,
+                        padding: EdgeInsets.symmetric(vertical: 8.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        textStyle: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Accept',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4.w),
+                    child: OutlinedButton(
+                      onPressed: () => _rejectLink(id, name),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red, width: 1.2),
+                        minimumSize: Size.zero,
+                        padding: EdgeInsets.symmetric(vertical: 8.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        textStyle: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      child: const Text(
+                        'Reject',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(left: 4.w),
+                    child: OutlinedButton(
+                      onPressed: () => _holdLink(id, name),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFD97706),
+                        side: const BorderSide(
+                          color: Color(0xFFD97706),
+                          width: 1.2,
+                        ),
+                        minimumSize: Size.zero,
+                        padding: EdgeInsets.symmetric(vertical: 8.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        textStyle: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      child: const Text(
+                        'Hold',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
 
             SizedBox(height: 10.h),
             const Divider(height: 1),
@@ -959,116 +1038,6 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                 ],
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Compact action buttons row (pinned right of name in header) ──
-  Widget _actionButtonsColumn(String assignmentId, String ownerName) {
-    return Wrap(
-      direction: Axis.horizontal,
-      spacing: 4.w,
-      runSpacing: 3.h,
-      children: [
-        _acceptBtn(assignmentId, ownerName),
-        _rejectBtn(assignmentId, ownerName),
-        _holdBtn(assignmentId, ownerName),
-      ],
-    );
-  }
-
-  // ── Action buttons row (narrow-screen fallback) ──
-  Widget _actionButtonsRow(String assignmentId, String ownerName) {
-    return Wrap(
-      spacing: 6.w,
-      runSpacing: 4.h,
-      children: [
-        _acceptBtn(assignmentId, ownerName),
-        _rejectBtn(assignmentId, ownerName),
-        _holdBtn(assignmentId, ownerName),
-      ],
-    );
-  }
-
-  // ── Individual action button builders ──
-  Widget _acceptBtn(String assignmentId, String ownerName) {
-    return SizedBox(
-      height: 28.h,
-      child: ElevatedButton(
-        onPressed: () => _acceptLink(assignmentId, ownerName),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF16A34A),
-          foregroundColor: Colors.white,
-          minimumSize: Size.zero,
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5.r),
-          ),
-          textStyle: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w600),
-          elevation: 0,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.check_rounded, size: 13.sp),
-            SizedBox(width: 4.w),
-            const Text('Accept', maxLines: 1, overflow: TextOverflow.ellipsis),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _rejectBtn(String assignmentId, String ownerName) {
-    return SizedBox(
-      height: 28.h,
-      child: OutlinedButton(
-        onPressed: () => _rejectLink(assignmentId, ownerName),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.red,
-          side: const BorderSide(color: Colors.red, width: 1.2),
-          minimumSize: Size.zero,
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5.r),
-          ),
-          textStyle: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w600),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.close_rounded, size: 13.sp),
-            SizedBox(width: 4.w),
-            const Text('Reject', maxLines: 1, overflow: TextOverflow.ellipsis),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _holdBtn(String assignmentId, String ownerName) {
-    return SizedBox(
-      height: 28.h,
-      child: OutlinedButton(
-        onPressed: () => _holdLink(assignmentId, ownerName),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFFD97706),
-          side: const BorderSide(color: Color(0xFFD97706), width: 1.2),
-          minimumSize: Size.zero,
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5.r),
-          ),
-          textStyle: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w600),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.pause_rounded, size: 13.sp),
-            SizedBox(width: 4.w),
-            const Text('Hold', maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),

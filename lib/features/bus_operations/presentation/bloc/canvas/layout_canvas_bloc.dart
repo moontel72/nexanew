@@ -103,9 +103,7 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
     // Safe fallback: guard against empty presets list to prevent
     // StateError (Bad state: No element) crash.
     if (_builtInPresets.isEmpty) {
-      emit(state.copyWith(
-        errorMessage: 'No built-in presets available.',
-      ));
+      emit(state.copyWith(error: 'No built-in presets available.'));
       return;
     }
     final preset = _builtInPresets.firstWhere(
