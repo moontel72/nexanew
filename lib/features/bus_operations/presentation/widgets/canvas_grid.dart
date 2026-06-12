@@ -61,9 +61,51 @@ class CanvasGrid extends StatelessWidget {
     this.onEmptyCellTap,
   });
 
+  /// Get column widths for a given row (flex overrides or uniform).
+  List<double> _rowColumns(int row) {
+    final overrides = canvasState.flexOverrides;
+    if (overrides != null && overrides.containsKey(row)) {
+      return overrides[row]!;
+    }
+    return List.generate(canvasState.maxCols, (_) => kCellSize);
+  }
+
+  /// Pixel left-edge of a grid cell at (row, col), 1-based.
+  double _cellLeft(int row, int col) {
+    final cols = _rowColumns(row);
+    double x = kCellSize; // offset for row labels
+    for (int c = 1; c < col && c <= cols.length; c++) {
+      x += cols[c - 1];
+    }
+    return x;
+  }
+
+  /// Pixel width of a component at (row, col) with given spans.
+  double _componentWidth(int row, int col, int spanCols) {
+    final cols = _rowColumns(row);
+    double w = 0;
+    for (int c = col; c < col + spanCols && c <= cols.length; c++) {
+      w += cols[c - 1];
+    }
+    return w;
+  }
+
+  /// Total canvas pixel width (uses the widest row).
+  double get _totalWidth {
+    double maxW = canvasState.maxCols * kCellSize;
+    final overrides = canvasState.flexOverrides;
+    if (overrides != null) {
+      for (final cols in overrides.values) {
+        double w = cols.fold(0.0, (a, b) => a + b);
+        if (w > maxW) maxW = w;
+      }
+    }
+    return maxW;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final gridWidth = canvasState.maxCols * kCellSize;
+    final gridWidth = _totalWidth;
     final gridHeight = canvasState.maxRows * kCellSize;
 
     return InteractiveViewer(
@@ -73,28 +115,36 @@ class CanvasGrid extends StatelessWidget {
       maxScale: 2.5,
       child: RepaintBoundary(
         child: SizedBox(
-          width: gridWidth + kCellSize, // +1 for row labels
-          height: gridHeight + kCellSize, // +1 for col headers
+          width: gridWidth + kCellSize,
+          height: gridHeight + kCellSize,
           child: Stack(
             children: [
-              // Grid lines
-              Positioned.fill(child: _GridPainter(canvasState: canvasState)),
-              // Column headers (A, B, C…)
+              Positioned.fill(
+                child: _GridPainter(
+                  canvasState: canvasState,
+                  getRowColumns: _rowColumns,
+                ),
+              ),
               ..._buildColumnHeaders(),
-              // Row labels (1, 2, 3…)
               ..._buildRowLabels(),
-              // Placed components
               ...canvasState.components
                   .where((c) => c.type != ComponentType.empty)
                   .map(
                     (comp) => _ComponentTile(
                       component: comp,
+                      left: _cellLeft(comp.originRow, comp.originCol),
+                      top: kCellSize + (comp.originRow - 1) * kCellSize,
+                      width: _componentWidth(
+                        comp.originRow,
+                        comp.originCol,
+                        comp.spanCols,
+                      ),
+                      height: comp.spanRows * kCellSize,
                       onTap: onComponentTap != null
                           ? () => onComponentTap!(comp.id)
                           : null,
                     ),
                   ),
-              // Empty cell tap targets (for placing new components via tap)
               ..._buildEmptyCellTargets(),
             ],
           ),
@@ -104,6 +154,8 @@ class CanvasGrid extends StatelessWidget {
   }
 
   List<Widget> _buildColumnHeaders() {
+    // Use maxCols for header count; flex rows may have fewer columns
+    // but we still show canonical column letters.
     final letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     return List.generate(canvasState.maxCols, (c) {
       return Positioned(
@@ -146,20 +198,20 @@ class CanvasGrid extends StatelessWidget {
     });
   }
 
-  /// Build tap targets for empty cells so users can tap-to-place.
   List<Widget> _buildEmptyCellTargets() {
     final targets = <Widget>[];
     for (int r = 0; r < canvasState.maxRows; r++) {
-      for (int c = 0; c < canvasState.maxCols; c++) {
-        final occupied = canvasState.isOccupied(r + 1, c + 1);
+      final row = r + 1;
+      final cols = _rowColumns(row);
+      for (int c = 0; c < cols.length; c++) {
+        final col = c + 1;
+        final occupied = canvasState.isOccupied(row, col);
         if (!occupied && onEmptyCellTap != null) {
-          final row = r + 1;
-          final col = c + 1;
           targets.add(
             Positioned(
-              left: kCellSize + c * kCellSize,
+              left: _cellLeft(row, col),
               top: kCellSize + r * kCellSize,
-              width: kCellSize,
+              width: cols[c],
               height: kCellSize,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -177,15 +229,18 @@ class CanvasGrid extends StatelessWidget {
 /// Paints the grid lines on the canvas.
 class _GridPainter extends StatelessWidget {
   final LayoutCanvasState canvasState;
-  const _GridPainter({required this.canvasState});
+  final List<double> Function(int row) getRowColumns;
+  const _GridPainter({required this.canvasState, required this.getRowColumns});
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
       painter: _GridLinesPainter(
         rows: canvasState.maxRows,
-        cols: canvasState.maxCols,
-        cellSize: kCellSize,
+        getRowColumns: getRowColumns,
+        hasFlexOverrides:
+            canvasState.flexOverrides != null &&
+            canvasState.flexOverrides!.isNotEmpty,
       ),
       size: Size(
         canvasState.maxCols * kCellSize + kCellSize,
@@ -197,13 +252,13 @@ class _GridPainter extends StatelessWidget {
 
 class _GridLinesPainter extends CustomPainter {
   final int rows;
-  final int cols;
-  final double cellSize;
+  final List<double> Function(int row) getRowColumns;
+  final bool hasFlexOverrides;
 
   _GridLinesPainter({
     required this.rows,
-    required this.cols,
-    required this.cellSize,
+    required this.getRowColumns,
+    required this.hasFlexOverrides,
   });
 
   @override
@@ -212,30 +267,71 @@ class _GridLinesPainter extends CustomPainter {
       ..color = const Color(0x15FFFFFF)
       ..strokeWidth = 1;
 
-    // Vertical lines
-    for (int c = 0; c <= cols; c++) {
-      final x = cellSize + c * cellSize;
-      canvas.drawLine(Offset(x, cellSize), Offset(x, size.height), paint);
+    final flexPaint = Paint()
+      ..color = const Color(0xFFD97706).withValues(alpha: 0.25)
+      ..strokeWidth = 2;
+
+    // Horizontal lines (always uniform)
+    for (int r = 0; r <= rows; r++) {
+      final y = kCellSize + r * kCellSize;
+      canvas.drawLine(Offset(kCellSize, y), Offset(size.width, y), paint);
     }
 
-    // Horizontal lines
-    for (int r = 0; r <= rows; r++) {
-      final y = cellSize + r * cellSize;
-      canvas.drawLine(Offset(cellSize, y), Offset(size.width, y), paint);
+    if (!hasFlexOverrides) {
+      // Simple uniform vertical lines
+      // Note: we don't know exact col count here, draw based on maxCols
+      for (int c = 0; c <= 12; c++) {
+        final x = kCellSize + c * kCellSize;
+        if (x > size.width) break;
+        canvas.drawLine(Offset(x, kCellSize), Offset(x, size.height), paint);
+      }
+      return;
+    }
+
+    // Per-row varying vertical lines
+    for (int r = 1; r <= rows; r++) {
+      final cols = getRowColumns(r);
+      final isFlexRow =
+          cols.length < 12 && cols.any((w) => (w - kCellSize).abs() > 1);
+
+      double x = kCellSize;
+      final yTop = kCellSize + (r - 1) * kCellSize;
+      final yBot = yTop + kCellSize;
+
+      for (int c = 0; c <= cols.length; c++) {
+        // Left edge of this column (or right edge of last)
+        if (c > 0) x += cols[c - 1];
+
+        // Draw vertical segment for this row only
+        final linePaint = isFlexRow ? flexPaint : paint;
+        canvas.drawLine(Offset(x, yTop), Offset(x, yBot), linePaint);
+      }
     }
   }
 
   @override
   bool shouldRepaint(covariant _GridLinesPainter oldDelegate) =>
-      rows != oldDelegate.rows || cols != oldDelegate.cols;
+      rows != oldDelegate.rows ||
+      hasFlexOverrides != oldDelegate.hasFlexOverrides;
 }
 
 /// Renders a single placed component on the canvas.
 class _ComponentTile extends StatefulWidget {
   final LayoutComponent component;
+  final double left;
+  final double top;
+  final double width;
+  final double height;
   final VoidCallback? onTap;
 
-  const _ComponentTile({required this.component, this.onTap});
+  const _ComponentTile({
+    required this.component,
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
+    this.onTap,
+  });
 
   @override
   State<_ComponentTile> createState() => _ComponentTileState();
@@ -248,10 +344,10 @@ class _ComponentTileState extends State<_ComponentTile> {
   @override
   Widget build(BuildContext context) {
     final comp = widget.component;
-    final left = kCellSize + (comp.originCol - 1) * kCellSize;
-    final top = kCellSize + (comp.originRow - 1) * kCellSize;
-    final width = comp.spanCols * kCellSize;
-    final height = comp.spanRows * kCellSize;
+    final left = widget.left;
+    final top = widget.top;
+    final width = widget.width;
+    final height = widget.height;
     final color =
         kComponentColors[comp.type] ?? kComponentColors[ComponentType.empty]!;
     final icon = kComponentIcons[comp.type] ?? Icons.help_outline;

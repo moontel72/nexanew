@@ -541,64 +541,77 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
     final rowStart = event.startRow;
     final rowEnd = rowStart + 2;
     final preserved = canvas.components.where((c) {
-      // Keep components that fall completely outside the target rows
       final compRowEnd = c.originRow + c.spanRows - 1;
       return compRowEnd < rowStart || c.originRow > rowEnd;
     }).toList();
 
-    final aisleCol = event.leftCols + 1;
     final uuidPrefix = '${state.activeDeck}_bc_';
 
+    // Compute flex-based column widths for business class rows
+    // Default kCellSize = 56.0; left seats get double-width, right seats get standard width
+    const double kCell = 56.0;
+    final leftWidth = kCell * event.leftCols; // e.g., 112 for 2-left
+    final rightSeatWidth = kCell; // each right seat = 1 standard cell
+    final aisleWidth = kCell; // aisle stays constant
+
+    // Build column widths per business row: [left, aisle, right_1, right_2]
+    // The number of columns per business row = 1 (left) + 1 (aisle) + rightCols
+    final bizColumnWidths = <double>[
+      leftWidth,
+      aisleWidth,
+      for (int i = 0; i < event.rightCols; i++) rightSeatWidth,
+    ];
+
+    // Store flex overrides for these 3 rows
+    final flexOverrides = FlexOverrides.from(canvas.flexOverrides ?? {});
     for (int row = rowStart; row <= rowEnd; row++) {
-      // Left-side business seat (double-width, occupies all left columns)
-      final leftId =
-          '${uuidPrefix}L${row}_${DateTime.now().millisecondsSinceEpoch}';
+      flexOverrides[row] = List.from(bizColumnWidths);
+
+      // Left-side business seat (occupies visual col 1, full left width)
       preserved.add(
         LayoutComponent(
-          id: leftId,
+          id: '${uuidPrefix}L${row}_${DateTime.now().millisecondsSinceEpoch}',
           type: ComponentType.businessClassSeat,
           originRow: row,
           originCol: 1,
           spanRows: 1,
-          spanCols: event.leftCols,
+          spanCols: 1, // 1 flex column = entire left side
           bookable: true,
           bookingMode: BookingMode.premium,
         ),
       );
 
-      // Right-side business seat 1 (double-width)
-      final rightColStart = aisleCol + 1;
-      final rightId1 =
-          '${uuidPrefix}R${row}a_${DateTime.now().millisecondsSinceEpoch}';
+      // Aisle (visual col 2)
       preserved.add(
         LayoutComponent(
-          id: rightId1,
-          type: ComponentType.businessClassSeat,
-          originRow: row,
-          originCol: rightColStart,
-          spanRows: 1,
-          spanCols: event.rightCols,
-          bookable: true,
-          bookingMode: BookingMode.premium,
-        ),
-      );
-
-      // Aisle strip
-      final aisleId = '${uuidPrefix}aisle_${row}';
-      preserved.add(
-        LayoutComponent(
-          id: aisleId,
+          id: '${uuidPrefix}aisle_${row}',
           type: ComponentType.aisle,
           originRow: row,
-          originCol: aisleCol,
+          originCol: 2,
           bookable: false,
           bookingMode: BookingMode.none,
         ),
       );
+
+      // Right-side business seats (visual cols 3, 4, ...)
+      for (int r = 0; r < event.rightCols; r++) {
+        preserved.add(
+          LayoutComponent(
+            id: '${uuidPrefix}R${row}_$r',
+            type: ComponentType.businessClassSeat,
+            originRow: row,
+            originCol: 3 + r,
+            spanRows: 1,
+            spanCols: 1,
+            bookable: true,
+            bookingMode: BookingMode.premium,
+          ),
+        );
+      }
     }
 
     final newCanvas = _replaceCanvasComponents(
-      canvas,
+      canvas.copyWith(flexOverrides: flexOverrides),
       preserved,
       renumber: true,
     );

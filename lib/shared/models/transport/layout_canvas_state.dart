@@ -6,14 +6,19 @@
 
 import 'layout_component.dart';
 
+/// Per-row column width overrides (pixel widths per visual column).
+/// Rows not present use uniform kCellSize for all columns.
+typedef FlexOverrides = Map<int, List<double>>;
+
 class LayoutCanvasState {
   final String? layoutId;
-  final String deckLevel; // 'lower' | 'upper'
+  final String deckLevel;
   final int maxRows;
-  final int maxCols; // total visual columns including aisle
-  final int seatCols; // ticketable column count (excludes structural)
+  final int maxCols;
+  final int seatCols;
   final List<LayoutComponent> components;
   final List<StructuralStrip> structuralStrips;
+  final FlexOverrides? flexOverrides;
   final Map<String, dynamic> metadata;
   final bool isDirty;
 
@@ -25,6 +30,7 @@ class LayoutCanvasState {
     this.seatCols = 4,
     this.components = const [],
     this.structuralStrips = const [],
+    this.flexOverrides,
     this.metadata = const {},
     this.isDirty = false,
   });
@@ -85,7 +91,15 @@ class LayoutCanvasState {
 
   /// Convert components to a publishable snapshot (v2 format).
   Map<String, dynamic> toSnapshot() => {
-    'canvas': {'max_rows': maxRows, 'max_cols': maxCols, 'seat_cols': seatCols},
+    'canvas': {
+      'max_rows': maxRows,
+      'max_cols': maxCols,
+      'seat_cols': seatCols,
+      if (flexOverrides != null)
+        'flex_overrides': flexOverrides!.map(
+          (k, v) => MapEntry(k.toString(), v),
+        ),
+    },
     'components': components.map((c) => c.toJson()).toList(),
     'structural_strips': structuralStrips.map((s) => s.toJson()).toList(),
     'metadata': {
@@ -131,6 +145,21 @@ class LayoutCanvasState {
         .map((j) => StructuralStrip.fromJson(j))
         .toList();
 
+    // Parse flex overrides
+    FlexOverrides? flexOverrides;
+    final flexJson = canvas?['flex_overrides'] as Map<String, dynamic>?;
+    if (flexJson != null) {
+      flexOverrides = {};
+      for (final entry in flexJson.entries) {
+        final row = int.tryParse(entry.key);
+        if (row != null && entry.value is List) {
+          flexOverrides[row] = (entry.value as List)
+              .map((e) => (e as num).toDouble())
+              .toList();
+        }
+      }
+    }
+
     return LayoutCanvasState(
       layoutId: layoutId,
       deckLevel: deckLevel,
@@ -144,6 +173,7 @@ class LayoutCanvasState {
           canvas?['seat_cols'] as int? ?? (snap['seat_cols'] as int?) ?? 4,
       components: components,
       structuralStrips: strips,
+      flexOverrides: flexOverrides,
       metadata: meta,
     );
   }
@@ -273,6 +303,7 @@ class LayoutCanvasState {
     int? seatCols,
     List<LayoutComponent>? components,
     List<StructuralStrip>? structuralStrips,
+    FlexOverrides? flexOverrides,
     Map<String, dynamic>? metadata,
     bool? isDirty,
   }) => LayoutCanvasState(
@@ -283,6 +314,7 @@ class LayoutCanvasState {
     seatCols: seatCols ?? this.seatCols,
     components: components ?? this.components,
     structuralStrips: structuralStrips ?? this.structuralStrips,
+    flexOverrides: flexOverrides ?? this.flexOverrides,
     metadata: metadata ?? this.metadata,
     isDirty: isDirty ?? this.isDirty,
   );
