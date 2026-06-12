@@ -928,7 +928,7 @@ class BusOwnerController extends Controller
 
             $messages = DB::table('fleet_assignment_messages AS fam')
                 ->leftJoin('fleet_assignments AS fa', 'fam.fleet_assignment_id', '=', 'fa.id')
-                ->leftJoin('tenant_accounts AS ta', 'fa.carrier_company_id', '=', 'ta.global_identity_id')
+                ->leftJoin('tenant_accounts AS ta', 'fa.carrier_company_id', '=', 'ta.id')
                 ->where('fam.owner_identity_id', $identityId)
                 ->select(
                     'fam.id',
