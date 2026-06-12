@@ -172,7 +172,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   }
 
   Widget _sidebar(bool isWide) => Container(
-    width: 240,
+    width: 260,
     decoration: const BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topCenter,
@@ -256,6 +256,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
               ),
               child: Scrollbar(
                 child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   children: [
                     _sl('MAIN'),
@@ -1079,7 +1080,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: ListView.builder(
-                      shrinkWrap: true,
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.all(10.w),
                       itemCount: _conversationMessages.length,
                       itemBuilder: (_, j) {
@@ -2199,6 +2200,7 @@ class _FleetListViewState extends State<_FleetListView> {
                   ),
                   child: Scrollbar(
                     child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.all(16.w),
                       itemCount: _items.length,
                       separatorBuilder: (_, __) => SizedBox(height: 8.h),
@@ -2525,6 +2527,7 @@ class _LayoutListViewState extends State<_LayoutListView> {
                   ),
                   child: Scrollbar(
                     child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.all(16.w),
                       itemCount: _layouts.length,
                       separatorBuilder: (_, __) => SizedBox(height: 8.h),

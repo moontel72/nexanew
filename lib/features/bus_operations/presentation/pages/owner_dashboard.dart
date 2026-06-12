@@ -162,6 +162,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           Gap(12),
           Expanded(
             child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.symmetric(horizontal: 12),
               child: Column(
                 children: [
@@ -845,7 +846,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: ListView.builder(
-                          shrinkWrap: true,
+                          physics: const AlwaysScrollableScrollPhysics(),
                           padding: EdgeInsets.all(10.w),
                           itemCount: _inboxConvMessages.length,
                           itemBuilder: (_, j) {
@@ -988,6 +989,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     final assignmentId = _linkStatus?['assignment_id'] as String? ?? '';
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.all(16.w),
       children: [
         // --- Status Banner ---
@@ -1332,7 +1334,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   ),
                 )
               : ListView.builder(
-                  shrinkWrap: true,
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.all(10),
                   itemCount: _chatMessages.length,
                   itemBuilder: (_, i) {
@@ -1458,6 +1460,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Widget _homePage() {
     _loadCounts();
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.all(16.w),
       children: [
         Text(
@@ -1668,6 +1671,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ),
           )
         : ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.all(16.w),
             itemCount: _drivers.length,
             separatorBuilder: (_, __) => SizedBox(height: 8.h),
@@ -1822,6 +1826,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ),
           )
         : ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.all(16.w),
             itemCount: _conductors.length,
             separatorBuilder: (_, __) => SizedBox(height: 8.h),
@@ -2023,6 +2028,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     return Stack(
       children: [
         ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(16.w, 16.w, 16.w, 80.h),
           itemCount: _layouts.length,
           itemBuilder: (_, i) => _layoutCard(_layouts[i]),
