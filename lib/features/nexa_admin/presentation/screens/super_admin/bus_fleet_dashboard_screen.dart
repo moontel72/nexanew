@@ -2466,6 +2466,59 @@ class _LayoutListViewState extends State<_LayoutListView> {
         });
   }
 
+  void _confirmPurge() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Purge All Layouts?'),
+        content: Text(
+          'This will archive ALL ${_layouts.length} layout(s). '
+          'This action cannot be undone. Proceed?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _purgeLayouts();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Purge All'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _purgeLayouts() async {
+    try {
+      final res = await ApiService().delete('/bus-fleet/layouts/purge/all');
+      final msg = res?['message'] ?? 'Purge completed';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg.toString()),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _load();
+        widget.onDataChanged();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Purge failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
@@ -2495,6 +2548,19 @@ class _LayoutListViewState extends State<_LayoutListView> {
                 ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
               ),
               const Spacer(),
+              if (_layouts.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _confirmPurge(),
+                    icon: const Icon(Icons.delete_sweep, size: 16),
+                    label: const Text('Purge All'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
               ElevatedButton.icon(
                 onPressed: () => _openDesigner(),
                 icon: const Icon(Icons.add, size: 18),

@@ -558,6 +558,39 @@ class LayoutService
         ]);
     }
 
+    /**
+     * Purge ALL non-archived layouts for a company.
+     *
+     * Used for development reset and deployment testing.
+     * Archives all draft/published layouts in a single operation.
+     *
+     * @return int Number of layouts purged.
+     */
+    public function purgeLayouts(string $companyId): int
+    {
+        $count = DB::table('transport_bus_layouts')
+            ->where('carrier_company_id', $companyId)
+            ->where('layout_status', '!=', 'archived')
+            ->count();
+
+        DB::table('transport_bus_layouts')
+            ->where('carrier_company_id', $companyId)
+            ->where('layout_status', '!=', 'archived')
+            ->update([
+                'layout_status' => 'archived',
+                'edit_lock_held_by' => null,
+                'edit_lock_expires_at' => null,
+                'updated_at' => now(),
+            ]);
+
+        Log::warning('LayoutService: bulk layout purge', [
+            'company_id' => $companyId,
+            'count'      => $count,
+        ]);
+
+        return $count;
+    }
+
     // ═══════════════════════════════════════════════════════════
     // PRESETS (public, static data)
     // ═══════════════════════════════════════════════════════════
@@ -958,13 +991,21 @@ class LayoutService
         });
 
         $seatCounter = 0;
-        $structuralTypes = ['aisle', 'driver', 'exit_door', 'emergency', 'lavatory', 'driverCabin'];
+        $structuralTypes = [
+            'aisle', 'driver', 'exit_door', 'emergency', 'lavatory', 'driverCabin',
+            'restaurantTable', 'restaurant_table', 'exitDoor',
+        ];
 
         foreach ($components as &$comp) {
             $type = $comp['type'] ?? 'empty';
             if (in_array($type, $structuralTypes, true)) {
                 $comp['seat_number'] = null;
                 $comp['seat_id'] = null;
+                continue;
+            }
+
+            // Skip auto-numbering for components with owner-set custom labels
+            if (!empty($comp['custom_label'])) {
                 continue;
             }
 

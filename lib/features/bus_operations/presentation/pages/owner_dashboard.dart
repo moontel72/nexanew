@@ -1992,6 +1992,49 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     }
   }
 
+  void _confirmPurgeLayouts() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF162438),
+        title: const Text(
+          'Purge All Layouts?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'This will archive ALL ${_layouts.length} of your seat layouts. '
+          'This action cannot be undone. Proceed?',
+          style: const TextStyle(color: Color(0xFF8899AA)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _purgeLayouts();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Purge All'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _purgeLayouts() async {
+    try {
+      final res = await ApiService().delete('/bus-owner/layouts/purge/all');
+      final msg = res?['message'] ?? 'Purge completed';
+      _loadLayouts();
+      _snack(msg.toString(), AppColors.success);
+    } catch (e) {
+      _snack('Purge failed: $e', AppColors.error);
+    }
+  }
+
   Widget _layoutsPage() {
     if (_layoutsLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -2036,12 +2079,26 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         Positioned(
           bottom: 16,
           right: 16,
-          child: FloatingActionButton.extended(
-            onPressed: _openLayoutDesigner,
-            icon: Icon(Icons.add),
-            label: Text('New Layout'),
-            backgroundColor: OwnerButtonColors.seats,
-            foregroundColor: Colors.white,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton.extended(
+                onPressed: () => _confirmPurgeLayouts(),
+                icon: const Icon(Icons.delete_sweep),
+                label: const Text('Purge All'),
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
+              const SizedBox(width: 12),
+              FloatingActionButton.extended(
+                onPressed: _openLayoutDesigner,
+                icon: const Icon(Icons.add),
+                label: const Text('New Layout'),
+                backgroundColor: OwnerButtonColors.seats,
+                foregroundColor: Colors.white,
+              ),
+            ],
           ),
         ),
       ],

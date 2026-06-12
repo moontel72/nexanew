@@ -86,7 +86,7 @@ const _paletteItems = [
   _PaletteItem(
     type: ComponentType.businessClassSeat,
     label: 'Business Class Seat',
-    subtitle: '2×1 · Premium Wide',
+    subtitle: '1×1 · Premium Wide (Flex)',
     icon: Icons.airline_seat_flat_angled,
     color: Color(0xFFD97706),
   ),

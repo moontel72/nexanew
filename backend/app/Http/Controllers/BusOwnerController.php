@@ -1381,6 +1381,47 @@ class BusOwnerController extends Controller
         }
     }
 
+    /**
+     * DELETE /bus-owner/layouts/purge/all
+     *
+     * Purge ALL non-archived layouts owned by this identity.
+     */
+    public function purgeLayouts(Request $request): JsonResponse
+    {
+        try {
+            $identityId = $this->ownerIdentityId($request);
+            // Scope to this owner's layouts via owner_identity_id
+            $count = DB::table('transport_bus_layouts')
+                ->where('owner_identity_id', $identityId)
+                ->where('layout_status', '!=', 'archived')
+                ->count();
+
+            DB::table('transport_bus_layouts')
+                ->where('owner_identity_id', $identityId)
+                ->where('layout_status', '!=', 'archived')
+                ->update([
+                    'layout_status' => 'archived',
+                    'edit_lock_held_by' => null,
+                    'edit_lock_expires_at' => null,
+                    'updated_at' => now(),
+                ]);
+
+            Log::warning('BusOwner: bulk layout purge', [
+                'identity_id' => $identityId,
+                'count'       => $count,
+            ]);
+
+            return response()->json([
+                'success'      => true,
+                'message'      => "Purged {$count} layout(s).",
+                'purged_count' => $count,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('BusOwner - purgeLayouts Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
     // ═══════════════════════════════════════════════════════
     // LAYOUT PRESETS (delegated to LayoutService)
     // ═══════════════════════════════════════════════════════

@@ -139,6 +139,8 @@ Route::prefix('api/v1/bus-fleet')
         Route::prefix('layouts')->group(function (): void {
             Route::get('/', [\App\Http\Controllers\BusTransitController::class, 'listLayouts']);
             Route::post('/', [\App\Http\Controllers\BusTransitController::class, 'createLayoutFull']);
+            // Purge must be BEFORE /{id} to avoid "purge" being captured as an ID
+            Route::delete('/purge/all', [\App\Http\Controllers\BusTransitController::class, 'purgeLayouts']);
             Route::get('/{id}', [\App\Http\Controllers\BusTransitController::class, 'getLayout']);
             Route::put('/{id}', [\App\Http\Controllers\BusTransitController::class, 'updateLayout']);
             Route::post('/{id}/acquire-lock', [\App\Http\Controllers\BusTransitController::class, 'acquireLock']);

@@ -254,31 +254,52 @@ class _GridPainter extends StatelessWidget {
   final List<double> Function(int row) getRowColumns;
   const _GridPainter({required this.canvasState, required this.getRowColumns});
 
+  /// Detect if any row has non-uniform column widths (stored flex OR auto-detected).
+  bool _hasAnyFlexRow() {
+    final overrides = canvasState.flexOverrides;
+    if (overrides != null && overrides.isNotEmpty) return true;
+    // Also check for auto-detected business class rows
+    for (int r = 1; r <= canvasState.maxRows; r++) {
+      final cols = getRowColumns(r);
+      if (cols.any((w) => (w - kCellSize).abs() > 1)) return true;
+    }
+    return false;
+  }
+
+  /// Compute dynamic grid width using per-row column widths.
+  double _computeWidth() {
+    double maxW = canvasState.maxCols * kCellSize;
+    for (int r = 1; r <= canvasState.maxRows; r++) {
+      final cols = getRowColumns(r);
+      final rowW = cols.fold(0.0, (a, b) => a + b);
+      if (rowW > maxW) maxW = rowW;
+    }
+    return maxW + kCellSize;
+  }
+
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
       painter: _GridLinesPainter(
         rows: canvasState.maxRows,
+        maxCols: canvasState.maxCols,
         getRowColumns: getRowColumns,
-        hasFlexOverrides:
-            canvasState.flexOverrides != null &&
-            canvasState.flexOverrides!.isNotEmpty,
+        hasFlexOverrides: _hasAnyFlexRow(),
       ),
-      size: Size(
-        canvasState.maxCols * kCellSize + kCellSize,
-        canvasState.maxRows * kCellSize + kCellSize,
-      ),
+      size: Size(_computeWidth(), canvasState.maxRows * kCellSize + kCellSize),
     );
   }
 }
 
 class _GridLinesPainter extends CustomPainter {
   final int rows;
+  final int maxCols;
   final List<double> Function(int row) getRowColumns;
   final bool hasFlexOverrides;
 
   _GridLinesPainter({
     required this.rows,
+    required this.maxCols,
     required this.getRowColumns,
     required this.hasFlexOverrides,
   });
@@ -293,7 +314,7 @@ class _GridLinesPainter extends CustomPainter {
       ..color = const Color(0xFFD97706).withValues(alpha: 0.25)
       ..strokeWidth = 2;
 
-    // Horizontal lines (always uniform)
+    // Horizontal lines (always uniform across rows)
     for (int r = 0; r <= rows; r++) {
       final y = kCellSize + r * kCellSize;
       canvas.drawLine(Offset(kCellSize, y), Offset(size.width, y), paint);
@@ -301,8 +322,7 @@ class _GridLinesPainter extends CustomPainter {
 
     if (!hasFlexOverrides) {
       // Simple uniform vertical lines
-      // Note: we don't know exact col count here, draw based on maxCols
-      for (int c = 0; c <= 12; c++) {
+      for (int c = 0; c <= maxCols; c++) {
         final x = kCellSize + c * kCellSize;
         if (x > size.width) break;
         canvas.drawLine(Offset(x, kCellSize), Offset(x, size.height), paint);
@@ -313,8 +333,7 @@ class _GridLinesPainter extends CustomPainter {
     // Per-row varying vertical lines
     for (int r = 1; r <= rows; r++) {
       final cols = getRowColumns(r);
-      final isFlexRow =
-          cols.length < 12 && cols.any((w) => (w - kCellSize).abs() > 1);
+      final isFlexRow = cols.any((w) => (w - kCellSize).abs() > 1);
 
       double x = kCellSize;
       final yTop = kCellSize + (r - 1) * kCellSize;
@@ -334,6 +353,7 @@ class _GridLinesPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _GridLinesPainter oldDelegate) =>
       rows != oldDelegate.rows ||
+      maxCols != oldDelegate.maxCols ||
       hasFlexOverrides != oldDelegate.hasFlexOverrides;
 }
 

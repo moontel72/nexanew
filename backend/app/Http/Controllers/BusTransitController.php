@@ -432,6 +432,29 @@ class BusTransitController extends Controller
         }
     }
 
+    /**
+     * DELETE /api/v1/bus-fleet/layouts/purge/all
+     *
+     * Purge ALL non-archived layouts for the authenticated company.
+     * Development/deployment reset — archives all draft/published layouts.
+     */
+    public function purgeLayouts(Request $request): JsonResponse
+    {
+        try {
+            $companyId = $this->resolveCompanyId($request);
+            $count = $this->layouts->purgeLayouts($companyId);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Purged {$count} layout(s).",
+                'purged_count' => $count,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('BusTransit - purgeLayouts Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
+
     // ─── VOUCHERS ───────────────────────────────────────
 
     /**
