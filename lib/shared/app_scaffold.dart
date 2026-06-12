@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
+import 'package:trace_odd/core/theme/app_scroll_behavior.dart';
 
 class FleetApp {
   /// Bootstrap a fleet panel app with standard configuration.
@@ -81,6 +82,7 @@ class _FleetMaterialApp extends StatelessWidget {
       builder: (_, __) => MaterialApp.router(
         title: title,
         debugShowCheckedModeBanner: false,
+        scrollBehavior: const WebAppScrollBehavior(),
         routerConfig: router,
         theme: ThemeData(
           colorSchemeSeed: seedColor ?? const Color(0xFF1F5E6B),

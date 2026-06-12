@@ -14,6 +14,7 @@ import 'package:trace_odd/core/interfaces/secure_storage_interface.dart';
 import 'package:trace_odd/core/services/secure_storage_service.dart';
 import 'package:trace_odd/core/services/mock_secure_storage.dart';
 import 'package:trace_odd/core/constants/app_constants.dart';
+import 'package:trace_odd/core/theme/app_scroll_behavior.dart';
 import 'package:trace_odd/shared/theme/app_theme.dart';
 import 'package:trace_odd/routes/app_router.dart';
 import 'package:trace_odd/features/nexa_admin/data/repositories/admin_auth_repository.dart';
@@ -73,11 +74,7 @@ class _AppInitializerState extends State<AppInitializer> {
     if (!_isInitialized) {
       return const Directionality(
         textDirection: TextDirection.ltr,
-        child: Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
+        child: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
 
@@ -133,9 +130,7 @@ class _AppInitializerState extends State<AppInitializer> {
                 return const Directionality(
                   textDirection: TextDirection.ltr,
                   child: Scaffold(
-                    body: Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    body: Center(child: CircularProgressIndicator()),
                   ),
                 );
               }
@@ -168,13 +163,13 @@ class _AppInitializerState extends State<AppInitializer> {
 
               if (kDebugMode) {
                 debugPrint(
-                    'APP_INIT authCheckCompleted=true isAuthenticated=$isAdminAuthed isFactoryAuthenticated=$isFactoryAuthed');
+                  'APP_INIT authCheckCompleted=true isAuthenticated=$isAdminAuthed isFactoryAuthenticated=$isFactoryAuthed',
+                );
               }
 
               return RepositoryProvider<AppRouter>(
-                create: (context) => AppRouter(
-                  authRepo: context.read<AdminAuthRepository>(),
-                ),
+                create: (context) =>
+                    AppRouter(authRepo: context.read<AdminAuthRepository>()),
                 child: Builder(
                   builder: (context) {
                     final router = context.read<AppRouter>();
@@ -193,6 +188,7 @@ class _AppInitializerState extends State<AppInitializer> {
                           return MaterialApp.router(
                             title: AppConstants.appName,
                             debugShowCheckedModeBanner: false,
+                            scrollBehavior: const WebAppScrollBehavior(),
                             theme: AppTheme.lightTheme(),
                             darkTheme: AppTheme.darkTheme(),
                             themeMode: ThemeMode.light,
@@ -209,9 +205,9 @@ class _AppInitializerState extends State<AppInitializer> {
                             locale: const Locale('en', 'US'),
                             builder: (context, child) {
                               return MediaQuery(
-                                data: MediaQuery.of(context).copyWith(
-                                  textScaler: TextScaler.noScaling,
-                                ),
+                                data: MediaQuery.of(
+                                  context,
+                                ).copyWith(textScaler: TextScaler.noScaling),
                                 child: child!,
                               );
                             },
