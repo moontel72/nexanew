@@ -62,10 +62,32 @@ class CanvasGrid extends StatelessWidget {
   });
 
   /// Get column widths for a given row (flex overrides or uniform).
+  /// Auto-detects business class rows missing explicit flex overrides.
   List<double> _rowColumns(int row) {
     final overrides = canvasState.flexOverrides;
     if (overrides != null && overrides.containsKey(row)) {
       return overrides[row]!;
+    }
+    // Auto-detect: if this row has a businessClassSeat, compute flex widths
+    final hasBizSeat = canvasState.components.any(
+      (c) =>
+          c.type == ComponentType.businessClassSeat &&
+          c.originRow <= row &&
+          c.originRow + c.spanRows - 1 >= row,
+    );
+    if (hasBizSeat) {
+      final meta = canvasState.metadata;
+      final leftCols =
+          (meta['left_cols'] as int?) ??
+          ((canvasState.maxCols - 1) ~/ 2).clamp(1, 3);
+      final rightCols =
+          (meta['right_cols'] as int?) ??
+          ((canvasState.maxCols - 1) ~/ 2).clamp(1, 3);
+      return <double>[
+        kCellSize * leftCols,
+        kCellSize,
+        for (int i = 0; i < rightCols; i++) kCellSize,
+      ];
     }
     return List.generate(canvasState.maxCols, (_) => kCellSize);
   }
