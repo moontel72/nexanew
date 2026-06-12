@@ -55,6 +55,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   List<Map<String, dynamic>> _conversationMessages = [];
   bool _messagesLoading = false;
   final _inboxReplyCtrl = TextEditingController();
+  final _homeScrollController = ScrollController();
 
   @override
   void initState() {
@@ -1585,35 +1586,42 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   // ═══════════════════════════════════════════════════
   // DASHBOARD HOME
   // ═══════════════════════════════════════════════════
-  Widget _home() => ScrollbarTheme(
-    data: ScrollbarThemeData(
-      thumbVisibility: WidgetStateProperty.all(true),
-      trackVisibility: WidgetStateProperty.all(true),
-      thickness: WidgetStateProperty.all(10),
-      radius: const Radius.circular(5),
-      thumbColor: WidgetStateProperty.all(Color(0xFF1F5E6B)),
-      trackColor: WidgetStateProperty.all(Color(0xFFD4EFEA)),
-    ),
-    child: Scrollbar(
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_company != null) _companyHeader(),
-            SizedBox(height: 20.h),
-            _sectionTitle('Fleet Management'),
-            SizedBox(height: 12.h),
-            _managementGrid(),
-            SizedBox(height: 24.h),
-            _sectionTitle('Quick Stats'),
-            SizedBox(height: 12.h),
-            _statsRow(),
-          ],
+  Widget _home() => LayoutBuilder(
+    builder: (context, constraints) {
+      return ScrollbarTheme(
+        data: ScrollbarThemeData(
+          thumbVisibility: WidgetStateProperty.all(true),
+          trackVisibility: WidgetStateProperty.all(true),
+          thickness: WidgetStateProperty.all(10),
+          radius: const Radius.circular(5),
+          thumbColor: WidgetStateProperty.all(const Color(0xFF1F5E6B)),
+          trackColor: WidgetStateProperty.all(const Color(0xFFD4EFEA)),
         ),
-      ),
-    ),
+        child: Scrollbar(
+          controller: _homeScrollController,
+          interactive: true,
+          child: SingleChildScrollView(
+            controller: _homeScrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.all(16.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_company != null) _companyHeader(),
+                SizedBox(height: 20.h),
+                _sectionTitle('Fleet Management'),
+                SizedBox(height: 12.h),
+                _managementGrid(),
+                SizedBox(height: 24.h),
+                _sectionTitle('Quick Stats'),
+                SizedBox(height: 12.h),
+                _statsRow(),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
   );
 
   Widget _companyHeader() {
@@ -1780,6 +1788,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   @override
   void dispose() {
     _inboxReplyCtrl.dispose();
+    _homeScrollController.dispose();
     super.dispose();
   }
 }
