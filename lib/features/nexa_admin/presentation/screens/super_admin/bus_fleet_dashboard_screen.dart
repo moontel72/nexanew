@@ -56,6 +56,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   bool _messagesLoading = false;
   final _inboxReplyCtrl = TextEditingController();
   final _homeScrollController = ScrollController();
+  final _sidebarScrollController = ScrollController();
 
   @override
   void initState() {
@@ -256,7 +257,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                 trackColor: WidgetStateProperty.all(Color(0x20FFFFFF)),
               ),
               child: Scrollbar(
+                controller: _sidebarScrollController,
+                interactive: true,
                 child: ListView(
+                  controller: _sidebarScrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   children: [
@@ -1789,6 +1793,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   void dispose() {
     _inboxReplyCtrl.dispose();
     _homeScrollController.dispose();
+    _sidebarScrollController.dispose();
     super.dispose();
   }
 }
