@@ -351,6 +351,15 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       height: 56,
                       onTap: () => setState(() => _currentPage = 'layouts'),
                     ),
+                    if (_layoutCount > 0)
+                      Missile3DButton(
+                        label: 'Purge All Layouts',
+                        icon: Icons.delete_sweep,
+                        color: const Color(0xFFDC2626),
+                        height: 56,
+                        subtitle: 'Archive $_layoutCount layout(s)',
+                        onTap: _confirmPurgeLayouts,
+                      ),
                     const SizedBox(height: 8),
                     _sl('SYSTEM'),
                     Missile3DButton(
@@ -408,6 +417,58 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           ),
         )
         .then((_) => _loadAll());
+  }
+
+  void _confirmPurgeLayouts() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Purge All Layouts?'),
+        content: Text(
+          'This will archive ALL $_layoutCount seat layout(s). '
+          'This action cannot be undone. Proceed?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _purgeLayouts();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Purge All'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _purgeLayouts() async {
+    try {
+      final res = await ApiService().delete('/bus-fleet/layouts/purge/all');
+      final msg = res?['message'] ?? 'Purge completed';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg.toString()),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadAll();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Purge failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _mainContent() => SafeArea(

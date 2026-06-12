@@ -1032,7 +1032,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       type == BuilderCellType.sleeperLower ||
       type == BuilderCellType.sleeperUpper ||
       type == BuilderCellType.lavatory ||
-      type == BuilderCellType.kitchen;
+      type == BuilderCellType.kitchen ||
+      type == BuilderCellType.restaurantTable;
 
   /// Returns the window-side shrink ratio based on what is below the upper berth.
   ///   0.50 = sleeperLower (50/50 split)
@@ -1480,6 +1481,13 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
               type == BuilderCellType.sleeperUpper) {
             // Auto-expand berth: 3 rows × 2 cols
             if (!_markBerthArea(row, col, type)) return;
+          } else if (type == BuilderCellType.restaurantTable) {
+            // Auto-expand restaurant: 2 rows × 2 cols
+            if (!_markMultiCellArea(row, col, type, 2, 2)) return;
+          } else if (type == BuilderCellType.lavatory ||
+              type == BuilderCellType.kitchen) {
+            // Auto-expand lavatory/kitchen: 2 rows × 2 cols
+            if (!_markMultiCellArea(row, col, type, 2, 2)) return;
           } else {
             setState(() {
               grid[row][col].type = type;
@@ -1578,28 +1586,41 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   // ── Mark berth area (3 rows × 2 cols) ──────────────
   /// Returns true if the berth was successfully placed.
   bool _markBerthArea(int startRow, int startCol, BuilderCellType berthType) {
+    return _markMultiCellArea(startRow, startCol, berthType, 3, 2);
+  }
+
+  /// Generic multi-cell area marker — used by berths (3×2),
+  /// restaurant tables (2×2), lavatories (2×2), kitchens (2×2).
+  /// Returns true if the area was successfully placed.
+  bool _markMultiCellArea(
+    int startRow,
+    int startCol,
+    BuilderCellType type,
+    int spanRows,
+    int spanCols,
+  ) {
     final grid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
-    // Bounds check: need 3 rows × 2 columns
-    if (startRow + 2 >= _rows || startCol + 1 >= _cols) {
+    // Bounds check
+    if (startRow + spanRows - 1 >= _rows || startCol + spanCols - 1 >= _cols) {
       _snack(
-        'Not enough space for berth (needs 3 rows × 2 cols)',
+        'Not enough space (needs $spanRows rows × $spanCols cols)',
         AppColors.error,
       );
       return false;
     }
-    // Overlap check: all 6 cells must be empty
-    for (int r = startRow; r < startRow + 3; r++) {
-      for (int c = startCol; c < startCol + 2; c++) {
+    // Overlap check: all cells must be empty
+    for (int r = startRow; r < startRow + spanRows; r++) {
+      for (int c = startCol; c < startCol + spanCols; c++) {
         if (grid[r][c].type != BuilderCellType.empty) {
-          _snack('Berth area overlaps existing cells', AppColors.error);
+          _snack('Area overlaps existing cells', AppColors.error);
           return false;
         }
       }
     }
     setState(() {
-      for (int r = startRow; r < startRow + 3; r++) {
-        for (int c = startCol; c < startCol + 2; c++) {
-          grid[r][c].type = berthType;
+      for (int r = startRow; r < startRow + spanRows; r++) {
+        for (int c = startCol; c < startCol + spanCols; c++) {
+          grid[r][c].type = type;
           grid[r][c].label = null;
         }
       }
@@ -1624,19 +1645,19 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     final cols = grid[0].length;
 
     // Scan contiguous span but STOP at already-visited cells
-    // and cap at standard berth dimensions (3×2 max).
+    // and cap at standard multi-cell dimensions (4×3 max).
     int spanR = 1;
     while (startRow + spanR < rows &&
         grid[startRow + spanR][startCol].type == targetType &&
         !(visited[startRow + spanR]?.contains(startCol) ?? false) &&
-        spanR < 3) {
+        spanR < 4) {
       spanR++;
     }
     int spanC = 1;
     while (startCol + spanC < cols &&
         grid[startRow][startCol + spanC].type == targetType &&
         !(visited[startRow]?.contains(startCol + spanC) ?? false) &&
-        spanC < 2) {
+        spanC < 3) {
       spanC++;
     }
 
@@ -1652,16 +1673,15 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     }
   }
 
-  // ── Clear an entire berth region ────────────────────
+  // ── Clear an entire multi-cell region ───────────────
   /// Scans up/down/left/right for contiguous cells of the same
-  /// berth type and clears them all. Falls back to single-cell
-  /// clear for non-berth types.
+  /// type and clears them all. Falls back to single-cell
+  /// clear for single-cell types.
   void _clearBerthRegion(int row, int col) {
     final grid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
     final type = grid[row][col].type;
-    if (type != BuilderCellType.sleeperLower &&
-        type != BuilderCellType.sleeperUpper) {
-      // Not a berth — clear just this cell
+    if (!_isMultiCellType(type)) {
+      // Not a multi-cell type — clear just this cell
       setState(() {
         grid[row][col] = _GridCell();
         _renumberSeats();
