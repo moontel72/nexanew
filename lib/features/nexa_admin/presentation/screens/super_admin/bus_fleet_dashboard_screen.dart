@@ -36,8 +36,6 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   bool _isLoading = true;
   String _currentPage = 'dashboard';
   bool _sidebarOpen = true;
-  bool _staffExpanded = false;
-  bool _assetsExpanded = false;
   String? _pendingAddDialog; // auto-open add dialog on next build
 
   int _ownerCount = 0;
@@ -269,89 +267,83 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                     ),
                     const SizedBox(height: 8),
                     _sl('FLEET STAFF'),
-                    _expandableSection(
-                      'STAFF MANAGEMENT',
-                      _staffExpanded,
-                      () => setState(() => _staffExpanded = !_staffExpanded),
-                      [
-                        _subButton(
-                          'Add New Owner',
-                          Icons.person_add,
-                          const Color(0xFFDB2777),
-                          () => _showStaffAddDialog('owners'),
-                        ),
-                        _subButton(
-                          'View Owners ($_ownerCount)',
-                          Icons.badge_rounded,
-                          const Color(0xFFDB2777),
-                          () => setState(() => _currentPage = 'owners'),
-                        ),
-                        _subButton(
-                          'Add New Driver',
-                          Icons.person_add_alt,
-                          const Color(0xFF2563EB),
-                          () => _showStaffAddDialog('drivers'),
-                        ),
-                        _subButton(
-                          'View Drivers ($_driverCount)',
-                          Icons.person_rounded,
-                          const Color(0xFF2563EB),
-                          () => setState(() => _currentPage = 'drivers'),
-                        ),
-                        _subButton(
-                          'Add New Conductor',
-                          Icons.group_add,
-                          const Color(0xFF16A34A),
-                          () => _showStaffAddDialog('conductors'),
-                        ),
-                        _subButton(
-                          'View Conductors ($_conductorCount)',
-                          Icons.group_rounded,
-                          const Color(0xFF16A34A),
-                          () => setState(() => _currentPage = 'conductors'),
-                        ),
-                        const SizedBox(height: 4),
-                        _subButton(
-                          'Link Requests ($_linkRequestCount)',
-                          Icons.link_rounded,
-                          const Color(0xFFF59E0B),
-                          () {
-                            setState(() => _currentPage = 'linkreqs');
-                            _loadLinkRequests();
-                          },
-                        ),
-                        const SizedBox(height: 4),
-                        _subButton(
-                          'Fleet Inbox',
-                          Icons.message_rounded,
-                          const Color(0xFF7C3AED),
-                          () {
-                            setState(() => _currentPage = 'inbox');
-                            _loadConversations();
-                          },
-                        ),
-                      ],
+                    Missile3DButton(
+                      label: 'Add New Owner',
+                      icon: Icons.person_add,
+                      color: const Color(0xFFDB2777),
+                      height: 56,
+                      onTap: () => _showStaffAddDialog('owners'),
+                    ),
+                    Missile3DButton(
+                      label: 'View Owners ($_ownerCount)',
+                      icon: Icons.badge_rounded,
+                      color: const Color(0xFFDB2777),
+                      height: 56,
+                      onTap: () => setState(() => _currentPage = 'owners'),
+                    ),
+                    Missile3DButton(
+                      label: 'Add New Driver',
+                      icon: Icons.person_add_alt,
+                      color: const Color(0xFF2563EB),
+                      height: 56,
+                      onTap: () => _showStaffAddDialog('drivers'),
+                    ),
+                    Missile3DButton(
+                      label: 'View Drivers ($_driverCount)',
+                      icon: Icons.person_rounded,
+                      color: const Color(0xFF2563EB),
+                      height: 56,
+                      onTap: () => setState(() => _currentPage = 'drivers'),
+                    ),
+                    Missile3DButton(
+                      label: 'Add New Conductor',
+                      icon: Icons.group_add,
+                      color: const Color(0xFF16A34A),
+                      height: 56,
+                      onTap: () => _showStaffAddDialog('conductors'),
+                    ),
+                    Missile3DButton(
+                      label: 'View Conductors ($_conductorCount)',
+                      icon: Icons.group_rounded,
+                      color: const Color(0xFF16A34A),
+                      height: 56,
+                      onTap: () => setState(() => _currentPage = 'conductors'),
+                    ),
+                    Missile3DButton(
+                      label: 'Link Requests ($_linkRequestCount)',
+                      icon: Icons.link_rounded,
+                      color: const Color(0xFFF59E0B),
+                      height: 56,
+                      onTap: () {
+                        setState(() => _currentPage = 'linkreqs');
+                        _loadLinkRequests();
+                      },
+                    ),
+                    Missile3DButton(
+                      label: 'Fleet Inbox',
+                      icon: Icons.message_rounded,
+                      color: const Color(0xFF7C3AED),
+                      height: 56,
+                      onTap: () {
+                        setState(() => _currentPage = 'inbox');
+                        _loadConversations();
+                      },
                     ),
                     const SizedBox(height: 8),
                     _sl('FLEET ASSETS'),
-                    _expandableSection(
-                      'FLEET ASSETS',
-                      _assetsExpanded,
-                      () => setState(() => _assetsExpanded = !_assetsExpanded),
-                      [
-                        _subButton(
-                          'New Seat Layout',
-                          Icons.add,
-                          const Color(0xFF0891B2),
-                          () => _openLayoutDesigner(),
-                        ),
-                        _subButton(
-                          'View Layouts ($_layoutCount)',
-                          Icons.event_seat,
-                          const Color(0xFF0891B2),
-                          () => setState(() => _currentPage = 'layouts'),
-                        ),
-                      ],
+                    Missile3DButton(
+                      label: 'New Seat Layout',
+                      icon: Icons.add,
+                      color: const Color(0xFF0891B2),
+                      height: 56,
+                      onTap: () => _openLayoutDesigner(),
+                    ),
+                    Missile3DButton(
+                      label: 'View Layouts ($_layoutCount)',
+                      icon: Icons.event_seat,
+                      color: const Color(0xFF0891B2),
+                      height: 56,
+                      onTap: () => setState(() => _currentPage = 'layouts'),
                     ),
                     const SizedBox(height: 8),
                     _sl('SYSTEM'),
@@ -389,84 +381,6 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
       ),
     ),
   );
-
-  // ── Expandable section (Issue #3 fix) ─────────────
-  Widget _expandableSection(
-    String label,
-    bool isExpanded,
-    VoidCallback onToggle,
-    List<Widget> children,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-            child: Row(
-              children: [
-                Icon(
-                  isExpanded ? Icons.keyboard_arrow_down : Icons.chevron_right,
-                  color: const Color(0xFFBDD8DB),
-                  size: 16,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Color(0xFFBDD8DB),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (isExpanded) ...children,
-      ],
-    );
-  }
-
-  Widget _subButton(
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 16, bottom: 4),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withValues(alpha: 0.25)),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   void _showStaffAddDialog(String type) {
     setState(() {
