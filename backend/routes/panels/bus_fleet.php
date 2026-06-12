@@ -203,4 +203,10 @@ Route::prefix('api/v1/bus-fleet')
             Route::post('{id}/reject', [\App\Http\Controllers\FleetManagementController::class, 'rejectLinkRequest']);
             Route::post('{id}/hold', [\App\Http\Controllers\FleetManagementController::class, 'holdLinkRequest']);
         });
+
+        // Link Messages — Persistent B2B Chat
+        Route::prefix('link-messages')->group(function (): void {
+            Route::get('{assignmentId}', [\App\Http\Controllers\FleetManagementController::class, 'listMessages']);
+            Route::post('{assignmentId}', [\App\Http\Controllers\FleetManagementController::class, 'sendMessage']);
+        });
     });

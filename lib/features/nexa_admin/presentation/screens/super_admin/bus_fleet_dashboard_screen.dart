@@ -312,6 +312,15 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                             _loadLinkRequests();
                           },
                         ),
+                        const SizedBox(height: 4),
+                        _subButton(
+                          'Fleet Inbox',
+                          Icons.message_rounded,
+                          const Color(0xFF7C3AED),
+                          () {
+                            setState(() => _currentPage = 'inbox');
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -509,6 +518,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       ? 'Seat Layouts'
                       : _currentPage == 'linkreqs'
                       ? 'Pending Link Requests'
+                      : _currentPage == 'inbox'
+                      ? 'Fleet Inbox'
                       : 'Dashboard',
                   style: const TextStyle(
                     fontSize: 17,
@@ -531,6 +542,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
               ? _buildLayoutList()
               : _currentPage == 'linkreqs'
               ? _linkRequestsPage()
+              : _currentPage == 'inbox'
+              ? _inboxPage()
               : _home(),
         ),
       ],
@@ -690,6 +703,87 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     } catch (e) {
       if (!mounted) return;
       _snackBar('Error: $e', Colors.red);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  // FLEET INBOX PAGE
+  // ═══════════════════════════════════════════════════
+
+  Widget _inboxPage() {
+    return ListView.builder(
+      padding: EdgeInsets.all(16.w),
+      itemCount: _linkRequests.length,
+      itemBuilder: (_, i) {
+        final req = _linkRequests[i];
+        final id = (req['assignment_id'] ?? '').toString();
+        final name = (req['name'] ?? '—').toString();
+        final token = (req['identity_token'] ?? '—').toString();
+        return Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          margin: EdgeInsets.only(bottom: 10.h),
+          child: Padding(
+            padding: EdgeInsets.all(14.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16.r,
+                      backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                      child: const Icon(Icons.person_rounded, color: Color(0xFFF59E0B), size: 16),
+                    ),
+                    SizedBox(width: 8.w),
+                    Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                    Text(token, style: const TextStyle(color: AppColors.gray500, fontSize: 10, fontFamily: 'monospace')),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                _inboxChatView(id),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _inboxChatView(String assignmentId) {
+    return FutureBuilder(
+      future: _fetchMessages(assignmentId),
+      builder: (ctx, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final msgs = (snap.data as List?) ?? [];
+        if (msgs.isEmpty) {
+          return const Text('No messages', style: TextStyle(color: AppColors.gray400, fontSize: 11));
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: msgs.take(3).map<Widget>((m) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: 4.h),
+              child: Text(
+                (m['message_body'] ?? '').toString(),
+                style: const TextStyle(fontSize: 11, color: AppColors.gray600),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Future<List> _fetchMessages(String assignmentId) async {
+    try {
+      final r = await ApiService().get('/bus-fleet/link-messages/$assignmentId');
+      return (r?['data'] as List?) ?? [];
+    } catch (_) {
+      return [];
     }
   }
 

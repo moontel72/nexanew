@@ -914,6 +914,55 @@ class BusOwnerController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════
+    // LINK MESSAGES — Persistent B2B Chat
+    // ═══════════════════════════════════════════════════════
+
+    public function listMessages(string $assignmentId): JsonResponse
+    {
+        try {
+            $messages = DB::table('fleet_assignment_messages')
+                ->where('fleet_assignment_id', $assignmentId)
+                ->orderBy('created_at', 'asc')
+                ->get()
+                ->map(fn($m) => [
+                    'id'           => $m->id,
+                    'sender_id'    => $m->sender_id,
+                    'message_body' => $m->message_body,
+                    'context_type' => $m->context_type,
+                    'created_at'   => $m->created_at,
+                ]);
+
+            return response()->json(['success' => true, 'data' => $messages]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function sendMessage(string $assignmentId, Request $request): JsonResponse
+    {
+        try {
+            $data = $request->validate(['message_body' => ['required', 'string', 'max:2000']]);
+            $user = $request->user();
+            $senderId = $user->global_identity_id ?? $user->id;
+
+            $msgId = (string) Str::orderedUuid();
+            DB::table('fleet_assignment_messages')->insert([
+                'id'                  => $msgId,
+                'fleet_assignment_id' => $assignmentId,
+                'sender_id'           => $senderId,
+                'message_body'        => $data['message_body'],
+                'context_type'        => 'general',
+                'created_at'          => now(),
+                'updated_at'          => now(),
+            ]);
+
+            return response()->json(['success' => true, 'data' => ['id' => $msgId]]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
     // SEAT LAYOUTS — LIST (delegated to LayoutService)
     // ═══════════════════════════════════════════════════════
 

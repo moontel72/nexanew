@@ -145,4 +145,10 @@ Route::prefix('api/v1/bus-owner')
             Route::post('/{id}/leave', [\App\Http\Controllers\BusOwnerController::class, 'leaveCarrier']);
         });
         Route::get('link-status', [\App\Http\Controllers\BusOwnerController::class, 'linkStatus']);
+
+        // Link Messages — Persistent B2B Chat
+        Route::prefix('link-messages')->group(function (): void {
+            Route::get('{assignmentId}', [\App\Http\Controllers\BusOwnerController::class, 'listMessages']);
+            Route::post('{assignmentId}', [\App\Http\Controllers\BusOwnerController::class, 'sendMessage']);
+        });
     });

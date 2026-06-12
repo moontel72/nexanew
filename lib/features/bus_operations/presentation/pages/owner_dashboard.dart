@@ -41,6 +41,11 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   String _companySearch = '';
   final _linkMsgCtrl = TextEditingController();
 
+  // Chat inbox state
+  List<Map<String, dynamic>> _chatMessages = [];
+  bool _chatLoading = false;
+  final _chatCtrl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -312,6 +317,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         _linkStatus = (r?['data'] as Map<String, dynamic>?) ?? {};
         _linkLoading = false;
       });
+      // Load chat if we have an assignment
+      final aid = _linkStatus?['assignment_id']?.toString();
+      if (aid != null && aid.isNotEmpty) _loadChatMessages(aid);
     } catch (_) {
       if (mounted) setState(() => _linkLoading = false);
     }
@@ -452,6 +460,35 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       _loadLinkStatus();
     } catch (e) {
       if (!mounted) return;
+      _snack('Error: $e', AppColors.error);
+    }
+  }
+
+  // ═══ Chat Inbox ═══
+
+  Future<void> _loadChatMessages(String assignmentId) async {
+    setState(() => _chatLoading = true);
+    try {
+      final r = await ApiService().get('/bus-owner/link-messages/$assignmentId');
+      if (!mounted) return;
+      final list = (r?['data'] as List?) ?? [];
+      setState(() {
+        _chatMessages = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+        _chatLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _chatLoading = false);
+    }
+  }
+
+  Future<void> _sendChatMessage(String assignmentId) async {
+    final msg = _chatCtrl.text.trim();
+    if (msg.isEmpty) return;
+    try {
+      await ApiService().post('/bus-owner/link-messages/$assignmentId', data: {'message_body': msg});
+      _chatCtrl.clear();
+      _loadChatMessages(assignmentId);
+    } catch (e) {
       _snack('Error: $e', AppColors.error);
     }
   }
@@ -778,6 +815,75 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ),
           ),
         ],
+
+        // --- Chat Inbox (when any assignment exists) ---
+        if (assignmentId.isNotEmpty) ...[
+          _chatInboxSection(assignmentId),
+        ],
+      ],
+    );
+  }
+
+  Widget _chatInboxSection(String assignmentId) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Gap(16),
+        const Text('Message Inbox', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+        Gap(8),
+        Container(
+          constraints: BoxConstraints(maxHeight: 250.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A2A3A),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: _chatLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _chatMessages.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text('No messages yet.', style: TextStyle(color: Color(0xFF667788))),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.all(10),
+                      itemCount: _chatMessages.length,
+                      itemBuilder: (_, i) {
+                        final m = _chatMessages[i];
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: 6.h),
+                          child: Text(
+                            (m['message_body'] ?? '').toString(),
+                            style: const TextStyle(color: Color(0xFFCCDDEE), fontSize: 12),
+                          ),
+                        );
+                      },
+                    ),
+        ),
+        Gap(6),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _chatCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+                decoration: InputDecoration(
+                  hintText: 'Type a message...',
+                  hintStyle: const TextStyle(color: Color(0xFF556677)),
+                  filled: true,
+                  fillColor: const Color(0xFF1A2A3A),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                ),
+              ),
+            ),
+            SizedBox(width: 8.w),
+            IconButton(
+              icon: const Icon(Icons.send_rounded, color: Color(0xFFF59E0B)),
+              onPressed: () => _sendChatMessage(assignmentId),
+            ),
+          ],
+        ),
       ],
     );
   }
