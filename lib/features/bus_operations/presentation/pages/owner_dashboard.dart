@@ -206,6 +206,15 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                       _loadLinkStatus();
                     },
                   ),
+                  Missile3DButton(
+                    label: 'Inbox',
+                    icon: Icons.message_rounded,
+                    color: const Color(0xFF7C3AED),
+                    onTap: () {
+                      setState(() => _currentPage = 'inbox');
+                      _loadInboxMessages();
+                    },
+                  ),
                   Gap(8),
                   _sec('SYSTEM'),
                   Missile3DButton(
@@ -283,6 +292,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               ? _layoutsPage()
               : _currentPage == 'carrier'
               ? _carrierLinkPage()
+              : _currentPage == 'inbox'
+              ? _inboxPage()
               : _homePage(),
         ),
       ],
@@ -469,11 +480,16 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _loadChatMessages(String assignmentId) async {
     setState(() => _chatLoading = true);
     try {
-      final r = await ApiService().get('/bus-owner/link-messages/$assignmentId');
+      final r = await ApiService().get(
+        '/bus-owner/link-messages/$assignmentId',
+      );
       if (!mounted) return;
       final list = (r?['data'] as List?) ?? [];
       setState(() {
-        _chatMessages = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+        _chatMessages = list
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
         _chatLoading = false;
       });
     } catch (_) {
@@ -485,12 +501,130 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     final msg = _chatCtrl.text.trim();
     if (msg.isEmpty) return;
     try {
-      await ApiService().post('/bus-owner/link-messages/$assignmentId', data: {'message_body': msg});
+      await ApiService().post(
+        '/bus-owner/link-messages/$assignmentId',
+        data: {'message_body': msg},
+      );
       _chatCtrl.clear();
       _loadChatMessages(assignmentId);
     } catch (e) {
       _snack('Error: $e', AppColors.error);
     }
+  }
+
+  // ═══ Permanent Dashboard Inbox ═══
+
+  List<Map<String, dynamic>> _inboxMessages = [];
+  bool _inboxLoading = false;
+
+  Future<void> _loadInboxMessages() async {
+    setState(() => _inboxLoading = true);
+    try {
+      final r = await ApiService().get('/bus-owner/link-messages');
+      if (!mounted) return;
+      final list = (r?['data'] as List?) ?? [];
+      setState(() {
+        _inboxMessages = list
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        _inboxLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _inboxLoading = false);
+    }
+  }
+
+  Widget _inboxPage() {
+    if (_inboxLoading) return const Center(child: CircularProgressIndicator());
+    if (_inboxMessages.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.message_rounded,
+              size: 48,
+              color: Colors.grey.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'No messages',
+              style: TextStyle(color: Color(0xFF667788)),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Messages from carriers appear here for 60 days.',
+              style: TextStyle(color: Color(0xFF556677), fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.all(16.w),
+      itemCount: _inboxMessages.length,
+      itemBuilder: (_, i) {
+        final m = _inboxMessages[i];
+        final ctx = (m['context_type'] ?? 'general').toString();
+        final color = ctx == 'rejection_reason'
+            ? Colors.red
+            : ctx == 'hold_reason'
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF8899AA);
+        return Card(
+          color: const Color(0xFF1A2A3A),
+          margin: EdgeInsets.only(bottom: 8.h),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(12.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        ctx.replaceAll('_', ' ').toUpperCase(),
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      (m['created_at'] ?? '').toString(),
+                      style: const TextStyle(
+                        color: Color(0xFF556677),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  (m['message_body'] ?? '').toString(),
+                  style: const TextStyle(
+                    color: Color(0xFFCCDDEE),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // ═══════════════════════════════════════════════════════
@@ -816,10 +950,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           ),
         ],
 
-        // --- Chat Inbox (when any assignment exists) ---
-        if (assignmentId.isNotEmpty) ...[
-          _chatInboxSection(assignmentId),
-        ],
+        // --- Chat Inbox REMOVED — now a permanent dashboard page ---
       ],
     );
   }
@@ -829,7 +960,14 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Gap(16),
-        const Text('Message Inbox', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+        const Text(
+          'Message Inbox',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         Gap(8),
         Container(
           constraints: BoxConstraints(maxHeight: 250.h),
@@ -840,25 +978,31 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           child: _chatLoading
               ? const Center(child: CircularProgressIndicator())
               : _chatMessages.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text('No messages yet.', style: TextStyle(color: Color(0xFF667788))),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      padding: EdgeInsets.all(10),
-                      itemCount: _chatMessages.length,
-                      itemBuilder: (_, i) {
-                        final m = _chatMessages[i];
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: 6.h),
-                          child: Text(
-                            (m['message_body'] ?? '').toString(),
-                            style: const TextStyle(color: Color(0xFFCCDDEE), fontSize: 12),
-                          ),
-                        );
-                      },
-                    ),
+              ? const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text(
+                    'No messages yet.',
+                    style: TextStyle(color: Color(0xFF667788)),
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.all(10),
+                  itemCount: _chatMessages.length,
+                  itemBuilder: (_, i) {
+                    final m = _chatMessages[i];
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: 6.h),
+                      child: Text(
+                        (m['message_body'] ?? '').toString(),
+                        style: const TextStyle(
+                          color: Color(0xFFCCDDEE),
+                          fontSize: 12,
+                        ),
+                      ),
+                    );
+                  },
+                ),
         ),
         Gap(6),
         Row(
@@ -872,8 +1016,14 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   hintStyle: const TextStyle(color: Color(0xFF556677)),
                   filled: true,
                   fillColor: const Color(0xFF1A2A3A),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ),

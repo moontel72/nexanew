@@ -685,21 +685,57 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   }
 
   Future<void> _holdLink(String assignmentId, String ownerName) async {
+    final msgCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('Hold \'$ownerName\'?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Add a reason (visible to the owner for 60 days):'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: msgCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Awaiting document verification',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF59E0B),
+            ),
+            child: const Text('Hold'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
     try {
-      final r = await ApiService().post(
+      await ApiService().post(
         '/bus-fleet/link-requests/$assignmentId/hold',
+        data: {
+          if (msgCtrl.text.trim().isNotEmpty)
+            'message_body': msgCtrl.text.trim(),
+        },
       );
       if (!mounted) return;
-      if (r?['success'] == true) {
-        _snackBar(
-          'Request from \'$ownerName\' placed on hold.',
-          const Color(0xFFF59E0B),
-        );
-        _loadLinkRequests();
-        _loadAll();
-      } else {
-        _snackBar(r?['message'] ?? 'Failed to hold', Colors.red);
-      }
+      _snackBar(
+        'Request from \'$ownerName\' placed on hold.',
+        const Color(0xFFF59E0B),
+      );
+      _loadLinkRequests();
+      _loadAll();
     } catch (e) {
       if (!mounted) return;
       _snackBar('Error: $e', Colors.red);
@@ -712,6 +748,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
   Widget _inboxPage() {
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.all(16.w),
       itemCount: _linkRequests.length,
       itemBuilder: (_, i) {
@@ -720,7 +757,9 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
         final name = (req['name'] ?? '—').toString();
         final token = (req['identity_token'] ?? '—').toString();
         return Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.r),
+          ),
           margin: EdgeInsets.only(bottom: 10.h),
           child: Padding(
             padding: EdgeInsets.all(14.w),
@@ -731,12 +770,30 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                   children: [
                     CircleAvatar(
                       radius: 16.r,
-                      backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                      child: const Icon(Icons.person_rounded, color: Color(0xFFF59E0B), size: 16),
+                      backgroundColor: const Color(
+                        0xFFF59E0B,
+                      ).withValues(alpha: 0.12),
+                      child: const Icon(
+                        Icons.person_rounded,
+                        color: Color(0xFFF59E0B),
+                        size: 16,
+                      ),
                     ),
                     SizedBox(width: 8.w),
-                    Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w600))),
-                    Text(token, style: const TextStyle(color: AppColors.gray500, fontSize: 10, fontFamily: 'monospace')),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Text(
+                      token,
+                      style: const TextStyle(
+                        color: AppColors.gray500,
+                        fontSize: 10,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
                   ],
                 ),
                 SizedBox(height: 8.h),
@@ -758,7 +815,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
         }
         final msgs = (snap.data as List?) ?? [];
         if (msgs.isEmpty) {
-          return const Text('No messages', style: TextStyle(color: AppColors.gray400, fontSize: 11));
+          return const Text(
+            'No messages',
+            style: TextStyle(color: AppColors.gray400, fontSize: 11),
+          );
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -780,7 +840,9 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
   Future<List> _fetchMessages(String assignmentId) async {
     try {
-      final r = await ApiService().get('/bus-fleet/link-messages/$assignmentId');
+      final r = await ApiService().get(
+        '/bus-fleet/link-messages/$assignmentId',
+      );
       return (r?['data'] as List?) ?? [];
     } catch (_) {
       return [];
@@ -1187,6 +1249,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     ),
     child: Scrollbar(
       child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

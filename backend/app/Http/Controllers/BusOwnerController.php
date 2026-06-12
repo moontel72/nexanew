@@ -917,6 +917,34 @@ class BusOwnerController extends Controller
     // LINK MESSAGES — Persistent B2B Chat
     // ═══════════════════════════════════════════════════════
 
+    public function listAllMessages(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $identityId = $user->global_identity_id ?? null;
+            if (!$identityId) {
+                return response()->json(['data' => []]);
+            }
+
+            $messages = DB::table('fleet_assignment_messages')
+                ->where('owner_identity_id', $identityId)
+                ->orderBy('created_at', 'desc')
+                ->limit(200)
+                ->get()
+                ->map(fn($m) => [
+                    'id'           => $m->id,
+                    'sender_id'    => $m->sender_id,
+                    'message_body' => $m->message_body,
+                    'context_type' => $m->context_type,
+                    'created_at'   => $m->created_at,
+                ]);
+
+            return response()->json(['success' => true, 'data' => $messages]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
     public function listMessages(string $assignmentId): JsonResponse
     {
         try {
@@ -945,10 +973,16 @@ class BusOwnerController extends Controller
             $user = $request->user();
             $senderId = $user->global_identity_id ?? $user->id;
 
+            // Resolve owner_identity_id from the assignment for retention
+            $ownerId = DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->value('global_identity_id');
+
             $msgId = (string) Str::orderedUuid();
             DB::table('fleet_assignment_messages')->insert([
                 'id'                  => $msgId,
                 'fleet_assignment_id' => $assignmentId,
+                'owner_identity_id'   => $ownerId,
                 'sender_id'           => $senderId,
                 'message_body'        => $data['message_body'],
                 'context_type'        => 'general',

@@ -866,6 +866,10 @@ class FleetManagementController extends Controller
                     'updated_at' => now(),
                 ]);
 
+            // Persist hold reason as permanent message for 60-day retention
+            $reason = $request->input('message_body', 'Request placed on hold by carrier admin');
+            $this->saveSystemMessage($assignmentId, $assignment->global_identity_id, $reason, 'hold_reason');
+
             Log::info('FleetManagement: link request put on hold', [
                 'assignment_id' => $assignmentId,
             ]);
@@ -928,6 +932,11 @@ class FleetManagementController extends Controller
                     'updated_at'      => now(),
                 ]);
 
+            // Persist rejection reason as permanent message for 60-day retention
+            if (!empty($data['reason'])) {
+                $this->saveSystemMessage($assignmentId, $assignment->global_identity_id, $data['reason'], 'rejection_reason');
+            }
+
             Log::info('FleetManagement: link request rejected', [
                 'assignment_id' => $assignmentId,
                 'reason'        => $data['reason'] ?? 'No reason provided',
@@ -977,10 +986,16 @@ class FleetManagementController extends Controller
             $user = $request->user();
             $senderId = $user->global_identity_id ?? $user->id;
 
+            // Resolve owner_identity_id from the assignment for retention
+            $ownerId = DB::table('fleet_assignments')
+                ->where('id', $assignmentId)
+                ->value('global_identity_id');
+
             $msgId = (string) Str::orderedUuid();
             DB::table('fleet_assignment_messages')->insert([
                 'id'                  => $msgId,
                 'fleet_assignment_id' => $assignmentId,
+                'owner_identity_id'   => $ownerId,
                 'sender_id'           => $senderId,
                 'message_body'        => $data['message_body'],
                 'context_type'        => 'general',
@@ -997,6 +1012,20 @@ class FleetManagementController extends Controller
     // ═══════════════════════════════════════════════════════
     // DESTROY — Soft-revoke (NOT hard-delete)
     // ═══════════════════════════════════════════════════════
+
+    private function saveSystemMessage(string $assignmentId, ?string $ownerIdentityId, string $body, string $contextType): void
+    {
+        DB::table('fleet_assignment_messages')->insert([
+            'id'                  => (string) Str::orderedUuid(),
+            'fleet_assignment_id' => $assignmentId,
+            'owner_identity_id'   => $ownerIdentityId,
+            'sender_id'           => auth()->user()->global_identity_id ?? auth()->id(),
+            'message_body'        => $body,
+            'context_type'        => $contextType,
+            'created_at'          => now(),
+            'updated_at'          => now(),
+        ]);
+    }
 
     public function destroyOwner(string $id): JsonResponse
     {
