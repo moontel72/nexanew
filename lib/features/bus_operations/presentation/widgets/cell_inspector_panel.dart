@@ -34,6 +34,7 @@ class _CellInspectorPanelState extends State<CellInspectorPanel> {
   late int _spanRows;
   late int _spanCols;
   late TextEditingController _seatIdController;
+  late TextEditingController _customLabelController;
 
   @override
   void initState() {
@@ -46,11 +47,13 @@ class _CellInspectorPanelState extends State<CellInspectorPanel> {
     _spanRows = c.spanRows;
     _spanCols = c.spanCols;
     _seatIdController = TextEditingController(text: c.seatId ?? '');
+    _customLabelController = TextEditingController(text: c.customLabel ?? '');
   }
 
   @override
   void dispose() {
     _seatIdController.dispose();
+    _customLabelController.dispose();
     super.dispose();
   }
 
@@ -168,6 +171,55 @@ class _CellInspectorPanelState extends State<CellInspectorPanel> {
                       horizontal: 12,
                       vertical: 10,
                     ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                _sectionLabel('OVERRIDE STICKER NUMBER / CUSTOM LABEL'),
+                TextField(
+                  controller: _customLabelController,
+                  style: const TextStyle(
+                    color: Color(0xFFFBBF24),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Owner-set label (e.g. 9-B, VIP)',
+                    hintStyle: const TextStyle(color: Color(0xFF556677)),
+                    filled: true,
+                    fillColor: const Color(0xFF112233),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFD97706)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: _customLabelController.text.isNotEmpty
+                            ? const Color(0xFFD97706)
+                            : const Color(0xFF334455),
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.label_important,
+                      color: Color(0xFFD97706),
+                      size: 16,
+                    ),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Freezes automatic numbering for this seat. '
+                  'Mirrors to the booking panel.',
+                  style: TextStyle(
+                    color: const Color(0xFFD97706).withValues(alpha: 0.6),
+                    fontSize: 9,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -313,6 +365,9 @@ class _CellInspectorPanelState extends State<CellInspectorPanel> {
                         seatId: _seatIdController.text.isNotEmpty
                             ? _seatIdController.text
                             : null,
+                        customLabel: _customLabelController.text.isNotEmpty
+                            ? _customLabelController.text
+                            : null,
                       );
                       widget.onApply?.call(updated);
                     },
@@ -448,6 +503,8 @@ class _CellInspectorPanelState extends State<CellInspectorPanel> {
     ComponentType.driverCabin => const Color(0xFF1E293B),
     ComponentType.emergency => const Color(0xFFDC2626),
     ComponentType.lavatory => const Color(0xFF6366F1),
+    ComponentType.restaurantTable => const Color(0xFF059669),
+    ComponentType.businessClassSeat => const Color(0xFFD97706),
     ComponentType.empty => const Color(0xFF556677),
   };
 }

@@ -10,7 +10,7 @@
 
 import 'dart:convert';
 
-/// The 7 component types for the modular seat layout canvas.
+/// Component types for the modular seat layout canvas.
 enum ComponentType {
   seat, // Standard passenger seat (1×1)
   sleeperLower, // Lower sleeper berth (1×3 or 1×4)
@@ -21,6 +21,8 @@ enum ComponentType {
   driverCabin, // Driver cockpit (2×1)
   emergency, // Emergency exit (1×1)
   lavatory, // Washroom block (2×2)
+  restaurantTable, // Restaurant-style dining module (2×2, 4 seats + table)
+  businessClassSeat, // Luxury business class seat (2×1, premium wide)
   empty, // Unoccupied canvas cell
 }
 
@@ -29,6 +31,7 @@ enum BookingMode {
   standard, // Always bookable at flat price
   conditional, // Bookable only when occupied (folding seat)
   berth, // Sleeper pricing tier
+  premium, // Business class premium tier
   none, // Not bookable (structural)
 }
 
@@ -45,6 +48,8 @@ class LayoutComponent {
   bool bookable;
   BookingMode bookingMode;
   String? genderRestriction;
+  String?
+  customLabel; // Override sticker number set by owner (freezes auto-numbering)
   Map<String, dynamic> meta;
 
   LayoutComponent({
@@ -59,6 +64,7 @@ class LayoutComponent {
     this.bookable = true,
     this.bookingMode = BookingMode.standard,
     this.genderRestriction,
+    this.customLabel,
     Map<String, dynamic>? meta,
   }) : meta = meta ?? {};
 
@@ -72,7 +78,14 @@ class LayoutComponent {
     ComponentType.driverCabin ||
     ComponentType.emergency ||
     ComponentType.lavatory ||
+    ComponentType.restaurantTable ||
     ComponentType.empty => true,
+    _ => false,
+  };
+
+  /// Whether this component has custom painter sub-layout.
+  bool get hasCustomRender => switch (type) {
+    ComponentType.restaurantTable || ComponentType.businessClassSeat => true,
     _ => false,
   };
 
@@ -80,7 +93,8 @@ class LayoutComponent {
   bool get isEditable => switch (type) {
     ComponentType.aisle ||
     ComponentType.exitDoor ||
-    ComponentType.driverCabin => false,
+    ComponentType.driverCabin ||
+    ComponentType.restaurantTable => false,
     _ => true,
   };
 
@@ -90,6 +104,9 @@ class LayoutComponent {
       row < originRow + spanRows &&
       col >= originCol &&
       col < originCol + spanCols;
+
+  /// Get the effective display label (custom override or auto-generated).
+  String? get displayLabel => customLabel ?? seatId;
 
   /// Clone with optional overrides.
   LayoutComponent copyWith({
@@ -104,6 +121,7 @@ class LayoutComponent {
     bool? bookable,
     BookingMode? bookingMode,
     String? genderRestriction,
+    String? customLabel,
     Map<String, dynamic>? meta,
   }) => LayoutComponent(
     id: id ?? this.id,
@@ -117,6 +135,7 @@ class LayoutComponent {
     bookable: bookable ?? this.bookable,
     bookingMode: bookingMode ?? this.bookingMode,
     genderRestriction: genderRestriction ?? this.genderRestriction,
+    customLabel: customLabel ?? this.customLabel,
     meta: meta ?? Map<String, dynamic>.from(this.meta),
   );
 
@@ -132,6 +151,7 @@ class LayoutComponent {
     'bookable': bookable,
     'booking_mode': bookingMode.name,
     'gender_restriction': genderRestriction,
+    if (customLabel != null) 'custom_label': customLabel,
     'meta': meta,
   };
 
@@ -158,6 +178,7 @@ class LayoutComponent {
             )
           : BookingMode.standard,
       genderRestriction: json['gender_restriction'] as String?,
+      customLabel: json['custom_label'] as String?,
       meta: (json['meta'] as Map<String, dynamic>?) ?? {},
     );
   }

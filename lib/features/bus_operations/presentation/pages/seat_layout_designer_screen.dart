@@ -371,6 +371,14 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
                     const Gap(12),
                     _sectionLabel('ACTIONS'),
                     Missile3DButton(
+                      label: 'Convert to Business Class',
+                      icon: Icons.airline_seat_flat_angled,
+                      color: const Color(0xFFD97706),
+                      height: 56,
+                      subtitle: '3-row → 2+1 luxury zone',
+                      onTap: () => _showBusinessClassDialog(context),
+                    ),
+                    Missile3DButton(
                       label: state.isDirty ? 'Publish Layout ✦' : 'Published ✓',
                       icon: Icons.cloud_upload_rounded,
                       color: const Color(0xFF16A34A),
@@ -811,6 +819,20 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
                   row,
                   col,
                 ),
+                _addBtn(
+                  context,
+                  'Dining Table',
+                  ComponentType.restaurantTable,
+                  row,
+                  col,
+                ),
+                _addBtn(
+                  context,
+                  'Business Seat',
+                  ComponentType.businessClassSeat,
+                  row,
+                  col,
+                ),
               ],
             ),
           ],
@@ -862,6 +884,141 @@ class _SeatLayoutDesignerScreenState extends State<SeatLayoutDesignerScreen> {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  void _showBusinessClassDialog(BuildContext context) {
+    final canvas = _bloc.state.activeCanvas;
+    if (canvas == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a preset first'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final rowCtrl = TextEditingController(text: '4');
+    final preset = _findSelectedPreset(_bloc.state);
+    final leftCols = preset?.leftCols ?? 2;
+    final rightCols = preset?.rightCols ?? 2;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A2A3A),
+        title: const Row(
+          children: [
+            Icon(
+              Icons.airline_seat_flat_angled,
+              color: Color(0xFFD97706),
+              size: 24,
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Convert to Business Class Zone',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Select the starting row (3 rows will be converted).\n'
+              'Standard seats → 2+1 luxury business layout.',
+              style: TextStyle(color: Color(0xFF8899AA), fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: rowCtrl,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              decoration: InputDecoration(
+                labelText: 'Start Row',
+                labelStyle: const TextStyle(color: Colors.white70),
+                hintText: 'e.g. 4',
+                hintStyle: const TextStyle(color: Color(0xFF556677)),
+                filled: true,
+                fillColor: const Color(0xFF112233),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFD97706),
+                    width: 1.5,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFD97706),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Rows ${rowCtrl.text}–${(int.tryParse(rowCtrl.text) ?? 1) + 2} will be converted.\n'
+              'Left: $leftCols-col → 1 wide seat · Right: $rightCols-col → 1 wide seat',
+              style: TextStyle(
+                color: const Color(0xFFD97706).withValues(alpha: 0.6),
+                fontSize: 10,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF8899AA)),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              final row = int.tryParse(rowCtrl.text);
+              if (row == null || row < 1 || row > canvas.maxRows - 2) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Row must be between 1 and ${canvas.maxRows - 2}',
+                    ),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+              _bloc.add(
+                BusinessClassZoneRequested(
+                  startRow: row,
+                  leftCols: leftCols,
+                  rightCols: rightCols,
+                ),
+              );
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Business Class zone created'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            icon: const Icon(Icons.check, size: 16),
+            label: const Text('Convert'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD97706),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

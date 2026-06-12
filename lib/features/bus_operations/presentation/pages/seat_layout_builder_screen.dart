@@ -32,6 +32,8 @@ enum BuilderCellType {
   emergency,
   lavatory,
   kitchen,
+  restaurantTable,
+  businessClassSeat,
 }
 
 const _cellLabels = {
@@ -54,6 +56,8 @@ const _cellLabels = {
   BuilderCellType.driverSeat: 'Driver Seat',
   BuilderCellType.rearDoor: 'Rear Door',
   BuilderCellType.kitchen: 'Kitchen',
+  BuilderCellType.restaurantTable: 'Restaurant Table',
+  BuilderCellType.businessClassSeat: 'Business Class Seat',
 };
 
 const _cellIcons = {
@@ -76,6 +80,8 @@ const _cellIcons = {
   BuilderCellType.driverSeat: Icons.airline_seat_recline_extra,
   BuilderCellType.rearDoor: Icons.door_back_door,
   BuilderCellType.kitchen: Icons.countertops,
+  BuilderCellType.restaurantTable: Icons.table_restaurant,
+  BuilderCellType.businessClassSeat: Icons.airline_seat_flat_angled,
 };
 
 const _cellColors = {
@@ -99,6 +105,8 @@ const _cellColors = {
   BuilderCellType.driverSeat: Color(0xFF3B82F6),
   BuilderCellType.rearDoor: Color(0xFFB91C1C),
   BuilderCellType.kitchen: Color(0xFFF59E0B),
+  BuilderCellType.restaurantTable: Color(0xFF059669),
+  BuilderCellType.businessClassSeat: Color(0xFFD97706),
 };
 
 class _GridCell {
@@ -1981,6 +1989,8 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
     BuilderCellType.reservedSeat => 'reservedSeat',
     BuilderCellType.purchaseSeat => 'purchaseSeat',
     BuilderCellType.terminalSeat => 'terminalSeat',
+    BuilderCellType.restaurantTable => 'restaurantTable',
+    BuilderCellType.businessClassSeat => 'businessClassSeat',
   };
 
   Widget _inputField(

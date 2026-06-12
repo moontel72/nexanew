@@ -76,6 +76,20 @@ const _paletteItems = [
     icon: Icons.warning_amber_rounded,
     color: Color(0xFFDC2626),
   ),
+  _PaletteItem(
+    type: ComponentType.restaurantTable,
+    label: 'Restaurant Table Module',
+    subtitle: '2×2 · 4-Seat Dining',
+    icon: Icons.table_restaurant,
+    color: Color(0xFF059669),
+  ),
+  _PaletteItem(
+    type: ComponentType.businessClassSeat,
+    label: 'Business Class Seat',
+    subtitle: '2×1 · Premium Wide',
+    icon: Icons.airline_seat_flat_angled,
+    color: Color(0xFFD97706),
+  ),
 ];
 
 class ComponentPalette extends StatelessWidget {

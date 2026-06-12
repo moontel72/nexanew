@@ -93,6 +93,7 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
     on<PublishRequested>(_onPublishRequested);
     on<LayoutLoaded>(_onLayoutLoaded);
     on<RenumberRequested>(_onRenumberRequested);
+    on<BusinessClassZoneRequested>(_onBusinessClassZoneRequested);
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -156,6 +157,16 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
         spanCols = 2;
         bookable = false;
         bookingMode = BookingMode.none;
+      case ComponentType.restaurantTable:
+        spanRows = 2;
+        spanCols = 2;
+        bookable = false;
+        bookingMode = BookingMode.none;
+      case ComponentType.businessClassSeat:
+        spanRows = 1;
+        spanCols = 2;
+        bookable = true;
+        bookingMode = BookingMode.premium;
       case ComponentType.sleeperLower:
       case ComponentType.sleeperUpper:
         spanRows = 3; // default 1×3 berth
@@ -516,6 +527,96 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
   }
 
   // ═══════════════════════════════════════════════════════════
+  // BUSINESS CLASS ZONE CONVERSION
+  // ═══════════════════════════════════════════════════════════
+
+  void _onBusinessClassZoneRequested(
+    BusinessClassZoneRequested event,
+    Emitter emit,
+  ) {
+    final canvas = state.activeCanvas;
+    if (canvas == null) return;
+
+    // Remove all existing components from the 3 target rows
+    final rowStart = event.startRow;
+    final rowEnd = rowStart + 2;
+    final preserved = canvas.components.where((c) {
+      // Keep components that fall completely outside the target rows
+      final compRowEnd = c.originRow + c.spanRows - 1;
+      return compRowEnd < rowStart || c.originRow > rowEnd;
+    }).toList();
+
+    final aisleCol = event.leftCols + 1;
+    final uuidPrefix = '${state.activeDeck}_bc_';
+
+    for (int row = rowStart; row <= rowEnd; row++) {
+      // Left-side business seat (double-width, occupies all left columns)
+      final leftId =
+          '${uuidPrefix}L${row}_${DateTime.now().millisecondsSinceEpoch}';
+      preserved.add(
+        LayoutComponent(
+          id: leftId,
+          type: ComponentType.businessClassSeat,
+          originRow: row,
+          originCol: 1,
+          spanRows: 1,
+          spanCols: event.leftCols,
+          bookable: true,
+          bookingMode: BookingMode.premium,
+        ),
+      );
+
+      // Right-side business seat 1 (double-width)
+      final rightColStart = aisleCol + 1;
+      final rightId1 =
+          '${uuidPrefix}R${row}a_${DateTime.now().millisecondsSinceEpoch}';
+      preserved.add(
+        LayoutComponent(
+          id: rightId1,
+          type: ComponentType.businessClassSeat,
+          originRow: row,
+          originCol: rightColStart,
+          spanRows: 1,
+          spanCols: event.rightCols,
+          bookable: true,
+          bookingMode: BookingMode.premium,
+        ),
+      );
+
+      // Aisle strip
+      final aisleId = '${uuidPrefix}aisle_${row}';
+      preserved.add(
+        LayoutComponent(
+          id: aisleId,
+          type: ComponentType.aisle,
+          originRow: row,
+          originCol: aisleCol,
+          bookable: false,
+          bookingMode: BookingMode.none,
+        ),
+      );
+    }
+
+    final newCanvas = _replaceCanvasComponents(
+      canvas,
+      preserved,
+      renumber: true,
+    );
+
+    emit(
+      state.copyWith(
+        status: CanvasStatus.modified,
+        lowerCanvas: state.activeDeck == 'lower'
+            ? newCanvas
+            : state.lowerCanvas,
+        upperCanvas: state.activeDeck == 'upper'
+            ? newCanvas
+            : state.upperCanvas,
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // HELPERS
   // ═══════════════════════════════════════════════════════════
 
@@ -561,6 +662,7 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
       ComponentType.driverCabin,
       ComponentType.emergency,
       ComponentType.lavatory,
+      ComponentType.restaurantTable,
     };
 
     int seatCounter = 0;
@@ -570,6 +672,11 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
       if (structural.contains(comp.type) || comp.type == ComponentType.empty) {
         comp.seatNumber = null;
         comp.seatId = null;
+        continue;
+      }
+
+      // Skip auto-numbering for components with owner-set custom labels
+      if (comp.customLabel != null) {
         continue;
       }
 

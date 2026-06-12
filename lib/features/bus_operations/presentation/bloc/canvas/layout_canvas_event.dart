@@ -89,3 +89,15 @@ class LayoutLoaded extends LayoutCanvasEvent {
 class RenumberRequested extends LayoutCanvasEvent {
   const RenumberRequested();
 }
+
+/// Convert 3 consecutive rows into a Business Class 2+1 luxury zone.
+class BusinessClassZoneRequested extends LayoutCanvasEvent {
+  final int startRow;
+  final int leftCols;
+  final int rightCols;
+  const BusinessClassZoneRequested({
+    required this.startRow,
+    required this.leftCols,
+    required this.rightCols,
+  });
+}

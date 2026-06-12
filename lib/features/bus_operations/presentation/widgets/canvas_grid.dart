@@ -28,6 +28,8 @@ const Map<ComponentType, Color> kComponentColors = {
   ComponentType.driverCabin: Color(0xFF1E293B),
   ComponentType.emergency: Color(0xFFDC2626),
   ComponentType.lavatory: Color(0xFF6366F1),
+  ComponentType.restaurantTable: Color(0xFF059669),
+  ComponentType.businessClassSeat: Color(0xFFD97706),
   ComponentType.empty: Color(0xFF1A2533),
 };
 
@@ -42,6 +44,8 @@ const Map<ComponentType, IconData> kComponentIcons = {
   ComponentType.driverCabin: Icons.settings_accessibility,
   ComponentType.emergency: Icons.warning_amber_rounded,
   ComponentType.lavatory: Icons.wc,
+  ComponentType.restaurantTable: Icons.table_restaurant,
+  ComponentType.businessClassSeat: Icons.airline_seat_flat_angled,
   ComponentType.empty: Icons.grid_view,
 };
 
@@ -296,37 +300,207 @@ class _ComponentTileState extends State<_ComponentTile> {
                     ]
                   : null,
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: color.withValues(alpha: 0.9), size: 18),
-                if (comp.seatId != null && comp.seatId!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      comp.seatId!,
-                      style: TextStyle(
-                        color: color.withValues(alpha: 0.9),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+            child: comp.hasCustomRender
+                ? _buildCustomRender(comp, color)
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, color: color.withValues(alpha: 0.9), size: 18),
+                      if (comp.displayLabel != null &&
+                          comp.displayLabel!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            comp.displayLabel!,
+                            style: TextStyle(
+                              color: color.withValues(alpha: 0.9),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      if (comp.isMultiCell && !comp.hasCustomRender)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 1),
+                          child: Text(
+                            '${comp.spanRows}×${comp.spanCols}',
+                            style: TextStyle(
+                              color: color.withValues(alpha: 0.5),
+                              fontSize: 8,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                if (comp.isMultiCell)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Text(
-                      '${comp.spanRows}×${comp.spanCols}',
-                      style: TextStyle(
-                        color: color.withValues(alpha: 0.5),
-                        fontSize: 8,
-                      ),
-                    ),
-                  ),
-              ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Custom sub-layout renderer for composite components (e.g. restaurant table).
+  Widget _buildCustomRender(LayoutComponent comp, Color color) {
+    if (comp.type == ComponentType.restaurantTable) {
+      return _buildRestaurantTableRender(comp, color);
+    }
+    if (comp.type == ComponentType.businessClassSeat) {
+      return _buildBusinessClassSeatRender(comp, color);
+    }
+    return const SizedBox.shrink();
+  }
+
+  /// Restaurant Table Module — 2×2 grid with 4 seats facing a central table.
+  Widget _buildRestaurantTableRender(LayoutComponent comp, Color color) {
+    final iconColor = color.withValues(alpha: 0.9);
+    final bgColor = color.withValues(alpha: 0.12);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Background
+        Container(
+          margin: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+        // Central dining table
+        Center(
+          child: Container(
+            width: 44,
+            height: 28,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B4513).withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: const Color(0xFFD2691E).withValues(alpha: 0.8),
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(
+              Icons.table_restaurant,
+              color: Colors.white70,
+              size: 16,
             ),
           ),
         ),
+        // Top-left seat (forward-facing)
+        Positioned(
+          top: 8,
+          left: 8,
+          child: _miniSeatIcon(Icons.event_seat, iconColor),
+        ),
+        // Top-right seat (forward-facing)
+        Positioned(
+          top: 8,
+          right: 8,
+          child: _miniSeatIcon(Icons.event_seat, iconColor),
+        ),
+        // Bottom-left seat (rear-facing)
+        Positioned(
+          bottom: 8,
+          left: 8,
+          child: Transform.rotate(
+            angle: 3.14159,
+            child: _miniSeatIcon(Icons.event_seat, iconColor),
+          ),
+        ),
+        // Bottom-right seat (rear-facing)
+        Positioned(
+          bottom: 8,
+          right: 8,
+          child: Transform.rotate(
+            angle: 3.14159,
+            child: _miniSeatIcon(Icons.event_seat, iconColor),
+          ),
+        ),
+        // Label at bottom center
+        Positioned(
+          bottom: 1,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Text(
+              comp.displayLabel ?? 'DINE',
+              style: TextStyle(
+                color: iconColor,
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _miniSeatIcon(IconData icon, Color color) {
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Icon(icon, size: 12, color: color),
+    );
+  }
+
+  /// Business Class Seat — premium wide seat with gold accent border.
+  Widget _buildBusinessClassSeatRender(LayoutComponent comp, Color color) {
+    final goldColor = const Color(0xFFD97706);
+    return Container(
+      margin: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: goldColor.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: goldColor.withValues(alpha: 0.6), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: goldColor.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.airline_seat_flat_angled,
+            color: Color(0xFFFBBF24),
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: goldColor.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'BUSINESS',
+              style: TextStyle(
+                color: goldColor,
+                fontSize: 8,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+          if (comp.displayLabel != null && comp.displayLabel!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(
+                comp.displayLabel!,
+                style: TextStyle(
+                  color: goldColor.withValues(alpha: 0.9),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
