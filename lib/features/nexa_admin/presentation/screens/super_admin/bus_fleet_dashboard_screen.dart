@@ -2297,69 +2297,115 @@ class _FleetListViewState extends State<_FleetListView> {
     );
   }
 
-  Widget _itemCard(Map<String, dynamic> item) => Card(
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-    child: Padding(
-      padding: EdgeInsets.all(14.w),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-            child: Icon(Icons.person, color: AppColors.primary),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _itemCard(Map<String, dynamic> item) {
+    final ownerName = (item['owner_company_name'] ?? '').toString();
+    final isExternal =
+        ownerName.isNotEmpty &&
+        widget.companyName != null &&
+        ownerName != widget.companyName;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: Padding(
+        padding: EdgeInsets.all(14.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  item['name'] ?? '—',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                CircleAvatar(
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                  child: Icon(Icons.person, color: AppColors.primary),
                 ),
-                Text(
-                  item['email'] ?? '',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
-                ),
-                SizedBox(height: 4.h),
-                Row(
-                  children: [
-                    _chip(Icons.phone, item['phone'] ?? '—'),
-                    if (item['license_number'] != null) ...[
-                      SizedBox(width: 10.w),
-                      _chip(Icons.badge, item['license_number']),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item['name'] ?? '—',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        item['email'] ?? '',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Row(
+                        children: [
+                          _chip(Icons.phone, item['phone'] ?? '—'),
+                          if (item['license_number'] != null) ...[
+                            SizedBox(width: 10.w),
+                            _chip(Icons.badge, item['license_number']),
+                          ],
+                        ],
+                      ),
                     ],
+                  ),
+                ),
+                _badge(item['status'] ?? 'active'),
+                SizedBox(width: 4.w),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
+                  onSelected: (v) {
+                    if (v == 'edit') {
+                      _showEditDialog(item);
+                    } else if (v == 'delete') {
+                      _confirmDelete(
+                        item['id'] as String,
+                        item['name'] as String? ?? '',
+                      );
+                    }
+                  },
                 ),
               ],
             ),
-          ),
-          _badge(item['status'] ?? 'active'),
-          SizedBox(width: 4.w),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, size: 20),
-            itemBuilder: (_) => [
-              const PopupMenuItem(value: 'edit', child: Text('Edit')),
-              const PopupMenuItem(value: 'delete', child: Text('Delete')),
+            // ── Ownership badge ──
+            if (isExternal && ownerName.isNotEmpty) ...[
+              SizedBox(height: 8.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: const Color(0xFF7C3AED).withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.link_rounded,
+                      size: 12,
+                      color: Color(0xFF7C3AED),
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      'Linked from $ownerName',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF7C3AED),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
-            onSelected: (v) {
-              if (v == 'edit') {
-                _showEditDialog(item);
-              } else if (v == 'delete') {
-                _confirmDelete(
-                  item['id'] as String,
-                  item['name'] as String? ?? '',
-                );
-              }
-            },
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _chip(IconData ic, String t) => Row(
     mainAxisSize: MainAxisSize.min,
@@ -2583,6 +2629,13 @@ class _LayoutListViewState extends State<_LayoutListView> {
     final status = layout['layout_status'] as String? ?? 'draft';
     final version = layout['version_number'] as int? ?? 1;
     final deck = (layout['deck_level'] as int? ?? 0);
+    final ownerName =
+        (layout['owner_company_name'] ?? layout['owner_display_name'] ?? '')
+            .toString();
+    final isExternal =
+        ownerName.isNotEmpty &&
+        widget.companyName != null &&
+        ownerName != widget.companyName;
     // Vehicle class → (label, accent color)
     const _vcMeta = {
       'coach_54': ('54-Seat Coach (Large)', Color(0xFF7C3AED)),
@@ -2599,69 +2652,110 @@ class _LayoutListViewState extends State<_LayoutListView> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: Padding(
         padding: EdgeInsets.all(14.w),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: presetColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                vc == 'sleeper_custom'
-                    ? Icons.airline_seat_flat_angled
-                    : Icons.event_seat,
-                color: presetColor,
-                size: 22,
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: presetColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    '${presetLabel}  •  v$version  •  ${deck == 0 ? 'Lower Deck' : 'Upper Deck'}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppColors.gray500),
+                  child: Icon(
+                    vc == 'sleeper_custom'
+                        ? Icons.airline_seat_flat_angled
+                        : Icons.event_seat,
+                    color: presetColor,
+                    size: 22,
                   ),
-                ],
-              ),
-            ),
-            _layoutBadge(status),
-            SizedBox(width: 4.w),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, size: 20),
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Text('Design Layout'),
                 ),
-                if (status == 'draft')
-                  const PopupMenuItem(
-                    value: 'publish',
-                    child: Text(
-                      'Publish',
-                      style: TextStyle(color: Color(0xFF16A34A)),
-                    ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        '${presetLabel}  •  v$version  •  ${deck == 0 ? 'Lower Deck' : 'Upper Deck'}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                    ],
                   ),
-                const PopupMenuItem(value: 'delete', child: Text('Archive')),
+                ),
+                _layoutBadge(status),
+                SizedBox(width: 4.w),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Design Layout'),
+                    ),
+                    if (status == 'draft')
+                      const PopupMenuItem(
+                        value: 'publish',
+                        child: Text(
+                          'Publish',
+                          style: TextStyle(color: Color(0xFF16A34A)),
+                        ),
+                      ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Archive'),
+                    ),
+                  ],
+                  onSelected: (v) {
+                    if (v == 'edit') _openDesigner(layoutId: layout['id']);
+                    if (v == 'publish') _publishLayout(layout['id'], name);
+                    if (v == 'delete') _archiveLayout(layout['id']);
+                  },
+                ),
               ],
-              onSelected: (v) {
-                if (v == 'edit') _openDesigner(layoutId: layout['id']);
-                if (v == 'publish') _publishLayout(layout['id'], name);
-                if (v == 'delete') _archiveLayout(layout['id']);
-              },
             ),
+            // ── Ownership badge ──
+            if (isExternal && ownerName.isNotEmpty) ...[
+              SizedBox(height: 8.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: const Color(0xFF7C3AED).withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.link_rounded,
+                      size: 12,
+                      color: Color(0xFF7C3AED),
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      'Linked from $ownerName',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF7C3AED),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

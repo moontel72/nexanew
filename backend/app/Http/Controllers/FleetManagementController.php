@@ -105,6 +105,8 @@ class FleetManagementController extends Controller
             'hire_date'           => $row->hire_date ?? null,
             'kyc_status'          => $row->kyc_status ?? 'unverified',
             'kyc_tier'            => $row->kyc_tier ?? 0,
+            'owner_company_id'    => $row->carrier_company_id ?? null,
+            'owner_company_name'  => $row->owner_company_name ?? null,
             'created_at'          => $row->created_at ?? null,
             'updated_at'          => $row->updated_at ?? null,
         ];
@@ -123,6 +125,7 @@ class FleetManagementController extends Controller
         $query = DB::table('fleet_assignments AS fa')
             ->join('global_identities AS gi', 'fa.global_identity_id', '=', 'gi.id')
             ->leftJoin('tenant_accounts AS ta', 'gi.id', '=', 'ta.global_identity_id')
+            ->leftJoin('tenant_accounts AS owner_ta', 'fa.carrier_company_id', '=', 'owner_ta.id')
             ->where('fa.role', $role)
             ->where('fa.fleet_type', $fleetType)
             ->whereIn('fa.status', ['active', 'pending_acceptance', 'suspended']);
@@ -150,6 +153,7 @@ class FleetManagementController extends Controller
 
         return $query->select(
             'fa.id AS assignment_id',
+            'fa.carrier_company_id',
             'gi.id AS global_identity_id',
             'gi.identity_token',
             'gi.display_name',
@@ -164,6 +168,7 @@ class FleetManagementController extends Controller
             'ta.email',
             'ta.phone_number AS phone',
             'ta.account_name',
+            'owner_ta.account_name AS owner_company_name',
         );
     }
 

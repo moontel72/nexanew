@@ -48,22 +48,29 @@ class LayoutService
             ->filter()
             ->toArray();
 
-        $query = DB::table('transport_bus_layouts')
+        $query = DB::table('transport_bus_layouts AS tbl')
+            ->leftJoin('tenant_accounts AS owner_ta', 'tbl.carrier_company_id', '=', 'owner_ta.id')
+            ->leftJoin('global_identities AS owner_gi', 'tbl.owner_identity_id', '=', 'owner_gi.id')
             ->where(function ($q) use ($companyId, $delegatedOwnerIds) {
                 // Carrier's own layouts
-                $q->where('carrier_company_id', $companyId);
+                $q->where('tbl.carrier_company_id', $companyId);
                 // PLUS delegated owners' layouts (R-5 portability)
                 if (!empty($delegatedOwnerIds)) {
-                    $q->orWhereIn('owner_identity_id', $delegatedOwnerIds);
+                    $q->orWhereIn('tbl.owner_identity_id', $delegatedOwnerIds);
                 }
             })
-            ->where('layout_status', '!=', 'archived');
+            ->where('tbl.layout_status', '!=', 'archived')
+            ->select(
+                'tbl.*',
+                'owner_ta.account_name AS owner_company_name',
+                'owner_gi.display_name AS owner_display_name',
+            );
 
         if ($vehicleClass !== null && $vehicleClass !== '') {
-            $query->where('vehicle_class', $vehicleClass);
+            $query->where('tbl.vehicle_class', $vehicleClass);
         }
 
-        $paginator = $query->orderBy('updated_at', 'desc')->paginate($perPage);
+        $paginator = $query->orderBy('tbl.updated_at', 'desc')->paginate($perPage);
 
         return [
             'data'       => $this->decodeSnapshots($paginator->items()),
