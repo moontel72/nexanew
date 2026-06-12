@@ -926,17 +926,34 @@ class BusOwnerController extends Controller
                 return response()->json(['data' => []]);
             }
 
-            $messages = DB::table('fleet_assignment_messages')
-                ->where('owner_identity_id', $identityId)
-                ->orderBy('created_at', 'desc')
+            $messages = DB::table('fleet_assignment_messages AS fam')
+                ->leftJoin('fleet_assignments AS fa', 'fam.fleet_assignment_id', '=', 'fa.id')
+                ->leftJoin('tenant_accounts AS ta', 'fa.carrier_company_id', '=', 'ta.global_identity_id')
+                ->where('fam.owner_identity_id', $identityId)
+                ->select(
+                    'fam.id',
+                    'fam.fleet_assignment_id',
+                    'fam.sender_id',
+                    'fam.message_body',
+                    'fam.context_type',
+                    'fam.created_at',
+                    'ta.account_name AS carrier_name',
+                    'fa.carrier_company_id',
+                    'fa.status AS assignment_status'
+                )
+                ->orderBy('fam.created_at', 'desc')
                 ->limit(200)
                 ->get()
                 ->map(fn($m) => [
-                    'id'           => $m->id,
-                    'sender_id'    => $m->sender_id,
-                    'message_body' => $m->message_body,
-                    'context_type' => $m->context_type,
-                    'created_at'   => $m->created_at,
+                    'id'                  => $m->id,
+                    'fleet_assignment_id' => $m->fleet_assignment_id,
+                    'sender_id'           => $m->sender_id,
+                    'message_body'        => $m->message_body,
+                    'context_type'        => $m->context_type,
+                    'created_at'          => $m->created_at,
+                    'carrier_name'        => $m->carrier_name ?? 'Unknown Carrier',
+                    'carrier_company_id'  => $m->carrier_company_id,
+                    'status'              => $m->assignment_status ?? 'unknown',
                 ]);
 
             return response()->json(['success' => true, 'data' => $messages]);

@@ -979,6 +979,74 @@ class FleetManagementController extends Controller
         }
     }
 
+    public function listAllConversations(Request $request): JsonResponse
+    {
+        try {
+            $cid = $this->carrierCompanyId($request);
+
+            // Get all assignments (active + pending + on_hold) for this carrier
+            // with the latest message from each
+            $assignments = DB::table('fleet_assignments AS fa')
+                ->join('global_identities AS gi', 'fa.global_identity_id', '=', 'gi.id')
+                ->leftJoin('tenant_accounts AS ta', 'gi.id', '=', 'ta.global_identity_id')
+                ->where('fa.carrier_company_id', $cid)
+                ->where('fa.role', 'owner')
+                ->where('fa.fleet_type', 'bus')
+                ->whereIn('fa.status', ['active', 'pending_acceptance', 'on_hold'])
+                ->select(
+                    'fa.id AS assignment_id',
+                    'gi.id AS global_identity_id',
+                    'gi.identity_token',
+                    'gi.display_name',
+                    'gi.kyc_status',
+                    'fa.status',
+                    'fa.created_at AS linked_at',
+                    'ta.email',
+                    'ta.phone_number AS phone',
+                    'ta.account_name'
+                )
+                ->orderBy('fa.created_at', 'desc')
+                ->limit(100)
+                ->get()
+                ->map(function ($row) {
+                    // Get latest message for this assignment
+                    $latest = DB::table('fleet_assignment_messages')
+                        ->where('fleet_assignment_id', $row->assignment_id)
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+
+                    // Count total messages
+                    $count = DB::table('fleet_assignment_messages')
+                        ->where('fleet_assignment_id', $row->assignment_id)
+                        ->count();
+
+                    return [
+                        'assignment_id'      => $row->assignment_id,
+                        'global_identity_id' => $row->global_identity_id,
+                        'identity_token'     => $row->identity_token,
+                        'name'               => $row->display_name ?? '—',
+                        'email'              => $row->email,
+                        'phone'              => $row->phone,
+                        'kyc_status'         => $row->kyc_status,
+                        'status'             => $row->status,
+                        'linked_at'          => $row->linked_at,
+                        'account_name'       => $row->account_name,
+                        'message_count'      => $count,
+                        'latest_message'     => $latest ? [
+                            'id'           => $latest->id,
+                            'message_body' => $latest->message_body,
+                            'context_type' => $latest->context_type,
+                            'created_at'   => $latest->created_at,
+                        ] : null,
+                    ];
+                });
+
+            return response()->json(['success' => true, 'data' => $assignments]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
     public function sendMessage(string $assignmentId, Request $request): JsonResponse
     {
         try {

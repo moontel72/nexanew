@@ -46,6 +46,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   bool _chatLoading = false;
   final _chatCtrl = TextEditingController();
 
+  // Inbox conversation state
+  String? _expandedInboxConv; // fleet_assignment_id of expanded conversation
+  List<Map<String, dynamic>> _inboxConvMessages = [];
+  bool _inboxConvLoading = false;
+  final _inboxReplyCtrl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -523,15 +529,78 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       final r = await ApiService().get('/bus-owner/link-messages');
       if (!mounted) return;
       final list = (r?['data'] as List?) ?? [];
+      final raw = list
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+
+      // Group by fleet_assignment_id into conversations
+      final Map<String, Map<String, dynamic>> convMap = {};
+      for (final m in raw) {
+        final aid = (m['fleet_assignment_id'] ?? '').toString();
+        if (aid.isEmpty) continue;
+        if (!convMap.containsKey(aid)) {
+          convMap[aid] = {
+            'assignment_id': aid,
+            'carrier_name': (m['carrier_name'] ?? 'Unknown Carrier').toString(),
+            'carrier_company_id': (m['carrier_company_id'] ?? '').toString(),
+            'status': (m['assignment_status'] ?? 'unknown').toString(),
+            'latest_message': m['message_body']?.toString() ?? '',
+            'latest_context': (m['context_type'] ?? 'general').toString(),
+            'latest_time': (m['created_at'] ?? '').toString(),
+            'message_count': 1,
+          };
+        } else {
+          convMap[aid]!['message_count'] =
+              (convMap[aid]!['message_count'] as int) + 1;
+        }
+      }
+
       setState(() {
-        _inboxMessages = list
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
+        _inboxMessages = convMap.values.toList();
         _inboxLoading = false;
       });
     } catch (_) {
       if (mounted) setState(() => _inboxLoading = false);
+    }
+  }
+
+  Future<void> _loadInboxConversation(String assignmentId) async {
+    setState(() {
+      _inboxConvLoading = true;
+      _expandedInboxConv = assignmentId;
+    });
+    try {
+      final r = await ApiService().get(
+        '/bus-owner/link-messages/$assignmentId',
+      );
+      if (!mounted) return;
+      final list = (r?['data'] as List?) ?? [];
+      setState(() {
+        _inboxConvMessages = list
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        _inboxConvLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _inboxConvLoading = false);
+    }
+  }
+
+  Future<void> _sendInboxReply(String assignmentId) async {
+    final msg = _inboxReplyCtrl.text.trim();
+    if (msg.isEmpty) return;
+    try {
+      await ApiService().post(
+        '/bus-owner/link-messages/$assignmentId',
+        data: {'message_body': msg},
+      );
+      _inboxReplyCtrl.clear();
+      _loadInboxConversation(assignmentId);
+      _loadInboxMessages(); // refresh conversation list
+    } catch (e) {
+      _snack('Error: $e', AppColors.error);
     }
   }
 
@@ -566,60 +635,337 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       padding: EdgeInsets.all(16.w),
       itemCount: _inboxMessages.length,
       itemBuilder: (_, i) {
-        final m = _inboxMessages[i];
-        final ctx = (m['context_type'] ?? 'general').toString();
-        final color = ctx == 'rejection_reason'
+        final conv = _inboxMessages[i];
+        final aid = (conv['assignment_id'] ?? '').toString();
+        final carrierName = (conv['carrier_name'] ?? 'Unknown').toString();
+        final status = (conv['status'] ?? 'unknown').toString();
+        final latestMsg = (conv['latest_message'] ?? '').toString();
+        final ctx = (conv['latest_context'] ?? 'general').toString();
+        final time = (conv['latest_time'] ?? '').toString();
+        final count = (conv['message_count'] as int?) ?? 0;
+        final isExpanded = _expandedInboxConv == aid;
+
+        final statusColor = status == 'active'
+            ? const Color(0xFF16A34A)
+            : status == 'on_hold'
+            ? const Color(0xFFF59E0B)
+            : status == 'pending_acceptance'
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF8899AA);
+        final statusLabel = status.replaceAll('_', ' ').toUpperCase();
+
+        final ctxColor = ctx == 'rejection_reason'
             ? Colors.red
             : ctx == 'hold_reason'
             ? const Color(0xFFF59E0B)
             : const Color(0xFF8899AA);
+
         return Card(
           color: const Color(0xFF1A2A3A),
           margin: EdgeInsets.only(bottom: 8.h),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Padding(
-            padding: EdgeInsets.all(12.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        ctx.replaceAll('_', ' ').toUpperCase(),
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () {
+              if (isExpanded) {
+                setState(() {
+                  _expandedInboxConv = null;
+                  _inboxConvMessages = [];
+                });
+              } else {
+                _loadInboxConversation(aid);
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.all(12.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Header: Carrier Name | Status | Count ──
+                  Row(
+                    children: [
+                      Container(
+                        width: 34.w,
+                        height: 34.w,
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.directions_bus,
+                          color: statusColor,
+                          size: 18,
                         ),
                       ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      (m['created_at'] ?? '').toString(),
-                      style: const TextStyle(
-                        color: Color(0xFF556677),
-                        fontSize: 10,
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              carrierName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: 2.h),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 5.w,
+                                vertical: 1.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                statusLabel,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      if (count > 0)
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 3.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF7C3AED,
+                            ).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              color: Color(0xFF7C3AED),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      SizedBox(width: 6.w),
+                      Icon(
+                        isExpanded
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
+                        color: Colors.white38,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+
+                  // ── Latest message preview ──
+                  if (latestMsg.isNotEmpty) ...[
+                    SizedBox(height: 8.h),
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 5.w,
+                            vertical: 1.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: ctxColor.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Text(
+                            ctx.replaceAll('_', ' ').toUpperCase(),
+                            style: TextStyle(
+                              color: ctxColor,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          time,
+                          style: const TextStyle(
+                            color: Color(0xFF556677),
+                            fontSize: 9,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      latestMsg,
+                      style: const TextStyle(
+                        color: Color(0xFF8899AA),
+                        fontSize: 11,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                ),
-                SizedBox(height: 6.h),
-                Text(
-                  (m['message_body'] ?? '').toString(),
-                  style: const TextStyle(
-                    color: Color(0xFFCCDDEE),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+
+                  // ── EXPANDED: Full message thread + Reply ──
+                  if (isExpanded) ...[
+                    SizedBox(height: 10.h),
+                    const Divider(color: Color(0xFF2A3A4A), height: 1),
+                    SizedBox(height: 10.h),
+                    if (_inboxConvLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (_inboxConvMessages.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Text(
+                          'No messages in this conversation.',
+                          style: TextStyle(
+                            color: Color(0xFF667788),
+                            fontSize: 11,
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        constraints: BoxConstraints(maxHeight: 250.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F1B2A),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          padding: EdgeInsets.all(10.w),
+                          itemCount: _inboxConvMessages.length,
+                          itemBuilder: (_, j) {
+                            final m = _inboxConvMessages[j];
+                            final mctx = (m['context_type'] ?? 'general')
+                                .toString();
+                            final mcolor = mctx == 'rejection_reason'
+                                ? Colors.red
+                                : mctx == 'hold_reason'
+                                ? const Color(0xFFF59E0B)
+                                : const Color(0xFF8899AA);
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: 6.h),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 5.w,
+                                          vertical: 1.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: mcolor.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            3,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          mctx
+                                              .replaceAll('_', ' ')
+                                              .toUpperCase(),
+                                          style: TextStyle(
+                                            color: mcolor,
+                                            fontSize: 7,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(width: 6.w),
+                                      Text(
+                                        (m['created_at'] ?? '').toString(),
+                                        style: const TextStyle(
+                                          color: Color(0xFF556677),
+                                          fontSize: 9,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 3.h),
+                                  Text(
+                                    (m['message_body'] ?? '').toString(),
+                                    style: const TextStyle(
+                                      color: Color(0xFFCCDDEE),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    // ── Reply Input ──
+                    SizedBox(height: 8.h),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _inboxReplyCtrl,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Type a reply...',
+                              hintStyle: const TextStyle(
+                                color: Color(0xFF556677),
+                              ),
+                              filled: true,
+                              fillColor: const Color(0xFF0F1B2A),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 8.h,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF2A3A4A),
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF2A3A4A),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF0D9488),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.send_rounded,
+                            color: Color(0xFF0D9488),
+                          ),
+                          onPressed: () => _sendInboxReply(aid),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         );
@@ -1879,5 +2225,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         duration: Duration(seconds: 3),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _inboxReplyCtrl.dispose();
+    _linkMsgCtrl.dispose();
+    _chatCtrl.dispose();
+    super.dispose();
   }
 }
