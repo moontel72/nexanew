@@ -132,7 +132,7 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
   }
 }
 
-/// Paints the dot-grid background on the canvas.
+/// Paints the dot-grid background and architectural ruler on the canvas.
 class _CanvasBackgroundPainter extends CustomPainter {
   final double canvasWidth;
   final double canvasHeight;
@@ -142,6 +142,9 @@ class _CanvasBackgroundPainter extends CustomPainter {
     required this.canvasHeight,
   });
 
+  static const double _rulerThickness = 22.0;
+  static const double _inchPx = kPixelsPerInch; // 4 px
+
   @override
   void paint(Canvas canvas, Size size) {
     // Fill background
@@ -150,7 +153,7 @@ class _CanvasBackgroundPainter extends CustomPainter {
       Paint()..color = kCanvasBackground,
     );
 
-    // Draw dot grid
+    // Draw dot grid (shifted down/right to leave room for rulers)
     final dotPaint = Paint()
       ..color = const Color(0x30FFFFFF)
       ..strokeWidth = 1.5;
@@ -170,19 +173,105 @@ class _CanvasBackgroundPainter extends CustomPainter {
         ..strokeWidth = 2.0,
     );
 
-    // Draw edge measurement labels in feet/inches
-    final labelStyle = TextStyle(color: const Color(0x60FFFFFF), fontSize: 10);
-    final topLabel = TextPainter(
-      text: TextSpan(text: pxToFtIn(canvasWidth), style: labelStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    topLabel.paint(canvas, Offset(8, 4));
+    // ═══════════════════════════════════════════════
+    // ARCHITECTURAL RULER — TOP EDGE (LENGTH)
+    // ═══════════════════════════════════════════════
+    _drawRuler(canvas, true);
 
-    final leftLabel = TextPainter(
-      text: TextSpan(text: pxToFtIn(canvasHeight), style: labelStyle),
+    // ═══════════════════════════════════════════════
+    // ARCHITECTURAL RULER — LEFT EDGE (WIDTH)
+    // ═══════════════════════════════════════════════
+    _drawRuler(canvas, false);
+
+    // Corner label: total canvas size
+    final totalStyle = TextStyle(color: const Color(0x80FFFFFF), fontSize: 9);
+    final totalLabel = TextPainter(
+      text: TextSpan(
+        text: '${pxToFtIn(canvasWidth)} × ${pxToFtIn(canvasHeight)}',
+        style: totalStyle,
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
-    leftLabel.paint(canvas, Offset(4, 20));
+    totalLabel.paint(canvas, const Offset(4, 4));
+  }
+
+  /// Draws an architectural ruler along the top (horizontal) or left (vertical).
+  void _drawRuler(Canvas canvas, bool isTop) {
+    final length = isTop ? canvasWidth : canvasHeight;
+    final totalInches = (length / _inchPx).round();
+
+    // Ruler background strip
+    final rulerBg = Paint()..color = const Color(0xFF07101E);
+    final rulerRect = isTop
+        ? Rect.fromLTWH(0, 0, canvasWidth, _rulerThickness)
+        : Rect.fromLTWH(0, 0, _rulerThickness, canvasHeight);
+    canvas.drawRect(rulerRect, rulerBg);
+
+    // Tick marks and labels
+    final tickPaint = Paint()
+      ..color = const Color(0x60FFFFFF)
+      ..strokeWidth = 1.0;
+    final footTickPaint = Paint()
+      ..color = const Color(0xCCFFFFFF)
+      ..strokeWidth = 1.5;
+    final labelStyle = TextStyle(color: const Color(0x99FFFFFF), fontSize: 8);
+
+    for (int inch = 0; inch <= totalInches; inch++) {
+      final pos = inch * _inchPx;
+      final isFoot = inch % 12 == 0;
+      final tickLen = isFoot ? 12.0 : 6.0; // longer tick at foot marks
+
+      if (isTop) {
+        // Top ruler: ticks go down from the top
+        canvas.drawLine(
+          Offset(pos, _rulerThickness - tickLen),
+          Offset(pos, _rulerThickness),
+          isFoot ? footTickPaint : tickPaint,
+        );
+        // Label at foot marks
+        if (isFoot && pos + 16 < canvasWidth) {
+          final feet = inch ~/ 12;
+          // Draw `feet` number only (not feet.inches) for cleaner look
+          final tp = TextPainter(
+            text: TextSpan(text: '$feet', style: labelStyle),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(canvas, Offset(pos + 2, _rulerThickness - tickLen - 10));
+        }
+        // Small inch labels every 3 inches between foot marks
+        if (!isFoot && inch % 3 == 0 && pos + 16 < canvasWidth) {
+          final tp = TextPainter(
+            text: TextSpan(
+              text: '${inch % 12}',
+              style: TextStyle(color: const Color(0x50FFFFFF), fontSize: 7),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(canvas, Offset(pos + 1, _rulerThickness - tickLen - 9));
+        }
+      } else {
+        // Left ruler: ticks go right from the left
+        canvas.drawLine(
+          Offset(_rulerThickness - tickLen, pos),
+          Offset(_rulerThickness, pos),
+          isFoot ? footTickPaint : tickPaint,
+        );
+        // Label at foot marks
+        if (isFoot && pos + 10 < canvasHeight) {
+          final feet = inch ~/ 12;
+          // Rotate text 90° for vertical ruler
+          canvas.save();
+          canvas.translate(4, pos + 8);
+          canvas.rotate(-3.1415926535 / 2);
+          final tp = TextPainter(
+            text: TextSpan(text: '$feet', style: labelStyle),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(canvas, Offset.zero);
+          canvas.restore();
+        }
+      }
+    }
   }
 
   @override

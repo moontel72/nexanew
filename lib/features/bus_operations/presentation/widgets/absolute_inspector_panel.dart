@@ -1,8 +1,8 @@
 // NEXATRACE — ABSOLUTE INSPECTOR PANEL
 // ======================================
-// Property inspector bottom sheet for the Absolute Bus Layout Engine.
-// Appears when a component is selected on the canvas. Shows editable
-// fields for position, size, rotation, custom label, and type metadata.
+// Compact property inspector for the Absolute Bus Layout Engine.
+// Uses a sticky footer so the Apply button is ALWAYS visible.
+// No scrollbars needed — the DraggableScrollableSheet handles resizing.
 //
 // 100% isolated from the legacy CellInspectorPanel.
 
@@ -15,8 +15,6 @@ class AbsoluteInspectorPanel extends StatefulWidget {
   final void Function(AbsoluteLayoutComponent updated) onApply;
   final VoidCallback onDelete;
   final VoidCallback onClose;
-
-  /// Optional scroll controller from a DraggableScrollableSheet ancestor.
   final ScrollController? scrollController;
 
   const AbsoluteInspectorPanel({
@@ -66,6 +64,9 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
   @override
   Widget build(BuildContext context) {
     final c = widget.component;
+    final ftInLabel =
+        '≈ ${pxToFtIn(c.width)} × ${pxToFtIn(c.height)}'
+        '  (1 in = ${kPixelsPerInch.toInt()} px)';
 
     return Container(
       decoration: const BoxDecoration(
@@ -77,202 +78,185 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
           right: BorderSide(color: Color(0x20FFFFFF)),
         ),
       ),
-      child: Scrollbar(
-        controller: widget.scrollController,
-        thumbVisibility: true,
-        thickness: 6,
-        radius: const Radius.circular(3),
-        child: ListView(
-          controller: widget.scrollController,
-          padding: EdgeInsets.zero,
-          children: [
-            // ── Header ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
-              child: Row(
-                children: [
-                  Icon(c.defaultIcon, color: c.defaultColor, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      c.typeLabel,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ═══ SCROLLABLE CONTENT ═══
+          Flexible(
+            child: ListView(
+              controller: widget.scrollController,
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              children: [
+                // ── Header bar ──
+                _header(c),
+                const SizedBox(height: 6),
+
+                // ── Position + Size side-by-side ──
+                _sectionChip('POSITION & SIZE'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left column: X / Y
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _tinyField('X (px)', _xCtrl),
+                            const SizedBox(height: 6),
+                            _tinyField('Y (px)', _yCtrl),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Right column: W / H
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _tinyField('Width (px)', _wCtrl),
+                            const SizedBox(height: 6),
+                            _tinyField('Height (px)', _hCtrl),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 12, top: 2),
+                  child: Text(
+                    ftInLabel,
+                    style: const TextStyle(
+                      color: Color(0x50FFFFFF),
+                      fontSize: 9,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // ── Rotation ──
+                _sectionChip('ROTATION'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 70, child: _tinyField('Deg', _rotCtrl)),
+                      const SizedBox(width: 6),
+                      _rotateChip('0°', 0),
+                      _rotateChip('45°', 45),
+                      _rotateChip('90°', 90),
+                      _rotateChip('180°', 180),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // ── Custom Label (editable only) ──
+                if (c.isEditable) ...[
+                  _sectionChip('CUSTOM LABEL'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: TextField(
+                      controller: _labelCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. VIP-1, A1, Driver Seat',
+                        hintStyle: const TextStyle(color: Color(0x40FFFFFF)),
+                        filled: true,
+                        fillColor: const Color(0xFF122442),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: const BorderSide(
+                            color: Color(0x20FFFFFF),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: const BorderSide(
+                            color: Color(0x20FFFFFF),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(color: c.defaultColor),
+                        ),
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.close,
-                      color: Colors.white54,
-                      size: 20,
-                    ),
-                    onPressed: widget.onClose,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
-                    ),
-                  ),
+                  const SizedBox(height: 4),
                 ],
+
+                // Bottom spacer so content doesn't crash into footer
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+
+          // ═══ STICKY FOOTER — ALWAYS VISIBLE ═══
+          Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFF0A1628),
+              border: Border(
+                top: BorderSide(color: Color(0x20FFFFFF), width: 0.5),
               ),
             ),
-            const SizedBox(height: 12),
-
-            // ── Position ──
-            _sectionTile('POSITION'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _field('X (px)', _xCtrl, 90),
-                  const SizedBox(width: 12),
-                  _field('Y (px)', _yCtrl, 90),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // ── Size ──
-            _sectionTile('SIZE'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _field('Width (px)', _wCtrl, 90),
-                  const SizedBox(width: 12),
-                  _field('Height (px)', _hCtrl, 90),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 16, top: 4),
-              child: Text(
-                '≈ ${pxToFtIn(c.width)} × ${pxToFtIn(c.height)}  '
-                '(1 in = ${kPixelsPerInch.toInt()} px)',
-                style: const TextStyle(color: Color(0x50FFFFFF), fontSize: 10),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // ── Rotation ──
-            _sectionTile('ROTATION'),
-            Padding(
-              padding: const EdgeInsets.only(left: 16),
-              child: Row(
-                children: [
-                  _field('Degrees', _rotCtrl, 60),
-                  const SizedBox(width: 6),
-                  _rotateBtn('0°', 0),
-                  _rotateBtn('45°', 45),
-                  _rotateBtn('90°', 90),
-                  _rotateBtn('180°', 180),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // ── Custom Label (editable only) ──
-            if (c.isEditable) ...[
-              _sectionTile('CUSTOM LABEL'),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  controller: _labelCtrl,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'e.g. VIP-1, A1, Driver Seat',
-                    hintStyle: const TextStyle(color: Color(0x40FFFFFF)),
-                    filled: true,
-                    fillColor: const Color(0xFF122442),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0x20FFFFFF)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0x20FFFFFF)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: c.defaultColor),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 16, top: 4),
-                child: Text(
-                  'Set a custom sticker label. Auto-numbering skips this seat.',
-                  style: const TextStyle(
-                    color: Color(0x60FFFFFF),
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            // ── Info ──
-            _sectionTile('INFO'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _infoRow('Type', c.typeLabel),
-                  _infoRow('ID', c.id.substring(0, 8)),
-                  if (c.seatNumber != null)
-                    _infoRow('Seat #', '${c.seatNumber}'),
-                  _infoRow('Bookable', c.bookable ? 'Yes' : 'No'),
-                  if (!c.isStructural)
-                    _infoRow('Booking Mode', c.bookingMode.name),
-                ],
-              ),
-            ),
-
-            // ── Action buttons ──
-            Padding(
-              padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+            child: SafeArea(
+              top: false,
               child: Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _apply,
-                      icon: const Icon(Icons.check, size: 18),
-                      label: const Text('Apply'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7C3AED),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      height: 40,
+                      child: ElevatedButton.icon(
+                        onPressed: _apply,
+                        icon: const Icon(Icons.check, size: 16),
+                        label: const Text(
+                          'Apply',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF7C3AED),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
                     ),
                   ),
                   if (c.isEditable) ...[
-                    const SizedBox(width: 10),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        widget.onDelete();
-                        widget.onClose();
-                      },
-                      icon: const Icon(Icons.delete_outline, size: 18),
-                      label: const Text('Delete'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFDC2626),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 40,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          widget.onDelete();
+                          widget.onClose();
+                        },
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: const Text(
+                          'Delete',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
                     ),
@@ -280,65 +264,89 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                 ],
               ),
             ),
-            // Extra safe-area at the bottom
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _sectionTile(String text) {
+  // ─── Helpers ───
+
+  Widget _header(AbsoluteLayoutComponent c) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 0),
+      child: Row(
+        children: [
+          Icon(c.defaultIcon, color: c.defaultColor, size: 18),
+          const SizedBox(width: 6),
+          Text(
+            c.typeLabel,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white38, size: 18),
+            onPressed: widget.onClose,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionChip(String text) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 4),
       child: Text(
         text,
         style: const TextStyle(
-          color: Color(0x80FFFFFF),
-          fontSize: 10,
+          color: Color(0x60FFFFFF),
+          fontSize: 9,
           fontWeight: FontWeight.w700,
-          letterSpacing: 1.5,
+          letterSpacing: 1.2,
         ),
       ),
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl, double width) {
+  Widget _tinyField(String label, TextEditingController ctrl) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
-          style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
+          style: const TextStyle(color: Color(0x50FFFFFF), fontSize: 10),
         ),
-        const SizedBox(height: 4),
-        SizedBox(
-          width: width,
-          child: TextField(
-            controller: ctrl,
-            keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xFF122442),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0x20FFFFFF)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0x20FFFFFF)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFF7C3AED)),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 8,
-              ),
-              isDense: true,
+        const SizedBox(height: 2),
+        TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFF122442),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 6,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(5),
+              borderSide: const BorderSide(color: Color(0x20FFFFFF)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(5),
+              borderSide: const BorderSide(color: Color(0x20FFFFFF)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(5),
+              borderSide: const BorderSide(color: Color(0xFF7C3AED)),
             ),
           ),
         ),
@@ -346,46 +354,23 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
     );
   }
 
-  Widget _rotateBtn(String label, double value) {
+  Widget _rotateChip(String label, double value) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(left: 3),
       child: InkWell(
         onTap: () => _rotCtrl.text = value.toStringAsFixed(0),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(4),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
           decoration: BoxDecoration(
             border: Border.all(color: const Color(0x30FFFFFF)),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
             label,
-            style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 11),
+            style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 10),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _infoRow(String key, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              key,
-              style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 12),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 12),
-            ),
-          ),
-        ],
       ),
     );
   }
