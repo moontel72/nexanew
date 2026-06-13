@@ -70,6 +70,9 @@ class _AbsoluteLayoutDesignerScreenState
   // Sidebar
   bool _sidebarOpen = true;
 
+  // Inspector bottom-sheet tracking
+  bool _inspectorOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -167,7 +170,7 @@ class _AbsoluteLayoutDesignerScreenState
     if (mounted) setState(() => _state = newState);
   }
 
-  void _addComponent(
+  String _addComponent(
     ComponentType type,
     double x,
     double y,
@@ -212,6 +215,7 @@ class _AbsoluteLayoutDesignerScreenState
         isDirty: true,
       ),
     );
+    return id;
   }
 
   String? _nextSeatId(ComponentType type) {
@@ -258,15 +262,21 @@ class _AbsoluteLayoutDesignerScreenState
   }
 
   void _deleteComponent(String id) {
+    final wasSelected = _state.selectedComponentId == id;
     _setState(
       _state.copyWith(
         components: _state.components.where((c) => c.id != id).toList(),
-        selectedComponentId: _state.selectedComponentId == id
-            ? null
-            : _state.selectedComponentId,
+        selectedComponentId: wasSelected ? null : _state.selectedComponentId,
         isDirty: true,
       ),
     );
+    // If the deleted component's inspector was open, close it.
+    if (_inspectorOpen && wasSelected) {
+      try {
+        Navigator.of(context).pop();
+      } catch (_) {}
+      _inspectorOpen = false;
+    }
   }
 
   void _selectComponent(String id) {
@@ -278,6 +288,13 @@ class _AbsoluteLayoutDesignerScreenState
 
   void _deselectAll() {
     _setState(_state.copyWith(clearSelection: true));
+    // Close the inspector if it was open for the now-deselected component.
+    if (_inspectorOpen) {
+      try {
+        Navigator.of(context).pop();
+      } catch (_) {}
+      _inspectorOpen = false;
+    }
     // Note: does NOT reset _tool or _placingType — callers manage those.
   }
 
@@ -372,29 +389,48 @@ class _AbsoluteLayoutDesignerScreenState
     final comp = _state.componentById(compId);
     if (comp == null) return;
 
-    // Use a post-frame callback to avoid "setState during build" issues
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Defer to post-frame to avoid "setState during build" issues.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      // If a bottom sheet is already open, ignore — user can dismiss manually
-      try {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => AbsoluteInspectorPanel(
-            component: comp,
-            onApply: (updated) {
-              _updateComponent(updated);
-              Navigator.pop(context);
-            },
-            onDelete: () => _deleteComponent(compId),
-            onClose: () => Navigator.pop(context),
-          ),
-        );
-      } catch (_) {
-        // Bottom sheet already open — silently skip
+
+      // If an inspector is already open, close it first so the new
+      // component's data populates the freshly-opened sheet.
+      if (_inspectorOpen) {
+        try {
+          Navigator.of(context).pop();
+        } catch (_) {
+          // No sheet to pop — fall through.
+        }
+        _inspectorOpen = false;
+        // Wait for the pop animation to finish before showing the new sheet.
+        await Future.delayed(const Duration(milliseconds: 220));
+        if (!mounted) return;
       }
+
+      _showInspectorSheet(comp);
     });
+  }
+
+  Future<void> _showInspectorSheet(AbsoluteLayoutComponent comp) async {
+    _inspectorOpen = true;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AbsoluteInspectorPanel(
+        component: comp,
+        onApply: (updated) {
+          _updateComponent(updated);
+          Navigator.pop(context);
+        },
+        onDelete: () {
+          _deleteComponent(comp.id);
+          Navigator.pop(context);
+        },
+        onClose: () => Navigator.pop(context),
+      ),
+    );
+    _inspectorOpen = false;
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -627,7 +663,7 @@ class _AbsoluteLayoutDesignerScreenState
             } else if (_tool == _CanvasTool.placeComponent &&
                 _placingType != null) {
               // Place mode: drop the new component at the tap position
-              _addComponent(
+              final newId = _addComponent(
                 _placingType!,
                 x,
                 y,
@@ -636,11 +672,12 @@ class _AbsoluteLayoutDesignerScreenState
               );
               _tool = _CanvasTool.select;
               _placingType = null;
+              _openInspector(newId);
             }
           },
           onCanvasTap: (x, y) {
             if (_tool == _CanvasTool.placeComponent && _placingType != null) {
-              _addComponent(
+              final newId = _addComponent(
                 _placingType!,
                 x,
                 y,
@@ -649,6 +686,7 @@ class _AbsoluteLayoutDesignerScreenState
               );
               _tool = _CanvasTool.select;
               _placingType = null;
+              _openInspector(newId);
             } else if (_tool == _CanvasTool.select) {
               _deselectAll();
             }

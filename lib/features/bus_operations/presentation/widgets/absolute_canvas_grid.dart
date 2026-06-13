@@ -47,7 +47,7 @@ const Color kCanvasBackground = Color(0xFF0D1B2A);
 /// Dot-grid spacing for background visual guide.
 const double kGridDotSpacing = 28.0;
 
-class AbsoluteCanvasGrid extends StatelessWidget {
+class AbsoluteCanvasGrid extends StatefulWidget {
   final AbsoluteLayoutState layoutState;
   final void Function(String componentId, double x, double y)? onComponentTap;
   final void Function(double x, double y)? onCanvasTap;
@@ -62,38 +62,66 @@ class AbsoluteCanvasGrid extends StatelessWidget {
   });
 
   @override
+  State<AbsoluteCanvasGrid> createState() => _AbsoluteCanvasGridState();
+}
+
+class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
+  // Manual tap detection — avoids gesture arena competition with
+  // InteractiveViewer's internal ScaleGestureRecognizer.
+  Offset? _pointerDownPos;
+  static const double _tapSlop = 12.0; // max movement to count as tap
+
+  void _onPointerDown(PointerDownEvent event) {
+    _pointerDownPos = event.localPosition;
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    if (_pointerDownPos == null) return;
+    final down = _pointerDownPos!;
+    _pointerDownPos = null;
+
+    final up = event.localPosition;
+    // Ignore if the pointer moved more than the tap slop
+    if ((up - down).distance > _tapSlop) return;
+
+    // Hit-test: use the midpoint of down/up for accuracy
+    final tapX = (down.dx + up.dx) / 2;
+    final tapY = (down.dy + up.dy) / 2;
+    final hit = widget.layoutState.componentAt(tapX, tapY);
+    if (hit != null) {
+      widget.onComponentTap?.call(hit.id, tapX, tapY);
+    } else {
+      widget.onCanvasTap?.call(tapX, tapY);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final ls = widget.layoutState;
     return InteractiveViewer(
-      transformationController: transformController,
+      transformationController: widget.transformController,
       constrained: false,
       boundaryMargin: const EdgeInsets.all(400),
       minScale: 0.25,
       maxScale: 4.0,
-      child: GestureDetector(
-        onTapUp: (details) {
-          final local = details.localPosition;
-          final hit = layoutState.componentAt(local.dx, local.dy);
-          if (hit != null) {
-            onComponentTap?.call(hit.id, local.dx, local.dy);
-          } else {
-            onCanvasTap?.call(local.dx, local.dy);
-          }
-        },
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: _onPointerDown,
+        onPointerUp: _onPointerUp,
         child: SizedBox(
-          width: layoutState.canvasWidth,
-          height: layoutState.canvasHeight,
+          width: ls.canvasWidth,
+          height: ls.canvasHeight,
           child: CustomPaint(
             painter: _CanvasBackgroundPainter(
-              canvasWidth: layoutState.canvasWidth,
-              canvasHeight: layoutState.canvasHeight,
+              canvasWidth: ls.canvasWidth,
+              canvasHeight: ls.canvasHeight,
             ),
             child: Stack(
               children: [
-                // Render each component as a positioned widget
-                for (final comp in layoutState.components)
+                for (final comp in ls.components)
                   _AbsoluteComponentWidget(
                     component: comp,
-                    isSelected: comp.id == layoutState.selectedComponentId,
+                    isSelected: comp.id == ls.selectedComponentId,
                   ),
               ],
             ),
