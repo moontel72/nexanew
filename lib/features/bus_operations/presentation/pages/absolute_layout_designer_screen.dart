@@ -372,28 +372,28 @@ class _AbsoluteLayoutDesignerScreenState
     final comp = _state.componentById(compId);
     if (comp == null) return;
 
-    // Dismiss any existing bottom sheet first
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-
     // Use a post-frame callback to avoid "setState during build" issues
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => AbsoluteInspectorPanel(
-          component: comp,
-          onApply: (updated) {
-            _updateComponent(updated);
-            Navigator.pop(context);
-          },
-          onDelete: () => _deleteComponent(compId),
-          onClose: () => Navigator.pop(context),
-        ),
-      );
+      // If a bottom sheet is already open, ignore — user can dismiss manually
+      try {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => AbsoluteInspectorPanel(
+            component: comp,
+            onApply: (updated) {
+              _updateComponent(updated);
+              Navigator.pop(context);
+            },
+            onDelete: () => _deleteComponent(compId),
+            onClose: () => Navigator.pop(context),
+          ),
+        );
+      } catch (_) {
+        // Bottom sheet already open — silently skip
+      }
     });
   }
 
