@@ -566,9 +566,21 @@ class _AbsoluteLayoutDesignerScreenState
         AbsoluteCanvasGrid(
           layoutState: _state,
           transformController: _transformCtrl,
-          onComponentTap: (id) {
+          onComponentTap: (id, x, y) {
             if (_tool == _CanvasTool.select) {
               _selectComponent(id);
+            } else if (_tool == _CanvasTool.placeComponent &&
+                _placingType != null) {
+              // Place mode: drop the new component at the tap position
+              _addComponent(
+                _placingType!,
+                x,
+                y,
+                _placingDefaultW,
+                _placingDefaultH,
+              );
+              _tool = _CanvasTool.select;
+              _placingType = null;
             }
           },
           onCanvasTap: (x, y) {
@@ -843,38 +855,14 @@ class _AbsoluteLayoutDesignerScreenState
     double value,
     ValueChanged<double> onChanged,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 9),
-        ),
-        const Gap(2),
-        TextField(
-          controller: TextEditingController(text: value.toInt().toString()),
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white, fontSize: 12),
-          onSubmitted: (s) {
-            final v = double.tryParse(s);
-            if (v != null) onChanged(v);
-          },
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: const Color(0xFF122442),
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 6,
-              vertical: 6,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
-              borderSide: const BorderSide(color: Color(0x20FFFFFF)),
-            ),
-          ),
-        ),
-      ],
+    // Use a stateful wrapper so the TextEditingController survives rebuilds
+    return _SizeField(
+      label: label,
+      initialValue: value.toInt().toString(),
+      onChanged: (s) {
+        final v = double.tryParse(s);
+        if (v != null) onChanged(v);
+      },
     );
   }
 
@@ -967,6 +955,87 @@ class _AbsoluteLayoutDesignerScreenState
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Size-Field Stateful Wrapper (fixes canvas resize UX) ───
+
+class _SizeField extends StatefulWidget {
+  final String label;
+  final String initialValue;
+  final ValueChanged<String> onChanged;
+
+  const _SizeField({
+    required this.label,
+    required this.initialValue,
+    required this.onChanged,
+  });
+
+  @override
+  State<_SizeField> createState() => _SizeFieldState();
+}
+
+class _SizeFieldState extends State<_SizeField> {
+  late final TextEditingController _ctrl;
+  late final FocusNode _focus;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.initialValue);
+    _focus = FocusNode();
+    _focus.addListener(() {
+      // Apply on focus loss
+      if (!_focus.hasFocus) {
+        widget.onChanged(_ctrl.text);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          widget.label,
+          style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 9),
+        ),
+        const Gap(2),
+        TextField(
+          controller: _ctrl,
+          focusNode: _focus,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white, fontSize: 12),
+          onSubmitted: (s) => widget.onChanged(s),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFF122442),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 6,
+              vertical: 6,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Color(0x20FFFFFF)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Color(0xFF7C3AED)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

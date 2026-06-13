@@ -49,7 +49,7 @@ const double kGridDotSpacing = 28.0;
 
 class AbsoluteCanvasGrid extends StatelessWidget {
   final AbsoluteLayoutState layoutState;
-  final void Function(String componentId)? onComponentTap;
+  final void Function(String componentId, double x, double y)? onComponentTap;
   final void Function(double x, double y)? onCanvasTap;
   final TransformationController? transformController;
 
@@ -71,10 +71,11 @@ class AbsoluteCanvasGrid extends StatelessWidget {
       maxScale: 4.0,
       child: GestureDetector(
         onTapUp: (details) {
-          // If tap lands on empty canvas, fire canvasTap
           final local = details.localPosition;
           final hit = layoutState.componentAt(local.dx, local.dy);
-          if (hit == null) {
+          if (hit != null) {
+            onComponentTap?.call(hit.id, local.dx, local.dy);
+          } else {
             onCanvasTap?.call(local.dx, local.dy);
           }
         },
@@ -93,7 +94,6 @@ class AbsoluteCanvasGrid extends StatelessWidget {
                   _AbsoluteComponentWidget(
                     component: comp,
                     isSelected: comp.id == layoutState.selectedComponentId,
-                    onTap: () => onComponentTap?.call(comp.id),
                   ),
               ],
             ),
@@ -166,12 +166,10 @@ class _CanvasBackgroundPainter extends CustomPainter {
 class _AbsoluteComponentWidget extends StatelessWidget {
   final AbsoluteLayoutComponent component;
   final bool isSelected;
-  final VoidCallback? onTap;
 
   const _AbsoluteComponentWidget({
     required this.component,
     required this.isSelected,
-    this.onTap,
   });
 
   @override
@@ -191,46 +189,43 @@ class _AbsoluteComponentWidget extends StatelessWidget {
       height: component.height,
       child: Transform.rotate(
         angle: component.rotation * 3.1415926535 / 180.0,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              color: color.withOpacity(isSelected ? 0.9 : 0.7),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: isSelected ? Colors.white : color.withOpacity(0.5),
-                width: isSelected ? 2.5 : 1.0,
-              ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: color.withOpacity(0.5),
-                        blurRadius: 12,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                  : null,
+        child: Container(
+          decoration: BoxDecoration(
+            color: color.withOpacity(isSelected ? 0.9 : 0.7),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isSelected ? Colors.white : color.withOpacity(0.5),
+              width: isSelected ? 2.5 : 1.0,
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: Colors.white, size: _iconSize()),
-                if (label.isNotEmpty && component.width >= 40)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: _fontSize(),
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: color.withOpacity(0.5),
+                      blurRadius: 12,
+                      spreadRadius: 1,
                     ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: _iconSize()),
+              if (label.isNotEmpty && component.width >= 40)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: _fontSize(),
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),
