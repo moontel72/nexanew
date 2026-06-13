@@ -1,10 +1,10 @@
 // NEXATRACE — ABSOLUTE TRANSFORM OVERLAY
 // =========================================
-// Resize and rotation overlay for selected components on the absolute canvas.
+// Resize, move, rotate, and delete overlay for selected components.
 //
-// Draws 8 resize handles (4 corners + 4 midpoints) and a rotation handle
-// (top-center extended arm) when a component is selected. Handles fire
-// callbacks for live resize and rotation.
+// Draws 8 resize handles (4 corners + 4 midpoints), a rotation handle
+// (top-center extended arm), a delete button (top-right), and supports
+// drag-to-move on the component body.
 //
 // 100% isolated from legacy system.
 
@@ -24,27 +24,35 @@ enum _HandlePosition {
   rotation,
 }
 
-/// Callback signatures.
 typedef OnResize =
     void Function(double newWidth, double newHeight, double newX, double newY);
 typedef OnResizeEnd = void Function();
+typedef OnMove = void Function(double newX, double newY);
+typedef OnMoveEnd = void Function();
 typedef OnRotate = void Function(double newRotation);
 typedef OnRotateEnd = void Function();
+typedef OnDelete = void Function();
 
 class AbsoluteTransformOverlay extends StatefulWidget {
   final AbsoluteLayoutComponent component;
   final OnResize onResize;
   final OnResizeEnd onResizeEnd;
+  final OnMove onMove;
+  final OnMoveEnd onMoveEnd;
   final OnRotate onRotate;
   final OnRotateEnd onRotateEnd;
+  final OnDelete? onDelete;
 
   const AbsoluteTransformOverlay({
     super.key,
     required this.component,
     required this.onResize,
     required this.onResizeEnd,
+    required this.onMove,
+    required this.onMoveEnd,
     required this.onRotate,
     required this.onRotateEnd,
+    this.onDelete,
   });
 
   @override
@@ -53,8 +61,9 @@ class AbsoluteTransformOverlay extends StatefulWidget {
 }
 
 class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
-  static const double _handleSize = 10.0;
-  static const double _rotationArmLength = 28.0;
+  static const double _handleSize = 12.0;
+  static const double _rotationArmLength = 32.0;
+  static const double _deleteBtnSize = 22.0;
 
   @override
   Widget build(BuildContext context) {
@@ -70,35 +79,76 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // Selection border
+            // ── Body: drag-to-move + selection border ──
             Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.9),
-                    width: 2.0,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onPanStart: (_) {},
+                onPanUpdate: (d) {
+                  widget.onMove(c.x + d.delta.dx, c.y + d.delta.dy);
+                },
+                onPanEnd: (_) => widget.onMoveEnd(),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.9),
+                      width: 2.5,
+                    ),
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
             ),
-            // 4 corner handles
+
+            // ── Delete button (top-right corner) ──
+            if (widget.onDelete != null)
+              Positioned(
+                right: -_deleteBtnSize / 2,
+                top: -_deleteBtnSize / 2,
+                child: GestureDetector(
+                  onTap: widget.onDelete,
+                  child: Container(
+                    width: _deleteBtnSize,
+                    height: _deleteBtnSize,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDC2626),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: Colors.black38, blurRadius: 4),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                ),
+              ),
+
+            // ── 4 corner handles ──
             _buildHandle(_HandlePosition.topLeft, c),
             _buildHandle(_HandlePosition.topRight, c),
             _buildHandle(_HandlePosition.bottomLeft, c),
             _buildHandle(_HandlePosition.bottomRight, c),
-            // 4 midpoint handles
+
+            // ── 4 midpoint handles ──
             _buildHandle(_HandlePosition.topCenter, c),
             _buildHandle(_HandlePosition.bottomCenter, c),
             _buildHandle(_HandlePosition.middleLeft, c),
             _buildHandle(_HandlePosition.middleRight, c),
-            // Rotation handle (top-center extended arm)
+
+            // ── Rotation handle ──
             _buildRotationHandle(c),
           ],
         ),
       ),
     );
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // RESIZE HANDLES
+  // ═══════════════════════════════════════════════════════════
 
   Widget _buildHandle(_HandlePosition pos, AbsoluteLayoutComponent c) {
     final offset = _handleOffset(pos, c);
@@ -114,6 +164,7 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
       top: offset.dy - _handleSize / 2,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
+        onPanStart: (_) {},
         onPanUpdate: (d) => _onResizeDrag(pos, d),
         onPanEnd: (_) => widget.onResizeEnd(),
         child: MouseRegion(
@@ -129,6 +180,9 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
               ),
               shape: isCorner ? BoxShape.circle : BoxShape.rectangle,
               borderRadius: isCorner ? null : BorderRadius.circular(2),
+              boxShadow: const [
+                BoxShadow(color: Colors.black38, blurRadius: 2),
+              ],
             ),
           ),
         ),
@@ -202,11 +256,9 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
         newW = c.width + d.delta.dx;
         newH = c.height + d.delta.dy;
       case _HandlePosition.rotation:
-        // Rotation is handled separately
         return;
     }
 
-    // Enforce minimum size
     if (newW < minSize) {
       if (pos == _HandlePosition.topLeft ||
           pos == _HandlePosition.middleLeft ||
@@ -227,47 +279,60 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
     widget.onResize(newW, newH, newX, newY);
   }
 
-  // ─── Rotation Handle ──────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // ROTATION HANDLE
+  // ═══════════════════════════════════════════════════════════
 
   Widget _buildRotationHandle(AbsoluteLayoutComponent c) {
     return Positioned(
-      left: c.width / 2 - 3, // line thickness
+      left: c.width / 2 - 2,
       top: -_rotationArmLength,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Vertical line
-          Container(
-            width: 2,
-            height: _rotationArmLength - _handleSize,
-            color: Colors.white70,
-          ),
-          // Rotation knob
-          GestureDetector(
-            onPanUpdate: (d) => _onRotateDrag(d, c),
-            onPanEnd: (_) => widget.onRotateEnd(),
-            child: Container(
-              width: _handleSize,
-              height: _handleSize,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF97316),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.rotate_right,
-                color: Colors.white,
-                size: 8,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanStart: (_) {},
+        onPanUpdate: (d) => _onRotateDrag(d, c),
+        onPanEnd: (_) => widget.onRotateEnd(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Vertical arm
+            Container(
+              width: 3,
+              height: _rotationArmLength - _handleSize - 4,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFFF97316).withOpacity(0.9),
+                    Colors.white70,
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+            // Knob
+            Container(
+              width: _handleSize + 4,
+              height: _handleSize + 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF97316),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black38, blurRadius: 3),
+                ],
+              ),
+              child: const Icon(Icons.sync, color: Colors.white, size: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _onRotateDrag(DragUpdateDetails d, AbsoluteLayoutComponent c) {
-    // Snapping behaviour: use delta to increment rotation
-    final deltaAngle = d.delta.dx * 0.5; // 1px horizontal ≈ 0.5° rotation
+    // Rotation by horizontal drag — 1px ≈ 1° for more responsive feel
+    final deltaAngle = d.delta.dx * 1.0;
     double newRotation = (c.rotation + deltaAngle) % 360;
     if (newRotation < 0) newRotation += 360;
     widget.onRotate(newRotation);

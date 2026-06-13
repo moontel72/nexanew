@@ -229,6 +229,34 @@ class _AbsoluteLayoutDesignerScreenState
     _setState(_state.copyWith(components: comps, isDirty: true));
   }
 
+  /// Convenience: update selected component with specific overrides.
+  void _updateCompWith(
+    AbsoluteLayoutComponent comp, {
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+    double? rotation,
+  }) {
+    _updateComponent(
+      AbsoluteLayoutComponent(
+        id: comp.id,
+        type: comp.type,
+        x: x ?? comp.x,
+        y: y ?? comp.y,
+        width: width ?? comp.width,
+        height: height ?? comp.height,
+        rotation: rotation ?? comp.rotation,
+        seatId: comp.seatId,
+        seatNumber: comp.seatNumber,
+        bookable: comp.bookable,
+        bookingMode: comp.bookingMode,
+        customLabel: comp.customLabel,
+        meta: comp.meta,
+      ),
+    );
+  }
+
   void _deleteComponent(String id) {
     _setState(
       _state.copyWith(
@@ -622,47 +650,26 @@ class _AbsoluteLayoutDesignerScreenState
           AbsoluteTransformOverlay(
             component: _state.selectedComponent!,
             onResize: (w, h, x, y) {
-              final comp = _state.selectedComponent!;
-              _updateComponent(
-                AbsoluteLayoutComponent(
-                  id: comp.id,
-                  type: comp.type,
-                  x: x,
-                  y: y,
-                  width: w,
-                  height: h,
-                  rotation: comp.rotation,
-                  seatId: comp.seatId,
-                  seatNumber: comp.seatNumber,
-                  bookable: comp.bookable,
-                  bookingMode: comp.bookingMode,
-                  customLabel: comp.customLabel,
-                  meta: comp.meta,
-                ),
+              _updateCompWith(
+                _state.selectedComponent!,
+                x: x,
+                y: y,
+                width: w,
+                height: h,
               );
             },
             onResizeEnd: () {},
+            onMove: (x, y) {
+              _updateCompWith(_state.selectedComponent!, x: x, y: y);
+            },
+            onMoveEnd: () {},
             onRotate: (r) {
-              final comp = _state.selectedComponent!;
-              _updateComponent(
-                AbsoluteLayoutComponent(
-                  id: comp.id,
-                  type: comp.type,
-                  x: comp.x,
-                  y: comp.y,
-                  width: comp.width,
-                  height: comp.height,
-                  rotation: r,
-                  seatId: comp.seatId,
-                  seatNumber: comp.seatNumber,
-                  bookable: comp.bookable,
-                  bookingMode: comp.bookingMode,
-                  customLabel: comp.customLabel,
-                  meta: comp.meta,
-                ),
-              );
+              _updateCompWith(_state.selectedComponent!, rotation: r);
             },
             onRotateEnd: () {},
+            onDelete: _state.selectedComponent!.isEditable
+                ? () => _deleteComponent(_state.selectedComponent!.id)
+                : null,
           ),
 
         // Place mode indicator
