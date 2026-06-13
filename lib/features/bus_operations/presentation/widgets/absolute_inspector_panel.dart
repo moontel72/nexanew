@@ -1,8 +1,8 @@
 // NEXATRACE — ABSOLUTE INSPECTOR PANEL
 // ======================================
-// Compact floating inspector panel rendered at top-right of the canvas.
-// Auto-sizes to content (mainAxisSize.min). No bottom sheet.
-// Apply button is always at the bottom of the panel.
+// Floating inspector panel at top-right of canvas.
+// Entire panel is scrollable with a visible scrollbar so the Apply
+// button is always reachable even on small laptop screens.
 //
 // 100% isolated from the legacy CellInspectorPanel.
 
@@ -66,100 +66,9 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
         '≈ ${pxToFtIn(c.width)} × ${pxToFtIn(c.height)}'
         '  (1 in = ${kPixelsPerInch.toInt()} px)';
 
-    // Max panel height = 60% of screen so it never overflows on small screens
-    final maxContentH = MediaQuery.of(context).size.height * 0.55;
-
-    final form = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Position & Size 2×2 grid ──
-        _chip('POSITION & SIZE'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _field('X (px)', _xCtrl)),
-              const SizedBox(width: 8),
-              Expanded(child: _field('Y (px)', _yCtrl)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _field('Width (px)', _wCtrl)),
-              const SizedBox(width: 8),
-              Expanded(child: _field('Height (px)', _hCtrl)),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 10, top: 1),
-          child: Text(
-            ftLabel,
-            style: const TextStyle(color: Color(0x50FFFFFF), fontSize: 8),
-          ),
-        ),
-        const SizedBox(height: 6),
-
-        // ── Rotation ──
-        _chip('ROTATION'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Row(
-            children: [
-              SizedBox(width: 56, child: _field('Deg', _rotCtrl)),
-              const SizedBox(width: 6),
-              _rotChip('0deg', 0),
-              _rotChip('45', 45),
-              _rotChip('90', 90),
-              _rotChip('180', 180),
-            ],
-          ),
-        ),
-        const SizedBox(height: 6),
-
-        // ── Custom Label (editable only) ──
-        if (c.isEditable) ...[
-          _chip('CUSTOM LABEL'),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: TextField(
-              controller: _labelCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-              decoration: InputDecoration(
-                hintText: 'e.g. VIP-1',
-                hintStyle: const TextStyle(color: Color(0x40FFFFFF)),
-                filled: true,
-                fillColor: const Color(0xFF122442),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 6,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(5),
-                  borderSide: const BorderSide(color: Color(0x20FFFFFF)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(5),
-                  borderSide: const BorderSide(color: Color(0x20FFFFFF)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(5),
-                  borderSide: BorderSide(color: c.defaultColor),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
+    // Cap panel height so it never overflows the screen.
+    // 85% leaves room for the top bar, status bar, and taskbar.
+    final maxPanelH = MediaQuery.of(context).size.height * 0.85;
 
     return Container(
       width: 240,
@@ -175,119 +84,217 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── Header ──
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 4, 0),
-            child: Row(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxPanelH),
+        child: Scrollbar(
+          thumbVisibility: true,
+          thickness: 6,
+          radius: const Radius.circular(3),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(c.defaultIcon, color: c.defaultColor, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  c.typeLabel,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                // ═══ HEADER ═══
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 4, 0),
+                  child: Row(
+                    children: [
+                      Icon(c.defaultIcon, color: c.defaultColor, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        c.typeLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white38,
+                          size: 16,
+                        ),
+                        onPressed: widget.onClose,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 24,
+                          minHeight: 24,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(
-                    Icons.close,
-                    color: Colors.white38,
-                    size: 16,
+                const SizedBox(height: 4),
+
+                // ═══ POSITION & SIZE 2x2 grid ═══
+                _chip('POSITION & SIZE'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _field('X (px)', _xCtrl)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _field('Y (px)', _yCtrl)),
+                    ],
                   ),
-                  onPressed: widget.onClose,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 24,
-                    minHeight: 24,
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _field('Width (px)', _wCtrl)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _field('Height (px)', _hCtrl)),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 10, top: 1),
+                  child: Text(
+                    ftLabel,
+                    style: const TextStyle(
+                      color: Color(0x50FFFFFF),
+                      fontSize: 8,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // ═══ ROTATION ═══
+                _chip('ROTATION'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 56, child: _field('Deg', _rotCtrl)),
+                      const SizedBox(width: 6),
+                      _rotChip('0', 0),
+                      _rotChip('45', 45),
+                      _rotChip('90', 90),
+                      _rotChip('180', 180),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // ═══ CUSTOM LABEL (all seat types) ═══
+                if (c.isEditable) ...[
+                  _chip('CUSTOM LABEL'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: TextField(
+                      controller: _labelCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. VIP-1, A1',
+                        hintStyle: const TextStyle(color: Color(0x40FFFFFF)),
+                        filled: true,
+                        fillColor: const Color(0xFF122442),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                          borderSide: const BorderSide(
+                            color: Color(0x20FFFFFF),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                          borderSide: const BorderSide(
+                            color: Color(0x20FFFFFF),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                          borderSide: BorderSide(color: c.defaultColor),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                ],
+
+                // ═══ APPLY + DELETE BUTTONS ═══
+                Container(
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Color(0x20FFFFFF), width: 0.5),
+                    ),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 36,
+                          child: ElevatedButton.icon(
+                            onPressed: _apply,
+                            icon: const Icon(Icons.check, size: 14),
+                            label: const Text(
+                              'Apply',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7C3AED),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (c.isEditable) ...[
+                        const SizedBox(width: 6),
+                        SizedBox(
+                          height: 36,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              widget.onDelete();
+                              widget.onClose();
+                            },
+                            icon: const Icon(Icons.delete_outline, size: 14),
+                            label: const Text(
+                              'Delete',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFDC2626),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 4),
-
-          // ── Scrollable form content (caps height, hugs content) ──
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxContentH),
-            child: SingleChildScrollView(child: form),
-          ),
-
-          // ── Sticky footer: Apply + Delete ──
-          Container(
-            decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Color(0x20FFFFFF), width: 0.5),
-              ),
-            ),
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-            child: SafeArea(
-              top: false,
-              bottom: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 34,
-                      child: ElevatedButton.icon(
-                        onPressed: _apply,
-                        icon: const Icon(Icons.check, size: 14),
-                        label: const Text(
-                          'Apply',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7C3AED),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (c.isEditable) ...[
-                    const SizedBox(width: 6),
-                    SizedBox(
-                      height: 34,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          widget.onDelete();
-                          widget.onClose();
-                        },
-                        icon: const Icon(Icons.delete_outline, size: 14),
-                        label: const Text(
-                          'Delete',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFDC2626),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
