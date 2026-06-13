@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/seat_layout_builder_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/seat_layout_designer_screen.dart';
 import 'package:trace_odd/features/nexa_admin/data/models/company/bus_company_model.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
@@ -342,7 +343,15 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       icon: Icons.add,
                       color: const Color(0xFF0891B2),
                       height: 56,
+                      subtitle: 'Drag & drop canvas designer',
                       onTap: () => _openLayoutDesigner(),
+                    ),
+                    Missile3DButton(
+                      label: 'Grid Builder (Classic)',
+                      icon: Icons.grid_view,
+                      color: const Color(0xFF6366F1),
+                      height: 48,
+                      onTap: () => _openLayoutBuilder(),
                     ),
                     Missile3DButton(
                       label: 'View Layouts ($_layoutCount)',
@@ -405,6 +414,21 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   }
 
   void _openLayoutDesigner() {
+    final cId = widget.companyId ?? _company?.id.toString() ?? '';
+    if (cId.isEmpty) return;
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => SeatLayoutDesignerScreen(
+              companyId: cId,
+              companyName: _company?.name,
+            ),
+          ),
+        )
+        .then((_) => _loadAll());
+  }
+
+  void _openLayoutBuilder() {
     final cId = widget.companyId ?? _company?.id.toString() ?? '';
     if (cId.isEmpty) return;
     Navigator.of(context)
@@ -2514,7 +2538,7 @@ class _LayoutListViewState extends State<_LayoutListView> {
     Navigator.of(context)
         .push(
           MaterialPageRoute(
-            builder: (_) => SeatLayoutBuilderScreen(
+            builder: (_) => SeatLayoutDesignerScreen(
               layoutId: layoutId,
               companyId: cId,
               companyName: widget.companyName,

@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/seat_layout_builder_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/seat_layout_designer_screen.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class OwnerButtonColors {
@@ -2207,8 +2208,26 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     }
   }
 
-  // ═══ OPEN BUILDER (blank slate, no presets) ═══
+  // ═══ OPEN DESIGNER (component canvas with inspector) ═══
   void _openLayoutDesigner({String? layoutId}) async {
+    if (_companyId.isEmpty) {
+      _snack('Company ID not available. Please reload.', AppColors.error);
+      return;
+    }
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SeatLayoutDesignerScreen(
+          companyId: _companyId,
+          companyName: _ownerName,
+          layoutId: layoutId,
+        ),
+      ),
+    );
+    if (mounted && result == true) _loadLayouts();
+  }
+
+  // ═══ OPEN BUILDER (classic grid builder) ═══
+  void _openLayoutBuilder({String? layoutId}) async {
     if (_companyId.isEmpty) {
       _snack('Company ID not available. Please reload.', AppColors.error);
       return;

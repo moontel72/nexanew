@@ -1401,70 +1401,160 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
   // ── Cell Assignment Dialog (centered, fully scrollable) ──
   void _openCellPicker(int row, int col) {
     final grid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
+    final currentCell = grid[row][col];
+    final labelCtrl = TextEditingController(text: currentCell.label ?? '');
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A2A3A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.touch_app, color: Color(0xFF7C3AED), size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Assign Row $row, Col ${String.fromCharCode(65 + col)}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A2A3A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                const Icon(Icons.touch_app, color: Color(0xFF7C3AED), size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Assign Row $row, Col ${String.fromCharCode(65 + col)}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (currentCell.type != BuilderCellType.empty)
+                  TextButton(
+                    onPressed: () {
+                      _clearBerthRegion(row, col);
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text(
+                      'Clear',
+                      style: TextStyle(color: Color(0xFFEF4444)),
+                    ),
+                  ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            titlePadding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+            content: SizedBox(
+              width: 420,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 550),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ── Custom Label / Sticker Override ─────
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'CUSTOM LABEL / STICKER NUMBER',
+                          style: TextStyle(
+                            color: Color(0xFF8899AA),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: labelCtrl,
+                        style: const TextStyle(
+                          color: Color(0xFFFBBF24),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Owner-set label (e.g. 9-B, VIP, DINE)',
+                          hintStyle: const TextStyle(
+                            color: Color(0xFF556677),
+                            fontSize: 12,
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFF112233),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: labelCtrl.text.isNotEmpty
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFF334455),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: labelCtrl.text.isNotEmpty
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFF334455),
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.label_important,
+                            color: Color(0xFFD97706),
+                            size: 16,
+                          ),
+                        ),
+                        onChanged: (_) => setDialogState(() {}),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Freezes auto-numbering. Mirrors to booking panel.',
+                        style: TextStyle(
+                          color: const Color(0xFFD97706).withAlpha(150),
+                          fontSize: 9,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      // ── Type Selection ────────────────────────
+                      for (final type in BuilderCellType.values)
+                        if (type != BuilderCellType.empty)
+                          _optionTileWithLabel(ctx, type, row, col, labelCtrl),
+                    ],
+                  ),
                 ),
               ),
             ),
-            if (grid[row][col].type != BuilderCellType.empty)
-              TextButton(
-                onPressed: () {
-                  _clearBerthRegion(row, col);
-                  Navigator.pop(ctx);
-                },
-                child: const Text(
-                  'Clear',
-                  style: TextStyle(color: Color(0xFFEF4444)),
-                ),
-              ),
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.white70, size: 20),
-              onPressed: () => Navigator.pop(ctx),
-            ),
-          ],
-        ),
-        titlePadding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
-        content: SizedBox(
-          width: 380,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 500),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final type in BuilderCellType.values)
-                    if (type != BuilderCellType.empty)
-                      _optionTile(ctx, type, row, col),
-                ],
-              ),
-            ),
-          ),
-        ),
-        contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+            contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+          );
+        },
       ),
     );
   }
 
-  Widget _optionTile(BuildContext ctx, BuilderCellType type, int row, int col) {
+  Widget _optionTileWithLabel(
+    BuildContext ctx,
+    BuilderCellType type,
+    int row,
+    int col,
+    TextEditingController labelCtrl,
+  ) {
     final grid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
     final color = _cellColors[type] ?? Colors.grey;
     final icon = _cellIcons[type] ?? Icons.help;
-    final label = _cellLabels[type] ?? type.name;
+    final typeLabel = _cellLabels[type] ?? type.name;
     final isSelected = grid[row][col].type == type;
+    final customLabel = labelCtrl.text.trim().isNotEmpty
+        ? labelCtrl.text.trim()
+        : null;
 
     return Card(
       color: isSelected ? color.withAlpha(25) : const Color(0xFF112233),
@@ -1479,19 +1569,19 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
         onTap: () {
           if (type == BuilderCellType.sleeperLower ||
               type == BuilderCellType.sleeperUpper) {
-            // Auto-expand berth: 3 rows × 2 cols
             if (!_markBerthArea(row, col, type)) return;
+            _applyLabelToRegion(row, col, type, customLabel);
           } else if (type == BuilderCellType.restaurantTable) {
-            // Auto-expand restaurant: 2 rows × 2 cols
             if (!_markMultiCellArea(row, col, type, 2, 2)) return;
+            _applyLabelToRegion(row, col, type, customLabel);
           } else if (type == BuilderCellType.lavatory ||
               type == BuilderCellType.kitchen) {
-            // Auto-expand lavatory/kitchen: 2 rows × 2 cols
             if (!_markMultiCellArea(row, col, type, 2, 2)) return;
+            _applyLabelToRegion(row, col, type, customLabel);
           } else {
             setState(() {
               grid[row][col].type = type;
-              grid[row][col].label = null;
+              grid[row][col].label = customLabel;
             });
           }
           _renumberSeats();
@@ -1510,65 +1600,52 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
                 ),
                 child: Icon(icon, size: 20, color: color),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: isSelected ? color : Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (type == BuilderCellType.foldingSeat)
-                      const Text(
-                        '2-in-1 Coaster seat — foldable for aisle access',
-                        style: TextStyle(
-                          color: Color(0xFF667788),
-                          fontSize: 11,
-                        ),
-                      ),
-                    if (type == BuilderCellType.sleeperLower ||
-                        type == BuilderCellType.sleeperUpper)
-                      const Text(
-                        'Auto-expands 3 rows × 2 cols (6 cells)\n'
-                        'Labeled L1, L2… (Lower) or U1, U2… (Upper)',
-                        style: TextStyle(
-                          color: Color(0xFF667788),
-                          fontSize: 11,
-                        ),
-                      ),
-                    if (type == BuilderCellType.aisle)
-                      const Text(
-                        'Walkway/path — not a bookable seat',
-                        style: TextStyle(
-                          color: Color(0xFF667788),
-                          fontSize: 11,
-                        ),
-                      ),
-                    if (type == BuilderCellType.driverCabin ||
-                        type == BuilderCellType.exitDoor ||
-                        type == BuilderCellType.emergency ||
-                        type == BuilderCellType.lavatory)
-                      const Text(
-                        'Structural — not bookable',
-                        style: TextStyle(
-                          color: Color(0xFF667788),
-                          fontSize: 11,
-                        ),
-                      ),
-                  ],
+                child: Text(
+                  typeLabel,
+                  style: TextStyle(
+                    color: isSelected ? color : const Color(0xFFCBD5E1),
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  ),
                 ),
               ),
-              if (isSelected) Icon(Icons.check_circle, color: color, size: 22),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle,
+                  color: Color(0xFF4ADE80),
+                  size: 18,
+                ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Apply a custom label to all cells in a multi-cell region.
+  void _applyLabelToRegion(
+    int startRow,
+    int startCol,
+    BuilderCellType type,
+    String? label,
+  ) {
+    final grid = _isUpperDeck && _hasUpperDeck ? _upperGrid : _grid;
+    // Find region bounds
+    int spanR = 1, spanC = 1;
+    while (startRow + spanR < _rows &&
+        grid[startRow + spanR][startCol].type == type)
+      spanR++;
+    while (startCol + spanC < _cols &&
+        grid[startRow][startCol + spanC].type == type)
+      spanC++;
+
+    for (int r = startRow; r < startRow + spanR; r++) {
+      for (int c = startCol; c < startCol + spanC; c++) {
+        grid[r][c].label = label;
+      }
+    }
   }
 
   // ── Generate blank grid ────────────────────────────
@@ -1743,10 +1820,16 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       for (int c = 0; c < grid[r].length; c++) {
         if ((visited[r]?.contains(c) ?? false)) continue;
         final type = grid[r][c].type;
-        if (type == BuilderCellType.sleeperLower) {
+        if (type == BuilderCellType.sleeperLower &&
+            (grid[r][c].label == null ||
+                grid[r][c].label!.isEmpty ||
+                grid[r][c].label!.startsWith('L'))) {
           lowerCount++;
           _labelBerthBlock(r, c, 'L$lowerCount', visited, grid);
-        } else if (type == BuilderCellType.sleeperUpper) {
+        } else if (type == BuilderCellType.sleeperUpper &&
+            (grid[r][c].label == null ||
+                grid[r][c].label!.isEmpty ||
+                grid[r][c].label!.startsWith('U'))) {
           upperCount++;
           _labelBerthBlock(r, c, 'U$upperCount', visited, grid);
         }
@@ -1759,7 +1842,7 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
       int letterIdx = 0;
       for (int c = 0; c < grid[r].length; c++) {
         final cell = grid[r][c];
-        // Skip non‑ticketable cells. Berths already have labels from pass 1.
+        // Skip non‑ticketable / structural cells
         if (cell.type == BuilderCellType.empty ||
             cell.type == BuilderCellType.aisle ||
             cell.type == BuilderCellType.driverCabin ||
@@ -1768,15 +1851,24 @@ class _SeatLayoutBuilderScreenState extends State<SeatLayoutBuilderScreen> {
             cell.type == BuilderCellType.rearDoor ||
             cell.type == BuilderCellType.emergency ||
             cell.type == BuilderCellType.lavatory ||
-            cell.type == BuilderCellType.kitchen) {
+            cell.type == BuilderCellType.kitchen ||
+            cell.type == BuilderCellType.restaurantTable) {
           cell.label = null;
           continue;
         }
+        // Berth labels were already set in pass 1 — preserve them
         if (cell.type == BuilderCellType.sleeperLower ||
             cell.type == BuilderCellType.sleeperUpper) {
-          continue; // keep berth labels from pass 1
+          continue;
         }
-        // Ticketable seat-type cells (seat, foldingSeat)
+        // Preserve custom/owner-set labels (non-auto-generated patterns)
+        final existing = cell.label;
+        if (existing != null &&
+            existing.isNotEmpty &&
+            !RegExp(r'^\d+[A-Z]$').hasMatch(existing)) {
+          continue; // custom label — freeze it
+        }
+        // Ticketable seat-type cells: auto-generate label
         cell.label =
             '${r + 1}${letters[letterIdx < letters.length ? letterIdx : 0]}';
         letterIdx++;
