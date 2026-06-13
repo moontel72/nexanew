@@ -10,6 +10,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_component.dart';
+import 'package:trace_odd/shared/models/transport/absolute_layout_state.dart';
 
 /// Handle positions around the bounding box.
 enum _HandlePosition {
@@ -69,9 +70,17 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
   static const double _rotationKnobSize = 40.0;
   static const double _deleteBtnSize = 40.0;
 
+  // Live dimension tooltip during resize
+  bool _isResizing = false;
+  double _resizeW = 0;
+  double _resizeH = 0;
+
   @override
   Widget build(BuildContext context) {
     final c = widget.component;
+    // Use live-resize values when dragging, otherwise the current component
+    final displayW = _isResizing ? _resizeW : c.width;
+    final displayH = _isResizing ? _resizeH : c.height;
 
     return Positioned(
       left: c.x,
@@ -135,6 +144,46 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
               ),
             ),
 
+            // ── Live resize dimension tooltip ──
+            if (_isResizing)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: -56,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xE50D1B2A),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: const Color(0xFF7C3AED).withOpacity(0.7),
+                        width: 1.5,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black54,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      '${pxToFtIn(displayW)} × ${pxToFtIn(displayH)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
             // ── 4 corner handles ──
             _buildHandle(_HandlePosition.topLeft, c),
             _buildHandle(_HandlePosition.topRight, c),
@@ -173,9 +222,18 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
       top: offset.dy - _handleSize / 2,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onPanStart: (_) {},
+        onPanStart: (_) {
+          setState(() {
+            _isResizing = true;
+            _resizeW = c.width;
+            _resizeH = c.height;
+          });
+        },
         onPanUpdate: (d) => _onResizeDrag(pos, d),
-        onPanEnd: (_) => widget.onResizeEnd(),
+        onPanEnd: (_) {
+          setState(() => _isResizing = false);
+          widget.onResizeEnd();
+        },
         child: MouseRegion(
           cursor: cursor,
           child: Container(
@@ -286,6 +344,11 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
     }
 
     widget.onResize(newW, newH, newX, newY);
+    // Update live tooltip
+    setState(() {
+      _resizeW = newW;
+      _resizeH = newH;
+    });
   }
 
   // ═══════════════════════════════════════════════════════════

@@ -170,16 +170,16 @@ class _CanvasBackgroundPainter extends CustomPainter {
         ..strokeWidth = 2.0,
     );
 
-    // Draw edge measurement labels
+    // Draw edge measurement labels in feet/inches
     final labelStyle = TextStyle(color: const Color(0x60FFFFFF), fontSize: 10);
     final topLabel = TextPainter(
-      text: TextSpan(text: '${canvasWidth.toInt()} px', style: labelStyle),
+      text: TextSpan(text: pxToFtIn(canvasWidth), style: labelStyle),
       textDirection: TextDirection.ltr,
     )..layout();
     topLabel.paint(canvas, Offset(8, 4));
 
     final leftLabel = TextPainter(
-      text: TextSpan(text: '${canvasHeight.toInt()} px', style: labelStyle),
+      text: TextSpan(text: pxToFtIn(canvasHeight), style: labelStyle),
       textDirection: TextDirection.ltr,
     )..layout();
     leftLabel.paint(canvas, Offset(4, 20));

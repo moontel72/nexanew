@@ -7,6 +7,37 @@
 
 import 'absolute_layout_component.dart';
 
+// ═══════════════════════════════════════════════════════════
+// UNIT CONVERSION
+// ═══════════════════════════════════════════════════════════
+/// Scale ratio: 1 inch = 4 logical pixels
+/// This means 48 px = 1 foot (12 inches × 4 px/inch)
+/// Chosen to give realistic bus dimensions:
+///   280 px wide ≈ 5'10" (standard coach width)
+///   896 px long ≈ 18'8" (standard coach length)
+const double kPixelsPerInch = 4.0;
+
+/// Convert logical pixels to a human-readable feet+inches string.
+/// e.g. pxToFtIn(280) → "5' 10\""
+String pxToFtIn(double pixels) {
+  final totalInches = (pixels / kPixelsPerInch).round();
+  final feet = totalInches ~/ 12;
+  final inches = totalInches % 12;
+  if (feet > 0 && inches > 0) {
+    return "$feet' $inches\"";
+  } else if (feet > 0) {
+    return "$feet'";
+  } else {
+    return '$inches"';
+  }
+}
+
+/// Convert logical pixels to inches string.
+/// e.g. pxToInches(56) → "14.0 in"
+String pxToInches(double pixels) {
+  return '${(pixels / kPixelsPerInch).toStringAsFixed(1)} in';
+}
+
 /// Vehicle class presets for the absolute canvas.
 class AbsoluteLayoutPreset {
   final String key;

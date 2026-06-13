@@ -842,7 +842,7 @@ class _AbsoluteLayoutDesignerScreenState
                 const Gap(4),
                 // Canvas size
                 const Text(
-                  'CANVAS SIZE',
+                  'CANVAS SIZE (ft/in)',
                   style: TextStyle(
                     color: Color(0x60FFFFFF),
                     fontSize: 9,
@@ -850,12 +850,17 @@ class _AbsoluteLayoutDesignerScreenState
                     letterSpacing: 1.5,
                   ),
                 ),
+                const Gap(2),
+                Text(
+                  'W: ${pxToFtIn(_state.canvasWidth)} · H: ${pxToFtIn(_state.canvasHeight)}',
+                  style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 9),
+                ),
                 const Gap(6),
                 Row(
                   children: [
                     Expanded(
                       child: _sizeField(
-                        'W',
+                        'Width (px)',
                         _state.canvasWidth,
                         (v) => _setState(
                           _state.copyWith(
@@ -868,7 +873,7 @@ class _AbsoluteLayoutDesignerScreenState
                     const Gap(8),
                     Expanded(
                       child: _sizeField(
-                        'H',
+                        'Height (px)',
                         _state.canvasHeight,
                         (v) => _setState(
                           _state.copyWith(
@@ -913,7 +918,7 @@ class _AbsoluteLayoutDesignerScreenState
               ),
               const Gap(4),
               Text(
-                '${preset.canvasWidth.toInt()}×${preset.canvasHeight.toInt()} px · ${preset.leftSeats + preset.rightSeats}-abreast',
+                '${pxToFtIn(preset.canvasWidth)} × ${pxToFtIn(preset.canvasHeight)} · ${preset.leftSeats + preset.rightSeats}-abreast',
                 style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 10),
               ),
             ],
@@ -970,14 +975,14 @@ class _AbsoluteLayoutDesignerScreenState
             Icon(sel.defaultIcon, color: sel.defaultColor, size: 12),
             const Gap(4),
             Text(
-              '${sel.typeLabel} · ${sel.x.toInt()},${sel.y.toInt()} · ${sel.width.toInt()}×${sel.height.toInt()} px',
+              '${sel.typeLabel} · ${pxToFtIn(sel.width)} × ${pxToFtIn(sel.height)}',
               style: const TextStyle(color: Color(0x80FFFFFF), fontSize: 11),
             ),
           ],
           const Gap(8),
           // Canvas dimensions
           Text(
-            'Canvas: ${_state.canvasWidth.toInt()}×${_state.canvasHeight.toInt()} px',
+            'Canvas: ${pxToFtIn(_state.canvasWidth)} × ${pxToFtIn(_state.canvasHeight)}',
             style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 10),
           ),
         ],
