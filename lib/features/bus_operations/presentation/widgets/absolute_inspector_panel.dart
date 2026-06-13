@@ -16,12 +16,16 @@ class AbsoluteInspectorPanel extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onClose;
 
+  /// Optional scroll controller from a DraggableScrollableSheet ancestor.
+  final ScrollController? scrollController;
+
   const AbsoluteInspectorPanel({
     super.key,
     required this.component,
     required this.onApply,
     required this.onDelete,
     required this.onClose,
+    this.scrollController,
   });
 
   @override
@@ -62,8 +66,6 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
   @override
   Widget build(BuildContext context) {
     final c = widget.component;
-    // Constrain height so the scroll view actually scrolls on small screens
-    final maxHeight = MediaQuery.of(context).size.height * 0.75;
 
     return Container(
       decoration: const BoxDecoration(
@@ -75,22 +77,19 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
           right: BorderSide(color: Color(0x20FFFFFF)),
         ),
       ),
-      constraints: BoxConstraints(maxHeight: maxHeight),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
       child: Scrollbar(
+        controller: widget.scrollController,
         thumbVisibility: true,
         thickness: 6,
         radius: const Radius.circular(3),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
+        child: ListView(
+          controller: widget.scrollController,
+          padding: EdgeInsets.zero,
+          children: [
+            // ── Header ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+              child: Row(
                 children: [
                   Icon(c.defaultIcon, color: c.defaultColor, size: 20),
                   const SizedBox(width: 8),
@@ -119,58 +118,68 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 12),
 
-              // Position (keep px for precision, add ft/in hint)
-              _sectionTitle('POSITION'),
-              const SizedBox(height: 8),
-              Row(
+            // ── Position ──
+            _sectionTile('POSITION'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
                 children: [
-                  _field('X (px)', _xCtrl, 80),
+                  _field('X (px)', _xCtrl, 90),
                   const SizedBox(width: 12),
-                  _field('Y (px)', _yCtrl, 80),
+                  _field('Y (px)', _yCtrl, 90),
                 ],
               ),
-              const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 12),
 
-              // Size — show both px and ft/in
-              _sectionTitle('SIZE'),
-              const SizedBox(height: 8),
-              Row(
+            // ── Size ──
+            _sectionTile('SIZE'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
                 children: [
-                  _field('Width (px)', _wCtrl, 80),
+                  _field('Width (px)', _wCtrl, 90),
                   const SizedBox(width: 12),
-                  _field('Height (px)', _hCtrl, 80),
+                  _field('Height (px)', _hCtrl, 90),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                '≈ ${pxToFtIn(c.width)} × ${pxToFtIn(c.height)}  (1 in = ${kPixelsPerInch.toInt()} px)',
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 16, top: 4),
+              child: Text(
+                '≈ ${pxToFtIn(c.width)} × ${pxToFtIn(c.height)}  '
+                '(1 in = ${kPixelsPerInch.toInt()} px)',
                 style: const TextStyle(color: Color(0x50FFFFFF), fontSize: 10),
               ),
-              const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 12),
 
-              // Rotation
-              _sectionTitle('ROTATION'),
-              const SizedBox(height: 8),
-              Row(
+            // ── Rotation ──
+            _sectionTile('ROTATION'),
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Row(
                 children: [
-                  _field('Degrees', _rotCtrl, 80),
-                  const SizedBox(width: 12),
-                  // Quick-rotate buttons
+                  _field('Degrees', _rotCtrl, 60),
+                  const SizedBox(width: 6),
                   _rotateBtn('0°', 0),
                   _rotateBtn('45°', 45),
                   _rotateBtn('90°', 90),
                   _rotateBtn('180°', 180),
                 ],
               ),
-              const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 12),
 
-              // Custom Label
-              if (c.isEditable) ...[
-                _sectionTitle('CUSTOM LABEL'),
-                const SizedBox(height: 8),
-                TextField(
+            // ── Custom Label (editable only) ──
+            if (c.isEditable) ...[
+              _sectionTile('CUSTOM LABEL'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
                   controller: _labelCtrl,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
@@ -196,31 +205,43 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Set a custom sticker label. Auto-numbering will skip this seat.',
-                  style: TextStyle(
-                    color: const Color(0x60FFFFFF),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 16, top: 4),
+                child: Text(
+                  'Set a custom sticker label. Auto-numbering skips this seat.',
+                  style: const TextStyle(
+                    color: Color(0x60FFFFFF),
                     fontSize: 11,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
+              ),
+              const SizedBox(height: 12),
+            ],
 
-              // Metadata
-              _sectionTitle('INFO'),
-              const SizedBox(height: 8),
-              _infoRow('Type', c.typeLabel),
-              _infoRow('ID', c.id.substring(0, 8)),
-              if (c.seatNumber != null) _infoRow('Seat #', '${c.seatNumber}'),
-              _infoRow('Bookable', c.bookable ? 'Yes' : 'No'),
-              if (!c.isStructural) _infoRow('Booking Mode', c.bookingMode.name),
+            // ── Info ──
+            _sectionTile('INFO'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _infoRow('Type', c.typeLabel),
+                  _infoRow('ID', c.id.substring(0, 8)),
+                  if (c.seatNumber != null)
+                    _infoRow('Seat #', '${c.seatNumber}'),
+                  _infoRow('Bookable', c.bookable ? 'Yes' : 'No'),
+                  if (!c.isStructural)
+                    _infoRow('Booking Mode', c.bookingMode.name),
+                ],
+              ),
+            ),
 
-              const SizedBox(height: 16),
-
-              // Action buttons — always at the bottom of the scrollable area
-              Row(
+            // ── Action buttons ──
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
@@ -258,22 +279,26 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                   ],
                 ],
               ),
-              const SizedBox(height: 8),
-            ],
-          ),
+            ),
+            // Extra safe-area at the bottom
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+          ],
         ),
       ),
     );
   }
 
-  Widget _sectionTitle(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: Color(0x80FFFFFF),
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.5,
+  Widget _sectionTile(String text) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0x80FFFFFF),
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.5,
+        ),
       ),
     );
   }

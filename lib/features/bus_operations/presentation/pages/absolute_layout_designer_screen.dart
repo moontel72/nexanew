@@ -417,17 +417,23 @@ class _AbsoluteLayoutDesignerScreenState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AbsoluteInspectorPanel(
-        component: comp,
-        onApply: (updated) {
-          _updateComponent(updated);
-          Navigator.pop(context);
-        },
-        onDelete: () {
-          _deleteComponent(comp.id);
-          Navigator.pop(context);
-        },
-        onClose: () => Navigator.pop(context),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.48,
+        minChildSize: 0.35,
+        maxChildSize: 0.92,
+        builder: (ctx, scrollController) => AbsoluteInspectorPanel(
+          scrollController: scrollController,
+          component: comp,
+          onApply: (updated) {
+            _updateComponent(updated);
+            Navigator.pop(context);
+          },
+          onDelete: () {
+            _deleteComponent(comp.id);
+            Navigator.pop(context);
+          },
+          onClose: () => Navigator.pop(context),
+        ),
       ),
     );
     _inspectorOpen = false;
