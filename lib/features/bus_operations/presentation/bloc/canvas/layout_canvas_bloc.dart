@@ -570,16 +570,18 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
 
     final uuidPrefix = '${state.activeDeck}_bc_';
 
-    // Business class: aisle 50% narrower, saved space to seats, rows 50% taller
+    // Aisle stays full 56px, shifts LEFT by half-cell.
+    // Left seat loses 28px, right seats gain 28px → more equal sizing.
     const double kCell = 56.0;
-    final leftWidth = kCell * event.leftCols;
-    final aisleWidth = kCell * 0.5; // half-width aisle
-    final extraPerSeat = (kCell * 0.5) / (1 + event.rightCols);
+    const double shift = kCell * 0.5;
+    final leftWidth = kCell * event.leftCols - shift;
+    final aisleWidth = kCell;
+    final rightExtra = shift / event.rightCols;
 
     final bizColumnWidths = <double>[
-      leftWidth + extraPerSeat,
+      leftWidth,
       aisleWidth,
-      for (int i = 0; i < event.rightCols; i++) kCell + extraPerSeat,
+      for (int i = 0; i < event.rightCols; i++) kCell + rightExtra,
     ];
 
     // Store flex overrides AND row heights for these 3 rows
@@ -668,15 +670,17 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
     final rightCols =
         (meta['right_cols'] as int?) ?? ((canvas.maxCols - 1) ~/ 2).clamp(1, 3);
 
-    // Business class: aisle 50% narrower, saved space distributed to seats
-    final leftWidth = kCell * leftCols;
-    final aisleWidth = kCell * 0.5; // half-width aisle
-    final extraPerSeat = (kCell * 0.5) / (1 + rightCols); // share saved space
+    // Aisle stays full 56px, shifts LEFT by half-cell (28px).
+    // Left seat loses 28px, right seats gain 28px → more equal sizing.
+    const double shift = kCell * 0.5; // 28px aisle left-shift
+    final leftWidth = kCell * leftCols - shift; // e.g. 112-28=84px
+    final aisleWidth = kCell; // 56px — unchanged
+    final rightExtra = shift / rightCols; // 28/2=14px per right seat
 
     final bizWidths = <double>[
-      leftWidth + extraPerSeat, // left panel + share
+      leftWidth,
       aisleWidth,
-      for (int i = 0; i < rightCols; i++) kCell + extraPerSeat,
+      for (int i = 0; i < rightCols; i++) kCell + rightExtra,
     ];
 
     final flexOverrides = FlexOverrides.from(canvas.flexOverrides ?? {});

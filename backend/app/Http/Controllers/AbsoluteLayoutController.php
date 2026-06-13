@@ -1,0 +1,247 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Services\Transport\AbsoluteLayoutService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * NEXATRACE — ABSOLUTE LAYOUT CONTROLLER
+ * =======================================
+ *
+ * Handles CRUD for the Absolute (Freeform) Bus Layout Engine.
+ * All routes are under /api/v1/bus-owner/absolute-layouts/*
+ * and scoped to the authenticated owner's global_identity_id.
+ *
+ * 100% isolated from the legacy BusOwnerController layout methods.
+ */
+class AbsoluteLayoutController extends Controller
+{
+    public function __construct(
+        private ?AbsoluteLayoutService $service = null,
+    ) {
+        $this->service ??= app(AbsoluteLayoutService::class);
+    }
+
+    /** Resolve the authenticated owner's global_identity_id. */
+    private function ownerIdentityId(Request $request): ?string
+    {
+        return $request->user()?->global_identity_id;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // LIST — GET /absolute-layouts
+    // ═══════════════════════════════════════════════════════════
+
+    public function index(Request $request): JsonResponse
+    {
+        $identityId = $this->ownerIdentityId($request);
+        if (!$identityId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No identity associated with this account.',
+            ], 403);
+        }
+
+        $perPage = (int) ($request->query('per_page', 20));
+        $result = $this->service->listLayouts($identityId, $perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => $result['data'],
+            'pagination' => $result['pagination'],
+        ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SHOW — GET /absolute-layouts/{id}
+    // ═══════════════════════════════════════════════════════════
+
+    public function show(Request $request, string $id): JsonResponse
+    {
+        $identityId = $this->ownerIdentityId($request);
+        if (!$identityId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No identity associated with this account.',
+            ], 403);
+        }
+
+        $layout = $this->service->showLayout($id, $identityId);
+
+        if (!$layout) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Layout not found.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $layout,
+        ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CREATE — POST /absolute-layouts
+    // ═══════════════════════════════════════════════════════════
+
+    public function store(Request $request): JsonResponse
+    {
+        $identityId = $this->ownerIdentityId($request);
+        if (!$identityId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No identity associated with this account.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'display_name' => 'sometimes|string|max:255',
+            'deck_level' => 'sometimes|string|in:lower,upper',
+            'canvas_width' => 'sometimes|integer|min:100|max:2000',
+            'canvas_height' => 'sometimes|integer|min:100|max:5000',
+            'current_snapshot' => 'sometimes|array',
+            'layout_status' => 'sometimes|string|in:draft,published',
+        ]);
+
+        $layout = $this->service->createLayout($identityId, $validated);
+
+        return response()->json([
+            'success' => true,
+            'data' => $layout->toArray(),
+            'message' => 'Absolute layout created successfully.',
+        ], 201);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // UPDATE — PUT /absolute-layouts/{id}
+    // ═══════════════════════════════════════════════════════════
+
+    public function update(Request $request, string $id): JsonResponse
+    {
+        $identityId = $this->ownerIdentityId($request);
+        if (!$identityId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No identity associated with this account.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'display_name' => 'sometimes|string|max:255',
+            'deck_level' => 'sometimes|string|in:lower,upper',
+            'canvas_width' => 'sometimes|integer|min:100|max:2000',
+            'canvas_height' => 'sometimes|integer|min:100|max:5000',
+            'current_snapshot' => 'sometimes|array',
+            'layout_status' => 'sometimes|string|in:draft,published',
+        ]);
+
+        $layout = $this->service->updateLayout($id, $identityId, $validated);
+
+        if (!$layout) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Layout not found or access denied.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $layout->toArray(),
+            'message' => 'Absolute layout updated successfully.',
+        ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // DELETE — DELETE /absolute-layouts/{id}
+    // ═══════════════════════════════════════════════════════════
+
+    public function destroy(Request $request, string $id): JsonResponse
+    {
+        $identityId = $this->ownerIdentityId($request);
+        if (!$identityId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No identity associated with this account.',
+            ], 403);
+        }
+
+        $deleted = $this->service->deleteLayout($id, $identityId);
+
+        if (!$deleted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Layout not found or access denied.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Absolute layout archived successfully.',
+        ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PUBLISH — POST /absolute-layouts/{id}/publish
+    // ═══════════════════════════════════════════════════════════
+
+    public function publish(Request $request, string $id): JsonResponse
+    {
+        $identityId = $this->ownerIdentityId($request);
+        if (!$identityId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No identity associated with this account.',
+            ], 403);
+        }
+
+        $publisherId = $request->user()?->global_identity_id;
+        $changeDescription = $request->input('change_description');
+
+        $layout = $this->service->publishLayout(
+            $id,
+            $identityId,
+            $publisherId,
+            $changeDescription,
+        );
+
+        if (!$layout) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Layout not found or access denied.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $layout->toArray(),
+            'message' => 'Absolute layout published (revision ' . $layout->version_number . ').',
+        ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PURGE ALL — DELETE /absolute-layouts/purge/all
+    // ═══════════════════════════════════════════════════════════
+
+    public function purgeAll(Request $request): JsonResponse
+    {
+        $identityId = $this->ownerIdentityId($request);
+        if (!$identityId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No identity associated with this account.',
+            ], 403);
+        }
+
+        $count = $this->service->purgeAll($identityId);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Purged $count absolute layout(s).",
+            'data' => ['deleted_count' => $count],
+        ]);
+    }
+}

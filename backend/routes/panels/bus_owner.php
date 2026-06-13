@@ -139,6 +139,17 @@ Route::prefix('api/v1/bus-owner')
         // ─── Layout Presets ─────────────────────────────────
         Route::get('layout-presets', [\App\Http\Controllers\BusOwnerController::class, 'layoutPresets']);
 
+        // ─── Absolute Layouts (Freeform Canvas) ───────────────
+        Route::prefix('absolute-layouts')->group(function (): void {
+            Route::get('/', [\App\Http\Controllers\AbsoluteLayoutController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\AbsoluteLayoutController::class, 'store']);
+            Route::delete('/purge/all', [\App\Http\Controllers\AbsoluteLayoutController::class, 'purgeAll']);
+            Route::get('/{id}', [\App\Http\Controllers\AbsoluteLayoutController::class, 'show']);
+            Route::put('/{id}', [\App\Http\Controllers\AbsoluteLayoutController::class, 'update']);
+            Route::post('/{id}/publish', [\App\Http\Controllers\AbsoluteLayoutController::class, 'publish']);
+            Route::delete('/{id}', [\App\Http\Controllers\AbsoluteLayoutController::class, 'destroy']);
+        });
+
         // ─── Identity Portability — Link Request (§10.11.2) ──
         Route::get('available-companies', [\App\Http\Controllers\BusOwnerController::class, 'availableCompanies']);
         Route::prefix('link-request')->group(function (): void {

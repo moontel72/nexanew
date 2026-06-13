@@ -84,13 +84,14 @@ class CanvasGrid extends StatelessWidget {
           (meta['right_cols'] as int?) ??
           ((canvasState.maxCols - 1) ~/ 2).clamp(1, 3);
       const double kCell = 56.0;
-      // Business class: narrow aisle (50%), wider seats
-      final leftWidth = kCell * leftCols * 1.0; // full left panel → 1 wide seat
-      final aisleWidth = kCell * 0.5; // half-width aisle for business rows
-      final rightExtra =
-          kCell * 0.5 / rightCols; // distribute saved aisle space
+      // Aisle stays full 56px, shifts LEFT by half-cell (28px).
+      // Left seat loses 28px, right seats gain 28px → more equal sizing.
+      const double shift = kCell * 0.5;
+      final leftWidth = kCell * leftCols - shift;
+      final aisleWidth = kCell;
+      final rightExtra = shift / rightCols;
       return <double>[
-        leftWidth + rightExtra, // left seat gets a share of saved aisle space
+        leftWidth,
         aisleWidth,
         for (int i = 0; i < rightCols; i++) kCell + rightExtra,
       ];
