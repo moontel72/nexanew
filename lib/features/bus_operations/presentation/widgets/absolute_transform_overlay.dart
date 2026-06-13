@@ -32,6 +32,7 @@ typedef OnMoveEnd = void Function();
 typedef OnRotate = void Function(double newRotation);
 typedef OnRotateEnd = void Function();
 typedef OnDelete = void Function();
+typedef OnTapOverlay = void Function();
 
 class AbsoluteTransformOverlay extends StatefulWidget {
   final AbsoluteLayoutComponent component;
@@ -42,6 +43,7 @@ class AbsoluteTransformOverlay extends StatefulWidget {
   final OnRotate onRotate;
   final OnRotateEnd onRotateEnd;
   final OnDelete? onDelete;
+  final OnTapOverlay? onTap;
 
   const AbsoluteTransformOverlay({
     super.key,
@@ -53,6 +55,7 @@ class AbsoluteTransformOverlay extends StatefulWidget {
     required this.onRotate,
     required this.onRotateEnd,
     this.onDelete,
+    this.onTap,
   });
 
   @override
@@ -62,9 +65,9 @@ class AbsoluteTransformOverlay extends StatefulWidget {
 
 class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
   static const double _handleSize = 18.0;
-  static const double _rotationArmLength = 56.0;
-  static const double _rotationKnobSize = 44.0;
-  static const double _deleteBtnSize = 56.0;
+  static const double _rotationArmLength = 48.0;
+  static const double _rotationKnobSize = 40.0;
+  static const double _deleteBtnSize = 40.0;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +87,7 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
+                onTap: widget.onTap,
                 onPanStart: (_) {},
                 onPanUpdate: (d) {
                   widget.onMove(c.x + d.delta.dx, c.y + d.delta.dy);

@@ -372,20 +372,29 @@ class _AbsoluteLayoutDesignerScreenState
     final comp = _state.componentById(compId);
     if (comp == null) return;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => AbsoluteInspectorPanel(
-        component: comp,
-        onApply: (updated) {
-          _updateComponent(updated);
-          Navigator.pop(context);
-        },
-        onDelete: () => _deleteComponent(compId),
-        onClose: () => Navigator.pop(context),
-      ),
-    );
+    // Dismiss any existing bottom sheet first
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    // Use a post-frame callback to avoid "setState during build" issues
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => AbsoluteInspectorPanel(
+          component: comp,
+          onApply: (updated) {
+            _updateComponent(updated);
+            Navigator.pop(context);
+          },
+          onDelete: () => _deleteComponent(compId),
+          onClose: () => Navigator.pop(context),
+        ),
+      );
+    });
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -669,6 +678,9 @@ class _AbsoluteLayoutDesignerScreenState
             },
             onRotateEnd: () {},
             onDelete: () => _deleteComponent(_state.selectedComponent!.id),
+            onTap: () {
+              _openInspector(_state.selectedComponent!.id);
+            },
           ),
 
         // Place mode indicator
