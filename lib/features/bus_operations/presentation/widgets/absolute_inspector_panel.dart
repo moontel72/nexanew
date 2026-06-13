@@ -1,8 +1,8 @@
 // NEXATRACE — ABSOLUTE INSPECTOR PANEL
 // ======================================
-// Compact property inspector for the Absolute Bus Layout Engine.
-// Uses a sticky footer so the Apply button is ALWAYS visible.
-// No scrollbars needed — the DraggableScrollableSheet handles resizing.
+// Compact floating inspector panel rendered at top-right of the canvas.
+// Auto-sizes to content (mainAxisSize.min). No bottom sheet.
+// Apply button is always at the bottom of the panel.
 //
 // 100% isolated from the legacy CellInspectorPanel.
 
@@ -15,7 +15,6 @@ class AbsoluteInspectorPanel extends StatefulWidget {
   final void Function(AbsoluteLayoutComponent updated) onApply;
   final VoidCallback onDelete;
   final VoidCallback onClose;
-  final ScrollController? scrollController;
 
   const AbsoluteInspectorPanel({
     super.key,
@@ -23,7 +22,6 @@ class AbsoluteInspectorPanel extends StatefulWidget {
     required this.onApply,
     required this.onDelete,
     required this.onClose,
-    this.scrollController,
   });
 
   @override
@@ -64,198 +62,226 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
   @override
   Widget build(BuildContext context) {
     final c = widget.component;
-    final ftInLabel =
+    final ftLabel =
         '≈ ${pxToFtIn(c.width)} × ${pxToFtIn(c.height)}'
         '  (1 in = ${kPixelsPerInch.toInt()} px)';
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF0A1628),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        border: Border(
-          top: BorderSide(color: Color(0x30FFFFFF)),
-          left: BorderSide(color: Color(0x20FFFFFF)),
-          right: BorderSide(color: Color(0x20FFFFFF)),
+    // Max panel height = 60% of screen so it never overflows on small screens
+    final maxContentH = MediaQuery.of(context).size.height * 0.55;
+
+    final form = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Position & Size 2×2 grid ──
+        _chip('POSITION & SIZE'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _field('X (px)', _xCtrl)),
+              const SizedBox(width: 8),
+              Expanded(child: _field('Y (px)', _yCtrl)),
+            ],
+          ),
         ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _field('Width (px)', _wCtrl)),
+              const SizedBox(width: 8),
+              Expanded(child: _field('Height (px)', _hCtrl)),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 10, top: 1),
+          child: Text(
+            ftLabel,
+            style: const TextStyle(color: Color(0x50FFFFFF), fontSize: 8),
+          ),
+        ),
+        const SizedBox(height: 6),
+
+        // ── Rotation ──
+        _chip('ROTATION'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              SizedBox(width: 56, child: _field('Deg', _rotCtrl)),
+              const SizedBox(width: 6),
+              _rotChip('0deg', 0),
+              _rotChip('45', 45),
+              _rotChip('90', 90),
+              _rotChip('180', 180),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+
+        // ── Custom Label (editable only) ──
+        if (c.isEditable) ...[
+          _chip('CUSTOM LABEL'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: TextField(
+              controller: _labelCtrl,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+              decoration: InputDecoration(
+                hintText: 'e.g. VIP-1',
+                hintStyle: const TextStyle(color: Color(0x40FFFFFF)),
+                filled: true,
+                fillColor: const Color(0xFF122442),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(5),
+                  borderSide: const BorderSide(color: Color(0x20FFFFFF)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(5),
+                  borderSide: const BorderSide(color: Color(0x20FFFFFF)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(5),
+                  borderSide: BorderSide(color: c.defaultColor),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+
+    return Container(
+      width: 240,
+      decoration: BoxDecoration(
+        color: const Color(0xEE0A1628),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0x30FFFFFF), width: 0.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ═══ SCROLLABLE CONTENT ═══
-          Flexible(
-            child: ListView(
-              controller: widget.scrollController,
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
+          // ── Header ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 4, 0),
+            child: Row(
               children: [
-                // ── Header bar ──
-                _header(c),
-                const SizedBox(height: 6),
-
-                // ── Position + Size side-by-side ──
-                _sectionChip('POSITION & SIZE'),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Left column: X / Y
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _tinyField('X (px)', _xCtrl),
-                            const SizedBox(height: 6),
-                            _tinyField('Y (px)', _yCtrl),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      // Right column: W / H
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _tinyField('Width (px)', _wCtrl),
-                            const SizedBox(height: 6),
-                            _tinyField('Height (px)', _hCtrl),
-                          ],
-                        ),
-                      ),
-                    ],
+                Icon(c.defaultIcon, color: c.defaultColor, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  c.typeLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 12, top: 2),
-                  child: Text(
-                    ftInLabel,
-                    style: const TextStyle(
-                      color: Color(0x50FFFFFF),
-                      fontSize: 9,
-                    ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white38,
+                    size: 16,
+                  ),
+                  onPressed: widget.onClose,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 24,
+                    minHeight: 24,
                   ),
                 ),
-                const SizedBox(height: 8),
-
-                // ── Rotation ──
-                _sectionChip('ROTATION'),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      SizedBox(width: 70, child: _tinyField('Deg', _rotCtrl)),
-                      const SizedBox(width: 6),
-                      _rotateChip('0°', 0),
-                      _rotateChip('45°', 45),
-                      _rotateChip('90°', 90),
-                      _rotateChip('180°', 180),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // ── Custom Label (editable only) ──
-                if (c.isEditable) ...[
-                  _sectionChip('CUSTOM LABEL'),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: TextField(
-                      controller: _labelCtrl,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: 'e.g. VIP-1, A1, Driver Seat',
-                        hintStyle: const TextStyle(color: Color(0x40FFFFFF)),
-                        filled: true,
-                        fillColor: const Color(0xFF122442),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 8,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(6),
-                          borderSide: const BorderSide(
-                            color: Color(0x20FFFFFF),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(6),
-                          borderSide: const BorderSide(
-                            color: Color(0x20FFFFFF),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(6),
-                          borderSide: BorderSide(color: c.defaultColor),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                ],
-
-                // Bottom spacer so content doesn't crash into footer
-                const SizedBox(height: 8),
               ],
             ),
           ),
+          const SizedBox(height: 4),
 
-          // ═══ STICKY FOOTER — ALWAYS VISIBLE ═══
+          // ── Scrollable form content ──
+          Flexible(
+            child: SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxContentH),
+                child: form,
+              ),
+            ),
+          ),
+
+          // ── Sticky footer: Apply + Delete ──
           Container(
             decoration: const BoxDecoration(
-              color: Color(0xFF0A1628),
               border: Border(
                 top: BorderSide(color: Color(0x20FFFFFF), width: 0.5),
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
             child: SafeArea(
               top: false,
+              bottom: false,
               child: Row(
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: 40,
+                      height: 34,
                       child: ElevatedButton.icon(
                         onPressed: _apply,
-                        icon: const Icon(Icons.check, size: 16),
+                        icon: const Icon(Icons.check, size: 14),
                         label: const Text(
                           'Apply',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF7C3AED),
                           foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                         ),
                       ),
                     ),
                   ),
                   if (c.isEditable) ...[
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     SizedBox(
-                      height: 40,
+                      height: 34,
                       child: ElevatedButton.icon(
                         onPressed: () {
                           widget.onDelete();
                           widget.onClose();
                         },
-                        icon: const Icon(Icons.delete_outline, size: 16),
+                        icon: const Icon(Icons.delete_outline, size: 14),
                         label: const Text(
                           'Delete',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFDC2626),
                           foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                         ),
                       ),
@@ -270,82 +296,53 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
     );
   }
 
-  // ─── Helpers ───
-
-  Widget _header(AbsoluteLayoutComponent c) {
+  Widget _chip(String label) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 6, 0),
-      child: Row(
-        children: [
-          Icon(c.defaultIcon, color: c.defaultColor, size: 18),
-          const SizedBox(width: 6),
-          Text(
-            c.typeLabel,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.white38, size: 18),
-            onPressed: widget.onClose,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionChip(String text) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 2, 12, 4),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 2),
       child: Text(
-        text,
+        label,
         style: const TextStyle(
-          color: Color(0x60FFFFFF),
-          fontSize: 9,
+          color: Color(0x50FFFFFF),
+          fontSize: 8,
           fontWeight: FontWeight.w700,
-          letterSpacing: 1.2,
+          letterSpacing: 1,
         ),
       ),
     );
   }
 
-  Widget _tinyField(String label, TextEditingController ctrl) {
+  Widget _field(String label, TextEditingController ctrl) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
-          style: const TextStyle(color: Color(0x50FFFFFF), fontSize: 10),
+          style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 9),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 1),
         TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white, fontSize: 13),
+          style: const TextStyle(color: Colors.white, fontSize: 12),
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFF122442),
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 6,
+              horizontal: 6,
+              vertical: 4,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(4),
               borderSide: const BorderSide(color: Color(0x20FFFFFF)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(4),
               borderSide: const BorderSide(color: Color(0x20FFFFFF)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(4),
               borderSide: const BorderSide(color: Color(0xFF7C3AED)),
             ),
           ),
@@ -354,21 +351,21 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
     );
   }
 
-  Widget _rotateChip(String label, double value) {
+  Widget _rotChip(String label, double value) {
     return Padding(
-      padding: const EdgeInsets.only(left: 3),
+      padding: const EdgeInsets.only(left: 2),
       child: InkWell(
         onTap: () => _rotCtrl.text = value.toStringAsFixed(0),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(3),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
           decoration: BoxDecoration(
             border: Border.all(color: const Color(0x30FFFFFF)),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(3),
           ),
           child: Text(
             label,
-            style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 10),
+            style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 9),
           ),
         ),
       ),

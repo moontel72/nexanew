@@ -70,9 +70,6 @@ class _AbsoluteLayoutDesignerScreenState
   // Sidebar
   bool _sidebarOpen = true;
 
-  // Inspector bottom-sheet tracking
-  bool _inspectorOpen = false;
-
   @override
   void initState() {
     super.initState();
@@ -270,13 +267,6 @@ class _AbsoluteLayoutDesignerScreenState
         isDirty: true,
       ),
     );
-    // If the deleted component's inspector was open, close it.
-    if (_inspectorOpen && wasSelected) {
-      try {
-        Navigator.of(context).pop();
-      } catch (_) {}
-      _inspectorOpen = false;
-    }
   }
 
   void _selectComponent(String id) {
@@ -288,13 +278,6 @@ class _AbsoluteLayoutDesignerScreenState
 
   void _deselectAll() {
     _setState(_state.copyWith(clearSelection: true));
-    // Close the inspector if it was open for the now-deselected component.
-    if (_inspectorOpen) {
-      try {
-        Navigator.of(context).pop();
-      } catch (_) {}
-      _inspectorOpen = false;
-    }
     // Note: does NOT reset _tool or _placingType — callers manage those.
   }
 
@@ -386,57 +369,11 @@ class _AbsoluteLayoutDesignerScreenState
   // ═══════════════════════════════════════════════════════════
 
   void _openInspector(String compId) {
-    final comp = _state.componentById(compId);
-    if (comp == null) return;
-
-    // Defer to post-frame to avoid "setState during build" issues.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-
-      // If an inspector is already open, close it first so the new
-      // component's data populates the freshly-opened sheet.
-      if (_inspectorOpen) {
-        try {
-          Navigator.of(context).pop();
-        } catch (_) {
-          // No sheet to pop — fall through.
-        }
-        _inspectorOpen = false;
-        // Wait for the pop animation to finish before showing the new sheet.
-        await Future.delayed(const Duration(milliseconds: 220));
-        if (!mounted) return;
-      }
-
-      _showInspectorSheet(comp);
-    });
-  }
-
-  Future<void> _showInspectorSheet(AbsoluteLayoutComponent comp) async {
-    _inspectorOpen = true;
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.48,
-        minChildSize: 0.35,
-        maxChildSize: 0.92,
-        builder: (ctx, scrollController) => AbsoluteInspectorPanel(
-          scrollController: scrollController,
-          component: comp,
-          onApply: (updated) {
-            _updateComponent(updated);
-            Navigator.pop(context);
-          },
-          onDelete: () {
-            _deleteComponent(comp.id);
-            Navigator.pop(context);
-          },
-          onClose: () => Navigator.pop(context),
-        ),
-      ),
-    );
-    _inspectorOpen = false;
+    // The inspector is rendered as a Positioned widget in _buildCanvas.
+    // Just trigger a rebuild — no bottom sheet needed.
+    if (mounted && _state.selectedComponentId == compId) {
+      setState(() {}); // re-render to show the inspector panel
+    }
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -725,6 +662,19 @@ class _AbsoluteLayoutDesignerScreenState
             onTap: () {
               _openInspector(_state.selectedComponent!.id);
             },
+          ),
+
+        // ── Top-Right Inspector Panel (floating) ──
+        if (_state.selectedComponent != null)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: AbsoluteInspectorPanel(
+              component: _state.selectedComponent!,
+              onApply: (updated) => _updateComponent(updated),
+              onDelete: () => _deleteComponent(_state.selectedComponent!.id),
+              onClose: () => _deselectAll(),
+            ),
           ),
 
         // Place mode indicator
