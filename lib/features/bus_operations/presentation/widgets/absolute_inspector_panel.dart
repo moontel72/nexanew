@@ -212,14 +212,10 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
           ),
           const SizedBox(height: 4),
 
-          // ── Scrollable form content ──
-          Flexible(
-            child: SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxContentH),
-                child: form,
-              ),
-            ),
+          // ── Scrollable form content (caps height, hugs content) ──
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxContentH),
+            child: SingleChildScrollView(child: form),
           ),
 
           // ── Sticky footer: Apply + Delete ──
