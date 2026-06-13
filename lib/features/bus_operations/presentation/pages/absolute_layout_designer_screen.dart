@@ -606,6 +606,7 @@ class _AbsoluteLayoutDesignerScreenState
 
   Widget _buildCanvas() {
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         // Main canvas
         AbsoluteCanvasGrid(
@@ -667,9 +668,7 @@ class _AbsoluteLayoutDesignerScreenState
               _updateCompWith(_state.selectedComponent!, rotation: r);
             },
             onRotateEnd: () {},
-            onDelete: _state.selectedComponent!.isEditable
-                ? () => _deleteComponent(_state.selectedComponent!.id)
-                : null,
+            onDelete: () => _deleteComponent(_state.selectedComponent!.id),
           ),
 
         // Place mode indicator

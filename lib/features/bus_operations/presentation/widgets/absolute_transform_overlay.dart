@@ -61,9 +61,10 @@ class AbsoluteTransformOverlay extends StatefulWidget {
 }
 
 class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
-  static const double _handleSize = 12.0;
-  static const double _rotationArmLength = 32.0;
-  static const double _deleteBtnSize = 22.0;
+  static const double _handleSize = 18.0;
+  static const double _rotationArmLength = 56.0;
+  static const double _rotationKnobSize = 44.0;
+  static const double _deleteBtnSize = 56.0;
 
   @override
   Widget build(BuildContext context) {
@@ -100,31 +101,35 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
               ),
             ),
 
-            // ── Delete button (top-right corner) ──
-            if (widget.onDelete != null)
-              Positioned(
-                right: -_deleteBtnSize / 2,
-                top: -_deleteBtnSize / 2,
-                child: GestureDetector(
-                  onTap: widget.onDelete,
-                  child: Container(
-                    width: _deleteBtnSize,
-                    height: _deleteBtnSize,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFDC2626),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(color: Colors.black38, blurRadius: 4),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 14,
-                    ),
+            // ── Delete button (top-right corner, always visible) ──
+            Positioned(
+              right: -_deleteBtnSize / 3,
+              top: -_deleteBtnSize / 3,
+              child: GestureDetector(
+                onTap: widget.onDelete ?? () {},
+                child: Container(
+                  width: _deleteBtnSize,
+                  height: _deleteBtnSize,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDC2626),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black54,
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
               ),
+            ),
 
             // ── 4 corner handles ──
             _buildHandle(_HandlePosition.topLeft, c),
@@ -285,7 +290,7 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
 
   Widget _buildRotationHandle(AbsoluteLayoutComponent c) {
     return Positioned(
-      left: c.width / 2 - 2,
+      left: c.width / 2 - 4,
       top: -_rotationArmLength,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -295,10 +300,10 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Vertical arm
+            // Arm
             Container(
-              width: 3,
-              height: _rotationArmLength - _handleSize - 4,
+              width: 5,
+              height: _rotationArmLength - _rotationKnobSize / 2,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -312,17 +317,21 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
             ),
             // Knob
             Container(
-              width: _handleSize + 4,
-              height: _handleSize + 4,
+              width: _rotationKnobSize,
+              height: _rotationKnobSize,
               decoration: BoxDecoration(
                 color: const Color(0xFFF97316),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
+                border: Border.all(color: Colors.white, width: 3),
                 boxShadow: const [
-                  BoxShadow(color: Colors.black38, blurRadius: 3),
+                  BoxShadow(
+                    color: Colors.black54,
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
                 ],
               ),
-              child: const Icon(Icons.sync, color: Colors.white, size: 12),
+              child: const Icon(Icons.sync, color: Colors.white, size: 24),
             ),
           ],
         ),
