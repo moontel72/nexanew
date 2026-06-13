@@ -250,8 +250,7 @@ class _AbsoluteLayoutDesignerScreenState
 
   void _deselectAll() {
     _setState(_state.copyWith(clearSelection: true));
-    _placingType = null;
-    _tool = _CanvasTool.select;
+    // Note: does NOT reset _tool or _placingType — callers manage those.
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -379,11 +378,11 @@ class _AbsoluteLayoutDesignerScreenState
                   // Left: palette
                   AbsoluteComponentPalette(
                     onItemSelected: (type, defW, defH) {
+                      _setState(_state.copyWith(clearSelection: true));
                       _tool = _CanvasTool.placeComponent;
                       _placingType = type;
                       _placingDefaultW = defW;
                       _placingDefaultH = defH;
-                      _deselectAll();
                     },
                   ),
                   // Center: canvas
@@ -470,7 +469,25 @@ class _AbsoluteLayoutDesignerScreenState
             icon: Icons.add_location_alt,
             label: 'Place',
             active: _tool == _CanvasTool.placeComponent,
-            onTap: () => setState(() => _tool = _CanvasTool.placeComponent),
+            onTap: () {
+              if (_placingType != null) {
+                setState(() => _tool = _CanvasTool.placeComponent);
+              } else {
+                // No part type selected yet — tell the user
+                setState(() => _tool = _CanvasTool.placeComponent);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Pick a part from the left palette first, then tap the canvas',
+                      ),
+                      backgroundColor: Color(0xFFD97706),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+              }
+            },
           ),
           const Gap(4),
           // Presets toggle
