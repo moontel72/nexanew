@@ -10,6 +10,10 @@ import 'layout_component.dart';
 /// Rows not present use uniform kCellSize for all columns.
 typedef FlexOverrides = Map<int, List<double>>;
 
+/// Per-row height overrides (pixel height per row).
+/// Rows not present use uniform kCellSize.
+typedef RowHeights = Map<int, double>;
+
 class LayoutCanvasState {
   final String? layoutId;
   final String deckLevel;
@@ -19,6 +23,7 @@ class LayoutCanvasState {
   final List<LayoutComponent> components;
   final List<StructuralStrip> structuralStrips;
   final FlexOverrides? flexOverrides;
+  final RowHeights? rowHeights;
   final Map<String, dynamic> metadata;
   final bool isDirty;
 
@@ -31,6 +36,7 @@ class LayoutCanvasState {
     this.components = const [],
     this.structuralStrips = const [],
     this.flexOverrides,
+    this.rowHeights,
     this.metadata = const {},
     this.isDirty = false,
   });
@@ -99,6 +105,8 @@ class LayoutCanvasState {
         'flex_overrides': flexOverrides!.map(
           (k, v) => MapEntry(k.toString(), v),
         ),
+      if (rowHeights != null)
+        'row_heights': rowHeights!.map((k, v) => MapEntry(k.toString(), v)),
     },
     'components': components.map((c) => c.toJson()).toList(),
     'structural_strips': structuralStrips.map((s) => s.toJson()).toList(),
@@ -160,6 +168,19 @@ class LayoutCanvasState {
       }
     }
 
+    // Parse row heights
+    RowHeights? rowHeights;
+    final heightJson = canvas?['row_heights'] as Map<String, dynamic>?;
+    if (heightJson != null) {
+      rowHeights = {};
+      for (final entry in heightJson.entries) {
+        final row = int.tryParse(entry.key);
+        if (row != null && entry.value is num) {
+          rowHeights[row] = entry.value.toDouble();
+        }
+      }
+    }
+
     return LayoutCanvasState(
       layoutId: layoutId,
       deckLevel: deckLevel,
@@ -174,6 +195,7 @@ class LayoutCanvasState {
       components: components,
       structuralStrips: strips,
       flexOverrides: flexOverrides,
+      rowHeights: rowHeights,
       metadata: meta,
     );
   }
@@ -304,6 +326,7 @@ class LayoutCanvasState {
     List<LayoutComponent>? components,
     List<StructuralStrip>? structuralStrips,
     FlexOverrides? flexOverrides,
+    RowHeights? rowHeights,
     Map<String, dynamic>? metadata,
     bool? isDirty,
   }) => LayoutCanvasState(
@@ -315,6 +338,7 @@ class LayoutCanvasState {
     components: components ?? this.components,
     structuralStrips: structuralStrips ?? this.structuralStrips,
     flexOverrides: flexOverrides ?? this.flexOverrides,
+    rowHeights: rowHeights ?? this.rowHeights,
     metadata: metadata ?? this.metadata,
     isDirty: isDirty ?? this.isDirty,
   );

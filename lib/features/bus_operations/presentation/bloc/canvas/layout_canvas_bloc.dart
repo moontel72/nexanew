@@ -151,6 +151,7 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
     BookingMode bookingMode = BookingMode.standard;
     bool bookable = true;
     FlexOverrides? pendingFlex;
+    RowHeights? pendingHeights;
 
     switch (event.type) {
       case ComponentType.lavatory:
@@ -168,12 +169,9 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
         spanCols = 1;
         bookable = true;
         bookingMode = BookingMode.premium;
-        // Compute flex column widths for this row
-        pendingFlex = _computeBusinessFlexRow(
-          canvas,
-          event.originRow,
-          event.originCol,
-        );
+        final result = _computeBusinessFlexRow(canvas, event.originRow);
+        pendingFlex = result.flex;
+        pendingHeights = result.heights;
       case ComponentType.sleeperLower:
       case ComponentType.sleeperUpper:
         spanRows = 3; // default 1×3 berth
@@ -226,9 +224,13 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
     );
 
     // Apply any pending flex overrides before building the new canvas
-    final effectiveCanvas = pendingFlex != null
-        ? canvas.copyWith(flexOverrides: pendingFlex)
-        : canvas;
+    var effectiveCanvas = canvas;
+    if (pendingFlex != null) {
+      effectiveCanvas = effectiveCanvas.copyWith(flexOverrides: pendingFlex);
+    }
+    if (pendingHeights != null) {
+      effectiveCanvas = effectiveCanvas.copyWith(rowHeights: pendingHeights);
+    }
 
     final newComponents = _replaceCanvasComponents(effectiveCanvas, [
       ...effectiveCanvas.components,
@@ -357,12 +359,11 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
 
     // If the updated component is business class, ensure flex overrides exist
     if (event.updated.type == ComponentType.businessClassSeat) {
-      final flex = _computeBusinessFlexRow(
-        canvas,
-        event.updated.originRow,
-        event.updated.originCol,
+      final result = _computeBusinessFlexRow(canvas, event.updated.originRow);
+      canvas = canvas.copyWith(
+        flexOverrides: result.flex,
+        rowHeights: result.heights,
       );
-      canvas = canvas.copyWith(flexOverrides: flex);
     }
 
     final newComponents = _replaceComponentInList(canvas, event.updated);
@@ -569,25 +570,24 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
 
     final uuidPrefix = '${state.activeDeck}_bc_';
 
-    // Compute flex-based column widths for business class rows
-    // Default kCellSize = 56.0; left seats get double-width, right seats get standard width
+    // Business class: aisle 50% narrower, saved space to seats, rows 50% taller
     const double kCell = 56.0;
-    final leftWidth = kCell * event.leftCols; // e.g., 112 for 2-left
-    final rightSeatWidth = kCell; // each right seat = 1 standard cell
-    final aisleWidth = kCell; // aisle stays constant
+    final leftWidth = kCell * event.leftCols;
+    final aisleWidth = kCell * 0.5; // half-width aisle
+    final extraPerSeat = (kCell * 0.5) / (1 + event.rightCols);
 
-    // Build column widths per business row: [left, aisle, right_1, right_2]
-    // The number of columns per business row = 1 (left) + 1 (aisle) + rightCols
     final bizColumnWidths = <double>[
-      leftWidth,
+      leftWidth + extraPerSeat,
       aisleWidth,
-      for (int i = 0; i < event.rightCols; i++) rightSeatWidth,
+      for (int i = 0; i < event.rightCols; i++) kCell + extraPerSeat,
     ];
 
-    // Store flex overrides for these 3 rows
+    // Store flex overrides AND row heights for these 3 rows
     final flexOverrides = FlexOverrides.from(canvas.flexOverrides ?? {});
+    final heights = RowHeights.from(canvas.rowHeights ?? {});
     for (int row = rowStart; row <= rowEnd; row++) {
       flexOverrides[row] = List.from(bizColumnWidths);
+      heights[row] = kCell * 1.5; // 84px — business class = 50% taller
 
       // Left-side business seat (occupies visual col 1, full left width)
       preserved.add(
@@ -633,7 +633,7 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
     }
 
     final newCanvas = _replaceCanvasComponents(
-      canvas.copyWith(flexOverrides: flexOverrides),
+      canvas.copyWith(flexOverrides: flexOverrides, rowHeights: heights),
       preserved,
       renumber: true,
     );
@@ -655,12 +655,11 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
   // FLEX ROW COMPUTATION
   // ═══════════════════════════════════════════════════════════
 
-  /// Compute flex column widths for a row receiving a business class seat.
-  /// Returns updated FlexOverrides map (merges with existing).
-  FlexOverrides _computeBusinessFlexRow(
+  /// Compute flex column widths AND row heights for a business class row.
+  /// Returns a record with both updated maps.
+  ({FlexOverrides flex, RowHeights heights}) _computeBusinessFlexRow(
     LayoutCanvasState canvas,
     int row,
-    int dropCol,
   ) {
     const double kCell = 56.0;
     final meta = canvas.metadata;
@@ -669,20 +668,25 @@ class LayoutCanvasBloc extends Bloc<LayoutCanvasEvent, LayoutCanvasBlocState> {
     final rightCols =
         (meta['right_cols'] as int?) ?? ((canvas.maxCols - 1) ~/ 2).clamp(1, 3);
 
-    final leftWidth = kCell * leftCols; // entire left panel → 1 wide seat
-    final aisleWidth = kCell; // aisle stays constant
-    final rightSeatWidth = kCell; // each right seat = 1 standard cell
+    // Business class: aisle 50% narrower, saved space distributed to seats
+    final leftWidth = kCell * leftCols;
+    final aisleWidth = kCell * 0.5; // half-width aisle
+    final extraPerSeat = (kCell * 0.5) / (1 + rightCols); // share saved space
 
-    // Column layout: [left_panel, aisle, right_seat_1, right_seat_2, ...]
     final bizWidths = <double>[
-      leftWidth,
+      leftWidth + extraPerSeat, // left panel + share
       aisleWidth,
-      for (int i = 0; i < rightCols; i++) rightSeatWidth,
+      for (int i = 0; i < rightCols; i++) kCell + extraPerSeat,
     ];
 
     final flexOverrides = FlexOverrides.from(canvas.flexOverrides ?? {});
     flexOverrides[row] = bizWidths;
-    return flexOverrides;
+
+    // Business class rows are 50% taller than standard
+    final heights = RowHeights.from(canvas.rowHeights ?? {});
+    heights[row] = kCell * 1.5; // 84px
+
+    return (flex: flexOverrides, heights: heights);
   }
 
   // ═══════════════════════════════════════════════════════════
