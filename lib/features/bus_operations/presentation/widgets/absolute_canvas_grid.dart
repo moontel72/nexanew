@@ -390,7 +390,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
 
     // Three distinct colour zones
     final Color backColor = const Color(0xFF800000); // maroon
-    final Color cushionColor = mid; // seat-type colour
+    final Color cushionColor = const Color(0xFFADF802); // lemon green
     final Color armColor = const Color(0xFF4B5E7D); // blue-grey
     final Color deepDark = Color.lerp(
       const Color(0xFF800000),
@@ -398,6 +398,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
       0.25,
     )!;
     final Color maroonDark = const Color(0xFF5C0000);
+    final Color greenDark = const Color(0xFF7AB800);
 
     // Reverse seats: flip the whole chair 180° around Y
     final double yAngle = component.isReverseFacing
@@ -431,7 +432,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [backColor, cushionColor, light],
+                          colors: [backColor, cushionColor, greenDark],
                           stops: const [0.0, 0.48, 1.0],
                         ),
                         borderRadius: BorderRadius.circular(5),
