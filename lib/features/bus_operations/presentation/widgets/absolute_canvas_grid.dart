@@ -367,7 +367,8 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     );
   }
 
-  /// 3D SEAT: backrest (top 32%) + cushion (bottom 68%)
+  /// 3D SEAT: backrest (top 32%) + cushion.  Stack ensures the label
+  /// renders on top of the gradient layers.
   Widget _buildSeat3D(
     Color dark,
     Color mid,
@@ -376,71 +377,76 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     String label,
   ) {
     final double backH = component.height * 0.32;
-    return Column(
+    return Stack(
       children: [
-        SizedBox(
-          height: backH,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [dark, mid],
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.chair_outlined,
-                color: Colors.white.withOpacity(0.22),
-                size: _iconSize() * 0.75,
-              ),
-            ),
-          ),
-        ),
-        Container(height: 1.2, color: light.withOpacity(0.45)),
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [mid, light],
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Transform.rotate(
-                  angle: component.isReverseFacing ? 3.1415926535 : 0,
-                  child: Icon(
-                    icon,
-                    color: Colors.white,
-                    size: _iconSize() * 0.88,
+        // Layer 1 – seat body (backrest gradient + divider + cushion gradient)
+        Column(
+          children: [
+            SizedBox(
+              height: backH,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [dark, mid],
                   ),
                 ),
-                if (label.isNotEmpty && component.width >= 40)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: _fontSize(),
-                        fontWeight: FontWeight.w800,
-                        shadows: const [
-                          Shadow(
-                            color: Colors.black45,
-                            blurRadius: 3,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
+              ),
             ),
+            Container(height: 1.2, color: light.withOpacity(0.45)),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [mid, light],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        // Layer 2 – icon + label centred inside the cushion region
+        Positioned(
+          top: backH + 1.2,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Transform.rotate(
+                angle: component.isReverseFacing ? 3.1415926535 : 0,
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: _iconSize() * 0.88,
+                ),
+              ),
+              if (label.isNotEmpty && component.width >= 40)
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: _fontSize(),
+                      fontWeight: FontWeight.w800,
+                      shadows: const [
+                        Shadow(
+                          color: Colors.black54,
+                          blurRadius: 3,
+                          offset: Offset(0, 1.5),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
           ),
         ),
       ],
@@ -448,6 +454,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
   }
 
   /// 3D CARD: gradient panel for berths, doors, tables, etc.
+  /// Stack ensures the label always renders on top.
   Widget _buildCard3D(
     Color dark,
     Color mid,
@@ -455,41 +462,49 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     IconData icon,
     String label,
   ) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [light.withOpacity(0.85), dark.withOpacity(0.85)],
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.white, size: _iconSize()),
-          if (label.isNotEmpty && component.width >= 40)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: _fontSize(),
-                  fontWeight: FontWeight.w700,
-                  shadows: const [
-                    Shadow(
-                      color: Colors.black45,
-                      blurRadius: 3,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+    return Stack(
+      children: [
+        // Gradient background
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [light.withOpacity(0.85), dark.withOpacity(0.85)],
             ),
-        ],
-      ),
+          ),
+        ),
+        // Icon + label on top
+        Positioned.fill(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: _iconSize()),
+              if (label.isNotEmpty && component.width >= 40)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: _fontSize(),
+                      fontWeight: FontWeight.w700,
+                      shadows: const [
+                        Shadow(
+                          color: Colors.black54,
+                          blurRadius: 3,
+                          offset: Offset(0, 1.5),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
