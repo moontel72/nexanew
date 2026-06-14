@@ -296,6 +296,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     final icon = kAbsoluteComponentIcons[component.type] ?? Icons.help_outline;
     final label =
         component.customLabel ??
+        component.berthLabel ??
         component.seatId ??
         (component.seatNumber?.toString() ?? '');
 

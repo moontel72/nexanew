@@ -387,6 +387,7 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
       rotation: (double.tryParse(_rotCtrl.text) ?? c.rotation) % 360,
       seatId: c.seatId,
       seatNumber: c.seatNumber,
+      berthLabel: c.berthLabel,
       bookable: c.bookable,
       bookingMode: c.bookingMode,
       genderRestriction: c.genderRestriction,

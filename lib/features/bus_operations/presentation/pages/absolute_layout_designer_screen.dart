@@ -205,9 +205,10 @@ class _AbsoluteLayoutDesignerScreenState
         _ => BookingMode.standard,
       },
     );
+    final comps = _reassignBerthLabels([..._state.components, comp]);
     _setState(
       _state.copyWith(
-        components: [..._state.components, comp],
+        components: comps,
         selectedComponentId: id,
         isDirty: true,
       ),
@@ -223,11 +224,55 @@ class _AbsoluteLayoutDesignerScreenState
     return null;
   }
 
+  /// Auto-assign L1/L2/… and U1/U2/… labels to sleeper berths.
+  /// Berths are sorted by Y (top‑to‑bottom), then X (left‑to‑right).
+  /// Berths that have a [customLabel] are skipped (owner override).
+  List<AbsoluteLayoutComponent> _reassignBerthLabels(
+    List<AbsoluteLayoutComponent> comps,
+  ) {
+    // Lower berths
+    final lower = comps
+        .where((c) => c.type == ComponentType.sleeperLower)
+        .toList()
+      ..sort((a, b) {
+        final yDiff = a.y.compareTo(b.y);
+        if (yDiff != 0) return yDiff;
+        return a.x.compareTo(b.x);
+      });
+    int l = 1;
+    for (final b in lower) {
+      b.berthLabel = b.customLabel == null ? 'L$l' : null;
+      if (b.customLabel == null) l++;
+    }
+
+    // Upper berths
+    final upper = comps
+        .where((c) => c.type == ComponentType.sleeperUpper)
+        .toList()
+      ..sort((a, b) {
+        final yDiff = a.y.compareTo(b.y);
+        if (yDiff != 0) return yDiff;
+        return a.x.compareTo(b.x);
+      });
+    int u = 1;
+    for (final b in upper) {
+      b.berthLabel = b.customLabel == null ? 'U$u' : null;
+      if (b.customLabel == null) u++;
+    }
+
+    return comps;
+  }
+
   void _updateComponent(AbsoluteLayoutComponent updated) {
     final comps = _state.components.map((c) {
       return c.id == updated.id ? updated : c;
     }).toList();
-    _setState(_state.copyWith(components: comps, isDirty: true));
+    _setState(
+      _state.copyWith(
+        components: _reassignBerthLabels(comps),
+        isDirty: true,
+      ),
+    );
   }
 
   /// Convenience: update selected component with specific overrides.
@@ -250,6 +295,7 @@ class _AbsoluteLayoutDesignerScreenState
         rotation: rotation ?? comp.rotation,
         seatId: comp.seatId,
         seatNumber: comp.seatNumber,
+        berthLabel: comp.berthLabel,
         bookable: comp.bookable,
         bookingMode: comp.bookingMode,
         customLabel: comp.customLabel,
@@ -260,9 +306,12 @@ class _AbsoluteLayoutDesignerScreenState
 
   void _deleteComponent(String id) {
     final wasSelected = _state.selectedComponentId == id;
+    final comps = _reassignBerthLabels(
+      _state.components.where((c) => c.id != id).toList(),
+    );
     _setState(
       _state.copyWith(
-        components: _state.components.where((c) => c.id != id).toList(),
+        components: comps,
         selectedComponentId: wasSelected ? null : _state.selectedComponentId,
         isDirty: true,
       ),
