@@ -23,6 +23,8 @@ class AbsoluteLayoutComponent {
   String? seatId;
   int? seatNumber;
   String? berthLabel; // e.g., "L1", "U2" — auto‑assigned for sleeper berths
+  bool
+  isReverseFacing; // true = reverse-facing seat (Type‑2), false = forward (Type‑1)
   bool bookable;
   BookingMode bookingMode;
   String? genderRestriction;
@@ -40,6 +42,7 @@ class AbsoluteLayoutComponent {
     this.seatId,
     this.seatNumber,
     this.berthLabel,
+    this.isReverseFacing = false,
     this.bookable = true,
     this.bookingMode = BookingMode.standard,
     this.genderRestriction,
@@ -145,6 +148,7 @@ class AbsoluteLayoutComponent {
     if (seatId != null) 'seat_id': seatId,
     if (seatNumber != null) 'seat_number': seatNumber,
     if (berthLabel != null) 'berth_label': berthLabel,
+    'is_reverse_facing': isReverseFacing,
     'bookable': bookable,
     'booking_mode': bookingMode.name,
     if (genderRestriction != null) 'gender_restriction': genderRestriction,
@@ -168,6 +172,7 @@ class AbsoluteLayoutComponent {
       seatId: json['seat_id'] as String?,
       seatNumber: json['seat_number'] as int?,
       berthLabel: json['berth_label'] as String?,
+      isReverseFacing: json['is_reverse_facing'] as bool? ?? false,
       bookable: json['bookable'] as bool? ?? true,
       bookingMode: BookingMode.values.firstWhere(
         (e) => e.name == (json['booking_mode'] as String?),

@@ -66,6 +66,7 @@ class _AbsoluteLayoutDesignerScreenState
   ComponentType? _placingType;
   double _placingDefaultW = 56;
   double _placingDefaultH = 56;
+  bool _placingIsReverse = false;
 
   // Sidebar
   bool _sidebarOpen = true;
@@ -172,8 +173,9 @@ class _AbsoluteLayoutDesignerScreenState
     double x,
     double y,
     double w,
-    double h,
-  ) {
+    double h, {
+    bool isReverseFacing = false,
+  }) {
     final id = _uuid.v4();
     final comp = AbsoluteLayoutComponent(
       id: id,
@@ -182,6 +184,7 @@ class _AbsoluteLayoutDesignerScreenState
       y: y,
       width: w,
       height: h,
+      isReverseFacing: isReverseFacing,
       seatId: _nextSeatId(type),
       seatNumber:
           type == ComponentType.seat ||
@@ -205,7 +208,9 @@ class _AbsoluteLayoutDesignerScreenState
         _ => BookingMode.standard,
       },
     );
-    final comps = _reassignBerthLabels([..._state.components, comp]);
+    var comps = [..._state.components, comp];
+    comps = _reassignSeatNumbers(comps);
+    comps = _reassignBerthLabels(comps);
     _setState(
       _state.copyWith(
         components: comps,
@@ -217,11 +222,43 @@ class _AbsoluteLayoutDesignerScreenState
   }
 
   String? _nextSeatId(ComponentType type) {
-    if (type == ComponentType.seat) return 'S${_state.totalSeats + 1}';
+    // Standard seats (forward + reverse) are numbered by _reassignSeatNumbers.
+    // Business / Folding seats keep simple increment numbering.
     if (type == ComponentType.businessClassSeat)
       return 'B${_state.totalSeats + 1}';
     if (type == ComponentType.foldingSeat) return 'F${_state.totalSeats + 1}';
     return null;
+  }
+
+  /// Auto-assign S1/S2/… labels to all standard seats (forward + reverse).
+  /// Seats are sorted by Y (top-to-bottom), within same Y: forward first,
+  /// then reverse, then by X (left-to-right).
+  List<AbsoluteLayoutComponent> _reassignSeatNumbers(
+    List<AbsoluteLayoutComponent> comps,
+  ) {
+    final seats = comps.where((c) => c.type == ComponentType.seat).toList();
+    if (seats.isEmpty) return comps;
+
+    // Sort: Y first, then forward-before-reverse, then X
+    seats.sort((a, b) {
+      final yDiff = a.y.compareTo(b.y);
+      if (yDiff != 0) return yDiff;
+      if (a.isReverseFacing != b.isReverseFacing) {
+        return a.isReverseFacing ? 1 : -1;
+      }
+      return a.x.compareTo(b.x);
+    });
+
+    int s = 1;
+    for (final seat in seats) {
+      if (seat.customLabel == null) {
+        seat.seatId = 'S$s';
+        seat.seatNumber = s;
+        s++;
+      }
+    }
+
+    return comps;
   }
 
   /// Auto-assign L1/L2/… and U1/U2/… labels to sleeper berths.
@@ -231,14 +268,13 @@ class _AbsoluteLayoutDesignerScreenState
     List<AbsoluteLayoutComponent> comps,
   ) {
     // Lower berths
-    final lower = comps
-        .where((c) => c.type == ComponentType.sleeperLower)
-        .toList()
-      ..sort((a, b) {
-        final yDiff = a.y.compareTo(b.y);
-        if (yDiff != 0) return yDiff;
-        return a.x.compareTo(b.x);
-      });
+    final lower =
+        comps.where((c) => c.type == ComponentType.sleeperLower).toList()
+          ..sort((a, b) {
+            final yDiff = a.y.compareTo(b.y);
+            if (yDiff != 0) return yDiff;
+            return a.x.compareTo(b.x);
+          });
     int l = 1;
     for (final b in lower) {
       b.berthLabel = b.customLabel == null ? 'L$l' : null;
@@ -246,14 +282,13 @@ class _AbsoluteLayoutDesignerScreenState
     }
 
     // Upper berths
-    final upper = comps
-        .where((c) => c.type == ComponentType.sleeperUpper)
-        .toList()
-      ..sort((a, b) {
-        final yDiff = a.y.compareTo(b.y);
-        if (yDiff != 0) return yDiff;
-        return a.x.compareTo(b.x);
-      });
+    final upper =
+        comps.where((c) => c.type == ComponentType.sleeperUpper).toList()
+          ..sort((a, b) {
+            final yDiff = a.y.compareTo(b.y);
+            if (yDiff != 0) return yDiff;
+            return a.x.compareTo(b.x);
+          });
     int u = 1;
     for (final b in upper) {
       b.berthLabel = b.customLabel == null ? 'U$u' : null;
@@ -264,15 +299,12 @@ class _AbsoluteLayoutDesignerScreenState
   }
 
   void _updateComponent(AbsoluteLayoutComponent updated) {
-    final comps = _state.components.map((c) {
+    var comps = _state.components.map((c) {
       return c.id == updated.id ? updated : c;
     }).toList();
-    _setState(
-      _state.copyWith(
-        components: _reassignBerthLabels(comps),
-        isDirty: true,
-      ),
-    );
+    comps = _reassignSeatNumbers(comps);
+    comps = _reassignBerthLabels(comps);
+    _setState(_state.copyWith(components: comps, isDirty: true));
   }
 
   /// Convenience: update selected component with specific overrides.
@@ -296,6 +328,7 @@ class _AbsoluteLayoutDesignerScreenState
         seatId: comp.seatId,
         seatNumber: comp.seatNumber,
         berthLabel: comp.berthLabel,
+        isReverseFacing: comp.isReverseFacing,
         bookable: comp.bookable,
         bookingMode: comp.bookingMode,
         customLabel: comp.customLabel,
@@ -306,9 +339,9 @@ class _AbsoluteLayoutDesignerScreenState
 
   void _deleteComponent(String id) {
     final wasSelected = _state.selectedComponentId == id;
-    final comps = _reassignBerthLabels(
-      _state.components.where((c) => c.id != id).toList(),
-    );
+    var comps = _state.components.where((c) => c.id != id).toList();
+    comps = _reassignSeatNumbers(comps);
+    comps = _reassignBerthLabels(comps);
     _setState(
       _state.copyWith(
         components: comps,
@@ -442,12 +475,13 @@ class _AbsoluteLayoutDesignerScreenState
                 children: [
                   // Left: palette
                   AbsoluteComponentPalette(
-                    onItemSelected: (type, defW, defH) {
+                    onItemSelected: (type, defW, defH, isReverse) {
                       _setState(_state.copyWith(clearSelection: true));
                       _tool = _CanvasTool.placeComponent;
                       _placingType = type;
                       _placingDefaultW = defW;
                       _placingDefaultH = defH;
+                      _placingIsReverse = isReverse;
                     },
                   ),
                   // Center: canvas
@@ -661,6 +695,7 @@ class _AbsoluteLayoutDesignerScreenState
                 y,
                 _placingDefaultW,
                 _placingDefaultH,
+                isReverseFacing: _placingIsReverse,
               );
               _tool = _CanvasTool.select;
               _placingType = null;
@@ -675,6 +710,7 @@ class _AbsoluteLayoutDesignerScreenState
                 y,
                 _placingDefaultW,
                 _placingDefaultH,
+                isReverseFacing: _placingIsReverse,
               );
               _tool = _CanvasTool.select;
               _placingType = null;

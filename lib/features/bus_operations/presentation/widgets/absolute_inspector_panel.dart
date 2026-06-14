@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_component.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_state.dart';
+import 'package:trace_odd/shared/models/transport/layout_component.dart';
 
 class AbsoluteInspectorPanel extends StatefulWidget {
   final AbsoluteLayoutComponent component;
@@ -35,6 +36,7 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
   late TextEditingController _hCtrl;
   late TextEditingController _rotCtrl;
   late TextEditingController _labelCtrl;
+  bool _isReversing = false;
 
   @override
   void initState() {
@@ -46,6 +48,7 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
     _hCtrl = TextEditingController(text: c.height.toStringAsFixed(0));
     _rotCtrl = TextEditingController(text: c.rotation.toStringAsFixed(0));
     _labelCtrl = TextEditingController(text: c.customLabel ?? '');
+    _isReversing = c.isReverseFacing;
   }
 
   @override
@@ -181,6 +184,55 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                   ),
                 ),
                 const SizedBox(height: 6),
+
+                // ═══ FACING DIRECTION (standard seats only) ═══
+                if (c.type == ComponentType.seat && c.isEditable) ...[
+                  _chip('FACING DIRECTION'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.arrow_upward,
+                          color: Color(0xFF7C3AED),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Forward',
+                          style: TextStyle(
+                            color: Color(0xCCFFFFFF),
+                            fontSize: 10,
+                          ),
+                        ),
+                        const Spacer(),
+                        SizedBox(
+                          height: 24,
+                          child: Switch(
+                            value: _isReversing,
+                            activeColor: const Color(0xFF3B82F6),
+                            onChanged: (v) => setState(() => _isReversing = v),
+                          ),
+                        ),
+                        const Spacer(),
+                        const Icon(
+                          Icons.arrow_downward,
+                          color: Color(0xFF3B82F6),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Reverse',
+                          style: TextStyle(
+                            color: Color(0xCCFFFFFF),
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ],
 
                 // ═══ CUSTOM LABEL (all seat types) ═══
                 if (c.isEditable) ...[
@@ -388,6 +440,7 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
       seatId: c.seatId,
       seatNumber: c.seatNumber,
       berthLabel: c.berthLabel,
+      isReverseFacing: _isReversing,
       bookable: c.bookable,
       bookingMode: c.bookingMode,
       genderRestriction: c.genderRestriction,

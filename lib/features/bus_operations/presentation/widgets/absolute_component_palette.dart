@@ -17,6 +17,7 @@ class _PaletteItem {
   final Color color;
   final double defaultWidth;
   final double defaultHeight;
+  final bool isReverseFacing;
 
   const _PaletteItem({
     required this.type,
@@ -25,6 +26,7 @@ class _PaletteItem {
     required this.color,
     this.defaultWidth = 56.0,
     this.defaultHeight = 56.0,
+    this.isReverseFacing = false,
   });
 }
 
@@ -35,6 +37,13 @@ const _paletteItems = [
     label: 'Seat',
     icon: Icons.event_seat,
     color: Color(0xFF7C3AED),
+  ),
+  _PaletteItem(
+    type: ComponentType.seat,
+    label: 'Seat Rev.',
+    icon: Icons.event_seat,
+    color: Color(0xFF3B82F6),
+    isReverseFacing: true,
   ),
   _PaletteItem(
     type: ComponentType.businessClassSeat,
@@ -105,13 +114,15 @@ const _paletteItems = [
 ];
 
 class AbsoluteComponentPalette extends StatelessWidget {
-  final void Function(ComponentType type, double defaultWidth,
-      double defaultHeight) onItemSelected;
+  final void Function(
+    ComponentType type,
+    double defaultWidth,
+    double defaultHeight,
+    bool isReverseFacing,
+  )
+  onItemSelected;
 
-  const AbsoluteComponentPalette({
-    super.key,
-    required this.onItemSelected,
-  });
+  const AbsoluteComponentPalette({super.key, required this.onItemSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -119,9 +130,7 @@ class AbsoluteComponentPalette extends StatelessWidget {
       width: 72,
       decoration: BoxDecoration(
         color: const Color(0xFF0A1628),
-        border: Border(
-          right: BorderSide(color: const Color(0x20FFFFFF)),
-        ),
+        border: Border(right: BorderSide(color: const Color(0x20FFFFFF))),
       ),
       child: Column(
         children: [
@@ -158,6 +167,7 @@ class AbsoluteComponentPalette extends StatelessWidget {
                     item.type,
                     item.defaultWidth,
                     item.defaultHeight,
+                    item.isReverseFacing,
                   ),
                 );
               },
@@ -188,9 +198,7 @@ class _PaletteTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: item.color.withOpacity(0.3),
-              ),
+              border: Border.all(color: item.color.withOpacity(0.3)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

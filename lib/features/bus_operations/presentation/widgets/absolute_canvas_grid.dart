@@ -291,9 +291,17 @@ class _AbsoluteComponentWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        kAbsoluteComponentColors[component.type] ?? const Color(0xFF334155);
-    final icon = kAbsoluteComponentIcons[component.type] ?? Icons.help_outline;
+    final Color color;
+    final IconData icon;
+    // Reverse-facing seats get a distinct blue tone and rotated icon
+    if (component.type == ComponentType.seat && component.isReverseFacing) {
+      color = const Color(0xFF3B82F6);
+      icon = Icons.event_seat;
+    } else {
+      color =
+          kAbsoluteComponentColors[component.type] ?? const Color(0xFF334155);
+      icon = kAbsoluteComponentIcons[component.type] ?? Icons.help_outline;
+    }
     final label =
         component.customLabel ??
         component.berthLabel ??
@@ -328,7 +336,12 @@ class _AbsoluteComponentWidget extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.white, size: _iconSize()),
+              Transform.rotate(
+                angle: component.isReverseFacing
+                    ? 3.1415926535 // 180° for reverse-facing
+                    : 0,
+                child: Icon(icon, color: Colors.white, size: _iconSize()),
+              ),
               if (label.isNotEmpty && component.width >= 40)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
