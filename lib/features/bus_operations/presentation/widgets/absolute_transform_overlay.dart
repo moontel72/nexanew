@@ -114,9 +114,9 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
               ),
             ),
 
-            // ── Delete button (top-right corner, always visible) ──
+            // ── Delete button (top-left corner, always visible) ──
             Positioned(
-              right: -_deleteBtnSize / 3,
+              left: -_deleteBtnSize / 3,
               top: -_deleteBtnSize / 3,
               child: GestureDetector(
                 onTap: widget.onDelete ?? () {},
