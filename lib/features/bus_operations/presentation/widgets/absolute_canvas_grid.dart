@@ -367,9 +367,9 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     );
   }
 
-  /// True 3D SEAT — matches the HTML/CSS model:
-  /// perspective rotation + backrest (with label) + tilted cushion + armrests.
-  /// No background layer.  Sits directly on the canvas.
+  /// True 3D SEAT — single unified body with backrest/cushion gradient,
+  /// shadow lift, and per-side armrests.  Reverse seats flip the entire chair
+  /// 180° around Y so the facing direction is visually opposite.
   Widget _buildSeat3D(
     Color dark,
     Color mid,
@@ -383,14 +383,17 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     // Proportions from the 60×65 px HTML model
     final double backW = w * 0.87; // 52/60
     final double backH = h * 0.74; // 48/65
-    final double cushionW = w * 0.87;
-    final double cushionH = h * 0.58; // 38/65
+    final double cushionTop = backH * 0.62; // seat-pan crease
     final double armW = w * 0.10; // 6/60
     final double armH = h * 0.46; // 30/65
-    final double armBottom = h * 0.08; // 5/65
+    final double armBottom = h * 0.04;
 
-    // Deeper shade for bottom borders
     final Color deepDark = Color.lerp(dark, Colors.black, 0.25)!;
+
+    // Reverse seats: flip the whole chair 180° around Y
+    final double yAngle = component.isReverseFacing
+        ? (3.1415926535 - 0.175)
+        : -0.175;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(7),
@@ -402,104 +405,89 @@ class _AbsoluteComponentWidget extends StatelessWidget {
             child: Transform(
               alignment: Alignment.center,
               transform: Matrix4.identity()
-                ..setEntry(3, 2, 0.001) // perspective
-                ..rotateX(0.436) // 25°
-                ..rotateY(-0.175), // -10°
+                ..setEntry(3, 2, 0.002) // ≈ 500 px perspective
+                ..rotateX(0.35) // ~20° gentle tilt
+                ..rotateY(yAngle),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // ── BACKREST ──
+                  // ── UNIFIED SEAT BODY (single backrest+cushion shape) ──
                   Positioned(
                     left: (w - backW) / 2,
                     top: 0,
                     width: backW,
-                    height: backH,
+                    height: h - armBottom - armH * 0.1,
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [light, mid],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [dark, mid, light],
+                          stops: const [0.0, 0.55, 1.0],
                         ),
                         borderRadius: BorderRadius.circular(5),
-                        border: Border.all(
-                          color: deepDark.withOpacity(0.7),
-                          width: 1,
-                        ),
+                        border: Border.all(color: deepDark.withOpacity(0.6)),
                         boxShadow: [
-                          // Outer drop shadow
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withOpacity(0.45),
                             blurRadius: 10,
-                            offset: const Offset(0, 5),
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
-                      child: Center(
-                        child: Text(
-                          label.isNotEmpty ? label : '',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: _fontSize(),
-                            fontWeight: FontWeight.w800,
-                            shadows: const [
-                              Shadow(
-                                color: Colors.black54,
-                                blurRadius: 3,
-                                offset: Offset(0, 1.5),
-                              ),
-                            ],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // ── CUSHION (tilted forward) ──
-                  Positioned(
-                    left: (w - cushionW) / 2,
-                    bottom: armBottom + armH * 0.15,
-                    width: cushionW,
-                    height: cushionH,
-                    child: Transform(
-                      alignment: Alignment.topCenter,
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.001)
-                        ..rotateX(-1.222), // -70°
                       child: Stack(
                         children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [mid, light],
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                              border: Border(
-                                bottom: BorderSide(color: deepDark, width: 5),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.55),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
+                          // ── Seam divider ──
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            top: cushionTop,
+                            child: Container(
+                              height: 1.5,
+                              color: deepDark.withOpacity(0.5),
                             ),
                           ),
-                          // Direction icon on cushion
-                          Center(
-                            child: Transform.rotate(
-                              angle: component.isReverseFacing
-                                  ? 3.1415926535
-                                  : 0,
-                              child: Icon(
-                                icon,
-                                color: Colors.white.withOpacity(0.85),
-                                size: _iconSize() * 0.65,
+                          // ── Label (backrest zone) ──
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            top: cushionTop * 0.22,
+                            child: Center(
+                              child: Text(
+                                label.isNotEmpty ? label : '',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: _fontSize(),
+                                  fontWeight: FontWeight.w800,
+                                  shadows: const [
+                                    Shadow(
+                                      color: Colors.black54,
+                                      blurRadius: 3,
+                                      offset: Offset(0, 1.5),
+                                    ),
+                                  ],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          // ── Direction icon (cushion zone) ──
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            top: cushionTop + 4,
+                            bottom: 2,
+                            child: Center(
+                              child: Transform.rotate(
+                                angle: component.isReverseFacing
+                                    ? 3.1415926535
+                                    : 0,
+                                child: Icon(
+                                  icon,
+                                  color: Colors.white.withOpacity(0.85),
+                                  size: _iconSize() * 0.6,
+                                ),
                               ),
                             ),
                           ),
@@ -514,26 +502,22 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                     bottom: armBottom,
                     width: armW,
                     height: armH,
-                    child: Transform(
-                      alignment: Alignment.bottomCenter,
-                      transform: Matrix4.identity()..rotateX(-0.349), // -20°
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [mid, dark],
-                          ),
-                          borderRadius: BorderRadius.circular(3),
-                          border: Border.all(color: deepDark.withOpacity(0.7)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
-                              blurRadius: 4,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [light, dark],
                         ),
+                        borderRadius: BorderRadius.circular(3),
+                        border: Border.all(color: deepDark.withOpacity(0.7)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.4),
+                            blurRadius: 4,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -544,26 +528,22 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                     bottom: armBottom,
                     width: armW,
                     height: armH,
-                    child: Transform(
-                      alignment: Alignment.bottomCenter,
-                      transform: Matrix4.identity()..rotateX(-0.349), // -20°
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [mid, dark],
-                          ),
-                          borderRadius: BorderRadius.circular(3),
-                          border: Border.all(color: deepDark.withOpacity(0.7)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
-                              blurRadius: 4,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [light, dark],
                         ),
+                        borderRadius: BorderRadius.circular(3),
+                        border: Border.all(color: deepDark.withOpacity(0.7)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.4),
+                            blurRadius: 4,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
                     ),
                   ),
