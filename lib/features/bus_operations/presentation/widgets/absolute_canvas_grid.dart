@@ -289,6 +289,12 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     required this.isSelected,
   });
 
+  /// Whether this component type should render as a 3D seat.
+  bool get _isSeatType =>
+      component.type == ComponentType.seat ||
+      component.type == ComponentType.businessClassSeat ||
+      component.type == ComponentType.foldingSeat;
+
   @override
   Widget build(BuildContext context) {
     final Color color;
@@ -308,6 +314,11 @@ class _AbsoluteComponentWidget extends StatelessWidget {
         component.seatId ??
         (component.seatNumber?.toString() ?? '');
 
+    // Derived shades for 3D gradient
+    final dark = Color.lerp(color, Colors.black, 0.40)!;
+    final mid = Color.lerp(color, Colors.black, 0.18)!;
+    final light = color;
+
     return Positioned(
       left: component.x,
       top: component.y,
@@ -315,50 +326,169 @@ class _AbsoluteComponentWidget extends StatelessWidget {
       height: component.height,
       child: Transform.rotate(
         angle: component.rotation * 3.1415926535 / 180.0,
-        child: Container(
-          decoration: BoxDecoration(
-            color: color.withOpacity(isSelected ? 0.9 : 0.7),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: isSelected ? Colors.white : color.withOpacity(0.5),
-              width: isSelected ? 2.5 : 1.0,
-            ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: color.withOpacity(0.5),
-                      blurRadius: 12,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Transform.rotate(
-                angle: component.isReverseFacing
-                    ? 3.1415926535 // 180° for reverse-facing
-                    : 0,
-                child: Icon(icon, color: Colors.white, size: _iconSize()),
+        child: Padding(
+          // Internal margin creates visual spacing between adjacent seats
+          padding: const EdgeInsets.all(2),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? Colors.white : light.withOpacity(0.35),
+                width: isSelected ? 2.5 : 1.2,
               ),
-              if (label.isNotEmpty && component.width >= 40)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: _fontSize(),
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: dark.withOpacity(0.55),
+                  blurRadius: 6,
+                  offset: const Offset(2, 3),
                 ),
-            ],
+                BoxShadow(
+                  color: light.withOpacity(0.25),
+                  blurRadius: 3,
+                  offset: const Offset(-1, -1),
+                ),
+                if (isSelected)
+                  BoxShadow(
+                    color: color.withOpacity(0.6),
+                    blurRadius: 14,
+                    spreadRadius: 2,
+                  ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: _isSeatType
+                  ? _buildSeat3D(dark, mid, light, icon, label)
+                  : _buildCard3D(dark, mid, light, icon, label),
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// 3D SEAT: backrest (top 32%) + cushion (bottom 68%)
+  Widget _buildSeat3D(
+    Color dark,
+    Color mid,
+    Color light,
+    IconData icon,
+    String label,
+  ) {
+    final double backH = component.height * 0.32;
+    return Column(
+      children: [
+        SizedBox(
+          height: backH,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [dark, mid],
+              ),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.chair_outlined,
+                color: Colors.white.withOpacity(0.22),
+                size: _iconSize() * 0.75,
+              ),
+            ),
+          ),
+        ),
+        Container(height: 1.2, color: light.withOpacity(0.45)),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [mid, light],
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Transform.rotate(
+                  angle: component.isReverseFacing ? 3.1415926535 : 0,
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: _iconSize() * 0.88,
+                  ),
+                ),
+                if (label.isNotEmpty && component.width >= 40)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: _fontSize(),
+                        fontWeight: FontWeight.w800,
+                        shadows: const [
+                          Shadow(
+                            color: Colors.black45,
+                            blurRadius: 3,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 3D CARD: gradient panel for berths, doors, tables, etc.
+  Widget _buildCard3D(
+    Color dark,
+    Color mid,
+    Color light,
+    IconData icon,
+    String label,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [light.withOpacity(0.85), dark.withOpacity(0.85)],
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white, size: _iconSize()),
+          if (label.isNotEmpty && component.width >= 40)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: _fontSize(),
+                  fontWeight: FontWeight.w700,
+                  shadows: const [
+                    Shadow(
+                      color: Colors.black45,
+                      blurRadius: 3,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
       ),
     );
   }
