@@ -380,15 +380,20 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     final double w = component.width;
     final double h = component.height;
 
-    // Proportions from the 60×65 px HTML model
-    final double backW = w * 0.87; // 52/60
-    final double backH = h * 0.74; // 48/65
-    final double cushionTop = backH * 0.62; // seat-pan crease
-    final double armW = w * 0.10; // 6/60
-    final double armH = h * 0.46; // 30/65
+    // 20% shorter body → visible aisle gap between rows
+    final double backW = w * 0.87;
+    final double bodyH = (h - h * 0.04 - h * 0.46 * 0.1) * 0.80;
+    final double seamY = bodyH * 0.45;
+    final double armW = w * 0.10;
+    final double armH = h * 0.46;
     final double armBottom = h * 0.04;
 
+    // Three distinct colour zones
+    final Color backColor = dark;
+    final Color cushionColor = mid;
+    final Color armColor = Color.lerp(mid, light, 0.45)!;
     final Color deepDark = Color.lerp(dark, Colors.black, 0.25)!;
+    final Color badgeBg = Color.lerp(dark, Colors.black, 0.55)!;
 
     // Reverse seats: flip the whole chair 180° around Y
     final double yAngle = component.isReverseFacing
@@ -416,14 +421,14 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                     left: (w - backW) / 2,
                     top: 0,
                     width: backW,
-                    height: h - armBottom - armH * 0.1,
+                    height: bodyH,
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [dark, mid, light],
-                          stops: const [0.0, 0.55, 1.0],
+                          colors: [backColor, cushionColor, light],
+                          stops: const [0.0, 0.45, 1.0],
                         ),
                         borderRadius: BorderRadius.circular(5),
                         border: Border.all(color: deepDark.withOpacity(0.6)),
@@ -437,38 +442,52 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                       ),
                       child: Stack(
                         children: [
-                          // ── Seam divider ──
+                          // ── Seam ──
                           Positioned(
                             left: 0,
                             right: 0,
-                            top: cushionTop,
+                            top: seamY,
                             child: Container(
                               height: 1.5,
                               color: deepDark.withOpacity(0.5),
                             ),
                           ),
-                          // ── Label (backrest zone) ──
+                          // ── Number badge (backrest zone) ──
                           Positioned(
                             left: 0,
                             right: 0,
-                            top: cushionTop * 0.22,
+                            top: seamY * 0.18,
                             child: Center(
-                              child: Text(
-                                label.isNotEmpty ? label : '',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: _fontSize(),
-                                  fontWeight: FontWeight.w800,
-                                  shadows: const [
-                                    Shadow(
-                                      color: Colors.black54,
-                                      blurRadius: 3,
-                                      offset: Offset(0, 1.5),
-                                    ),
-                                  ],
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 2,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                decoration: BoxDecoration(
+                                  color: badgeBg,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: light.withOpacity(0.35),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  label.isNotEmpty ? label : '',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: _fontSize(),
+                                    fontWeight: FontWeight.w800,
+                                    shadows: const [
+                                      Shadow(
+                                        color: Colors.black54,
+                                        blurRadius: 3,
+                                        offset: Offset(0, 1.5),
+                                      ),
+                                    ],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ),
                           ),
@@ -476,7 +495,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                           Positioned(
                             left: 0,
                             right: 0,
-                            top: cushionTop + 4,
+                            top: seamY + 4,
                             bottom: 2,
                             child: Center(
                               child: Transform.rotate(
@@ -496,7 +515,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                     ),
                   ),
 
-                  // ── LEFT ARMREST ──
+                  // ── LEFT ARMREST (distinct arm colour) ──
                   Positioned(
                     left: 0,
                     bottom: armBottom,
@@ -507,7 +526,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [light, dark],
+                          colors: [armColor, dark],
                         ),
                         borderRadius: BorderRadius.circular(3),
                         border: Border.all(color: deepDark.withOpacity(0.7)),
@@ -522,7 +541,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                     ),
                   ),
 
-                  // ── RIGHT ARMREST ──
+                  // ── RIGHT ARMREST (distinct arm colour) ──
                   Positioned(
                     right: 0,
                     bottom: armBottom,
@@ -533,7 +552,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [light, dark],
+                          colors: [armColor, dark],
                         ),
                         borderRadius: BorderRadius.circular(3),
                         border: Border.all(color: deepDark.withOpacity(0.7)),
