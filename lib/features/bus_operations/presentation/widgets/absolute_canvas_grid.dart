@@ -289,20 +289,31 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     required this.isSelected,
   });
 
-  /// Whether this component type should render as a 3D seat.
+  /// Whether this component type should render as a seat (flat clean style).
   bool get _isSeatType =>
       component.type == ComponentType.seat ||
       component.type == ComponentType.businessClassSeat ||
       component.type == ComponentType.foldingSeat;
 
+  /// Whether this component should be rendered with a 180° visual flip.
+  bool get _isReversed =>
+      component.isReverseFacing &&
+      (component.type == ComponentType.seat ||
+          component.type == ComponentType.businessClassSeat);
+
   @override
   Widget build(BuildContext context) {
     final Color color;
     final IconData icon;
-    // Reverse-facing seats get a distinct blue tone and rotated icon
     if (component.type == ComponentType.seat && component.isReverseFacing) {
       color = const Color(0xFF3B82F6);
       icon = Icons.event_seat;
+    } else if (component.type == ComponentType.businessClassSeat) {
+      color = const Color(0xFFD97706);
+      icon = Icons.airline_seat_flat_angled;
+    } else if (component.type == ComponentType.foldingSeat) {
+      color = const Color(0xFF06B6D4);
+      icon = Icons.chair_alt;
     } else {
       color =
           kAbsoluteComponentColors[component.type] ?? const Color(0xFF334155);
@@ -314,10 +325,21 @@ class _AbsoluteComponentWidget extends StatelessWidget {
         component.seatId ??
         (component.seatNumber?.toString() ?? '');
 
-    // Derived shades for 3D gradient
     final dark = Color.lerp(color, Colors.black, 0.40)!;
-    final mid = Color.lerp(color, Colors.black, 0.18)!;
     final light = color;
+
+    // ── Build the content widget ──
+    final Widget content = ClipRRect(
+      borderRadius: BorderRadius.circular(7),
+      child: _isSeatType
+          ? _buildFlatSeat(color, icon, label)
+          : _buildCardComponent(dark, light, icon, label),
+    );
+
+    // ── Apply 180° rotation for reverse-facing seats ──
+    final Widget rotatedContent = _isReversed
+        ? Transform.rotate(angle: 3.1415926535, child: content)
+        : content;
 
     return Positioned(
       left: component.x,
@@ -326,90 +348,81 @@ class _AbsoluteComponentWidget extends StatelessWidget {
       height: component.height,
       child: Transform.rotate(
         angle: component.rotation * 3.1415926535 / 180.0,
-        child: Padding(
-          // Internal margin creates visual spacing between adjacent seats
-          padding: const EdgeInsets.all(2),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isSelected ? Colors.white : light.withOpacity(0.35),
-                width: isSelected ? 2.5 : 1.2,
+        child: Container(
+          // Structural aisles between seat blocks
+          margin: _isSeatType
+              ? const EdgeInsets.symmetric(vertical: 4, horizontal: 6)
+              : const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? Colors.white : light.withOpacity(0.35),
+              width: isSelected ? 2.5 : 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: dark.withOpacity(0.55),
+                blurRadius: 6,
+                offset: const Offset(2, 3),
               ),
-              boxShadow: [
+              BoxShadow(
+                color: light.withOpacity(0.25),
+                blurRadius: 3,
+                offset: const Offset(-1, -1),
+              ),
+              if (isSelected)
                 BoxShadow(
-                  color: dark.withOpacity(0.55),
-                  blurRadius: 6,
-                  offset: const Offset(2, 3),
+                  color: color.withOpacity(0.6),
+                  blurRadius: 14,
+                  spreadRadius: 2,
                 ),
-                BoxShadow(
-                  color: light.withOpacity(0.25),
-                  blurRadius: 3,
-                  offset: const Offset(-1, -1),
-                ),
-                if (isSelected)
-                  BoxShadow(
-                    color: color.withOpacity(0.6),
-                    blurRadius: 14,
-                    spreadRadius: 2,
-                  ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(7),
-              child: _isSeatType
-                  ? _buildSeat3D(dark, mid, light, icon, label)
-                  : _buildCard3D(dark, mid, light, icon, label),
-            ),
+            ],
           ),
+          child: rotatedContent,
         ),
       ),
     );
   }
 
-  /// 3D AIRPLANE-STYLE SEAT — realistic multi-part chair with headrest,
-  /// backrest, cushion, armrests, and a small accent lumbar cushion.
-  /// Reverse seats flip the entire chair 180° around Y so the facing
-  /// direction is visually opposite.
-  /// CLEAN & MODERN FLAT SEAT STYLE (As per the provided image)
-  /// complex 3D elements ko hata kar bilkul clean, rounded aur modern look diya gaya hai.
-  Widget _buildSeat3D(
-    Color dark,
-    Color mid,
-    Color light,
-    IconData icon,
-    String label,
-  ) {
-    final double w = component.width;
-    final double h = component.height;
+  // ═══════════════════════════════════════════════════════════
+  // FLAT SEAT RENDERING (clean airline / bus booking style)
+  // ═══════════════════════════════════════════════════════════
 
-    // Image ke mutabiq colors select karein (Row 1 green hai, baki blue hain)
-    // Aap layoutState se seat row check kar sakte hain ya defaults use kar sakte hain
-    bool isFirstRow = component.y < (h * 1.5); // Example check for row 1
+  /// Renders a clean, modern flat seat with a headrest indicator line.
+  ///
+  /// ── Orientation ──
+  /// - Forward seats:  headrest indicator at the **bottom** edge (facing up).
+  /// - Reverse seats:  indicator at the **top** edge (facing down).
+  ///   (The 180° rotation is applied by [build] via [_isReversed].)
+  ///
+  /// ── Color ──
+  /// - Standard forward: purple  (#7C3AED)
+  /// - Standard reverse:  blue    (#3B82F6)
+  /// - Business Class:    amber   (#D97706), wider with premium styling
+  /// - Folding:           cyan    (#06B6D4)
+  Widget _buildFlatSeat(Color color, IconData icon, String label) {
+    final double w = component.width - 12; // account for horizontal margin
+    final bool isBiz = component.type == ComponentType.businessClassSeat;
 
-    final Color seatColor = isFirstRow
-        ? const Color(0xFF8BC34A) // Row 1 Green color
-        : const Color(0xFF2F70C1); // Other rows Clean Blue color
+    // Seat body colour — use the passed-in [color] directly
+    final Color seatBody = color;
+    final Color borderClr = Color.lerp(color, Colors.black, 0.18)!;
 
-    final Color borderColor = isFirstRow
-        ? const Color(0xFF7CB342).withOpacity(0.8)
-        : const Color(0xFF255FA8).withOpacity(0.8);
+    // Headrest indicator colour (white with slight opacity)
+    const Color indicatorClr = Color(0xCCFFFFFF);
 
-    // Larisa seat ki tarah pink label check karne ke liye logic (Optional)
-    bool isLarisaSeat = label == 'Larisa' || component.customLabel == 'Larisa';
+    // Label styling
+    final double fontSize = _fontSize();
+    final bool showLabel = label.isNotEmpty && component.width >= 34;
 
     return Container(
-      // Padding ki wajah se seats ke darmian charo taraf se rasta (Aisle) automatic banega
-      margin: const EdgeInsets.all(4.0),
       decoration: BoxDecoration(
-        color: seatColor,
-        borderRadius: BorderRadius.circular(
-          12,
-        ), // Clean rounded corners as in image
-        border: Border.all(color: borderColor, width: 1.5),
+        color: seatBody,
+        borderRadius: BorderRadius.circular(isBiz ? 10 : 8),
+        border: Border.all(color: borderClr, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withOpacity(0.18),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -417,75 +430,89 @@ class _AbsoluteComponentWidget extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Seat Ka Upper White Headrest Indicator Line (jo image me har seat ke top/bottom par hai)
+          // ── Headrest indicator line ──
+          // Rendered at the BOTTOM edge for forward seats.
+          // The 180° Transform.rotate in build() will flip it
+          // to the TOP edge for reverse seats.
           Positioned(
-            left: w * 0.2,
-            right: w * 0.2,
-            bottom:
-                6, // facing direction ke mutabiq top ya bottom par set karein
-            height: 3,
+            left: w * 0.18,
+            right: w * 0.18,
+            bottom: isBiz ? 5 : 3,
+            height: isBiz ? 4 : 3,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
+                color: indicatorClr,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
 
-          // Seat Text Label (e.g., 4A, 4B, 4C) ya Custom Name Label
-          Center(
-            child: isLarisaSeat
-                ? Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(
-                        0xFFFF4081,
-                      ), // Pink background for special label
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  )
-                : Text(
-                    label,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.95),
-                      fontSize: (w * 0.26).clamp(10.0, 14.0),
-                      fontWeight: FontWeight.w700, // Clean readable weight
-                      letterSpacing: 0.5,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          // ── Business Class: top-edge accent stripe ──
+          if (isBiz)
+            Positioned(
+              left: w * 0.22,
+              right: w * 0.22,
+              top: 4,
+              height: 2.5,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.55),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+          // ── Seat icon (small, centered) ──
+          if (!showLabel || isBiz)
+            Center(
+              child: Icon(
+                icon,
+                color: Colors.white.withOpacity(0.55),
+                size: _iconSize() * 0.65,
+              ),
+            ),
+
+          // ── Seat label ──
+          if (showLabel)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
                   ),
-          ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  /// 3D CARD: gradient panel for berths, doors, tables, etc.
-  /// Stack ensures the label always renders on top.
-  Widget _buildCard3D(
+  // ═══════════════════════════════════════════════════════════
+  // CARD-STYLE COMPONENTS (berths, doors, tables, lavatory)
+  // ═══════════════════════════════════════════════════════════
+
+  /// Renders a card-style component (sleeper berth, door, table, lavatory, etc.)
+  /// with a gradient background and icon + label.
+  Widget _buildCardComponent(
     Color dark,
-    Color mid,
     Color light,
     IconData icon,
     String label,
   ) {
+    final bool isTable = component.type == ComponentType.restaurantTable;
+
     return Stack(
       children: [
-        // Gradient background
+        // ── Background ──
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -493,38 +520,74 @@ class _AbsoluteComponentWidget extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [light.withOpacity(0.85), dark.withOpacity(0.85)],
             ),
+            // Rounded inner border for tables
+            borderRadius: isTable ? BorderRadius.circular(8) : null,
+            border: isTable
+                ? Border.all(color: Colors.white.withOpacity(0.15), width: 1.2)
+                : null,
           ),
         ),
-        // Icon + label on top
-        Positioned.fill(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.white, size: _iconSize()),
-              if (label.isNotEmpty && component.width >= 40)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: _fontSize(),
-                      fontWeight: FontWeight.w700,
-                      shadows: const [
-                        Shadow(
-                          color: Colors.black54,
-                          blurRadius: 3,
-                          offset: Offset(0, 1.5),
-                        ),
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+
+        // ── Table: 4 seat-position dots ──
+        if (isTable) ...[
+          for (final dot in [
+            Alignment(-0.55, -0.55),
+            Alignment(0.55, -0.55),
+            Alignment(-0.55, 0.55),
+            Alignment(0.55, 0.55),
+          ])
+            Align(
+              alignment: dot,
+              child: Container(
+                width: component.width * 0.22,
+                height: component.height * 0.22,
+                decoration: BoxDecoration(
+                  color: light.withOpacity(0.45),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-            ],
+              ),
+            ),
+          // Table center icon
+          Center(
+            child: Icon(
+              Icons.table_restaurant,
+              color: Colors.white.withOpacity(0.35),
+              size: _iconSize() * 0.9,
+            ),
           ),
-        ),
+        ],
+
+        // ── Icon + label (non-table components) ──
+        if (!isTable)
+          Positioned.fill(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: Colors.white, size: _iconSize()),
+                if (label.isNotEmpty && component.width >= 40)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: _fontSize(),
+                        fontWeight: FontWeight.w700,
+                        shadows: const [
+                          Shadow(
+                            color: Colors.black54,
+                            blurRadius: 3,
+                            offset: Offset(0, 1.5),
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+            ),
+          ),
       ],
     );
   }

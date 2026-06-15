@@ -190,7 +190,7 @@ class _AbsoluteLayoutDesignerScreenState
           type == ComponentType.seat ||
               type == ComponentType.businessClassSeat ||
               type == ComponentType.foldingSeat
-          ? _state.totalSeats + 1
+          ? _state.components.where((c) => c.type == type).length + 1
           : null,
       bookable: switch (type) {
         ComponentType.seat ||
@@ -222,11 +222,22 @@ class _AbsoluteLayoutDesignerScreenState
   }
 
   String? _nextSeatId(ComponentType type) {
-    // Standard seats (forward + reverse) are numbered by _reassignSeatNumbers.
-    // Business / Folding seats keep simple increment numbering.
-    if (type == ComponentType.businessClassSeat)
-      return 'B${_state.totalSeats + 1}';
-    if (type == ComponentType.foldingSeat) return 'F${_state.totalSeats + 1}';
+    // Per-type independent counters — tables/doors/lavatories never
+    // consume a seat number digit, so sequences stay contiguous.
+    final comps = _state.components;
+    if (type == ComponentType.businessClassSeat) {
+      final count = comps
+          .where((c) => c.type == ComponentType.businessClassSeat)
+          .length;
+      return 'B${count + 1}';
+    }
+    if (type == ComponentType.foldingSeat) {
+      final count = comps
+          .where((c) => c.type == ComponentType.foldingSeat)
+          .length;
+      return 'F${count + 1}';
+    }
+    // Standard seats numbered by _reassignSeatNumbers
     return null;
   }
 
