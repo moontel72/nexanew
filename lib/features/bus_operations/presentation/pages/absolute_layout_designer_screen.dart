@@ -379,6 +379,12 @@ class _AbsoluteLayoutDesignerScreenState
   // ═══════════════════════════════════════════════════════════
 
   void _applyPreset(AbsoluteLayoutPreset preset) {
+    // Special-case: VIP + Sleeper custom layout (5'1" × 18'8")
+    if (preset.key == 'vip_sleeper_40') {
+      _applyVipSleeperPreset(preset);
+      return;
+    }
+
     final components = <AbsoluteLayoutComponent>[];
     const double seatW = 56, seatH = 56;
     const double aisleW = 56;
@@ -447,6 +453,212 @@ class _AbsoluteLayoutDesignerScreenState
         canvasHeight: preset.canvasHeight,
         displayName: preset.label,
         components: components,
+        metadata: {'preset_key': preset.key},
+        isDirty: true,
+      ),
+    );
+  }
+
+  /// Generates the VIP + Sleeper layout (5'1" × 18'8" bus).
+  ///
+  /// Layout (front → back):
+  ///   1. Row 1:  Driver (left) + VIP Business Class (right)
+  ///   2. Rows 2-3:  8 standard seats (2L+2R × 2)
+  ///   3. Rows 4-6:  12 standard seats + 2 upper sleeper berths
+  ///   4. Rear (rows 7-16): mixed tables, forward & reverse seats
+  void _applyVipSleeperPreset(AbsoluteLayoutPreset preset) {
+    final comps = <AbsoluteLayoutComponent>[];
+    const double seatW = 56, seatH = 56;
+    // 244 px wide = 5'1": left(4,60) | aisle(116-128) | right(128,184)
+    const double lx0 = 4, lx1 = 60; // left-side seat X positions
+    const double rx0 = 128, rx1 = 184; // right-side seat X positions
+
+    // ── helpers ──
+    String nextId() => _uuid.v4();
+
+    int seatNum = 0;
+    void addStdSeat(double x, double y, {bool rev = false}) {
+      seatNum++;
+      final c = AbsoluteLayoutComponent(
+        id: nextId(),
+        type: ComponentType.seat,
+        x: x,
+        y: y,
+        width: seatW,
+        height: seatH,
+        isReverseFacing: rev,
+        seatId: 'S$seatNum',
+        seatNumber: seatNum,
+        bookable: true,
+      );
+      comps.add(c);
+    }
+
+    void addRow(double y, {bool revL = false, bool revR = false}) {
+      addStdSeat(lx0, y, rev: revL);
+      addStdSeat(lx1, y, rev: revL);
+      addStdSeat(rx0, y, rev: revR);
+      addStdSeat(rx1, y, rev: revR);
+    }
+
+    // ═══════════════════════════════════════════════
+    // 1. FRONT ROW: Driver + VIP (y = 0)
+    // ═══════════════════════════════════════════════
+    double y = 0;
+
+    // Driver cabin
+    comps.add(
+      AbsoluteLayoutComponent(
+        id: nextId(),
+        type: ComponentType.driverCabin,
+        x: lx0,
+        y: y,
+        width: seatW,
+        height: seatH,
+        bookable: false,
+        seatId: 'DRIVER',
+      ),
+    );
+
+    // VIP — business class, sits on right side
+    comps.add(
+      AbsoluteLayoutComponent(
+        id: nextId(),
+        type: ComponentType.businessClassSeat,
+        x: rx1,
+        y: y,
+        width: seatW,
+        height: seatH,
+        isReverseFacing: false,
+        bookable: true,
+        bookingMode: BookingMode.premium,
+        customLabel: 'VIP',
+        seatId: 'VIP',
+        seatNumber: 0,
+      ),
+    );
+
+    // ═══════════════════════════════════════════════
+    // 2. ROWS 2-3: 8 standard seats (y = 56, 112)
+    // ═══════════════════════════════════════════════
+    y += seatH; // 56
+    addRow(y); // row 2 → 4 seats
+    y += seatH; // 112
+    addRow(y); // row 3 → 4 seats
+
+    // ═══════════════════════════════════════════════
+    // 3. ROWS 4-6: 12 standard seats + 2 upper berths
+    // ═══════════════════════════════════════════════
+    y += seatH; // 168 — row 4
+    addRow(y);
+    y += seatH; // 224 — row 5
+    addRow(y);
+    y += seatH; // 280 — row 6
+    addRow(y);
+
+    // Upper sleeper berths (above the 6 right + 6 left seats)
+    // Each berth spans 3 rows (168 px tall), 1 seat wide (56 px)
+    const double berthY = 168;
+    const double berthH = 168; // 3 rows
+
+    comps.add(
+      AbsoluteLayoutComponent(
+        id: nextId(),
+        type: ComponentType.sleeperUpper,
+        x: lx0,
+        y: berthY,
+        width: seatW,
+        height: berthH,
+        berthLabel: 'LU1',
+        bookable: true,
+        bookingMode: BookingMode.berth,
+      ),
+    );
+
+    comps.add(
+      AbsoluteLayoutComponent(
+        id: nextId(),
+        type: ComponentType.sleeperUpper,
+        x: rx0,
+        y: berthY,
+        width: seatW,
+        height: berthH,
+        berthLabel: 'RU1',
+        bookable: true,
+        bookingMode: BookingMode.berth,
+      ),
+    );
+
+    // ═══════════════════════════════════════════════
+    // 4. REAR SECTION (y = 336 → 896): mixed layout
+    // ═══════════════════════════════════════════════
+    y += seatH; // 336 — row 7: 2L forward + 2R reverse
+    addRow(y, revR: true);
+
+    y += seatH; // 392 — row 8: 2L reverse + 2R forward
+    addRow(y, revL: true);
+
+    // Row 9-10: Table (left) + 2 right seats each row
+    y += seatH; // 448
+    // Table spans 2 seat-widths + aisle (covers left side)
+    comps.add(
+      AbsoluteLayoutComponent(
+        id: nextId(),
+        type: ComponentType.restaurantTable,
+        x: lx0,
+        y: y,
+        width: 112,
+        height: 112,
+        bookable: false,
+      ),
+    );
+    addStdSeat(rx0, y); // row 9 right
+    addStdSeat(rx1, y);
+
+    y += seatH; // 504 — row 10 right seats (table covers left side)
+    addStdSeat(rx0, y);
+    addStdSeat(rx1, y);
+
+    y += seatH; // 560 — row 11: 2L reverse + 2R forward
+    addRow(y, revL: true);
+
+    y += seatH; // 616 — row 12: 2L forward + 2R reverse
+    addRow(y, revR: true);
+
+    // Row 13-14: Table (right) + 2 left seats each row
+    y += seatH; // 672
+    comps.add(
+      AbsoluteLayoutComponent(
+        id: nextId(),
+        type: ComponentType.restaurantTable,
+        x: rx0,
+        y: y,
+        width: 112,
+        height: 112,
+        bookable: false,
+      ),
+    );
+    addStdSeat(lx0, y, rev: true); // row 13 left reverse
+    addStdSeat(lx1, y, rev: true);
+
+    y += seatH; // 728 — row 14 left seats (table covers right side)
+    addStdSeat(lx0, y);
+    addStdSeat(lx1, y);
+
+    y += seatH; // 784 — row 15: 2L + 2R reverse
+    addRow(y, revR: true);
+
+    y += seatH; // 840 — row 16: 2L reverse + 2R
+    addRow(y, revL: true);
+
+    // ── Finalize state ──
+    final reassigned = _reassignSeatNumbers(comps);
+    _setState(
+      AbsoluteLayoutState(
+        canvasWidth: preset.canvasWidth,
+        canvasHeight: preset.canvasHeight,
+        displayName: preset.label,
+        components: reassigned,
         metadata: {'preset_key': preset.key},
         isDirty: true,
       ),

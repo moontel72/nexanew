@@ -101,6 +101,16 @@ class AbsoluteLayoutPreset {
       driverSeats: 1,
       deckType: 'single',
     ),
+    AbsoluteLayoutPreset(
+      key: 'vip_sleeper_40',
+      label: '40-Seat VIP + Sleeper (5\'1" × 18\'8")',
+      canvasWidth: 244,
+      canvasHeight: 896,
+      leftSeats: 2,
+      rightSeats: 2,
+      driverSeats: 1,
+      deckType: 'single',
+    ),
   ];
 }
 
