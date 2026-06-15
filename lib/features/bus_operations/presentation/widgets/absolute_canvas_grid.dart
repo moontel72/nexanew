@@ -465,11 +465,20 @@ class _AbsoluteComponentWidget extends StatelessWidget {
           // ── Seat icon (small, centered) ──
           if (!showLabel || isBiz)
             Center(
-              child: Icon(
-                icon,
-                color: Colors.white.withOpacity(0.55),
-                size: _iconSize() * 0.65,
-              ),
+              child: component.isReverseFacing
+                  ? Transform.rotate(
+                      angle: 3.1415926535,
+                      child: Icon(
+                        icon,
+                        color: Colors.white.withOpacity(0.55),
+                        size: _iconSize() * 0.65,
+                      ),
+                    )
+                  : Icon(
+                      icon,
+                      color: Colors.white.withOpacity(0.55),
+                      size: _iconSize() * 0.65,
+                    ),
             ),
 
           // ── Seat label ──
@@ -477,18 +486,34 @@ class _AbsoluteComponentWidget extends StatelessWidget {
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
+                child: component.isReverseFacing
+                    ? Transform.rotate(
+                        angle: 3.1415926535,
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : Text(
+                        label,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
               ),
             ),
         ],

@@ -54,6 +54,15 @@ const _paletteItems = [
     defaultHeight: 84,
   ),
   _PaletteItem(
+    type: ComponentType.businessClassSeat,
+    label: 'Business Rev.',
+    icon: Icons.airline_seat_flat_angled,
+    color: Color(0xFFB45309),
+    defaultWidth: 84,
+    defaultHeight: 84,
+    isReverseFacing: true,
+  ),
+  _PaletteItem(
     type: ComponentType.sleeperLower,
     label: 'Sleeper L.',
     icon: Icons.airline_seat_flat,
