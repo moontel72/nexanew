@@ -462,7 +462,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.95),
                       fontSize: (w * 0.26).clamp(10.0, 14.0),
-                      fontWeight: FontWeight.w650, // Clean readable weight
+                      fontWeight: FontWeight.w700, // Clean readable weight
                       letterSpacing: 0.5,
                     ),
                     maxLines: 1,
