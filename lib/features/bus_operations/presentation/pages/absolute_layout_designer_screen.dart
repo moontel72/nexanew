@@ -242,17 +242,28 @@ class _AbsoluteLayoutDesignerScreenState
   }
 
   /// Auto-assign S1/S2/… labels to all standard seats (forward + reverse).
-  /// Seats are sorted by Y (top-to-bottom), within same Y: forward first,
-  /// then reverse, then by X (left-to-right).
+  /// Numbering always flows from the driver's position toward the opposite
+  /// end: the row nearest the driver gets S1/S2/..., and numbers increase
+  /// sequentially all the way to the back.
   List<AbsoluteLayoutComponent> _reassignSeatNumbers(
     List<AbsoluteLayoutComponent> comps,
   ) {
     final seats = comps.where((c) => c.type == ComponentType.seat).toList();
     if (seats.isEmpty) return comps;
 
-    // Sort: Y first, then forward-before-reverse, then X
+    // Driver position determines the numbering direction.
+    // If the driver is nearer the top (small Y), number top→bottom.
+    // If the driver is nearer the bottom (large Y), number bottom→top.
+    final driver =
+        comps.where((c) => c.type == ComponentType.driverCabin).isEmpty
+        ? null
+        : comps.firstWhere((c) => c.type == ComponentType.driverCabin);
+    final bool numberTopToBottom =
+        driver == null || driver.y <= 56; // front half of canvas
+
+    // Sort: Y first (relative to driver), forward-before-reverse, then X
     seats.sort((a, b) {
-      final yDiff = a.y.compareTo(b.y);
+      final yDiff = numberTopToBottom ? a.y.compareTo(b.y) : b.y.compareTo(a.y);
       if (yDiff != 0) return yDiff;
       if (a.isReverseFacing != b.isReverseFacing) {
         return a.isReverseFacing ? 1 : -1;
@@ -388,11 +399,30 @@ class _AbsoluteLayoutDesignerScreenState
     final components = <AbsoluteLayoutComponent>[];
     const double seatW = 56, seatH = 56;
     const double aisleW = 56;
-    const double marginTop = 28;
-    double y = marginTop;
+
+    // Driver cabin at the TOP (front) of every layout
+    components.add(
+      AbsoluteLayoutComponent(
+        id: _uuid.v4(),
+        type: ComponentType.driverCabin,
+        x: 0,
+        y: 0,
+        width: 56,
+        height: 56,
+        bookable: false,
+        seatId: 'DRIVER',
+      ),
+    );
+
+    // Seat rows start right after the driver
+    double y = seatH; // y = 56
+    final int rowCount = ((preset.canvasHeight - 56) / seatH).floor().clamp(
+      0,
+      16,
+    );
 
     // Generate seat rows
-    for (int row = 0; row < 14; row++) {
+    for (int row = 0; row < rowCount; row++) {
       double x = 0;
       // Left seats
       for (int i = 0; i < preset.leftSeats; i++) {
@@ -433,26 +463,15 @@ class _AbsoluteLayoutDesignerScreenState
       y += seatH;
     }
 
-    // Driver cabin at bottom
-    components.add(
-      AbsoluteLayoutComponent(
-        id: _uuid.v4(),
-        type: ComponentType.driverCabin,
-        x: 0,
-        y: preset.canvasHeight - 112,
-        width: 56,
-        height: 112,
-        bookable: false,
-        seatId: 'DRIVER',
-      ),
-    );
+    var reassigned = _reassignSeatNumbers(components);
+    reassigned = _reassignBerthLabels(reassigned);
 
     _setState(
       AbsoluteLayoutState(
         canvasWidth: preset.canvasWidth,
         canvasHeight: preset.canvasHeight,
         displayName: preset.label,
-        components: components,
+        components: reassigned,
         metadata: {'preset_key': preset.key},
         isDirty: true,
       ),

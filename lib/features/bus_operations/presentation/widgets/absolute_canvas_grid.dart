@@ -115,6 +115,7 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
             painter: _CanvasBackgroundPainter(
               canvasWidth: ls.canvasWidth,
               canvasHeight: ls.canvasHeight,
+              components: ls.components,
             ),
             child: Stack(
               children: [
@@ -132,14 +133,17 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
   }
 }
 
-/// Paints the dot-grid background and architectural ruler on the canvas.
+/// Paints the dot-grid background, architectural ruler, and bus body
+/// outline (windshield, side windows, passenger door) on the canvas.
 class _CanvasBackgroundPainter extends CustomPainter {
   final double canvasWidth;
   final double canvasHeight;
+  final List<AbsoluteLayoutComponent> components;
 
   _CanvasBackgroundPainter({
     required this.canvasWidth,
     required this.canvasHeight,
+    this.components = const [],
   });
 
   static const double _rulerThickness = 22.0;
@@ -193,6 +197,11 @@ class _CanvasBackgroundPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
     totalLabel.paint(canvas, const Offset(4, 4));
+
+    // ═══════════════════════════════════════════════
+    // BUS BODY OUTLINE (windshield, windows, door)
+    // ═══════════════════════════════════════════════
+    _drawBusBody(canvas);
   }
 
   /// Draws an architectural ruler along the top (horizontal) or left (vertical).
@@ -277,6 +286,177 @@ class _CanvasBackgroundPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _CanvasBackgroundPainter old) =>
       canvasWidth != old.canvasWidth || canvasHeight != old.canvasHeight;
+
+  // ═══════════════════════════════════════════════
+  // BUS BODY GRAPHICS
+  // ═══════════════════════════════════════════════
+
+  void _drawBusBody(Canvas canvas) {
+    // Determine driver position → front of bus
+    final driver = components.isEmpty
+        ? null
+        : components.where((c) => c.type == ComponentType.driverCabin).isEmpty
+        ? null
+        : components.firstWhere((c) => c.type == ComponentType.driverCabin);
+    final bool frontAtTop = driver == null || driver.y < canvasHeight / 2;
+
+    _drawWindshield(canvas, frontAtTop);
+    _drawSideWindows(canvas);
+    _drawPassengerDoor(canvas, frontAtTop);
+  }
+
+  /// Curved front windshield / dashboard outline at the driver's end.
+  void _drawWindshield(Canvas canvas, bool atTop) {
+    final windshieldPaint = Paint()
+      ..color = const Color(0x1844AAFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final fillPaint = Paint()..color = const Color(0x0810A0FF);
+
+    final double y;
+    if (atTop) {
+      y = _rulerThickness + 2;
+    } else {
+      y = canvasHeight - _rulerThickness - 2;
+    }
+
+    // Curved windshield shape (like a rounded trapezoid)
+    final path = Path();
+    final double w = canvasWidth;
+    final double windH = 48; // windshield depth
+    final double shrink = w * 0.12; // curvature inset
+
+    if (atTop) {
+      path.moveTo(shrink, y + windH);
+      path.lineTo(w - shrink, y + windH);
+      path.quadraticBezierTo(w + 6, y + windH * 0.6, w - shrink * 0.5, y + 4);
+      path.lineTo(shrink * 0.5, y + 4);
+      path.quadraticBezierTo(-6, y + windH * 0.6, shrink, y + windH);
+    } else {
+      path.moveTo(shrink, y - windH);
+      path.lineTo(w - shrink, y - windH);
+      path.quadraticBezierTo(w + 6, y - windH * 0.6, w - shrink * 0.5, y - 4);
+      path.lineTo(shrink * 0.5, y - 4);
+      path.quadraticBezierTo(-6, y - windH * 0.6, shrink, y - windH);
+    }
+    path.close();
+
+    canvas.drawPath(path, fillPaint);
+    canvas.drawPath(path, windshieldPaint);
+
+    // "WINDSHIELD" label
+    final lblStyle = TextStyle(color: const Color(0x30FFFFFF), fontSize: 8);
+    final tp = TextPainter(
+      text: TextSpan(text: 'WINDSHIELD', style: lblStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(
+      canvas,
+      Offset((w - tp.width) / 2, atTop ? y + windH * 0.55 : y - windH * 0.85),
+    );
+  }
+
+  /// Subtle side-window indicators along left and right canvas edges.
+  void _drawSideWindows(Canvas canvas) {
+    final windowPaint = Paint()
+      ..color = const Color(0x18CCDDFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    final fillPaint = Paint()..color = const Color(0x0610A0FF);
+
+    final double winTop = _rulerThickness + 52;
+    final double winBottom = canvasHeight - 4;
+    final double winInset = 2; // distance from canvas edge
+    final double winWide = 14; // window strip width
+
+    // Left-side window strip
+    final leftRect = Rect.fromLTWH(
+      winInset,
+      winTop,
+      winWide,
+      winBottom - winTop,
+    );
+    canvas.drawRect(leftRect, fillPaint);
+    canvas.drawRect(leftRect, windowPaint);
+
+    // Right-side window strip
+    final rightRect = Rect.fromLTWH(
+      canvasWidth - winInset - winWide,
+      winTop,
+      winWide,
+      winBottom - winTop,
+    );
+    canvas.drawRect(rightRect, fillPaint);
+    canvas.drawRect(rightRect, windowPaint);
+
+    // Window separation lines (like pane dividers) every ~2 ft
+    final sepPaint = Paint()
+      ..color = const Color(0x12FFFFFF)
+      ..strokeWidth = 0.8;
+    const double sepSpacing = 96; // 2 ft = 24" × 4 px/in
+    for (double sy = winTop + sepSpacing; sy < winBottom; sy += sepSpacing) {
+      // Left
+      canvas.drawLine(
+        Offset(winInset, sy),
+        Offset(winInset + winWide, sy),
+        sepPaint,
+      );
+      // Right
+      canvas.drawLine(
+        Offset(canvasWidth - winInset - winWide, sy),
+        Offset(canvasWidth - winInset, sy),
+        sepPaint,
+      );
+    }
+  }
+
+  /// Passenger entry door graphic on the right side, near the front.
+  void _drawPassengerDoor(Canvas canvas, bool frontAtTop) {
+    final doorPaint = Paint()
+      ..color = const Color(0x28FFAA33)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8;
+
+    final doorFill = Paint()..color = const Color(0x10FFAA33);
+
+    final double doorW = 44;
+    final double doorH = 80;
+    final double doorX = canvasWidth - 6 - doorW;
+    final double doorY = frontAtTop
+        ? _rulerThickness + 56
+        : canvasHeight - _rulerThickness - doorH - 4;
+
+    final doorRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(doorX, doorY, doorW, doorH),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(doorRect, doorFill);
+    canvas.drawRRect(doorRect, doorPaint);
+
+    // Door handle
+    final handlePaint = Paint()
+      ..color = const Color(0x40FFFFFF)
+      ..strokeWidth = 1.5;
+    canvas.drawLine(
+      Offset(doorX + doorW * 0.65, doorY + doorH * 0.55),
+      Offset(doorX + doorW * 0.65, doorY + doorH * 0.75),
+      handlePaint,
+    );
+
+    // "DOOR" label
+    final lblStyle = TextStyle(
+      color: const Color(0x30FFAA33),
+      fontSize: 8,
+      fontWeight: FontWeight.w600,
+    );
+    final tp = TextPainter(
+      text: TextSpan(text: 'DOOR', style: lblStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(doorX + (doorW - tp.width) / 2, doorY + doorH + 2));
+  }
 }
 
 /// Renders a single component on the absolute canvas.
