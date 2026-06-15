@@ -75,6 +75,14 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
   double _resizeW = 0;
   double _resizeH = 0;
 
+  // Stable resize anchors — captured at drag start, never mutate mid-drag.
+  double _resizeStartX = 0;
+  double _resizeStartY = 0;
+  double _resizeStartW = 0;
+  double _resizeStartH = 0;
+  double _accumDx = 0;
+  double _accumDy = 0;
+
   @override
   Widget build(BuildContext context) {
     final c = widget.component;
@@ -225,6 +233,12 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
         onPanStart: (_) {
           setState(() {
             _isResizing = true;
+            _resizeStartX = c.x;
+            _resizeStartY = c.y;
+            _resizeStartW = c.width;
+            _resizeStartH = c.height;
+            _accumDx = 0;
+            _accumDy = 0;
             _resizeW = c.width;
             _resizeH = c.height;
           });
@@ -288,49 +302,54 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
   }
 
   void _onResizeDrag(_HandlePosition pos, DragUpdateDetails d) {
-    final c = widget.component;
-    double newX = c.x;
-    double newY = c.y;
-    double newW = c.width;
-    double newH = c.height;
+    // Accumulate total delta from drag start — avoids any feedback
+    // loop with the component values that change every frame.
+    _accumDx += d.delta.dx;
+    _accumDy += d.delta.dy;
+
+    double newX = _resizeStartX;
+    double newY = _resizeStartY;
+    double newW = _resizeStartW;
+    double newH = _resizeStartH;
     const minSize = 24.0;
 
     switch (pos) {
       case _HandlePosition.topLeft:
-        newX = c.x + d.delta.dx;
-        newY = c.y + d.delta.dy;
-        newW = c.width - d.delta.dx;
-        newH = c.height - d.delta.dy;
+        newX = _resizeStartX + _accumDx;
+        newY = _resizeStartY + _accumDy;
+        newW = _resizeStartW - _accumDx;
+        newH = _resizeStartH - _accumDy;
       case _HandlePosition.topCenter:
-        newY = c.y + d.delta.dy;
-        newH = c.height - d.delta.dy;
+        newY = _resizeStartY + _accumDy;
+        newH = _resizeStartH - _accumDy;
       case _HandlePosition.topRight:
-        newY = c.y + d.delta.dy;
-        newW = c.width + d.delta.dx;
-        newH = c.height - d.delta.dy;
+        newY = _resizeStartY + _accumDy;
+        newW = _resizeStartW + _accumDx;
+        newH = _resizeStartH - _accumDy;
       case _HandlePosition.middleLeft:
-        newX = c.x + d.delta.dx;
-        newW = c.width - d.delta.dx;
+        newX = _resizeStartX + _accumDx;
+        newW = _resizeStartW - _accumDx;
       case _HandlePosition.middleRight:
-        newW = c.width + d.delta.dx;
+        newW = _resizeStartW + _accumDx;
       case _HandlePosition.bottomLeft:
-        newX = c.x + d.delta.dx;
-        newW = c.width - d.delta.dx;
-        newH = c.height + d.delta.dy;
+        newX = _resizeStartX + _accumDx;
+        newW = _resizeStartW - _accumDx;
+        newH = _resizeStartH + _accumDy;
       case _HandlePosition.bottomCenter:
-        newH = c.height + d.delta.dy;
+        newH = _resizeStartH + _accumDy;
       case _HandlePosition.bottomRight:
-        newW = c.width + d.delta.dx;
-        newH = c.height + d.delta.dy;
+        newW = _resizeStartW + _accumDx;
+        newH = _resizeStartH + _accumDy;
       case _HandlePosition.rotation:
         return;
     }
 
+    // Clamp minimum size — preserve opposite edge position
     if (newW < minSize) {
       if (pos == _HandlePosition.topLeft ||
           pos == _HandlePosition.middleLeft ||
           pos == _HandlePosition.bottomLeft) {
-        newX = c.x + c.width - minSize;
+        newX = _resizeStartX + _resizeStartW - minSize;
       }
       newW = minSize;
     }
@@ -338,13 +357,12 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
       if (pos == _HandlePosition.topLeft ||
           pos == _HandlePosition.topCenter ||
           pos == _HandlePosition.topRight) {
-        newY = c.y + c.height - minSize;
+        newY = _resizeStartY + _resizeStartH - minSize;
       }
       newH = minSize;
     }
 
     widget.onResize(newW, newH, newX, newY);
-    // Update live tooltip
     setState(() {
       _resizeW = newW;
       _resizeH = newH;

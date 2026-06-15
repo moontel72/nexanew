@@ -381,24 +381,50 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     final double w = component.width;
     final double h = component.height;
 
-    // ── Airplane seat palette (matches classic coach interior) ──
-    const Color headrestColor = Color(0xFF2A6F97);   // light airline blue
-    const Color backrestColor = Color(0xFF014F86);   // medium airline blue
-    const Color cushionColor = Color(0xFF01497C);    // deep seat blue
-    const Color cushionDark = Color(0xFF013A63);     // shadow edge
-    const Color armColor = Color(0xFF2C3E50);        // dark blue-grey
-    const Color armHighlight = Color(0xFF3D5266);    // lighter arm top
-    const Color accentCushion = Color(0xFFF4A261);   // warm terracotta/orange
-    const Color accentDark = Color(0xFFE08A3D);      // deeper accent shadow
+    // ── Dual seat palette (economy + business class) ──
+    final bool isBusiness = component.type == ComponentType.businessClassSeat;
 
-    // ── Layout proportions ──
-    final double pad = w * 0.04;         // internal margin
+    // Economy: classic airline blue
+    const Color ecoHeadrest = Color(0xFF2A6F97);
+    const Color ecoBackrest = Color(0xFF014F86);
+    const Color ecoCushion = Color(0xFF01497C);
+    const Color ecoCushionDark = Color(0xFF013A63);
+    const Color ecoAccent = Color(0xFFF4A261);
+    const Color ecoAccentDark = Color(0xFFE08A3D);
+
+    // Business: premium deep navy + gold accent
+    const Color bizHeadrest = Color(0xFF1B2A4A);
+    const Color bizBackrest = Color(0xFF152238);
+    const Color bizCushion = Color(0xFF0C1A32);
+    const Color bizCushionDark = Color(0xFF080E22);
+    const Color bizAccent = Color(0xFFD4A017);
+    const Color bizAccentDark = Color(0xFFB88A0C);
+
+    final Color headrestColor = isBusiness ? bizHeadrest : ecoHeadrest;
+    final Color backrestColor = isBusiness ? bizBackrest : ecoBackrest;
+    final Color cushionColor = isBusiness ? bizCushion : ecoCushion;
+    final Color cushionDark = isBusiness ? bizCushionDark : ecoCushionDark;
+    final Color accentCushion = isBusiness ? bizAccent : ecoAccent;
+    final Color accentDark = isBusiness ? bizAccentDark : ecoAccentDark;
+    const Color armColor = Color(0xFF2C3E50);
+    const Color armHighlight = Color(0xFF3D5266);
+
+    final Color headrestTop = isBusiness
+        ? const Color(0xFF2A3D5E)
+        : const Color(0xFF3685B0);
+    final Color backrestTop = isBusiness
+        ? const Color(0xFF1E3050)
+        : const Color(0xFF015F9E);
+    final Color backrestBottom = isBusiness
+        ? const Color(0xFF0E1A30)
+        : const Color(0xFF013D6B);
+    final double pad = w * 0.04; // internal margin
     final double innerW = w - pad * 2;
-    final double headH = h * 0.18;        // headrest height
-    final double backH = h * 0.32;        // backrest height
-    final double seatH = h * 0.30;        // main cushion height
-    final double armW = w * 0.10;         // armrest width
-    final double armH = h * 0.40;         // armrest height
+    final double headH = h * 0.18; // headrest height
+    final double backH = h * 0.32; // backrest height
+    final double seatH = h * 0.30; // main cushion height
+    final double armW = w * 0.10; // armrest width
+    final double armH = h * 0.40; // armrest height
     final double armTop = headH + backH * 0.55; // armrest vertical start
     final double smallCushionH = h * 0.16; // accent cushion height
     final double smallCushionW = innerW * 0.72;
@@ -412,334 +438,321 @@ class _AbsoluteComponentWidget extends StatelessWidget {
         ? (3.1415926535 - 0.175)
         : yAngleBase;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // ═══════════════════════════════════════════════
-          // 3D PERSPECTIVE WRAPPER
-          // ═══════════════════════════════════════════════
-          Positioned.fill(
-            child: Transform(
-              alignment: Alignment.center,
-              transform: Matrix4.identity()
-                ..setEntry(3, 2, 0.0018) // perspective ~550 px
-                ..rotateX(0.26)          // ~15° tilt
-                ..rotateY(yAngle),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // ─── HEADREST ───
-                  // Rounded top section with subtle highlight
-                  Positioned(
-                    left: pad,
-                    top: 0,
-                    width: innerW,
-                    height: headH,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Color(0xFF3685B0),
-                            headrestColor,
-                          ],
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(8),
-                          topRight: Radius.circular(8),
-                          bottomLeft: Radius.circular(3),
-                          bottomRight: Radius.circular(3),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.35),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // ═══════════════════════════════════════════════
+        // 3D PERSPECTIVE WRAPPER
+        // ═══════════════════════════════════════════════
+        Positioned.fill(
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.0018) // perspective ~550 px
+              ..rotateX(0.26) // ~15° tilt
+              ..rotateY(yAngle),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // ─── HEADREST ───
+                // Rounded top section with subtle highlight
+                Positioned(
+                  left: pad,
+                  top: 0,
+                  width: innerW,
+                  height: headH,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [headrestTop, headrestColor],
                       ),
-                      // Headrest inner highlight
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: Container(
-                          height: headH * 0.35,
-                          margin: EdgeInsets.symmetric(horizontal: innerW * 0.18),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.white.withOpacity(0.30),
-                                Colors.white.withOpacity(0.0),
-                              ],
-                            ),
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(6),
-                              topRight: Radius.circular(6),
-                            ),
-                          ),
-                        ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(8),
+                        topRight: Radius.circular(8),
+                        bottomLeft: Radius.circular(3),
+                        bottomRight: Radius.circular(3),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.35),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                  ),
-
-                  // ─── BACKREST ───
-                  // Tall middle panel with subtle inset shadow
-                  Positioned(
-                    left: pad + innerW * 0.03,
-                    top: headH - 2,
-                    width: innerW * 0.94,
-                    height: backH + 2,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Color(0xFF015F9E),
-                            backrestColor,
-                            Color(0xFF013D6B),
-                          ],
-                          stops: [0.0, 0.5, 1.0],
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(5),
-                          bottomRight: Radius.circular(5),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 3,
-                            offset: const Offset(0, 1),
-                            blurStyle: BlurStyle.inner,
-                          ),
-                        ],
-                      ),
-                      // Seat number label centered in backrest
-                      child: Center(
-                        child: Padding(
-                          padding: EdgeInsets.only(bottom: backH * 0.15),
-                          child: Text(
-                            label.isNotEmpty ? label : '',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: _fontSize(),
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                              shadows: const [
-                                Shadow(
-                                  color: Colors.black54,
-                                  blurRadius: 3,
-                                  offset: Offset(0, 1.5),
-                                ),
-                              ],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // ─── MAIN CUSHION ───
-                  // Deep seat pan with strong forward tilt for depth
-                  Positioned(
-                    left: pad,
-                    top: headH + backH - 2,
-                    width: innerW,
-                    height: seatH + 2,
-                    child: Transform(
+                    // Headrest inner highlight
+                    child: Align(
                       alignment: Alignment.topCenter,
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.0012)
-                        ..rotateX(1.15), // ~66° — strong forward tilt
                       child: Container(
+                        height: headH * 0.35,
+                        margin: EdgeInsets.symmetric(horizontal: innerW * 0.18),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
+                          gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              cushionColor,
-                              cushionDark,
+                              Colors.white.withOpacity(0.30),
+                              Colors.white.withOpacity(0.0),
                             ],
                           ),
                           borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(10),
-                            bottomRight: Radius.circular(10),
-                            topLeft: Radius.circular(5),
-                            topRight: Radius.circular(5),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.45),
-                              blurRadius: 10,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        // Direction icon on cushion
-                        child: Center(
-                          child: Transform.rotate(
-                            angle: component.isReverseFacing
-                                ? 3.1415926535
-                                : 0,
-                            child: Icon(
-                              icon,
-                              color: Colors.white.withOpacity(0.70),
-                              size: _iconSize() * 0.55,
-                            ),
+                            topLeft: Radius.circular(6),
+                            topRight: Radius.circular(6),
                           ),
                         ),
                       ),
                     ),
                   ),
+                ),
 
-                  // ─── LEFT ARMREST ───
-                  Positioned(
-                    left: 0,
-                    top: armTop,
-                    width: armW,
-                    height: armH,
+                // ─── BACKREST ───
+                // Tall middle panel with subtle inset shadow
+                Positioned(
+                  left: pad + innerW * 0.03,
+                  top: headH - 2,
+                  width: innerW * 0.94,
+                  height: backH + 2,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [backrestTop, backrestColor, backrestBottom],
+                        stops: const [0.0, 0.5, 1.0],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(5),
+                        bottomRight: Radius.circular(5),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                          blurStyle: BlurStyle.inner,
+                        ),
+                      ],
+                    ),
+                    // Seat number label centered in backrest
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: backH * 0.15),
+                        child: Text(
+                          label.isNotEmpty ? label : '',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: _fontSize(),
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                            shadows: const [
+                              Shadow(
+                                color: Colors.black54,
+                                blurRadius: 3,
+                                offset: Offset(0, 1.5),
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ─── MAIN CUSHION ───
+                // Deep seat pan with strong forward tilt for depth
+                Positioned(
+                  left: pad,
+                  top: headH + backH - 2,
+                  width: innerW,
+                  height: seatH + 2,
+                  child: Transform(
+                    alignment: Alignment.topCenter,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.0012)
+                      ..rotateX(1.15), // ~66° — strong forward tilt
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [cushionColor, cushionDark],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(10),
+                          bottomRight: Radius.circular(10),
+                          topLeft: Radius.circular(5),
+                          topRight: Radius.circular(5),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.45),
+                            blurRadius: 10,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      // Direction icon on cushion
+                      child: Center(
+                        child: Transform.rotate(
+                          angle: component.isReverseFacing ? 3.1415926535 : 0,
+                          child: Icon(
+                            icon,
+                            color: Colors.white.withOpacity(0.70),
+                            size: _iconSize() * 0.55,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ─── LEFT ARMREST ───
+                Positioned(
+                  left: 0,
+                  top: armTop,
+                  width: armW,
+                  height: armH,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          armHighlight,
+                          armColor,
+                          Colors.black.withOpacity(0.3),
+                        ],
+                        stops: const [0.0, 0.6, 1.0],
+                      ),
+                      borderRadius: BorderRadius.circular(3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.4),
+                          blurRadius: 5,
+                          offset: const Offset(1, 4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ─── RIGHT ARMREST ───
+                Positioned(
+                  right: 0,
+                  top: armTop,
+                  width: armW,
+                  height: armH,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          armHighlight,
+                          armColor,
+                          Colors.black.withOpacity(0.3),
+                        ],
+                        stops: const [0.0, 0.6, 1.0],
+                      ),
+                      borderRadius: BorderRadius.circular(3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.4),
+                          blurRadius: 5,
+                          offset: const Offset(-1, 4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ─── SMALL ACCENT LUMBAR CUSHION ───
+                // Plush orange/terracotta accent pillow overlay
+                Positioned(
+                  left: (w - smallCushionW) / 2,
+                  top: headH + backH - smallCushionH * 0.4,
+                  width: smallCushionW,
+                  height: smallCushionH,
+                  child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.0015)
+                      ..rotateX(0.35)
+                      ..rotateY(yAngle * 0.3),
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            armHighlight,
-                            armColor,
-                            Colors.black.withOpacity(0.3),
+                            const Color(0xFFF7B87A),
+                            accentCushion,
+                            accentDark,
                           ],
-                          stops: const [0.0, 0.6, 1.0],
+                          stops: const [0.0, 0.45, 1.0],
                         ),
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.elliptical(20, 14),
+                          topRight: Radius.elliptical(20, 14),
+                          bottomLeft: Radius.elliptical(14, 10),
+                          bottomRight: Radius.elliptical(14, 10),
+                        ),
+                        border: Border.all(
+                          color: const Color(0xFFD27A2E).withOpacity(0.5),
+                          width: 0.8,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.4),
-                            blurRadius: 5,
-                            offset: const Offset(1, 4),
+                            color: Colors.black.withOpacity(0.30),
+                            blurRadius: 8,
+                            offset: const Offset(0, 5),
+                          ),
+                          BoxShadow(
+                            color: accentCushion.withOpacity(0.35),
+                            blurRadius: 6,
+                            offset: const Offset(0, -1),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-
-                  // ─── RIGHT ARMREST ───
-                  Positioned(
-                    right: 0,
-                    top: armTop,
-                    width: armW,
-                    height: armH,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            armHighlight,
-                            armColor,
-                            Colors.black.withOpacity(0.3),
-                          ],
-                          stops: const [0.0, 0.6, 1.0],
-                        ),
-                        borderRadius: BorderRadius.circular(3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.4),
-                            blurRadius: 5,
-                            offset: const Offset(-1, 4),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // ─── SMALL ACCENT LUMBAR CUSHION ───
-                  // Plush orange/terracotta accent pillow overlay
-                  Positioned(
-                    left: (w - smallCushionW) / 2,
-                    top: headH + backH - smallCushionH * 0.4,
-                    width: smallCushionW,
-                    height: smallCushionH,
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.0015)
-                        ..rotateX(0.35)
-                        ..rotateY(yAngle * 0.3),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Color(0xFFF7B87A),
-                              accentCushion,
-                              accentDark,
-                            ],
-                            stops: [0.0, 0.45, 1.0],
-                          ),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.elliptical(20, 14),
-                            topRight: Radius.elliptical(20, 14),
-                            bottomLeft: Radius.elliptical(14, 10),
-                            bottomRight: Radius.elliptical(14, 10),
-                          ),
-                          border: Border.all(
-                            color: const Color(0xFFD27A2E).withOpacity(0.5),
-                            width: 0.8,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.30),
-                              blurRadius: 8,
-                              offset: const Offset(0, 5),
-                            ),
-                            BoxShadow(
-                              color: accentCushion.withOpacity(0.35),
-                              blurRadius: 6,
-                              offset: const Offset(0, -1),
-                            ),
-                          ],
-                        ),
-                        // Stitch lines for fabric realism
-                        child: Stack(
-                          children: [
-                            Positioned(
-                              left: smallCushionW * 0.18,
-                              right: smallCushionW * 0.18,
-                              top: smallCushionH * 0.28,
-                              child: Container(
-                                height: 1,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF8B4513)
-                                      .withOpacity(0.45),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF8B4513)
-                                          .withOpacity(0.30),
-                                      blurRadius: 0,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
+                      // Stitch lines for fabric realism
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            left: smallCushionW * 0.18,
+                            right: smallCushionW * 0.18,
+                            top: smallCushionH * 0.28,
+                            child: Container(
+                              height: 1,
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF8B4513,
+                                ).withOpacity(0.45),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF8B4513,
+                                    ).withOpacity(0.30),
+                                    blurRadius: 0,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
