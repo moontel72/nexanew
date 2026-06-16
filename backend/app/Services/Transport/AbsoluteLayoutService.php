@@ -20,6 +20,14 @@ use Illuminate\Support\Facades\Log;
  */
 class AbsoluteLayoutService
 {
+    /**
+     * Check if the carrier_company_id column exists (migration may not have run yet).
+     */
+    private function hasCarrierColumn(): bool
+    {
+        return \Illuminate\Support\Facades\Schema::hasColumn('absolute_bus_layouts', 'carrier_company_id');
+    }
+
     // ═══════════════════════════════════════════════════════════
     // LIST
     // ═══════════════════════════════════════════════════════════
@@ -35,7 +43,7 @@ class AbsoluteLayoutService
 
         $query = AbsoluteBusLayout::where('layout_status', '!=', 'archived');
 
-        if ($carrierCompanyId !== null) {
+        if ($carrierCompanyId !== null && $this->hasCarrierColumn()) {
             $query->where('carrier_company_id', $carrierCompanyId);
         } else {
             $query->where('owner_identity_id', $ownerIdentityId);
@@ -67,7 +75,7 @@ class AbsoluteLayoutService
     {
         $query = AbsoluteBusLayout::where('id', $id);
 
-        if ($carrierCompanyId !== null) {
+        if ($carrierCompanyId !== null && $this->hasCarrierColumn()) {
             $query->where('carrier_company_id', $carrierCompanyId);
         } else {
             $query->where('owner_identity_id', $ownerIdentityId);
@@ -91,10 +99,9 @@ class AbsoluteLayoutService
     {
         $id = $data['id'] ?? (string) \Illuminate\Support\Str::uuid();
 
-        $layout = AbsoluteBusLayout::create([
+        $layoutData = [
             'id' => $id,
             'owner_identity_id' => $ownerIdentityId,
-            'carrier_company_id' => $data['carrier_company_id'] ?? null,
             'display_name' => $data['display_name'] ?? 'Untitled Layout',
             'deck_level' => $data['deck_level'] ?? 'lower',
             'canvas_width' => $data['canvas_width'] ?? 280,
@@ -103,7 +110,13 @@ class AbsoluteLayoutService
             'layout_status' => $data['layout_status'] ?? 'draft',
             'version_number' => 1,
             'is_active' => true,
-        ]);
+        ];
+
+        if ($this->hasCarrierColumn() && isset($data['carrier_company_id'])) {
+            $layoutData['carrier_company_id'] = $data['carrier_company_id'];
+        }
+
+        $layout = AbsoluteBusLayout::create($layoutData);
 
         Log::info('AbsoluteBusLayout created', [
             'layout_id' => $layout->id,
@@ -124,7 +137,7 @@ class AbsoluteLayoutService
     {
         $query = AbsoluteBusLayout::where('id', $id);
 
-        if ($carrierCompanyId !== null) {
+        if ($carrierCompanyId !== null && $this->hasCarrierColumn()) {
             $query->where('carrier_company_id', $carrierCompanyId);
         } else {
             $query->where('owner_identity_id', $ownerIdentityId);
@@ -168,7 +181,7 @@ class AbsoluteLayoutService
     {
         $query = AbsoluteBusLayout::where('id', $id);
 
-        if ($carrierCompanyId !== null) {
+        if ($carrierCompanyId !== null && $this->hasCarrierColumn()) {
             $query->where('carrier_company_id', $carrierCompanyId);
         } else {
             $query->where('owner_identity_id', $ownerIdentityId);
@@ -205,7 +218,7 @@ class AbsoluteLayoutService
     ): ?AbsoluteBusLayout {
         $query = AbsoluteBusLayout::where('id', $id);
 
-        if ($carrierCompanyId !== null) {
+        if ($carrierCompanyId !== null && $this->hasCarrierColumn()) {
             $query->where('carrier_company_id', $carrierCompanyId);
         } else {
             $query->where('owner_identity_id', $ownerIdentityId);
@@ -250,7 +263,7 @@ class AbsoluteLayoutService
     {
         $query = AbsoluteBusLayout::where('owner_identity_id', $ownerIdentityId);
 
-        if ($carrierCompanyId !== null) {
+        if ($carrierCompanyId !== null && $this->hasCarrierColumn()) {
             $query->where('carrier_company_id', $carrierCompanyId);
         }
 

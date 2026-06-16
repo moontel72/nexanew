@@ -40,8 +40,9 @@ Route::prefix('api/v1/bus-fleet')
             }
 
             $fleetSize = \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
-                ->when($carrierId, fn($q) => $q->where('carrier_company_id', $carrierId))
                 ->where('layout_status', '!=', 'archived')
+                ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('absolute_bus_layouts', 'carrier_company_id'),
+                    fn($q) => $q->where('carrier_company_id', $carrierId))
                 ->count();
 
             $staffCount = \Illuminate\Support\Facades\DB::table('fleet_assignments')
@@ -96,8 +97,9 @@ Route::prefix('api/v1/bus-fleet')
             }
 
             $fleetSize = \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
-                ->when($carrierId, fn($q) => $q->where('carrier_company_id', $carrierId))
                 ->where('layout_status', '!=', 'archived')
+                ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('absolute_bus_layouts', 'carrier_company_id'),
+                    fn($q) => $q->where('carrier_company_id', $carrierId))
                 ->count();
 
             $companyName = 'NexaTrace Fleet';

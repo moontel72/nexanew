@@ -113,7 +113,7 @@ class AbsoluteLayoutController extends Controller
 
         // Fleet admin panel: attach carrier_company_id from middleware context
         $carrierCompanyId = $request->get('_carrier_company_id');
-        if ($carrierCompanyId) {
+        if ($carrierCompanyId && \Illuminate\Support\Facades\Schema::hasColumn('absolute_bus_layouts', 'carrier_company_id')) {
             $validated['carrier_company_id'] = $carrierCompanyId;
         }
 
