@@ -39,7 +39,7 @@ Route::prefix('api/v1/bus-fleet')
                 return response()->json(['message' => 'No company found for this account'], 404);
             }
 
-            $fleetSize = \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+            $fleetSize = \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
                 ->when($carrierId, fn($q) => $q->where('carrier_company_id', $carrierId))
                 ->where('layout_status', '!=', 'archived')
                 ->count();
@@ -95,7 +95,7 @@ Route::prefix('api/v1/bus-fleet')
                 return response()->json(['message' => 'No company found for this account'], 404);
             }
 
-            $fleetSize = \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+            $fleetSize = \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
                 ->when($carrierId, fn($q) => $q->where('carrier_company_id', $carrierId))
                 ->where('layout_status', '!=', 'archived')
                 ->count();

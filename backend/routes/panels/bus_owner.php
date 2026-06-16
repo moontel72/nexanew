@@ -35,7 +35,7 @@ Route::prefix('api/v1/bus-owner')
                 ->where('global_identity_id', $identityId)
                 ->first();
 
-            $fleetSize = \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+            $fleetSize = \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
                 ->where('owner_identity_id', $identityId)
                 ->where('layout_status', '!=', 'archived')
                 ->count();
@@ -68,7 +68,7 @@ Route::prefix('api/v1/bus-owner')
                 ->where('global_identity_id', $identityId)
                 ->value('id') ?? $identityId;
 
-            $fleetSize = \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+            $fleetSize = \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
                 ->where('owner_identity_id', $identityId)
                 ->where('layout_status', '!=', 'archived')
                 ->count();
@@ -87,7 +87,7 @@ Route::prefix('api/v1/bus-owner')
                 ->whereIn('status', ['active', 'pending_acceptance'])
                 ->count();
 
-            $layoutCount = \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+            $layoutCount = \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
                 ->where('owner_identity_id', $identityId)
                 ->count();
 
