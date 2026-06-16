@@ -92,50 +92,56 @@ class _AbsoluteLayoutDesignerScreenState
     const double seatW = 56, seatH = 56;
 
     // Compute canvas size from config
-    final double canvasW = config.leftSeats * seatW +
-        config.rightSeats * seatW +
-        56; // aisle
-    final double canvasH = 56 + config.rowCount * seatH + 28; // driver + rows + padding
+    final double canvasW =
+        config.leftSeats * seatW + config.rightSeats * seatW + 56; // aisle
+    final double canvasH =
+        56 + config.rowCount * seatH + 28; // driver + rows + padding
 
     // Driver
-    comps.add(AbsoluteLayoutComponent(
-      id: _uuid.v4(),
-      type: ComponentType.driverCabin,
-      x: 0,
-      y: 0,
-      width: seatW,
-      height: seatH,
-      bookable: false,
-      seatId: 'DRIVER',
-    ));
+    comps.add(
+      AbsoluteLayoutComponent(
+        id: _uuid.v4(),
+        type: ComponentType.driverCabin,
+        x: 0,
+        y: 0,
+        width: seatW,
+        height: seatH,
+        bookable: false,
+        seatId: 'DRIVER',
+      ),
+    );
 
     // Generate rows
     double y = seatH; // start after driver
     for (int row = 0; row < config.rowCount; row++) {
       double x = 0;
       for (int i = 0; i < config.leftSeats; i++) {
-        comps.add(AbsoluteLayoutComponent(
-          id: _uuid.v4(),
-          type: ComponentType.seat,
-          x: x,
-          y: y,
-          width: seatW,
-          height: seatH,
-          bookable: true,
-        ));
+        comps.add(
+          AbsoluteLayoutComponent(
+            id: _uuid.v4(),
+            type: ComponentType.seat,
+            x: x,
+            y: y,
+            width: seatW,
+            height: seatH,
+            bookable: true,
+          ),
+        );
         x += seatW;
       }
       x += 56; // aisle
       for (int i = 0; i < config.rightSeats; i++) {
-        comps.add(AbsoluteLayoutComponent(
-          id: _uuid.v4(),
-          type: ComponentType.seat,
-          x: x,
-          y: y,
-          width: seatW,
-          height: seatH,
-          bookable: true,
-        ));
+        comps.add(
+          AbsoluteLayoutComponent(
+            id: _uuid.v4(),
+            type: ComponentType.seat,
+            x: x,
+            y: y,
+            width: seatW,
+            height: seatH,
+            bookable: true,
+          ),
+        );
         x += seatW;
       }
       y += seatH;
@@ -195,6 +201,36 @@ class _AbsoluteLayoutDesignerScreenState
       );
     }
     _setState(_state.copyWith(isSaving: false));
+  }
+
+  Future<void> _publishLayout() async {
+    // Save first if dirty or new
+    if (_state.isDirty || _state.layoutId == null) {
+      await _saveLayout();
+      if (_state.errorMessage != null) return;
+    }
+    if (_state.layoutId == null) {
+      _setState(_state.copyWith(errorMessage: 'Cannot publish: no layout ID'));
+      return;
+    }
+
+    _setState(_state.copyWith(isSaving: true, clearError: true));
+    try {
+      await _api.post('/bus-owner/absolute-layouts/${_state.layoutId}/publish');
+      _setState(_state.copyWith(isSaving: false, isDirty: false));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Layout published — live on Customer Booking App'),
+            backgroundColor: Color(0xFFD97706),
+          ),
+        );
+      }
+    } catch (e) {
+      _setState(
+        _state.copyWith(isSaving: false, errorMessage: 'Publish failed: $e'),
+      );
+    }
   }
 
   Future<void> _saveLayout() async {
@@ -829,14 +865,15 @@ class _AbsoluteLayoutDesignerScreenState
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
-          // Back button
+          // Back to Dashboard button
           IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 20),
+            tooltip: 'Back to Dashboard',
             onPressed: () {
               if (_state.isDirty) {
                 _showUnsavedDialog();
               } else {
-                Navigator.pop(context);
+                Navigator.pop(context, true);
               }
             },
             padding: EdgeInsets.zero,
@@ -922,7 +959,7 @@ class _AbsoluteLayoutDesignerScreenState
             tooltip: 'Presets',
           ),
           const Gap(4),
-          // Save button
+          // Save Project button
           ElevatedButton.icon(
             onPressed: _state.isSaving ? null : _saveLayout,
             icon: _state.isSaving
@@ -935,15 +972,50 @@ class _AbsoluteLayoutDesignerScreenState
                     ),
                   )
                 : const Icon(Icons.save, size: 16),
-            label: Text(_state.isSaving ? 'SAVING...' : 'SAVE'),
+            label: const Text(
+              'Save',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF16A34A),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              textStyle: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
               ),
+            ),
+          ),
+          const Gap(4),
+          // Publish button — syncs to Customer Booking App
+          ElevatedButton.icon(
+            onPressed: _state.isSaving
+                ? null
+                : (_state.layoutId != null
+                      ? _publishLayout
+                      : () async {
+                          await _saveLayout();
+                          if (_state.layoutId != null && mounted) {
+                            await _publishLayout();
+                          }
+                        }),
+            icon: _state.isSaving
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.cloud_upload, size: 16),
+            label: const Text(
+              'Publish',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD97706),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(6),
               ),
@@ -1372,7 +1444,7 @@ class _AbsoluteLayoutDesignerScreenState
           TextButton(
             onPressed: () {
               Navigator.pop(c);
-              Navigator.pop(context);
+              Navigator.pop(context, true);
             },
             child: const Text(
               'Discard',
@@ -1384,7 +1456,7 @@ class _AbsoluteLayoutDesignerScreenState
               Navigator.pop(c);
               await _saveLayout();
               if (mounted && _state.errorMessage == null) {
-                Navigator.pop(context);
+                Navigator.pop(context, true);
               }
             },
             style: ElevatedButton.styleFrom(
