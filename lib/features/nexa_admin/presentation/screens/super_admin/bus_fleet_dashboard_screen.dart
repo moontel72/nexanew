@@ -347,13 +347,6 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       onTap: () => _openLayoutDesigner(),
                     ),
                     Missile3DButton(
-                      label: 'Grid Builder (Classic)',
-                      icon: Icons.grid_view,
-                      color: const Color(0xFF6366F1),
-                      height: 48,
-                      onTap: () => _openLayoutBuilder(),
-                    ),
-                    Missile3DButton(
                       label: 'View Layouts ($_layoutCount)',
                       icon: Icons.event_seat,
                       color: const Color(0xFF0891B2),

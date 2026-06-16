@@ -19,6 +19,6 @@ class BusQrCode extends Model
 
     public function busLayout(): BelongsTo
     {
-        return $this->belongsTo(BusLayout::class, 'bus_id');
+        return $this->belongsTo(AbsoluteBusLayout::class, 'bus_id');
     }
 }

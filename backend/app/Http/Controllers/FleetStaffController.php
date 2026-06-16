@@ -90,7 +90,7 @@ class FleetStaffController extends Controller
      */
     public function getBusPlates(Request $request): JsonResponse
     {
-        $plates = DB::table('transport_bus_layouts')
+        $plates = DB::table('absolute_bus_layouts')
             ->select('display_name', 'id')
             ->where('layout_status', '!=', 'archived')
             ->orderBy('display_name')

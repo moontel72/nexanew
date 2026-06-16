@@ -219,9 +219,9 @@ class TenantContextResolver
     private function resolveOwnerFromEntity(string $param, string $id): ?string
     {
         return match (true) {
-            str_contains($param, 'bus') => \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+            str_contains($param, 'bus') => \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
                 ->where('id', $id)->value('owner_identity_id'),
-            str_contains($param, 'layout') => \Illuminate\Support\Facades\DB::table('transport_bus_layouts')
+            str_contains($param, 'layout') => \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
                 ->where('id', $id)->value('owner_identity_id'),
             str_contains($param, 'driver') => \Illuminate\Support\Facades\DB::table('fleet_assignments')
                 ->where('id', $id)->value('global_identity_id'),

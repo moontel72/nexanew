@@ -31,7 +31,7 @@ class BusTransitController extends Controller
     public function registerQr(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'bus_id' => ['required', 'string', 'exists:transport_bus_layouts,bus_id'],
+            'bus_id' => ['required', 'string', 'exists:absolute_bus_layouts,id'],
             'active_trip_id' => ['nullable', 'string', 'max:100'],
         ]);
 

@@ -1503,19 +1503,10 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           ],
         ),
         Gap(24),
-        // Three buttons — Grid Designer, Absolute Canvas, View All
         Missile3DButton(
           label: 'New Layout',
           icon: Icons.add,
           color: const Color(0xFF0891B2),
-          height: 56,
-          onTap: _openAbsoluteLayoutDesigner,
-        ),
-        Gap(8),
-        Missile3DButton(
-          label: 'Absolute Canvas (Freeform)',
-          icon: Icons.dashboard_customize,
-          color: const Color(0xFFD97706),
           height: 56,
           onTap: _openAbsoluteLayoutDesigner,
         ),

@@ -31,7 +31,7 @@ class AccountEngineController extends Controller
         if (!$tenant) return response()->json(['status' => 'error'], 404);
 
         $allIds = $tenant->getAllTenantIds();
-        $buses = DB::table('transport_bus_layouts')->whereIn('tenant_account_id', $allIds)->select('bus_id', 'total_rows', 'tenant_account_id')->get();
+        $buses = DB::table('absolute_bus_layouts')->whereIn('tenant_account_id', $allIds)->select('bus_id', 'tenant_account_id')->get();
         $shifts = DB::table('bus_shift_allocations')->whereIn('tenant_account_id', $allIds)->get();
 
         return response()->json(['status' => 'success', 'data' => [

@@ -4,7 +4,7 @@ namespace App\Services\Transport;
 
 use App\Models\Financial\Wallet;
 use App\Models\Financial\WalletTransaction;
-use App\Models\Transport\BusLayout;
+use App\Models\Transport\AbsoluteBusLayout;
 use App\Models\Transport\BusQrCode;
 use App\Models\Transport\NexatraceVoucher;
 use App\Services\Financial\CommissionService;
@@ -60,12 +60,12 @@ class BusInventoryService
         $bookedSeats = $this->getBookedSeats($layout->id, $qr->active_trip_id);
 
         return [
-            'bus_registration' => $layout->bus_id,
+            'bus_registration' => $layout->display_name ?? $layout->id,
             'route_origin' => $qr->active_trip_id ? 'Active Trip' : 'No active trip',
             'route_destination' => $qr->active_trip_id ? 'Trip Destination' : 'N/A',
             'total_seats' => $layout->totalSeats(),
             'available_seats' => $layout->totalSeats() - count($bookedSeats),
-            'seat_grid' => $layout->raw_grid_json,
+            'seat_grid' => $layout->current_snapshot['components'] ?? [],
             'booked_seat_numbers' => $bookedSeats,
             'active_trip_id' => $qr->active_trip_id,
         ];
@@ -99,7 +99,7 @@ class BusInventoryService
             $paymentMethod, $ticketPrice, $voucherCode, $busOwnerId
         ) {
             // ─── Lock bus layout (prevents double-booking) ──
-            $layout = BusLayout::where('bus_id', $busId)
+            $layout = AbsoluteBusLayout::where('id', $busId)
                 ->lockForUpdate()->firstOrFail();
 
             // Check seat availability
@@ -108,8 +108,8 @@ class BusInventoryService
                 throw new \RuntimeException("Seat {$seatNumber} is already booked.");
             }
 
-            // Validate seat exists in grid
-            $allSeats = $this->flattenSeatNumbers($layout->raw_grid_json);
+            // Validate seat exists in snapshot components
+            $allSeats = $this->flattenSeatNumbers($layout->current_snapshot['components'] ?? []);
             if (! in_array($seatNumber, $allSeats)) {
                 throw new \RuntimeException("Seat {$seatNumber} does not exist in this bus layout.");
             }
@@ -312,15 +312,15 @@ class BusInventoryService
             ->toArray();
     }
 
-    private function flattenSeatNumbers(array $grid): array
+    private function flattenSeatNumbers(array $components): array
     {
         $seats = [];
-        foreach ($grid as $row) {
-            foreach (['left', 'right', 'driver'] as $section) {
-                if (isset($row[$section])) {
-                    foreach ((array) $row[$section] as $seat) {
-                        $seats[] = (int) $seat;
-                    }
+        foreach ($components as $comp) {
+            $type = $comp['type'] ?? '';
+            if (in_array($type, ['seat', 'businessClassSeat', 'foldingSeat'])) {
+                $num = $comp['seat_number'] ?? $comp['seatId'] ?? null;
+                if ($num !== null) {
+                    $seats[] = (int) $num;
                 }
             }
         }

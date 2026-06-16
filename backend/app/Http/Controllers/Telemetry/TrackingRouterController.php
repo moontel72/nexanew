@@ -67,7 +67,7 @@ class TrackingRouterController extends Controller
     {
         $tenants = TenantAccount::where('status', 'active')->get();
         $invoice = $tenants->map(function ($t) {
-            $count = $t->active_bus_count ?: DB::table('transport_bus_layouts')->where('tenant_account_id', $t->id)->count();
+            $count = $t->active_bus_count ?: DB::table('absolute_bus_layouts')->where('tenant_account_id', $t->id)->count();
             $rate = $t->subscription_rate_pkr ?: 5000;
             return ['tenant_id' => $t->id, 'account_name' => $t->account_name, 'active_buses' => $count, 'rate_pkr' => $rate, 'monthly_pkr' => $count * $rate];
         });

@@ -53,7 +53,7 @@ class ConsumerSuperAppService
                     ->where('booking_status', 'confirmed')
                     ->pluck('seat_number')->toArray();
 
-                $layout = DB::table('transport_bus_layouts')
+                $layout = DB::table('absolute_bus_layouts')
                     ->where('bus_id', $trip->bus_id)->first();
 
                 $results[] = [
