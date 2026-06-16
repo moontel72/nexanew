@@ -11,6 +11,7 @@ import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3
 import 'package:trace_odd/features/bus_operations/presentation/pages/seat_layout_builder_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/seat_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class OwnerButtonColors {
@@ -2250,16 +2251,30 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       _snack('Company ID not available. Please reload.', AppColors.error);
       return;
     }
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AbsoluteLayoutDesignerScreen(
-          companyId: _companyId,
-          companyName: _ownerName,
-          layoutId: layoutId,
+    if (layoutId == null) {
+      // New layout → show bus config setup first
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BusConfigSetupScreen(
+            companyId: _companyId,
+            companyName: _ownerName,
+          ),
         ),
-      ),
-    );
-    if (mounted && result == true) _loadLayouts();
+      );
+      if (mounted && result == true) _loadLayouts();
+    } else {
+      // Editing existing → go straight to designer
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AbsoluteLayoutDesignerScreen(
+            companyId: _companyId,
+            companyName: _ownerName,
+            layoutId: layoutId,
+          ),
+        ),
+      );
+      if (mounted && result == true) _loadLayouts();
+    }
   }
 
   // ═══ OPEN BUILDER (classic grid builder) ═══

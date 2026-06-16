@@ -30,6 +30,7 @@ import 'package:trace_odd/features/bus_operations/presentation/widgets/absolute_
 import 'package:trace_odd/features/bus_operations/presentation/widgets/absolute_component_palette.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/absolute_transform_overlay.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/absolute_inspector_panel.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
 import 'package:uuid/uuid.dart';
 
 const _uuid = Uuid();
@@ -41,12 +42,14 @@ class AbsoluteLayoutDesignerScreen extends StatefulWidget {
   final String companyId;
   final String companyName;
   final String? layoutId;
+  final BusConfig? config;
 
   const AbsoluteLayoutDesignerScreen({
     super.key,
     required this.companyId,
     required this.companyName,
     this.layoutId,
+    this.config,
   });
 
   @override
@@ -74,10 +77,85 @@ class _AbsoluteLayoutDesignerScreenState
   @override
   void initState() {
     super.initState();
-    _state = const AbsoluteLayoutState();
-    if (widget.layoutId != null) {
+    if (widget.config != null) {
+      // New layout with config → generate initial seats
+      _initFromConfig(widget.config!);
+    } else if (widget.layoutId != null) {
       _loadLayout(widget.layoutId!);
+    } else {
+      _state = const AbsoluteLayoutState();
     }
+  }
+
+  void _initFromConfig(BusConfig config) {
+    final comps = <AbsoluteLayoutComponent>[];
+    const double seatW = 56, seatH = 56;
+
+    // Compute canvas size from config
+    final double canvasW = config.leftSeats * seatW +
+        config.rightSeats * seatW +
+        56; // aisle
+    final double canvasH = 56 + config.rowCount * seatH + 28; // driver + rows + padding
+
+    // Driver
+    comps.add(AbsoluteLayoutComponent(
+      id: _uuid.v4(),
+      type: ComponentType.driverCabin,
+      x: 0,
+      y: 0,
+      width: seatW,
+      height: seatH,
+      bookable: false,
+      seatId: 'DRIVER',
+    ));
+
+    // Generate rows
+    double y = seatH; // start after driver
+    for (int row = 0; row < config.rowCount; row++) {
+      double x = 0;
+      for (int i = 0; i < config.leftSeats; i++) {
+        comps.add(AbsoluteLayoutComponent(
+          id: _uuid.v4(),
+          type: ComponentType.seat,
+          x: x,
+          y: y,
+          width: seatW,
+          height: seatH,
+          bookable: true,
+        ));
+        x += seatW;
+      }
+      x += 56; // aisle
+      for (int i = 0; i < config.rightSeats; i++) {
+        comps.add(AbsoluteLayoutComponent(
+          id: _uuid.v4(),
+          type: ComponentType.seat,
+          x: x,
+          y: y,
+          width: seatW,
+          height: seatH,
+          bookable: true,
+        ));
+        x += seatW;
+      }
+      y += seatH;
+    }
+
+    var reassigned = _reassignSeatNumbers(comps);
+    reassigned = _reassignBerthLabels(reassigned);
+
+    final displayName = config.numberPlate.isNotEmpty
+        ? '${config.maker} ${config.numberPlate}'
+        : 'Custom ${config.leftSeats}+${config.rightSeats} Seats';
+
+    _state = AbsoluteLayoutState(
+      canvasWidth: canvasW,
+      canvasHeight: canvasH,
+      displayName: displayName,
+      components: reassigned,
+      metadata: config.toJson(),
+      isDirty: true,
+    );
   }
 
   @override
