@@ -86,6 +86,8 @@ class _AbsoluteLayoutDesignerScreenState
       // New layout with config → generate initial seats
       _initFromConfig(widget.config!);
     } else if (widget.layoutId != null) {
+      // Editing existing → init default state first, then load from API
+      _state = const AbsoluteLayoutState();
       _loadLayout(widget.layoutId!);
     } else {
       _state = const AbsoluteLayoutState();
