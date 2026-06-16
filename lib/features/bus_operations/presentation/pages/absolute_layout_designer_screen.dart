@@ -104,12 +104,12 @@ class _AbsoluteLayoutDesignerScreenState
     final double canvasH =
         56 + config.rowCount * seatH + 28; // driver + rows + padding
 
-    // Driver
+    // Driver (right-hand side — Pakistan / RHD convention)
     comps.add(
       AbsoluteLayoutComponent(
         id: _uuid.v4(),
         type: ComponentType.driverCabin,
-        x: 0,
+        x: canvasW - seatW,
         y: 0,
         width: seatW,
         height: seatH,
@@ -587,12 +587,12 @@ class _AbsoluteLayoutDesignerScreenState
     const double seatW = 56, seatH = 56;
     const double aisleW = 56;
 
-    // Driver cabin at the TOP (front) of every layout
+    // Driver cabin at the TOP-FRONT, right-hand side (Pakistan / RHD)
     components.add(
       AbsoluteLayoutComponent(
         id: _uuid.v4(),
         type: ComponentType.driverCabin,
-        x: 0,
+        x: preset.canvasWidth - 56,
         y: 0,
         width: 56,
         height: 56,
@@ -668,7 +668,7 @@ class _AbsoluteLayoutDesignerScreenState
   /// Generates the VIP + Sleeper layout (5'1" × 18'8" bus).
   ///
   /// Layout (front → back):
-  ///   1. Row 1:  Driver (left) + VIP Business Class (right)
+  ///   1. Row 1:  Driver (right) + VIP Business Class (right)
   ///   2. Rows 2-3:  8 standard seats (2L+2R × 2)
   ///   3. Rows 4-6:  12 standard seats + 2 upper sleeper berths
   ///   4. Rear (rows 7-16): mixed tables, forward & reverse seats
@@ -712,12 +712,12 @@ class _AbsoluteLayoutDesignerScreenState
     // ═══════════════════════════════════════════════
     double y = 0;
 
-    // Driver cabin
+    // Driver cabin (right-hand side — Pakistan / RHD)
     comps.add(
       AbsoluteLayoutComponent(
         id: nextId(),
         type: ComponentType.driverCabin,
-        x: lx0,
+        x: rx0,
         y: y,
         width: seatW,
         height: seatH,
