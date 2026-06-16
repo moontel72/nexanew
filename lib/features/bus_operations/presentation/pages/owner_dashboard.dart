@@ -2185,14 +2185,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   PopupMenuItem(
                     value: 'edit',
                     child: Text(
-                      'Design (Grid)',
-                      style: TextStyle(color: Color(0xFF0891B2)),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'absolute',
-                    child: Text(
-                      'Open in Absolute Canvas',
+                      'Edit Layout',
                       style: TextStyle(color: Color(0xFFD97706)),
                     ),
                   ),

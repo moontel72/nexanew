@@ -2735,6 +2735,7 @@ class _LayoutListViewState extends State<_LayoutListView> {
     final presetColor = vcInfo.$2;
 
     return Card(
+      color: const Color(0xFF122442),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: Padding(
         padding: EdgeInsets.all(14.w),
