@@ -44,12 +44,17 @@ class AbsoluteLayoutDesignerScreen extends StatefulWidget {
   final String? layoutId;
   final BusConfig? config;
 
+  /// API prefix for layout endpoints (e.g. '/bus-owner' or '/bus-fleet').
+  /// Defaults to '/bus-owner' for backward compatibility.
+  final String apiPrefix;
+
   const AbsoluteLayoutDesignerScreen({
     super.key,
     required this.companyId,
     required this.companyName,
     this.layoutId,
     this.config,
+    this.apiPrefix = '/bus-owner',
   });
 
   @override
@@ -177,7 +182,7 @@ class _AbsoluteLayoutDesignerScreenState
   Future<void> _loadLayout(String id) async {
     _setState(_state.copyWith(isSaving: true));
     try {
-      final res = await _api.get('/bus-owner/absolute-layouts/$id');
+      final res = await _api.get('${widget.apiPrefix}/absolute-layouts/$id');
       final data = res?['data'];
       if (data != null) {
         _setState(
@@ -216,7 +221,9 @@ class _AbsoluteLayoutDesignerScreenState
 
     _setState(_state.copyWith(isSaving: true, clearError: true));
     try {
-      await _api.post('/bus-owner/absolute-layouts/${_state.layoutId}/publish');
+      await _api.post(
+        '${widget.apiPrefix}/absolute-layouts/${_state.layoutId}/publish',
+      );
       _setState(_state.copyWith(isSaving: false, isDirty: false));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -245,11 +252,14 @@ class _AbsoluteLayoutDesignerScreenState
       Map<String, dynamic>? res;
       if (_state.layoutId != null) {
         res = await _api.put(
-          '/bus-owner/absolute-layouts/${_state.layoutId}',
+          '${widget.apiPrefix}/absolute-layouts/${_state.layoutId}',
           body: body,
         );
       } else {
-        res = await _api.post('/bus-owner/absolute-layouts', body: body);
+        res = await _api.post(
+          '${widget.apiPrefix}/absolute-layouts',
+          body: body,
+        );
       }
       final id = res?['data']?['id']?.toString();
       _setState(

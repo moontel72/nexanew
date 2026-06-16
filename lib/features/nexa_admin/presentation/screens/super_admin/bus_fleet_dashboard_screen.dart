@@ -415,6 +415,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
             builder: (_) => AbsoluteLayoutDesignerScreen(
               companyId: cId,
               companyName: _company?.name ?? 'Fleet',
+              apiPrefix: '/bus-fleet',
             ),
           ),
         )
@@ -430,6 +431,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
             builder: (_) => BusConfigSetupScreen(
               companyId: cId,
               companyName: _company?.name ?? 'Fleet',
+              apiPrefix: '/bus-fleet',
             ),
           ),
         )
@@ -2537,6 +2539,7 @@ class _LayoutListViewState extends State<_LayoutListView> {
               layoutId: layoutId,
               companyId: cId,
               companyName: widget.companyName ?? 'Fleet',
+              apiPrefix: '/bus-fleet',
             ),
           ),
         )

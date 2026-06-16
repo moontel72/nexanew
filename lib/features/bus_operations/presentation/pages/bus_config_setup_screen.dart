@@ -14,12 +14,14 @@ class BusConfigSetupScreen extends StatefulWidget {
   final String companyId;
   final String companyName;
   final String? layoutId;
+  final String apiPrefix;
 
   const BusConfigSetupScreen({
     super.key,
     required this.companyId,
     required this.companyName,
     this.layoutId,
+    this.apiPrefix = '/bus-owner',
   });
 
   @override
@@ -77,7 +79,11 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         backgroundColor: const Color(0xFF0A1628),
         title: const Text(
           'Bus Configuration Setup',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white70),
@@ -138,7 +144,8 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   maxLines: 4,
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: _inputDecoration(
-                    hint: 'e.g. Total Capacity: 54 seats\nRoute Permit: Dhaka-Chittagong\nCoach Type: AC Sleeper',
+                    hint:
+                        'e.g. Total Capacity: 54 seats\nRoute Permit: Dhaka-Chittagong\nCoach Type: AC Sleeper',
                     prefixIcon: Icons.description,
                   ),
                 ),
@@ -151,7 +158,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Define how many seats per side and how many rows.',
-                  style: TextStyle(color: const Color(0x60FFFFFF), fontSize: 11),
+                  style: TextStyle(
+                    color: const Color(0x60FFFFFF),
+                    fontSize: 11,
+                  ),
                 ),
                 const SizedBox(height: 14),
 
@@ -171,16 +181,31 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                     ),
                     const SizedBox(width: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 18,
+                      ),
                       decoration: BoxDecoration(
                         border: Border.all(color: const Color(0x20FFFFFF)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.swap_horiz, color: Color(0x30FFFFFF), size: 20),
+                          Icon(
+                            Icons.swap_horiz,
+                            color: Color(0x30FFFFFF),
+                            size: 20,
+                          ),
                           SizedBox(height: 4),
-                          Text('AISLE', style: TextStyle(color: Color(0x30FFFFFF), fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
+                          Text(
+                            'AISLE',
+                            style: TextStyle(
+                              color: Color(0x30FFFFFF),
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -224,13 +249,21 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, color: Color(0x60FFFFFF), size: 16),
+                      const Icon(
+                        Icons.info_outline,
+                        color: Color(0x60FFFFFF),
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           '${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows'
                           ' = ${(_leftSeats + _rightSeats) * _rowCount} total seats',
-                          style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 12, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            color: Color(0xCCFFFFFF),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -252,7 +285,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                           foregroundColor: Colors.white54,
                           side: const BorderSide(color: Color(0x30FFFFFF)),
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                       ),
                     ),
@@ -262,12 +297,17 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _startDesigning,
                         icon: const Icon(Icons.design_services, size: 18),
-                        label: const Text('Start Designing', style: TextStyle(fontWeight: FontWeight.w700)),
+                        label: const Text(
+                          'Start Designing',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF7C3AED),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                       ),
                     ),
@@ -299,6 +339,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
           companyName: widget.companyName,
           layoutId: widget.layoutId,
           config: config,
+          apiPrefix: widget.apiPrefix,
         ),
       ),
     );
@@ -337,11 +378,18 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   Widget _fieldLabel(String text) {
     return Text(
       text,
-      style: const TextStyle(color: Color(0x80FFFFFF), fontSize: 11, fontWeight: FontWeight.w600),
+      style: const TextStyle(
+        color: Color(0x80FFFFFF),
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 
-  InputDecoration _inputDecoration({required String hint, required IconData prefixIcon}) {
+  InputDecoration _inputDecoration({
+    required String hint,
+    required IconData prefixIcon,
+  }) {
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: Color(0xFF445566), fontSize: 13),
@@ -389,7 +437,14 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
             children: [
               Icon(icon, color: color, size: 16),
               const SizedBox(width: 6),
-              Text(label, style: const TextStyle(color: Color(0x80FFFFFF), fontSize: 11, fontWeight: FontWeight.w600)),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0x80FFFFFF),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -406,7 +461,11 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               const SizedBox(width: 12),
               Text(
                 '$value',
-                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(width: 12),
               IconButton(
