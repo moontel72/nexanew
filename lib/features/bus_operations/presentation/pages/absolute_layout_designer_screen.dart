@@ -187,11 +187,29 @@ class _AbsoluteLayoutDesignerScreenState
       final res = await _api.get('${widget.apiPrefix}/absolute-layouts/$id');
       final data = res?['data'];
       if (data != null) {
+        // Safely extract the snapshot regardless of format
+        final raw = data['current_snapshot'];
+        Map<String, dynamic> snapshot;
+        if (raw is String) {
+          final decoded = jsonDecode(raw);
+          snapshot = decoded is Map<String, dynamic>
+              ? decoded
+              : <String, dynamic>{};
+        } else if (raw is Map<String, dynamic>) {
+          snapshot = raw;
+        } else if (raw is List) {
+          // Legacy format: bare component list without canvas/metadata wrapper
+          snapshot = <String, dynamic>{'components': raw};
+        } else if (data is Map<String, dynamic>) {
+          // Fallback: use entire response as snapshot
+          snapshot = data;
+        } else {
+          snapshot = <String, dynamic>{};
+        }
+
         _setState(
           AbsoluteLayoutState.fromSnapshot(
-            data['current_snapshot'] is String
-                ? jsonDecode(data['current_snapshot'])
-                : (data['current_snapshot'] ?? data),
+            snapshot,
             layoutId: data['id']?.toString(),
           ).copyWith(
             layoutId: data['id']?.toString(),
