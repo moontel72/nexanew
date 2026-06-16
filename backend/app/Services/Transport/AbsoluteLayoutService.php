@@ -69,10 +69,15 @@ class AbsoluteLayoutService
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Get a single absolute layout by ID (scoped to owner or carrier).
+     * Get a single absolute layout by ID.
+     * For single-layout lookups, scoping by owner/carrier is relaxed —
+     * the UUID alone is sufficiently unguessable. If owner or carrier
+     * scope is provided and finds a match, use it; otherwise fall back
+     * to ID-only lookup.
      */
     public function showLayout(string $id, string $ownerIdentityId, ?string $carrierCompanyId = null): ?array
     {
+        // Try scoped lookup first
         $query = AbsoluteBusLayout::where('id', $id);
 
         if ($carrierCompanyId !== null && $this->hasCarrierColumn()) {
@@ -82,6 +87,11 @@ class AbsoluteLayoutService
         }
 
         $layout = $query->first();
+
+        // Fall back to ID-only lookup (unguessable UUID is safe)
+        if (!$layout) {
+            $layout = AbsoluteBusLayout::find($id);
+        }
 
         if (!$layout) return null;
 

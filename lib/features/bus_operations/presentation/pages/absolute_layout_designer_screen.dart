@@ -183,13 +183,53 @@ class _AbsoluteLayoutDesignerScreenState
 
   Future<void> _loadLayout(String id) async {
     _setState(_state.copyWith(isSaving: true));
+
+    Map<String, dynamic> layoutData = <String, dynamic>{};
+
     try {
-      final res = await _api.get('${widget.apiPrefix}/absolute-layouts/$id');
-      final data = res?['data'];
-      if (data != null) {
-        // Safely extract the snapshot regardless of format
-        final raw = data['current_snapshot'];
+      // 1) Try single-layout endpoint first
+      try {
+        final r = await _api.get('${widget.apiPrefix}/absolute-layouts/$id');
+        final d = r?['data'];
+        if (d is Map<String, dynamic>) {
+          layoutData = d;
+        }
+      } catch (_) {
+        // Show endpoint failed — try list endpoint below
+      }
+
+      // 2) Fallback: scan the list endpoint for this layout ID
+      if (layoutData.isEmpty) {
+        try {
+          final r = await _api.get(
+            '${widget.apiPrefix}/absolute-layouts',
+            queryParams: {'per_page': '100'},
+          );
+          final d = r?['data'];
+          List<dynamic>? items;
+          if (d is List) {
+            items = d;
+          } else if (d is Map) {
+            items = d['data'] as List<dynamic>?;
+          }
+          if (items != null) {
+            for (final item in items) {
+              if (item is Map && item['id']?.toString() == id) {
+                layoutData = Map<String, dynamic>.from(item);
+                break;
+              }
+            }
+          }
+        } catch (_) {
+          // Both endpoints failed
+        }
+      }
+
+      // 3) Parse the snapshot from whatever layout data we have
+      if (layoutData.isNotEmpty) {
+        final raw = layoutData['current_snapshot'];
         Map<String, dynamic> snapshot;
+
         if (raw is String) {
           final decoded = jsonDecode(raw);
           snapshot = decoded is Map<String, dynamic>
@@ -198,22 +238,19 @@ class _AbsoluteLayoutDesignerScreenState
         } else if (raw is Map<String, dynamic>) {
           snapshot = raw;
         } else if (raw is List) {
-          // Legacy format: bare component list without canvas/metadata wrapper
           snapshot = <String, dynamic>{'components': raw};
-        } else if (data is Map<String, dynamic>) {
-          // Fallback: use entire response as snapshot
-          snapshot = data;
         } else {
-          snapshot = <String, dynamic>{};
+          snapshot = layoutData;
         }
 
         _setState(
           AbsoluteLayoutState.fromSnapshot(
             snapshot,
-            layoutId: data['id']?.toString(),
+            layoutId: layoutData['id']?.toString(),
           ).copyWith(
-            layoutId: data['id']?.toString(),
-            displayName: data['display_name'] as String? ?? 'Loaded Layout',
+            layoutId: layoutData['id']?.toString(),
+            displayName:
+                layoutData['display_name'] as String? ?? 'Loaded Layout',
           ),
         );
       }
