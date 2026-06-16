@@ -132,25 +132,16 @@ Route::prefix('api/v1/bus-fleet')
             Route::post('complete-trip/{id}', [\App\Http\Controllers\BusDispatchController::class, 'completeTrip']);
         });
 
-        // Bus Owner: Seat Layout Builder (14E) — legacy backward compat
-        Route::post('owners/layouts', [\App\Http\Controllers\BusTransitController::class, 'createLayout']);
-
-        // Seat Layout Designer (14E) — Wave 4
-        Route::prefix('layouts')->group(function (): void {
-            Route::get('/', [\App\Http\Controllers\BusTransitController::class, 'listLayouts']);
-            Route::post('/', [\App\Http\Controllers\BusTransitController::class, 'createLayoutFull']);
-            // Purge must be BEFORE /{id} to avoid "purge" being captured as an ID
-            Route::delete('/purge/all', [\App\Http\Controllers\BusTransitController::class, 'purgeLayouts']);
-            Route::get('/{id}', [\App\Http\Controllers\BusTransitController::class, 'getLayout']);
-            Route::put('/{id}', [\App\Http\Controllers\BusTransitController::class, 'updateLayout']);
-            Route::post('/{id}/acquire-lock', [\App\Http\Controllers\BusTransitController::class, 'acquireLock']);
-            Route::post('/{id}/release-lock', [\App\Http\Controllers\BusTransitController::class, 'releaseLock']);
-            Route::post('/{id}/publish', [\App\Http\Controllers\BusTransitController::class, 'publishLayout']);
-            Route::patch('/{id}/components', [\App\Http\Controllers\BusTransitController::class, 'updateComponent']);
-            Route::get('/{id}/revisions', [\App\Http\Controllers\BusTransitController::class, 'listRevisions']);
-            Route::delete('/{id}', [\App\Http\Controllers\BusTransitController::class, 'archiveLayout']);
+        // ─── Absolute Layouts (Freeform Canvas) — sole layout engine ──
+        Route::prefix('absolute-layouts')->group(function (): void {
+            Route::get('/', [\App\Http\Controllers\AbsoluteLayoutController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\AbsoluteLayoutController::class, 'store']);
+            Route::delete('/purge/all', [\App\Http\Controllers\AbsoluteLayoutController::class, 'purgeAll']);
+            Route::get('/{id}', [\App\Http\Controllers\AbsoluteLayoutController::class, 'show']);
+            Route::put('/{id}', [\App\Http\Controllers\AbsoluteLayoutController::class, 'update']);
+            Route::post('/{id}/publish', [\App\Http\Controllers\AbsoluteLayoutController::class, 'publish']);
+            Route::delete('/{id}', [\App\Http\Controllers\AbsoluteLayoutController::class, 'destroy']);
         });
-        Route::get('layout-presets', [\App\Http\Controllers\BusTransitController::class, 'listPresets']);
 
         // Bus Door QR Codes (15E)
         Route::post('qr/register', [\App\Http\Controllers\BusTransitController::class, 'registerQr']);

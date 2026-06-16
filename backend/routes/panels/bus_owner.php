@@ -124,21 +124,6 @@ Route::prefix('api/v1/bus-owner')
             Route::delete('/{id}', [\App\Http\Controllers\BusOwnerController::class, 'destroyConductor']);
         });
 
-        // ─── Seat Layouts CRUD ──────────────────────────────
-        Route::prefix('layouts')->group(function (): void {
-            Route::get('/', [\App\Http\Controllers\BusOwnerController::class, 'listLayouts']);
-            Route::post('/', [\App\Http\Controllers\BusOwnerController::class, 'storeLayout']);
-            // Purge must be BEFORE /{id} to avoid "purge" being captured as an ID
-            Route::delete('/purge/all', [\App\Http\Controllers\BusOwnerController::class, 'purgeLayouts']);
-            Route::get('/{id}', [\App\Http\Controllers\BusOwnerController::class, 'showLayout']);
-            Route::put('/{id}', [\App\Http\Controllers\BusOwnerController::class, 'updateLayout']);
-            Route::post('/{id}/publish', [\App\Http\Controllers\BusOwnerController::class, 'publishLayout']);
-            Route::delete('/{id}', [\App\Http\Controllers\BusOwnerController::class, 'destroyLayout']);
-        });
-
-        // ─── Layout Presets ─────────────────────────────────
-        Route::get('layout-presets', [\App\Http\Controllers\BusOwnerController::class, 'layoutPresets']);
-
         // ─── Absolute Layouts (Freeform Canvas) ───────────────
         Route::prefix('absolute-layouts')->group(function (): void {
             Route::get('/', [\App\Http\Controllers\AbsoluteLayoutController::class, 'index']);

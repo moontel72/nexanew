@@ -8,8 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/seat_layout_builder_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/seat_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
@@ -1507,11 +1505,11 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         Gap(24),
         // Three buttons — Grid Designer, Absolute Canvas, View All
         Missile3DButton(
-          label: 'New Layout (Grid)',
+          label: 'New Layout',
           icon: Icons.add,
           color: const Color(0xFF0891B2),
           height: 56,
-          onTap: _openLayoutDesigner,
+          onTap: _openAbsoluteLayoutDesigner,
         ),
         Gap(8),
         Missile3DButton(
@@ -2067,7 +2065,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ),
             Gap(12),
             ElevatedButton.icon(
-              onPressed: _openLayoutDesigner,
+              onPressed: () => _openAbsoluteLayoutDesigner(),
               icon: Icon(Icons.add),
               label: Text('Create Your First Layout'),
               style: ElevatedButton.styleFrom(
@@ -2103,7 +2101,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               ),
               const SizedBox(width: 12),
               FloatingActionButton.extended(
-                onPressed: _openLayoutDesigner,
+                onPressed: () => _openAbsoluteLayoutDesigner(),
                 icon: const Icon(Icons.add),
                 label: const Text('New Layout'),
                 backgroundColor: OwnerButtonColors.seats,
@@ -2211,9 +2209,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   ),
                 ],
                 onSelected: (v) {
-                  if (v == 'edit') _openLayoutDesigner(layoutId: id);
-                  if (v == 'absolute')
-                    _openAbsoluteLayoutDesigner(layoutId: id);
+                  if (v == 'edit') _openAbsoluteLayoutDesigner(layoutId: id);
                   if (v == 'publish') _publishLayout(id, name);
                   if (v == 'archive') _archiveLayout(id, name);
                 },
@@ -2227,25 +2223,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     }
   }
 
-  // ═══ OPEN DESIGNER (component canvas with inspector) ═══
-  void _openLayoutDesigner({String? layoutId}) async {
-    if (_companyId.isEmpty) {
-      _snack('Company ID not available. Please reload.', AppColors.error);
-      return;
-    }
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => SeatLayoutDesignerScreen(
-          companyId: _companyId,
-          companyName: _ownerName,
-          layoutId: layoutId,
-        ),
-      ),
-    );
-    if (mounted && result == true) _loadLayouts();
-  }
-
-  // ═══ OPEN ABSOLUTE DESIGNER (freeform canvas) ═══
+  // ═══ OPEN ABSOLUTE DESIGNER (freeform canvas — sole layout engine) ═══
   void _openAbsoluteLayoutDesigner({String? layoutId}) async {
     if (_companyId.isEmpty) {
       _snack('Company ID not available. Please reload.', AppColors.error);
@@ -2277,24 +2255,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     }
   }
 
-  // ═══ OPEN BUILDER (classic grid builder) ═══
-  void _openLayoutBuilder({String? layoutId}) async {
-    if (_companyId.isEmpty) {
-      _snack('Company ID not available. Please reload.', AppColors.error);
-      return;
-    }
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => SeatLayoutBuilderScreen(
-          companyId: _companyId,
-          companyName: _ownerName,
-          layoutId: layoutId,
-        ),
-      ),
-    );
-    if (mounted && result == true) _loadLayouts();
-  }
-
+  // ═══ DELETE LEGACY BUILDER — replaced by Absolute Canvas ═══
   // ═══ SHARED ═══
   Widget _tf(
     TextEditingController ctrl,
