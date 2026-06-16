@@ -45,8 +45,11 @@ class AbsoluteLayoutController extends Controller
             ], 403);
         }
 
+        // Fleet admin panel: scope by carrier_company_id instead of owner_identity_id
+        $carrierCompanyId = $request->get('_carrier_company_id');
+
         $perPage = (int) ($request->query('per_page', 20));
-        $result = $this->service->listLayouts($identityId, $perPage);
+        $result = $this->service->listLayouts($identityId, $perPage, $carrierCompanyId);
 
         return response()->json([
             'success' => true,
@@ -69,7 +72,8 @@ class AbsoluteLayoutController extends Controller
             ], 403);
         }
 
-        $layout = $this->service->showLayout($id, $identityId);
+        $carrierCompanyId = $request->get('_carrier_company_id');
+        $layout = $this->service->showLayout($id, $identityId, $carrierCompanyId);
 
         if (!$layout) {
             return response()->json([
@@ -107,6 +111,12 @@ class AbsoluteLayoutController extends Controller
             'layout_status' => 'sometimes|string|in:draft,published',
         ]);
 
+        // Fleet admin panel: attach carrier_company_id from middleware context
+        $carrierCompanyId = $request->get('_carrier_company_id');
+        if ($carrierCompanyId) {
+            $validated['carrier_company_id'] = $carrierCompanyId;
+        }
+
         $layout = $this->service->createLayout($identityId, $validated);
 
         return response()->json([
@@ -139,7 +149,8 @@ class AbsoluteLayoutController extends Controller
             'layout_status' => 'sometimes|string|in:draft,published',
         ]);
 
-        $layout = $this->service->updateLayout($id, $identityId, $validated);
+        $carrierCompanyId = $request->get('_carrier_company_id');
+        $layout = $this->service->updateLayout($id, $identityId, $validated, $carrierCompanyId);
 
         if (!$layout) {
             return response()->json([
@@ -169,7 +180,8 @@ class AbsoluteLayoutController extends Controller
             ], 403);
         }
 
-        $deleted = $this->service->deleteLayout($id, $identityId);
+        $carrierCompanyId = $request->get('_carrier_company_id');
+        $deleted = $this->service->deleteLayout($id, $identityId, $carrierCompanyId);
 
         if (!$deleted) {
             return response()->json([
@@ -200,12 +212,14 @@ class AbsoluteLayoutController extends Controller
 
         $publisherId = $request->user()?->global_identity_id;
         $changeDescription = $request->input('change_description');
+        $carrierCompanyId = $request->get('_carrier_company_id');
 
         $layout = $this->service->publishLayout(
             $id,
             $identityId,
             $publisherId,
             $changeDescription,
+            $carrierCompanyId,
         );
 
         if (!$layout) {
@@ -236,7 +250,8 @@ class AbsoluteLayoutController extends Controller
             ], 403);
         }
 
-        $count = $this->service->purgeAll($identityId);
+        $carrierCompanyId = $request->get('_carrier_company_id');
+        $count = $this->service->purgeAll($identityId, $carrierCompanyId);
 
         return response()->json([
             'success' => true,

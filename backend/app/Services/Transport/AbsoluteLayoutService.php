@@ -26,14 +26,22 @@ class AbsoluteLayoutService
 
     /**
      * Get all absolute layouts for the authenticated owner.
+     * When $carrierCompanyId is provided, scopes by carrier company
+     * instead of owner identity (used by bus-fleet admin panel).
      */
-    public function listLayouts(string $ownerIdentityId, int $perPage = 20): array
+    public function listLayouts(string $ownerIdentityId, int $perPage = 20, ?string $carrierCompanyId = null): array
     {
         $perPage = max(1, min(100, $perPage));
 
-        $query = AbsoluteBusLayout::where('owner_identity_id', $ownerIdentityId)
-            ->where('layout_status', '!=', 'archived')
-            ->orderBy('updated_at', 'desc');
+        $query = AbsoluteBusLayout::where('layout_status', '!=', 'archived');
+
+        if ($carrierCompanyId !== null) {
+            $query->where('carrier_company_id', $carrierCompanyId);
+        } else {
+            $query->where('owner_identity_id', $ownerIdentityId);
+        }
+
+        $query->orderBy('updated_at', 'desc');
 
         $paginator = $query->paginate($perPage);
 
@@ -53,13 +61,19 @@ class AbsoluteLayoutService
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Get a single absolute layout by ID (scoped to owner).
+     * Get a single absolute layout by ID (scoped to owner or carrier).
      */
-    public function showLayout(string $id, string $ownerIdentityId): ?array
+    public function showLayout(string $id, string $ownerIdentityId, ?string $carrierCompanyId = null): ?array
     {
-        $layout = AbsoluteBusLayout::where('id', $id)
-            ->where('owner_identity_id', $ownerIdentityId)
-            ->first();
+        $query = AbsoluteBusLayout::where('id', $id);
+
+        if ($carrierCompanyId !== null) {
+            $query->where('carrier_company_id', $carrierCompanyId);
+        } else {
+            $query->where('owner_identity_id', $ownerIdentityId);
+        }
+
+        $layout = $query->first();
 
         if (!$layout) return null;
 
@@ -80,6 +94,7 @@ class AbsoluteLayoutService
         $layout = AbsoluteBusLayout::create([
             'id' => $id,
             'owner_identity_id' => $ownerIdentityId,
+            'carrier_company_id' => $data['carrier_company_id'] ?? null,
             'display_name' => $data['display_name'] ?? 'Untitled Layout',
             'deck_level' => $data['deck_level'] ?? 'lower',
             'canvas_width' => $data['canvas_width'] ?? 280,
@@ -103,13 +118,19 @@ class AbsoluteLayoutService
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Update an existing absolute layout (owner-scoped).
+     * Update an existing absolute layout (owner-scoped or carrier-scoped).
      */
-    public function updateLayout(string $id, string $ownerIdentityId, array $data): ?AbsoluteBusLayout
+    public function updateLayout(string $id, string $ownerIdentityId, array $data, ?string $carrierCompanyId = null): ?AbsoluteBusLayout
     {
-        $layout = AbsoluteBusLayout::where('id', $id)
-            ->where('owner_identity_id', $ownerIdentityId)
-            ->first();
+        $query = AbsoluteBusLayout::where('id', $id);
+
+        if ($carrierCompanyId !== null) {
+            $query->where('carrier_company_id', $carrierCompanyId);
+        } else {
+            $query->where('owner_identity_id', $ownerIdentityId);
+        }
+
+        $layout = $query->first();
 
         if (!$layout) return null;
 
@@ -141,13 +162,19 @@ class AbsoluteLayoutService
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Soft-delete (archive) a layout.
+     * Soft-delete (archive) a layout (owner-scoped or carrier-scoped).
      */
-    public function deleteLayout(string $id, string $ownerIdentityId): bool
+    public function deleteLayout(string $id, string $ownerIdentityId, ?string $carrierCompanyId = null): bool
     {
-        $layout = AbsoluteBusLayout::where('id', $id)
-            ->where('owner_identity_id', $ownerIdentityId)
-            ->first();
+        $query = AbsoluteBusLayout::where('id', $id);
+
+        if ($carrierCompanyId !== null) {
+            $query->where('carrier_company_id', $carrierCompanyId);
+        } else {
+            $query->where('owner_identity_id', $ownerIdentityId);
+        }
+
+        $layout = $query->first();
 
         if (!$layout) return false;
 
@@ -174,10 +201,17 @@ class AbsoluteLayoutService
         string $ownerIdentityId,
         ?string $publisherId = null,
         ?string $changeDescription = null,
+        ?string $carrierCompanyId = null,
     ): ?AbsoluteBusLayout {
-        $layout = AbsoluteBusLayout::where('id', $id)
-            ->where('owner_identity_id', $ownerIdentityId)
-            ->first();
+        $query = AbsoluteBusLayout::where('id', $id);
+
+        if ($carrierCompanyId !== null) {
+            $query->where('carrier_company_id', $carrierCompanyId);
+        } else {
+            $query->where('owner_identity_id', $ownerIdentityId);
+        }
+
+        $layout = $query->first();
 
         if (!$layout) return null;
 
@@ -210,12 +244,17 @@ class AbsoluteLayoutService
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Purge all absolute layouts for an owner (hard delete).
+     * Purge all absolute layouts for an owner or carrier (hard delete).
      */
-    public function purgeAll(string $ownerIdentityId): int
+    public function purgeAll(string $ownerIdentityId, ?string $carrierCompanyId = null): int
     {
-        $count = AbsoluteBusLayout::where('owner_identity_id', $ownerIdentityId)
-            ->forceDelete();
+        $query = AbsoluteBusLayout::where('owner_identity_id', $ownerIdentityId);
+
+        if ($carrierCompanyId !== null) {
+            $query->where('carrier_company_id', $carrierCompanyId);
+        }
+
+        $count = $query->forceDelete();
 
         Log::warning('AbsoluteBusLayout purge all', [
             'owner_identity_id' => $ownerIdentityId,

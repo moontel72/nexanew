@@ -26,6 +26,7 @@ class AbsoluteBusLayout extends Model
     protected $fillable = [
         'id',
         'owner_identity_id',
+        'carrier_company_id',
         'display_name',
         'deck_level',
         'canvas_width',
