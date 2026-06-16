@@ -201,17 +201,55 @@ class AbsoluteLayoutState {
   };
 
   /// Parse from a backend snapshot.
+  /// All nested casts are defensive to survive legacy / malformed snapshot data
+  /// that may arrive as String, List, or other non-Map types.
   factory AbsoluteLayoutState.fromSnapshot(
     Map<String, dynamic> snap, {
     String? layoutId,
   }) {
-    final canvas = snap['canvas'] as Map<String, dynamic>?;
-    final compsJson = snap['components'] as List<dynamic>?;
+    // ── Safe canvas extraction ──
+    Map<String, dynamic>? canvas;
+    final rawCanvas = snap['canvas'];
+    if (rawCanvas is Map<String, dynamic>) {
+      canvas = rawCanvas;
+    } else if (rawCanvas is Map) {
+      canvas = rawCanvas.cast<String, dynamic>();
+    }
 
-    final components = (compsJson ?? [])
-        .whereType<Map<String, dynamic>>()
-        .map((j) => AbsoluteLayoutComponent.fromJson(j))
-        .toList();
+    // ── Safe metadata extraction ──
+    Map<String, dynamic> metadata;
+    final rawMeta = snap['metadata'];
+    if (rawMeta is Map<String, dynamic>) {
+      metadata = rawMeta;
+    } else if (rawMeta is Map) {
+      metadata = rawMeta.cast<String, dynamic>();
+    } else {
+      metadata = <String, dynamic>{};
+    }
+
+    // ── Safe components extraction ──
+    final compsJson = snap['components'];
+    final List<dynamic> compsList;
+    if (compsJson is List) {
+      compsList = compsJson;
+    } else {
+      compsList = <dynamic>[];
+    }
+
+    final components = <AbsoluteLayoutComponent>[];
+    for (final j in compsList) {
+      if (j is Map) {
+        try {
+          components.add(
+            AbsoluteLayoutComponent.fromJson(
+              j is Map<String, dynamic> ? j : j.cast<String, dynamic>(),
+            ),
+          );
+        } catch (_) {
+          // Skip one malformed component — don't lose the whole layout
+        }
+      }
+    }
 
     return AbsoluteLayoutState(
       layoutId: layoutId,
@@ -220,7 +258,7 @@ class AbsoluteLayoutState {
       canvasHeight: (canvas?['canvas_height'] as num?)?.toDouble() ?? 896.0,
       displayName: snap['display_name'] as String? ?? 'Untitled Layout',
       components: components,
-      metadata: (snap['metadata'] as Map<String, dynamic>?) ?? {},
+      metadata: metadata,
     );
   }
 

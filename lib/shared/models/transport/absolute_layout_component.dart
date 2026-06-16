@@ -180,9 +180,18 @@ class AbsoluteLayoutComponent {
       ),
       genderRestriction: json['gender_restriction'] as String?,
       customLabel: json['custom_label'] as String?,
-      meta: (json['meta'] as Map<String, dynamic>?) ?? {},
+      meta: _safeCastMap(json['meta']),
     );
   }
+}
+
+/// Safely cast a dynamic value to Map<String, dynamic>.
+/// Returns an empty map for null, List, String, or any non-Map type
+/// to avoid the "type 'X' is not a subtype of Map<String, dynamic>?" crash.
+Map<String, dynamic> _safeCastMap(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return value.cast<String, dynamic>();
+  return <String, dynamic>{};
 }
 
 // Tiny inline trig helpers to avoid a math import for hit-testing.

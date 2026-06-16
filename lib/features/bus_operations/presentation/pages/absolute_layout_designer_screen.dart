@@ -237,6 +237,9 @@ class _AbsoluteLayoutDesignerScreenState
               : <String, dynamic>{};
         } else if (raw is Map<String, dynamic>) {
           snapshot = raw;
+        } else if (raw is Map) {
+          // Edge case: Map with non-String keys (e.g. Map<dynamic, dynamic>)
+          snapshot = raw.cast<String, dynamic>();
         } else if (raw is List) {
           snapshot = <String, dynamic>{'components': raw};
         } else {
@@ -250,7 +253,10 @@ class _AbsoluteLayoutDesignerScreenState
           ).copyWith(
             layoutId: layoutData['id']?.toString(),
             displayName:
-                layoutData['display_name'] as String? ?? 'Loaded Layout',
+                (layoutData['display_name'] is String
+                    ? layoutData['display_name'] as String
+                    : null) ??
+                'Loaded Layout',
           ),
         );
       }
