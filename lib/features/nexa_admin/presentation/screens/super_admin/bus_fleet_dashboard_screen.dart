@@ -99,7 +99,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
         _safeCount(api, '/bus-fleet/owners'),
         _safeCount(api, '/bus-fleet/drivers/manage'),
         _safeCount(api, '/bus-fleet/conductors'),
-        _safeCount(api, '/bus-fleet/layouts'),
+        _safeCount(api, '/bus-fleet/absolute-layouts'),
         _safeCount(api, '/bus-fleet/link-requests'),
       ], eagerError: false);
 
@@ -472,7 +472,9 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
 
   Future<void> _purgeLayouts() async {
     try {
-      final res = await ApiService().delete('/bus-fleet/layouts/purge/all');
+      final res = await ApiService().delete(
+        '/bus-fleet/absolute-layouts/purge/all',
+      );
       final msg = res?['message'] ?? 'Purge completed';
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2491,7 +2493,7 @@ class _LayoutListViewState extends State<_LayoutListView> {
       _error = null;
     });
     try {
-      final res = await ApiService().get('/bus-fleet/layouts');
+      final res = await ApiService().get('/bus-fleet/absolute-layouts');
       if (res == null || res is! Map) {
         setState(() {
           _error = 'Invalid response';
@@ -2580,7 +2582,9 @@ class _LayoutListViewState extends State<_LayoutListView> {
 
   Future<void> _purgeLayouts() async {
     try {
-      final res = await ApiService().delete('/bus-fleet/layouts/purge/all');
+      final res = await ApiService().delete(
+        '/bus-fleet/absolute-layouts/purge/all',
+      );
       final msg = res?['message'] ?? 'Purge completed';
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2864,7 +2868,7 @@ class _LayoutListViewState extends State<_LayoutListView> {
 
   Future<void> _publishLayout(String id, String name) async {
     try {
-      await ApiService().post('/bus-fleet/layouts/$id/publish');
+      await ApiService().post('/bus-fleet/absolute-layouts/$id/publish');
       _load();
       widget.onDataChanged();
       if (mounted)
@@ -2906,7 +2910,7 @@ class _LayoutListViewState extends State<_LayoutListView> {
     );
     if (ok != true) return;
     try {
-      await ApiService().delete('/bus-fleet/layouts/$id');
+      await ApiService().delete('/bus-fleet/absolute-layouts/$id');
       _load();
       widget.onDataChanged();
       if (mounted)

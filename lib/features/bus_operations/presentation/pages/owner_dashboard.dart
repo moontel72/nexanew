@@ -1889,7 +1889,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _loadLayouts() async {
     setState(() => _layoutsLoading = true);
     try {
-      final r = await ApiService().get('/bus-owner/layouts');
+      final r = await ApiService().get('/bus-owner/absolute-layouts');
       if (!mounted) return;
       final d = r?['data'];
       if (d is List) {
@@ -1924,7 +1924,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   Future<void> _publishLayout(String id, String name) async {
     try {
-      await ApiService().post('/bus-owner/layouts/$id/publish');
+      await ApiService().post('/bus-owner/absolute-layouts/$id/publish');
       _loadLayouts();
       _snack('$name published', AppColors.success);
     } catch (e) {
@@ -1960,7 +1960,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
     if (ok != true) return;
     try {
-      await ApiService().delete('/bus-owner/layouts/$id');
+      await ApiService().delete('/bus-owner/absolute-layouts/$id');
       _loadLayouts();
       _snack('$name archived', AppColors.success);
     } catch (e) {
@@ -1993,7 +1993,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
     if (ok != true) return;
     try {
-      await ApiService().delete('/bus-owner/layouts/$id?permanent=true');
+      await ApiService().delete(
+        '/bus-owner/absolute-layouts/$id?permanent=true',
+      );
       _loadLayouts();
       _snack('Layout deleted', AppColors.success);
     } catch (e) {
@@ -2035,7 +2037,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   Future<void> _purgeLayouts() async {
     try {
-      final res = await ApiService().delete('/bus-owner/layouts/purge/all');
+      final res = await ApiService().delete(
+        '/bus-owner/absolute-layouts/purge/all',
+      );
       final msg = res?['message'] ?? 'Purge completed';
       _loadLayouts();
       _snack(msg.toString(), AppColors.success);
