@@ -406,36 +406,35 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     });
   }
 
-  void _openLayoutDesigner() {
+  void _openLayoutDesigner({String? layoutId}) async {
     final cId = widget.companyId ?? _company?.id.toString() ?? '';
     if (cId.isEmpty) return;
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => AbsoluteLayoutDesignerScreen(
-              companyId: cId,
-              companyName: _company?.name ?? 'Fleet',
-              apiPrefix: '/bus-fleet',
-            ),
+    if (layoutId == null) {
+      // New layout: show bus config setup first (number plate, maker, specs, seats)
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BusConfigSetupScreen(
+            companyId: cId,
+            companyName: _company?.name ?? 'Fleet',
+            apiPrefix: '/bus-fleet',
           ),
-        )
-        .then((_) => _loadAll());
-  }
-
-  void _openLayoutBuilder() {
-    final cId = widget.companyId ?? _company?.id.toString() ?? '';
-    if (cId.isEmpty) return;
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => BusConfigSetupScreen(
-              companyId: cId,
-              companyName: _company?.name ?? 'Fleet',
-              apiPrefix: '/bus-fleet',
-            ),
+        ),
+      );
+      if (mounted && result == true) _loadAll();
+    } else {
+      // Editing existing: go straight to designer
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AbsoluteLayoutDesignerScreen(
+            companyId: cId,
+            companyName: _company?.name ?? 'Fleet',
+            layoutId: layoutId,
+            apiPrefix: '/bus-fleet',
           ),
-        )
-        .then((_) => _loadAll());
+        ),
+      );
+      if (mounted && result == true) _loadAll();
+    }
   }
 
   void _confirmPurgeLayouts() {
@@ -2529,24 +2528,41 @@ class _LayoutListViewState extends State<_LayoutListView> {
     }
   }
 
-  void _openDesigner({String? layoutId}) {
+  void _openDesigner({String? layoutId}) async {
     final cId = widget.companyId ?? '';
     if (cId.isEmpty) return;
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => AbsoluteLayoutDesignerScreen(
-              layoutId: layoutId,
-              companyId: cId,
-              companyName: widget.companyName ?? 'Fleet',
-              apiPrefix: '/bus-fleet',
-            ),
+    if (layoutId == null) {
+      // New layout: show bus config setup first (number plate, maker, specs, seats)
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BusConfigSetupScreen(
+            companyId: cId,
+            companyName: widget.companyName ?? 'Fleet',
+            apiPrefix: '/bus-fleet',
           ),
-        )
-        .then((_) {
-          _load();
-          widget.onDataChanged();
-        });
+        ),
+      );
+      if (mounted && result == true) {
+        _load();
+        widget.onDataChanged();
+      }
+    } else {
+      // Editing existing: go straight to designer
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AbsoluteLayoutDesignerScreen(
+            layoutId: layoutId,
+            companyId: cId,
+            companyName: widget.companyName ?? 'Fleet',
+            apiPrefix: '/bus-fleet',
+          ),
+        ),
+      );
+      if (mounted && result == true) {
+        _load();
+        widget.onDataChanged();
+      }
+    }
   }
 
   void _confirmPurge() {
