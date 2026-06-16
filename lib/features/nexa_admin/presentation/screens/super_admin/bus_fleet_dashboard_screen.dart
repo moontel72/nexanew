@@ -10,8 +10,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/seat_layout_builder_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/seat_layout_designer_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
 import 'package:trace_odd/features/nexa_admin/data/models/company/bus_company_model.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
@@ -419,7 +419,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     Navigator.of(context)
         .push(
           MaterialPageRoute(
-            builder: (_) => SeatLayoutDesignerScreen(
+            builder: (_) => AbsoluteLayoutDesignerScreen(
               companyId: cId,
               companyName: _company?.name,
             ),
@@ -434,7 +434,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     Navigator.of(context)
         .push(
           MaterialPageRoute(
-            builder: (_) => SeatLayoutBuilderScreen(
+            builder: (_) => BusConfigSetupScreen(
               companyId: cId,
               companyName: _company?.name,
             ),
@@ -2538,7 +2538,7 @@ class _LayoutListViewState extends State<_LayoutListView> {
     Navigator.of(context)
         .push(
           MaterialPageRoute(
-            builder: (_) => SeatLayoutDesignerScreen(
+            builder: (_) => AbsoluteLayoutDesignerScreen(
               layoutId: layoutId,
               companyId: cId,
               companyName: widget.companyName,
