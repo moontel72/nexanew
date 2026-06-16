@@ -55,7 +55,7 @@ jobs:
           fi
           echo "✅ Admin Panel build verified ($(du -sh build/web | cut -f1))"
 
-      # 🔥 SSH Setup (uses webfactory/ssh-agent for reliable key handling)
+      # 🔥 SSH Setup
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
@@ -65,13 +65,12 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts 2>/dev/null
-          # Fallback: accept host key on first connection
           echo 'Host 135.181.46.27' >> ~/.ssh/config
           echo '  StrictHostKeyChecking accept-new' >> ~/.ssh/config
 
       - name: Deploy Admin Panel to /frontend/
         run: |
-          rsync -avz --delete --progress -e 'ssh -o StrictHostKeyChecking=accept-new' build/web/ root@135.181.46.27:/var/www/traceodd/frontend/
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/frontend/
 
       # ──────────────────────────────────────────────────────────────
       # STEP B: Build & Deploy Reseller App (main_reseller.dart)
@@ -83,7 +82,7 @@ jobs:
       - name: Deploy Reseller App to /reseller/
         continue-on-error: true
         run: |
-          rsync -avz --delete --progress -e 'ssh -o StrictHostKeyChecking=accept-new' build/web/ root@135.181.46.27:/var/www/traceodd/reseller/
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/reseller/
 
       # ──────────────────────────────────────────────────────────────
       # STEP C: Build & Deploy Driver App (main_driver.dart)
@@ -95,7 +94,7 @@ jobs:
       - name: Deploy Driver App to /driver/
         continue-on-error: true
         run: |
-          rsync -avz --delete --progress -e 'ssh -o StrictHostKeyChecking=accept-new' build/web/ root@135.181.46.27:/var/www/traceodd/driver/
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/driver/
 
       # ──────────────────────────────────────────────────────────────
       # STEP D: Build & Deploy Bus Owner App (main_bus_owner.dart)
@@ -107,7 +106,7 @@ jobs:
       - name: Deploy Bus Owner App to /bus-owner/
         continue-on-error: true
         run: |
-          rsync -avz --delete --progress -e 'ssh -o StrictHostKeyChecking=accept-new' build/web/ root@135.181.46.27:/var/www/traceodd/bus-owner/
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/bus-owner/
 
       # ──────────────────────────────────────────────────────────────
       # Post-Deployment: Fix permissions for all apps
@@ -116,7 +115,7 @@ jobs:
       - name: Post-Deployment Permissions Fix
         if: always()
         run: |
-          ssh -o StrictHostKeyChecking=accept-new root@135.181.46.27 "
+          ssh root@135.181.46.27 "
             chown -R www-data:www-data /var/www/traceodd/frontend && \
             chmod -R 755 /var/www/traceodd/frontend && \
             chown -R www-data:www-data /var/www/traceodd/reseller && \

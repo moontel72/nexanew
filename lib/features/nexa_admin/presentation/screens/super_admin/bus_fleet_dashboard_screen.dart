@@ -421,7 +421,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           MaterialPageRoute(
             builder: (_) => AbsoluteLayoutDesignerScreen(
               companyId: cId,
-              companyName: _company?.name,
+              companyName: _company?.name ?? 'Fleet',
             ),
           ),
         )
@@ -436,7 +436,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
           MaterialPageRoute(
             builder: (_) => BusConfigSetupScreen(
               companyId: cId,
-              companyName: _company?.name,
+              companyName: _company?.name ?? 'Fleet',
             ),
           ),
         )
@@ -2541,7 +2541,7 @@ class _LayoutListViewState extends State<_LayoutListView> {
             builder: (_) => AbsoluteLayoutDesignerScreen(
               layoutId: layoutId,
               companyId: cId,
-              companyName: widget.companyName,
+              companyName: widget.companyName ?? 'Fleet',
             ),
           ),
         )
