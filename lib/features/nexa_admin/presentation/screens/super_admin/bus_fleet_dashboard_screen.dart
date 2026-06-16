@@ -2487,44 +2487,35 @@ class _LayoutListViewState extends State<_LayoutListView> {
       _error = null;
     });
     try {
-      final res = await ApiService().get('/bus-fleet/absolute-layouts');
-      if (res == null || res is! Map) {
-        setState(() {
-          _error = 'Invalid response';
-          _loading = false;
-        });
-        return;
-      }
-      final data = res['data'];
-      if (data == null) {
-        setState(() {
+      final r = await ApiService().get('/bus-fleet/absolute-layouts');
+      if (!mounted) return;
+      final d = r?['data'];
+      if (d is List) {
+        // Old API format: {success: true, data: [...]}
+        _layouts = d
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      } else if (d is Map) {
+        // New paginated format: {success: true, data: {data: [...], ...}}
+        final list = d['data'];
+        if (list is List) {
+          _layouts = list
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        } else {
           _layouts = [];
-          _loading = false;
-        });
-        return;
-      }
-      // LayoutService returns data as a flat array, not nested {data: [...], pagination}
-      if (data is List) {
-        setState(() {
-          _layouts = List<Map<String, dynamic>>.from(data);
-          _loading = false;
-        });
-      } else if (data is Map) {
-        setState(() {
-          _layouts = List<Map<String, dynamic>>.from(data['data'] ?? []);
-          _loading = false;
-        });
+        }
       } else {
-        setState(() {
-          _layouts = [];
-          _loading = false;
-        });
+        _layouts = [];
       }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      _layouts = [];
+      _error = e.toString();
+    } finally {
+      _loading = false;
+      if (mounted) setState(() {});
     }
   }
 
@@ -2721,144 +2712,103 @@ class _LayoutListViewState extends State<_LayoutListView> {
     );
   }
 
-  Widget _layoutCard(Map<String, dynamic> layout) {
-    final vc = layout['vehicle_class'] as String? ?? 'unknown';
-    final name = layout['display_name'] as String? ?? 'Untitled';
-    final status = layout['layout_status'] as String? ?? 'draft';
-    final version = layout['version_number'] as int? ?? 1;
-    final deck = (layout['deck_level'] as int? ?? 0);
-    final ownerName =
-        (layout['owner_company_name'] ?? layout['owner_display_name'] ?? '')
-            .toString();
-    final isExternal =
-        ownerName.isNotEmpty &&
-        widget.companyName != null &&
-        ownerName != widget.companyName;
-    // Vehicle class → (label, accent color)
-    const _vcMeta = {
-      'coach_54': ('54-Seat Coach (Large)', Color(0xFF7C3AED)),
-      'standard_45': ('45-Seat Standard Coach', Color(0xFF2563EB)),
-      'coaster_34': ('34-Seat Coaster', Color(0xFF16A34A)),
-      'hiace_13': ('13-Seat HiAce', Color(0xFFD97706)),
-      'sleeper_custom': ('Custom Sleeper Coach', Color(0xFFDB2777)),
-    };
-    final vcInfo = _vcMeta[vc] ?? _vcMeta['standard_45']!;
-    final presetLabel = vcInfo.$1;
-    final presetColor = vcInfo.$2;
-
-    return Card(
-      color: const Color(0xFF122442),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      child: Padding(
-        padding: EdgeInsets.all(14.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: presetColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    vc == 'sleeper_custom'
-                        ? Icons.airline_seat_flat_angled
-                        : Icons.event_seat,
-                    color: presetColor,
-                    size: 22,
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        '${presetLabel}  •  v$version  •  ${deck == 0 ? 'Lower Deck' : 'Upper Deck'}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.gray500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _layoutBadge(status),
-                SizedBox(width: 4.w),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 20),
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Text('Design Layout'),
-                    ),
-                    if (status == 'draft')
-                      const PopupMenuItem(
-                        value: 'publish',
-                        child: Text(
-                          'Publish',
-                          style: TextStyle(color: Color(0xFF16A34A)),
-                        ),
-                      ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Archive'),
-                    ),
-                  ],
-                  onSelected: (v) {
-                    if (v == 'edit') _openDesigner(layoutId: layout['id']);
-                    if (v == 'publish') _publishLayout(layout['id'], name);
-                    if (v == 'delete') _archiveLayout(layout['id']);
-                  },
-                ),
-              ],
-            ),
-            // ── Ownership badge ──
-            if (isExternal && ownerName.isNotEmpty) ...[
-              SizedBox(height: 8.h),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: const Color(0xFF7C3AED).withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+  Widget _layoutCard(Map<String, dynamic> l) {
+    try {
+      final sn = l['current_snapshot'] is Map
+          ? l['current_snapshot'] as Map<String, dynamic>
+          : null;
+      final plate =
+          (l['bus_plate'] ?? sn?['bus_plate'] ?? l['vehicle_class'] ?? '')
+              .toString();
+      final seats =
+          (sn?['total_seats'] ??
+          sn?['metadata']?['total_bookable_seats'] ??
+          l['total_seats'] ??
+          0);
+      final rows = (sn?['total_rows'] ?? l['total_rows'] ?? 0);
+      final cols = (sn?['total_cols'] ?? l['total_cols'] ?? 0);
+      final name = (l['display_name'] ?? 'Untitled').toString();
+      final status = (l['layout_status'] ?? 'draft').toString();
+      final id = (l['id'] ?? '').toString();
+      return Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        color: const Color(0xFF1A2A3A),
+        child: Padding(
+          padding: EdgeInsets.all(14.w),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                backgroundColor: const Color(0xFF0891B2).withValues(alpha: .15),
+                child: const Icon(Icons.event_seat, color: Color(0xFF0891B2)),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.link_rounded,
-                      size: 12,
-                      color: Color(0xFF7C3AED),
-                    ),
-                    SizedBox(width: 4.w),
                     Text(
-                      'Linked from $ownerName',
+                      name,
                       style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF7C3AED),
-                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '$plate \u2022 $seats seats \u2022 ${rows}\u00d7$cols',
+                      style: TextStyle(color: AppColors.gray500, fontSize: 11),
                     ),
                   ],
                 ),
               ),
+              _layoutBadge(status),
+              SizedBox(width: 4.w),
+              PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_vert,
+                  color: Color(0xFF8899AA),
+                  size: 20,
+                ),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Text(
+                      'Edit Layout',
+                      style: TextStyle(color: Color(0xFFD97706)),
+                    ),
+                  ),
+                  if (status == 'draft')
+                    const PopupMenuItem(
+                      value: 'publish',
+                      child: Text(
+                        'Publish',
+                        style: TextStyle(color: Color(0xFF16A34A)),
+                      ),
+                    ),
+                  const PopupMenuItem(
+                    value: 'archive',
+                    child: Text(
+                      'Archive',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
+                  ),
+                ],
+                onSelected: (v) {
+                  if (v == 'edit') _openDesigner(layoutId: id);
+                  if (v == 'publish') _publishLayout(id, name);
+                  if (v == 'archive') _archiveLayout(id);
+                },
+              ),
             ],
-          ],
+          ),
         ),
-      ),
-    );
+      );
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
   }
 
   Widget _layoutBadge(String s) => Container(
