@@ -279,7 +279,7 @@ class AbsoluteLayoutService
             if ($includeBookings) {
                 // Attach booked seat numbers (trip-agnostic: all bookings for this layout)
                 $bookedSeats = DB::table('transport_seat_bookings')
-                    ->where('bus_id', $id)
+                    ->where('bus_layout_id', $id)
                     ->whereIn('status', ['confirmed', 'boarded'])
                     ->pluck('seat_number')
                     ->toArray();
