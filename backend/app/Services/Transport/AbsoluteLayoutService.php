@@ -222,6 +222,12 @@ class AbsoluteLayoutService
         $paginator = AbsoluteBusLayout::where('layout_status', 'published')
             ->orderBy('updated_at', 'desc')
             ->paginate($perPage);
+
+        Log::info('listPublicLayouts', [
+            'total' => $paginator->total(),
+            'count' => $paginator->count(),
+        ]);
+
         return [
             'data' => $paginator->items(),
             'pagination' => [
@@ -248,6 +254,7 @@ class AbsoluteLayoutService
         // Reject non-UUID values before they hit PostgreSQL to avoid
         // SQLSTATE[22P02] "invalid input syntax for type uuid".
         if (!\Illuminate\Support\Str::isUuid($id)) {
+            Log::info('showPublicLayout rejected non-UUID', ['id' => $id]);
             return null;
         }
 
@@ -256,7 +263,16 @@ class AbsoluteLayoutService
                 ->where('layout_status', 'published')
                 ->first();
 
-            if (!$layout) return null;
+            if (!$layout) {
+                // Diagnostic: check if the layout exists at all (any status)
+                $any = AbsoluteBusLayout::find($id);
+                Log::info('showPublicLayout not found', [
+                    'id' => $id,
+                    'exists_at_all' => $any !== null,
+                    'actual_status' => $any?->layout_status ?? 'n/a',
+                ]);
+                return null;
+            }
 
             $result = $layout->toArray();
 

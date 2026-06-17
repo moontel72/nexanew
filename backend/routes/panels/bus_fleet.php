@@ -52,7 +52,7 @@ Route::prefix('api/v1/bus-fleet')
             $activeRoutes = \Illuminate\Support\Facades\DB::table('transport_bus_routes')
                 ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('transport_bus_routes', 'carrier_company_id'),
                     fn($q) => $q->where('carrier_company_id', $carrierId))
-                ->where('is_published', true)
+                ->where('status', 'published')
                 ->count();
 
             $totalTrips = \Illuminate\Support\Facades\DB::table('transport_bus_trips')
@@ -102,7 +102,7 @@ Route::prefix('api/v1/bus-fleet')
             $activeRoutes = \Illuminate\Support\Facades\DB::table('transport_bus_routes')
                 ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('transport_bus_routes', 'carrier_company_id'),
                     fn($q) => $q->where('carrier_company_id', $carrierId))
-                ->where('is_published', true)
+                ->where('status', 'published')
                 ->count();
 
             $totalTrips = \Illuminate\Support\Facades\DB::table('transport_bus_trips')

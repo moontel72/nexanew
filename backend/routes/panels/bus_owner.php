@@ -103,7 +103,7 @@ Route::prefix('api/v1/bus-owner')
 
             $activeRoutes = \Illuminate\Support\Facades\DB::table('transport_bus_routes')
                 ->where('owner_identity_id', $identityId)
-                ->where('is_published', true)
+                ->where('status', 'published')
                 ->count();
 
             $totalTrips = \Illuminate\Support\Facades\DB::table('transport_bus_trips')
