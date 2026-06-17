@@ -1,0 +1,35 @@
+# =============================================================================
+# NEXATRACE — REDIS QUEUE WORKER (systemd unit)
+# =============================================================================
+# Installed at: /etc/systemd/system/nexatrace-queue.service
+#
+# Processes queued jobs from Redis, including ShouldBroadcast events
+# (BusLocationUpdated, FleetLocationUpdated, etc.) and async jobs
+# (CommissionPayoutJob, NotificationBlastJob, etc.).
+#
+# Commands:
+#   systemctl enable --now nexatrace-queue   (start + auto-start on boot)
+#   systemctl status nexatrace-queue         (check status)
+#   journalctl -u nexatrace-queue -f         (follow logs)
+# =============================================================================
+
+[Unit]
+Description=NexaTrace Redis Queue Worker
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+User=root
+WorkingDirectory=/var/www/traceodd/admin-panel
+ExecStart=/usr/bin/php artisan queue:work redis --tries=3 --timeout=90 --sleep=3 --max-jobs=500 --max-time=3600
+Restart=always
+RestartSec=5
+
+# Environment
+Environment="APP_ENV=production"
+
+# Security hardening
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

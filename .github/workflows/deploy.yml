@@ -39,35 +39,29 @@ jobs:
           ls -la target/release/trace_odd_rust
           chmod +x target/release/trace_odd_rust
 
-      # 🔥 SSH Setup
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 🔥 Add server to known_hosts
       - name: Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts
 
-      # 🔥 Deploy backend via rsync (Excluding .env to protect server config)
       - name: Deploy backend via rsync
         run: |
           rsync -avz --delete --exclude='.env' backend/ root@135.181.46.27:/var/www/traceodd/admin-panel/
 
-      # 🔥 Deploy Rust source + compiled binary to server
       - name: Deploy Rust directory to server
         run: |
           rsync -avz --delete rust/ root@135.181.46.27:/var/www/traceodd/admin-panel/rust/
 
-      # 🔥 Also deploy shared libs to rust-lib for FFI consumers (non-blocking)
       - name: Deploy Rust shared libraries
         continue-on-error: true
         run: |
           rsync -avz --include='*.so' --include='*.rlib' --exclude='*' rust/target/release/ root@135.181.46.27:/var/www/traceodd/rust-lib/ 2>/dev/null || echo "No shared libs to deploy"
 
-      # 🔥 Deploy Nginx config to server
       - name: Deploy Nginx configuration
         run: |
           rsync -avz .nginx/traceodd.conf root@135.181.46.27:/etc/nginx/sites-available/traceodd
@@ -77,36 +71,33 @@ jobs:
             nginx -t && systemctl reload nginx && echo 'Nginx OK'
           "
 
-      # 🔥 Deploy systemd unit for Reverb WebSocket server
       - name: Deploy Reverb systemd unit
         run: |
           rsync -avz .nginx/nexatrace-reverb.service root@135.181.46.27:/etc/systemd/system/nexatrace-reverb.service
-          ssh root@135.181.46.27 "
-            systemctl daemon-reload
-            systemctl enable nexatrace-reverb
-          "
+          ssh root@135.181.46.27 "systemctl daemon-reload && systemctl enable nexatrace-reverb"
 
-      # 🔥 Laravel optimize, Reverb setup, Fix Permissions and Reload Nginx
+      - name: Deploy Queue Worker systemd unit
+        run: |
+          rsync -avz .nginx/nexatrace-queue.service root@135.181.46.27:/etc/systemd/system/nexatrace-queue.service
+          ssh root@135.181.46.27 "systemctl daemon-reload && systemctl enable nexatrace-queue"
+
       - name: Server Post-Deployment Tasks
         run: |
           ssh root@135.181.46.27 "
             cd /var/www/traceodd/admin-panel
 
-            # 0. Ensure Rust binary permissions
             if [ -f rust/target/release/trace_odd_rust ]; then
               chmod +x rust/target/release/trace_odd_rust
               echo 'Rust binary OK: ' \$(rust/target/release/trace_odd_rust --version)
             else
-              echo 'WARNING: Rust binary not found at rust/target/release/trace_odd_rust'
+              echo 'WARNING: Rust binary not found'
             fi
             chmod 755 /var/www/traceodd/rust-lib/*.so 2>/dev/null || true
             chown -R www-data:www-data /var/www/traceodd/rust-lib
             chown -R www-data:www-data /var/www/traceodd/admin-panel/rust
 
-            # 1. Install laravel/reverb (resolves lock file + installs)
             composer require laravel/reverb --no-interaction --prefer-dist --optimize-autoloader
 
-            # 2. Seed Reverb + Redis env vars if missing (idempotent)
             grep -q '^QUEUE_CONNECTION=' .env 2>/dev/null || echo 'QUEUE_CONNECTION=redis' >> .env
             grep -q '^CACHE_STORE=' .env 2>/dev/null || echo 'CACHE_STORE=redis' >> .env
             grep -q '^BROADCAST_DRIVER=' .env 2>/dev/null || echo 'BROADCAST_DRIVER=reverb' >> .env
@@ -119,28 +110,18 @@ jobs:
             grep -q '^REVERB_SERVER_HOST=' .env 2>/dev/null || echo 'REVERB_SERVER_HOST=0.0.0.0' >> .env
             grep -q '^REVERB_SERVER_PORT=' .env 2>/dev/null || echo 'REVERB_SERVER_PORT=8080' >> .env
 
-            # 3. Run database migrations
             php artisan migrate --force
-
-            # 4. Clear and cache Laravel config/routes
             php artisan optimize:clear
             php artisan optimize
 
-            # 5. Restart Reverb WebSocket server
-            systemctl restart nexatrace-reverb || echo 'Reverb not yet installed (first deploy)'
+            systemctl restart nexatrace-reverb || echo 'Reverb not yet installed'
+            systemctl restart nexatrace-queue || echo 'Queue worker not yet installed'
 
-            # 6. Fix Ownership
             chown -R www-data:www-data /var/www/traceodd/admin-panel
             chown -R www-data:www-data /var/www/traceodd/frontend
-
-            # 7. Set standard permissions
             find /var/www/traceodd/admin-panel -type d -exec chmod 755 {} \;
             find /var/www/traceodd/admin-panel -type f -exec chmod 644 {} \;
-
-            # 8. Special permissions for storage and cache
             chmod -R 775 /var/www/traceodd/admin-panel/storage
             chmod -R 775 /var/www/traceodd/admin-panel/bootstrap/cache
-
-            # 9. Reload Nginx
             systemctl reload nginx
           "
