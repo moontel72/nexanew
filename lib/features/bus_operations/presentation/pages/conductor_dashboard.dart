@@ -58,6 +58,9 @@ class _ConductorDashboardScreenState extends State<ConductorDashboardScreen> {
       if (!mounted) return;
       setState(() {
         _conductorName = data['account_name']?.toString() ?? 'Conductor';
+        _routeName = data['active_route']?.toString() ?? '--';
+        _totalSeats = (data['total_seats'] ?? 52) as int;
+        _bookedSeats = (data['booked_seats'] ?? 0) as int;
         _isLoading = false;
       });
     } on Exception catch (e) {

@@ -1703,18 +1703,20 @@
 - **Tech:** marketplace_subscriptions table; max_allowed_items enforcement; Step 8 double-entry ledger for subscription payments.
 - **Built:** Not started.
 ### MODULE 13 — PUBLIC TRANSPORT BUS ADMIN PANEL
-**Domain:** Transit Fleet Control · **Code Namespace:** Not yet allocated  
-**Build Status:** ░░░░░░░░░░ 0 % — Not started
+**Domain:** Transit Fleet Control · **Code Namespace:** `App\Http\Controllers\BusDispatchController`, `BusRouteController`, `BusTransitController`, `FleetStaffController`  
+**Flutter Entry:** `lib/features/bus_operations/` (Route Editor, Staff Management)  
+**Backend Routes:** `routes/panels/bus_fleet.php`  
+**Build Status:** ████░░░░░░ 40 % — Fleet profile/dashboard, route CRUD + publish, trip creation, driver dispatch actions (start/update/complete trip), staff listing (drivers/conductors/plates), QR register/scan, seat bookings, voucher create; telemetry dashboard + revenue ledger pending
 
 #### 13A — Enterprise Transport Network Matrix
 - Central management console for transit brands.
 - Build company profiles, catalog heavy assets, coordinate multi-line schedules.
-- **Built:** ❌ Not started.
+- **Built:** ✅ Partially built — Fleet profile + dashboard with live fleet size / route / trip counts (`bus_fleet.php` profile + dashboard endpoints). Staff management (drivers, conductors, plates) operational via `FleetStaffController`.
 > **[REQUIRED TECH-STACK & INTEGRATION POINTS]**
-> - **Dynamic Seat Grid Builder** (Step 12/14E): Bus Owner creates floor-plan layout via `POST /api/v1/bus-fleet/owners/layouts` — configures rows, columns, driver seats; stored as `raw_grid_json`.
+> - **Dynamic Seat Grid Builder** (Step 12/14E): Bus Owner creates floor-plan layout via `POST /api/v1/bus-fleet/absolute-layouts` — freeform absolute canvas; stored as `absolute_bus_layouts` with component JSON.
 > - **Gate QR Code Generation** (Step 12/15E): Register bus door QR via `POST /api/v1/bus-fleet/qr/register`; generates unique `qr_payload_uuid` linked to bus + active trip.
 > - **Voucher Split Clearing Ledger** (Step 12/8W + Step 8): Physical NexaTrace voucher redemption with instant change credited to customer wallet via double-entry ledger.
-> - **Live GPS Broadcasting** (Step 3): `BusLocationUpdated` WebSocket event on `bus.{route_id}` channel — consumed by Customer App (8V) for real-time tracking.
+> - **Live GPS Broadcasting** (Step 3): `BusLocationUpdated` WebSocket event on `bus.{trip_id}` channel — consumed by Customer App (8V) for real-time tracking.
 > - **Seat Booking** (Step 12): `POST /api/v1/bus-fleet/bookings` with 3-way payment (wallet/card/voucher); `lockForUpdate()` prevents double-booking.
 > - **Stack Tags:** WebSockets, Redis Pub/Sub Subscription, Complex JSON Grid Builders, `BusInventoryService`, Step 8 Financial Ledger hooks.
 
@@ -1722,14 +1724,14 @@
 - Graphic mapping canvas to define fixed transit paths.
 - Specify intermediate passenger terminals.
 - Publish timetable models.
-- **Tech:** Google Maps Drawing API; PostgreSQL route tables.
-- **Built:** ❌ Not started.
+- **Tech:** Custom `CustomPainter` canvas (zero Google Maps dependency); PostgreSQL route tables; `transport_bus_routes` table.
+- **Built:** ✅ 70% built — `BusRouteController` (index/store/show/update/destroy/publish/saveWaypoints) operational, `route_editor_screen.dart` with interactive drag-to-place waypoints, `route_list_screen.dart` with publish/delete actions. Pending: timetable scheduling model.
 
 #### 13C — Live Multi-Asset Telemetry Command View (WebSockets)
 - Real-time spatial tracking interface mapping fleet positions via high-frequency WebSocket streams.
 - Monitor arrival time compliance against schedule.
-- **Tech:** WebSocket `BusLocationUpdated` event; Redis geospatial cache; Syncfusion real-time charts.
-- **Built:** ❌ Not started.
+- **Tech:** WebSocket `BusLocationUpdated` event; Redis geospatial cache; Laravel Reverb (port 8080); `BusLiveTrackingService` with Haversine ETA.
+- **Built:** ✅ 30% built — WebSocket infrastructure fully operational (Laravel Reverb + Redis Pub/Sub), `BusLocationUpdated` event broadcasting on `bus.{trip_id}` channel, `bus_tracking_websocket.dart` client with Pusher protocol + exponential backoff. Pending: admin telemetry dashboard UI.
 
 #### 13D — Ticket Revenue Ledger Hub
 - Central financial monitor: ticket sales, active seat booking states, online conversions, branch payout timelines.
@@ -1738,21 +1740,23 @@
 ---
 
 ### MODULE 14 — BUS OWNERS APP
-**Domain:** Independent Franchise Terminal · **Code Namespace:** Not yet allocated  
-**Build Status:** ░░░░░░░░░░ 0 % — Not started
+**Domain:** Independent Franchise Terminal · **Code Namespace:** `App\Http\Controllers\BusOwnerController`, `AbsoluteLayoutController`  
+**Flutter Entry:** `lib/features/bus_operations/` (Owner Dashboard, Absolute Layout Designer)  
+**Backend Routes:** `routes/panels/bus_owner.php`  
+**Build Status:** ██████░░░░ 65 % — Owner profile + dashboard (live fleet/route/trip counts), driver CRUD, conductor CRUD, absolute layout CRUD (freeform canvas), link-request identity portability, link-messages B2B chat; operational logs + asset diagnostics pending
 
 #### 14A — Franchise Vehicle Profile Registry
 - Asset management panel: register physical vehicles under parent transit brand network.
-- **Built:** ❌ Not started.
+- **Built:** ✅ 80% built — `AbsoluteLayoutController` (index/store/show/update/destroy/publish/purgeAll) fully operational, `absolute_layout_designer_screen.dart` with freeform canvas designer, `owner_dashboard.dart` with fleet size / staff stats. Pending: vehicle maintenance profile integration.
 
 #### 14B — Automated Fleet Operational Logs
 - Financial reporting: daily passenger statistics, total route runs, gross ticket balances, platform service fees.
-- **Built:** ❌ Not started.
+- **Built:** ⚠️ 15% — Dashboard stats endpoint returns fleet size, driver/conductor/layout counts. Full revenue/operational log report generation pending.
 
 #### 14C — Driver Shift Scheduling Core
 - Crew allocation module: assign verified drivers to specific vehicle IDs.
 - Log active hours.
-- **Built:** ❌ Not started.
+- **Built:** ✅ 60% built — `BusShiftController` (saveShiftRoster, getShiftRoster) operational, `bus_shift_screen.dart` with shift roster table, fleet assignment management via `BusOwnerController`. Pending: automated scheduling algorithm.
 
 #### 14D — Real-Time Coach Asset Diagnostic Interface
 - Summary view: real-time vehicle maintenance requirements, active line statuses, repair logs.
@@ -1760,25 +1764,38 @@
 
 ---
 
-#### 14E — Dynamic Seat Grid Builder (Visual Floor-Plan Layout)
-- Bus Owner configures a visual floor-plan layout builder similar to a house floor plan.
-- Configurable parameters: total row lines, left-side seat count (2 or 3), right-side seat count (2 or 1), driver-adjacent seats (1 or 2), aisle configuration.
-- Stored as structured JSON in bus_layouts table (raw_grid_json) for rendering in Customer App seat selection (Module 8V).
-- **Tech:** Flutter GridView.builder rendering seat map; bus_layouts migration; raw_grid_json schema.
-- **Built:** Not started.
+#### 14E — Dynamic Seat Grid Builder (Freeform Absolute Canvas)
+> **⚠️ ARCHITECTURAL EVOLUTION — May 2026:** The original specification described a rigid `GridView.builder` approach with configurable rows/columns and aisle position.
+>
+> **CURRENT IMPLEMENTATION:** The seat layout system has evolved into a **freeform absolute-positioning canvas** (`AbsoluteLayoutController` + `absolute_bus_layouts` table). Bus Owners place individual seat components (driver seat, passenger seat, door, aisle marker) by tapping anywhere on a 2D canvas — no grid constraints. Each component stores an `(x, y)` position, rotation, size, and type tag. The full component tree is serialized as JSON in `absolute_bus_layouts.layout_data`.
+>
+> **Key differences from original spec:**
+> | Aspect | Original Spec (GridView) | Current (Absolute Canvas) |
+> |--------|--------------------------|---------------------------|
+> | Layout model | Fixed rows × columns | Freeform (x, y) coordinates |
+> | Seat placement | Grid cells (2 left + 2 right) | Tap-to-place anywhere on canvas |
+> | API endpoint | `POST /bus-fleet/owners/layouts` | `POST /bus-fleet/absolute-layouts` |
+> | Storage | `bus_layouts.raw_grid_json` | `absolute_bus_layouts.layout_data` |
+> | Aisle config | Left/right seat count params | Door/aisle marker components |
+> | Designer UI | Form fields (rows, cols, seats) | Drag/resize/rotate canvas tools |
+>
+> - **Tech:** Flutter `CustomPainter` canvas; `absolute_bus_layouts` migration; freeform component JSON schema.
+> - **Built:** ✅ 90% built — Full CRUD + publish/purge, interactive canvas designer with drag/resize/rotate, component serialization, seat booking integration.
 ### MODULE 15 — BUS DRIVERS APP
-**Domain:** On-Route Navigation Terminal · **Code Namespace:** Not yet allocated  
-**Build Status:** ░░░░░░░░░░ 0 % — Not started
+**Domain:** On-Route Navigation Terminal · **Code Namespace:** `App\Http\Controllers\BusDispatchController`, `FleetStaffController`  
+**Flutter Entry:** `lib/features/bus_operations/` (Driver Dashboard, Driver Trip Screen, Conductor Dashboard)  
+**Backend Routes:** `routes/panels/bus_fleet.php` (driver prefix group)  
+**Build Status:** ████░░░░░░ 45 % — Driver dashboard with live staff profile, active route + seat manifest, GPS beacon (4-second `Timer.periodic` fire-and-forget), conductor dashboard with seat grid; Rust FFI boarding + dispatch advisory + NFC check-in pending
 
 #### 15A — Active Line Manifest Terminal
 - Simplified operational view: active route tasks, upcoming terminal checkpoints, live schedule compliance graphs.
-- **Built:** ❌ Not started.
+- **Built:** ✅ 50% built — `driver_dashboard.dart` with live staff profile endpoint (`GET /bus-fleet/staff/profile`), active route display, vehicle plate, seat manifest (booked/vacant), next stop indicator, GPS status card. `driver_trip_screen.dart` with Start/Complete trip controls. Pending: schedule compliance graphs.
 
 #### 15B — High-Frequency Spatial Telemetry Beacon
 - High-frequency location broadcasting engine.
 - Flutter Signals / Lightweight Streams to broadcast continuous coordinates to consumer applications.
-- **Tech:** `Stream.periodic()` → WebSocket emit `BusDriverLocation`; low-overhead location plugin.
-- **Built:** ❌ Not started.
+- **Tech:** `Timer.periodic()` (4-second interval) → POST to `BusLiveTrackingService`; Laravel Reverb WebSocket broadcast on `bus.{trip_id}`.
+- **Built:** ✅ 70% built — `driver_gps_beacon.dart` with fire-and-forget POST, `BusLiveTrackingService` with Haversine ETA recompute + `BusLocationUpdated` WebSocket broadcast. Pending: location plugin integration.
 
 #### 15C — Contactless Passenger Boarding Interface (Rust FFI)
 - High-speed boarding confirmation: native Rust via FFI optimizes device camera pipeline.
@@ -1796,8 +1813,8 @@
 #### 15E — Gate QR Code Automation (Door-Mounted NexaTrace Codes)
 - Every bus has a unique NexaTrace QR Code printed on the door.
 - When scanned via Module 8 Customer App, it instantly returns: bus registration number, active route profile (origin to destination), current live GPS location/ETA, and real-time available seat count — without any human interaction.
-- **Tech:** bus_qr_codes table; QR payload UUID links to bus_id + active_trip_id; WebSocket BusLocationUpdated for live GPS; BusInventoryService for seat count.
-- **Built:** Not started.
+- **Tech:** `transport_bus_qr_codes` table; QR payload UUID links to bus_id + active_trip_id; `POST /api/v1/bus-fleet/qr/register` + `GET /api/v1/bus-fleet/qr/scan/{uuid}` endpoints; WebSocket `BusLocationUpdated` for live GPS; `BusInventoryService` for seat count.
+- **Built:** ⚠️ 20% built — QR register and scan endpoints operational, database table and indexes created. Door-mount printing + NFC hardware integration pending.
 ### MODULE 16 — [CONSOLIDATED INTO MODULE 8 — CUSTOMERS APP (2-in-1)]
 > **Strategic Decision:** A dedicated Bus Passenger App is unnecessary. All bus passenger features (seat selection, live bus tracking, encrypted ETA links, QR ticketing) have been consolidated into Module 8 as a unified 2-in-1 Customer App. Passengers use the same NexaTrace Customer App for both product anti-counterfeit verification AND live bus transit booking/tracking.
 ### MODULE 17 — [PERMANENTLY REMOVED — P2P Car Trip Sharing]

@@ -39,9 +39,26 @@ Route::prefix('api/v1/bus-fleet')
                 $companyName = $company->account_name ?? 'Bus Company';
             }
 
+            $activeRoutes = \Illuminate\Support\Facades\DB::table('transport_bus_routes')
+                ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('transport_bus_routes', 'carrier_company_id'),
+                    fn($q) => $q->where('carrier_company_id', $carrierId))
+                ->where('is_published', true)
+                ->count();
+
+            $totalTrips = \Illuminate\Support\Facades\DB::table('transport_bus_trips')
+                ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('transport_bus_trips', 'carrier_company_id'),
+                    fn($q) => $q->where('carrier_company_id', $carrierId))
+                ->count();
+
+            $activeTrips = \Illuminate\Support\Facades\DB::table('transport_bus_trips')
+                ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('transport_bus_trips', 'carrier_company_id'),
+                    fn($q) => $q->where('carrier_company_id', $carrierId))
+                ->where('status', 'active')
+                ->count();
+
             return response()->json(['success' => true, 'data' => [
                 'company' => ['id' => $carrierId ?? 'admin', 'name' => $companyName, 'email' => $user->email ?? '', 'phone' => $user->phone_number ?? '', 'status' => 'active', 'city' => null, 'country' => null],
-                'fleet_size' => $fleetSize, 'active_routes' => 0, 'owner_name' => $companyName, 'is_bus_fleet' => true, 'active_buses' => $fleetSize, 'staff_count' => $staffCount,
+                'fleet_size' => $fleetSize, 'active_routes' => $activeRoutes, 'owner_name' => $companyName, 'is_bus_fleet' => true, 'active_buses' => $fleetSize, 'staff_count' => $staffCount,
             ]]);
         });
 
@@ -72,10 +89,27 @@ Route::prefix('api/v1/bus-fleet')
                 $companyName = $company->account_name ?? 'Bus Company';
             }
 
+            $activeRoutes = \Illuminate\Support\Facades\DB::table('transport_bus_routes')
+                ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('transport_bus_routes', 'carrier_company_id'),
+                    fn($q) => $q->where('carrier_company_id', $carrierId))
+                ->where('is_published', true)
+                ->count();
+
+            $totalTrips = \Illuminate\Support\Facades\DB::table('transport_bus_trips')
+                ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('transport_bus_trips', 'carrier_company_id'),
+                    fn($q) => $q->where('carrier_company_id', $carrierId))
+                ->count();
+
+            $activeTrips = \Illuminate\Support\Facades\DB::table('transport_bus_trips')
+                ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('transport_bus_trips', 'carrier_company_id'),
+                    fn($q) => $q->where('carrier_company_id', $carrierId))
+                ->where('status', 'active')
+                ->count();
+
             return response()->json(['success' => true, 'data' => [
                 'company_id' => $carrierId ?? 'admin', 'company_name' => $companyName, 'status' => 'active',
-                'fleet_size' => $fleetSize, 'active_routes' => 0, 'owner_name' => $companyName,
-                'total_trips' => 0, 'active_trips' => 0,
+                'fleet_size' => $fleetSize, 'active_routes' => $activeRoutes, 'owner_name' => $companyName,
+                'total_trips' => $totalTrips, 'active_trips' => $activeTrips,
             ]]);
         });
 
@@ -117,6 +151,97 @@ Route::prefix('api/v1/bus-fleet')
         Route::post('vouchers/create', [\App\Http\Controllers\BusTransitController::class, 'createVoucher']);
 
         Route::prefix('staff')->group(function (): void {
+            Route::get('profile', function (\Illuminate\Http\Request $request) {
+                $user = $request->user();
+                $identityId = $user->global_identity_id ?? null;
+
+                if (!$identityId) {
+                    return response()->json(['message' => 'No identity found for this account'], 404);
+                }
+
+                $assignment = \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                    ->where('global_identity_id', $identityId)
+                    ->where('fleet_type', 'bus')
+                    ->whereIn('role', ['driver', 'conductor'])
+                    ->whereIn('status', ['active', 'pending_acceptance'])
+                    ->first();
+
+                if (!$assignment) {
+                    return response()->json(['message' => 'No active staff assignment found'], 404);
+                }
+
+                $identity = \Illuminate\Support\Facades\DB::table('global_identities')
+                    ->where('id', $identityId)
+                    ->first();
+
+                $meta = is_string($assignment->assignment_meta ?? null)
+                    ? json_decode($assignment->assignment_meta, true)
+                    : ($assignment->assignment_meta ?? []);
+
+                $plate = $meta['plate_number'] ?? $meta['plate'] ?? ($assignment->plate_number ?? null);
+                $busId = $meta['bus_id'] ?? ($assignment->bus_id ?? null);
+
+                // Resolve active trip for this staff member
+                $activeTrip = \Illuminate\Support\Facades\DB::table('transport_bus_trips')
+                    ->where(function ($q) use ($identityId, $busId) {
+                        $q->where('driver_id', $identityId)
+                          ->orWhere('bus_id', $busId);
+                    })
+                    ->where('status', 'active')
+                    ->orderByDesc('started_at')
+                    ->first();
+
+                $routeName = null;
+                $nextStop = null;
+                $totalSeats = 0;
+                $bookedSeats = 0;
+                $scheduleStatus = 'Off Duty';
+
+                if ($activeTrip) {
+                    $scheduleStatus = 'On Route';
+                    $route = \Illuminate\Support\Facades\DB::table('transport_bus_routes')
+                        ->where('id', $activeTrip->route_id)
+                        ->first();
+                    $routeName = $route->display_name ?? $route->route_code ?? null;
+
+                    $waypoints = is_string($activeTrip->waypoints ?? null)
+                        ? json_decode($activeTrip->waypoints, true)
+                        : ($activeTrip->waypoints ?? []);
+
+                    $currentIdx = (int) ($activeTrip->current_waypoint_index ?? 0);
+                    if (!empty($waypoints) && isset($waypoints[$currentIdx])) {
+                        $nextStop = $waypoints[$currentIdx]['station'] ?? "Stop {$currentIdx}";
+                    }
+
+                    $totalSeats = \Illuminate\Support\Facades\DB::table('transport_seat_bookings')
+                        ->where('trip_id', $activeTrip->id)
+                        ->count();
+
+                    $bookedSeats = \Illuminate\Support\Facades\DB::table('transport_seat_bookings')
+                        ->where('trip_id', $activeTrip->id)
+                        ->whereIn('status', ['confirmed', 'boarded'])
+                        ->count();
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'account_name'    => $identity->display_name ?? $identity->full_name ?? $user->account_name ?? 'Staff',
+                        'full_name'       => $identity->display_name ?? $identity->full_name ?? null,
+                        'role'            => $assignment->role,
+                        'vehicle_plate'   => $plate,
+                        'bus_id'          => $busId,
+                        'carrier_company_id' => $assignment->carrier_company_id ?? null,
+                        'active_route'     => $routeName ?? 'No active route',
+                        'active_trip_id'  => $activeTrip->id ?? null,
+                        'total_seats'     => $totalSeats,
+                        'booked_seats'    => $bookedSeats,
+                        'next_stop'       => $nextStop ?? '--',
+                        'schedule_status' => $scheduleStatus,
+                    ],
+                ]);
+            });
+
             Route::get('drivers', [\App\Http\Controllers\FleetStaffController::class, 'getDriversList']);
             Route::get('conductors', [\App\Http\Controllers\FleetStaffController::class, 'getConductorsList']);
             Route::get('plates', [\App\Http\Controllers\FleetStaffController::class, 'getBusPlates']);

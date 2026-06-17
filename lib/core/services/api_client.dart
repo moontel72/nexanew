@@ -6,6 +6,7 @@ import 'dart:io' show SocketException;
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,6 +20,11 @@ class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
   ApiClient._internal();
+
+  /// Secure storage reference for dual-write token sync.
+  /// When set, [setAuthToken] and [clearAuthToken] also write to this
+  /// backend so that Dio-based [NexaTraceApiClient] reads the same token.
+  FlutterSecureStorage? _secureStorage;
 
   // HTTP client with custom request method to disable redirects
   final http.Client _client = http.Client();
@@ -73,8 +79,19 @@ class ApiClient {
     await prefs.setString(AppConstants.authTokenKey, token);
   }
 
+  /// Wire the secure storage backend so that token writes are mirrored
+  /// to [FlutterSecureStorage] (used by [NexaTraceApiClient] / Dio).
+  /// Call once during app initialization.
+  void setSecureStorage(FlutterSecureStorage storage) {
+    _secureStorage = storage;
+  }
+
   Future<void> setAuthToken(String token) async {
     await _setAuthToken(token);
+    // Dual-write to FlutterSecureStorage so Dio-based clients stay in sync
+    if (_secureStorage != null) {
+      await _secureStorage!.write(key: AppConstants.authTokenKey, value: token);
+    }
     // Immediately set the header so the next API call doesn't wait for
     // a SharedPreferences round-trip (prevents race-condition 401s on web)
     _headers['Authorization'] = 'Bearer $token';
@@ -82,6 +99,9 @@ class ApiClient {
 
   Future<void> clearAuthToken() async {
     await _clearAuthToken();
+    if (_secureStorage != null) {
+      await _secureStorage!.delete(key: AppConstants.authTokenKey);
+    }
     _headers.remove('Authorization');
   }
 

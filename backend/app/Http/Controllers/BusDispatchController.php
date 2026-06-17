@@ -73,7 +73,7 @@ class BusDispatchController extends Controller
      */
     public function startTrip(string $id, Request $request): JsonResponse
     {
-        $driverId = (string) $request->user()->id;
+        $driverId = (string) $request->user()->global_identity_id;
 
         $data = $request->validate([
             'lat' => ['required', 'numeric', 'between:-90,90'],

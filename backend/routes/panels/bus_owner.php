@@ -91,6 +91,20 @@ Route::prefix('api/v1/bus-owner')
                 ->where('owner_identity_id', $identityId)
                 ->count();
 
+            $activeRoutes = \Illuminate\Support\Facades\DB::table('transport_bus_routes')
+                ->where('owner_identity_id', $identityId)
+                ->where('is_published', true)
+                ->count();
+
+            $totalTrips = \Illuminate\Support\Facades\DB::table('transport_bus_trips')
+                ->where('owner_identity_id', $identityId)
+                ->count();
+
+            $activeTrips = \Illuminate\Support\Facades\DB::table('transport_bus_trips')
+                ->where('owner_identity_id', $identityId)
+                ->where('status', 'active')
+                ->count();
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -99,9 +113,9 @@ Route::prefix('api/v1/bus-owner')
                     'driver_count'    => $driverCount,
                     'conductor_count' => $conductorCount,
                     'layout_count'    => $layoutCount,
-                    'active_routes'   => 0,
-                    'total_trips'     => 0,
-                    'active_trips'    => 0,
+                    'active_routes'   => $activeRoutes,
+                    'total_trips'     => $totalTrips,
+                    'active_trips'    => $activeTrips,
                 ],
             ]);
         });

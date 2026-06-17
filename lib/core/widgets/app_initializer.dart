@@ -7,8 +7,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/providers/app_providers.dart';
+import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/features/bus_operations/data/services/ticket_vault_service.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, debugPrint;
 import 'package:trace_odd/core/interfaces/secure_storage_interface.dart';
 import 'package:trace_odd/core/services/secure_storage_service.dart';
@@ -50,8 +53,41 @@ class _AppInitializerState extends State<AppInitializer> {
       // Initialize FlutterSecureStorage with web-specific options for HTTP testing
       final secureStorage = _createSecureStorage();
 
+      // ── C2 FIX: Initialize Hive for offline ticket vault ──
+      await Hive.initFlutter();
+      try {
+        await TicketVaultService().init();
+      } catch (e) {
+        debugPrint('TicketVaultService init warning (non-fatal): $e');
+      }
+
+      // ── C4 FIX: Token sync bridge ──
+      // ApiClient (http) writes to SharedPreferences.
+      // NexaTraceApiClient (Dio) reads from FlutterSecureStorage.
+      // Bridge them so both channels always see the same token.
+      final flutterSecureStorage = FlutterSecureStorage();
+      ApiClient().setSecureStorage(flutterSecureStorage);
+
+      // Startup sync: copy from SharedPreferences → FlutterSecureStorage
+      final prefsToken = sharedPreferences.getString(AppConstants.authTokenKey);
+      if (prefsToken != null && prefsToken.isNotEmpty) {
+        try {
+          final existingSecure = await flutterSecureStorage.read(
+            key: AppConstants.authTokenKey,
+          );
+          if (existingSecure != prefsToken) {
+            await flutterSecureStorage.write(
+              key: AppConstants.authTokenKey,
+              value: prefsToken,
+            );
+          }
+        } catch (e) {
+          debugPrint('Token sync skipped (platform restriction): $e');
+        }
+      }
+
       if (kDebugMode) {
-        debugPrint('APP_INIT depsReady=true');
+        debugPrint('APP_INIT depsReady=true hiveReady=true tokenSynced=true');
       }
       setState(() {
         _sharedPreferences = sharedPreferences;

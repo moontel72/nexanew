@@ -37,8 +37,11 @@ import 'package:trace_odd/features/bus_operations/presentation/pages/driver_logi
 import 'package:trace_odd/features/bus_operations/presentation/pages/driver_dashboard.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/conductor_login_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/conductor_dashboard.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/truck_owner_login_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/truck_owner_dashboard.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/customer_super_app_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/passenger_seat_selection_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/live_transit_tracking_screen.dart';
+import 'package:trace_odd/features/goods_operations/presentation/pages/truck_owner_login_screen.dart';
+import 'package:trace_odd/features/goods_operations/presentation/pages/truck_owner_dashboard.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_owners_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_drivers_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_conductors_screen.dart';
@@ -450,6 +453,28 @@ class AppRouter {
         ),
       ],
     ),
+
+    // ── Customer App (Module 8V) ───────────────────
+    GoRoute(
+      path: '/customer/home',
+      name: 'customer_home',
+      builder: (context, state) => const CustomerSuperAppScreen(),
+    ),
+    GoRoute(
+      path: '/customer/seat-selection/:layoutId',
+      name: 'customer_seat_selection',
+      builder: (context, state) {
+        final layoutId = state.pathParameters['layoutId'] ?? 'default';
+        final tripId = state.uri.queryParameters['tripId'];
+        return PassengerSeatSelectionScreen(layoutId: layoutId, tripId: tripId);
+      },
+    ),
+    GoRoute(
+      path: '/customer/live-tracking',
+      name: 'customer_live_tracking',
+      builder: (context, state) => const LiveTransitTrackingScreen(),
+    ),
+
     ShellRoute(
       builder: (context, state, child) => SuperAdminShell(child: child),
       routes: [

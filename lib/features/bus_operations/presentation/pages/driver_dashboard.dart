@@ -57,6 +57,12 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       if (!mounted) return;
       setState(() {
         _driverName = data['account_name']?.toString() ?? 'Driver';
+        _vehiclePlate = data['vehicle_plate']?.toString() ?? '--';
+        _activeRoute = data['active_route']?.toString() ?? 'No active route';
+        _totalSeats = (data['total_seats'] ?? 0) as int;
+        _bookedSeats = (data['booked_seats'] ?? 0) as int;
+        _nextCheckpoint = data['next_stop']?.toString() ?? '--';
+        _scheduleStatus = data['schedule_status']?.toString() ?? 'Off Duty';
         _isLoading = false;
       });
     } on Exception catch (e) {
