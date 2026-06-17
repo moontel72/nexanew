@@ -6,14 +6,13 @@
 //
 // MODULE: 13B — Dynamic Route & Waypoint Line Scheduler
 
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/route_map_editor_painter.dart';
 
 class RouteEditorScreen extends StatefulWidget {
-  final String? routeId; // null = new route
+  final String? routeId;
   final String carrierCompanyId;
   const RouteEditorScreen({
     super.key,
@@ -26,10 +25,10 @@ class RouteEditorScreen extends StatefulWidget {
 
 class _RouteEditorScreenState extends State<RouteEditorScreen> {
   final _api = ApiService();
-  final _nameCtrl = TextEditingController();
-  final _codeCtrl = TextEditingController();
-  final _originCtrl = TextEditingController();
-  final _destCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController(),
+      _codeCtrl = TextEditingController();
+  final _originCtrl = TextEditingController(),
+      _destCtrl = TextEditingController();
   List<EditorWaypoint> _waypoints = [];
   EditorWaypoint? _dragging;
   bool _saving = false, _loading = true;
@@ -42,9 +41,9 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   void initState() {
     super.initState();
     _routeId = widget.routeId;
-    if (_routeId != null)
+    if (_routeId != null) {
       _loadRoute();
-    else {
+    } else {
       _loading = false;
       _addDefaultWaypoints();
     }
@@ -104,7 +103,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     }
     setState(() => _saving = true);
     try {
-      Map<String, dynamic> body = {
+      final body = {
         'route_code': _codeCtrl.text,
         'display_name': _nameCtrl.text,
         'origin_city': _originCtrl.text,
@@ -114,14 +113,12 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         'destination_lat': _waypoints.last.lat,
         'destination_lng': _waypoints.last.lng,
       };
-      dynamic result;
       if (_routeId == null) {
-        result = await _api.post('/bus-fleet/routes', body: body);
-        _routeId = result['data']['id']?.toString();
+        final r = await _api.post('/bus-fleet/routes', body: body);
+        _routeId = r['data']['id']?.toString();
       } else {
         await _api.put('/bus-fleet/routes/$_routeId', body: body);
       }
-      // Save waypoints
       if (_routeId != null) {
         await _api.post(
           '/bus-fleet/routes/$_routeId/waypoints',
@@ -151,7 +148,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
             backgroundColor: Colors.red.shade700,
             behavior: SnackBarBehavior.floating,
           ),
@@ -177,7 +174,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${e}').replaceAll('Exception: ', ''),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
             backgroundColor: Colors.red.shade700,
             behavior: SnackBarBehavior.floating,
           ),
@@ -186,162 +183,152 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(_routeId == null ? 'New Route' : 'Edit Route'),
-        actions: [
-          if (_routeId != null)
-            TextButton(
-              onPressed: _publish,
-              child: const Text(
-                'Publish',
-                style: TextStyle(
-                  color: Color(0xFF16A34A),
-                  fontWeight: FontWeight.w600,
-                ),
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: const Color(0xFFF8FAFC),
+    appBar: AppBar(
+      title: Text(_routeId == null ? 'New Route' : 'Edit Route'),
+      actions: [
+        if (_routeId != null)
+          TextButton(
+            onPressed: _publish,
+            child: const Text(
+              'Publish',
+              style: TextStyle(
+                color: Color(0xFF16A34A),
+                fontWeight: FontWeight.w600,
               ),
             ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _buildForm(),
-                Expanded(child: _buildCanvas()),
-                _buildBottomBar(),
-              ],
-            ),
-    );
-  }
+          ),
+        const SizedBox(width: 4),
+      ],
+    ),
+    body: _loading
+        ? const Center(child: CircularProgressIndicator())
+        : Column(
+            children: [
+              _buildForm(),
+              Expanded(child: _buildCanvas()),
+              _buildBottomBar(),
+            ],
+          ),
+  );
 
-  Widget _buildForm() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      color: Colors.white,
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _codeCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Code',
-                hintText: 'LHR-ISB-001',
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
+  Widget _buildForm() => Container(
+    padding: const EdgeInsets.all(12),
+    color: Colors.white,
+    child: Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _codeCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Code',
+              hintText: 'LHR-ISB-001',
+              isDense: true,
+              border: OutlineInputBorder(),
             ),
           ),
-          const Gap(8),
-          Expanded(
-            flex: 2,
-            child: TextField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                hintText: 'Lahore → Islamabad Express',
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
+        ),
+        const Gap(8),
+        Expanded(
+          flex: 2,
+          child: TextField(
+            controller: _nameCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              hintText: 'Lahore → Islamabad Express',
+              isDense: true,
+              border: OutlineInputBorder(),
             ),
           ),
-          const Gap(8),
-          Expanded(
-            child: TextField(
-              controller: _originCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Origin',
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
+        ),
+        const Gap(8),
+        Expanded(
+          child: TextField(
+            controller: _originCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Origin',
+              isDense: true,
+              border: OutlineInputBorder(),
             ),
           ),
-          const Gap(8),
-          Expanded(
-            child: TextField(
-              controller: _destCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Dest.',
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
+        ),
+        const Gap(8),
+        Expanded(
+          child: TextField(
+            controller: _destCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Dest.',
+              isDense: true,
+              border: OutlineInputBorder(),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 
-  Widget _buildCanvas() {
-    return LayoutBuilder(
-      builder: (ctx, constraints) {
-        return GestureDetector(
-          onTapUp: (d) {
-            final rb = ctx.findRenderObject() as RenderBox;
-            final lp = rb.globalToLocal(d.globalPosition);
-            final (lat, lng) = RouteMapEditorPainter.inverseProject(
-              lp,
-              rb.size,
-              _minLat,
-              _maxLat,
-              _minLng,
-              _maxLng,
-            );
-            setState(
-              () => _waypoints.add(
-                EditorWaypoint(
-                  id: DateTime.now().microsecondsSinceEpoch.toString(),
-                  stationName: 'Stop ${_waypoints.length + 1}',
-                  lat: lat,
-                  lng: lng,
-                  order: _waypoints.length,
-                ),
-              ),
-            );
-          },
-          child: CustomPaint(
-            painter: RouteMapEditorPainter(
-              waypoints: _waypoints,
-              draggingWaypoint: _dragging,
-              minLat: _minLat,
-              maxLat: _maxLat,
-              minLng: _minLng,
-              maxLng: _maxLng,
-              originCity: _originCtrl.text,
-              destinationCity: _destCtrl.text,
+  Widget _buildCanvas() => LayoutBuilder(
+    builder: (ctx, constraints) => GestureDetector(
+      onTapUp: (d) {
+        final rb = ctx.findRenderObject() as RenderBox;
+        final lp = rb.globalToLocal(d.globalPosition);
+        final (lat, lng) = RouteMapEditorPainter.inverseProject(
+          lp,
+          rb.size,
+          _minLat,
+          _maxLat,
+          _minLng,
+          _maxLng,
+        );
+        setState(
+          () => _waypoints.add(
+            EditorWaypoint(
+              id: DateTime.now().microsecondsSinceEpoch.toString(),
+              stationName: 'Stop ${_waypoints.length + 1}',
+              lat: lat,
+              lng: lng,
+              order: _waypoints.length,
             ),
-            size: Size.infinite,
           ),
         );
       },
-    );
-  }
-
-  Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: Row(
-        children: [
-          Text(
-            '${_waypoints.length} stops',
-            style: const TextStyle(color: Color(0xFF64748B)),
-          ),
-          const Spacer(),
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          const Gap(8),
-          FilledButton(
-            onPressed: _saving ? null : _save,
-            child: Text(_saving ? 'Saving...' : 'Save Route'),
-          ),
-        ],
+      child: CustomPaint(
+        painter: RouteMapEditorPainter(
+          waypoints: _waypoints,
+          draggingWaypoint: _dragging,
+          minLat: _minLat,
+          maxLat: _maxLat,
+          minLng: _minLng,
+          maxLng: _maxLng,
+          originCity: _originCtrl.text,
+          destinationCity: _destCtrl.text,
+        ),
+        size: Size.infinite,
       ),
-    );
-  }
+    ),
+  );
+
+  Widget _buildBottomBar() => Container(
+    padding: const EdgeInsets.all(16),
+    color: Colors.white,
+    child: Row(
+      children: [
+        Text(
+          '${_waypoints.length} stops',
+          style: const TextStyle(color: Color(0xFF64748B)),
+        ),
+        const Spacer(),
+        OutlinedButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        const Gap(8),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: Text(_saving ? 'Saving...' : 'Save Route'),
+        ),
+      ],
+    ),
+  );
 }
