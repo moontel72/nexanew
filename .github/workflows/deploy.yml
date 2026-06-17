@@ -24,10 +24,10 @@ jobs:
         with:
           php-version: "8.2"
 
-      - name: Install PHP dependencies
+      - name: Install PHP dependencies (with Reverb)
         run: |
           cd backend
-          composer install --no-interaction --prefer-dist --optimize-autoloader
+          composer require laravel/reverb --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
