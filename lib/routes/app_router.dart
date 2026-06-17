@@ -255,6 +255,8 @@ class AppRouter {
     if (path == '/truck-conductor/dashboard') return null;
     // Goods Fleet login — public access for goods company owners
     if (path == '/goods-fleet/login') return null;
+    // Customer App — guest mode, no auth required for transit browsing
+    if (path.startsWith('/customer')) return null;
 
     // ── Protected routes - require authentication ─────────────
     // These are admin panel routes that require super admin login
