@@ -8,21 +8,21 @@
 
 /// Visual category for rendering the seat shape and color.
 enum PassengerSeatCategory {
-  standard,       // Regular forward-facing seat
-  businessClass,  // Premium wide seat (2×1)
-  sleeper,        // Sleeper berth (lower or upper)
-  folding,        // Fold-down aisle seat
-  driverCabin,    // Driver cockpit (not bookable)
-  structural,     // Aisle, door, lavatory (not bookable)
+  standard, // Regular forward-facing seat
+  businessClass, // Premium wide seat (2×1)
+  sleeper, // Sleeper berth (lower or upper)
+  folding, // Fold-down aisle seat
+  driverCabin, // Driver cockpit (not bookable)
+  structural, // Aisle, door, lavatory (not bookable)
 }
 
 /// Live booking state reflected in the seat grid.
 enum SeatAvailability {
-  available,    // Free — tappable
-  selected,     // Currently held by THIS passenger
-  booked,       // Taken by another passenger
-  held,         // Temporarily locked by another session
-  unavailable,  // Structural or not bookable
+  available, // Free — tappable
+  selected, // Currently held by THIS passenger
+  booked, // Taken by another passenger
+  held, // Temporarily locked by another session
+  unavailable, // Structural or not bookable
 }
 
 /// Clean render model for one component in the passenger seat grid.
@@ -31,16 +31,16 @@ class PassengerSeatModel {
   final PassengerSeatCategory category;
   final SeatAvailability availability;
   final int? seatNumber;
-  final String? seatLabel;      // e.g. "12A", "L3", "U1"
-  final double x;               // absolute X in layout coordinates
-  final double y;               // absolute Y in layout coordinates
+  final String? seatLabel; // e.g. "12A", "L3", "U1"
+  final double x; // absolute X in layout coordinates
+  final double y; // absolute Y in layout coordinates
   final double width;
   final double height;
-  final double rotation;        // degrees clockwise
+  final double rotation; // degrees clockwise
   final bool isReverseFacing;
   final String? genderRestriction; // null, "male", "female", "family"
-  final String? berthLabel;     // "L" or "U" for sleeper berths
-  final double? price;          // ticket price override (null = default)
+  final String? berthLabel; // "L" or "U" for sleeper berths
+  final double? price; // ticket price override (null = default)
 
   const PassengerSeatModel({
     required this.componentId,
@@ -96,10 +96,7 @@ class PassengerSeatModel {
   }
 
   /// Clone with overrides (immutable pattern).
-  PassengerSeatModel copyWith({
-    SeatAvailability? availability,
-    double? price,
-  }) {
+  PassengerSeatModel copyWith({SeatAvailability? availability, double? price}) {
     return PassengerSeatModel(
       componentId: componentId,
       category: category,
@@ -115,6 +112,26 @@ class PassengerSeatModel {
       genderRestriction: genderRestriction,
       berthLabel: berthLabel,
       price: price ?? this.price,
+    );
+  }
+
+  /// Clone with a new seat label (used by auto-label generator).
+  PassengerSeatModel copyWithLabel(String newLabel) {
+    return PassengerSeatModel(
+      componentId: componentId,
+      category: category,
+      availability: availability,
+      seatNumber: seatNumber,
+      seatLabel: newLabel,
+      x: x,
+      y: y,
+      width: width,
+      height: height,
+      rotation: rotation,
+      isReverseFacing: isReverseFacing,
+      genderRestriction: genderRestriction,
+      berthLabel: berthLabel,
+      price: price,
     );
   }
 
@@ -147,7 +164,8 @@ PassengerSeatModel parsePassengerSeat(
     return PassengerSeatModel(
       componentId: 'unknown',
       category: PassengerSeatCategory.structural,
-      x: 0, y: 0,
+      x: 0,
+      y: 0,
     );
   }
 
@@ -159,27 +177,34 @@ PassengerSeatModel parsePassengerSeat(
   return PassengerSeatModel(
     componentId: (map['id'] ?? '').toString(),
     category: category,
-    availability: category == PassengerSeatCategory.structural ||
+    availability:
+        category == PassengerSeatCategory.structural ||
             category == PassengerSeatCategory.driverCabin
         ? SeatAvailability.unavailable
         : isBooked
-            ? SeatAvailability.booked
-            : SeatAvailability.available,
+        ? SeatAvailability.booked
+        : SeatAvailability.available,
     seatNumber: seatNum,
-    seatLabel: (map['custom_label'] ?? map['customLabel'] ?? map['seat_label'] ?? '').toString(),
+    seatLabel:
+        (map['custom_label'] ?? map['customLabel'] ?? map['seat_label'] ?? '')
+            .toString(),
     x: _doubleOr(map['x'], 0),
     y: _doubleOr(map['y'], 0),
     width: _doubleOr(map['width'], 56),
     height: _doubleOr(map['height'], 56),
     rotation: _doubleOr(map['rotation'], 0),
-    isReverseFacing: map['is_reverse_facing'] == true || map['isReverseFacing'] == true,
-    genderRestriction: (map['gender_restriction'] ?? map['genderRestriction'])?.toString(),
+    isReverseFacing:
+        map['is_reverse_facing'] == true || map['isReverseFacing'] == true,
+    genderRestriction: (map['gender_restriction'] ?? map['genderRestriction'])
+        ?.toString(),
     berthLabel: (map['berth_label'] ?? map['berthLabel'])?.toString(),
     price: _doubleOrNull(map['price'] ?? map['ticket_price']),
   );
 }
 
 /// Parse an entire layout snapshot into a list of seat models.
+/// Also auto-generates row+letter labels (e.g. "1A", "1B") for
+/// seats that only have plain numeric labels.
 List<PassengerSeatModel> parsePassengerSeats(
   Map<String, dynamic> snapshot, {
   List<int> bookedSeatNumbers = const [],
@@ -188,10 +213,103 @@ List<PassengerSeatModel> parsePassengerSeats(
   final components = snapshot['components'];
   if (components is! List) return [];
 
-  return components
+  final seats = components
       .map((c) => parsePassengerSeat(c, bookedSeatNumbers: booked))
       .toList();
+
+  // Auto-generate airline-style row+letter labels for seats
+  // that only have plain numeric labels
+  _applySeatLabels(seats);
+
+  return seats;
 }
+
+/// Auto-generate row+letter labels based on grid position.
+/// Groups seats by Y-coordinate (row) and assigns A/B/C...
+/// from left to right within each row.
+void _applySeatLabels(List<PassengerSeatModel> seats) {
+  final bookable = seats.where((s) => !s.isStructural).toList();
+  if (bookable.isEmpty) return;
+
+  // Determine if any seat already has a proper alphanumeric label
+  final hasAlpha = bookable.any((s) {
+    final label = s.seatLabel ?? '';
+    return label.isNotEmpty && !_isNumericOnly(label);
+  });
+
+  // If labels are already alphanumeric (e.g. set in designer), don't override
+  if (hasAlpha) return;
+
+  // Group seats by Y-coordinate (rounded to nearest whole number to form rows)
+  final rowMap = <int, List<PassengerSeatModel>>{};
+  for (final seat in bookable) {
+    final row = seat.y.round();
+    rowMap.putIfAbsent(row, () => []).add(seat);
+  }
+
+  // Sort rows by Y (top to bottom)
+  final sortedRows = rowMap.entries.toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
+
+  // Assign labels row by row
+  for (var rowIdx = 0; rowIdx < sortedRows.length; rowIdx++) {
+    final rowSeats = sortedRows[rowIdx].value;
+    // Sort seats within row by X (left to right)
+    rowSeats.sort((a, b) => a.x.compareTo(b.x));
+
+    // Detect aisle gap (large X gap between columns)
+    double? aisleX;
+    if (rowSeats.length >= 4) {
+      for (var i = 1; i < rowSeats.length; i++) {
+        final gap = rowSeats[i].x - (rowSeats[i - 1].x + rowSeats[i - 1].width);
+        if (gap > rowSeats[0].width * 1.2) {
+          aisleX = rowSeats[i - 1].x + rowSeats[i - 1].width + gap / 2;
+          break;
+        }
+      }
+    }
+
+    final rowNum = rowIdx + 1;
+    // Capture aisleX in a local for null-safety promotion in closures
+    final mid = aisleX;
+    // Collect left-side and right-side seats
+    final leftSide = mid != null
+        ? rowSeats.where((s) => s.centerX < mid).toList()
+        : rowSeats;
+    final rightSide = mid != null
+        ? rowSeats.where((s) => s.centerX >= mid).toList()
+        : <PassengerSeatModel>[];
+
+    // Assign letters: A,B,C... for left, then D,E,F... for right
+    final leftLetters = <String>[];
+    final rightLetters = <String>[];
+    final allCount = leftSide.length + rightSide.length;
+    for (var i = 0; i < allCount; i++) {
+      final letter = String.fromCharCode(65 + i); // A, B, C, ...
+      if (i < leftSide.length) {
+        leftLetters.add('$rowNum$letter');
+      } else {
+        rightLetters.add('$rowNum$letter');
+      }
+    }
+
+    // Create new seat models with updated labels
+    for (var i = 0; i < leftSide.length; i++) {
+      final idx = seats.indexOf(leftSide[i]);
+      if (idx >= 0) {
+        seats[idx] = seats[idx].copyWithLabel(leftLetters[i]);
+      }
+    }
+    for (var i = 0; i < rightSide.length; i++) {
+      final idx = seats.indexOf(rightSide[i]);
+      if (idx >= 0) {
+        seats[idx] = seats[idx].copyWithLabel(rightLetters[i]);
+      }
+    }
+  }
+}
+
+bool _isNumericOnly(String s) => RegExp(r'^\d+$').hasMatch(s);
 
 /// Resolve a JSON type string to PassengerSeatCategory.
 PassengerSeatCategory _resolveCategory(String type) {

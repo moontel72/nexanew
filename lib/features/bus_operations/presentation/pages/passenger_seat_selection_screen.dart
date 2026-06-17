@@ -12,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/features/bus_operations/data/models/passenger_seat_model.dart';
-import 'package:trace_odd/features/bus_operations/data/repositories/seat_booking_repository.dart';
 import 'package:trace_odd/features/bus_operations/data/services/ticket_vault_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/seat_selection/seat_selection_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/passenger_seat_painter.dart';
@@ -158,17 +157,17 @@ class _PassengerSeatSelectionScreenState
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _legendDot(const Color(0xFF22C55E), 'Available'),
+          _legendDot(const Color(0xFF3B82F6), 'Available'),
           const Gap(16),
-          _legendDot(const Color(0xFF3B82F6), 'Selected'),
+          _legendDot(const Color(0xFF10B981), 'Selected'),
           const Gap(16),
-          _legendDot(const Color(0xFFEF4444), 'Booked'),
+          _legendDot(const Color(0xFF9CA3AF), 'Booked'),
           const Gap(16),
-          _legendDot(const Color(0xFFA855F7), 'Business'),
+          _legendDot(const Color(0xFF8B5CF6), 'Business'),
           const Gap(16),
           _legendDot(const Color(0xFFF59E0B), 'Sleeper'),
           const Gap(16),
-          _legendDot(const Color(0xFF9CA3AF), 'Structural'),
+          _legendDot(const Color(0xFFD1D5DB), 'Structural'),
         ],
       ),
     ),
@@ -315,7 +314,7 @@ class _PassengerSeatSelectionScreenState
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                color: const Color(0xFF10B981).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
@@ -323,7 +322,7 @@ class _PassengerSeatSelectionScreenState
                   seat.displayLabel,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF3B82F6),
+                    color: Color(0xFF10B981),
                   ),
                 ),
               ),
