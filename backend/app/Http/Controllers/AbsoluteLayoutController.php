@@ -237,6 +237,22 @@ class AbsoluteLayoutController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════════
+    // LIST PUBLIC — GET /absolute-layouts/public
+    // ═══════════════════════════════════════════════════════════
+
+    /** List all published layouts (no auth). */
+    public function listPublic(Request $request): JsonResponse
+    {
+        $perPage = (int) ($request->query('per_page', 20));
+        $result = $this->service->listPublicLayouts($perPage);
+        return response()->json([
+            'success' => true,
+            'data' => $result['data'],
+            'pagination' => $result['pagination'],
+        ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // SHOW PUBLIC — GET /absolute-layouts/{id}/public
     // ═══════════════════════════════════════════════════════════
 

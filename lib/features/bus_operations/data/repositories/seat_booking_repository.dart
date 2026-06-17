@@ -76,6 +76,22 @@ class SeatBookingRepository {
 
   // ── FETCH LAYOUT ────────────────────────────────────
 
+  /// List all published layouts (no auth — guest browsing).
+  Future<List<Map<String, dynamic>>> fetchPublishedLayouts() async {
+    try {
+      final response = await _api.get(
+        '/bus-fleet/absolute-layouts/public',
+        queryParams: {'per_page': '50'},
+        requiresAuth: false,
+      );
+      final data = _safeMap(response);
+      final list = data['data'] as List<dynamic>? ?? [];
+      return list.cast<Map<String, dynamic>>();
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// Fetch a published bus layout with live booking status.
   /// Uses the public endpoint (no auth required) so guest customers
   /// can browse seat maps before sign-in. Only published layouts are returned.

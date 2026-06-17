@@ -212,6 +212,28 @@ class AbsoluteLayoutService
     }
 
     // ═══════════════════════════════════════════════════════════
+    // LIST PUBLIC (no auth — customer guest browsing)
+    // ═══════════════════════════════════════════════════════════
+
+    /** List all published layouts (no auth). */
+    public function listPublicLayouts(int $perPage = 20): array
+    {
+        $perPage = max(1, min(100, $perPage));
+        $paginator = AbsoluteBusLayout::where('layout_status', 'published')
+            ->orderBy('updated_at', 'desc')
+            ->paginate($perPage);
+        return [
+            'data' => $paginator->items(),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ];
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // SHOW PUBLIC (no auth — customer guest browsing)
     // ═══════════════════════════════════════════════════════════
 
@@ -223,55 +245,69 @@ class AbsoluteLayoutService
      */
     public function showPublicLayout(string $id, bool $includeBookings = false): ?array
     {
-        $layout = AbsoluteBusLayout::where('id', $id)
-            ->where('layout_status', 'published')
-            ->first();
-
-        if (!$layout) return null;
-
-        $result = $layout->toArray();
-
-        if ($includeBookings) {
-            // Attach booked seat numbers (trip-agnostic: all bookings for this layout)
-            $bookedSeats = DB::table('transport_seat_bookings')
-                ->where('bus_id', $id)
-                ->whereIn('status', ['confirmed', 'boarded'])
-                ->pluck('seat_number')
-                ->toArray();
-
-            $result['booked_seats'] = $bookedSeats;
-            $result['booked_seat_numbers'] = $bookedSeats;
+        // Reject non-UUID values before they hit PostgreSQL to avoid
+        // SQLSTATE[22P02] "invalid input syntax for type uuid".
+        if (!\Illuminate\Support\Str::isUuid($id)) {
+            return null;
         }
 
-        // Count total seats from the snapshot components
-        $snapshot = $layout->current_snapshot;
-        $components = is_string($snapshot) ? json_decode($snapshot, true) : ($snapshot ?? []);
-        $seats = $components['seats'] ?? $components['components'] ?? $components ?? [];
-        $totalSeats = is_array($seats) ? count($seats) : 0;
+        try {
+            $layout = AbsoluteBusLayout::where('id', $id)
+                ->where('layout_status', 'published')
+                ->first();
 
-        $bookedCount = 0;
-        if (!empty($result['booked_seats']) && is_array($result['booked_seats'])) {
-            $bookedCount = count($result['booked_seats']);
-        } elseif (!empty($result['booked_seat_numbers']) && is_array($result['booked_seat_numbers'])) {
-            $bookedCount = count($result['booked_seat_numbers']);
+            if (!$layout) return null;
+
+            $result = $layout->toArray();
+
+            if ($includeBookings) {
+                // Attach booked seat numbers (trip-agnostic: all bookings for this layout)
+                $bookedSeats = DB::table('transport_seat_bookings')
+                    ->where('bus_id', $id)
+                    ->whereIn('status', ['confirmed', 'boarded'])
+                    ->pluck('seat_number')
+                    ->toArray();
+
+                $result['booked_seats'] = $bookedSeats;
+                $result['booked_seat_numbers'] = $bookedSeats;
+            }
+
+            // Count total seats from the snapshot components
+            $snapshot = $layout->current_snapshot;
+            $components = is_string($snapshot) ? json_decode($snapshot, true) : ($snapshot ?? []);
+            $seats = $components['seats'] ?? $components['components'] ?? $components ?? [];
+            $totalSeats = is_array($seats) ? count($seats) : 0;
+
+            $bookedCount = 0;
+            if (!empty($result['booked_seats']) && is_array($result['booked_seats'])) {
+                $bookedCount = count($result['booked_seats']);
+            } elseif (!empty($result['booked_seat_numbers']) && is_array($result['booked_seat_numbers'])) {
+                $bookedCount = count($result['booked_seat_numbers']);
+            }
+            $availableSeats = max(0, $totalSeats - $bookedCount);
+
+            $result['total_seats'] = $totalSeats;
+            $result['available_seats'] = $availableSeats;
+
+            // Embed canvas dimensions inside current_snapshot so the Flutter
+            // BLoC can read them via result.snapshot['canvas'].
+            $snapshotDecoded = is_string($snapshot) ? json_decode($snapshot, true) : ($snapshot ?? []);
+            if (is_array($snapshotDecoded)) {
+                $snapshotDecoded['canvas'] = [
+                    'width' => (int) ($layout->canvas_width ?? 280),
+                    'height' => (int) ($layout->canvas_height ?? 728),
+                ];
+                $result['current_snapshot'] = $snapshotDecoded;
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            Log::warning('showPublicLayout failed', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
         }
-        $availableSeats = max(0, $totalSeats - $bookedCount);
-
-        $result['total_seats'] = $totalSeats;
-        $result['available_seats'] = $availableSeats;
-
-        // Embed canvas dimensions inside current_snapshot so the Flutter
-        // BLoC can read them via result.snapshot['canvas'].
-        $snapshotDecoded = is_string($snapshot) ? json_decode($snapshot, true) : ($snapshot ?? []);
-        if (is_array($snapshotDecoded)) {
-            $snapshotDecoded['canvas'] = [
-                'width' => (int) ($layout->canvas_width ?? 280),
-                'height' => (int) ($layout->canvas_height ?? 728),
-            ];
-            $result['current_snapshot'] = $snapshotDecoded;
-        }
-
-        return $result;
     }
 
     // ═══════════════════════════════════════════════════════════
