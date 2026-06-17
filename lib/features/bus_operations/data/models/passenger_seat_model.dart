@@ -186,7 +186,11 @@ PassengerSeatModel parsePassengerSeat(
         : SeatAvailability.available,
     seatNumber: seatNum,
     seatLabel:
-        (map['custom_label'] ?? map['customLabel'] ?? map['seat_label'] ?? '')
+        (map['custom_label'] ??
+                map['customLabel'] ??
+                map['seat_id'] ??
+                map['seat_label'] ??
+                '')
             .toString(),
     x: _doubleOr(map['x'], 0),
     y: _doubleOr(map['y'], 0),
