@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/features/bus_operations/data/models/passenger_seat_model.dart';
+import 'package:trace_odd/features/bus_operations/data/repositories/seat_booking_repository.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/seat_selection/seat_selection_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/passenger_seat_painter.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/seat_booking_sheet.dart';
@@ -46,7 +47,6 @@ class _PassengerSeatSelectionScreenState
     super.initState();
     _bloc = SeatSelectionBloc();
     _bloc.add(LoadBusLayout(widget.layoutId, tripId: widget.tripId));
-
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -71,23 +71,11 @@ class _PassengerSeatSelectionScreenState
         body: BlocConsumer<SeatSelectionBloc, SeatSelectionState>(
           listener: _onStateChanged,
           builder: (context, state) {
-            return switch (state.status) {
-              SeatSelectionStatus.initial ||
-              SeatSelectionStatus.loadingLayout => _buildLoading(),
-              SeatSelectionStatus.layoutReady ||
-              SeatSelectionStatus.selectingSeat ||
-              SeatSelectionStatus.confirmingBooking ||
-              SeatSelectionStatus.bookingInProgress ||
-              SeatSelectionStatus.refreshing => _buildSeatGrid(context, state),
-              SeatSelectionStatus.bookingSuccess => _buildSeatGrid(
-                context,
-                state,
-              ),
-              SeatSelectionStatus.bookingFailure => _buildSeatGrid(
-                context,
-                state,
-              ),
-            };
+            if (state.status == SeatSelectionStatus.initial ||
+                state.status == SeatSelectionStatus.loadingLayout) {
+              return _buildLoading();
+            }
+            return _buildSeatGrid(context, state);
           },
         ),
       ),
@@ -106,40 +94,28 @@ class _PassengerSeatSelectionScreenState
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               if (state.status != SeatSelectionStatus.initial &&
                   state.status != SeatSelectionStatus.loadingLayout)
                 Text(
                   '${state.availableSeats} of ${state.totalSeats} available',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
             ],
           );
         },
       ),
       actions: [
-        // ── Refresh button ──
         BlocBuilder<SeatSelectionBloc, SeatSelectionState>(
           builder: (_, state) => IconButton(
             icon: const Icon(Icons.refresh, size: 20),
             tooltip: 'Refresh availability',
-            onPressed:
-                state.status == SeatSelectionStatus.loadingLayout ||
+            onPressed: state.status == SeatSelectionStatus.loadingLayout ||
                     state.status == SeatSelectionStatus.bookingInProgress
                 ? null
                 : () => _bloc.add(const RefreshBookings()),
           ),
         ),
-        // ── Filter button ──
         _buildFilterMenu(),
         const SizedBox(width: 4),
       ],
@@ -155,10 +131,7 @@ class _PassengerSeatSelectionScreenState
         children: [
           CircularProgressIndicator(strokeWidth: 2.5),
           Gap(16),
-          Text(
-            'Loading bus layout...',
-            style: TextStyle(color: Color(0xFF64748B)),
-          ),
+          Text('Loading bus layout...', style: TextStyle(color: Color(0xFF64748B))),
         ],
       ),
     );
@@ -169,11 +142,8 @@ class _PassengerSeatSelectionScreenState
   Widget _buildSeatGrid(BuildContext context, SeatSelectionState state) {
     return Column(
       children: [
-        // ── Legend bar ──
         _buildLegend(context),
-        // ── Interactive grid ──
         Expanded(child: _buildInteractiveCanvas(context, state)),
-        // ── Bottom selection bar ──
         if (state.hasSelection) _buildSelectionBar(context, state),
       ],
     );
@@ -211,8 +181,7 @@ class _PassengerSeatSelectionScreenState
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 12, height: 12,
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(3),
@@ -220,26 +189,19 @@ class _PassengerSeatSelectionScreenState
           ),
         ),
         const Gap(6),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF475569)),
-        ),
+        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF475569))),
       ],
     );
   }
 
   // ── INTERACTIVE CANVAS ───────────────────────────────
 
-  Widget _buildInteractiveCanvas(
-    BuildContext context,
-    SeatSelectionState state,
-  ) {
+  Widget _buildInteractiveCanvas(BuildContext context, SeatSelectionState state) {
     final pw = state.canvasWidth;
     final ph = state.canvasHeight;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Fit the canvas to fill width with aspect ratio
         final fitScale = constraints.maxWidth / pw;
         final fittedHeight = ph * fitScale;
 
@@ -276,28 +238,17 @@ class _PassengerSeatSelectionScreenState
     );
   }
 
-  void _handleTap(
-    TapUpDetails details,
-    SeatSelectionState state,
-    double scale,
-  ) {
-    // Transform tap from screen coordinates to canvas coordinates
+  void _handleTap(TapUpDetails details, SeatSelectionState state, double scale) {
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
     final localPos = renderBox.globalToLocal(details.globalPosition);
-    // Account for InteractiveViewer transform
     final matrix = _transformCtrl.value;
     final inv = Matrix4.inverted(matrix);
-
-    // Transform to canvas space
     final canvasPoint = MatrixUtils.transformPoint(inv, localPos);
-
-    // Scale back to layout coordinate space
     final cx = canvasPoint.dx / scale;
     final cy = canvasPoint.dy / scale;
 
-    // Hit-test against seats
     for (final seat in state.seats.reversed) {
       if (seat.containsPoint(cx, cy)) {
         if (seat.isTappable) {
@@ -324,46 +275,20 @@ class _PassengerSeatSelectionScreenState
       tooltip: 'Filter seats',
       onSelected: (value) {
         switch (value) {
-          case 'all':
-            _bloc.add(const SetGenderFilter(''));
-            break;
-          case 'male':
-            _bloc.add(const SetGenderFilter('male'));
-            break;
-          case 'female':
-            _bloc.add(const SetGenderFilter('female'));
-            break;
-          case 'family':
-            _bloc.add(const SetGenderFilter('family'));
-            break;
-          case 'available':
-            _bloc.add(const ToggleShowOnlyAvailable());
-            break;
+          case 'all':    _bloc.add(const SetGenderFilter('')); break;
+          case 'male':   _bloc.add(const SetGenderFilter('male')); break;
+          case 'female': _bloc.add(const SetGenderFilter('female')); break;
+          case 'family': _bloc.add(const SetGenderFilter('family')); break;
+          case 'available': _bloc.add(const ToggleShowOnlyAvailable()); break;
         }
       },
-      itemBuilder: (_) => [
-        const PopupMenuItem(value: 'all', child: Text('All Seats')),
-        const PopupMenuItem(value: 'male', child: Text('Male Section')),
-        const PopupMenuItem(value: 'female', child: Text('Female Section')),
-        const PopupMenuItem(value: 'family', child: Text('Family Section')),
-        const PopupMenuDivider(),
-        BlocBuilder<SeatSelectionBloc, SeatSelectionState>(
-          builder: (_, state) => PopupMenuItem(
-            value: 'available',
-            child: Row(
-              children: [
-                Icon(
-                  state.showOnlyAvailable
-                      ? Icons.check_box
-                      : Icons.check_box_outline_blank,
-                  size: 18,
-                ),
-                const Gap(8),
-                const Text('Available Only'),
-              ],
-            ),
-          ),
-        ),
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: 'all', child: Text('All Seats')),
+        PopupMenuItem(value: 'male', child: Text('Male Section')),
+        PopupMenuItem(value: 'female', child: Text('Female Section')),
+        PopupMenuItem(value: 'family', child: Text('Family Section')),
+        PopupMenuDivider(),
+        PopupMenuItem(value: 'available', child: Text('Available Only')),
       ],
     );
   }
@@ -390,22 +315,15 @@ class _PassengerSeatSelectionScreenState
         top: false,
         child: Row(
           children: [
-            // Seat badge
             Container(
-              width: 44,
-              height: 44,
+              width: 44, height: 44,
               decoration: BoxDecoration(
                 color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
-                child: Text(
-                  seat.displayLabel,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF3B82F6),
-                  ),
-                ),
+                child: Text(seat.displayLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF3B82F6))),
               ),
             ),
             const Gap(12),
@@ -414,26 +332,15 @@ class _PassengerSeatSelectionScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Seat ${seat.displayLabel} selected',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    'Tap continue to book',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  Text('Seat ${seat.displayLabel} selected',
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                  Text('Tap continue to book',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),
             const Gap(8),
-            TextButton(
-              onPressed: () => _bloc.add(const DeselectSeat()),
-              child: const Text('Cancel'),
-            ),
+            TextButton(onPressed: () => _bloc.add(const DeselectSeat()), child: const Text('Cancel')),
             const Gap(4),
             FilledButton(
               onPressed: state.status == SeatSelectionStatus.bookingInProgress
@@ -463,10 +370,10 @@ class _PassengerSeatSelectionScreenState
       builder: (_) => SeatBookingSheet(
         seat: seat,
         currentMethod: state.paymentMethod,
-        basePrice: seat.price ?? 500, // default ticket price
+        basePrice: seat.price ?? 500,
         voucherCode: state.voucherCode,
         onConfirm: () {
-          Navigator.pop(context); // close sheet
+          Navigator.pop(context);
           _bloc.add(const ConfirmBooking());
         },
         onMethodChanged: (m) => _bloc.add(ChangePaymentMethod(m)),
@@ -479,21 +386,15 @@ class _PassengerSeatSelectionScreenState
   // ── STATE LISTENER ───────────────────────────────────
 
   void _onStateChanged(BuildContext context, SeatSelectionState state) {
-    if (state.status == SeatSelectionStatus.bookingSuccess &&
-        state.bookingResult != null) {
+    if (state.status == SeatSelectionStatus.bookingSuccess && state.bookingResult != null) {
       _showBookingSuccess(state.bookingResult!);
-    } else if (state.status == SeatSelectionStatus.bookingFailure &&
-        state.errorMessage != null) {
+    } else if (state.status == SeatSelectionStatus.bookingFailure && state.errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(state.errorMessage!),
           backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: 'Dismiss',
-            textColor: Colors.white,
-            onPressed: () {},
-          ),
+          action: SnackBarAction(label: 'Dismiss', textColor: Colors.white, onPressed: () {}),
         ),
       );
     }
@@ -505,33 +406,25 @@ class _PassengerSeatSelectionScreenState
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        icon: const Icon(
-          Icons.check_circle,
-          color: Color(0xFF16A34A),
-          size: 56,
-        ),
+        icon: const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 56),
         title: const Text('Booking Confirmed!'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Seat ${result.seatNumber} has been booked.'),
             const Gap(8),
-            Text(
-              'Booking ID: ${result.bookingId ?? 'N/A'}',
-              style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-            ),
+            Text('Booking ID: ${result.bookingId ?? 'N/A'}',
+                style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
             const Gap(4),
-            Text(
-              'Amount paid: Rs. ${result.ticketPrice.toInt()}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+            Text('Amount paid: Rs. ${result.ticketPrice.toInt()}',
+                style: const TextStyle(fontWeight: FontWeight.w600)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // close dialog
-              Navigator.pop(context); // go back
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             child: const Text('Done'),
           ),
