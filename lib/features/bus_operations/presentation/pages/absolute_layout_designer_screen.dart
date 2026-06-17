@@ -303,7 +303,8 @@ class _AbsoluteLayoutDesignerScreenState
     }
   }
 
-  Future<void> _saveLayout() async {
+  Future<void> _saveLayout({bool autoPublish = false}) async {
+    final isNew = _state.layoutId == null;
     final snapshot = _state.toSnapshot();
     final body = {
       'display_name': _state.displayName,
@@ -339,6 +340,25 @@ class _AbsoluteLayoutDesignerScreenState
             backgroundColor: Color(0xFF16A34A),
           ),
         );
+      }
+
+      // Auto-publish new layouts so they appear immediately in the Customer App
+      if (isNew || autoPublish) {
+        final newId = id ?? _state.layoutId;
+        if (newId != null && mounted) {
+          await _api.post(
+            '${widget.apiPrefix}/absolute-layouts/$newId/publish',
+          );
+          _setState(_state.copyWith(isDirty: false));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Published — now live on Customer App'),
+                backgroundColor: Color(0xFFD97706),
+              ),
+            );
+          }
+        }
       }
     } catch (e) {
       _setState(
@@ -1462,9 +1482,9 @@ class _AbsoluteLayoutDesignerScreenState
                     ),
                   ),
                 ),
-              // ── SAVE LAYOUT button ──
+              // ── SAVE LAYOUT button (auto-publishes new layouts) ──
               ElevatedButton.icon(
-                onPressed: _state.isSaving ? null : _saveLayout,
+                onPressed: _state.isSaving ? null : () => _saveLayout(),
                 icon: _state.isSaving
                     ? const SizedBox(
                         width: 14,
@@ -1475,9 +1495,12 @@ class _AbsoluteLayoutDesignerScreenState
                         ),
                       )
                     : const Icon(Icons.save, size: 16),
-                label: const Text(
-                  'Save Layout',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                label: Text(
+                  _state.layoutId == null ? 'Save & Publish' : 'Save Layout',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF16A34A),
@@ -1492,18 +1515,11 @@ class _AbsoluteLayoutDesignerScreenState
                 ),
               ),
               const Gap(8),
-              // ── PUBLISH button ──
+              // ── PUBLISH button (re-publish existing layouts) ──
               ElevatedButton.icon(
-                onPressed: _state.isSaving
+                onPressed: _state.isSaving || _state.layoutId == null
                     ? null
-                    : (_state.layoutId != null
-                          ? _publishLayout
-                          : () async {
-                              await _saveLayout();
-                              if (_state.layoutId != null && mounted) {
-                                await _publishLayout();
-                              }
-                            }),
+                    : _publishLayout,
                 icon: _state.isSaving
                     ? const SizedBox(
                         width: 14,
@@ -1515,7 +1531,7 @@ class _AbsoluteLayoutDesignerScreenState
                       )
                     : const Icon(Icons.cloud_upload, size: 16),
                 label: const Text(
-                  'Publish',
+                  'Re-publish',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                 ),
                 style: ElevatedButton.styleFrom(
