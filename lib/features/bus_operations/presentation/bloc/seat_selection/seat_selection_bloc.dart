@@ -12,7 +12,9 @@ import 'package:trace_odd/features/bus_operations/data/repositories/seat_booking
 
 // ── EVENTS ────────────────────────────────────────────
 
-sealed class SeatSelectionEvent {}
+sealed class SeatSelectionEvent {
+  const SeatSelectionEvent();
+}
 
 class LoadBusLayout extends SeatSelectionEvent {
   final String layoutId;
@@ -113,31 +115,7 @@ class SeatSelectionState {
     this.canvasHeight = 728,
   });
 
-  List<PassengerSeatModel> get bookableSeats =>
-      seats.where((s) => !s.isStructural).toList();
-
-  int get bookedCount => bookedSeatNumbers.length;
-
   bool get hasSelection => selectedSeat != null;
-
-  List<PassengerSeatModel> get filteredSeats {
-    var list = seats.toList();
-    if (genderFilter.isNotEmpty) {
-      list = list
-          .where((s) =>
-              s.genderRestriction == null ||
-              s.genderRestriction == genderFilter)
-          .toList();
-    }
-    if (showOnlyAvailable) {
-      list = list
-          .where((s) =>
-              s.availability == SeatAvailability.available ||
-              s.availability == SeatAvailability.selected)
-          .toList();
-    }
-    return list;
-  }
 
   SeatSelectionState copyWith({
     SeatSelectionStatus? status,
@@ -187,14 +165,13 @@ class SeatSelectionState {
 
 // ── BLoC ──────────────────────────────────────────────
 
-class SeatSelectionBloc
-    extends Bloc<SeatSelectionEvent, SeatSelectionState> {
+class SeatSelectionBloc extends Bloc<SeatSelectionEvent, SeatSelectionState> {
   final SeatBookingRepository _repo;
   Timer? _refreshTimer;
 
   SeatSelectionBloc({SeatBookingRepository? repo})
-      : _repo = repo ?? SeatBookingRepository(),
-        super(const SeatSelectionState()) {
+    : _repo = repo ?? SeatBookingRepository(),
+      super(const SeatSelectionState()) {
     on<LoadBusLayout>(_onLoadLayout);
     on<SelectSeat>(_onSelectSeat);
     on<DeselectSeat>(_onDeselectSeat);
@@ -207,36 +184,47 @@ class SeatSelectionBloc
   }
 
   Future<void> _onLoadLayout(
-      LoadBusLayout event, Emitter<SeatSelectionState> emit) async {
+    LoadBusLayout event,
+    Emitter<SeatSelectionState> emit,
+  ) async {
     emit(state.copyWith(status: SeatSelectionStatus.loadingLayout));
     try {
-      final result =
-          await _repo.fetchLayout(event.layoutId, tripId: event.tripId);
-      final seats = parsePassengerSeats(result.snapshot,
-          bookedSeatNumbers: result.bookedSeatNumbers);
+      final result = await _repo.fetchLayout(
+        event.layoutId,
+        tripId: event.tripId,
+      );
+      final seats = parsePassengerSeats(
+        result.snapshot,
+        bookedSeatNumbers: result.bookedSeatNumbers,
+      );
       final canvas = result.snapshot['canvas'] as Map<String, dynamic>? ?? {};
       final cw = (canvas['width'] ?? 280).toDouble();
       final ch = (canvas['height'] ?? 728).toDouble();
-      emit(state.copyWith(
-        status: SeatSelectionStatus.layoutReady,
-        layoutId: event.layoutId,
-        tripId: event.tripId,
-        busDisplayName: result.displayName,
-        seats: seats,
-        bookedSeatNumbers: result.bookedSeatNumbers,
-        totalSeats: result.totalSeats,
-        availableSeats: result.availableSeats,
-        canvasWidth: cw,
-        canvasHeight: ch,
-        clearError: true,
-      ));
+      emit(
+        state.copyWith(
+          status: SeatSelectionStatus.layoutReady,
+          layoutId: event.layoutId,
+          tripId: event.tripId,
+          busDisplayName: result.displayName,
+          seats: seats,
+          bookedSeatNumbers: result.bookedSeatNumbers,
+          totalSeats: result.totalSeats,
+          availableSeats: result.availableSeats,
+          canvasWidth: cw,
+          canvasHeight: ch,
+          clearError: true,
+        ),
+      );
       _startAutoRefresh();
     } catch (e) {
-      emit(state.copyWith(
-        status: SeatSelectionStatus.bookingFailure,
-        errorMessage:
-            'Failed to load layout: ${e.toString().replaceAll("Exception: ", "")}',
-      ));
+      emit(
+        state.copyWith(
+          status: SeatSelectionStatus.bookingFailure,
+          errorMessage:
+              'Failed to load layout: '
+              '${e.toString().replaceAll("Exception: ", "")}',
+        ),
+      );
     }
   }
 
@@ -251,12 +239,14 @@ class SeatSelectionBloc
       }
       return s;
     }).toList();
-    emit(state.copyWith(
-      status: SeatSelectionStatus.selectingSeat,
-      seats: updatedSeats,
-      selectedSeat: event.seat,
-      clearError: true,
-    ));
+    emit(
+      state.copyWith(
+        status: SeatSelectionStatus.selectingSeat,
+        seats: updatedSeats,
+        selectedSeat: event.seat,
+        clearError: true,
+      ),
+    );
   }
 
   void _onDeselectSeat(DeselectSeat event, Emitter<SeatSelectionState> emit) {
@@ -266,15 +256,19 @@ class SeatSelectionBloc
       }
       return s;
     }).toList();
-    emit(state.copyWith(
-      status: SeatSelectionStatus.layoutReady,
-      seats: updatedSeats,
-      clearSelected: true,
-    ));
+    emit(
+      state.copyWith(
+        status: SeatSelectionStatus.layoutReady,
+        seats: updatedSeats,
+        clearSelected: true,
+      ),
+    );
   }
 
   void _onChangePayment(
-      ChangePaymentMethod event, Emitter<SeatSelectionState> emit) {
+    ChangePaymentMethod event,
+    Emitter<SeatSelectionState> emit,
+  ) {
     emit(state.copyWith(paymentMethod: event.method));
   }
 
@@ -283,7 +277,9 @@ class SeatSelectionBloc
   }
 
   Future<void> _onConfirmBooking(
-      ConfirmBooking event, Emitter<SeatSelectionState> emit) async {
+    ConfirmBooking event,
+    Emitter<SeatSelectionState> emit,
+  ) async {
     final seat = state.selectedSeat;
     if (seat == null) return;
     emit(state.copyWith(status: SeatSelectionStatus.bookingInProgress));
@@ -302,14 +298,16 @@ class SeatSelectionBloc
         }
         return s;
       }).toList();
-      emit(state.copyWith(
-        status: SeatSelectionStatus.bookingSuccess,
-        seats: updatedSeats,
-        bookedSeatNumbers: [...state.bookedSeatNumbers, seat.seatNumber ?? 0],
-        bookingResult: result,
-        clearSelected: true,
-        clearError: true,
-      ));
+      emit(
+        state.copyWith(
+          status: SeatSelectionStatus.bookingSuccess,
+          seats: updatedSeats,
+          bookedSeatNumbers: [...state.bookedSeatNumbers, seat.seatNumber ?? 0],
+          bookingResult: result,
+          clearSelected: true,
+          clearError: true,
+        ),
+      );
     } else {
       final revertedSeats = state.seats.map((s) {
         if (s.componentId == seat.componentId) {
@@ -317,47 +315,59 @@ class SeatSelectionBloc
         }
         return s;
       }).toList();
-      emit(state.copyWith(
-        status: SeatSelectionStatus.bookingFailure,
-        seats: revertedSeats,
-        bookingResult: result,
-        errorMessage: result.errorMessage,
-        clearSelected: true,
-      ));
+      emit(
+        state.copyWith(
+          status: SeatSelectionStatus.bookingFailure,
+          seats: revertedSeats,
+          bookingResult: result,
+          errorMessage: result.errorMessage,
+          clearSelected: true,
+        ),
+      );
     }
   }
 
   Future<void> _onRefresh(
-      RefreshBookings event, Emitter<SeatSelectionState> emit) async {
+    RefreshBookings event,
+    Emitter<SeatSelectionState> emit,
+  ) async {
     if (state.layoutId.isEmpty) return;
     emit(state.copyWith(status: SeatSelectionStatus.refreshing));
-    final booked =
-        await _repo.fetchBookedSeats(state.layoutId, tripId: state.tripId);
+    final booked = await _repo.fetchBookedSeats(
+      state.layoutId,
+      tripId: state.tripId,
+    );
     final updatedSeats = state.seats.map((s) {
       if (s.isStructural) return s;
       if (s.availability == SeatAvailability.selected) return s;
-      final isNowBooked =
-          s.seatNumber != null && booked.contains(s.seatNumber);
+      final isNowBooked = s.seatNumber != null && booked.contains(s.seatNumber);
       return s.copyWith(
-        availability:
-            isNowBooked ? SeatAvailability.booked : SeatAvailability.available,
+        availability: isNowBooked
+            ? SeatAvailability.booked
+            : SeatAvailability.available,
       );
     }).toList();
-    emit(state.copyWith(
-      status: SeatSelectionStatus.layoutReady,
-      seats: updatedSeats,
-      bookedSeatNumbers: booked,
-      availableSeats: state.totalSeats - booked.length,
-    ));
+    emit(
+      state.copyWith(
+        status: SeatSelectionStatus.layoutReady,
+        seats: updatedSeats,
+        bookedSeatNumbers: booked,
+        availableSeats: state.totalSeats - booked.length,
+      ),
+    );
   }
 
   void _onGenderFilter(
-      SetGenderFilter event, Emitter<SeatSelectionState> emit) {
+    SetGenderFilter event,
+    Emitter<SeatSelectionState> emit,
+  ) {
     emit(state.copyWith(genderFilter: event.filter));
   }
 
   void _onToggleAvailable(
-      ToggleShowOnlyAvailable event, Emitter<SeatSelectionState> emit) {
+    ToggleShowOnlyAvailable event,
+    Emitter<SeatSelectionState> emit,
+  ) {
     emit(state.copyWith(showOnlyAvailable: !state.showOnlyAvailable));
   }
 
