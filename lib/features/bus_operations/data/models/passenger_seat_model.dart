@@ -203,8 +203,8 @@ PassengerSeatModel parsePassengerSeat(
 }
 
 /// Parse an entire layout snapshot into a list of seat models.
-/// Also auto-generates row+letter labels (e.g. "1A", "1B") for
-/// seats that only have plain numeric labels.
+/// Labels are taken directly from the database (set by the owner in
+/// the layout designer) — no synthetic labels are generated.
 List<PassengerSeatModel> parsePassengerSeats(
   Map<String, dynamic> snapshot, {
   List<int> bookedSeatNumbers = const [],
@@ -213,103 +213,10 @@ List<PassengerSeatModel> parsePassengerSeats(
   final components = snapshot['components'];
   if (components is! List) return [];
 
-  final seats = components
+  return components
       .map((c) => parsePassengerSeat(c, bookedSeatNumbers: booked))
       .toList();
-
-  // Auto-generate airline-style row+letter labels for seats
-  // that only have plain numeric labels
-  _applySeatLabels(seats);
-
-  return seats;
 }
-
-/// Auto-generate row+letter labels based on grid position.
-/// Groups seats by Y-coordinate (row) and assigns A/B/C...
-/// from left to right within each row.
-void _applySeatLabels(List<PassengerSeatModel> seats) {
-  final bookable = seats.where((s) => !s.isStructural).toList();
-  if (bookable.isEmpty) return;
-
-  // Determine if any seat already has a proper alphanumeric label
-  final hasAlpha = bookable.any((s) {
-    final label = s.seatLabel ?? '';
-    return label.isNotEmpty && !_isNumericOnly(label);
-  });
-
-  // If labels are already alphanumeric (e.g. set in designer), don't override
-  if (hasAlpha) return;
-
-  // Group seats by Y-coordinate (rounded to nearest whole number to form rows)
-  final rowMap = <int, List<PassengerSeatModel>>{};
-  for (final seat in bookable) {
-    final row = seat.y.round();
-    rowMap.putIfAbsent(row, () => []).add(seat);
-  }
-
-  // Sort rows by Y (top to bottom)
-  final sortedRows = rowMap.entries.toList()
-    ..sort((a, b) => a.key.compareTo(b.key));
-
-  // Assign labels row by row
-  for (var rowIdx = 0; rowIdx < sortedRows.length; rowIdx++) {
-    final rowSeats = sortedRows[rowIdx].value;
-    // Sort seats within row by X (left to right)
-    rowSeats.sort((a, b) => a.x.compareTo(b.x));
-
-    // Detect aisle gap (large X gap between columns)
-    double? aisleX;
-    if (rowSeats.length >= 4) {
-      for (var i = 1; i < rowSeats.length; i++) {
-        final gap = rowSeats[i].x - (rowSeats[i - 1].x + rowSeats[i - 1].width);
-        if (gap > rowSeats[0].width * 1.2) {
-          aisleX = rowSeats[i - 1].x + rowSeats[i - 1].width + gap / 2;
-          break;
-        }
-      }
-    }
-
-    final rowNum = rowIdx + 1;
-    // Capture aisleX in a local for null-safety promotion in closures
-    final mid = aisleX;
-    // Collect left-side and right-side seats
-    final leftSide = mid != null
-        ? rowSeats.where((s) => s.centerX < mid).toList()
-        : rowSeats;
-    final rightSide = mid != null
-        ? rowSeats.where((s) => s.centerX >= mid).toList()
-        : <PassengerSeatModel>[];
-
-    // Assign letters: A,B,C... for left, then D,E,F... for right
-    final leftLetters = <String>[];
-    final rightLetters = <String>[];
-    final allCount = leftSide.length + rightSide.length;
-    for (var i = 0; i < allCount; i++) {
-      final letter = String.fromCharCode(65 + i); // A, B, C, ...
-      if (i < leftSide.length) {
-        leftLetters.add('$rowNum$letter');
-      } else {
-        rightLetters.add('$rowNum$letter');
-      }
-    }
-
-    // Create new seat models with updated labels
-    for (var i = 0; i < leftSide.length; i++) {
-      final idx = seats.indexOf(leftSide[i]);
-      if (idx >= 0) {
-        seats[idx] = seats[idx].copyWithLabel(leftLetters[i]);
-      }
-    }
-    for (var i = 0; i < rightSide.length; i++) {
-      final idx = seats.indexOf(rightSide[i]);
-      if (idx >= 0) {
-        seats[idx] = seats[idx].copyWithLabel(rightLetters[i]);
-      }
-    }
-  }
-}
-
-bool _isNumericOnly(String s) => RegExp(r'^\d+$').hasMatch(s);
 
 /// Resolve a JSON type string to PassengerSeatCategory.
 PassengerSeatCategory _resolveCategory(String type) {

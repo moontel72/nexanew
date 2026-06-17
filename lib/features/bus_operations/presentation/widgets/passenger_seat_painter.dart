@@ -188,22 +188,26 @@ class PassengerSeatPainter extends CustomPainter {
       canvas.rotate(seat.rotation * math.pi / 180);
     }
 
-    final w = seat.width;
-    final h = seat.height;
+    // ══ Visual downscale ══
+    // Hit-test uses the full database dimensions, but the visual
+    // seat is rendered at 70 % of that area so seats look compact
+    // and professional, like an airline seat map.
+    const visualScale = 0.70;
+    final w = seat.width * visualScale;
+    final h = seat.height * visualScale;
     final halfH = h / 2;
 
     final (fillColor, strokeColor) = _resolveColors(seat);
 
-    // Render margin — seat body is slightly inset
-    const margin = 3.0;
+    const margin = 2.5;
     final bodyW = w - margin * 2;
     final bodyH = h - margin * 2;
-    final radius = math.min(bodyW, bodyH) * 0.2;
+    final radius = math.min(bodyW, bodyH) * 0.22;
 
     // ── Subtle shadow ──
     if (!seat.isStructural) {
       final shadow = Paint()
-        ..color = Colors.black.withValues(alpha: 0.06)
+        ..color = Colors.black.withValues(alpha: 0.07)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
       canvas.drawRRect(
         RRect.fromRectAndRadius(
@@ -229,14 +233,13 @@ class PassengerSeatPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawRRect(bodyRect, bodyPaint);
 
-    // Thin border
     final borderPaint = Paint()
       ..color = strokeColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     canvas.drawRRect(bodyRect, borderPaint);
 
-    // ── Seat backrest stripe (top portion) ──
+    // ── Backrest stripe ──
     if (!seat.isStructural) {
       final stripeH = bodyH * 0.22;
       final stripeRect = RRect.fromRectAndRadius(
@@ -253,7 +256,7 @@ class PassengerSeatPainter extends CustomPainter {
       canvas.drawRRect(stripeRect, stripePaint);
     }
 
-    // ── Selected glow ring ──
+    // ── Selected glow ──
     if (seat.availability == SeatAvailability.selected) {
       final glowPaint = Paint()
         ..color = _colorSelected.withValues(alpha: 0.35)
@@ -263,7 +266,7 @@ class PassengerSeatPainter extends CustomPainter {
       canvas.drawRRect(bodyRect, glowPaint);
     }
 
-    // ── Seat label (bottom portion) ──
+    // ── Label (inside seat body) ──
     if (seat.displayLabel.isNotEmpty) {
       _drawCompactLabel(canvas, seat, bodyW, bodyH, halfH, margin);
     }
