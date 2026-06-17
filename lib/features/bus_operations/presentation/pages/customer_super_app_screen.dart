@@ -76,6 +76,7 @@ class _TransitHubTabState extends State<_TransitHubTab> {
   List<Map<String, dynamic>> _layouts = [];
   bool _loading = true;
   String? _error;
+  final GlobalKey _listKey = GlobalKey();
 
   @override
   void initState() {
@@ -167,7 +168,17 @@ class _TransitHubTabState extends State<_TransitHubTab> {
             title: 'Find & Book a Seat',
             subtitle: 'Search routes, view seat maps, confirm booking',
             color: const Color(0xFF2563EB),
-            onTap: () {}, // scrolls to list below
+            onTap: () {
+              // Scroll to the available buses list below
+              final ctx = _listKey.currentContext;
+              if (ctx != null) {
+                Scrollable.ensureVisible(
+                  ctx,
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeInOut,
+                );
+              }
+            },
           ),
           const Gap(12),
 
@@ -197,8 +208,9 @@ class _TransitHubTabState extends State<_TransitHubTab> {
           const Gap(24),
 
           // Available Buses
-          const Text(
+          Text(
             'Available Buses',
+            key: _listKey,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
