@@ -2,6 +2,16 @@
 
 use Illuminate\Support\Facades\Route;
 
+// ═══════════════════════════════════════════════════════════════
+// PUBLIC — Customer App (Module 8V) — no auth required
+// ═══════════════════════════════════════════════════════════════
+// MUST be registered BEFORE the auth group so literal routes
+// like /public are not shadowed by /{id} in the auth group.
+Route::prefix('api/v1/bus-owner')->group(function (): void {
+    Route::get('absolute-layouts/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'listPublic']);
+    Route::get('absolute-layouts/{id}/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'showPublic']);
+});
+
 /**
  * NEXATRACE — BUS OWNER APP ROUTES
  * ==================================
@@ -165,11 +175,3 @@ Route::prefix('api/v1/bus-owner')
             Route::post('{assignmentId}', [\App\Http\Controllers\BusOwnerController::class, 'sendMessage']);
         });
     });
-
-// ═══════════════════════════════════════════════════════════════
-// PUBLIC — Customer App (Module 8V) — no auth required
-// ═══════════════════════════════════════════════════════════════
-Route::prefix('api/v1/bus-owner')->group(function (): void {
-    Route::get('absolute-layouts/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'listPublic']);
-    Route::get('absolute-layouts/{id}/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'showPublic']);
-});

@@ -65,24 +65,30 @@ class _AppInitializerState extends State<AppInitializer> {
       // ApiClient (http) writes to SharedPreferences.
       // NexaTraceApiClient (Dio) reads from FlutterSecureStorage.
       // Bridge them so both channels always see the same token.
-      final flutterSecureStorage = FlutterSecureStorage();
-      ApiClient().setSecureStorage(flutterSecureStorage);
+      // SKIP ON WEB: FlutterSecureStorage requires HTTPS (secure context);
+      // SharedPreferences alone is sufficient for web token storage.
+      if (!kIsWeb) {
+        final flutterSecureStorage = FlutterSecureStorage();
+        ApiClient().setSecureStorage(flutterSecureStorage);
 
-      // Startup sync: copy from SharedPreferences → FlutterSecureStorage
-      final prefsToken = sharedPreferences.getString(AppConstants.authTokenKey);
-      if (prefsToken != null && prefsToken.isNotEmpty) {
-        try {
-          final existingSecure = await flutterSecureStorage.read(
-            key: AppConstants.authTokenKey,
-          );
-          if (existingSecure != prefsToken) {
-            await flutterSecureStorage.write(
+        // Startup sync: copy from SharedPreferences → FlutterSecureStorage
+        final prefsToken = sharedPreferences.getString(
+          AppConstants.authTokenKey,
+        );
+        if (prefsToken != null && prefsToken.isNotEmpty) {
+          try {
+            final existingSecure = await flutterSecureStorage.read(
               key: AppConstants.authTokenKey,
-              value: prefsToken,
             );
+            if (existingSecure != prefsToken) {
+              await flutterSecureStorage.write(
+                key: AppConstants.authTokenKey,
+                value: prefsToken,
+              );
+            }
+          } catch (e) {
+            debugPrint('Token sync skipped (platform restriction): $e');
           }
-        } catch (e) {
-          debugPrint('Token sync skipped (platform restriction): $e');
         }
       }
 
