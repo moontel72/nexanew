@@ -1,0 +1,31 @@
+# =============================================================================
+# NEXATRACE — REVERB WEBSOCKET SERVER (systemd unit)
+# =============================================================================
+# Installed at: /etc/systemd/system/nexatrace-reverb.service
+#
+# Commands:
+#   systemctl enable --now nexatrace-reverb   (start + auto-start on boot)
+#   systemctl status nexatrace-reverb         (check status)
+#   journalctl -u nexatrace-reverb -f         (follow logs)
+# =============================================================================
+
+[Unit]
+Description=NexaTrace Reverb WebSocket Server
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+User=root
+WorkingDirectory=/var/www/traceodd/admin-panel
+ExecStart=/usr/bin/php artisan reverb:start
+Restart=always
+RestartSec=3
+
+# Environment
+Environment="APP_ENV=production"
+
+# Security hardening
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
