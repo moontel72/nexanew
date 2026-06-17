@@ -103,8 +103,8 @@ jobs:
             chown -R www-data:www-data /var/www/traceodd/rust-lib
             chown -R www-data:www-data /var/www/traceodd/admin-panel/rust
 
-            # 1. Install/update Composer dependencies (includes laravel/reverb)
-            composer install --no-interaction --prefer-dist --optimize-autoloader
+            # 1. Install laravel/reverb (resolves lock file + installs)
+            composer require laravel/reverb --no-interaction --prefer-dist --optimize-autoloader
 
             # 2. Seed Reverb + Redis env vars if missing (idempotent)
             grep -q '^QUEUE_CONNECTION=' .env 2>/dev/null || echo 'QUEUE_CONNECTION=redis' >> .env
