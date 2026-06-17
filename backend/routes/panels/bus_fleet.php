@@ -2,26 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 
-/**
- * NEXATRACE — BUS FLEET PANEL ROUTES
- * ====================================
- *
- * Route prefix: /api/v1/bus-fleet
- * Middleware:   auth:sanctum
- *
- * MODULES COVERED:
- *   - Module 13 (Public Transport Bus Admin Panel)
- *   - Module 14 (Bus Owners App) + 14E Seat Grid Builder
- *   - Module 15 (Bus Drivers App) + 15E Gate QR Automation
- *   - Module 8V (Customer 2-in-1 Bus Transit)
- *   - Module 8W (3-Way Payment & Voucher Logic)
- */
-
 Route::prefix('api/v1/bus-fleet')
     ->middleware(['auth:sanctum', 'bus.fleet'])
     ->group(function (): void {
 
-        // Company Profile (Dashboard) — resolved via identity spine
         Route::get('profile', function (\Illuminate\Http\Request $request) {
             $user = $request->user();
             $carrierId = $request->get('_carrier_company_id')
@@ -33,8 +17,6 @@ Route::prefix('api/v1/bus-fleet')
                     ->value('carrier_company_id');
 
             $isMasterAdmin = ($user->account_type ?? null) === 'master_admin';
-
-            // For master admin or when no specific carrier: show aggregated stats
             if (!$carrierId && !$isMasterAdmin) {
                 return response()->json(['message' => 'No company found for this account'], 404);
             }
@@ -57,29 +39,12 @@ Route::prefix('api/v1/bus-fleet')
                 $companyName = $company->account_name ?? 'Bus Company';
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'company' => [
-                        'id'    => $carrierId ?? 'admin',
-                        'name'  => $companyName,
-                        'email' => $user->email ?? '',
-                        'phone' => $user->phone_number ?? '',
-                        'status'=> 'active',
-                        'city'  => null,
-                        'country' => null,
-                    ],
-                    'fleet_size'    => $fleetSize,
-                    'active_routes' => 0,
-                    'owner_name'    => $companyName,
-                    'is_bus_fleet'  => true,
-                    'active_buses'  => $fleetSize,
-                    'staff_count'   => $staffCount,
-                ],
-            ]);
+            return response()->json(['success' => true, 'data' => [
+                'company' => ['id' => $carrierId ?? 'admin', 'name' => $companyName, 'email' => $user->email ?? '', 'phone' => $user->phone_number ?? '', 'status' => 'active', 'city' => null, 'country' => null],
+                'fleet_size' => $fleetSize, 'active_routes' => 0, 'owner_name' => $companyName, 'is_bus_fleet' => true, 'active_buses' => $fleetSize, 'staff_count' => $staffCount,
+            ]]);
         });
 
-        // Fleet Dashboard Stats
         Route::get('dashboard', function (\Illuminate\Http\Request $request) {
             $user = $request->user();
             $carrierId = $request->get('_carrier_company_id')
@@ -91,7 +56,6 @@ Route::prefix('api/v1/bus-fleet')
                     ->value('carrier_company_id');
 
             $isMasterAdmin = ($user->account_type ?? null) === 'master_admin';
-
             if (!$carrierId && !$isMasterAdmin) {
                 return response()->json(['message' => 'No company found for this account'], 404);
             }
@@ -108,24 +72,25 @@ Route::prefix('api/v1/bus-fleet')
                 $companyName = $company->account_name ?? 'Bus Company';
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'company_id'   => $carrierId ?? 'admin',
-                    'company_name' => $companyName,
-                    'status'       => 'active',
-                    'fleet_size'   => $fleetSize,
-                    'active_routes'=> 0,
-                    'owner_name'   => $companyName,
-                    'total_trips'  => 0,
-                    'active_trips' => 0,
-                ],
-            ]);
+            return response()->json(['success' => true, 'data' => [
+                'company_id' => $carrierId ?? 'admin', 'company_name' => $companyName, 'status' => 'active',
+                'fleet_size' => $fleetSize, 'active_routes' => 0, 'owner_name' => $companyName,
+                'total_trips' => 0, 'active_trips' => 0,
+            ]]);
         });
 
-        // Trips (Admin / Owner)
+        // Trips
         Route::post('trips', [\App\Http\Controllers\BusDispatchController::class, 'createTrip']);
         Route::get('trips/active', [\App\Http\Controllers\BusDispatchController::class, 'activeTrips']);
+
+        // Routes (13B — Route Scheduler)
+        Route::get('routes', [\App\Http\Controllers\BusRouteController::class, 'index']);
+        Route::post('routes', [\App\Http\Controllers\BusRouteController::class, 'store']);
+        Route::get('routes/{id}', [\App\Http\Controllers\BusRouteController::class, 'show']);
+        Route::put('routes/{id}', [\App\Http\Controllers\BusRouteController::class, 'update']);
+        Route::delete('routes/{id}', [\App\Http\Controllers\BusRouteController::class, 'destroy']);
+        Route::post('routes/{id}/publish', [\App\Http\Controllers\BusRouteController::class, 'publish']);
+        Route::post('routes/{id}/waypoints', [\App\Http\Controllers\BusRouteController::class, 'saveWaypoints']);
 
         // Driver Dispatch (15A, 15B)
         Route::prefix('driver')->group(function (): void {
@@ -134,7 +99,7 @@ Route::prefix('api/v1/bus-fleet')
             Route::post('complete-trip/{id}', [\App\Http\Controllers\BusDispatchController::class, 'completeTrip']);
         });
 
-        // ─── Absolute Layouts (Freeform Canvas) — sole layout engine ──
+        // Absolute Layouts
         Route::prefix('absolute-layouts')->group(function (): void {
             Route::get('/', [\App\Http\Controllers\AbsoluteLayoutController::class, 'index']);
             Route::post('/', [\App\Http\Controllers\AbsoluteLayoutController::class, 'store']);
@@ -145,31 +110,24 @@ Route::prefix('api/v1/bus-fleet')
             Route::delete('/{id}', [\App\Http\Controllers\AbsoluteLayoutController::class, 'destroy']);
         });
 
-        // Bus Door QR Codes (15E)
+        // QR, Bookings, Vouchers, Staff, Owners, Drivers, Conductors, Shifts, Links
         Route::post('qr/register', [\App\Http\Controllers\BusTransitController::class, 'registerQr']);
         Route::get('qr/scan/{uuid}', [\App\Http\Controllers\BusTransitController::class, 'scanQr']);
-
-        // Customer Seat Booking (8V)
         Route::post('bookings', [\App\Http\Controllers\BusTransitController::class, 'bookSeat']);
-
-        // NexaTrace Cash Vouchers (8W)
         Route::post('vouchers/create', [\App\Http\Controllers\BusTransitController::class, 'createVoucher']);
 
-        // Fleet Staff Dropdowns (Setup 14/15)
         Route::prefix('staff')->group(function (): void {
             Route::get('drivers', [\App\Http\Controllers\FleetStaffController::class, 'getDriversList']);
             Route::get('conductors', [\App\Http\Controllers\FleetStaffController::class, 'getConductorsList']);
             Route::get('plates', [\App\Http\Controllers\FleetStaffController::class, 'getBusPlates']);
         });
 
-        // Bus Owners CRUD
         Route::get('owners', [\App\Http\Controllers\FleetManagementController::class, 'listOwners']);
         Route::post('owners', [\App\Http\Controllers\FleetManagementController::class, 'storeOwner']);
         Route::get('owners/{id}', [\App\Http\Controllers\FleetManagementController::class, 'showOwner']);
         Route::put('owners/{id}', [\App\Http\Controllers\FleetManagementController::class, 'updateOwner']);
         Route::delete('owners/{id}', [\App\Http\Controllers\FleetManagementController::class, 'destroyOwner']);
 
-        // Bus Drivers CRUD
         Route::prefix('drivers/manage')->group(function (): void {
             Route::get('/', [\App\Http\Controllers\FleetManagementController::class, 'listDrivers']);
             Route::post('/', [\App\Http\Controllers\FleetManagementController::class, 'storeDriver']);
@@ -178,20 +136,17 @@ Route::prefix('api/v1/bus-fleet')
             Route::delete('/{id}', [\App\Http\Controllers\FleetManagementController::class, 'destroyDriver']);
         });
 
-        // Bus Conductors CRUD
         Route::get('conductors', [\App\Http\Controllers\FleetManagementController::class, 'listConductors']);
         Route::post('conductors', [\App\Http\Controllers\FleetManagementController::class, 'storeConductor']);
         Route::get('conductors/{id}', [\App\Http\Controllers\FleetManagementController::class, 'showConductor']);
         Route::put('conductors/{id}', [\App\Http\Controllers\FleetManagementController::class, 'updateConductor']);
         Route::delete('conductors/{id}', [\App\Http\Controllers\FleetManagementController::class, 'destroyConductor']);
 
-        // Shift Allocation Roster (Setup 14/15)
         Route::prefix('shifts')->group(function (): void {
             Route::post('save', [\App\Http\Controllers\BusShiftController::class, 'saveShiftRoster']);
             Route::get('{plate}', [\App\Http\Controllers\BusShiftController::class, 'getShiftRoster']);
         });
 
-        // Identity Portability — Link Request Management (§10.11.2)
         Route::prefix('link-requests')->group(function (): void {
             Route::get('/', [\App\Http\Controllers\FleetManagementController::class, 'listLinkRequests']);
             Route::post('{id}/accept', [\App\Http\Controllers\FleetManagementController::class, 'acceptLinkRequest']);
@@ -199,7 +154,6 @@ Route::prefix('api/v1/bus-fleet')
             Route::post('{id}/hold', [\App\Http\Controllers\FleetManagementController::class, 'holdLinkRequest']);
         });
 
-        // Link Messages — Persistent B2B Chat
         Route::prefix('link-messages')->group(function (): void {
             Route::get('/', [\App\Http\Controllers\FleetManagementController::class, 'listAllConversations']);
             Route::get('{assignmentId}', [\App\Http\Controllers\FleetManagementController::class, 'listMessages']);
