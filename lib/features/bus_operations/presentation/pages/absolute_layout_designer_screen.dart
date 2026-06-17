@@ -1032,33 +1032,33 @@ class _AbsoluteLayoutDesignerScreenState
             tooltip: 'Presets',
           ),
           const Gap(4),
-          // Save Project button
+          // Save Layout button
           ElevatedButton.icon(
             onPressed: _state.isSaving ? null : _saveLayout,
             icon: _state.isSaving
                 ? const SizedBox(
-                    width: 14,
-                    height: 14,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: Colors.white,
                     ),
                   )
-                : const Icon(Icons.save, size: 16),
+                : const Icon(Icons.save, size: 18),
             label: const Text(
-              'Save',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+              'Save Layout',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF16A34A),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),
-          const Gap(4),
+          const Gap(6),
           // Publish button — syncs to Customer Booking App
           ElevatedButton.icon(
             onPressed: _state.isSaving
@@ -1073,24 +1073,24 @@ class _AbsoluteLayoutDesignerScreenState
                         }),
             icon: _state.isSaving
                 ? const SizedBox(
-                    width: 14,
-                    height: 14,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: Colors.white,
                     ),
                   )
-                : const Icon(Icons.cloud_upload, size: 16),
+                : const Icon(Icons.cloud_upload, size: 18),
             label: const Text(
               'Publish',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFD97706),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),

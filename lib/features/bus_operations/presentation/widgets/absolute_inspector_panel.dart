@@ -53,7 +53,43 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
   @override
   void initState() {
     super.initState();
-    final c = widget.component;
+    _syncFromComponent(widget.component);
+  }
+
+  @override
+  void didUpdateWidget(covariant AbsoluteInspectorPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // When the designer replaces the component (e.g. after Apply),
+    // resync all inspector fields so the UI reflects the latest state.
+    if (oldWidget.component != widget.component) {
+      _syncFromComponent(widget.component);
+    }
+  }
+
+  void _syncFromComponent(AbsoluteLayoutComponent c) {
+    // Dispose old controllers before creating new ones
+    try {
+      _xCtrl.dispose();
+    } catch (_) {}
+    try {
+      _yCtrl.dispose();
+    } catch (_) {}
+    try {
+      _wCtrl.dispose();
+    } catch (_) {}
+    try {
+      _hCtrl.dispose();
+    } catch (_) {}
+    try {
+      _rotCtrl.dispose();
+    } catch (_) {}
+    try {
+      _seatIdController.dispose();
+    } catch (_) {}
+    try {
+      _customLabelController.dispose();
+    } catch (_) {}
+
     _xCtrl = TextEditingController(text: c.x.toStringAsFixed(0));
     _yCtrl = TextEditingController(text: c.y.toStringAsFixed(0));
     _wCtrl = TextEditingController(text: c.width.toStringAsFixed(0));
