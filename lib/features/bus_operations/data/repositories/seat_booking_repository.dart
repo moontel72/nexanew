@@ -77,15 +77,19 @@ class SeatBookingRepository {
   // ── FETCH LAYOUT ────────────────────────────────────
 
   /// Fetch a published bus layout with live booking status.
+  /// Uses the public endpoint (no auth required) so guest customers
+  /// can browse seat maps before sign-in. Only published layouts are returned.
   Future<BusLayoutResult> fetchLayout(String layoutId, {String? tripId}) async {
     final response = await _api.get(
-      '/bus-fleet/absolute-layouts/$layoutId',
+      '/bus-fleet/absolute-layouts/$layoutId/public',
       queryParams: {'include_bookings': 'true'},
+      requiresAuth: false,
     );
 
     final data = _safeMap(response['data'] ?? response);
-    final snapshot =
-        _safeMap(data['current_snapshot'] ?? data['snapshot'] ?? {});
+    final snapshot = _safeMap(
+      data['current_snapshot'] ?? data['snapshot'] ?? {},
+    );
     final bookingsRaw =
         data['booked_seats'] ?? data['booked_seat_numbers'] ?? [];
 
@@ -99,10 +103,11 @@ class SeatBookingRepository {
 
     return BusLayoutResult(
       layoutId: layoutId,
-      displayName: (data['display_name'] ??
-              data['bus_registration'] ??
-              'Bus ${layoutId.substring(0, layoutId.length < 8 ? layoutId.length : 8)}')
-          .toString(),
+      displayName:
+          (data['display_name'] ??
+                  data['bus_registration'] ??
+                  'Bus ${layoutId.substring(0, layoutId.length < 8 ? layoutId.length : 8)}')
+              .toString(),
       snapshot: snapshot,
       bookedSeatNumbers: bookedSeats,
       totalSeats: (data['total_seats'] ?? 0) as int,
@@ -161,8 +166,9 @@ class SeatBookingRepository {
   Future<List<int>> fetchBookedSeats(String layoutId, {String? tripId}) async {
     try {
       final response = await _api.get(
-        '/bus-fleet/absolute-layouts/$layoutId',
+        '/bus-fleet/absolute-layouts/$layoutId/public',
         queryParams: {'include_bookings': 'true'},
+        requiresAuth: false,
       );
       final data = _safeMap(response['data'] ?? response);
       final raw = data['booked_seats'] ?? data['booked_seat_numbers'] ?? [];

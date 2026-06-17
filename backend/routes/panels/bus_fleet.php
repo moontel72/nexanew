@@ -285,3 +285,12 @@ Route::prefix('api/v1/bus-fleet')
             Route::post('{assignmentId}', [\App\Http\Controllers\FleetManagementController::class, 'sendMessage']);
         });
     });
+
+// ═══════════════════════════════════════════════════════════════
+// PUBLIC — Customer App (Module 8V) — no auth required
+// ═══════════════════════════════════════════════════════════════
+// Guest users can browse published seat maps before booking.
+// Booking itself is gated by the auth interceptor on the Flutter side.
+Route::prefix('api/v1/bus-fleet')->group(function (): void {
+    Route::get('absolute-layouts/{id}/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'showPublic']);
+});

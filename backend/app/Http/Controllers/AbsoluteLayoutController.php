@@ -237,6 +237,35 @@ class AbsoluteLayoutController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════════
+    // SHOW PUBLIC — GET /absolute-layouts/{id}/public
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Fetch a published layout without authentication.
+     * Used by the Customer App (Module 8V) for guest-mode
+     * seat-map browsing. Only returns layouts where
+     * layout_status = 'published'. Booking still requires auth.
+     */
+    public function showPublic(Request $request, string $id): JsonResponse
+    {
+        $includeBookings = $request->query('include_bookings', 'false') === 'true';
+
+        $layout = $this->service->showPublicLayout($id, $includeBookings);
+
+        if (!$layout) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Layout not found or not published.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $layout,
+        ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // PURGE ALL — DELETE /absolute-layouts/purge/all
     // ═══════════════════════════════════════════════════════════
 
