@@ -1002,7 +1002,6 @@ class _AbsoluteLayoutDesignerScreenState
               if (_placingType != null) {
                 setState(() => _tool = _CanvasTool.placeComponent);
               } else {
-                // No part type selected yet — tell the user
                 setState(() => _tool = _CanvasTool.placeComponent);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1030,69 +1029,6 @@ class _AbsoluteLayoutDesignerScreenState
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             tooltip: 'Presets',
-          ),
-          const Gap(4),
-          // Save Layout button
-          ElevatedButton.icon(
-            onPressed: _state.isSaving ? null : _saveLayout,
-            icon: _state.isSaving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.save, size: 18),
-            label: const Text(
-              'Save Layout',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF16A34A),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-          const Gap(6),
-          // Publish button — syncs to Customer Booking App
-          ElevatedButton.icon(
-            onPressed: _state.isSaving
-                ? null
-                : (_state.layoutId != null
-                      ? _publishLayout
-                      : () async {
-                          await _saveLayout();
-                          if (_state.layoutId != null && mounted) {
-                            await _publishLayout();
-                          }
-                        }),
-            icon: _state.isSaving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.cloud_upload, size: 18),
-            label: const Text(
-              'Publish',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD97706),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
           ),
         ],
       ),
@@ -1453,43 +1389,148 @@ class _AbsoluteLayoutDesignerScreenState
   Widget _statusBar() {
     final sel = _state.selectedComponent;
     return Container(
-      height: 28,
       decoration: const BoxDecoration(
-        color: Color(0xFF0A1628),
+        color: Color(0xFF0D1525),
         border: Border(top: BorderSide(color: Color(0x20FFFFFF))),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          // Component count
-          Icon(Icons.grid_view, color: Colors.white38, size: 12),
-          const Gap(4),
-          Text(
-            '${_state.components.length} parts',
-            style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
-          ),
-          const Gap(12),
-          Icon(Icons.event_seat, color: const Color(0xFF7C3AED), size: 12),
-          const Gap(4),
-          Text(
-            '${_state.totalSeats} seats',
-            style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
-          ),
-          const Spacer(),
-          // Selected component info
-          if (sel != null) ...[
-            Icon(sel.defaultIcon, color: sel.defaultColor, size: 12),
-            const Gap(4),
-            Text(
-              '${sel.typeLabel} · ${pxToFtIn(sel.width)} × ${pxToFtIn(sel.height)}',
-              style: const TextStyle(color: Color(0x80FFFFFF), fontSize: 11),
+          // Left: component info
+          Expanded(
+            child: Row(
+              children: [
+                Icon(Icons.grid_view, color: Colors.white38, size: 12),
+                const Gap(4),
+                Text(
+                  '${_state.components.length} parts',
+                  style: const TextStyle(
+                    color: Color(0x60FFFFFF),
+                    fontSize: 11,
+                  ),
+                ),
+                const Gap(12),
+                Icon(
+                  Icons.event_seat,
+                  color: const Color(0xFF7C3AED),
+                  size: 12,
+                ),
+                const Gap(4),
+                Text(
+                  '${_state.totalSeats} seats',
+                  style: const TextStyle(
+                    color: Color(0x60FFFFFF),
+                    fontSize: 11,
+                  ),
+                ),
+                if (sel != null) ...[
+                  const Gap(12),
+                  Icon(sel.defaultIcon, color: sel.defaultColor, size: 12),
+                  const Gap(4),
+                  Text(
+                    '${sel.typeLabel}',
+                    style: const TextStyle(
+                      color: Color(0x80FFFFFF),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
-          const Gap(8),
-          // Canvas dimensions
-          Text(
-            'Canvas: ${pxToFtIn(_state.canvasWidth)} × ${pxToFtIn(_state.canvasHeight)}',
-            style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 10),
+          ),
+          // Right: save actions
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_state.isDirty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF97316).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: const Text(
+                    'UNSAVED',
+                    style: TextStyle(
+                      color: Color(0xFFF97316),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              // ── SAVE LAYOUT button ──
+              ElevatedButton.icon(
+                onPressed: _state.isSaving ? null : _saveLayout,
+                icon: _state.isSaving
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.save, size: 16),
+                label: const Text(
+                  'Save Layout',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF16A34A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const Gap(8),
+              // ── PUBLISH button ──
+              ElevatedButton.icon(
+                onPressed: _state.isSaving
+                    ? null
+                    : (_state.layoutId != null
+                          ? _publishLayout
+                          : () async {
+                              await _saveLayout();
+                              if (_state.layoutId != null && mounted) {
+                                await _publishLayout();
+                              }
+                            }),
+                icon: _state.isSaving
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.cloud_upload, size: 16),
+                label: const Text(
+                  'Publish',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD97706),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
