@@ -1,44 +1,38 @@
-// NEXATRACE — PASSENGER SEAT PAINTER
-// =====================================
-// CustomPainter that renders the bus floor-plan from
-// AbsoluteLayoutComponent data. Draws structural elements
-// (walls, aisle, driver cabin) and interactive seats with
-// color-coded availability status.
+// NEXATRACE — PASSENGER SEAT PAINTER v3
+// ========================================
+// Premium bus-cabin rendering with 3D-styled seats,
+// bus body framework, windshield, entry door, and
+// dynamic availability states.
 //
-// v2: Airline-style compact design — narrow rounded seats,
-//     subtle shadows, clean labels, no emoji icons.
-//
-// MODULE: 8V — Interactive Seat Selection
+// MODULE: 8V — Interactive Seat Selection (Customer App)
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:trace_odd/features/bus_operations/data/models/passenger_seat_model.dart';
 
-/// Custom painter that renders the entire bus floor plan with
-/// structural elements, seat icons, and booking status colors.
 class PassengerSeatPainter extends CustomPainter {
   final List<PassengerSeatModel> seats;
   final double canvasWidth;
   final double canvasHeight;
   final PassengerSeatModel? selectedSeat;
 
-  // ── Airline-style color palette ──
-  static const _colorAvailable = Color(0xFF3B82F6); // blue (like airline)
-  static const _colorAvailableStroke = Color(0xFF2563EB);
-  static const _colorSelected = Color(0xFF10B981); // emerald
-  static const _colorSelectedStroke = Color(0xFF059669);
+  // ── Premium palette ──
+  static const _colorAvailable = Color(0xFF2563EB); // rich blue
+  static const _colorAvailableDark = Color(0xFF1D4ED8);
+  static const _colorAvailableLight = Color(0xFF60A5FA);
+  static const _colorSelected = Color(0xFF059669); // emerald
+  static const _colorSelectedDark = Color(0xFF047857);
   static const _colorBooked = Color(0xFF9CA3AF); // gray
-  static const _colorBookedStroke = Color(0xFF6B7280);
-  static const _colorBusiness = Color(0xFF8B5CF6); // violet
-  static const _colorBusinessStroke = Color(0xFF7C3AED);
-  static const _colorSleeper = Color(0xFFF59E0B); // amber
-  static const _colorSleeperStroke = Color(0xFFD97706);
-  static const _colorStructural = Color(0xFFD1D5DB);
-  static const _colorDriver = Color(0xFF374151);
-  static const _colorFloor = Color(0xFFF9FAFB);
-  static const _colorWall = Color(0xFFE5E7EB);
-  static const _colorAisle = Color(0xFFF3F4F6);
-  static const _colorAisleLabel = Color(0xFF9CA3AF);
+  static const _colorBookedDark = Color(0xFF6B7280);
+  static const _colorBusiness = Color(0xFF7C3AED); // violet
+  static const _colorBusinessDark = Color(0xFF6D28D9);
+  static const _colorSleeper = Color(0xFFD97706); // amber
+  static const _colorSleeperDark = Color(0xFFB45309);
+  static const _colorFloor = Color(0xFFF1F5F9);
+  static const _colorWall = Color(0xFFCBD5E1);
+  static const _colorWindshield = Color(0xFFDBEAFE);
+  static const _colorDoor = Color(0xFFFEE2E2);
+  static const _colorAisle = Color(0xFFF8FAFC);
 
   PassengerSeatPainter({
     required this.seats,
@@ -52,8 +46,6 @@ class PassengerSeatPainter extends CustomPainter {
     final scaleX = size.width / canvasWidth;
     final scaleY = size.height / canvasHeight;
     final scale = math.min(scaleX, scaleY);
-
-    // Center the canvas
     final offsetX = (size.width - canvasWidth * scale) / 2;
     final offsetY = (size.height - canvasHeight * scale) / 2;
 
@@ -61,77 +53,200 @@ class PassengerSeatPainter extends CustomPainter {
     canvas.translate(offsetX, offsetY);
     canvas.scale(scale, scale);
 
-    // ── 1. Floor background ──
-    _drawFloor(canvas);
+    // ── 1. Bus body framework ──
+    _drawBusBody(canvas);
 
-    // ── 2. Structural elements (aisle, walls) ──
+    // ── 2. Floor texture ──
+    _drawFloorTexture(canvas);
+
+    // ── 3. Structural elements ──
     for (final seat in seats) {
-      if (seat.isStructural) {
-        _drawStructural(canvas, seat);
-      }
+      if (seat.isStructural) _drawStructural(canvas, seat);
     }
 
-    // ── 3. Seat rows (grouped and drawn back-to-front) ──
+    // ── 4. Seats sorted back-to-front ──
     final bookable = seats.where((s) => !s.isStructural).toList();
-    // Sort by Y (top to bottom) for consistent z-order
     bookable.sort((a, b) => a.y.compareTo(b.y));
     for (final seat in bookable) {
-      _drawSeat(canvas, seat);
+      _draw3DSeat(canvas, seat);
     }
 
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant PassengerSeatPainter oldDelegate) {
-    return oldDelegate.seats != seats ||
-        oldDelegate.selectedSeat?.componentId != selectedSeat?.componentId;
-  }
+  bool shouldRepaint(covariant PassengerSeatPainter old) =>
+      old.seats != seats ||
+      old.selectedSeat?.componentId != selectedSeat?.componentId;
 
-  // ── Floor ───────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // BUS BODY FRAMEWORK
+  // ═══════════════════════════════════════════════════════════
 
-  void _drawFloor(Canvas canvas) {
-    // Subtle outer container
-    final outer = Paint()
+  void _drawBusBody(Canvas canvas) {
+    final bodyPaint = Paint()
       ..color = _colorFloor
       ..style = PaintingStyle.fill;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, canvasWidth, canvasHeight),
-        const Radius.circular(12),
-      ),
-      outer,
-    );
 
-    // Thin border
-    final border = Paint()
+    // Main body rounded rect
+    final bodyRect = RRect.fromLTRBAndCorners(
+      0,
+      0,
+      canvasWidth,
+      canvasHeight,
+      topLeft: const Radius.circular(14),
+      topRight: const Radius.circular(14),
+      bottomLeft: const Radius.circular(6),
+      bottomRight: const Radius.circular(6),
+    );
+    canvas.drawRRect(bodyRect, bodyPaint);
+
+    // Outer wall stroke
+    final wall = Paint()
       ..color = _colorWall
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..strokeWidth = 2.5;
+    canvas.drawRRect(bodyRect, wall);
+
+    // ── Windshield area (top portion, centered) ──
+    final windshieldW = canvasWidth * 0.55;
+    final windshieldH = 32.0;
+    final windshieldX = (canvasWidth - windshieldW) / 2;
+    final windshieldY = 4.0;
+
+    final windshield = Paint()
+      ..color = _colorWindshield
+      ..style = PaintingStyle.fill;
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(1, 1, canvasWidth - 2, canvasHeight - 2),
-        const Radius.circular(12),
+      RRect.fromLTRBAndCorners(
+        windshieldX,
+        windshieldY,
+        windshieldX + windshieldW,
+        windshieldY + windshieldH,
+        topLeft: const Radius.circular(8),
+        topRight: const Radius.circular(8),
       ),
-      border,
+      windshield,
     );
+
+    // Windshield label
+    final tp = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+    tp.text = TextSpan(
+      text: '🚌 FRONT',
+      style: TextStyle(
+        fontSize: 10,
+        color: _colorWall.withValues(alpha: 0.7),
+        fontWeight: FontWeight.w600,
+        letterSpacing: 2,
+      ),
+    );
+    tp.layout(maxWidth: windshieldW);
+    tp.paint(
+      canvas,
+      Offset(windshieldX + (windshieldW - tp.width) / 2, windshieldY + 9),
+    );
+
+    // ── Door marker (right side, top area) ──
+    final doorW = 22.0;
+    final doorH = 36.0;
+    final doorX = canvasWidth - doorW - 6;
+    final doorY = windshieldY + windshieldH + 8;
+
+    final doorPaint = Paint()
+      ..color = _colorDoor
+      ..style = PaintingStyle.fill;
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        doorX,
+        doorY,
+        doorX + doorW,
+        doorY + doorH,
+        topLeft: const Radius.circular(5),
+        topRight: const Radius.circular(5),
+      ),
+      doorPaint,
+    );
+
+    final doorBorder = Paint()
+      ..color = const Color(0xFFFCA5A5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        doorX,
+        doorY,
+        doorX + doorW,
+        doorY + doorH,
+        topLeft: const Radius.circular(5),
+        topRight: const Radius.circular(5),
+      ),
+      doorBorder,
+    );
+
+    // Door label
+    tp.text = TextSpan(
+      text: 'DOOR',
+      style: TextStyle(
+        fontSize: 7,
+        color: const Color(0xFFDC2626).withValues(alpha: 0.6),
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1,
+      ),
+    );
+    tp.layout(maxWidth: doorW);
+    tp.paint(
+      canvas,
+      Offset(doorX + (doorW - tp.width) / 2, doorY + doorH / 2 - 3),
+    );
+
+    // ── Side wall stripes ──
+    final stripe = Paint()
+      ..color = _colorWall.withValues(alpha: 0.3)
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(Rect.fromLTWH(0, 0, 3, canvasHeight), stripe);
+    canvas.drawRect(Rect.fromLTWH(canvasWidth - 3, 0, 3, canvasHeight), stripe);
   }
 
-  // ── Structural ──────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // FLOOR TEXTURE
+  // ═══════════════════════════════════════════════════════════
+
+  void _drawFloorTexture(Canvas canvas) {
+    final stripe = Paint()
+      ..color = const Color(0xFFE2E8F0)
+      ..style = PaintingStyle.fill;
+    for (double y = 60; y < canvasHeight; y += 28) {
+      canvas.drawRect(Rect.fromLTWH(8, y, canvasWidth - 16, 0.5), stripe);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // STRUCTURAL ELEMENTS
+  // ═══════════════════════════════════════════════════════════
 
   void _drawStructural(Canvas canvas, PassengerSeatModel el) {
     if (el.category == PassengerSeatCategory.driverCabin) {
-      // Driver cabin — dark tinted zone with steering wheel hint
+      // Driver zone with steering wheel icon
       final paint = Paint()
-        ..color = _colorDriver.withValues(alpha: 0.15)
+        ..color = const Color(0xFF1E293B).withValues(alpha: 0.12)
         ..style = PaintingStyle.fill;
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(el.x, el.y, el.width, el.height),
-        const Radius.circular(4),
+      canvas.drawRRect(
+        RRect.fromLTRBAndCorners(
+          el.x,
+          el.y,
+          el.x + el.width,
+          el.y + el.height,
+          topLeft: const Radius.circular(6),
+          topRight: const Radius.circular(6),
+          bottomLeft: const Radius.circular(3),
+          bottomRight: const Radius.circular(3),
+        ),
+        paint,
       );
-      canvas.drawRRect(rect, paint);
 
-      // Label
       final tp = TextPainter(
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
@@ -139,8 +254,8 @@ class PassengerSeatPainter extends CustomPainter {
       tp.text = TextSpan(
         text: '🚌',
         style: TextStyle(
-          fontSize: 11,
-          color: _colorDriver.withValues(alpha: 0.5),
+          fontSize: 13,
+          color: const Color(0xFF475569).withValues(alpha: 0.5),
         ),
       );
       tp.layout(maxWidth: el.width);
@@ -149,13 +264,12 @@ class PassengerSeatPainter extends CustomPainter {
         Offset(el.centerX - tp.width / 2, el.centerY - tp.height / 2),
       );
     } else {
-      // Aisle or other structural — light wash
+      // Aisle or other structural
       final paint = Paint()
         ..color = _colorAisle
         ..style = PaintingStyle.fill;
       canvas.drawRect(Rect.fromLTWH(el.x, el.y, el.width, el.height), paint);
 
-      // Aisle label
       if (el.seatLabel == 'aisle') {
         final tp = TextPainter(
           textDirection: TextDirection.ltr,
@@ -164,9 +278,9 @@ class PassengerSeatPainter extends CustomPainter {
         tp.text = TextSpan(
           text: 'AISLE',
           style: TextStyle(
-            fontSize: 9,
+            fontSize: 8,
             fontWeight: FontWeight.w500,
-            color: _colorAisleLabel,
+            color: _colorWall,
             letterSpacing: 2,
           ),
         );
@@ -179,176 +293,248 @@ class PassengerSeatPainter extends CustomPainter {
     }
   }
 
-  // ── Single Seat ─────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // 3D-STYLED SEAT
+  // ═══════════════════════════════════════════════════════════
 
-  void _drawSeat(Canvas canvas, PassengerSeatModel seat) {
+  void _draw3DSeat(Canvas canvas, PassengerSeatModel seat) {
     canvas.save();
     canvas.translate(seat.centerX, seat.centerY);
     if (seat.rotation != 0) {
       canvas.rotate(seat.rotation * math.pi / 180);
     }
 
-    // ══ Visual downscale ══
-    // Hit-test uses the full database dimensions, but the visual
-    // seat is rendered at 70 % of that area so seats look compact
-    // and professional, like an airline seat map.
-    const visualScale = 0.70;
-    final w = seat.width * visualScale;
-    final h = seat.height * visualScale;
-    final halfH = h / 2;
+    // Visual scale: render at 70% of DB dimensions
+    const scale = 0.70;
+    final w = seat.width * scale;
+    final h = seat.height * scale;
+    final hw = w / 2;
+    final hh = h / 2;
 
-    final (fillColor, strokeColor) = _resolveColors(seat);
+    final (base, dark, light) = _seatColors(seat);
 
-    const margin = 2.5;
-    final bodyW = w - margin * 2;
-    final bodyH = h - margin * 2;
-    final radius = math.min(bodyW, bodyH) * 0.22;
+    const pad = 1.5;
+    final bw = w - pad * 2; // body width
+    final bh = h - pad * 2; // body height
+    final radius = math.min(bw, bh) * 0.18;
 
-    // ── Subtle shadow ──
-    if (!seat.isStructural) {
-      final shadow = Paint()
-        ..color = Colors.black.withValues(alpha: 0.07)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(
-            center: const Offset(0.5, 1),
-            width: bodyW,
-            height: bodyH,
-          ),
-          Radius.circular(radius),
-        ),
-        shadow,
-      );
-    }
-
-    // ── Seat body ──
-    final bodyRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset.zero, width: bodyW, height: bodyH),
-      Radius.circular(radius),
+    // ── Drop shadow ──
+    final shadow = Paint()
+      ..color = Colors.black.withValues(alpha: 0.08)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        -hw + pad + 1,
+        -hh + pad + 1.5,
+        hw - pad + 1,
+        hh - pad + 1.5,
+        topLeft: Radius.circular(radius),
+        topRight: Radius.circular(radius),
+        bottomLeft: Radius.circular(radius * 0.5),
+        bottomRight: Radius.circular(radius * 0.5),
+      ),
+      shadow,
     );
 
+    // ── Seat base (cushion) ──
+    final seatBody = RRect.fromLTRBAndCorners(
+      -hw + pad,
+      -hh + pad,
+      hw - pad,
+      hh - pad,
+      topLeft: Radius.circular(radius),
+      topRight: Radius.circular(radius),
+      bottomLeft: Radius.circular(radius * 0.5),
+      bottomRight: Radius.circular(radius * 0.5),
+    );
+
+    // Gradient fill for 3D effect
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [light, base, dark],
+      stops: const [0.0, 0.45, 1.0],
+    );
     final bodyPaint = Paint()
-      ..color = fillColor
+      ..shader = gradient.createShader(
+        Rect.fromCenter(center: Offset.zero, width: bw, height: bh),
+      )
       ..style = PaintingStyle.fill;
-    canvas.drawRRect(bodyRect, bodyPaint);
+    canvas.drawRRect(seatBody, bodyPaint);
 
+    // Border
     final borderPaint = Paint()
-      ..color = strokeColor
+      ..color = dark
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawRRect(bodyRect, borderPaint);
+      ..strokeWidth = 0.8;
+    canvas.drawRRect(seatBody, borderPaint);
 
-    // ── Backrest stripe ──
-    if (!seat.isStructural) {
-      final stripeH = bodyH * 0.22;
-      final stripeRect = RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: Offset(0, -halfH + margin + stripeH / 2),
-          width: bodyW - 4,
-          height: stripeH,
-        ),
-        Radius.circular(radius * 0.6),
-      );
-      final stripePaint = Paint()
-        ..color = strokeColor.withValues(alpha: 0.2)
-        ..style = PaintingStyle.fill;
-      canvas.drawRRect(stripeRect, stripePaint);
-    }
+    // ── Headrest (top 25%) ──
+    final hrH = bh * 0.25;
+    final hrW = bw - 4;
+    final hrRect = RRect.fromLTRBAndCorners(
+      -hrW / 2,
+      -hh + pad + 1,
+      hrW / 2,
+      -hh + pad + 1 + hrH,
+      topLeft: Radius.circular(radius * 1.2),
+      topRight: Radius.circular(radius * 1.2),
+      bottomLeft: Radius.circular(radius * 0.4),
+      bottomRight: Radius.circular(radius * 0.4),
+    );
+    final hrPaint = Paint()
+      ..color = dark.withValues(alpha: 0.35)
+      ..style = PaintingStyle.fill;
+    canvas.drawRRect(hrRect, hrPaint);
 
-    // ── Selected glow ──
+    // Headrest highlight line
+    final hlPaint = Paint()
+      ..color = light.withValues(alpha: 0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.5;
+    canvas.drawLine(
+      Offset(-hrW / 2 + 3, -hh + pad + 3),
+      Offset(hrW / 2 - 3, -hh + pad + 3),
+      hlPaint,
+    );
+
+    // ── Armrests (small side bars) ──
+    final armW = bw * 0.1;
+    final armH = bh * 0.35;
+    final armY = -hh + pad + hrH + 5;
+    final armPaint = Paint()
+      ..color = dark.withValues(alpha: 0.4)
+      ..style = PaintingStyle.fill;
+
+    // Left armrest
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        -hw + pad - armW + 1,
+        armY,
+        -hw + pad + 1,
+        armY + armH,
+        topRight: const Radius.circular(2),
+        bottomRight: const Radius.circular(2),
+      ),
+      armPaint,
+    );
+    // Right armrest
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        hw - pad - 1,
+        armY,
+        hw - pad + armW - 1,
+        armY + armH,
+        topLeft: const Radius.circular(2),
+        bottomLeft: const Radius.circular(2),
+      ),
+      armPaint,
+    );
+
+    // ── Seat crease line (bottom) ──
+    final creasePaint = Paint()
+      ..color = dark.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.5;
+    canvas.drawLine(
+      Offset(-bw * 0.35, hh - pad - bh * 0.18),
+      Offset(bw * 0.35, hh - pad - bh * 0.18),
+      creasePaint,
+    );
+
+    // ── Selection glow ──
     if (seat.availability == SeatAvailability.selected) {
-      final glowPaint = Paint()
-        ..color = _colorSelected.withValues(alpha: 0.35)
+      final glow = Paint()
+        ..color = _colorSelected.withValues(alpha: 0.4)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-      canvas.drawRRect(bodyRect, glowPaint);
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      canvas.drawRRect(seatBody, glow);
     }
 
-    // ── Label (inside seat body) ──
+    // ── Booked indicator ──
+    if (seat.availability == SeatAvailability.booked) {
+      final crossPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1;
+      canvas.drawLine(
+        Offset(-bw * 0.25, -bh * 0.25),
+        Offset(bw * 0.25, bh * 0.25),
+        crossPaint,
+      );
+      canvas.drawLine(
+        Offset(-bw * 0.25, bh * 0.25),
+        Offset(bw * 0.25, -bh * 0.25),
+        crossPaint,
+      );
+    }
+
+    // ── Seat label ──
     if (seat.displayLabel.isNotEmpty) {
-      _drawCompactLabel(canvas, seat, bodyW, bodyH, halfH, margin);
+      final isLight = _isLight(base);
+      final label = seat.displayLabel;
+      double fs;
+      if (label.length <= 2) {
+        fs = bw * 0.32;
+      } else {
+        fs = bw * 0.25;
+      }
+      fs = fs.clamp(7.0, 12.0);
+
+      final tp = TextPainter(
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+      );
+      tp.text = TextSpan(
+        text: label,
+        style: TextStyle(
+          fontSize: fs,
+          fontWeight: FontWeight.w700,
+          color: isLight ? Colors.black87 : Colors.white,
+          height: 1.0,
+        ),
+      );
+      tp.layout(maxWidth: bw);
+      tp.paint(canvas, Offset(-tp.width / 2, hh - pad - tp.height - 3));
     }
 
     canvas.restore();
   }
 
-  // ── Compact Label ───────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // COLOR HELPERS
+  // ═══════════════════════════════════════════════════════════
 
-  void _drawCompactLabel(
-    Canvas canvas,
-    PassengerSeatModel seat,
-    double bodyW,
-    double bodyH,
-    double halfH,
-    double margin,
-  ) {
-    final isLight = _isLightColor(_resolveColors(seat).$1);
-    final label = seat.displayLabel;
-
-    // Scale font to fit inside the seat body
-    double fontSize;
-    if (label.length <= 2) {
-      fontSize = bodyW * 0.38;
-    } else if (label.length <= 3) {
-      fontSize = bodyW * 0.32;
-    } else {
-      fontSize = bodyW * 0.26;
-    }
-    fontSize = fontSize.clamp(7.0, 13.0);
-
-    final tp = TextPainter(
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    );
-    tp.text = TextSpan(
-      text: label,
-      style: TextStyle(
-        fontSize: fontSize,
-        fontWeight: FontWeight.w600,
-        color: isLight ? Colors.black87 : Colors.white,
-        height: 1.0,
-      ),
-    );
-    tp.layout(maxWidth: bodyW);
-
-    // Position label in lower portion of seat
-    final labelY = halfH - margin - tp.height - 2;
-    tp.paint(canvas, Offset(-tp.width / 2, labelY));
-  }
-
-  // ── Colors ──────────────────────────────────────────
-
-  (Color, Color) _resolveColors(PassengerSeatModel seat) {
+  (Color base, Color dark, Color light) _seatColors(PassengerSeatModel seat) {
     if (seat.isStructural) {
-      return seat.category == PassengerSeatCategory.driverCabin
-          ? (_colorDriver, _colorWall)
-          : (_colorStructural, _colorWall);
+      return (_colorBooked, _colorBookedDark, const Color(0xFFD1D5DB));
     }
-
     switch (seat.availability) {
       case SeatAvailability.selected:
-        return (_colorSelected, _colorSelectedStroke);
+        return (_colorSelected, _colorSelectedDark, const Color(0xFF34D399));
       case SeatAvailability.booked:
       case SeatAvailability.held:
-        return (_colorBooked, _colorBookedStroke);
+        return (_colorBooked, _colorBookedDark, const Color(0xFFD1D5DB));
       case SeatAvailability.available:
       default:
         switch (seat.category) {
           case PassengerSeatCategory.businessClass:
-            return (_colorBusiness, _colorBusinessStroke);
+            return (
+              _colorBusiness,
+              _colorBusinessDark,
+              const Color(0xFFA78BFA),
+            );
           case PassengerSeatCategory.sleeper:
-            return (_colorSleeper, _colorSleeperStroke);
+            return (_colorSleeper, _colorSleeperDark, const Color(0xFFFBBF24));
           default:
-            return (_colorAvailable, _colorAvailableStroke);
+            return (_colorAvailable, _colorAvailableDark, _colorAvailableLight);
         }
     }
   }
 
-  bool _isLightColor(Color color) {
-    final luminance =
-        (0.299 * color.r + 0.587 * color.g + 0.114 * color.b) * 255;
-    return luminance > 150;
+  bool _isLight(Color c) {
+    final lum = (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) * 255;
+    return lum > 140;
   }
 }
