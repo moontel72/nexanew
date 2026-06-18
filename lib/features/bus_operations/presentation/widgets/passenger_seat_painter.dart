@@ -30,6 +30,10 @@ class PassengerSeatPainter extends CustomPainter {
   static const _colorSleeperDk = Color(0xFFBE185D);
   static const _colorSleeperUpper = Color(0xFFD97706);
   static const _colorSleeperUpperDk = Color(0xFFB45309);
+  static const _colorFolding = Color(0xFF06B6D4);
+  static const _colorFoldingDk = Color(0xFF0891B2);
+  static const _colorTable = Color(0xFF059669);
+  static const _colorTableDk = Color(0xFF047857);
   static const _colorFloor = Color(0xFFF8FAFC);
   static const _colorWall = Color(0xFFCBD5E1);
 
@@ -168,6 +172,9 @@ class PassengerSeatPainter extends CustomPainter {
         break;
       case PassengerSeatCategory.lavatory:
         _drawLavatory(canvas, el);
+        break;
+      case PassengerSeatCategory.restaurantTable:
+        _drawTable(canvas, el);
         break;
       case PassengerSeatCategory.emergency:
         _drawEmergency(canvas, el);
@@ -405,6 +412,38 @@ class PassengerSeatPainter extends CustomPainter {
       ..layout();
     tp.paint(canvas, Offset(cx - tp.width / 2, cy - tp.height / 2 - 2));
   }
+n  void _drawTable(Canvas canvas, PassengerSeatModel el) {
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
+        topLeft: const Radius.circular(6), topRight: const Radius.circular(6),
+        bottomLeft: const Radius.circular(3), bottomRight: const Radius.circular(3)),
+      Paint()..color = const Color(0xFF059669).withValues(alpha: 0.15),
+    );
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
+        topLeft: const Radius.circular(6), topRight: const Radius.circular(6),
+        bottomLeft: const Radius.circular(3), bottomRight: const Radius.circular(3)),
+      Paint()..color = const Color(0xFF059669)..style = PaintingStyle.stroke..strokeWidth = 2.0,
+    );
+    // 4 corner seat dots
+    final cx = el.centerX, cy = el.centerY;
+    final off = math.min(el.width, el.height) * 0.22;
+    for (final dot in [Offset(-off, -off), Offset(off, -off), Offset(-off, off), Offset(off, off)]) {
+      canvas.drawCircle(Offset(cx + dot.dx, cy + dot.dy), 5,
+        Paint()..color = const Color(0xFF059669).withValues(alpha: 0.3));
+    }
+    // Table surface
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(cx - off * 0.8, cy - off * 0.8, cx + off * 0.8, cy + off * 0.8,
+        topLeft: const Radius.circular(3), topRight: const Radius.circular(3),
+        bottomLeft: const Radius.circular(3), bottomRight: const Radius.circular(3)),
+      Paint()..color = const Color(0xFF059669).withValues(alpha: 0.25)..style = PaintingStyle.stroke..strokeWidth = 1.5,
+    );
+    final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center)
+      ..text = TextSpan(text: "TABLE", style: TextStyle(fontSize: 7, fontWeight: FontWeight.w600, color: const Color(0xFF059669).withValues(alpha: 0.7), letterSpacing: 1))
+      ..layout(maxWidth: el.width);
+    tp.paint(canvas, Offset(el.centerX - tp.width / 2, cy + off + 8));
+  }
   void _drawGenericStructural(Canvas canvas, PassengerSeatModel el) {
     canvas.drawRRect(
       RRect.fromLTRBAndCorners(
@@ -429,6 +468,7 @@ class PassengerSeatPainter extends CustomPainter {
     canvas.save();
     canvas.translate(seat.centerX, seat.centerY);
     if (seat.rotation != 0) canvas.rotate(seat.rotation * math.pi / 180);
+    if (seat.isReverseFacing) canvas.rotate(math.pi);
 
     final w = seat.width * 0.75, h = seat.height * 0.78;
     final hw = w / 2, hh = h / 2;
@@ -711,12 +751,18 @@ class PassengerSeatPainter extends CustomPainter {
         return (_colorBooked, _colorBookedDk, const Color(0xFFD1D5DB));
       default:
         switch (s.category) {
+          case PassengerSeatCategory.folding:
+            return (_colorFolding, _colorFoldingDk, const Color(0xFF67E8F9));
           case PassengerSeatCategory.businessClass:
             return (_colorBusiness, _colorBusinessDk, const Color(0xFFA78BFA));
           case PassengerSeatCategory.sleeperLower:
             return (_colorSleeper, _colorSleeperDk, const Color(0xFFF9A8D4));
           case PassengerSeatCategory.sleeperUpper:
             return (_colorSleeperUpper, _colorSleeperUpperDk, const Color(0xFFFBBF24));
+  static const _colorFolding = Color(0xFF06B6D4);
+  static const _colorFoldingDk = Color(0xFF0891B2);
+  static const _colorTable = Color(0xFF059669);
+  static const _colorTableDk = Color(0xFF047857);
           default:
             return (_colorAvailable, _colorAvailableDk, _colorAvailableLt);
         }

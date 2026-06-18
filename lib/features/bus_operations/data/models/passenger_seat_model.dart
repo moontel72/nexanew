@@ -18,6 +18,7 @@ enum PassengerSeatCategory {
   aisle, // Walkway corridor (not bookable)
   lavatory, // Washroom / restroom (not bookable)
   emergency, // Emergency exit (not bookable)
+  restaurantTable, // Dining table module (not bookable)
   structural, // Other structural element (not bookable)
 }
 
@@ -75,6 +76,7 @@ class PassengerSeatModel {
       category == PassengerSeatCategory.aisle ||
       category == PassengerSeatCategory.lavatory ||
       category == PassengerSeatCategory.emergency;
+      category == PassengerSeatCategory.restaurantTable ||
 
   /// Center point for hit-testing.
   double get centerX => x + width / 2;
@@ -193,6 +195,7 @@ PassengerSeatModel parsePassengerSeat(
             category == PassengerSeatCategory.aisle ||
             category == PassengerSeatCategory.lavatory ||
             category == PassengerSeatCategory.emergency
+            category == PassengerSeatCategory.restaurantTable ||
         ? SeatAvailability.unavailable
         : isBooked
         ? SeatAvailability.booked
@@ -258,6 +261,8 @@ PassengerSeatCategory _resolveCategory(String type) {
     case 'lavatory':
       return PassengerSeatCategory.lavatory;
     case 'emergency':
+    case "restaurantTable":
+      return PassengerSeatCategory.restaurantTable;
       return PassengerSeatCategory.emergency;
     default:
       return PassengerSeatCategory.structural;
