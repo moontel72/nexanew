@@ -714,10 +714,50 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     String label,
   ) {
     final bool isTable = component.type == ComponentType.restaurantTable;
+    final bool isStructural =
+        component.type == ComponentType.exitDoor ||
+        component.type == ComponentType.driverCabin ||
+        component.type == ComponentType.emergency ||
+        component.type == ComponentType.lavatory;
 
+    // ── Icon + label (non-table components) ──
+    if (!isTable) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: isStructural ? Colors.white : light,
+            size: _iconSize(),
+          ),
+          if (label.isNotEmpty && component.width >= 40)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: _fontSize(),
+                  fontWeight: FontWeight.w700,
+                  shadows: const [
+                    Shadow(
+                      color: Colors.black54,
+                      blurRadius: 3,
+                      offset: Offset(0, 1.5),
+                    ),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      );
+    }
+
+    // ── Table rendering ──
     return Stack(
       children: [
-        // ── Background ──
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -725,74 +765,37 @@ class _AbsoluteComponentWidget extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [light.withOpacity(0.85), dark.withOpacity(0.85)],
             ),
-            // Rounded inner border for tables
-            borderRadius: isTable ? BorderRadius.circular(8) : null,
-            border: isTable
-                ? Border.all(color: Colors.white.withOpacity(0.15), width: 1.2)
-                : null,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.15),
+              width: 1.2,
+            ),
           ),
         ),
-
-        // ── Table: 4 seat-position dots ──
-        if (isTable) ...[
-          for (final dot in [
-            Alignment(-0.55, -0.55),
-            Alignment(0.55, -0.55),
-            Alignment(-0.55, 0.55),
-            Alignment(0.55, 0.55),
-          ])
-            Align(
-              alignment: dot,
-              child: Container(
-                width: component.width * 0.22,
-                height: component.height * 0.22,
-                decoration: BoxDecoration(
-                  color: light.withOpacity(0.45),
-                  borderRadius: BorderRadius.circular(4),
-                ),
+        for (final dot in [
+          Alignment(-0.55, -0.55),
+          Alignment(0.55, -0.55),
+          Alignment(-0.55, 0.55),
+          Alignment(0.55, 0.55),
+        ])
+          Align(
+            alignment: dot,
+            child: Container(
+              width: component.width * 0.22,
+              height: component.height * 0.22,
+              decoration: BoxDecoration(
+                color: light.withOpacity(0.45),
+                borderRadius: BorderRadius.circular(4),
               ),
             ),
-          // Table center icon
-          Center(
-            child: Icon(
-              Icons.table_restaurant,
-              color: Colors.white.withOpacity(0.35),
-              size: _iconSize() * 0.9,
-            ),
           ),
-        ],
-
-        // ── Icon + label (non-table components) ──
-        if (!isTable)
-          Positioned.fill(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: Colors.white, size: _iconSize()),
-                if (label.isNotEmpty && component.width >= 40)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: _fontSize(),
-                        fontWeight: FontWeight.w700,
-                        shadows: const [
-                          Shadow(
-                            color: Colors.black54,
-                            blurRadius: 3,
-                            offset: Offset(0, 1.5),
-                          ),
-                        ],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-            ),
+        Center(
+          child: Icon(
+            Icons.table_restaurant,
+            color: Colors.white.withOpacity(0.35),
+            size: _iconSize() * 0.9,
           ),
+        ),
       ],
     );
   }

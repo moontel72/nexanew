@@ -84,12 +84,9 @@ class AbsoluteLayoutComponent {
   };
 
   /// Whether this component can be edited/moved by the user.
-  bool get isEditable => switch (type) {
-    ComponentType.exitDoor ||
-    ComponentType.driverCabin ||
-    ComponentType.restaurantTable => false,
-    _ => true,
-  };
+  /// All components are deletable — structural components like doors
+  /// and driver cabins are still interactive for selection/delete.
+  bool get isEditable => true;
 
   /// Default icon for this component type.
   IconData get defaultIcon => switch (type) {
