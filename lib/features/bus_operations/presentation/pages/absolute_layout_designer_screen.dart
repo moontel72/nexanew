@@ -1238,9 +1238,8 @@ class _AbsoluteLayoutDesignerScreenState
               onClose: () => _deselectAll(),
             ),
           ),
-            ),
-          ),
 
+          if (_tool == _CanvasTool.placeComponent && _placingType != null)
           Positioned(
             top: 12,
             left: 0,
