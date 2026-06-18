@@ -176,7 +176,6 @@ class PassengerSeatPainter extends CustomPainter {
         _drawGenericStructural(canvas, el);
     }
   }
-  }
 
   void _drawDriverCabin(Canvas canvas, PassengerSeatModel el) {
     final bg = const Color(0xFF1E293B).withValues(alpha: 0.08);
