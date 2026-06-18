@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:trace_odd/shared/models/transport/layout_component.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_component.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_state.dart';
+import "package:trace_odd/features/bus_operations/presentation/widgets/absolute_transform_overlay.dart";
 
 /// Default component type colors (mirrors legacy kComponentColors).
 const Map<ComponentType, Color> kAbsoluteComponentColors = {
@@ -51,12 +52,22 @@ class AbsoluteCanvasGrid extends StatefulWidget {
   final AbsoluteLayoutState layoutState;
   final void Function(String componentId, double x, double y)? onComponentTap;
   final void Function(double x, double y)? onCanvasTap;
+  final void Function(double w, double h, double x, double y)? onOverlayResize;
+  final void Function(double x, double y)? onOverlayMove;
+  final void Function(double r)? onOverlayRotate;
+  final VoidCallback? onOverlayDelete;
+  final VoidCallback? onOverlayTap;
   final TransformationController? transformController;
 
   const AbsoluteCanvasGrid({
     super.key,
     required this.layoutState,
     this.onComponentTap,
+    this.onOverlayResize,
+    this.onOverlayMove,
+    this.onOverlayRotate,
+    this.onOverlayDelete,
+    this.onOverlayTap,
     this.onCanvasTap,
     this.transformController,
   });
@@ -123,6 +134,20 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
                   _AbsoluteComponentWidget(
                     component: comp,
                     isSelected: comp.id == ls.selectedComponentId,
+                  ),
+                // Transform overlay inside InteractiveViewer — scrolls with canvas
+                if (ls.selectedComponent != null)
+                  AbsoluteTransformOverlay(
+                    key: ValueKey("overlay_${ls.selectedComponent!.id}"),
+                    component: ls.selectedComponent!,
+                    onResize: (w, h, x, y) => widget.onOverlayResize?.call(w, h, x, y),
+                    onResizeEnd: () {},
+                    onMove: (x, y) => widget.onOverlayMove?.call(x, y),
+                    onMoveEnd: () {},
+                    onRotate: (r) => widget.onOverlayRotate?.call(r),
+                    onRotateEnd: () {},
+                    onDelete: () => widget.onOverlayDelete?.call(),
+                    onTap: () => widget.onOverlayTap?.call(),
                   ),
               ],
             ),

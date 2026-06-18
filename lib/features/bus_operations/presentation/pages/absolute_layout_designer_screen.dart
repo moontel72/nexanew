@@ -925,12 +925,12 @@ class _AbsoluteLayoutDesignerScreenState
                   // Left: palette
                   AbsoluteComponentPalette(
                     onItemSelected: (type, defW, defH, isReverse) {
-                      _setState(_state.copyWith(clearSelection: true));
                       _tool = _CanvasTool.placeComponent;
                       _placingType = type;
                       _placingDefaultW = defW;
                       _placingDefaultH = defH;
                       _placingIsReverse = isReverse;
+                      _setState(_state.copyWith(clearSelection: true));
                     },
                   ),
                   // Center: canvas
@@ -961,7 +961,11 @@ class _AbsoluteLayoutDesignerScreenState
           children: [
             // Back
             IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 18),
+              icon: const Icon(
+                Icons.arrow_back,
+                color: Colors.white70,
+                size: 18,
+              ),
               tooltip: 'Back',
               onPressed: () {
                 if (_state.isDirty) {
@@ -979,7 +983,11 @@ class _AbsoluteLayoutDesignerScreenState
               constraints: const BoxConstraints(maxWidth: 140),
               child: Text(
                 _state.displayName,
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -990,59 +998,111 @@ class _AbsoluteLayoutDesignerScreenState
                   color: const Color(0xFFF97316).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(3),
                 ),
-                child: const Text('UNSAVED', style: TextStyle(color: Color(0xFFF97316), fontSize: 8, fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'UNSAVED',
+                  style: TextStyle(
+                    color: Color(0xFFF97316),
+                    fontSize: 8,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             const Gap(8),
             // Select
-            _compactBtn(Icons.near_me, 'Select', _tool == _CanvasTool.select, () {
-              _tool = _CanvasTool.select;
-              _placingType = null;
-              _setState(_state.copyWith(clearSelection: true));
-            }),
+            _compactBtn(
+              Icons.near_me,
+              'Select',
+              _tool == _CanvasTool.select,
+              () {
+                _tool = _CanvasTool.select;
+                _placingType = null;
+                _setState(_state.copyWith(clearSelection: true));
+              },
+            ),
             // Place
-            _compactBtn(Icons.add_location_alt, 'Place', _tool == _CanvasTool.placeComponent, () {
-              if (_placingType == null && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Pick a part from the left palette first'), backgroundColor: Color(0xFFD97706), duration: Duration(seconds: 2)),
-                );
-              }
-              setState(() => _tool = _CanvasTool.placeComponent);
-            }),
+            _compactBtn(
+              Icons.add_location_alt,
+              'Place',
+              _tool == _CanvasTool.placeComponent,
+              () {
+                if (_placingType == null && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Pick a part from the left palette first'),
+                      backgroundColor: Color(0xFFD97706),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+                setState(() => _tool = _CanvasTool.placeComponent);
+              },
+            ),
             // Presets
-            _compactBtn(_sidebarOpen ? Icons.menu_open : Icons.menu, 'Presets', _sidebarOpen, () => setState(() => _sidebarOpen = !_sidebarOpen)),
+            _compactBtn(
+              _sidebarOpen ? Icons.menu_open : Icons.menu,
+              'Presets',
+              _sidebarOpen,
+              () => setState(() => _sidebarOpen = !_sidebarOpen),
+            ),
             const Gap(8),
             // Save & Publish / Save
             ElevatedButton.icon(
               onPressed: _state.isSaving ? null : () => _saveLayout(),
               icon: _state.isSaving
-                  ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.save, size: 14),
               label: Text(
                 _state.layoutId == null ? 'Save & Publish' : 'Save',
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF16A34A),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 minimumSize: Size.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
+                ),
               ),
             ),
             const Gap(4),
             // Publish
             ElevatedButton.icon(
-              onPressed: _state.isSaving || _state.layoutId == null ? null : _publishLayout,
+              onPressed: _state.isSaving || _state.layoutId == null
+                  ? null
+                  : _publishLayout,
               icon: _state.isSaving
-                  ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.cloud_upload, size: 14),
-              label: const Text('Publish', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+              label: const Text(
+                'Publish',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFD97706),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 minimumSize: Size.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
+                ),
               ),
             ),
           ],
@@ -1051,7 +1111,12 @@ class _AbsoluteLayoutDesignerScreenState
     );
   }
 
-  Widget _compactBtn(IconData icon, String label, bool active, VoidCallback onTap) {
+  Widget _compactBtn(
+    IconData icon,
+    String label,
+    bool active,
+    VoidCallback onTap,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(left: 2),
       child: InkWell(
@@ -1062,14 +1127,27 @@ class _AbsoluteLayoutDesignerScreenState
           decoration: BoxDecoration(
             color: active ? const Color(0xFF7C3AED).withOpacity(0.2) : null,
             borderRadius: BorderRadius.circular(4),
-            border: active ? Border.all(color: const Color(0xFF7C3AED).withOpacity(0.4)) : null,
+            border: active
+                ? Border.all(color: const Color(0xFF7C3AED).withOpacity(0.4))
+                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 12, color: active ? const Color(0xFF7C3AED) : Colors.white54),
+              Icon(
+                icon,
+                size: 12,
+                color: active ? const Color(0xFF7C3AED) : Colors.white54,
+              ),
               const Gap(3),
-              Text(label, style: TextStyle(color: active ? const Color(0xFF7C3AED) : Colors.white54, fontSize: 9, fontWeight: FontWeight.w600)),
+              Text(
+                label,
+                style: TextStyle(
+                  color: active ? const Color(0xFF7C3AED) : Colors.white54,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -1090,7 +1168,6 @@ class _AbsoluteLayoutDesignerScreenState
               _selectComponent(id);
             } else if (_tool == _CanvasTool.placeComponent &&
                 _placingType != null) {
-              // Place mode: drop the new component at the tap position
               final newId = _addComponent(
                 _placingType!,
                 x,
@@ -1121,41 +1198,39 @@ class _AbsoluteLayoutDesignerScreenState
               _deselectAll();
             }
           },
+          onOverlayResize: (w, h, x, y) {
+            if (_state.selectedComponent != null) {
+              _updateCompWith(_state.selectedComponent!, x: x, y: y, width: w, height: h);
+            }
+          },
+          onOverlayMove: (x, y) {
+            if (_state.selectedComponent != null) {
+              _updateCompWith(_state.selectedComponent!, x: x, y: y);
+            }
+          },
+          onOverlayRotate: (r) {
+            if (_state.selectedComponent != null) {
+              _updateCompWith(_state.selectedComponent!, rotation: r);
+            }
+          },
+          onOverlayDelete: () {
+            if (_state.selectedComponent != null) {
+              _deleteComponent(_state.selectedComponent!.id);
+            }
+          },
+          onOverlayTap: () {
+            if (_state.selectedComponent != null) {
+              _openInspector(_state.selectedComponent!.id);
+            }
+          },
         ),
 
-        // Transform overlay for selected component
-        if (_state.selectedComponent != null)
-          AbsoluteTransformOverlay(
-            component: _state.selectedComponent!,
-            onResize: (w, h, x, y) {
-              _updateCompWith(
-                _state.selectedComponent!,
-                x: x,
-                y: y,
-                width: w,
-                height: h,
-              );
-            },
-            onResizeEnd: () {},
-            onMove: (x, y) {
-              _updateCompWith(_state.selectedComponent!, x: x, y: y);
-            },
-            onMoveEnd: () {},
-            onRotate: (r) {
-              _updateCompWith(_state.selectedComponent!, rotation: r);
-            },
-            onRotateEnd: () {},
-            onDelete: () => _deleteComponent(_state.selectedComponent!.id),
-            onTap: () {
-              _openInspector(_state.selectedComponent!.id);
-            },
-          ),
-
-        // ── Top-Right Inspector Panel (floating) ──
+        // Inspector Panel — positioned alongside canvas at top-right
         if (_state.selectedComponent != null)
           Positioned(
             top: 8,
             right: 8,
+            width: 280,
             child: AbsoluteInspectorPanel(
               component: _state.selectedComponent!,
               onApply: (updated) => _updateComponent(updated),
@@ -1163,9 +1238,9 @@ class _AbsoluteLayoutDesignerScreenState
               onClose: () => _deselectAll(),
             ),
           ),
+            ),
+          ),
 
-        // Place mode indicator
-        if (_tool == _CanvasTool.placeComponent && _placingType != null)
           Positioned(
             top: 12,
             left: 0,
