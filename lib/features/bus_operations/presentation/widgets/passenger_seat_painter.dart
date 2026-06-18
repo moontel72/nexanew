@@ -378,72 +378,181 @@ class PassengerSeatPainter extends CustomPainter {
 
   void _drawLavatory(Canvas canvas, PassengerSeatModel el) {
     canvas.drawRRect(
-      RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
-        topLeft: const Radius.circular(4), topRight: const Radius.circular(4),
-        bottomLeft: const Radius.circular(2), bottomRight: const Radius.circular(2)),
+      RRect.fromLTRBAndCorners(
+        el.x,
+        el.y,
+        el.x + el.width,
+        el.y + el.height,
+        topLeft: const Radius.circular(4),
+        topRight: const Radius.circular(4),
+        bottomLeft: const Radius.circular(2),
+        bottomRight: const Radius.circular(2),
+      ),
       Paint()..color = const Color(0xFFEEF2FF),
     );
     final cx = el.centerX, cy = el.centerY;
     final r = math.min(el.width, el.height) * 0.22;
-    canvas.drawCircle(Offset(cx, cy - r * 0.3), r,
-      Paint()..color = const Color(0xFF6366F1)..style = PaintingStyle.stroke..strokeWidth = 2.0);
-    canvas.drawLine(Offset(cx, cy - r * 0.3 - r), Offset(cx, cy - r * 0.3 + r),
-      Paint()..color = const Color(0xFF6366F1)..strokeWidth = 1.8);
-    final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center)
-      ..text = TextSpan(text: "WC", style: TextStyle(fontSize: 8, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1).withValues(alpha: 0.8)))
-      ..layout(maxWidth: el.width);
+    canvas.drawCircle(
+      Offset(cx, cy - r * 0.3),
+      r,
+      Paint()
+        ..color = const Color(0xFF6366F1)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0,
+    );
+    canvas.drawLine(
+      Offset(cx, cy - r * 0.3 - r),
+      Offset(cx, cy - r * 0.3 + r),
+      Paint()
+        ..color = const Color(0xFF6366F1)
+        ..strokeWidth = 1.8,
+    );
+    final tp =
+        TextPainter(
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+          )
+          ..text = TextSpan(
+            text: "WC",
+            style: TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF6366F1).withValues(alpha: 0.8),
+            ),
+          )
+          ..layout(maxWidth: el.width);
     tp.paint(canvas, Offset(el.centerX - tp.width / 2, cy + r + 4));
   }
 
   void _drawEmergency(Canvas canvas, PassengerSeatModel el) {
     canvas.drawRRect(
-      RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
-        topLeft: const Radius.circular(4), topRight: const Radius.circular(4),
-        bottomLeft: const Radius.circular(2), bottomRight: const Radius.circular(2)),
+      RRect.fromLTRBAndCorners(
+        el.x,
+        el.y,
+        el.x + el.width,
+        el.y + el.height,
+        topLeft: const Radius.circular(4),
+        topRight: const Radius.circular(4),
+        bottomLeft: const Radius.circular(2),
+        bottomRight: const Radius.circular(2),
+      ),
       Paint()..color = const Color(0xFFFEF2F2),
     );
     final cx = el.centerX, cy = el.centerY;
     final sz = math.min(el.width, el.height) * 0.35;
-    final path = Path()..moveTo(cx, cy - sz)..lineTo(cx + sz * 0.8, cy + sz * 0.5)..lineTo(cx - sz * 0.8, cy + sz * 0.5)..close();
-    canvas.drawPath(path, Paint()..color = const Color(0xFFDC2626)..style = PaintingStyle.stroke..strokeWidth = 2.0);
-    canvas.drawPath(path, Paint()..color = const Color(0xFFDC2626).withValues(alpha: 0.12));
-    final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center)
-      ..text = TextSpan(text: "!", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0xFFDC2626)))
-      ..layout();
+    final path = Path()
+      ..moveTo(cx, cy - sz)
+      ..lineTo(cx + sz * 0.8, cy + sz * 0.5)
+      ..lineTo(cx - sz * 0.8, cy + sz * 0.5)
+      ..close();
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xFFDC2626)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0,
+    );
+    canvas.drawPath(
+      path,
+      Paint()..color = const Color(0xFFDC2626).withValues(alpha: 0.12),
+    );
+    final tp =
+        TextPainter(
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+          )
+          ..text = TextSpan(
+            text: "!",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFFDC2626),
+            ),
+          )
+          ..layout();
     tp.paint(canvas, Offset(cx - tp.width / 2, cy - tp.height / 2 - 2));
   }
+
   void _drawTable(Canvas canvas, PassengerSeatModel el) {
     canvas.drawRRect(
-      RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
-        topLeft: const Radius.circular(6), topRight: const Radius.circular(6),
-        bottomLeft: const Radius.circular(3), bottomRight: const Radius.circular(3)),
+      RRect.fromLTRBAndCorners(
+        el.x,
+        el.y,
+        el.x + el.width,
+        el.y + el.height,
+        topLeft: const Radius.circular(6),
+        topRight: const Radius.circular(6),
+        bottomLeft: const Radius.circular(3),
+        bottomRight: const Radius.circular(3),
+      ),
       Paint()..color = const Color(0xFF059669).withValues(alpha: 0.15),
     );
     canvas.drawRRect(
-      RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
-        topLeft: const Radius.circular(6), topRight: const Radius.circular(6),
-        bottomLeft: const Radius.circular(3), bottomRight: const Radius.circular(3)),
-      Paint()..color = const Color(0xFF059669)..style = PaintingStyle.stroke..strokeWidth = 2.0,
+      RRect.fromLTRBAndCorners(
+        el.x,
+        el.y,
+        el.x + el.width,
+        el.y + el.height,
+        topLeft: const Radius.circular(6),
+        topRight: const Radius.circular(6),
+        bottomLeft: const Radius.circular(3),
+        bottomRight: const Radius.circular(3),
+      ),
+      Paint()
+        ..color = const Color(0xFF059669)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0,
     );
     // 4 corner seat dots
     final cx = el.centerX, cy = el.centerY;
     final off = math.min(el.width, el.height) * 0.22;
-    for (final dot in [Offset(-off, -off), Offset(off, -off), Offset(-off, off), Offset(off, off)]) {
-      canvas.drawCircle(Offset(cx + dot.dx, cy + dot.dy), 5,
-        Paint()..color = const Color(0xFF059669).withValues(alpha: 0.3));
+    for (final dot in [
+      Offset(-off, -off),
+      Offset(off, -off),
+      Offset(-off, off),
+      Offset(off, off),
+    ]) {
+      canvas.drawCircle(
+        Offset(cx + dot.dx, cy + dot.dy),
+        5,
+        Paint()..color = const Color(0xFF059669).withValues(alpha: 0.3),
+      );
     }
     // Table surface
     canvas.drawRRect(
-      RRect.fromLTRBAndCorners(cx - off * 0.8, cy - off * 0.8, cx + off * 0.8, cy + off * 0.8,
-        topLeft: const Radius.circular(3), topRight: const Radius.circular(3),
-        bottomLeft: const Radius.circular(3), bottomRight: const Radius.circular(3)),
-      Paint()..color = const Color(0xFF059669).withValues(alpha: 0.25)..style = PaintingStyle.stroke..strokeWidth = 1.5,
+      RRect.fromLTRBAndCorners(
+        cx - off * 0.8,
+        cy - off * 0.8,
+        cx + off * 0.8,
+        cy + off * 0.8,
+        topLeft: const Radius.circular(3),
+        topRight: const Radius.circular(3),
+        bottomLeft: const Radius.circular(3),
+        bottomRight: const Radius.circular(3),
+      ),
+      Paint()
+        ..color = const Color(0xFF059669).withValues(alpha: 0.25)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
     );
-    final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center)
-      ..text = TextSpan(text: "TABLE", style: TextStyle(fontSize: 7, fontWeight: FontWeight.w600, color: const Color(0xFF059669).withValues(alpha: 0.7), letterSpacing: 1))
-      ..layout(maxWidth: el.width);
+    final tp =
+        TextPainter(
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+          )
+          ..text = TextSpan(
+            text: "TABLE",
+            style: TextStyle(
+              fontSize: 7,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF059669).withValues(alpha: 0.7),
+              letterSpacing: 1,
+            ),
+          )
+          ..layout(maxWidth: el.width);
     tp.paint(canvas, Offset(el.centerX - tp.width / 2, cy + off + 8));
   }
+
   void _drawGenericStructural(Canvas canvas, PassengerSeatModel el) {
     canvas.drawRRect(
       RRect.fromLTRBAndCorners(
@@ -585,6 +694,9 @@ class PassengerSeatPainter extends CustomPainter {
 
     // ── Label (centered on cushion) ──
     if (seat.displayLabel.isNotEmpty) {
+      canvas.save();
+      canvas.rotate(-seat.rotation * math.pi / 180);
+      if (seat.isReverseFacing) canvas.rotate(math.pi);
       final label = seat.displayLabel;
       final fs = (label.length <= 2 ? bw * 0.34 : bw * 0.26).clamp(7.5, 11.0);
       final tp =
@@ -715,6 +827,9 @@ class PassengerSeatPainter extends CustomPainter {
 
     // ── Label ──
     if (seat.displayLabel.isNotEmpty) {
+      canvas.save();
+      canvas.rotate(-seat.rotation * math.pi / 180);
+      if (seat.isReverseFacing) canvas.rotate(math.pi);
       final label = seat.displayLabel;
       final fs = (label.length <= 3 ? bw * 0.22 : bw * 0.18).clamp(6.5, 9.5);
       final tp =
@@ -733,6 +848,7 @@ class PassengerSeatPainter extends CustomPainter {
             )
             ..layout(maxWidth: bw);
       tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
+      canvas.restore();
     }
 
     canvas.restore();
@@ -758,7 +874,11 @@ class PassengerSeatPainter extends CustomPainter {
           case PassengerSeatCategory.sleeperLower:
             return (_colorSleeper, _colorSleeperDk, const Color(0xFFF9A8D4));
           case PassengerSeatCategory.sleeperUpper:
-            return (_colorSleeperUpper, _colorSleeperUpperDk, const Color(0xFFFBBF24));
+            return (
+              _colorSleeperUpper,
+              _colorSleeperUpperDk,
+              const Color(0xFFFBBF24),
+            );
           default:
             return (_colorAvailable, _colorAvailableDk, _colorAvailableLt);
         }
