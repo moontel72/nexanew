@@ -75,8 +75,8 @@ class PassengerSeatModel {
       category == PassengerSeatCategory.door ||
       category == PassengerSeatCategory.aisle ||
       category == PassengerSeatCategory.lavatory ||
-      category == PassengerSeatCategory.emergency;
-      category == PassengerSeatCategory.restaurantTable ||
+      category == PassengerSeatCategory.emergency ||
+      category == PassengerSeatCategory.restaurantTable;
 
   /// Center point for hit-testing.
   double get centerX => x + width / 2;
@@ -194,8 +194,8 @@ PassengerSeatModel parsePassengerSeat(
             category == PassengerSeatCategory.door ||
             category == PassengerSeatCategory.aisle ||
             category == PassengerSeatCategory.lavatory ||
-            category == PassengerSeatCategory.emergency
-            category == PassengerSeatCategory.restaurantTable ||
+            category == PassengerSeatCategory.emergency ||
+            category == PassengerSeatCategory.restaurantTable
         ? SeatAvailability.unavailable
         : isBooked
         ? SeatAvailability.booked
@@ -260,10 +260,10 @@ PassengerSeatCategory _resolveCategory(String type) {
       return PassengerSeatCategory.aisle;
     case 'lavatory':
       return PassengerSeatCategory.lavatory;
-    case 'emergency':
+    case "emergency":
+      return PassengerSeatCategory.emergency;
     case "restaurantTable":
       return PassengerSeatCategory.restaurantTable;
-      return PassengerSeatCategory.emergency;
     default:
       return PassengerSeatCategory.structural;
   }

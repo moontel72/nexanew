@@ -412,7 +412,7 @@ class PassengerSeatPainter extends CustomPainter {
       ..layout();
     tp.paint(canvas, Offset(cx - tp.width / 2, cy - tp.height / 2 - 2));
   }
-n  void _drawTable(Canvas canvas, PassengerSeatModel el) {
+  void _drawTable(Canvas canvas, PassengerSeatModel el) {
     canvas.drawRRect(
       RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
         topLeft: const Radius.circular(6), topRight: const Radius.circular(6),
@@ -759,10 +759,6 @@ n  void _drawTable(Canvas canvas, PassengerSeatModel el) {
             return (_colorSleeper, _colorSleeperDk, const Color(0xFFF9A8D4));
           case PassengerSeatCategory.sleeperUpper:
             return (_colorSleeperUpper, _colorSleeperUpperDk, const Color(0xFFFBBF24));
-  static const _colorFolding = Color(0xFF06B6D4);
-  static const _colorFoldingDk = Color(0xFF0891B2);
-  static const _colorTable = Color(0xFF059669);
-  static const _colorTableDk = Color(0xFF047857);
           default:
             return (_colorAvailable, _colorAvailableDk, _colorAvailableLt);
         }
