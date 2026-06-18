@@ -154,7 +154,8 @@ class _SeatInfoHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final typeLabel = switch (seat.category) {
       PassengerSeatCategory.businessClass => 'Business Class',
-      PassengerSeatCategory.sleeper => 'Sleeper Berth',
+      PassengerSeatCategory.sleeperLower ||
+      PassengerSeatCategory.sleeperUpper => 'Sleeper Berth',
       PassengerSeatCategory.folding => 'Folding Seat',
       _ => 'Standard Seat',
     };

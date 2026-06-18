@@ -10,11 +10,14 @@
 enum PassengerSeatCategory {
   standard, // Regular forward-facing seat
   businessClass, // Premium wide seat (2×1)
-  sleeper, // Sleeper berth (lower or upper)
+  sleeperLower, // Lower sleeper berth (pink)
+  sleeperUpper, // Upper sleeper berth (dark orange)
   folding, // Fold-down aisle seat
   driverCabin, // Driver cockpit (not bookable)
   door, // Entry/exit door (not bookable)
   aisle, // Walkway corridor (not bookable)
+  lavatory, // Washroom / restroom (not bookable)
+  emergency, // Emergency exit (not bookable)
   structural, // Other structural element (not bookable)
 }
 
@@ -69,7 +72,9 @@ class PassengerSeatModel {
       category == PassengerSeatCategory.structural ||
       category == PassengerSeatCategory.driverCabin ||
       category == PassengerSeatCategory.door ||
-      category == PassengerSeatCategory.aisle;
+      category == PassengerSeatCategory.aisle ||
+      category == PassengerSeatCategory.lavatory ||
+      category == PassengerSeatCategory.emergency;
 
   /// Center point for hit-testing.
   double get centerX => x + width / 2;
@@ -185,7 +190,9 @@ PassengerSeatModel parsePassengerSeat(
         category == PassengerSeatCategory.structural ||
             category == PassengerSeatCategory.driverCabin ||
             category == PassengerSeatCategory.door ||
-            category == PassengerSeatCategory.aisle
+            category == PassengerSeatCategory.aisle ||
+            category == PassengerSeatCategory.lavatory ||
+            category == PassengerSeatCategory.emergency
         ? SeatAvailability.unavailable
         : isBooked
         ? SeatAvailability.booked
@@ -236,16 +243,22 @@ PassengerSeatCategory _resolveCategory(String type) {
     case 'businessClassSeat':
       return PassengerSeatCategory.businessClass;
     case 'sleeperLower':
+      return PassengerSeatCategory.sleeperLower;
     case 'sleeperUpper':
-      return PassengerSeatCategory.sleeper;
+      return PassengerSeatCategory.sleeperUpper;
     case 'foldingSeat':
       return PassengerSeatCategory.folding;
     case 'driverCabin':
       return PassengerSeatCategory.driverCabin;
+    case 'exitDoor':
     case 'door':
       return PassengerSeatCategory.door;
     case 'aisle':
       return PassengerSeatCategory.aisle;
+    case 'lavatory':
+      return PassengerSeatCategory.lavatory;
+    case 'emergency':
+      return PassengerSeatCategory.emergency;
     default:
       return PassengerSeatCategory.structural;
   }

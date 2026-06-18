@@ -26,8 +26,10 @@ class PassengerSeatPainter extends CustomPainter {
   static const _colorBookedDk = Color(0xFF6B7280);
   static const _colorBusiness = Color(0xFF7C3AED);
   static const _colorBusinessDk = Color(0xFF6D28D9);
-  static const _colorSleeper = Color(0xFFD97706);
-  static const _colorSleeperDk = Color(0xFFB45309);
+  static const _colorSleeper = Color(0xFFDB2777);
+  static const _colorSleeperDk = Color(0xFFBE185D);
+  static const _colorSleeperUpper = Color(0xFFD97706);
+  static const _colorSleeperUpperDk = Color(0xFFB45309);
   static const _colorFloor = Color(0xFFF8FAFC);
   static const _colorWall = Color(0xFFCBD5E1);
 
@@ -60,7 +62,8 @@ class PassengerSeatPainter extends CustomPainter {
     final bookable = seats.where((s) => !s.isStructural).toList()
       ..sort((a, b) => a.y.compareTo(b.y));
     for (final seat in bookable) {
-      if (seat.category == PassengerSeatCategory.sleeper) {
+      if (seat.category == PassengerSeatCategory.sleeperLower ||
+          seat.category == PassengerSeatCategory.sleeperUpper) {
         _drawSleeperBerth(canvas, seat);
       } else {
         _drawSeat(canvas, seat);
@@ -152,8 +155,6 @@ class PassengerSeatPainter extends CustomPainter {
 
   // ═══════════════════════════════════════════════════════════
   // STRUCTURAL — rendered dynamically from database
-  // ═══════════════════════════════════════════════════════════
-
   void _drawStructural(Canvas canvas, PassengerSeatModel el) {
     switch (el.category) {
       case PassengerSeatCategory.driverCabin:
@@ -165,12 +166,16 @@ class PassengerSeatPainter extends CustomPainter {
       case PassengerSeatCategory.aisle:
         _drawAisle(canvas, el);
         break;
+      case PassengerSeatCategory.lavatory:
+        _drawLavatory(canvas, el);
+        break;
+      case PassengerSeatCategory.emergency:
+        _drawEmergency(canvas, el);
+        break;
       default:
         _drawGenericStructural(canvas, el);
     }
   }
-
-  // ── Driver Cabin ──────────────────────────────────────────
 
   void _drawDriverCabin(Canvas canvas, PassengerSeatModel el) {
     final bg = const Color(0xFF1E293B).withValues(alpha: 0.08);
@@ -364,6 +369,42 @@ class PassengerSeatPainter extends CustomPainter {
 
   // ── Generic Structural (fallback) ─────────────────────────
 
+n  void _drawLavatory(Canvas canvas, PassengerSeatModel el) {
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
+        topLeft: const Radius.circular(4), topRight: const Radius.circular(4),
+        bottomLeft: const Radius.circular(2), bottomRight: const Radius.circular(2)),
+      Paint()..color = const Color(0xFFEEF2FF),
+    );
+    final cx = el.centerX, cy = el.centerY;
+    final r = math.min(el.width, el.height) * 0.22;
+    canvas.drawCircle(Offset(cx, cy - r * 0.3), r,
+      Paint()..color = const Color(0xFF6366F1)..style = PaintingStyle.stroke..strokeWidth = 2.0);
+    canvas.drawLine(Offset(cx, cy - r * 0.3 - r), Offset(cx, cy - r * 0.3 + r),
+      Paint()..color = const Color(0xFF6366F1)..strokeWidth = 1.8);
+    final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center)
+      ..text = TextSpan(text: "WC", style: TextStyle(fontSize: 8, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1).withValues(alpha: 0.8)))
+      ..layout(maxWidth: el.width);
+    tp.paint(canvas, Offset(el.centerX - tp.width / 2, cy + r + 4));
+  }
+
+  void _drawEmergency(Canvas canvas, PassengerSeatModel el) {
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
+        topLeft: const Radius.circular(4), topRight: const Radius.circular(4),
+        bottomLeft: const Radius.circular(2), bottomRight: const Radius.circular(2)),
+      Paint()..color = const Color(0xFFFEF2F2),
+    );
+    final cx = el.centerX, cy = el.centerY;
+    final sz = math.min(el.width, el.height) * 0.35;
+    final path = Path()..moveTo(cx, cy - sz)..lineTo(cx + sz * 0.8, cy + sz * 0.5)..lineTo(cx - sz * 0.8, cy + sz * 0.5)..close();
+    canvas.drawPath(path, Paint()..color = const Color(0xFFDC2626)..style = PaintingStyle.stroke..strokeWidth = 2.0);
+    canvas.drawPath(path, Paint()..color = const Color(0xFFDC2626).withValues(alpha: 0.12));
+    final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center)
+      ..text = TextSpan(text: "!", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0xFFDC2626)))
+      ..layout();
+    tp.paint(canvas, Offset(cx - tp.width / 2, cy - tp.height / 2 - 2));
+  }
   void _drawGenericStructural(Canvas canvas, PassengerSeatModel el) {
     canvas.drawRRect(
       RRect.fromLTRBAndCorners(
@@ -634,8 +675,7 @@ class PassengerSeatPainter extends CustomPainter {
 
     // ── Label ──
     if (seat.displayLabel.isNotEmpty) {
-      final label =
-          '${seat.displayLabel}${seat.berthLabel != null ? ' ${seat.berthLabel}' : ''}';
+      final label = seat.displayLabel;
       final fs = (label.length <= 3 ? bw * 0.22 : bw * 0.18).clamp(6.5, 9.5);
       final tp =
           TextPainter(
@@ -673,8 +713,10 @@ class PassengerSeatPainter extends CustomPainter {
         switch (s.category) {
           case PassengerSeatCategory.businessClass:
             return (_colorBusiness, _colorBusinessDk, const Color(0xFFA78BFA));
-          case PassengerSeatCategory.sleeper:
-            return (_colorSleeper, _colorSleeperDk, const Color(0xFFFBBF24));
+          case PassengerSeatCategory.sleeperLower:
+            return (_colorSleeper, _colorSleeperDk, const Color(0xFFF9A8D4));
+          case PassengerSeatCategory.sleeperUpper:
+            return (_colorSleeperUpper, _colorSleeperUpperDk, const Color(0xFFFBBF24));
           default:
             return (_colorAvailable, _colorAvailableDk, _colorAvailableLt);
         }
