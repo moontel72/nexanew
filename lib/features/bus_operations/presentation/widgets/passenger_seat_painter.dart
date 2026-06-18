@@ -17,19 +17,19 @@ class PassengerSeatPainter extends CustomPainter {
   final PassengerSeatModel? selectedSeat;
 
   // ── Palette ──
-  static const _colorAvailable   = Color(0xFF2563EB);
+  static const _colorAvailable = Color(0xFF2563EB);
   static const _colorAvailableDk = Color(0xFF1D4ED8);
   static const _colorAvailableLt = Color(0xFF60A5FA);
-  static const _colorSelected    = Color(0xFF059669);
-  static const _colorSelectedDk  = Color(0xFF047857);
-  static const _colorBooked      = Color(0xFF9CA3AF);
-  static const _colorBookedDk    = Color(0xFF6B7280);
-  static const _colorBusiness    = Color(0xFF7C3AED);
-  static const _colorBusinessDk  = Color(0xFF6D28D9);
-  static const _colorSleeper     = Color(0xFFD97706);
-  static const _colorSleeperDk   = Color(0xFFB45309);
-  static const _colorFloor       = Color(0xFFF8FAFC);
-  static const _colorWall        = Color(0xFFCBD5E1);
+  static const _colorSelected = Color(0xFF059669);
+  static const _colorSelectedDk = Color(0xFF047857);
+  static const _colorBooked = Color(0xFF9CA3AF);
+  static const _colorBookedDk = Color(0xFF6B7280);
+  static const _colorBusiness = Color(0xFF7C3AED);
+  static const _colorBusinessDk = Color(0xFF6D28D9);
+  static const _colorSleeper = Color(0xFFD97706);
+  static const _colorSleeperDk = Color(0xFFB45309);
+  static const _colorFloor = Color(0xFFF8FAFC);
+  static const _colorWall = Color(0xFFCBD5E1);
 
   PassengerSeatPainter({
     required this.seats,
@@ -41,7 +41,7 @@ class PassengerSeatPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final s = math.min(size.width / canvasWidth, size.height / canvasHeight);
-    final ox = (size.width  - canvasWidth  * s) / 2;
+    final ox = (size.width - canvasWidth * s) / 2;
     final oy = (size.height - canvasHeight * s) / 2;
 
     canvas.save();
@@ -78,7 +78,10 @@ class PassengerSeatPainter extends CustomPainter {
   void _drawShell(Canvas canvas) {
     // Floor
     final body = RRect.fromLTRBAndCorners(
-      0, 0, canvasWidth, canvasHeight,
+      0,
+      0,
+      canvasWidth,
+      canvasHeight,
       topLeft: const Radius.circular(12),
       topRight: const Radius.circular(12),
       bottomLeft: const Radius.circular(5),
@@ -87,10 +90,13 @@ class PassengerSeatPainter extends CustomPainter {
     canvas.drawRRect(body, Paint()..color = _colorFloor);
 
     // Wall stroke
-    canvas.drawRRect(body, Paint()
-      ..color = _colorWall
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5);
+    canvas.drawRRect(
+      body,
+      Paint()
+        ..color = _colorWall
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5,
+    );
 
     // ── Windshield accent (top center) ──
     final ww = canvasWidth * 0.50;
@@ -98,19 +104,40 @@ class PassengerSeatPainter extends CustomPainter {
     final wx = (canvasWidth - ww) / 2;
     final wy = 5.0;
     canvas.drawRRect(
-      RRect.fromLTRBAndCorners(wx, wy, wx + ww, wy + wh,
-        topLeft: const Radius.circular(8), topRight: const Radius.circular(8)),
+      RRect.fromLTRBAndCorners(
+        wx,
+        wy,
+        wx + ww,
+        wy + wh,
+        topLeft: const Radius.circular(8),
+        topRight: const Radius.circular(8),
+      ),
       Paint()..color = const Color(0xFFDBEAFE),
     );
-    final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center)
-      ..text = TextSpan(text: 'FRONT', style: TextStyle(fontSize: 9, color: _colorWall.withValues(alpha: 0.6), fontWeight: FontWeight.w600, letterSpacing: 2))
-      ..layout(maxWidth: ww);
+    final tp =
+        TextPainter(
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+          )
+          ..text = TextSpan(
+            text: 'FRONT',
+            style: TextStyle(
+              fontSize: 9,
+              color: _colorWall.withValues(alpha: 0.6),
+              fontWeight: FontWeight.w600,
+              letterSpacing: 2,
+            ),
+          )
+          ..layout(maxWidth: ww);
     tp.paint(canvas, Offset(wx + (ww - tp.width) / 2, wy + 8));
 
     // Side wall lines
     final wallLine = Paint()..color = _colorWall.withValues(alpha: 0.25);
     canvas.drawRect(Rect.fromLTWH(0, 0, 2.5, canvasHeight), wallLine);
-    canvas.drawRect(Rect.fromLTWH(canvasWidth - 2.5, 0, 2.5, canvasHeight), wallLine);
+    canvas.drawRect(
+      Rect.fromLTWH(canvasWidth - 2.5, 0, 2.5, canvasHeight),
+      wallLine,
+    );
 
     // Subtle floor lines
     final floorLine = Paint()..color = const Color(0xFFE2E8F0);
@@ -124,41 +151,229 @@ class PassengerSeatPainter extends CustomPainter {
   // ═══════════════════════════════════════════════════════════
 
   void _drawStructural(Canvas canvas, PassengerSeatModel el) {
-    final String icon;
-    final Color bg;
-    final String label;
     switch (el.category) {
       case PassengerSeatCategory.driverCabin:
-        icon = '🚌'; bg = const Color(0xFF374151).withValues(alpha: 0.10); label = 'DRIVER';
+        _drawDriverCabin(canvas, el);
+        break;
+      case PassengerSeatCategory.door:
+        _drawDoor(canvas, el);
+        break;
+      case PassengerSeatCategory.aisle:
+        _drawAisle(canvas, el);
         break;
       default:
-        if ((el.seatLabel ?? '').toLowerCase() == 'aisle') {
-          icon = ''; bg = const Color(0xFFF1F5F9); label = 'AISLE';
-        } else {
-          icon = ''; bg = const Color(0xFFF1F5F9); label = '';
-        }
+        _drawGenericStructural(canvas, el);
     }
+  }
 
-    // Background zone
+  // ── Driver Cabin ──────────────────────────────────────────
+
+  void _drawDriverCabin(Canvas canvas, PassengerSeatModel el) {
+    final bg = const Color(0xFF1E293B).withValues(alpha: 0.08);
     canvas.drawRRect(
-      RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
-        topLeft: const Radius.circular(4), topRight: const Radius.circular(4),
-        bottomLeft: const Radius.circular(2), bottomRight: const Radius.circular(2)),
+      RRect.fromLTRBAndCorners(
+        el.x,
+        el.y,
+        el.x + el.width,
+        el.y + el.height,
+        topLeft: const Radius.circular(6),
+        topRight: const Radius.circular(6),
+        bottomLeft: const Radius.circular(3),
+        bottomRight: const Radius.circular(3),
+      ),
       Paint()..color = bg,
     );
 
-    // Icon + label
-    if (icon.isNotEmpty || label.isNotEmpty) {
-      final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center);
-      final buffer = StringBuffer();
-      if (icon.isNotEmpty) buffer.write('$icon\n');
-      if (label.isNotEmpty) buffer.write(label);
-      tp.text = TextSpan(text: buffer.toString(), style: TextStyle(
-        fontSize: 8, fontWeight: FontWeight.w500,
-        color: const Color(0xFF64748B).withValues(alpha: 0.7), height: 1.3));
-      tp.layout(maxWidth: el.width);
-      tp.paint(canvas, Offset(el.centerX - tp.width / 2, el.centerY - tp.height / 2));
+    // Steering wheel — simple vector circle + cross
+    final cx = el.centerX, cy = el.centerY;
+    final r = math.min(el.width, el.height) * 0.28;
+    // Outer ring
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r,
+      Paint()
+        ..color = const Color(0xFF64748B)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0,
+    );
+    // Inner hub
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r * 0.3,
+      Paint()..color = const Color(0xFF475569),
+    );
+    // Spokes
+    final spoke = Paint()
+      ..color = const Color(0xFF64748B)
+      ..strokeWidth = 1.2;
+    canvas.drawLine(Offset(cx - r, cy), Offset(cx + r, cy), spoke);
+    canvas.drawLine(Offset(cx, cy - r), Offset(cx, cy + r), spoke);
+
+    // Label below wheel
+    final tp =
+        TextPainter(
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+          )
+          ..text = TextSpan(
+            text: 'DRIVER',
+            style: TextStyle(
+              fontSize: 7,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF64748B).withValues(alpha: 0.7),
+              letterSpacing: 1.2,
+            ),
+          )
+          ..layout(maxWidth: el.width);
+    tp.paint(canvas, Offset(el.centerX - tp.width / 2, cy + r + 6));
+  }
+
+  // ── Door ──────────────────────────────────────────────────
+
+  void _drawDoor(Canvas canvas, PassengerSeatModel el) {
+    // Door background (light, distinct zone)
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        el.x,
+        el.y,
+        el.x + el.width,
+        el.y + el.height,
+        topLeft: const Radius.circular(4),
+        topRight: const Radius.circular(4),
+        bottomLeft: const Radius.circular(2),
+        bottomRight: const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFFF1F5F9),
+    );
+
+    // Door outline
+    final dw = el.width - 8, dh = el.height - 8;
+    final dx = el.x + 4, dy = el.y + 4;
+    final doorRect = RRect.fromLTRBAndCorners(
+      dx,
+      dy,
+      dx + dw,
+      dy + dh,
+      topLeft: const Radius.circular(4),
+      topRight: const Radius.circular(4),
+      bottomLeft: const Radius.circular(2),
+      bottomRight: const Radius.circular(2),
+    );
+    canvas.drawRRect(
+      doorRect,
+      Paint()
+        ..color = const Color(0xFFCBD5E1)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8,
+    );
+
+    // Door handle — small vertical bar on the right side
+    final hx = dx + dw - 7, hy = dy + dh * 0.25;
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        hx,
+        hy,
+        hx + 2.5,
+        hy + dh * 0.45,
+        topLeft: const Radius.circular(1.5),
+        topRight: const Radius.circular(1.5),
+        bottomLeft: const Radius.circular(1.5),
+        bottomRight: const Radius.circular(1.5),
+      ),
+      Paint()..color = const Color(0xFF94A3B8),
+    );
+
+    // Door swing arc — subtle hinge line on left
+    canvas.drawLine(
+      Offset(dx + 2, dy + 3),
+      Offset(dx + 2, dy + dh - 3),
+      Paint()
+        ..color = const Color(0xFFCBD5E1).withValues(alpha: 0.5)
+        ..strokeWidth = 1.0,
+    );
+
+    // Label
+    final tp =
+        TextPainter(
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+          )
+          ..text = TextSpan(
+            text: 'DOOR',
+            style: TextStyle(
+              fontSize: 7,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF94A3B8).withValues(alpha: 0.9),
+              letterSpacing: 1.0,
+            ),
+          )
+          ..layout(maxWidth: dw - 12);
+    tp.paint(
+      canvas,
+      Offset(el.centerX - tp.width / 2, el.centerY - tp.height / 2),
+    );
+  }
+
+  // ── Aisle ─────────────────────────────────────────────────
+
+  void _drawAisle(Canvas canvas, PassengerSeatModel el) {
+    // Subtle lane background
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        el.x,
+        el.y,
+        el.x + el.width,
+        el.y + el.height,
+        topLeft: const Radius.circular(2),
+        topRight: const Radius.circular(2),
+        bottomLeft: const Radius.circular(2),
+        bottomRight: const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFFF8FAFC),
+    );
+
+    // Dashed center line
+    final isVertical = el.height > el.width;
+    final dashPaint = Paint()
+      ..color = const Color(0xFFCBD5E1).withValues(alpha: 0.5)
+      ..strokeWidth = 1.0;
+    const dashLen = 6.0;
+    const gapLen = 4.0;
+    if (isVertical) {
+      final cx = el.centerX;
+      var y = el.y + 4;
+      while (y < el.y + el.height - 4) {
+        final endY = math.min(y + dashLen, el.y + el.height - 4);
+        canvas.drawLine(Offset(cx, y), Offset(cx, endY), dashPaint);
+        y += dashLen + gapLen;
+      }
+    } else {
+      final cy = el.centerY;
+      var x = el.x + 4;
+      while (x < el.x + el.width - 4) {
+        final endX = math.min(x + dashLen, el.x + el.width - 4);
+        canvas.drawLine(Offset(x, cy), Offset(endX, cy), dashPaint);
+        x += dashLen + gapLen;
+      }
     }
+  }
+
+  // ── Generic Structural (fallback) ─────────────────────────
+
+  void _drawGenericStructural(Canvas canvas, PassengerSeatModel el) {
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        el.x,
+        el.y,
+        el.x + el.width,
+        el.y + el.height,
+        topLeft: const Radius.circular(4),
+        topRight: const Radius.circular(4),
+        bottomLeft: const Radius.circular(2),
+        bottomRight: const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFFF1F5F9),
+    );
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -181,54 +396,136 @@ class PassengerSeatPainter extends CustomPainter {
 
     // Shadow
     canvas.drawRRect(
-      RRect.fromLTRBAndCorners(-hw + pad + 1, -hh + pad + 1.5, hw - pad + 1, hh - pad + 1.5,
-        topLeft: Radius.circular(r), topRight: Radius.circular(r),
-        bottomLeft: Radius.circular(r * 0.5), bottomRight: Radius.circular(r * 0.5)),
-      Paint()..color = Colors.black.withValues(alpha: 0.08)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+      RRect.fromLTRBAndCorners(
+        -hw + pad + 1,
+        -hh + pad + 1.5,
+        hw - pad + 1,
+        hh - pad + 1.5,
+        topLeft: Radius.circular(r),
+        topRight: Radius.circular(r),
+        bottomLeft: Radius.circular(r * 0.5),
+        bottomRight: Radius.circular(r * 0.5),
+      ),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.08)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
     );
 
     // Body
-    final body = RRect.fromLTRBAndCorners(-hw + pad, -hh + pad, hw - pad, hh - pad,
-      topLeft: Radius.circular(r), topRight: Radius.circular(r),
-      bottomLeft: Radius.circular(r * 0.5), bottomRight: Radius.circular(r * 0.5));
-    final grad = LinearGradient(colors: [light, base, dark], stops: const [0.0, 0.45, 1.0]);
-    canvas.drawRRect(body, Paint()..shader = grad.createShader(Rect.fromCenter(center: Offset.zero, width: bw, height: bh)));
-    canvas.drawRRect(body, Paint()..color = dark..style = PaintingStyle.stroke..strokeWidth = 0.8);
+    final body = RRect.fromLTRBAndCorners(
+      -hw + pad,
+      -hh + pad,
+      hw - pad,
+      hh - pad,
+      topLeft: Radius.circular(r),
+      topRight: Radius.circular(r),
+      bottomLeft: Radius.circular(r * 0.5),
+      bottomRight: Radius.circular(r * 0.5),
+    );
+    final grad = LinearGradient(
+      colors: [light, base, dark],
+      stops: const [0.0, 0.45, 1.0],
+    );
+    canvas.drawRRect(
+      body,
+      Paint()
+        ..shader = grad.createShader(
+          Rect.fromCenter(center: Offset.zero, width: bw, height: bh),
+        ),
+    );
+    canvas.drawRRect(
+      body,
+      Paint()
+        ..color = dark
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8,
+    );
 
     // Headrest
     final hrH = bh * 0.25, hrW = bw - 4;
     canvas.drawRRect(
-      RRect.fromLTRBAndCorners(-hrW / 2, -hh + pad + 1, hrW / 2, -hh + pad + 1 + hrH,
-        topLeft: Radius.circular(r * 1.2), topRight: Radius.circular(r * 1.2),
-        bottomLeft: Radius.circular(r * 0.4), bottomRight: Radius.circular(r * 0.4)),
+      RRect.fromLTRBAndCorners(
+        -hrW / 2,
+        -hh + pad + 1,
+        hrW / 2,
+        -hh + pad + 1 + hrH,
+        topLeft: Radius.circular(r * 1.2),
+        topRight: Radius.circular(r * 1.2),
+        bottomLeft: Radius.circular(r * 0.4),
+        bottomRight: Radius.circular(r * 0.4),
+      ),
       Paint()..color = dark.withValues(alpha: 0.35),
     );
-    canvas.drawLine(Offset(-hrW / 2 + 3, -hh + pad + 3), Offset(hrW / 2 - 3, -hh + pad + 3),
-      Paint()..color = light.withValues(alpha: 0.4)..strokeWidth = 0.5);
+    canvas.drawLine(
+      Offset(-hrW / 2 + 3, -hh + pad + 3),
+      Offset(hrW / 2 - 3, -hh + pad + 3),
+      Paint()
+        ..color = light.withValues(alpha: 0.4)
+        ..strokeWidth = 0.5,
+    );
 
     // Armrests
     final armW = bw * 0.1, armH = bh * 0.35, armY = -hh + pad + hrH + 5;
     final armPaint = Paint()..color = dark.withValues(alpha: 0.4);
-    canvas.drawRRect(RRect.fromLTRBAndCorners(-hw + pad - armW + 1, armY, -hw + pad + 1, armY + armH, topRight: const Radius.circular(2), bottomRight: const Radius.circular(2)), armPaint);
-    canvas.drawRRect(RRect.fromLTRBAndCorners(hw - pad - 1, armY, hw - pad + armW - 1, armY + armH, topLeft: const Radius.circular(2), bottomLeft: const Radius.circular(2)), armPaint);
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        -hw + pad - armW + 1,
+        armY,
+        -hw + pad + 1,
+        armY + armH,
+        topRight: const Radius.circular(2),
+        bottomRight: const Radius.circular(2),
+      ),
+      armPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        hw - pad - 1,
+        armY,
+        hw - pad + armW - 1,
+        armY + armH,
+        topLeft: const Radius.circular(2),
+        bottomLeft: const Radius.circular(2),
+      ),
+      armPaint,
+    );
 
     // Crease
-    canvas.drawLine(Offset(-bw * 0.35, hh - pad - bh * 0.18), Offset(bw * 0.35, hh - pad - bh * 0.18),
-      Paint()..color = dark.withValues(alpha: 0.25)..strokeWidth = 0.5);
+    canvas.drawLine(
+      Offset(-bw * 0.35, hh - pad - bh * 0.18),
+      Offset(bw * 0.35, hh - pad - bh * 0.18),
+      Paint()
+        ..color = dark.withValues(alpha: 0.25)
+        ..strokeWidth = 0.5,
+    );
 
     // Selected glow
     if (seat.availability == SeatAvailability.selected) {
-      canvas.drawRRect(body, Paint()
-        ..color = _colorSelected.withValues(alpha: 0.4)
-        ..style = PaintingStyle.stroke..strokeWidth = 2.5
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
+      canvas.drawRRect(
+        body,
+        Paint()
+          ..color = _colorSelected.withValues(alpha: 0.4)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      );
     }
 
     // Booked X
     if (seat.availability == SeatAvailability.booked) {
-      final xp = Paint()..color = Colors.white.withValues(alpha: 0.5)..strokeWidth = 1;
-      canvas.drawLine(Offset(-bw * 0.25, -bh * 0.25), Offset(bw * 0.25, bh * 0.25), xp);
-      canvas.drawLine(Offset(-bw * 0.25,  bh * 0.25), Offset(bw * 0.25, -bh * 0.25), xp);
+      final xp = Paint()
+        ..color = Colors.white.withValues(alpha: 0.5)
+        ..strokeWidth = 1;
+      canvas.drawLine(
+        Offset(-bw * 0.25, -bh * 0.25),
+        Offset(bw * 0.25, bh * 0.25),
+        xp,
+      );
+      canvas.drawLine(
+        Offset(-bw * 0.25, bh * 0.25),
+        Offset(bw * 0.25, -bh * 0.25),
+        xp,
+      );
     }
 
     // Label
@@ -236,9 +533,21 @@ class PassengerSeatPainter extends CustomPainter {
       final label = seat.displayLabel;
       double fs = (label.length <= 2) ? bw * 0.32 : bw * 0.25;
       fs = fs.clamp(7.0, 12.0);
-      final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center)
-        ..text = TextSpan(text: label, style: TextStyle(fontSize: fs, fontWeight: FontWeight.w700, color: _isLight(base) ? Colors.black87 : Colors.white, height: 1.0))
-        ..layout(maxWidth: bw);
+      final tp =
+          TextPainter(
+              textDirection: TextDirection.ltr,
+              textAlign: TextAlign.center,
+            )
+            ..text = TextSpan(
+              text: label,
+              style: TextStyle(
+                fontSize: fs,
+                fontWeight: FontWeight.w700,
+                color: _isLight(base) ? Colors.black87 : Colors.white,
+                height: 1.0,
+              ),
+            )
+            ..layout(maxWidth: bw);
       tp.paint(canvas, Offset(-tp.width / 2, hh - pad - tp.height - 3));
     }
 
@@ -268,5 +577,6 @@ class PassengerSeatPainter extends CustomPainter {
     }
   }
 
-  bool _isLight(Color c) => (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) * 255 > 140;
+  bool _isLight(Color c) =>
+      (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) * 255 > 140;
 }

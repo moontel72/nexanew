@@ -13,7 +13,9 @@ enum PassengerSeatCategory {
   sleeper, // Sleeper berth (lower or upper)
   folding, // Fold-down aisle seat
   driverCabin, // Driver cockpit (not bookable)
-  structural, // Aisle, door, lavatory (not bookable)
+  door, // Entry/exit door (not bookable)
+  aisle, // Walkway corridor (not bookable)
+  structural, // Other structural element (not bookable)
 }
 
 /// Live booking state reflected in the seat grid.
@@ -65,7 +67,9 @@ class PassengerSeatModel {
   /// Whether this seat renders as a structural element (no interaction).
   bool get isStructural =>
       category == PassengerSeatCategory.structural ||
-      category == PassengerSeatCategory.driverCabin;
+      category == PassengerSeatCategory.driverCabin ||
+      category == PassengerSeatCategory.door ||
+      category == PassengerSeatCategory.aisle;
 
   /// Center point for hit-testing.
   double get centerX => x + width / 2;
@@ -179,7 +183,9 @@ PassengerSeatModel parsePassengerSeat(
     category: category,
     availability:
         category == PassengerSeatCategory.structural ||
-            category == PassengerSeatCategory.driverCabin
+            category == PassengerSeatCategory.driverCabin ||
+            category == PassengerSeatCategory.door ||
+            category == PassengerSeatCategory.aisle
         ? SeatAvailability.unavailable
         : isBooked
         ? SeatAvailability.booked
@@ -236,6 +242,10 @@ PassengerSeatCategory _resolveCategory(String type) {
       return PassengerSeatCategory.folding;
     case 'driverCabin':
       return PassengerSeatCategory.driverCabin;
+    case 'door':
+      return PassengerSeatCategory.door;
+    case 'aisle':
+      return PassengerSeatCategory.aisle;
     default:
       return PassengerSeatCategory.structural;
   }
