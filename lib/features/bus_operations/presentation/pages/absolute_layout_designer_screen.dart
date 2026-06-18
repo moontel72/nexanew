@@ -954,216 +954,124 @@ class _AbsoluteLayoutDesignerScreenState
         color: Color(0xFF0A1628),
         border: Border(bottom: BorderSide(color: Color(0x20FFFFFF))),
       ),
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Row 1: Back + Title + UNSAVED badge
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.white70,
-                  size: 20,
-                ),
-                tooltip: 'Back to Dashboard',
-                onPressed: () {
-                  if (_state.isDirty) {
-                    _showUnsavedDialog();
-                  } else {
-                    Navigator.pop(context, true);
-                  }
-                },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // Back
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 18),
+              tooltip: 'Back',
+              onPressed: () {
+                if (_state.isDirty) {
+                  _showUnsavedDialog();
+                } else {
+                  Navigator.pop(context, true);
+                }
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+            ),
+            const Gap(4),
+            // Title (compact)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 140),
+              child: Text(
+                _state.displayName,
+                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                overflow: TextOverflow.ellipsis,
               ),
-              const Gap(8),
-              Expanded(
-                child: Text(
-                  _state.displayName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+            ),
+            if (_state.isDirty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF97316).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(3),
                 ),
+                child: const Text('UNSAVED', style: TextStyle(color: Color(0xFFF97316), fontSize: 8, fontWeight: FontWeight.w700)),
               ),
-              if (_state.isDirty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF97316).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'UNSAVED',
-                    style: TextStyle(
-                      color: Color(0xFFF97316),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const Gap(4),
-          // Row 2: All action buttons — Select, Place, Presets, Save, Publish
-          Row(
-            children: [
-              _toolButton(
-                icon: Icons.near_me,
-                label: 'Select',
-                active: _tool == _CanvasTool.select,
-                onTap: () {
-                  _tool = _CanvasTool.select;
-                  _placingType = null;
-                  _setState(_state.copyWith(clearSelection: true));
-                },
+            const Gap(8),
+            // Select
+            _compactBtn(Icons.near_me, 'Select', _tool == _CanvasTool.select, () {
+              _tool = _CanvasTool.select;
+              _placingType = null;
+              _setState(_state.copyWith(clearSelection: true));
+            }),
+            // Place
+            _compactBtn(Icons.add_location_alt, 'Place', _tool == _CanvasTool.placeComponent, () {
+              if (_placingType == null && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Pick a part from the left palette first'), backgroundColor: Color(0xFFD97706), duration: Duration(seconds: 2)),
+                );
+              }
+              setState(() => _tool = _CanvasTool.placeComponent);
+            }),
+            // Presets
+            _compactBtn(_sidebarOpen ? Icons.menu_open : Icons.menu, 'Presets', _sidebarOpen, () => setState(() => _sidebarOpen = !_sidebarOpen)),
+            const Gap(8),
+            // Save & Publish / Save
+            ElevatedButton.icon(
+              onPressed: _state.isSaving ? null : () => _saveLayout(),
+              icon: _state.isSaving
+                  ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.save, size: 14),
+              label: Text(
+                _state.layoutId == null ? 'Save & Publish' : 'Save',
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
               ),
-              const Gap(4),
-              _toolButton(
-                icon: Icons.add_location_alt,
-                label: 'Place',
-                active: _tool == _CanvasTool.placeComponent,
-                onTap: () {
-                  if (_placingType != null) {
-                    setState(() => _tool = _CanvasTool.placeComponent);
-                  } else {
-                    setState(() => _tool = _CanvasTool.placeComponent);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Pick a part from the left palette first',
-                          ),
-                          backgroundColor: Color(0xFFD97706),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  }
-                },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
               ),
-              const Gap(4),
-              _toolButton(
-                icon: _sidebarOpen ? Icons.menu_open : Icons.menu,
-                label: 'Presets',
-                active: _sidebarOpen,
-                onTap: () => setState(() => _sidebarOpen = !_sidebarOpen),
+            ),
+            const Gap(4),
+            // Publish
+            ElevatedButton.icon(
+              onPressed: _state.isSaving || _state.layoutId == null ? null : _publishLayout,
+              icon: _state.isSaving
+                  ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.cloud_upload, size: 14),
+              label: const Text('Publish', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD97706),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
               ),
-              const Spacer(),
-              // ── SAVE button ──
-              ElevatedButton.icon(
-                onPressed: _state.isSaving ? null : () => _saveLayout(),
-                icon: _state.isSaving
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.save, size: 16),
-                label: Text(
-                  _state.layoutId == null ? 'Save & Publish' : 'Save',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF16A34A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ),
-              const Gap(4),
-              // ── PUBLISH button ──
-              ElevatedButton.icon(
-                onPressed: _state.isSaving || _state.layoutId == null
-                    ? null
-                    : _publishLayout,
-                icon: _state.isSaving
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.cloud_upload, size: 16),
-                label: const Text(
-                  'Publish',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD97706),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _toolButton({
-    required IconData icon,
-    required String label,
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF7C3AED).withOpacity(0.2) : null,
-          borderRadius: BorderRadius.circular(6),
-          border: active
-              ? Border.all(color: const Color(0xFF7C3AED).withOpacity(0.5))
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 14,
-              color: active ? const Color(0xFF7C3AED) : Colors.white54,
-            ),
-            const Gap(4),
-            Text(
-              label,
-              style: TextStyle(
-                color: active ? const Color(0xFF7C3AED) : Colors.white54,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+  Widget _compactBtn(IconData icon, String label, bool active, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: active ? const Color(0xFF7C3AED).withOpacity(0.2) : null,
+            borderRadius: BorderRadius.circular(4),
+            border: active ? Border.all(color: const Color(0xFF7C3AED).withOpacity(0.4)) : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: active ? const Color(0xFF7C3AED) : Colors.white54),
+              const Gap(3),
+              Text(label, style: TextStyle(color: active ? const Color(0xFF7C3AED) : Colors.white54, fontSize: 9, fontWeight: FontWeight.w600)),
+            ],
+          ),
         ),
       ),
     );
