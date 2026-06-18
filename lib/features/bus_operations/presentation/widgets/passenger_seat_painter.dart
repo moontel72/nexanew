@@ -60,7 +60,11 @@ class PassengerSeatPainter extends CustomPainter {
     final bookable = seats.where((s) => !s.isStructural).toList()
       ..sort((a, b) => a.y.compareTo(b.y));
     for (final seat in bookable) {
-      _draw3DSeat(canvas, seat);
+      if (seat.category == PassengerSeatCategory.sleeper) {
+        _drawSleeperBerth(canvas, seat);
+      } else {
+        _drawSeat(canvas, seat);
+      }
     }
 
     canvas.restore();
@@ -377,162 +381,131 @@ class PassengerSeatPainter extends CustomPainter {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 3D-STYLED SEAT
+  // SEAT — slim airline-style seat icon
   // ═══════════════════════════════════════════════════════════
 
-  void _draw3DSeat(Canvas canvas, PassengerSeatModel seat) {
+  void _drawSeat(Canvas canvas, PassengerSeatModel seat) {
     canvas.save();
     canvas.translate(seat.centerX, seat.centerY);
     if (seat.rotation != 0) canvas.rotate(seat.rotation * math.pi / 180);
 
-    const vs = 0.70; // visual scale
-    final w = seat.width * vs, h = seat.height * vs;
+    final w = seat.width * 0.75, h = seat.height * 0.78;
     final hw = w / 2, hh = h / 2;
     final (base, dark, light) = _seatColors(seat);
-
-    const pad = 1.5;
+    final r = math.min(w, h) * 0.16;
+    const pad = 2.0;
     final bw = w - pad * 2, bh = h - pad * 2;
-    final r = math.min(bw, bh) * 0.18;
 
-    // Shadow
-    canvas.drawRRect(
-      RRect.fromLTRBAndCorners(
-        -hw + pad + 1,
-        -hh + pad + 1.5,
-        hw - pad + 1,
-        hh - pad + 1.5,
-        topLeft: Radius.circular(r),
-        topRight: Radius.circular(r),
-        bottomLeft: Radius.circular(r * 0.5),
-        bottomRight: Radius.circular(r * 0.5),
-      ),
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.08)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+    // ── Seat back (taller upper portion) ──
+    final backH = bh * 0.48;
+    final backTop = -hh + pad;
+    final backRR = RRect.fromLTRBAndCorners(
+      -hw + pad + 1,
+      backTop,
+      hw - pad - 1,
+      backTop + backH,
+      topLeft: Radius.circular(r * 1.3),
+      topRight: Radius.circular(r * 1.3),
+      bottomLeft: Radius.circular(r * 0.3),
+      bottomRight: Radius.circular(r * 0.3),
+    );
+    canvas.drawRRect(backRR, Paint()..color = dark.withValues(alpha: 0.65));
+    // Back highlight
+    canvas.drawRect(
+      Rect.fromLTWH(-hw + pad + 3, backTop + 3, bw * 0.28, backH - 6),
+      Paint()..color = light.withValues(alpha: 0.25),
     );
 
-    // Body
-    final body = RRect.fromLTRBAndCorners(
+    // ── Seat cushion (lower wider portion) ──
+    final cushionTop = backTop + backH + 1.5;
+    final cushionH = bh - backH - 1.5;
+    final cushionRR = RRect.fromLTRBAndCorners(
       -hw + pad,
-      -hh + pad,
+      cushionTop,
       hw - pad,
-      hh - pad,
-      topLeft: Radius.circular(r),
-      topRight: Radius.circular(r),
-      bottomLeft: Radius.circular(r * 0.5),
-      bottomRight: Radius.circular(r * 0.5),
+      cushionTop + cushionH,
+      topLeft: Radius.circular(r * 0.5),
+      topRight: Radius.circular(r * 0.5),
+      bottomLeft: Radius.circular(r * 0.7),
+      bottomRight: Radius.circular(r * 0.7),
     );
     final grad = LinearGradient(
-      colors: [light, base, dark],
-      stops: const [0.0, 0.45, 1.0],
+      colors: [light, base],
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
     );
     canvas.drawRRect(
-      body,
+      cushionRR,
       Paint()
         ..shader = grad.createShader(
-          Rect.fromCenter(center: Offset.zero, width: bw, height: bh),
+          Rect.fromLTRB(-hw, cushionTop, hw, cushionTop + cushionH),
         ),
     );
     canvas.drawRRect(
-      body,
+      cushionRR,
       Paint()
         ..color = dark
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.8,
+        ..strokeWidth = 0.7,
     );
 
-    // Headrest
-    final hrH = bh * 0.25, hrW = bw - 4;
-    canvas.drawRRect(
-      RRect.fromLTRBAndCorners(
-        -hrW / 2,
-        -hh + pad + 1,
-        hrW / 2,
-        -hh + pad + 1 + hrH,
-        topLeft: Radius.circular(r * 1.2),
-        topRight: Radius.circular(r * 1.2),
-        bottomLeft: Radius.circular(r * 0.4),
-        bottomRight: Radius.circular(r * 0.4),
-      ),
-      Paint()..color = dark.withValues(alpha: 0.35),
+    // ── Armrest dots ──
+    final dotR = 2.5;
+    final dotY = cushionTop + cushionH * 0.4;
+    canvas.drawCircle(
+      Offset(-hw + pad + dotR + 1, dotY),
+      dotR,
+      Paint()..color = dark.withValues(alpha: 0.5),
     );
-    canvas.drawLine(
-      Offset(-hrW / 2 + 3, -hh + pad + 3),
-      Offset(hrW / 2 - 3, -hh + pad + 3),
-      Paint()
-        ..color = light.withValues(alpha: 0.4)
-        ..strokeWidth = 0.5,
+    canvas.drawCircle(
+      Offset(hw - pad - dotR - 1, dotY),
+      dotR,
+      Paint()..color = dark.withValues(alpha: 0.5),
     );
 
-    // Armrests
-    final armW = bw * 0.1, armH = bh * 0.35, armY = -hh + pad + hrH + 5;
-    final armPaint = Paint()..color = dark.withValues(alpha: 0.4);
-    canvas.drawRRect(
-      RRect.fromLTRBAndCorners(
-        -hw + pad - armW + 1,
-        armY,
-        -hw + pad + 1,
-        armY + armH,
-        topRight: const Radius.circular(2),
-        bottomRight: const Radius.circular(2),
-      ),
-      armPaint,
-    );
-    canvas.drawRRect(
-      RRect.fromLTRBAndCorners(
-        hw - pad - 1,
-        armY,
-        hw - pad + armW - 1,
-        armY + armH,
-        topLeft: const Radius.circular(2),
-        bottomLeft: const Radius.circular(2),
-      ),
-      armPaint,
-    );
-
-    // Crease
-    canvas.drawLine(
-      Offset(-bw * 0.35, hh - pad - bh * 0.18),
-      Offset(bw * 0.35, hh - pad - bh * 0.18),
-      Paint()
-        ..color = dark.withValues(alpha: 0.25)
-        ..strokeWidth = 0.5,
-    );
-
-    // Selected glow
+    // ── Selected ring ──
     if (seat.availability == SeatAvailability.selected) {
+      final selRect = RRect.fromLTRBAndCorners(
+        -hw + pad - 1,
+        backTop - 1,
+        hw - pad + 1,
+        cushionTop + cushionH + 1,
+        topLeft: Radius.circular(r * 1.3),
+        topRight: Radius.circular(r * 1.3),
+        bottomLeft: Radius.circular(r * 0.7),
+        bottomRight: Radius.circular(r * 0.7),
+      );
       canvas.drawRRect(
-        body,
+        selRect,
         Paint()
-          ..color = _colorSelected.withValues(alpha: 0.4)
+          ..color = _colorSelected.withValues(alpha: 0.45)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+          ..strokeWidth = 2.2
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
       );
     }
 
-    // Booked X
+    // ── Booked X ──
     if (seat.availability == SeatAvailability.booked) {
       final xp = Paint()
-        ..color = Colors.white.withValues(alpha: 0.5)
-        ..strokeWidth = 1;
+        ..color = Colors.white.withValues(alpha: 0.55)
+        ..strokeWidth = 1.2;
       canvas.drawLine(
-        Offset(-bw * 0.25, -bh * 0.25),
-        Offset(bw * 0.25, bh * 0.25),
+        Offset(-bw * 0.22, -bh * 0.22),
+        Offset(bw * 0.22, bh * 0.22),
         xp,
       );
       canvas.drawLine(
-        Offset(-bw * 0.25, bh * 0.25),
-        Offset(bw * 0.25, -bh * 0.25),
+        Offset(-bw * 0.22, bh * 0.22),
+        Offset(bw * 0.22, -bh * 0.22),
         xp,
       );
     }
 
-    // Label
+    // ── Label (centered on cushion) ──
     if (seat.displayLabel.isNotEmpty) {
       final label = seat.displayLabel;
-      double fs = (label.length <= 2) ? bw * 0.32 : bw * 0.25;
-      fs = fs.clamp(7.0, 12.0);
+      final fs = (label.length <= 2 ? bw * 0.34 : bw * 0.26).clamp(7.5, 11.0);
       final tp =
           TextPainter(
               textDirection: TextDirection.ltr,
@@ -548,7 +521,138 @@ class PassengerSeatPainter extends CustomPainter {
               ),
             )
             ..layout(maxWidth: bw);
-      tp.paint(canvas, Offset(-tp.width / 2, hh - pad - tp.height - 3));
+      tp.paint(
+        canvas,
+        Offset(-tp.width / 2, cushionTop + cushionH * 0.28 - tp.height / 2),
+      );
+    }
+
+    canvas.restore();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // SLEEPER BERTH — horizontal bed-style icon
+  // ═══════════════════════════════════════════════════════════
+
+  void _drawSleeperBerth(Canvas canvas, PassengerSeatModel seat) {
+    canvas.save();
+    canvas.translate(seat.centerX, seat.centerY);
+    if (seat.rotation != 0) canvas.rotate(seat.rotation * math.pi / 180);
+
+    final w = seat.width * 0.78, h = seat.height * 0.60;
+    final hw = w / 2, hh = h / 2;
+    final (base, dark, light) = _seatColors(seat);
+    final r = math.min(w, h) * 0.12;
+    const pad = 2.0;
+    final bw = w - pad * 2, bh = h - pad * 2;
+
+    // ── Bed frame (long horizontal rounded rect) ──
+    final bedRR = RRect.fromLTRBAndCorners(
+      -hw + pad,
+      -hh + pad,
+      hw - pad,
+      hh - pad,
+      topLeft: Radius.circular(r),
+      topRight: Radius.circular(r),
+      bottomLeft: Radius.circular(r),
+      bottomRight: Radius.circular(r),
+    );
+    final grad = LinearGradient(
+      colors: [light, base],
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+    );
+    canvas.drawRRect(
+      bedRR,
+      Paint()..shader = grad.createShader(Rect.fromLTRB(-hw, -hh, hw, hh)),
+    );
+    canvas.drawRRect(
+      bedRR,
+      Paint()
+        ..color = dark
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8,
+    );
+
+    // ── Pillow (left section) ──
+    final pillowW = bw * 0.28;
+    canvas.drawRRect(
+      RRect.fromLTRBAndCorners(
+        -hw + pad + 3,
+        -hh + pad + 3,
+        -hw + pad + pillowW,
+        hh - pad - 3,
+        topLeft: Radius.circular(r * 1.5),
+        bottomLeft: Radius.circular(r * 1.5),
+        topRight: Radius.circular(r * 0.4),
+        bottomRight: Radius.circular(r * 0.4),
+      ),
+      Paint()..color = light.withValues(alpha: 0.7),
+    );
+
+    // ── Blanket crease lines ──
+    final crease = Paint()
+      ..color = dark.withValues(alpha: 0.18)
+      ..strokeWidth = 0.6;
+    for (var i = 0; i < 3; i++) {
+      final cx = -hw + pad + pillowW + 6 + i * (bw - pillowW - 12) / 3;
+      canvas.drawLine(
+        Offset(cx, -hh + pad + 4),
+        Offset(cx, hh - pad - 4),
+        crease,
+      );
+    }
+
+    // ── Selected ring ──
+    if (seat.availability == SeatAvailability.selected) {
+      canvas.drawRRect(
+        bedRR,
+        Paint()
+          ..color = _colorSelected.withValues(alpha: 0.45)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.2
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      );
+    }
+
+    // ── Booked X ──
+    if (seat.availability == SeatAvailability.booked) {
+      final xp = Paint()
+        ..color = Colors.white.withValues(alpha: 0.55)
+        ..strokeWidth = 1.2;
+      canvas.drawLine(
+        Offset(-bw * 0.25, -bh * 0.25),
+        Offset(bw * 0.25, bh * 0.25),
+        xp,
+      );
+      canvas.drawLine(
+        Offset(-bw * 0.25, bh * 0.25),
+        Offset(bw * 0.25, -bh * 0.25),
+        xp,
+      );
+    }
+
+    // ── Label ──
+    if (seat.displayLabel.isNotEmpty) {
+      final label =
+          '${seat.displayLabel}${seat.berthLabel != null ? ' ${seat.berthLabel}' : ''}';
+      final fs = (label.length <= 3 ? bw * 0.22 : bw * 0.18).clamp(6.5, 9.5);
+      final tp =
+          TextPainter(
+              textDirection: TextDirection.ltr,
+              textAlign: TextAlign.center,
+            )
+            ..text = TextSpan(
+              text: label,
+              style: TextStyle(
+                fontSize: fs,
+                fontWeight: FontWeight.w700,
+                color: _isLight(base) ? Colors.black87 : Colors.white,
+                height: 1.0,
+              ),
+            )
+            ..layout(maxWidth: bw);
+      tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
     }
 
     canvas.restore();

@@ -11,6 +11,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/bus_operations/data/models/passenger_seat_model.dart';
 import 'package:trace_odd/features/bus_operations/data/services/ticket_vault_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/seat_selection/seat_selection_bloc.dart';
@@ -81,6 +82,11 @@ class _PassengerSeatSelectionScreenState
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_rounded),
+        tooltip: 'Back to Home',
+        onPressed: () => context.go('/customer/home'),
+      ),
       title: BlocBuilder<SeatSelectionBloc, SeatSelectionState>(
         builder: (_, state) {
           final name = state.busDisplayName.isNotEmpty
@@ -196,23 +202,30 @@ class _PassengerSeatSelectionScreenState
     final ph = state.canvasHeight;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final fitScale = constraints.maxWidth / pw;
-        final fittedHeight = ph * fitScale;
+        // Auto-fit: scale the bus to fill the available viewport height
+        // so the entire layout is visible without manual zooming.
+        final maxW = constraints.maxWidth - 24; // horizontal padding
+        final maxH = constraints.maxHeight - 24;
+        final autoScale = math.min(maxW / pw, maxH / ph).clamp(0.35, 1.2);
+        final displayW = pw * autoScale;
+        final displayH = ph * autoScale;
+
         return InteractiveViewer(
           transformationController: _transformCtrl,
-          boundaryMargin: const EdgeInsets.all(80),
-          minScale: 0.5,
-          maxScale: 4.0,
+          boundaryMargin: const EdgeInsets.all(60),
+          minScale: autoScale * 0.6,
+          maxScale: autoScale * 3.5,
           constrained: false,
           child: GestureDetector(
-            onTapUp: (d) => _handleTap(d, state, fitScale),
+            onTapUp: (d) => _handleTap(d, state, autoScale),
             child: Container(
-              width: constraints.maxWidth,
-              height: math.max(fittedHeight, constraints.maxHeight),
-              padding: const EdgeInsets.all(16),
+              width: math.max(displayW, constraints.maxWidth),
+              height: math.max(displayH, constraints.maxHeight),
+              padding: const EdgeInsets.all(12),
               child: Center(
-                child: AspectRatio(
-                  aspectRatio: pw / ph,
+                child: SizedBox(
+                  width: displayW,
+                  height: displayH,
                   child: CustomPaint(
                     painter: PassengerSeatPainter(
                       seats: state.seats,
