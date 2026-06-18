@@ -176,6 +176,7 @@ class PassengerSeatPainter extends CustomPainter {
         _drawGenericStructural(canvas, el);
     }
   }
+  }
 
   void _drawDriverCabin(Canvas canvas, PassengerSeatModel el) {
     final bg = const Color(0xFF1E293B).withValues(alpha: 0.08);
@@ -369,7 +370,7 @@ class PassengerSeatPainter extends CustomPainter {
 
   // ── Generic Structural (fallback) ─────────────────────────
 
-n  void _drawLavatory(Canvas canvas, PassengerSeatModel el) {
+  void _drawLavatory(Canvas canvas, PassengerSeatModel el) {
     canvas.drawRRect(
       RRect.fromLTRBAndCorners(el.x, el.y, el.x + el.width, el.y + el.height,
         topLeft: const Radius.circular(4), topRight: const Radius.circular(4),
