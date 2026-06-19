@@ -59,10 +59,10 @@ class BusRouteController extends Controller
             'display_name' => ['required', 'string', 'max:255'],
             'origin_city' => ['required', 'string', 'max:100'],
             'destination_city' => ['required', 'string', 'max:100'],
-            'origin_lat' => ['required', 'numeric', 'between:-90,90'],
-            'origin_lng' => ['required', 'numeric', 'between:-180,180'],
-            'destination_lat' => ['required', 'numeric', 'between:-90,90'],
-            'destination_lng' => ['required', 'numeric', 'between:-180,180'],
+            'origin_lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'origin_lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'destination_lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'destination_lng' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $route = BusRoute::create([
@@ -71,10 +71,10 @@ class BusRouteController extends Controller
             'display_name' => $data['display_name'],
             'origin_city' => $data['origin_city'],
             'destination_city' => $data['destination_city'],
-            'origin_lat' => $data['origin_lat'],
-            'origin_lng' => $data['origin_lng'],
-            'destination_lat' => $data['destination_lat'],
-            'destination_lng' => $data['destination_lng'],
+            'origin_lat' => $data['origin_lat'] ?? 0,
+            'origin_lng' => $data['origin_lng'] ?? 0,
+            'destination_lat' => $data['destination_lat'] ?? 0,
+            'destination_lng' => $data['destination_lng'] ?? 0,
             'carrier_company_id' => $carrierId,
             'status' => BusRoute::STATUS_DRAFT,
         ]);
@@ -172,8 +172,8 @@ class BusRouteController extends Controller
         $data = $request->validate([
             'waypoints' => ['required', 'array', 'min:2'],
             'waypoints.*.station_name' => ['required', 'string', 'max:255'],
-            'waypoints.*.lat' => ['required', 'numeric', 'between:-90,90'],
-            'waypoints.*.lng' => ['required', 'numeric', 'between:-180,180'],
+            'waypoints.*.lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'waypoints.*.lng' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         DB::transaction(function () use ($route, $data) {
