@@ -98,6 +98,25 @@ class BusInventoryService
             $busId, $tripId, $userId, $seatNumber,
             $paymentMethod, $ticketPrice, $voucherCode, $busOwnerId
         ) {
+            // ─── 48-hour departure lockout ────────────
+            $holdService = app(\App\Services\Transport\SeatHoldService::class);
+            if (! $holdService->holdsAllowed($tripId)) {
+                throw new \RuntimeException(
+                    'Cannot pre-book within 48 hours of departure. Please purchase at the terminal.'
+                );
+            }
+
+            // ─── Check active holds on this seat ──────
+            $activeHold = DB::table('transport_seat_holds')
+                ->where('trip_id', $tripId)
+                ->where('seat_number', $seatNumber)
+                ->where('hold_expires_at', '>', now())
+                ->exists();
+
+            if ($activeHold) {
+                throw new \RuntimeException("Seat {$seatNumber} is currently held by another passenger.");
+            }
+
             // ─── Lock bus layout (prevents double-booking) ──
             $layout = AbsoluteBusLayout::where('id', $busId)
                 ->lockForUpdate()->firstOrFail();
@@ -296,6 +315,28 @@ class BusInventoryService
         $results['voucher_redeemed'] = true;
 
         return $results;
+    }
+
+    // ─── PUBLIC PAYMENT BRIDGE ───────────────────────
+
+    /**
+     * Public payment entry point for external services (e.g. SeatHoldService)
+     * that need to process payment without going through the full bookSeat flow.
+     */
+    public function processPaymentExternal(
+        string $userId,
+        float $ticketPrice,
+        string $paymentMethod,
+        ?string $voucherCode = null,
+        string $busOwnerId = '',
+    ): array {
+        return $this->processPayment(
+            userId: $userId,
+            ticketPrice: $ticketPrice,
+            paymentMethod: $paymentMethod,
+            voucherCode: $voucherCode,
+            busOwnerId: $busOwnerId,
+        );
     }
 
     // ─── HELPERS ────────────────────────────────────────

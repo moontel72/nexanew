@@ -24,6 +24,7 @@ class BusTransitController extends Controller
 {
     public function __construct(
         private BusInventoryService $bus,
+        private \App\Services\Transport\SeatHoldService $holdService,
     ) {}
 
     // ─── BUS DOOR QR (15E) ──────────────────────────────
@@ -83,6 +84,150 @@ class BusTransitController extends Controller
         }
 
         return response()->json(['success' => true, 'data' => $result], 201);
+    }
+
+    // ─── SEAT HOLD / RESERVE (Phase 2) ───────────────
+
+    /**
+     * POST /api/v1/bus-fleet/bookings/hold
+     *
+     * Reserve a seat for checkout (8-minute TTL).
+     * Auth required. Rejects if within 48 hours of departure.
+     *
+     * Body: {bus_id, trip_id, seat_number, ttl_minutes?}
+     */
+    public function holdSeat(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Authentication required.'], 401);
+        }
+
+        $data = $request->validate([
+            'bus_id'      => ['required', 'string', 'max:100'],
+            'trip_id'     => ['required', 'string', 'max:100'],
+            'seat_number' => ['required', 'integer', 'min:1'],
+            'ttl_minutes' => ['nullable', 'integer', 'min:1', 'max:15'],
+        ]);
+
+        try {
+            $result = $this->holdService->holdSeat(
+                layoutId:   $data['bus_id'],
+                tripId:     $data['trip_id'],
+                userId:     (string) $user->id,
+                seatNumber: (int) $data['seat_number'],
+                ttlMinutes: $data['ttl_minutes'] ?? null,
+            );
+        } catch (\RuntimeException $e) {
+            $msg = $e->getMessage();
+            $code = 409;
+            if (str_contains($msg, 'just claimed') || str_contains($msg, 'already booked')) {
+                $code = 409;
+            } elseif (str_contains($msg, 'within') && str_contains($msg, 'hours of departure')) {
+                $code = 422;
+            } elseif (str_contains($msg, 'does not exist') || str_contains($msg, 'not found')) {
+                $code = 404;
+            }
+            return response()->json(['success' => false, 'message' => $msg], $code);
+        }
+
+        return response()->json(['success' => true, 'data' => $result], 201);
+    }
+
+    /**
+     * POST /api/v1/bus-fleet/bookings/{holdToken}/confirm
+     *
+     * Finalize a held seat — process payment and convert to permanent booking.
+     * Auth required. Holden must belong to the authenticated user.
+     *
+     * Body: {payment_method, ticket_price, voucher_code?, bus_owner_id?}
+     */
+    public function confirmHold(string $holdToken, Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Authentication required.'], 401);
+        }
+
+        $data = $request->validate([
+            'payment_method' => ['required', 'string', 'in:wallet,card,voucher'],
+            'ticket_price'   => ['required', 'numeric', 'min:0'],
+            'voucher_code'   => ['nullable', 'string', 'max:64'],
+            'bus_owner_id'   => ['nullable', 'string', 'max:100'],
+        ]);
+
+        try {
+            $result = $this->holdService->confirmHold(
+                holdToken:     $holdToken,
+                userId:        (string) $user->id,
+                paymentMethod: $data['payment_method'],
+                ticketPrice:   (float) $data['ticket_price'],
+                voucherCode:   $data['voucher_code'] ?? null,
+                busOwnerId:    $data['bus_owner_id'] ?? '',
+            );
+        } catch (\RuntimeException $e) {
+            $msg = $e->getMessage();
+            $code = 409;
+            if (str_contains($msg, 'expired')) {
+                $code = 410; // Gone
+            } elseif (str_contains($msg, 'not found')) {
+                $code = 404;
+            } elseif (str_contains($msg, 'belongs to another')) {
+                $code = 403;
+            }
+            return response()->json(['success' => false, 'message' => $msg], $code);
+        }
+
+        return response()->json(['success' => true, 'data' => $result], 200);
+    }
+
+    /**
+     * DELETE /api/v1/bus-fleet/bookings/{holdToken}/release
+     *
+     * Explicitly release a held seat (user cancels checkout).
+     * Auth required. Hold must belong to the authenticated user.
+     */
+    public function releaseHold(string $holdToken, Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Authentication required.'], 401);
+        }
+
+        try {
+            $result = $this->holdService->releaseHold(
+                holdToken: $holdToken,
+                userId:    (string) $user->id,
+            );
+        } catch (\RuntimeException $e) {
+            $msg = $e->getMessage();
+            $code = str_contains($msg, 'not found') ? 404 : 403;
+            return response()->json(['success' => false, 'message' => $msg], $code);
+        }
+
+        return response()->json(['success' => true, 'data' => $result], 200);
+    }
+
+    /**
+     * GET /api/v1/bus-fleet/bookings/held/{tripId}
+     *
+     * Return all currently held seat numbers for a trip with TTL.
+     * Public — used by the passenger seat grid to show held seats.
+     */
+    public function listHeldSeats(string $tripId): JsonResponse
+    {
+        $held = $this->holdService->getHeldSeatsWithTTL($tripId);
+        $holdsAllowed = $this->holdService->holdsAllowed($tripId);
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'trip_id'        => $tripId,
+                'held_seats'     => $held,
+                'holds_allowed'  => $holdsAllowed,
+                'hold_ttl_minutes' => \App\Services\Transport\SeatHoldService::DEFAULT_HOLD_TTL_MINUTES,
+            ],
+        ]);
     }
 
     // ─── VOUCHERS ───────────────────────────────────────

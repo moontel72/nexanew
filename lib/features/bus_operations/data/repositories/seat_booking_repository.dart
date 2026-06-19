@@ -1,8 +1,7 @@
-// NEXATRACE — SEAT BOOKING REPOSITORY
+// NEXATRACE — SEAT BOOKING REPOSITORY v2
 // ======================================
-// Data layer for passenger seat booking operations.
-// Communicates with the BusInventoryService backend via
-// POST /api/v1/bus-fleet/bookings and GET layout endpoints.
+// Data layer for passenger seat operations.
+// Phase 2: Hold/Reserve → Confirm/Pay → Release cycle.
 //
 // MODULE: 8V — Unified Bus Transit Terminal
 
@@ -45,6 +44,84 @@ class SeatBookingResult {
       seatNumber: seatNumber,
       ticketPrice: 0,
       errorMessage: message,
+    );
+  }
+}
+
+/// Result from holding a seat.
+class SeatHoldResult {
+  final bool success;
+  final String? holdToken;
+  final String? expiresAt;
+  final int expiresInSeconds;
+  final String? errorMessage;
+
+  const SeatHoldResult({
+    required this.success,
+    this.holdToken,
+    this.expiresAt,
+    this.expiresInSeconds = 0,
+    this.errorMessage,
+  });
+
+  factory SeatHoldResult.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>? ?? {};
+    return SeatHoldResult(
+      success: json['success'] == true,
+      holdToken: data['hold_token']?.toString(),
+      expiresAt: data['expires_at']?.toString(),
+      expiresInSeconds: (data['expires_in_seconds'] ?? 0) as int,
+      errorMessage: json['message']?.toString(),
+    );
+  }
+
+  factory SeatHoldResult.failure(String message) =>
+      SeatHoldResult(success: false, errorMessage: message);
+}
+
+/// Result from releasing a hold.
+class SeatReleaseResult {
+  final bool success;
+  final int seatNumber;
+  final String? errorMessage;
+
+  const SeatReleaseResult({
+    required this.success,
+    required this.seatNumber,
+    this.errorMessage,
+  });
+}
+
+/// Snapshot of held seats for a trip.
+class HeldSeatsSnapshot {
+  final List<int> seatNumbers;
+  final List<int> remainingSeconds;
+  final bool holdsAllowed;
+  final int holdTtlMinutes;
+
+  const HeldSeatsSnapshot({
+    required this.seatNumbers,
+    required this.remainingSeconds,
+    required this.holdsAllowed,
+    required this.holdTtlMinutes,
+  });
+
+  factory HeldSeatsSnapshot.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>? ?? {};
+    final heldList = data['held_seats'] as List<dynamic>? ?? [];
+    final seats = <int>[];
+    final secs = <int>[];
+    for (final h in heldList) {
+      if (h is Map) {
+        seats.add((h['seat_number'] ?? 0) as int);
+        secs.add((h['remaining_seconds'] ?? 0) as int);
+      }
+    }
+    return HeldSeatsSnapshot(
+      seatNumbers: seats,
+      remainingSeconds: secs,
+      holdsAllowed: data['holds_allowed'] == true,
+      holdTtlMinutes: (data['hold_ttl_minutes'] ?? 8) as int,
     );
   }
 }
@@ -92,9 +169,7 @@ class SeatBookingRepository {
     }
   }
 
-  /// Fetch a published bus layout with live booking status.
-  /// Uses the public endpoint (no auth required) so guest customers
-  /// can browse seat maps before sign-in. Only published layouts are returned.
+  /// Fetch a published bus layout with live booking + hold status.
   Future<BusLayoutResult> fetchLayout(String layoutId, {String? tripId}) async {
     final response = await _api.get(
       '/bus-fleet/absolute-layouts/$layoutId/public',
@@ -131,9 +206,128 @@ class SeatBookingRepository {
     );
   }
 
-  // ── BOOK SEAT ───────────────────────────────────────
+  // ── HOLD SEAT (Phase 2) ──────────────────────────
 
-  /// Book a seat with payment method.
+  /// Reserve a seat for checkout (8-minute TTL).
+  Future<SeatHoldResult> holdSeat({
+    required String busId,
+    required String tripId,
+    required int seatNumber,
+    int? ttlMinutes,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'bus_id': busId,
+        'trip_id': tripId,
+        'seat_number': seatNumber,
+      };
+      if (ttlMinutes != null) body['ttl_minutes'] = ttlMinutes;
+
+      final response = await _api.post('/bus-fleet/bookings/hold', body: body);
+      final json = _safeMap(response);
+
+      if (json['success'] != true) {
+        return SeatHoldResult.failure(
+          json['message']?.toString() ?? 'Failed to hold seat',
+        );
+      }
+      return SeatHoldResult.fromJson(json);
+    } catch (e) {
+      final msg = _humanizeError(e);
+      // Detect 409 conflict
+      if (msg.contains('just claimed') || msg.contains('already booked')) {
+        return SeatHoldResult.failure(
+          'Seat $seatNumber was just claimed by another passenger.',
+        );
+      }
+      return SeatHoldResult.failure(msg);
+    }
+  }
+
+  /// Confirm a held seat — process payment, finalize booking.
+  Future<SeatBookingResult> confirmHold({
+    required String holdToken,
+    required String paymentMethod,
+    required double ticketPrice,
+    String? voucherCode,
+    String? busOwnerId,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'payment_method': paymentMethod,
+        'ticket_price': ticketPrice,
+      };
+      if (voucherCode != null && voucherCode.isNotEmpty) {
+        body['voucher_code'] = voucherCode;
+      }
+      if (busOwnerId != null && busOwnerId.isNotEmpty) {
+        body['bus_owner_id'] = busOwnerId;
+      }
+
+      final response = await _api.post(
+        '/bus-fleet/bookings/$holdToken/confirm',
+        body: body,
+      );
+      final json = _safeMap(response);
+
+      if (json['success'] != true) {
+        return SeatBookingResult.failure(
+          json['message']?.toString() ?? 'Confirmation failed',
+        );
+      }
+      return SeatBookingResult.fromJson(json);
+    } catch (e) {
+      final msg = _humanizeError(e);
+      if (msg.contains('expired')) {
+        return SeatBookingResult.failure(
+          'Your hold has expired. Please select the seat again.',
+        );
+      }
+      return SeatBookingResult.failure(msg);
+    }
+  }
+
+  /// Release a held seat (user cancels).
+  Future<SeatReleaseResult> releaseHold(String holdToken) async {
+    try {
+      final response = await _api.delete(
+        '/bus-fleet/bookings/$holdToken/release',
+      );
+      final json = _safeMap(response);
+      final data = json['data'] as Map<String, dynamic>? ?? {};
+      return SeatReleaseResult(
+        success: json['success'] == true,
+        seatNumber: (data['seat_number'] ?? 0) as int,
+        errorMessage: json['message']?.toString(),
+      );
+    } catch (_) {
+      // Non-fatal — server cron will clean up anyway
+      return const SeatReleaseResult(success: false, seatNumber: 0);
+    }
+  }
+
+  /// Fetch currently held seats for a trip (public).
+  Future<HeldSeatsSnapshot> fetchHeldSeats(String tripId) async {
+    try {
+      final response = await _api.get(
+        '/bus-fleet/bookings/held/$tripId',
+        requiresAuth: false,
+      );
+      final json = _safeMap(response);
+      return HeldSeatsSnapshot.fromJson(json);
+    } catch (_) {
+      return const HeldSeatsSnapshot(
+        seatNumbers: [],
+        remainingSeconds: [],
+        holdsAllowed: false,
+        holdTtlMinutes: 8,
+      );
+    }
+  }
+
+  // ── BOOK SEAT (instant, existing) ──────────────────
+
+  /// Book a seat with payment method (instant, no hold).
   Future<SeatBookingResult> bookSeat({
     required String busId,
     required String tripId,
@@ -210,7 +404,7 @@ class SeatBookingRepository {
 
   String _humanizeError(Object e) {
     final msg = e.toString();
-    if (msg.contains('already booked')) {
+    if (msg.contains('just claimed') || msg.contains('already booked')) {
       return 'This seat was just taken. Please choose another.';
     }
     if (msg.contains('does not exist')) return 'Seat not found.';

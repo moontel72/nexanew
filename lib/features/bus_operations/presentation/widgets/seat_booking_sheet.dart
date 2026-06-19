@@ -16,6 +16,8 @@ class SeatBookingSheet extends StatefulWidget {
   final PaymentMethod currentMethod;
   final double basePrice;
   final String? voucherCode;
+  final bool isHolding;
+  final String holdCountdown;
   final VoidCallback onConfirm;
   final ValueChanged<PaymentMethod> onMethodChanged;
   final ValueChanged<String> onVoucherChanged;
@@ -27,6 +29,8 @@ class SeatBookingSheet extends StatefulWidget {
     required this.currentMethod,
     this.basePrice = 500,
     this.voucherCode,
+    this.isHolding = false,
+    this.holdCountdown = '',
     required this.onConfirm,
     required this.onMethodChanged,
     required this.onVoucherChanged,
@@ -59,7 +63,9 @@ class _SeatBookingSheetState extends State<SeatBookingSheet> {
     final theme = Theme.of(context);
 
     return Container(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -73,18 +79,59 @@ class _SeatBookingSheetState extends State<SeatBookingSheet> {
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.3,
+                    ),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
               _SeatInfoHeader(seat: widget.seat, basePrice: widget.basePrice),
+              if (widget.isHolding && widget.holdCountdown.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.timer,
+                        size: 16,
+                        color: Color(0xFFD97706),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Seat held — ${widget.holdCountdown} remaining to complete payment',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF92400E),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
-              Text('Payment Method',
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text(
+                'Payment Method',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 12),
               _PaymentMethodSelector(
                 current: widget.currentMethod,
@@ -98,7 +145,9 @@ class _SeatBookingSheetState extends State<SeatBookingSheet> {
                     labelText: 'Voucher Code',
                     hintText: 'Enter 8-digit voucher code',
                     prefixIcon: const Icon(Icons.card_giftcard),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onChanged: widget.onVoucherChanged,
                 ),
@@ -117,7 +166,9 @@ class _SeatBookingSheetState extends State<SeatBookingSheet> {
                       onPressed: widget.onCancel,
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                       child: const Text('Cancel'),
                     ),
@@ -129,9 +180,13 @@ class _SeatBookingSheetState extends State<SeatBookingSheet> {
                       onPressed: widget.onConfirm,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
-                      child: Text('Confirm Booking — Rs. ${widget.basePrice.toInt()}'),
+                      child: Text(
+                        'Confirm Booking — Rs. ${widget.basePrice.toInt()}',
+                      ),
                     ),
                   ),
                 ],
@@ -163,16 +218,23 @@ class _SeatInfoHeader extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 56, height: 56,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
+            border: Border.all(
+              color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+            ),
           ),
           child: Center(
-            child: Text(seat.displayLabel,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700, color: const Color(0xFF3B82F6))),
+            child: Text(
+              seat.displayLabel,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF3B82F6),
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 16),
@@ -180,12 +242,19 @@ class _SeatInfoHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Seat ${seat.displayLabel}',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Seat ${seat.displayLabel}',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text('$typeLabel · Rs. ${basePrice.toInt()}',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              Text(
+                '$typeLabel · Rs. ${basePrice.toInt()}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
         ),
@@ -197,7 +266,10 @@ class _SeatInfoHeader extends StatelessWidget {
 class _PaymentMethodSelector extends StatelessWidget {
   final PaymentMethod current;
   final ValueChanged<PaymentMethod> onChanged;
-  const _PaymentMethodSelector({required this.current, required this.onChanged});
+  const _PaymentMethodSelector({
+    required this.current,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +283,9 @@ class _PaymentMethodSelector extends StatelessWidget {
         };
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.only(right: method != PaymentMethod.values.last ? 8 : 0),
+            padding: EdgeInsets.only(
+              right: method != PaymentMethod.values.last ? 8 : 0,
+            ),
             child: ChoiceChip(
               selected: isSelected,
               showCheckmark: false,
@@ -219,7 +293,9 @@ class _PaymentMethodSelector extends StatelessWidget {
               label: Text(label),
               onSelected: (_) => onChanged(method),
               selectedColor: Theme.of(context).colorScheme.primaryContainer,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 10),
             ),
           ),
@@ -233,7 +309,11 @@ class _PriceBreakdown extends StatelessWidget {
   final double basePrice;
   final PaymentMethod method;
   final String? voucherCode;
-  const _PriceBreakdown({required this.basePrice, required this.method, this.voucherCode});
+  const _PriceBreakdown({
+    required this.basePrice,
+    required this.method,
+    this.voucherCode,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -254,9 +334,13 @@ class _PriceBreakdown extends StatelessWidget {
           _PriceRow('Total', 'Rs. ${total.toInt()}', isBold: true),
           if (method == PaymentMethod.voucher && voucherCode != null) ...[
             const SizedBox(height: 8),
-            Text('Change returned to wallet automatically',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: const Color(0xFF16A34A), fontStyle: FontStyle.italic)),
+            Text(
+              'Change returned to wallet automatically',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF16A34A),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ],
         ],
       ),
@@ -279,9 +363,16 @@ class _PriceRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: theme.textTheme.bodyMedium),
-          Text(value,
-              style: (isBold ? theme.textTheme.titleMedium : theme.textTheme.bodyMedium)
-                  ?.copyWith(fontWeight: isBold ? FontWeight.w700 : FontWeight.w500)),
+          Text(
+            value,
+            style:
+                (isBold
+                        ? theme.textTheme.titleMedium
+                        : theme.textTheme.bodyMedium)
+                    ?.copyWith(
+                      fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+                    ),
+          ),
         ],
       ),
     );

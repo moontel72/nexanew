@@ -22,8 +22,11 @@ class PassengerSeatPainter extends CustomPainter {
   static const _colorAvailableLt = Color(0xFF60A5FA);
   static const _colorSelected = Color(0xFF059669);
   static const _colorSelectedDk = Color(0xFF047857);
-  static const _colorBooked = Color(0xFF9CA3AF);
-  static const _colorBookedDk = Color(0xFF6B7280);
+  static const _colorBooked = Color(0xFF64748B); // Slate Gray — sold/occupied
+  static const _colorBookedDk = Color(0xFF475569);
+  static const _colorHeld = Color(0xFFF59E0B); // Amber — temporary hold
+  static const _colorHeldDk = Color(0xFFD97706);
+  static const _colorHeldLt = Color(0xFFFCD34D);
   static const _colorBusiness = Color(0xFF7C3AED);
   static const _colorBusinessDk = Color(0xFF6D28D9);
   static const _colorSleeper = Color(0xFFDB2777);
@@ -692,6 +695,30 @@ class PassengerSeatPainter extends CustomPainter {
       );
     }
 
+    // ── Held clock overlay ──
+    if (seat.availability == SeatAvailability.held) {
+      final clockR = math.min(bw, bh) * 0.2;
+      final clockCy = cushionTop + cushionH * 0.45;
+      canvas.drawCircle(
+        Offset(0, clockCy),
+        clockR,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.7)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2,
+      );
+      final hp = Paint()
+        ..color = Colors.white.withValues(alpha: 0.85)
+        ..strokeWidth = 1.0
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        Offset(0, clockCy),
+        Offset(0, clockCy - clockR * 0.55),
+        hp,
+      );
+      canvas.drawLine(Offset(0, clockCy), Offset(clockR * 0.38, clockCy), hp);
+    }
+
     // ── Label (centered on cushion) ──
     if (seat.displayLabel.isNotEmpty) {
       canvas.save();
@@ -826,6 +853,25 @@ class PassengerSeatPainter extends CustomPainter {
       );
     }
 
+    // ── Held clock overlay ──
+    if (seat.availability == SeatAvailability.held) {
+      final clockR = math.min(bw, bh) * 0.22;
+      canvas.drawCircle(
+        Offset(0, 0),
+        clockR,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.7)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2,
+      );
+      final hp = Paint()
+        ..color = Colors.white.withValues(alpha: 0.85)
+        ..strokeWidth = 1.0
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(Offset(0, 0), Offset(0, -clockR * 0.55), hp);
+      canvas.drawLine(Offset(0, 0), Offset(clockR * 0.38, 0), hp);
+    }
+
     // ── Label ──
     if (seat.displayLabel.isNotEmpty) {
       canvas.save();
@@ -864,8 +910,9 @@ class PassengerSeatPainter extends CustomPainter {
       case SeatAvailability.selected:
         return (_colorSelected, _colorSelectedDk, const Color(0xFF34D399));
       case SeatAvailability.booked:
+        return (_colorBooked, _colorBookedDk, const Color(0xFF94A3B8));
       case SeatAvailability.held:
-        return (_colorBooked, _colorBookedDk, const Color(0xFFD1D5DB));
+        return (_colorHeld, _colorHeldDk, _colorHeldLt);
       default:
         switch (s.category) {
           case PassengerSeatCategory.folding:

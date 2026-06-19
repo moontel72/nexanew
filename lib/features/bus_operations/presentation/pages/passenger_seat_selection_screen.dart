@@ -1,9 +1,9 @@
-// NEXATRACE — PASSENGER SEAT SELECTION SCREEN
+// NEXATRACE — PASSENGER SEAT SELECTION SCREEN v2
 // ==============================================
 // Full interactive seat booking experience for the
 // Customer App (Module 8V). Displays the bus floor-plan
-// with color-coded tappable seats, payment flow, and
-// booking confirmation. Auto-saves tickets to Hive vault.
+// with 3-color state matrix (Available / Held-Amber / Booked-Slate).
+// Phase 2: Hold countdown, release-on-exit, WebSocket sync.
 //
 // MODULE: 8V — Unified Bus Transit Terminal
 
@@ -63,18 +63,26 @@ class _PassengerSeatSelectionScreenState
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _bloc,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: _buildAppBar(),
-        body: BlocConsumer<SeatSelectionBloc, SeatSelectionState>(
-          listener: _onStateChanged,
-          builder: (context, state) {
-            if (state.status == SeatSelectionStatus.initial ||
-                state.status == SeatSelectionStatus.loadingLayout) {
-              return _buildLoading();
-            }
-            return _buildSeatGrid(context, state);
-          },
+      child: PopScope(
+        canPop: true,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop && _bloc.state.isHolding) {
+            _bloc.add(const ReleaseHold());
+          }
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          appBar: _buildAppBar(),
+          body: BlocConsumer<SeatSelectionBloc, SeatSelectionState>(
+            listener: _onStateChanged,
+            builder: (context, state) {
+              if (state.status == SeatSelectionStatus.initial ||
+                  state.status == SeatSelectionStatus.loadingLayout) {
+                return _buildLoading();
+              }
+              return _buildSeatGrid(context, state);
+            },
+          ),
         ),
       ),
     );
@@ -85,7 +93,12 @@ class _PassengerSeatSelectionScreenState
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded),
         tooltip: 'Back to Home',
-        onPressed: () => context.go('/customer/home'),
+        onPressed: () {
+          if (_bloc.state.isHolding) {
+            _bloc.add(const ReleaseHold());
+          }
+          context.go('/customer/home');
+        },
       ),
       title: BlocBuilder<SeatSelectionBloc, SeatSelectionState>(
         builder: (_, state) {
@@ -157,20 +170,22 @@ class _PassengerSeatSelectionScreenState
       );
 
   Widget _buildLegend(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     color: Colors.white,
     child: SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
           _legendDot(const Color(0xFF2563EB), 'Available'),
-          const Gap(16),
+          const Gap(12),
           _legendDot(const Color(0xFF059669), 'Selected'),
-          const Gap(16),
-          _legendDot(const Color(0xFF9CA3AF), 'Booked'),
-          const Gap(16),
+          const Gap(12),
+          _legendDot(const Color(0xFF64748B), 'Booked'),
+          const Gap(12),
+          _legendDot(const Color(0xFFF59E0B), 'Held'),
+          const Gap(12),
           _legendDot(const Color(0xFF7C3AED), 'Business'),
-          const Gap(16),
+          const Gap(12),
           _legendDot(const Color(0xFFD97706), 'Sleeper'),
         ],
       ),
@@ -189,7 +204,7 @@ class _PassengerSeatSelectionScreenState
           border: Border.all(color: c.withValues(alpha: 0.7)),
         ),
       ),
-      const Gap(6),
+      const Gap(4),
       Text(l, style: const TextStyle(fontSize: 11, color: Color(0xFF475569))),
     ],
   );
@@ -202,9 +217,7 @@ class _PassengerSeatSelectionScreenState
     final ph = state.canvasHeight;
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Auto-fit: scale the bus to fill the available viewport height
-        // so the entire layout is visible without manual zooming.
-        final maxW = constraints.maxWidth - 24; // horizontal padding
+        final maxW = constraints.maxWidth - 24;
         final maxH = constraints.maxHeight - 24;
         final autoScale = math.min(maxW / pw, maxH / ph).clamp(0.35, 1.2);
         final displayW = pw * autoScale;
@@ -256,6 +269,16 @@ class _PassengerSeatSelectionScreenState
       if (seat.containsPoint(cx, cy)) {
         if (seat.isTappable) {
           _bloc.add(SelectSeat(seat));
+        } else if (seat.availability == SeatAvailability.held) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Seat ${seat.displayLabel} is currently held by another passenger',
+              ),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
         } else if (seat.availability == SeatAvailability.booked) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -305,6 +328,7 @@ class _PassengerSeatSelectionScreenState
   Widget _buildSelectionBar(BuildContext context, SeatSelectionState state) {
     final seat = state.selectedSeat!;
     final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -319,57 +343,102 @@ class _PassengerSeatSelectionScreenState
       ),
       child: SafeArea(
         top: false,
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  seat.displayLabel,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF10B981),
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: state.isHolding
+                        ? const Color(0xFFF59E0B).withValues(alpha: 0.1)
+                        : const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: state.isHolding
+                        ? const Icon(
+                            Icons.timer,
+                            size: 20,
+                            color: Color(0xFFF59E0B),
+                          )
+                        : Text(
+                            seat.displayLabel,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
                   ),
                 ),
-              ),
-            ),
-            const Gap(12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Seat ${seat.displayLabel} selected',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (state.isHolding) ...[
+                        Text(
+                          'Seat ${seat.displayLabel} held — ${state.holdCountdownDisplay} remaining',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFD97706),
+                          ),
+                        ),
+                        const Gap(2),
+                        _HoldProgressBar(
+                          remaining: state.holdSecondsRemaining,
+                          total: state.holdTotalSeconds,
+                        ),
+                      ] else ...[
+                        Text(
+                          'Seat ${seat.displayLabel} selected',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          'Tap continue to hold',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  Text(
-                    'Tap continue to book',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const Gap(8),
+                if (state.isHolding)
+                  TextButton(
+                    onPressed: () => _bloc.add(const ReleaseHold()),
+                    child: const Text(
+                      'Release',
+                      style: TextStyle(color: Colors.red),
                     ),
+                  )
+                else
+                  TextButton(
+                    onPressed: () => _bloc.add(const DeselectSeat()),
+                    child: const Text('Cancel'),
                   ),
-                ],
-              ),
-            ),
-            const Gap(8),
-            TextButton(
-              onPressed: () => _bloc.add(const DeselectSeat()),
-              child: const Text('Cancel'),
-            ),
-            const Gap(4),
-            FilledButton(
-              onPressed: state.status == SeatSelectionStatus.bookingInProgress
-                  ? null
-                  : () => _showBookingSheet(context, state),
-              child: const Text('Continue'),
+                const Gap(4),
+                FilledButton(
+                  onPressed:
+                      state.status == SeatSelectionStatus.bookingInProgress ||
+                          state.status == SeatSelectionStatus.holdingSeat
+                      ? null
+                      : () {
+                          if (state.isHolding) {
+                            _showBookingSheet(context, state);
+                          } else {
+                            _bloc.add(const TryHoldSeat());
+                          }
+                        },
+                  child: Text(state.isHolding ? 'Pay Now' : 'Continue'),
+                ),
+              ],
             ),
           ],
         ),
@@ -392,6 +461,8 @@ class _PassengerSeatSelectionScreenState
         currentMethod: state.paymentMethod,
         basePrice: seat.price ?? 500,
         voucherCode: state.voucherCode,
+        isHolding: state.isHolding,
+        holdCountdown: state.holdCountdownDisplay,
         onConfirm: () {
           Navigator.pop(context);
           _bloc.add(const ConfirmBooking());
@@ -404,7 +475,27 @@ class _PassengerSeatSelectionScreenState
   }
 
   void _onStateChanged(BuildContext context, SeatSelectionState state) {
-    if (state.status == SeatSelectionStatus.bookingSuccess &&
+    if (state.status == SeatSelectionStatus.holdFailed &&
+        state.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(state.errorMessage!),
+          backgroundColor: const Color(0xFFD97706),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } else if (state.status == SeatSelectionStatus.holdExpired &&
+        state.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(state.errorMessage!),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } else if (state.status == SeatSelectionStatus.bookingSuccess &&
         state.bookingResult != null) {
       _saveAndShowSuccess(state);
     } else if (state.status == SeatSelectionStatus.bookingFailure &&
@@ -426,7 +517,6 @@ class _PassengerSeatSelectionScreenState
 
   Future<void> _saveAndShowSuccess(SeatSelectionState state) async {
     final result = state.bookingResult!;
-    // Auto-save ticket to Hive vault for offline access
     await _vault.saveTicket(
       CachedBusTicket(
         bookingId: result.bookingId ?? '',
@@ -489,6 +579,42 @@ class _PassengerSeatSelectionScreenState
             child: const Text('Done'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Animated progress bar showing hold countdown.
+class _HoldProgressBar extends StatelessWidget {
+  final int remaining;
+  final int total;
+  const _HoldProgressBar({required this.remaining, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = total > 0 ? (remaining / total).clamp(0.0, 1.0) : 0.0;
+    final color = pct > 0.5
+        ? const Color(0xFFF59E0B)
+        : pct > 0.2
+        ? const Color(0xFFD97706)
+        : const Color(0xFFDC2626);
+
+    return Container(
+      height: 4,
+      width: 120,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: pct,
+        child: Container(
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
       ),
     );
   }

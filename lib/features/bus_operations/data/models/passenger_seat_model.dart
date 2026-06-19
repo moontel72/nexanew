@@ -169,6 +169,7 @@ class PassengerSeatModel {
 PassengerSeatModel parsePassengerSeat(
   dynamic raw, {
   Set<int> bookedSeatNumbers = const {},
+  Set<int> heldSeatNumbers = const {},
 }) {
   final map = _safeCastMap(raw);
   if (map.isEmpty) {
@@ -184,6 +185,7 @@ PassengerSeatModel parsePassengerSeat(
   final category = _resolveCategory(typeStr);
   final seatNum = _intOrNull(map['seat_number'] ?? map['seatNumber']);
   final isBooked = seatNum != null && bookedSeatNumbers.contains(seatNum);
+  final isHeld = seatNum != null && heldSeatNumbers.contains(seatNum);
 
   return PassengerSeatModel(
     componentId: (map['id'] ?? '').toString(),
@@ -199,6 +201,8 @@ PassengerSeatModel parsePassengerSeat(
         ? SeatAvailability.unavailable
         : isBooked
         ? SeatAvailability.booked
+        : isHeld
+        ? SeatAvailability.held
         : SeatAvailability.available,
     seatNumber: seatNum,
     seatLabel:
@@ -228,13 +232,21 @@ PassengerSeatModel parsePassengerSeat(
 List<PassengerSeatModel> parsePassengerSeats(
   Map<String, dynamic> snapshot, {
   List<int> bookedSeatNumbers = const [],
+  List<int> heldSeatNumbers = const [],
 }) {
   final booked = bookedSeatNumbers.toSet();
+  final held = heldSeatNumbers.toSet();
   final components = snapshot['components'];
   if (components is! List) return [];
 
   return components
-      .map((c) => parsePassengerSeat(c, bookedSeatNumbers: booked))
+      .map(
+        (c) => parsePassengerSeat(
+          c,
+          bookedSeatNumbers: booked,
+          heldSeatNumbers: held,
+        ),
+      )
       .toList();
 }
 

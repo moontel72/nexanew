@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api/v1/bus-fleet')->group(function (): void {
     Route::get('absolute-layouts/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'listPublic']);
     Route::get('absolute-layouts/{id}/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'showPublic']);
+    // Public seat hold status (guest seat-grid browsing)
+    Route::get('bookings/held/{tripId}', [\App\Http\Controllers\BusTransitController::class, 'listHeldSeats']);
 });
 
 Route::prefix('api/v1/bus-fleet')
@@ -157,7 +159,11 @@ Route::prefix('api/v1/bus-fleet')
         // QR, Bookings, Vouchers, Staff, Owners, Drivers, Conductors, Shifts, Links
         Route::post('qr/register', [\App\Http\Controllers\BusTransitController::class, 'registerQr']);
         Route::get('qr/scan/{uuid}', [\App\Http\Controllers\BusTransitController::class, 'scanQr']);
-        Route::post('bookings', [\App\Http\Controllers\BusTransitController::class, 'bookSeat']);
+        // ─── Seat Bookings (Phase 2 — Hold + Confirm + Instant) ──
+        Route::post('bookings/hold', [\App\Http\Controllers\BusTransitController::class, 'holdSeat']);
+        Route::post('bookings/{holdToken}/confirm', [\App\Http\Controllers\BusTransitController::class, 'confirmHold']);
+        Route::delete('bookings/{holdToken}/release', [\App\Http\Controllers\BusTransitController::class, 'releaseHold']);
+        Route::post('bookings', [\App\Http\Controllers\BusTransitController::class, 'bookSeat']); // instant
         Route::post('vouchers/create', [\App\Http\Controllers\BusTransitController::class, 'createVoucher']);
 
         Route::prefix('staff')->group(function (): void {

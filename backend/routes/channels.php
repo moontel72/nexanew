@@ -28,6 +28,12 @@ Broadcast::channel('bus.{tripId}', function ($user, string $tripId) {
     return $user !== null;
 });
 
+Broadcast::channel('bus.{tripId}.seats', function ($user, string $tripId) {
+    // Seat hold/release/confirm events — public to all authenticated
+    // passengers viewing the trip layout.
+    return $user !== null;
+});
+
 // ─── FLEET CHANNELS ───────────────────────────────────
 
 Broadcast::channel('fleet.{companyId}', function ($user, string $companyId) {
