@@ -679,6 +679,8 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
         builder: (_) => RoutePricingScreen(
           routeId: route['id'],
           routeName: route['display_name'] ?? '',
+          originCity: route['origin_city'] ?? 'Origin',
+          destCity: route['destination_city'] ?? 'Destination',
           waypoints: (route['waypoints'] as List<dynamic>?) ?? [],
           panelPrefix: widget.panelPrefix,
         ),
@@ -689,12 +691,14 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
 
 // ═══ PRICING SCREEN ═══
 class RoutePricingScreen extends StatefulWidget {
-  final String routeId, routeName, panelPrefix;
+  final String routeId, routeName, panelPrefix, originCity, destCity;
   final List<dynamic> waypoints;
   const RoutePricingScreen({
     super.key,
     required this.routeId,
     required this.routeName,
+    required this.originCity,
+    required this.destCity,
     required this.waypoints,
     this.panelPrefix = '/bus-fleet',
   });
@@ -761,12 +765,19 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
   }
 
   List<Widget> _buildPriceRows() {
-    final wps = widget.waypoints;
+    // Build full station list: Origin + waypoints + Destination
+    final stations = <Map<String, dynamic>>[
+      {'name': widget.originCity, 'is_origin': true},
+      ...widget.waypoints.map(
+        (w) => {'name': w['station_name'] ?? 'Stop', 'is_origin': false},
+      ),
+      {'name': widget.destCity, 'is_dest': true},
+    ];
     final widgets = <Widget>[];
-    for (int i = 0; i < wps.length; i++) {
-      for (int j = i + 1; j < wps.length; j++) {
-        final from = wps[i]['station_name'] ?? 'Stop $i';
-        final to = wps[j]['station_name'] ?? 'Stop $j';
+    for (int i = 0; i < stations.length; i++) {
+      for (int j = i + 1; j < stations.length; j++) {
+        final from = stations[i]['name'] ?? 'Stop $i';
+        final to = stations[j]['name'] ?? 'Stop $j';
         final existing = _prices
             .where((p) => p['from_stop_order'] == i && p['to_stop_order'] == j)
             .firstOrNull;
