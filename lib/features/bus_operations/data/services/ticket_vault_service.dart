@@ -22,6 +22,8 @@ class CachedBusTicket {
   final String paymentMethod;
   final DateTime bookedAt;
   final String? qrPayload;
+  final String? ticketHash; // Phase 3: SHA-256 tamper-proof seal
+  final String? qrBase64; // Phase 3: base64-encoded QR data
   final String status; // 'active', 'used', 'expired', 'cancelled'
 
   const CachedBusTicket({
@@ -36,6 +38,8 @@ class CachedBusTicket {
     required this.paymentMethod,
     required this.bookedAt,
     this.qrPayload,
+    this.ticketHash,
+    this.qrBase64,
     this.status = 'active',
   });
 
@@ -52,6 +56,8 @@ class CachedBusTicket {
     'payment_method': paymentMethod,
     'booked_at': bookedAt.toIso8601String(),
     'qr_payload': qrPayload ?? '',
+    'ticket_hash': ticketHash ?? '',
+    'qr_base64': qrBase64 ?? '',
     'status': status,
   };
 
@@ -71,6 +77,8 @@ class CachedBusTicket {
           DateTime.tryParse(json['booked_at']?.toString() ?? '') ??
           DateTime.now(),
       qrPayload: json['qr_payload']?.toString(),
+      ticketHash: json['ticket_hash']?.toString(),
+      qrBase64: json['qr_base64']?.toString(),
       status: json['status']?.toString() ?? 'active',
     );
   }
@@ -85,7 +93,7 @@ class CachedBusTicket {
   bool get isValid => status == 'active';
 
   /// Generate a simple display QR string from booking ID.
-  String get displayQr => 'NEXA:$bookingId';
+  String get displayQr => qrBase64 ?? qrPayload ?? 'NEXA:$bookingId';
 }
 
 /// Hive-based service for offline ticket storage and retrieval.
@@ -176,6 +184,8 @@ extension CachedBusTicketX on CachedBusTicket {
       paymentMethod: paymentMethod,
       bookedAt: bookedAt,
       qrPayload: qrPayload,
+      ticketHash: ticketHash,
+      qrBase64: qrBase64,
       status: newStatus,
     );
   }

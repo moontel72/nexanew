@@ -233,6 +233,10 @@ class SeatHoldService
                 'updated_at'     => now(),
             ]);
 
+            // ─── Issue ticket (Phase 3) ──────────────────
+            $ticketService = app(\App\Services\Transport\TicketService::class);
+            $ticket = $ticketService->issueTicket($bookingId);
+
             // ─── Delete the hold ────────────────────────
             DB::table('transport_seat_holds')
                 ->where('hold_token', $holdToken)
@@ -254,6 +258,7 @@ class SeatHoldService
                 'bus_id'      => $hold->layout_id,
                 'seat_number' => $hold->seat_number,
                 'payment'     => $paymentResult,
+                'ticket'      => $ticket,
             ];
         });
     }

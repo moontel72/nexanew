@@ -164,11 +164,16 @@ class BusInventoryService
                 'payment_method' => $paymentMethod, 'price' => $ticketPrice,
             ]);
 
+            // ─── Issue ticket (Phase 3) ────────────────
+            $ticketService = app(\App\Services\Transport\TicketService::class);
+            $ticket = $ticketService->issueTicket($bookingId);
+
             return [
                 'booking_id' => $bookingId,
                 'bus_id' => $busId,
                 'seat_number' => $seatNumber,
                 'payment' => $paymentResult,
+                'ticket' => $ticket,
             ];
         });
     }

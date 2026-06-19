@@ -530,6 +530,8 @@ class _PassengerSeatSelectionScreenState
         ticketPrice: result.ticketPrice,
         paymentMethod: state.paymentMethod.name,
         bookedAt: DateTime.now(),
+        ticketHash: result.ticketHash,
+        qrBase64: result.qrBase64,
       ),
     );
 
@@ -571,7 +573,16 @@ class _PassengerSeatSelectionScreenState
           ],
         ),
         actions: [
-          TextButton(
+          TextButton.icon(
+            icon: const Icon(Icons.download, size: 16),
+            label: const Text('Ticket'),
+            onPressed: () {
+              // Navigate to ticket vault to view/download
+              Navigator.pop(context);
+            },
+          ),
+          const Gap(8),
+          FilledButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pop(context);

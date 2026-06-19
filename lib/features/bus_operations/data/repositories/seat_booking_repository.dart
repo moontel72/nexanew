@@ -15,6 +15,8 @@ class SeatBookingResult {
   final double ticketPrice;
   final String? paymentReference;
   final String? errorMessage;
+  final String? ticketHash; // Phase 3
+  final String? qrBase64; // Phase 3
 
   const SeatBookingResult({
     required this.success,
@@ -23,6 +25,8 @@ class SeatBookingResult {
     required this.ticketPrice,
     this.paymentReference,
     this.errorMessage,
+    this.ticketHash,
+    this.qrBase64,
   });
 
   factory SeatBookingResult.fromJson(Map<String, dynamic> json) {
@@ -34,6 +38,8 @@ class SeatBookingResult {
       ticketPrice: (data['payment']?['amount'] ?? data['ticket_price'] ?? 0)
           .toDouble(),
       paymentReference: data['payment']?['reference_id']?.toString(),
+      ticketHash: data['ticket']?['ticket_hash']?.toString(),
+      qrBase64: data['ticket']?['qr_base64']?.toString(),
       errorMessage: json['message']?.toString(),
     );
   }
