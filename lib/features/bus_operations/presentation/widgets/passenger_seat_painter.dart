@@ -718,6 +718,7 @@ class PassengerSeatPainter extends CustomPainter {
         canvas,
         Offset(-tp.width / 2, cushionTop + cushionH * 0.28 - tp.height / 2),
       );
+      canvas.restore();
     }
 
     canvas.restore();
