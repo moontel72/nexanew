@@ -88,7 +88,17 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     }
   }
 
-  @override
+    Future<void> _unpublishRoute(String id) async {
+    try {
+      await _api.post('${widget.panelPrefix}/routes/$id/unpublish');
+      _loadRoutes();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Route unpublished!')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -232,6 +242,13 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                     'Publish',
                     () => _publishRoute(r['id']),
                     color: const Color(0xFF16A34A),
+                  ),
+                if (status == 'published')
+                  _actionBtn(
+                    Icons.undo,
+                    'Unpublish',
+                    () => _unpublishRoute(r['id']),
+                    color: const Color(0xFFD97706),
                   ),
                 const Spacer(),
                 _actionBtn(

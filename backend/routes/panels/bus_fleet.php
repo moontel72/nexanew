@@ -136,6 +136,7 @@ Route::prefix('api/v1/bus-fleet')
         Route::put('routes/{id}', [\App\Http\Controllers\BusRouteController::class, 'update']);
         Route::delete('routes/{id}', [\App\Http\Controllers\BusRouteController::class, 'destroy']);
         Route::post('routes/{id}/publish', [\App\Http\Controllers\BusRouteController::class, 'publish']);
+        Route::post('routes/{id}/unpublish', [\App\Http\Controllers\BusRouteController::class, 'unpublish']);
         Route::post('routes/{id}/waypoints', [\App\Http\Controllers\BusRouteController::class, 'saveWaypoints']);
         // Phase 4 — Pricing & Ticket Reports
         Route::get('routes/{id}/pricing', [\App\Http\Controllers\RoutePricingController::class, 'index']);

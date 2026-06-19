@@ -152,10 +152,32 @@ class BusRouteController extends Controller
         $route->update([
             'status' => BusRoute::STATUS_PUBLISHED,
             'total_distance_km' => round($totalKm, 2),
-            'estimated_duration_min' => (int) round(($totalKm / 60) * 60), // assume 60 km/h avg
+            'estimated_duration_min' => (int) round(($totalKm / 60) * 60),
         ]);
 
         return response()->json(['success' => true, 'data' => $route->fresh('waypoints')]);
+    }
+
+    // ── UNPUBLISH ────────────────────────────────────────
+
+    public function unpublish(string $id): JsonResponse
+    {
+        $route = BusRoute::findOrFail($id);
+
+        if (! $route->isPublished()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Route is not published.',
+            ], 422);
+        }
+
+        $route->update(['status' => BusRoute::STATUS_DRAFT]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Route unpublished. You can now edit it.',
+            'data' => $route->fresh('waypoints'),
+        ]);
     }
 
     // ── WAYPOINT BATCH ──────────────────────────────────
