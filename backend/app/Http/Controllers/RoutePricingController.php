@@ -63,6 +63,7 @@ class RoutePricingController extends Controller
             'prices.*.to_station'       => ['required', 'string', 'max:255'],
             'prices.*.price'            => ['required', 'numeric', 'min:0'],
             'prices.*.seat_category'    => ['nullable', 'string', 'max:30'],
+            'prices.*.distance_km'      => ['nullable', 'numeric', 'min:0'],
         ]);
 
         DB::transaction(function () use ($routeId, $data) {
@@ -82,6 +83,7 @@ class RoutePricingController extends Controller
                     'from_station'    => $p['from_station'],
                     'to_station'      => $p['to_station'],
                     'price'           => $p['price'],
+                    'distance_km'     => $p['distance_km'] ?? null,
                     'seat_category'   => $p['seat_category'] ?? 'standard',
                     'created_at'      => now(),
                     'updated_at'      => now(),

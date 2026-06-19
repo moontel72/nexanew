@@ -748,6 +748,41 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
     }
   }
 
+  void _onPriceChanged(
+    int i,
+    int j,
+    String from,
+    String to,
+    String field,
+    String v,
+  ) {
+    final val = double.tryParse(v) ?? 0;
+    final idx = _prices.indexWhere(
+      (p) => p['from_stop_order'] == i && p['to_stop_order'] == j,
+    );
+    Map<String, dynamic> entry;
+    if (idx >= 0) {
+      entry = Map<String, dynamic>.from(_prices[idx]);
+    } else {
+      entry = {
+        'from_stop_order': i,
+        'to_stop_order': j,
+        'from_station': from,
+        'to_station': to,
+        'price': 0,
+        'distance_km': 0,
+        'seat_category': 'standard',
+      };
+    }
+    if (field == 'price') entry['price'] = val;
+    if (field == 'distance_km') entry['distance_km'] = val;
+    if (idx >= 0) {
+      _prices[idx] = entry;
+    } else {
+      _prices.add(entry);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -781,51 +816,60 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
         final existing = _prices
             .where((p) => p['from_stop_order'] == i && p['to_stop_order'] == j)
             .firstOrNull;
-        final ctrl = TextEditingController(
+        final priceCtrl = TextEditingController(
           text: existing?['price']?.toString() ?? '',
+        );
+        final kmCtrl = TextEditingController(
+          text: existing?['distance_km']?.toString() ?? '',
         );
         widgets.add(
           Card(
             margin: const EdgeInsets.only(bottom: 8),
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      '$from → $to',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                  Text(
+                    '$from → $to',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
                     ),
                   ),
-                  const Text('Rs. '),
-                  SizedBox(
-                    width: 80,
-                    child: TextField(
-                      controller: ctrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(hintText: '0'),
-                      onChanged: (v) {
-                        final price = double.tryParse(v) ?? 0;
-                        final idx = _prices.indexWhere(
-                          (p) =>
-                              p['from_stop_order'] == i &&
-                              p['to_stop_order'] == j,
-                        );
-                        final entry = {
-                          'from_stop_order': i,
-                          'to_stop_order': j,
-                          'from_station': from,
-                          'to_station': to,
-                          'price': price,
-                          'seat_category': 'standard',
-                        };
-                        if (idx >= 0) {
-                          _prices[idx] = entry;
-                        } else {
-                          _prices.add(entry);
-                        }
-                      },
-                    ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Text('Rs. '),
+                      SizedBox(
+                        width: 72,
+                        child: TextField(
+                          controller: priceCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: 'Price',
+                            isDense: true,
+                          ),
+                          onChanged: (v) =>
+                              _onPriceChanged(i, j, from, to, 'price', v),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text('KM '),
+                      SizedBox(
+                        width: 64,
+                        child: TextField(
+                          controller: kmCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: 'Dist',
+                            isDense: true,
+                          ),
+                          onChanged: (v) =>
+                              _onPriceChanged(i, j, from, to, 'distance_km', v),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
