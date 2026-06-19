@@ -277,12 +277,20 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     );
     List<TextEditingController> stopCtrls = [];
     List<TextEditingController> stopArrCtrls = [];
+    List<TextEditingController> stopStayCtrls = [];
+    List<TextEditingController> stopDepCtrls = [];
     if (route != null) {
       final wps = (route['waypoints'] as List<dynamic>?) ?? [];
       for (final w in wps) {
         stopCtrls.add(TextEditingController(text: w['station_name'] ?? ''));
         stopArrCtrls.add(
           TextEditingController(text: _metaStr(w, 'arrival_time')),
+        );
+        stopStayCtrls.add(
+          TextEditingController(text: _metaStr(w, 'stay_minutes')),
+        );
+        stopDepCtrls.add(
+          TextEditingController(text: _metaStr(w, 'departure_time')),
         );
       }
     }
@@ -362,47 +370,78 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                       onPressed: () => setDlg(() {
                         stopCtrls.add(TextEditingController());
                         stopArrCtrls.add(TextEditingController());
+                        stopStayCtrls.add(TextEditingController());
+                        stopDepCtrls.add(TextEditingController());
                       }),
                     ),
                   ],
                 ),
                 ...stopCtrls.asMap().entries.map(
                   (e) => Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Row(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: TextField(
-                            controller: e.value,
-                            decoration: InputDecoration(
-                              labelText: 'Stop ${e.key + 1}',
-                              hintText: 'e.g. Gujrat Itehad ADA',
-                            ),
+                        TextField(
+                          controller: e.value,
+                          decoration: InputDecoration(
+                            labelText: 'Stop ${e.key + 1}',
+                            hintText: 'e.g. Gujrat Itehad ADA',
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 85,
-                          child: TextField(
-                            controller: stopArrCtrls[e.key],
-                            decoration: const InputDecoration(
-                              labelText: 'Arrival',
-                              hintText: '17:00',
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            SizedBox(
+                              width: 72,
+                              child: TextField(
+                                controller: stopArrCtrls[e.key],
+                                decoration: const InputDecoration(
+                                  labelText: 'Arrival',
+                                  hintText: '17:00',
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.remove_circle,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                          onPressed: () => setDlg(() {
-                            e.value.dispose();
-                            stopArrCtrls[e.key].dispose();
-                            stopCtrls.removeAt(e.key);
-                            stopArrCtrls.removeAt(e.key);
-                          }),
+                            const SizedBox(width: 6),
+                            SizedBox(
+                              width: 58,
+                              child: TextField(
+                                controller: stopStayCtrls[e.key],
+                                decoration: const InputDecoration(
+                                  labelText: 'Stay',
+                                  hintText: '30m',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            SizedBox(
+                              width: 72,
+                              child: TextField(
+                                controller: stopDepCtrls[e.key],
+                                decoration: const InputDecoration(
+                                  labelText: 'Depart',
+                                  hintText: '17:30',
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.remove_circle,
+                                color: Colors.red,
+                                size: 20,
+                              ),
+                              onPressed: () => setDlg(() {
+                                e.value.dispose();
+                                stopArrCtrls[e.key].dispose();
+                                stopStayCtrls[e.key].dispose();
+                                stopDepCtrls[e.key].dispose();
+                                stopCtrls.removeAt(e.key);
+                                stopArrCtrls.removeAt(e.key);
+                                stopStayCtrls.removeAt(e.key);
+                                stopDepCtrls.removeAt(e.key);
+                              }),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -448,7 +487,11 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                           'station_name': stopCtrls[k].text,
                           'lat': 0,
                           'lng': 0,
-                          'meta': {'arrival_time': stopArrCtrls[k].text},
+                          'meta': {
+                            'arrival_time': stopArrCtrls[k].text,
+                            'stay_minutes': stopStayCtrls[k].text,
+                            'departure_time': stopDepCtrls[k].text,
+                          },
                         });
                       }
                       await _api.post(

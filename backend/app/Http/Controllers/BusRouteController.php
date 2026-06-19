@@ -63,6 +63,7 @@ class BusRouteController extends Controller
             'origin_lng' => ['nullable', 'numeric', 'between:-180,180'],
             'destination_lat' => ['nullable', 'numeric', 'between:-90,90'],
             'destination_lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'meta' => ['nullable', 'array'],
         ]);
 
         $route = BusRoute::create([
@@ -109,6 +110,7 @@ class BusRouteController extends Controller
             'origin_lng' => ['sometimes', 'numeric'],
             'destination_lat' => ['sometimes', 'numeric'],
             'destination_lng' => ['sometimes', 'numeric'],
+            'meta' => ['nullable', 'array'],
         ]);
 
         $route->update($data);
@@ -174,6 +176,7 @@ class BusRouteController extends Controller
             'waypoints.*.station_name' => ['required', 'string', 'max:255'],
             'waypoints.*.lat' => ['nullable', 'numeric', 'between:-90,90'],
             'waypoints.*.lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'waypoints.*.meta' => ['nullable', 'array'],
         ]);
 
         DB::transaction(function () use ($route, $data) {
