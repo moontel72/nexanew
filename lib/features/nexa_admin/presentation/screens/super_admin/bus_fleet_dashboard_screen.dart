@@ -13,6 +13,8 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
 import 'package:trace_odd/features/nexa_admin/data/models/company/bus_company_model.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/route_scheduler_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/ticket_management_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
@@ -272,6 +274,24 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       color: const Color(0xFF7C3AED),
                       onTap: () => setState(() => _currentPage = 'dashboard'),
                     ),
+                    const SizedBox(height: 6),
+                    _sl('OPERATIONS'),
+                    Missile3DButton(
+                      label: 'Route Scheduler',
+                      icon: Icons.alt_route_rounded,
+                      color: const Color(0xFF0891B2),
+                      height: 56,
+                      subtitle: 'Create routes & stopovers',
+                      onTap: () => setState(() => _currentPage = 'routes'),
+                    ),
+                    Missile3DButton(
+                      label: 'Ticket Management',
+                      icon: Icons.confirmation_num_rounded,
+                      color: const Color(0xFF059669),
+                      height: 56,
+                      subtitle: 'Sales, holds & revenue',
+                      onTap: () => setState(() => _currentPage = 'tickets'),
+                    ),
                     const SizedBox(height: 8),
                     _sl('FLEET STAFF'),
                     Missile3DButton(
@@ -530,6 +550,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       ? 'Pending Link Requests'
                       : _currentPage == 'inbox'
                       ? 'Fleet Inbox'
+                      : _currentPage == 'routes'
+                      ? 'Route Scheduler'
+                      : _currentPage == 'tickets'
+                      ? 'Ticket Management'
                       : 'Dashboard',
                   style: const TextStyle(
                     fontSize: 17,
@@ -554,6 +578,10 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
               ? _linkRequestsPage()
               : _currentPage == 'inbox'
               ? _inboxPage()
+              : _currentPage == 'routes'
+              ? const RouteSchedulerScreen()
+              : _currentPage == 'tickets'
+              ? const TicketManagementScreen()
               : _home(),
         ),
       ],

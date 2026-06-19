@@ -10,6 +10,8 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/route_scheduler_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/ticket_management_screen.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class OwnerButtonColors {
@@ -184,6 +186,20 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                     },
                   ),
                   Gap(8),
+                  _sec('OPERATIONS'),
+                  Missile3DButton(
+                    label: 'Route Scheduler',
+                    icon: Icons.alt_route_rounded,
+                    color: const Color(0xFF0891B2),
+                    onTap: () => setState(() => _currentPage = 'routes'),
+                  ),
+                  Missile3DButton(
+                    label: 'Ticket Management',
+                    icon: Icons.confirmation_num_rounded,
+                    color: const Color(0xFF059669),
+                    onTap: () => setState(() => _currentPage = 'tickets'),
+                  ),
+                  Gap(8),
                   _sec('STAFF'),
                   Missile3DButton(
                     label: 'Drivers',
@@ -302,6 +318,10 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               ? _carrierLinkPage()
               : _currentPage == 'inbox'
               ? _inboxPage()
+              : _currentPage == 'routes'
+              ? const RouteSchedulerScreen(panelPrefix: '/bus-owner')
+              : _currentPage == 'tickets'
+              ? const TicketManagementScreen(panelPrefix: '/bus-owner')
               : _homePage(),
         ),
       ],
@@ -316,6 +336,10 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       ? 'Seat Layouts'
       : _currentPage == 'carrier'
       ? 'Carrier Link'
+      : _currentPage == 'routes'
+      ? 'Route Scheduler'
+      : _currentPage == 'tickets'
+      ? 'Ticket Management'
       : 'Dashboard';
   void _loadAll() {
     _loadDrivers();
