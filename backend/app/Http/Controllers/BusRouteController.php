@@ -172,7 +172,7 @@ class BusRouteController extends Controller
         }
 
         $data = $request->validate([
-            'waypoints' => ['required', 'array', 'min:2'],
+            'waypoints' => ['required', 'array', 'min:1'],
             'waypoints.*.station_name' => ['required', 'string', 'max:255'],
             'waypoints.*.lat' => ['nullable', 'numeric', 'between:-90,90'],
             'waypoints.*.lng' => ['nullable', 'numeric', 'between:-180,180'],

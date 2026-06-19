@@ -275,51 +275,122 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
   void _showRouteDetail(Map<String, dynamic> r) {
     final waypoints = (r['waypoints'] as List<dynamic>?) ?? [];
     final depTime = _metaStr(r, 'departure_time');
-    showDialog(context: context, builder: (_) => AlertDialog(
-      title: Text(r['display_name'] ?? 'Route Detail'),
-      content: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        _detailRow('Route Code', r['route_code'] ?? '—'),
-        _detailRow('Status', (r['status'] ?? 'draft').toString().toUpperCase()),
-        _detailRow('From', r['origin_city'] ?? '—'),
-        _detailRow('To', r['destination_city'] ?? '—'),
-        if (depTime.isNotEmpty) _detailRow('Bus Departure', depTime),
-        if (r['total_distance_km'] != null) _detailRow('Distance', '${r['total_distance_km']} km'),
-        if (waypoints.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          const Text('Stopovers:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-          const SizedBox(height: 6),
-          ...waypoints.asMap().entries.map((e) {
-            final w = e.value;
-            final arr = _metaStr(w, 'arrival_time');
-            final stay = _metaStr(w, 'stay_minutes');
-            final dep = _metaStr(w, 'departure_time');
-            return Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('${e.key + 1}. ${w['station_name'] ?? 'Stop ${e.key + 1}'}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                if (arr.isNotEmpty || stay.isNotEmpty || dep.isNotEmpty)
-                  Padding(padding: const EdgeInsets.only(top: 4), child: Wrap(spacing: 12, children: [
-                    if (arr.isNotEmpty) Text('Arr: $arr', style: const TextStyle(fontSize: 12)),
-                    if (stay.isNotEmpty) Text('Stay: ${stay}m', style: const TextStyle(fontSize: 12, color: Color(0xFFD97706))),
-                    if (dep.isNotEmpty) Text('Dep: $dep', style: const TextStyle(fontSize: 12, color: Color(0xFF059669))),
-                  ])),
-              ]),
-            );
-          }),
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(r['display_name'] ?? 'Route Detail'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _detailRow('Route Code', r['route_code'] ?? '—'),
+              _detailRow(
+                'Status',
+                (r['status'] ?? 'draft').toString().toUpperCase(),
+              ),
+              _detailRow('From', r['origin_city'] ?? '—'),
+              _detailRow('To', r['destination_city'] ?? '—'),
+              if (depTime.isNotEmpty) _detailRow('Bus Departure', depTime),
+              if (r['total_distance_km'] != null)
+                _detailRow('Distance', '${r['total_distance_km']} km'),
+              if (waypoints.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Stopovers:',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                const SizedBox(height: 6),
+                ...waypoints.asMap().entries.map((e) {
+                  final w = e.value;
+                  final arr = _metaStr(w, 'arrival_time');
+                  final stay = _metaStr(w, 'stay_minutes');
+                  final dep = _metaStr(w, 'departure_time');
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${e.key + 1}. ${w['station_name'] ?? 'Stop ${e.key + 1}'}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        if (arr.isNotEmpty || stay.isNotEmpty || dep.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Wrap(
+                              spacing: 12,
+                              children: [
+                                if (arr.isNotEmpty)
+                                  Text(
+                                    'Arr: $arr',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                if (stay.isNotEmpty)
+                                  Text(
+                                    'Stay: ${stay}m',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFFD97706),
+                                    ),
+                                  ),
+                                if (dep.isNotEmpty)
+                                  Text(
+                                    'Dep: $dep',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF059669),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
         ],
-      ])),
-      actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
-    ));
+      ),
+    );
   }
 
   Widget _detailRow(String label, String value) => Padding(
     padding: const EdgeInsets.only(bottom: 4),
-    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SizedBox(width: 100, child: Text('$label:', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)))),
-      Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
-    ]),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            '$label:',
+            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          ),
+        ),
+      ],
+    ),
   );
 
   // ═══ ROUTE EDITOR DIALOG ═══
@@ -532,6 +603,25 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                       '${widget.panelPrefix}/routes/${route!['id']}',
                       body: body,
                     );
+                    if (stopCtrls.isNotEmpty) {
+                      final wps = <Map<String, dynamic>>[];
+                      for (int k = 0; k < stopCtrls.length; k++) {
+                        wps.add({
+                          'station_name': stopCtrls[k].text,
+                          'lat': 0,
+                          'lng': 0,
+                          'meta': {
+                            'arrival_time': stopArrCtrls[k].text,
+                            'stay_minutes': stopStayCtrls[k].text,
+                            'departure_time': stopDepCtrls[k].text,
+                          },
+                        });
+                      }
+                      await _api.post(
+                        '${widget.panelPrefix}/routes/${route!['id']}/waypoints',
+                        body: {'waypoints': wps},
+                      );
+                    }
                   } else {
                     final r = await _api.post(
                       '${widget.panelPrefix}/routes',
