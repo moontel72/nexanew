@@ -43,6 +43,23 @@ class BusRouteController extends Controller
 
         $routes = $query->latest()->get();
 
+        // Append computed total_km (fallback to pricing if coordinates are 0)
+        $routeIds = $routes->pluck('id');
+        $pricingKm = DB::table('route_segment_prices')
+            ->whereIn('route_id', $routeIds)
+            ->select('route_id', DB::raw('SUM(distance_km) as total'))
+            ->groupBy('route_id')
+            ->pluck('total', 'route_id');
+
+        $routes->transform(function ($route) use ($pricingKm) {
+            $km = $route->total_distance_km;
+            if (empty($km) || $km <= 0) {
+                $km = $pricingKm->get($route->id, 0);
+            }
+            $route->total_km = round((float) $km, 2);
+            return $route;
+        });
+
         return response()->json([
             'success' => true,
             'data' => $routes,

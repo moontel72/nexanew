@@ -210,9 +210,9 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                   ),
                 ),
                 const Spacer(),
-                if (r['total_distance_km'] != null)
+                if ((r['total_km'] ?? r['total_distance_km']) != null)
                   Text(
-                    '${r['total_distance_km']} km',
+                    '${r['total_km'] ?? r['total_distance_km']} km',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF64748B),
@@ -322,8 +322,11 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
               _detailRow('From', r['origin_city'] ?? '—'),
               _detailRow('To', r['destination_city'] ?? '—'),
               if (depTime.isNotEmpty) _detailRow('Bus Departure', depTime),
-              if (r['total_distance_km'] != null)
-                _detailRow('Distance', '${r['total_distance_km']} km'),
+              if (r['total_km'] != null || r['total_distance_km'] != null)
+                _detailRow(
+                  'Distance',
+                  '${r['total_km'] ?? r['total_distance_km']} km',
+                ),
               if (waypoints.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 const Text(
