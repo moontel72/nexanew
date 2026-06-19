@@ -156,7 +156,7 @@ class PassengerTicketController extends Controller
             ], 422);
         }
 
-        // Verify bus + trip match
+        // Verify bus + trip + seat match (anti-tamper)
         if (! empty($payload['bus']) && (string) $payload['bus'] !== (string) $booking->bus_layout_id) {
             return response()->json([
                 'success' => false,
@@ -170,6 +170,14 @@ class PassengerTicketController extends Controller
                 'success' => false,
                 'message' => 'Ticket does not match this trip.',
                 'code'    => 'TRIP_MISMATCH',
+            ], 422);
+        }
+
+        if (! empty($payload['seat']) && (int) $payload['seat'] !== (int) $booking->seat_number) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ticket seat number does not match booking.',
+                'code'    => 'SEAT_MISMATCH',
             ], 422);
         }
 
