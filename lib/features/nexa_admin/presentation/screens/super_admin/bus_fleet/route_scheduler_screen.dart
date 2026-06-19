@@ -521,35 +521,38 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            SizedBox(
-                              width: 72,
+                            Expanded(
+                              flex: 3,
                               child: TextField(
                                 controller: stopArrCtrls[e.key],
                                 decoration: const InputDecoration(
                                   labelText: 'Arrival',
                                   hintText: '17:00',
+                                  isDense: true,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 6),
-                            SizedBox(
-                              width: 58,
+                            Expanded(
+                              flex: 2,
                               child: TextField(
                                 controller: stopStayCtrls[e.key],
                                 decoration: const InputDecoration(
                                   labelText: 'Stay',
                                   hintText: '30m',
+                                  isDense: true,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 6),
-                            SizedBox(
-                              width: 72,
+                            Expanded(
+                              flex: 3,
                               child: TextField(
                                 controller: stopDepCtrls[e.key],
                                 decoration: const InputDecoration(
                                   labelText: 'Depart',
                                   hintText: '17:30',
+                                  isDense: true,
                                 ),
                               ),
                             ),
@@ -842,7 +845,7 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
                     children: [
                       const Text('Rs. '),
                       SizedBox(
-                        width: 72,
+                        width: 100,
                         child: TextField(
                           controller: priceCtrl,
                           keyboardType: TextInputType.number,
@@ -854,15 +857,15 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
                               _onPriceChanged(i, j, from, to, 'price', v),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 16),
                       const Text('KM '),
                       SizedBox(
-                        width: 64,
+                        width: 90,
                         child: TextField(
                           controller: kmCtrl,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            hintText: 'Dist',
+                            hintText: 'Distance',
                             isDense: true,
                           ),
                           onChanged: (v) =>
