@@ -88,17 +88,23 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     }
   }
 
-    Future<void> _unpublishRoute(String id) async {
+  Future<void> _unpublishRoute(String id) async {
     try {
       await _api.post('${widget.panelPrefix}/routes/$id/unpublish');
       _loadRoutes();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Route unpublished!')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Route unpublished!')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -701,30 +707,75 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
 
   void _showAllPrices(Map<String, dynamic> route) async {
     final api = ApiService();
-    showDialog(context: context, builder: (_) => AlertDialog(
-      title: Text('Prices: ${route['display_name'] ?? ''}'),
-      content: SizedBox(width: double.maxFinite, child: FutureBuilder(
-        future: api.get('${widget.panelPrefix}/routes/${route['id']}/pricing'),
-        builder: (ctx, snap) {
-          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-          final data = snap.data?['data'];
-          final prices = (data?['prices'] as List?) ?? [];
-          final waypoints = (data?['waypoints'] as List?) ?? [];
-          if (prices.isEmpty) return const Text('No prices set yet.');
-          return SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            ...prices.map<Widget>((p) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(children: [
-                Expanded(child: Text('${p['from_station'] ?? ''} → ${p['to_station'] ?? ''}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
-                Text('Rs. ${(p['price'] as num?)?.toStringAsFixed(0) ?? '0'}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF059669))),
-                if (p['distance_km'] != null && p['distance_km'] > 0) Text('  |  ${p['distance_km']} km', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-              ]),
-            )),
-          ]));
-        },
-      )),
-      actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
-    ));
+    // Fetch data before showing dialog
+    List prices = [];
+    try {
+      final res = await api.get(
+        '${widget.panelPrefix}/routes/${route['id']}/pricing',
+      );
+      final data = res?['data'];
+      prices = (data?['prices'] as List?) ?? [];
+    } catch (_) {}
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Prices: ${route['display_name'] ?? ''}'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: prices.isEmpty
+              ? const Center(child: Text('No prices set yet.'))
+              : SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ...prices.map<Widget>(
+                        (p) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${p['from_station'] ?? ''} → ${p['to_station'] ?? ''}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                'Rs. ${(p['price'] as num?)?.toStringAsFixed(0) ?? '0'}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF059669),
+                                ),
+                              ),
+                              if (p['distance_km'] != null &&
+                                  p['distance_km'] > 0)
+                                Text(
+                                  '  |  ${p['distance_km']} km',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showPricingEditor(Map<String, dynamic> route) {
