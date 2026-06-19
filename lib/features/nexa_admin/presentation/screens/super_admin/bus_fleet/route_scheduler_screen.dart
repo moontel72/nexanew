@@ -1,7 +1,7 @@
-// NEXATRACE — ROUTE SCHEDULER SCREEN v2
+// NEXATRACE — ROUTE SCHEDULER SCREEN v3
 // ====================================
-// Create multi-stopover bus routes. Location names only —
-// Lat/Lng are auto-set to 0 (future: Google Places autocomplete).
+// Multi-stopover routes with departure time, arrival times,
+// city-to-city pricing. No Lat/Lng fields.
 //
 // MODULE: 13B — Dynamic Route & Waypoint Line Scheduler
 
@@ -264,7 +264,7 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     );
   }
 
-  // ═══ ROUTE EDITOR DIALOG (NO LAT/LNG FIELDS) ═══
+  // ═══ ROUTE EDITOR DIALOG ═══
   void _showRouteEditor({Map<String, dynamic>? route}) {
     final nameCtrl = TextEditingController(text: route?['display_name'] ?? '');
     final codeCtrl = TextEditingController(text: route?['route_code'] ?? '');
@@ -272,11 +272,18 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     final destCtrl = TextEditingController(
       text: route?['destination_city'] ?? '',
     );
+    final depCtrl = TextEditingController(
+      text: _metaStr(route, 'departure_time'),
+    );
     List<TextEditingController> stopCtrls = [];
+    List<TextEditingController> stopArrCtrls = [];
     if (route != null) {
       final wps = (route['waypoints'] as List<dynamic>?) ?? [];
       for (final w in wps) {
         stopCtrls.add(TextEditingController(text: w['station_name'] ?? ''));
+        stopArrCtrls.add(
+          TextEditingController(text: _metaStr(w, 'arrival_time')),
+        );
       }
     }
     final isEdit = route != null;
@@ -307,6 +314,14 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                TextField(
+                  controller: depCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Bus Departure Time',
+                    hintText: 'e.g. 15:00',
+                  ),
+                ),
+                const SizedBox(height: 14),
                 const Text(
                   'Origin',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
@@ -334,7 +349,7 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                 Row(
                   children: [
                     const Text(
-                      'Stopovers (optional)',
+                      'Stopovers',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
@@ -344,8 +359,10 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                     TextButton.icon(
                       icon: const Icon(Icons.add, size: 16),
                       label: const Text('Add Stop'),
-                      onPressed: () =>
-                          setDlg(() => stopCtrls.add(TextEditingController())),
+                      onPressed: () => setDlg(() {
+                        stopCtrls.add(TextEditingController());
+                        stopArrCtrls.add(TextEditingController());
+                      }),
                     ),
                   ],
                 ),
@@ -363,6 +380,17 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                             ),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 85,
+                          child: TextField(
+                            controller: stopArrCtrls[e.key],
+                            decoration: const InputDecoration(
+                              labelText: 'Arrival',
+                              hintText: '17:00',
+                            ),
+                          ),
+                        ),
                         IconButton(
                           icon: const Icon(
                             Icons.remove_circle,
@@ -371,7 +399,9 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                           ),
                           onPressed: () => setDlg(() {
                             e.value.dispose();
+                            stopArrCtrls[e.key].dispose();
                             stopCtrls.removeAt(e.key);
+                            stopArrCtrls.removeAt(e.key);
                           }),
                         ),
                       ],
@@ -397,6 +427,7 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                   'origin_lng': 0,
                   'destination_lat': 0,
                   'destination_lng': 0,
+                  'meta': {'departure_time': depCtrl.text},
                 };
                 try {
                   if (isEdit) {
@@ -411,19 +442,18 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                     );
                     final newId = r?['data']?['id']?.toString();
                     if (newId != null && stopCtrls.isNotEmpty) {
+                      final wps = <Map<String, dynamic>>[];
+                      for (int k = 0; k < stopCtrls.length; k++) {
+                        wps.add({
+                          'station_name': stopCtrls[k].text,
+                          'lat': 0,
+                          'lng': 0,
+                          'meta': {'arrival_time': stopArrCtrls[k].text},
+                        });
+                      }
                       await _api.post(
                         '${widget.panelPrefix}/routes/$newId/waypoints',
-                        body: {
-                          'waypoints': stopCtrls
-                              .map(
-                                (c) => {
-                                  'station_name': c.text,
-                                  'lat': 0,
-                                  'lng': 0,
-                                },
-                              )
-                              .toList(),
-                        },
+                        body: {'waypoints': wps},
                       );
                     }
                   }
@@ -442,6 +472,13 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
         ),
       ),
     );
+  }
+
+  String _metaStr(dynamic obj, String key) {
+    if (obj == null) return '';
+    final meta = obj['meta'];
+    if (meta is Map) return (meta[key] ?? '').toString();
+    return '';
   }
 
   void _showPricingEditor(Map<String, dynamic> route) {
