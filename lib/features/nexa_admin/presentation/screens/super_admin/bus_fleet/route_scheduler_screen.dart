@@ -236,6 +236,13 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                   () => _showPricingEditor(r),
                 ),
                 const SizedBox(width: 8),
+                _actionBtn(
+                  Icons.list_alt,
+                  'Prices',
+                  () => _showAllPrices(r),
+                  color: const Color(0xFF0D9488),
+                ),
+                const SizedBox(width: 8),
                 if (status == 'draft')
                   _actionBtn(
                     Icons.publish,
@@ -690,6 +697,34 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     final meta = obj['meta'];
     if (meta is Map) return (meta[key] ?? '').toString();
     return '';
+  }
+
+  void _showAllPrices(Map<String, dynamic> route) async {
+    final api = ApiService();
+    showDialog(context: context, builder: (_) => AlertDialog(
+      title: Text('Prices: ${route['display_name'] ?? ''}'),
+      content: SizedBox(width: double.maxFinite, child: FutureBuilder(
+        future: api.get('${widget.panelPrefix}/routes/${route['id']}/pricing'),
+        builder: (ctx, snap) {
+          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+          final data = snap.data?['data'];
+          final prices = (data?['prices'] as List?) ?? [];
+          final waypoints = (data?['waypoints'] as List?) ?? [];
+          if (prices.isEmpty) return const Text('No prices set yet.');
+          return SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            ...prices.map<Widget>((p) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(children: [
+                Expanded(child: Text('${p['from_station'] ?? ''} → ${p['to_station'] ?? ''}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+                Text('Rs. ${(p['price'] as num?)?.toStringAsFixed(0) ?? '0'}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF059669))),
+                if (p['distance_km'] != null && p['distance_km'] > 0) Text('  |  ${p['distance_km']} km', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              ]),
+            )),
+          ]));
+        },
+      )),
+      actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+    ));
   }
 
   void _showPricingEditor(Map<String, dynamic> route) {

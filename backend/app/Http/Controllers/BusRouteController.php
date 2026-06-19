@@ -139,7 +139,7 @@ class BusRouteController extends Controller
             ], 422);
         }
 
-        // Compute distance and duration
+        // Compute distance from Haversine (or fallback to pricing data)
         $totalKm = 0;
         $waypoints = $route->waypoints;
         for ($i = 1; $i < $waypoints->count(); $i++) {
@@ -147,6 +147,13 @@ class BusRouteController extends Controller
                 $waypoints[$i - 1]->lat, $waypoints[$i - 1]->lng,
                 $waypoints[$i]->lat, $waypoints[$i]->lng,
             );
+        }
+
+        // Fallback: sum distance_km from segment prices if coordinates are all zero
+        if ($totalKm <= 0) {
+            $totalKm = DB::table('route_segment_prices')
+                ->where('route_id', $id)
+                ->sum('distance_km');
         }
 
         $route->update([
