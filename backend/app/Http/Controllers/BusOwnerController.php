@@ -1006,4 +1006,83 @@ class BusOwnerController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
+
+    // ═══════════════════════════════════════════════════════
+    // PHASE 2 — TRIP SEAT STATUS (Owner-Scoped)
+    // ═══════════════════════════════════════════════════════
+
+    public function tripSeatStatus(string $tripId, Request $request): JsonResponse
+    {
+        $ownerId = $this->ownerIdentityId($request);
+        if (!$ownerId) {
+            return response()->json(['success' => false, 'message' => 'Owner identity required.'], 403);
+        }
+
+        $trip = DB::table('transport_bus_trips')->where('id', $tripId)->first();
+        if (!$trip) {
+            return response()->json(['success' => false, 'message' => 'Trip not found.'], 404);
+        }
+
+        $layout = DB::table('absolute_bus_layouts')->where('id', $trip->bus_id)->first();
+        if (!$layout) {
+            return response()->json(['success' => false, 'message' => 'Bus layout not found.'], 404);
+        }
+
+        $isMasterAdmin = ($request->user()->account_type ?? null) === 'master_admin';
+        $layoutOwnerId = $layout->owner_identity_id ?? null;
+        if (!$isMasterAdmin && (string) $layoutOwnerId !== (string) $ownerId) {
+            return response()->json(['success' => false, 'message' => 'This trip belongs to a different bus owner.'], 403);
+        }
+
+        $heldSeats = DB::table('transport_seat_holds')
+            ->where('trip_id', $tripId)
+            ->where('hold_expires_at', '>', now())
+            ->select('seat_number', 'hold_expires_at')
+            ->get()
+            ->map(fn($row) => [
+                'seat_number'       => (int) $row->seat_number,
+                'remaining_seconds' => max(0, (int) now()->diffInSeconds($row->hold_expires_at, false)),
+            ])->toArray();
+
+        $bookedSeats = DB::table('transport_seat_bookings')
+            ->where('trip_id', $tripId)
+            ->whereIn('status', ['booked', 'confirmed', 'boarded'])
+            ->pluck('seat_number')->map(fn($v) => (int) $v)->toArray();
+
+        $snapshot = is_string($layout->current_snapshot ?? null)
+            ? json_decode($layout->current_snapshot, true)
+            : ($layout->current_snapshot ?? []);
+        $components = $snapshot['components'] ?? [];
+        $totalSeats = 0;
+        foreach ($components as $c) {
+            $type = $c['type'] ?? '';
+            if (in_array($type, ['seat', 'businessClassSeat', 'foldingSeat', 'sleeperLower', 'sleeperUpper'])) {
+                $totalSeats++;
+            }
+        }
+
+        $available = $totalSeats - count($heldSeats) - count($bookedSeats);
+
+        $holdsAllowed = false;
+        try {
+            $holdsAllowed = app(\App\Services\Transport\SeatHoldService::class)->holdsAllowed($tripId);
+        } catch (\RuntimeException) {}
+
+        return response()->json(['success' => true, 'data' => [
+            'trip_id'          => $tripId,
+            'bus_id'           => $trip->bus_id,
+            'status'           => $trip->status,
+            'origin'           => $trip->origin,
+            'destination'      => $trip->destination,
+            'layout_name'      => $layout->display_name ?? 'Untitled',
+            'total_seats'      => $totalSeats,
+            'held_seats'       => $heldSeats,
+            'held_count'       => count($heldSeats),
+            'booked_seats'     => $bookedSeats,
+            'booked_count'     => count($bookedSeats),
+            'available_seats'  => max(0, $available),
+            'holds_allowed'    => $holdsAllowed,
+            'scheduled_departure_at' => $trip->scheduled_departure_at ?? null,
+        ]]);
+    }
 }

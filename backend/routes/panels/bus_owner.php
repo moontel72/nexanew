@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api/v1/bus-owner')->group(function (): void {
     Route::get('absolute-layouts/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'listPublic']);
     Route::get('absolute-layouts/{id}/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'showPublic']);
+    // Public seat hold status (cross-panel parity)
+    Route::get('bookings/held/{tripId}', [\App\Http\Controllers\BusTransitController::class, 'listHeldSeats']);
 });
 
 /**
@@ -173,5 +175,11 @@ Route::prefix('api/v1/bus-owner')
             Route::get('/', [\App\Http\Controllers\BusOwnerController::class, 'listAllMessages']);
             Route::get('{assignmentId}', [\App\Http\Controllers\BusOwnerController::class, 'listMessages']);
             Route::post('{assignmentId}', [\App\Http\Controllers\BusOwnerController::class, 'sendMessage']);
+        });
+
+        // Phase 2 — Seat Booking & Hold Status (Cross-Panel Parity)
+        Route::prefix('bookings')->group(function (): void {
+            Route::get('held/{tripId}', [\App\Http\Controllers\BusTransitController::class, 'listHeldSeats']);
+            Route::get('trip/{tripId}', [\App\Http\Controllers\BusOwnerController::class, 'tripSeatStatus']);
         });
     });
