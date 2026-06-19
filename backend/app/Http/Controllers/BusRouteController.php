@@ -198,6 +198,7 @@ class BusRouteController extends Controller
                     'station_name' => $wp['station_name'],
                     'lat' => $wp['lat'],
                     'lng' => $wp['lng'],
+                    'meta' => $wp['meta'] ?? null,
                     'distance_from_origin_km' => round($cumulativeKm, 2),
                     'estimated_min_from_origin' => (int) round(($cumulativeKm / 60) * 60),
                 ]);
