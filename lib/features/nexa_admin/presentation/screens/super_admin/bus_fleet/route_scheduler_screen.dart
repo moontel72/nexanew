@@ -709,11 +709,10 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
   }
 
   void _showAllPrices(Map<String, dynamic> route) async {
-    final api = ApiService();
     // Fetch data before showing dialog
     List prices = [];
     try {
-      final res = await api.get(
+      final res = await _api.get(
         '${widget.panelPrefix}/routes/${route['id']}/pricing',
       );
       final data = res?['data'];
