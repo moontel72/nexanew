@@ -327,7 +327,7 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
                             fontSize: 16,
                           ),
                         ),
-                        if (seg.distanceKm != null && seg.distanceKm > 0) ...[
+                        if (seg.distanceKm != null && seg.distanceKm! > 0) ...[
                           const SizedBox(width: 12),
                           Text(
                             '${seg.distanceKm} km',
