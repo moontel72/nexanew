@@ -1,7 +1,9 @@
 // NEXATRACE — ALL TICKETS SCREEN
 // ===============================
 // Displays all station-to-station ticket fare structures for a route.
-// Each segment can be downloaded as a printable PDF ticket.
+// Generates every possible segment pair from the route's waypoints
+// and overlays saved pricing data. Each priced segment can be
+// downloaded as a printable HTML ticket.
 //
 // MODULE: 13B — Route Scheduler Pricing & Ticketing
 
@@ -28,7 +30,7 @@ class AllTicketsScreen extends StatefulWidget {
 
 class _AllTicketsScreenState extends State<AllTicketsScreen> {
   final _api = ApiService();
-  List<Map<String, dynamic>> _prices = [];
+  List<_TicketSegment> _segments = [];
   bool _loading = true;
   String? _error;
 
@@ -39,44 +41,85 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final res = await _api.get(
-        '${widget.panelPrefix}/routes/${widget.routeId}/pricing',
-      );
-      final data = res?['data'];
-      final raw = (data?['prices'] as List?) ?? [];
-      // Filter out self-referencing and duplicates
+      // Fetch saved pricing data
+      Map<String, Map<String, dynamic>> priceMap = {};
+      try {
+        final res = await _api.get(
+          '${widget.panelPrefix}/routes/${widget.routeId}/pricing',
+        );
+        final data = res?['data'];
+        final prices = (data?['prices'] as List?) ?? [];
+        for (final p in prices) {
+          if (p is Map) {
+            final key = '${p['from_station'] ?? ''}→${p['to_station'] ?? ''}';
+            priceMap[key] = Map<String, dynamic>.from(p);
+          }
+        }
+      } catch (_) {
+        // Pricing fetch failed — continue with empty prices
+      }
+
+      // Build full station list: Origin + waypoints + Destination
+      final stations = <String>[];
+      stations.add(widget.originCity.isNotEmpty ? widget.originCity : 'Origin');
+      for (final w in widget.waypoints) {
+        final name =
+            (w is Map ? w['station_name']?.toString() : w?.toString()) ?? '';
+        if (name.isNotEmpty && name != stations.last) {
+          stations.add(name);
+        }
+      }
+      final dest = widget.destCity.isNotEmpty ? widget.destCity : 'Destination';
+      if (dest != stations.last) {
+        stations.add(dest);
+      }
+
+      // Generate all consecutive and non-consecutive segment pairs
+      final segments = <_TicketSegment>[];
       final seen = <String>{};
-      _prices = raw.cast<Map<String, dynamic>>().where((p) {
-        final from = p['from_station']?.toString() ?? '';
-        final to = p['to_station']?.toString() ?? '';
-        if (from == to) return false;
-        final key = '$from→$to';
-        if (seen.contains(key)) return false;
-        seen.add(key);
-        return true;
-      }).toList();
+      for (int i = 0; i < stations.length; i++) {
+        for (int j = i + 1; j < stations.length; j++) {
+          final from = stations[i];
+          final to = stations[j];
+          if (from == to) continue;
+          final pairKey = '$from→$to';
+          if (seen.contains(pairKey)) continue;
+          seen.add(pairKey);
+
+          final saved = priceMap[pairKey];
+          segments.add(
+            _TicketSegment(
+              from: from,
+              to: to,
+              price: saved?['price'],
+              distanceKm: saved?['distance_km'],
+              segmentId: saved?['id']?.toString(),
+              isConsecutive: j == i + 1,
+              fromOrder: i,
+              toOrder: j,
+            ),
+          );
+        }
+      }
+
+      _segments = segments;
     } catch (e) {
       _error = e.toString();
     }
     if (mounted) setState(() => _loading = false);
   }
 
-  Future<void> _downloadPdf(Map<String, dynamic> segment) async {
-    try {
-      final segId = segment['id']?.toString() ?? '';
-      final url = ApiEndpoints.getFullUrl(
-        '${widget.panelPrefix}/routes/${widget.routeId}/pricing/$segId/pdf',
-      );
-      // Open PDF in new tab for download
-      html.window.open(url, '_blank');
-    } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF error: $e')),
-        );
-    }
+  void _openPdf(_TicketSegment seg) {
+    if (seg.segmentId == null) return;
+    final url = ApiEndpoints.getFullUrl(
+      '${widget.panelPrefix}/routes/${widget.routeId}/pricing/${seg.segmentId}/pdf',
+    );
+    html.window.open(url, '_blank');
   }
 
   @override
@@ -92,108 +135,248 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Error: $_error', style: const TextStyle(color: Colors.red)),
-                      const SizedBox(height: 12),
-                      FilledButton(onPressed: _load, child: const Text('Retry')),
-                    ],
-                  ),
-                )
-              : _prices.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No ticket prices set yet.\n\nGo to Pricing editor to add prices for each segment.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFF64748B)),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _prices.length,
-                      itemBuilder: (ctx, i) => _ticketCard(_prices[i]),
-                    ),
+          ? _buildError()
+          : _segments.isEmpty
+          ? _buildEmpty()
+          : _buildSegmentList(),
     );
   }
 
-  Widget _ticketCard(Map<String, dynamic> p) {
-    final from = p['from_station']?.toString() ?? '?';
-    final to = p['to_station']?.toString() ?? '?';
-    final price = (p['price'] as num?)?.toStringAsFixed(0) ?? '0';
-    final km = p['distance_km'];
-    final segId = p['id']?.toString() ?? '';
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+  Widget _buildError() {
+    return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Route icon
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFF0D9488).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.directions_bus, color: Color(0xFF0D9488)),
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 12),
+            Text(
+              'Failed to load ticket data',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(width: 14),
-            // Segment info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$from → $to',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        'Rs. $price',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF059669),
-                          fontSize: 16,
-                        ),
-                      ),
-                      if (km != null && km > 0) ...[
-                        const SizedBox(width: 12),
-                        Text(
-                          '$km km',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'ID: ${segId.substring(0, 8)}...',
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              textAlign: TextAlign.center,
             ),
-            // PDF download button
-            IconButton(
-              icon: const Icon(Icons.picture_as_pdf, color: Color(0xFFDC2626)),
-              tooltip: 'Download PDF Ticket',
-              onPressed: () => _downloadPdf(p),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              onPressed: _load,
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.confirmation_num_outlined,
+              size: 56,
+              color: Color(0xFF94A3B8),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No route segments found',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'This route has no waypoints or stations defined.\nAdd stops via the Route Editor first.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+              onPressed: _load,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSegmentList() {
+    return Column(
+      children: [
+        // Summary header
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          color: Colors.white,
+          child: Row(
+            children: [
+              const Icon(Icons.route, color: Color(0xFF0D9488)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${widget.originCity} → ${widget.destCity}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      '${_segments.length} segment${_segments.length == 1 ? '' : 's'} · '
+                      '${_segments.where((s) => s.price != null).length} priced',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Segment list
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: _segments.length,
+            itemBuilder: (ctx, i) => _segmentCard(_segments[i]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _segmentCard(_TicketSegment seg) {
+    final hasPrice = seg.price != null && (seg.price as num) > 0;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            // Icon
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: hasPrice
+                    ? const Color(0xFF059669).withValues(alpha: 0.1)
+                    : const Color(0xFF94A3B8).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                hasPrice ? Icons.confirmation_num : Icons.edit_calendar,
+                color: hasPrice
+                    ? const Color(0xFF059669)
+                    : const Color(0xFF94A3B8),
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${seg.from} → ${seg.to}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (hasPrice)
+                    Row(
+                      children: [
+                        Text(
+                          'Rs. ${(seg.price as num).toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF059669),
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (seg.distanceKm != null && seg.distanceKm > 0) ...[
+                          const SizedBox(width: 12),
+                          Text(
+                            '${seg.distanceKm} km',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ],
+                    )
+                  else
+                    Text(
+                      seg.isConsecutive ? 'Not priced yet' : 'Not priced',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF94A3B8),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // Action button
+            if (hasPrice)
+              IconButton(
+                icon: const Icon(
+                  Icons.picture_as_pdf,
+                  color: Color(0xFFDC2626),
+                ),
+                tooltip: 'Download Ticket PDF',
+                onPressed: () => _openPdf(seg),
+              )
+            else
+              const SizedBox(
+                width: 48,
+                height: 48,
+                child: Icon(
+                  Icons.lock_outline,
+                  size: 18,
+                  color: Color(0xFFCBD5E1),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Internal model for a ticket segment row.
+class _TicketSegment {
+  final String from;
+  final String to;
+  final dynamic price;
+  final dynamic distanceKm;
+  final String? segmentId;
+  final bool isConsecutive;
+  final int fromOrder;
+  final int toOrder;
+
+  const _TicketSegment({
+    required this.from,
+    required this.to,
+    this.price,
+    this.distanceKm,
+    this.segmentId,
+    this.isConsecutive = false,
+    this.fromOrder = 0,
+    this.toOrder = 0,
+  });
 }
