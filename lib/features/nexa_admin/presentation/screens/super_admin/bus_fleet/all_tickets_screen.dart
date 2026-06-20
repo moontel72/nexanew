@@ -56,8 +56,14 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
         final prices = (data?['prices'] as List?) ?? [];
         for (final p in prices) {
           if (p is Map) {
-            final key = '${p['from_station'] ?? ''}→${p['to_station'] ?? ''}';
-            priceMap[key] = Map<String, dynamic>.from(p);
+            // Key by stop order — immune to station name drift
+            final fromOrd = p['from_stop_order'];
+            final toOrd = p['to_stop_order'];
+            if (fromOrd != null && toOrd != null) {
+              final key = '${fromOrd}→${toOrd}';
+              // Keep the first entry if duplicate stop-order pairs exist
+              priceMap[key] ??= Map<String, dynamic>.from(p);
+            }
           }
         }
       } catch (_) {
@@ -79,19 +85,23 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
         stations.add(dest);
       }
 
-      // Generate all consecutive and non-consecutive segment pairs
+      // Generate all segment pairs, matching pricing by stop order
       final segments = <_TicketSegment>[];
-      final seen = <String>{};
+      final seenNames = <String>{};
       for (int i = 0; i < stations.length; i++) {
         for (int j = i + 1; j < stations.length; j++) {
           final from = stations[i];
           final to = stations[j];
+          // Skip self-referencing (station cannot route to itself)
           if (from == to) continue;
-          final pairKey = '$from→$to';
-          if (seen.contains(pairKey)) continue;
-          seen.add(pairKey);
+          // Skip duplicate station-name pairs
+          final nameKey = '$from→$to';
+          if (seenNames.contains(nameKey)) continue;
+          seenNames.add(nameKey);
 
-          final saved = priceMap[pairKey];
+          // Match by stop-order index — exact, not fuzzy string match
+          final orderKey = '$i→$j';
+          final saved = priceMap[orderKey];
           segments.add(
             _TicketSegment(
               from: from,
