@@ -306,6 +306,7 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
   void _showRouteDetail(Map<String, dynamic> r) {
     final waypoints = (r['waypoints'] as List<dynamic>?) ?? [];
     final depTime = _metaStr(r, 'departure_time');
+    final destArrTime = _metaStr(r, 'destination_arrival_time');
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -323,6 +324,8 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
               _detailRow('From', r['origin_city'] ?? '—'),
               _detailRow('To', r['destination_city'] ?? '—'),
               if (depTime.isNotEmpty) _detailRow('Bus Departure', depTime),
+              if (destArrTime.isNotEmpty)
+                _detailRow('Dest Arrival', destArrTime),
               if (r['total_km'] != null || r['total_distance_km'] != null)
                 _detailRow(
                   'Distance',
@@ -438,6 +441,9 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     final depCtrl = TextEditingController(
       text: _metaStr(route, 'departure_time'),
     );
+    final destArrCtrl = TextEditingController(
+      text: _metaStr(route, 'destination_arrival_time'),
+    );
     List<TextEditingController> stopCtrls = [];
     List<TextEditingController> stopArrCtrls = [];
     List<TextEditingController> stopStayCtrls = [];
@@ -514,6 +520,14 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                   decoration: const InputDecoration(
                     labelText: 'City / Terminal Name',
                     hintText: 'e.g. Islamabad Faizabad',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: destArrCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Destination Arrival Time',
+                    hintText: 'e.g. 21:00',
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -632,7 +646,10 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                   'origin_lng': 0,
                   'destination_lat': 0,
                   'destination_lng': 0,
-                  'meta': {'departure_time': depCtrl.text},
+                  'meta': {
+                    'departure_time': depCtrl.text,
+                    'destination_arrival_time': destArrCtrl.text,
+                  },
                 };
                 try {
                   if (isEdit) {

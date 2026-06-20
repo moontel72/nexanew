@@ -154,14 +154,57 @@ class RoutePricingController extends Controller
             return response()->json(['success' => false, 'message' => 'Route not found.'], 404);
         }
 
-        // Multi-tenant ownership enforcement (bus-owner panel only)
-        $user = $request->user();
-        $isMasterAdmin = ($user->account_type ?? null) === 'master_admin';
-        $panelPrefix = $request->route()->getPrefix();
-        if (! $isMasterAdmin && str_contains($panelPrefix, 'bus-owner')) {
-            $ownerIdentityId = $user->global_identity_id ?? null;
-            if (! $ownerIdentityId || ($route->owner_identity_id ?? null) !== $ownerIdentityId) {
-                return response()->json(['success' => false, 'message' => 'This route does not belong to your account.'], 403);
+        // ── Branding: Radhnal Express vs Owner's business name ──
+        $brandName = 'Radhnal Express';
+        if (! empty($route->owner_identity_id)) {
+            $owner = DB::table('global_identities')
+                ->where('id', $route->owner_identity_id)
+                ->first();
+            if ($owner && ! empty($owner->display_name)) {
+                $brandName = $owner->display_name;
+            }
+        }
+
+        // ── Calculate boarding/dropping times from waypoints ──
+        $waypoints = DB::table('transport_bus_route_waypoints')
+            ->where('route_id', $routeId)
+            ->orderBy('stop_order')
+            ->get();
+
+        $routeMeta = is_string($route->meta ?? null)
+            ? json_decode($route->meta, true)
+            : ($route->meta ?? []);
+        $originDeparture = $routeMeta['departure_time'] ?? '—';
+        $destArrival = $routeMeta['destination_arrival_time'] ?? '—';
+
+        // Determine boarding time (from stop) and dropping time (to stop)
+        $boardingTime = $originDeparture;
+        $droppingTime = $destArrival;
+        $fromOrder = $segment->from_stop_order;
+        $toOrder = $segment->to_stop_order;
+
+        // If boarding from a waypoint (not origin), use that waypoint's departure
+        if ($fromOrder > 0) {
+            $wpIdx = $fromOrder - 1; // waypoints are 0-indexed
+            if (isset($waypoints[$wpIdx])) {
+                $wpMeta = is_string($waypoints[$wpIdx]->meta ?? null)
+                    ? json_decode($waypoints[$wpIdx]->meta, true)
+                    : ($waypoints[$wpIdx]->meta ?? []);
+                $stayMin = intval($wpMeta['stay_minutes'] ?? 0);
+                $wpDeparture = $wpMeta['departure_time'] ?? '';
+                $boardingTime = $wpDeparture ?: $originDeparture;
+            }
+        }
+
+        // If dropping at a waypoint (not final destination), use that waypoint's arrival
+        if ($toOrder < count($waypoints)) {
+            $wpIdx = $toOrder - 1;
+            if (isset($waypoints[$wpIdx])) {
+                $wpMeta = is_string($waypoints[$wpIdx]->meta ?? null)
+                    ? json_decode($waypoints[$wpIdx]->meta, true)
+                    : ($waypoints[$wpIdx]->meta ?? []);
+                $wpArrival = $wpMeta['arrival_time'] ?? '';
+                $droppingTime = $wpArrival ?: $destArrival;
             }
         }
 
@@ -190,6 +233,9 @@ class RoutePricingController extends Controller
             qrBase64: $qrBase64,
             routeName: $route->display_name ?? '',
             routeCode: $route->route_code ?? '',
+            brandName: $brandName,
+            boardingTime: $boardingTime,
+            droppingTime: $droppingTime,
         );
 
         return response($html, 200, [
@@ -210,6 +256,9 @@ class RoutePricingController extends Controller
         string $qrBase64,
         string $routeName,
         string $routeCode,
+        string $brandName = 'Radhnal Express',
+        string $boardingTime = '—',
+        string $droppingTime = '—',
     ): string {
         $qrSvg = $this->generateQrSvg($qrBase64);
         $kmDisplay = $km ? number_format($km, 1) . ' km' : '—';
@@ -219,23 +268,25 @@ class RoutePricingController extends Controller
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>NexaTrace Ticket — {$from} → {$to}</title>
+    <title>{$brandName} Ticket — {$from} → {$to}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; display: flex; justify-content: center; padding: 20px; }
         .ticket { max-width: 440px; width: 100%; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,.12); }
         .ticket-header { background: linear-gradient(135deg, #0D9488, #0F766E); color: #fff; padding: 24px; }
         .ticket-header h1 { font-size: 18px; font-weight: 700; }
-        .ticket-header .sub { font-size: 12px; opacity: .85; margin-top: 4px; }
+        .ticket-header .brand { font-size: 13px; font-weight: 600; opacity: .9; }
+        .ticket-header .sub { font-size: 11px; opacity: .75; margin-top: 4px; }
         .ticket-body { padding: 20px 24px; }
         .route-display { text-align: center; padding: 16px 0; }
-        .route-display .station { font-size: 18px; font-weight: 700; color: #1e293b; }
-        .route-display .arrow { color: #0D9488; font-size: 20px; margin: 0 12px; }
+        .route-display .station { font-size: 16px; font-weight: 700; color: #1e293b; }
+        .route-display .arrow { color: #0D9488; font-size: 20px; margin: 0 10px; }
         .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
         .row:last-child { border-bottom: none; }
         .label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; }
         .value { font-size: 14px; font-weight: 600; color: #1e293b; text-align: right; }
         .fare-badge { display: inline-block; background: #dcfce7; color: #16a34a; padding: 6px 20px; border-radius: 20px; font-size: 18px; font-weight: 700; }
+        .time-badge { display: inline-block; background: #dbeafe; color: #2563eb; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; }
         .qr-section { text-align: center; padding: 16px 24px 24px; background: #f8fafc; }
         .qr-code { width: 140px; height: 140px; margin: 0 auto 12px; background: #fff; border: 3px solid #0D9488; border-radius: 12px; padding: 8px; }
         .tracking { font-family: 'Courier New', monospace; font-size: 10px; color: #94a3b8; word-break: break-all; margin-top: 8px; }
@@ -246,6 +297,7 @@ class RoutePricingController extends Controller
 <body>
     <div class="ticket">
         <div class="ticket-header">
+            <div class="brand">{$brandName}</div>
             <h1>🎫 {$from} → {$to}</h1>
             <div class="sub">{$routeName} · {$routeCode}</div>
         </div>
@@ -258,6 +310,14 @@ class RoutePricingController extends Controller
             <div class="row">
                 <span class="label">Ticket Fare</span>
                 <span class="fare-badge">Rs. {$fare}</span>
+            </div>
+            <div class="row">
+                <span class="label">Boarding (Departure)</span>
+                <span class="time-badge">{$boardingTime}</span>
+            </div>
+            <div class="row">
+                <span class="label">Dropping (Arrival)</span>
+                <span class="time-badge">{$droppingTime}</span>
             </div>
             <div class="row">
                 <span class="label">Distance</span>
@@ -279,7 +339,7 @@ class RoutePricingController extends Controller
             <div class="tracking">🔐 {$trackingId}</div>
         </div>
         <div class="footer">
-            NexaTrace Secure Transit · Tamper-Proof SHA-256 · Tracking: {$trackingId}
+            {$brandName} · Secure Transit · Tamper-Proof SHA-256 · Tracking: {$trackingId}
         </div>
     </div>
 </body>
