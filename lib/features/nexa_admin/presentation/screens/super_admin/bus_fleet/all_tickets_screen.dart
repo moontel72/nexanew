@@ -71,18 +71,27 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
       }
 
       // Build full station list: Origin + waypoints + Destination
+      // Trim every name so whitespace drift cannot defeat dedup logic
       final stations = <String>[];
-      stations.add(widget.originCity.isNotEmpty ? widget.originCity : 'Origin');
-      for (final w in widget.waypoints) {
-        final name =
-            (w is Map ? w['station_name']?.toString() : w?.toString()) ?? '';
+      final addStation = (String raw) {
+        final name = raw.trim();
         if (name.isNotEmpty && name != stations.last) {
           stations.add(name);
         }
+      };
+      addStation(widget.originCity.isNotEmpty ? widget.originCity : 'Origin');
+      for (final w in widget.waypoints) {
+        final name =
+            (w is Map ? w['station_name']?.toString() : w?.toString()) ?? '';
+        addStation(name);
       }
-      final dest = widget.destCity.isNotEmpty ? widget.destCity : 'Destination';
-      if (dest != stations.last) {
-        stations.add(dest);
+      addStation(widget.destCity.isNotEmpty ? widget.destCity : 'Destination');
+
+      // Helper: parse DB numeric value (Laravel DB::table() returns strings)
+      num? parseNum(dynamic v) {
+        if (v == null) return null;
+        if (v is num) return v;
+        return num.tryParse(v.toString());
       }
 
       // Generate all segment pairs, matching pricing by stop order
@@ -106,8 +115,8 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
             _TicketSegment(
               from: from,
               to: to,
-              price: saved?['price'],
-              distanceKm: saved?['distance_km'],
+              price: parseNum(saved?['price']),
+              distanceKm: parseNum(saved?['distance_km']),
               segmentId: saved?['id']?.toString(),
               isConsecutive: j == i + 1,
               fromOrder: i,
@@ -243,7 +252,7 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
                     ),
                     Text(
                       '${_segments.length} segment${_segments.length == 1 ? '' : 's'} · '
-                      '${_segments.where((s) => s.price != null).length} priced',
+                      '${_segments.where((s) => s.price != null && s.price! > 0).length} priced',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFF64748B),
@@ -268,7 +277,8 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
   }
 
   Widget _segmentCard(_TicketSegment seg) {
-    final hasPrice = seg.price != null && (seg.price as num) > 0;
+    final priceNum = seg.price;
+    final hasPrice = priceNum != null && priceNum > 0;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
@@ -310,7 +320,7 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
                     Row(
                       children: [
                         Text(
-                          'Rs. ${(seg.price as num).toStringAsFixed(0)}',
+                          'Rs. ${priceNum.toStringAsFixed(0)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF059669),
@@ -372,8 +382,8 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
 class _TicketSegment {
   final String from;
   final String to;
-  final dynamic price;
-  final dynamic distanceKm;
+  final num? price;
+  final num? distanceKm;
   final String? segmentId;
   final bool isConsecutive;
   final int fromOrder;
