@@ -709,24 +709,40 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
   }
 
   void _showAllPrices(Map<String, dynamic> route) async {
-    // Fetch data before showing dialog
+    showDialog(
+      context: context,
+      builder: (_) => const AlertDialog(
+        title: Text('Loading...'),
+        content: Center(child: CircularProgressIndicator()),
+      ),
+    );
     List prices = [];
+    String? error;
     try {
       final res = await _api.get(
         '${widget.panelPrefix}/routes/${route['id']}/pricing',
       );
       final data = res?['data'];
       prices = (data?['prices'] as List?) ?? [];
-    } catch (_) {}
+    } catch (e) {
+      error = e.toString();
+    }
     if (!mounted) return;
+    Navigator.pop(context); // close loading
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Prices: ${route['display_name'] ?? ''}'),
         content: SizedBox(
           width: double.maxFinite,
-          child: prices.isEmpty
-              ? const Center(child: Text('No prices set yet.'))
+          child: error != null
+              ? Text('Error: $error')
+              : prices.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No prices set yet.\n\nGo to Pricing to add prices for each segment.',
+                  ),
+                )
               : SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
