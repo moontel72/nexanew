@@ -99,11 +99,16 @@ class RoutePricingController extends Controller
 
             DB::table('route_segment_prices')->insert($inserts);
 
-            // Update the pricing_matrix JSON cache on the route
+            // Update the pricing_matrix JSON cache (use filtered inserts,
+            // strip DB metadata so the cache stays lean)
+            $cacheEntries = array_map(function ($p) {
+                unset($p['id'], $p['created_at'], $p['updated_at']);
+                return $p;
+            }, $inserts);
             DB::table('transport_bus_routes')
                 ->where('id', $routeId)
                 ->update([
-                    'pricing_matrix' => json_encode($data['prices']),
+                    'pricing_matrix' => json_encode(array_values($cacheEntries)),
                     'updated_at'     => now(),
                 ]);
         });

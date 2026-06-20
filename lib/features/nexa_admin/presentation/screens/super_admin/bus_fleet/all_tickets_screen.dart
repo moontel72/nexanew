@@ -71,11 +71,14 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
       }
 
       // Build full station list: Origin + waypoints + Destination
-      // Trim every name so whitespace drift cannot defeat dedup logic
+      // Use a Set to deduplicate across ALL positions, not just adjacent.
+      // This prevents Stop-5=Naushahra and Dest=Naushahra from creating
+      // phantom duplicate pairs.
       final stations = <String>[];
+      final stationSet = <String>{};
       final addStation = (String raw) {
         final name = raw.trim();
-        if (name.isNotEmpty && name != stations.last) {
+        if (name.isNotEmpty && stationSet.add(name)) {
           stations.add(name);
         }
       };
@@ -125,6 +128,12 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
           );
         }
       }
+
+      // Zero-price rule: free-commute segments (e.g. intra-city 1km hops)
+      // must never appear in the active ticketing grid. Only filter
+      // explicitly-priced zeros; unpriced (null) segments stay visible
+      // so admins can see they need pricing.
+      segments.removeWhere((s) => s.price != null && s.price == 0);
 
       _segments = segments;
     } catch (e) {

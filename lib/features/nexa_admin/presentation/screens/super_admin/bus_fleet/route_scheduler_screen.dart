@@ -855,13 +855,22 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
 
   List<Widget> _buildPriceRows() {
     // Build full station list: Origin + waypoints + Destination
-    final stations = <Map<String, dynamic>>[
+    // Deduplicate by trimmed name so Stop-5=Dest doesn't create phantom pairs
+    final rawStations = <Map<String, dynamic>>[
       {'name': widget.originCity, 'is_origin': true},
       ...widget.waypoints.map(
         (w) => {'name': w['station_name'] ?? 'Stop', 'is_origin': false},
       ),
       {'name': widget.destCity, 'is_dest': true},
     ];
+    final stations = <Map<String, dynamic>>[];
+    final stationSet = <String>{};
+    for (final s in rawStations) {
+      final name = (s['name']?.toString() ?? '').trim();
+      if (name.isNotEmpty && stationSet.add(name)) {
+        stations.add({'name': name, 'is_origin': s['is_origin'], 'is_dest': s['is_dest']});
+      }
+    }
     final widgets = <Widget>[];
     _renderedPairs.clear();
     for (int i = 0; i < stations.length; i++) {
