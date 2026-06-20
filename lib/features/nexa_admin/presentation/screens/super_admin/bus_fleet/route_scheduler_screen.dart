@@ -827,7 +827,7 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
     String field,
     String v,
   ) {
-    final val = double.tryParse(v) ?? 0;
+    final val = v.isEmpty ? null : (double.tryParse(v) ?? 0);
     final idx = _prices.indexWhere(
       (p) => p['from_stop_order'] == i && p['to_stop_order'] == j,
     );
@@ -845,8 +845,12 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
         'seat_category': 'standard',
       };
     }
-    if (field == 'price') entry['price'] = val;
-    if (field == 'distance_km') entry['distance_km'] = val;
+    if (field == 'price') entry['price'] = val ?? 0;
+    if (field == 'distance_km') entry['distance_km'] = val ?? 0;
+    if (field == 'price_sleeper_upper') entry['price_sleeper_upper'] = val;
+    if (field == 'price_sleeper_lower') entry['price_sleeper_lower'] = val;
+    if (field == 'price_business') entry['price_business'] = val;
+    if (field == 'price_folding') entry['price_folding'] = val;
     if (idx >= 0) {
       _prices[idx] = entry;
     } else {
@@ -918,6 +922,18 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
         final kmCtrl = TextEditingController(
           text: existing?['distance_km']?.toString() ?? '',
         );
+        final suCtrl = TextEditingController(
+          text: existing?['price_sleeper_upper']?.toString() ?? '',
+        );
+        final slCtrl = TextEditingController(
+          text: existing?['price_sleeper_lower']?.toString() ?? '',
+        );
+        final bizCtrl = TextEditingController(
+          text: existing?['price_business']?.toString() ?? '',
+        );
+        final foldCtrl = TextEditingController(
+          text: existing?['price_folding']?.toString() ?? '',
+        );
         widgets.add(
           Card(
             margin: const EdgeInsets.only(bottom: 8),
@@ -934,6 +950,7 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
+                  // Standard price + KM on one row
                   Row(
                     children: [
                       const Text('Rs. '),
@@ -943,7 +960,7 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
                           controller: priceCtrl,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            hintText: 'Price',
+                            hintText: 'Standard',
                             isDense: true,
                           ),
                           onChanged: (v) =>
@@ -967,6 +984,51 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 6),
+                  // Seat category prices in a 2x2 compact grid
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _seatPriceField(
+                          'Sleeper Upper',
+                          suCtrl,
+                          (v) => _onPriceChanged(
+                              i, j, from, to, 'price_sleeper_upper', v),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _seatPriceField(
+                          'Sleeper Lower',
+                          slCtrl,
+                          (v) => _onPriceChanged(
+                              i, j, from, to, 'price_sleeper_lower', v),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _seatPriceField(
+                          'Business',
+                          bizCtrl,
+                          (v) => _onPriceChanged(
+                              i, j, from, to, 'price_business', v),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _seatPriceField(
+                          'Folding',
+                          foldCtrl,
+                          (v) => _onPriceChanged(
+                              i, j, from, to, 'price_folding', v),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -981,5 +1043,42 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
         ),
       );
     return widgets;
+  }
+
+  Widget _seatPriceField(
+    String label,
+    TextEditingController controller,
+    ValueChanged<String> onChanged,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+        ),
+        const SizedBox(height: 2),
+        SizedBox(
+          height: 38,
+          child: TextField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(
+              signed: true,
+              decimal: true,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Rs.',
+              isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
   }
 }

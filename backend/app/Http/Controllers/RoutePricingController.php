@@ -57,14 +57,18 @@ class RoutePricingController extends Controller
     public function update(string $routeId, Request $request): JsonResponse
     {
         $data = $request->validate([
-            'prices'                    => ['required', 'array'],
-            'prices.*.from_stop_order'  => ['required', 'integer', 'min:0'],
-            'prices.*.to_stop_order'    => ['required', 'integer', 'min:0'],
-            'prices.*.from_station'     => ['required', 'string', 'max:255'],
-            'prices.*.to_station'       => ['required', 'string', 'max:255'],
-            'prices.*.price'            => ['required', 'numeric', 'min:0'],
-            'prices.*.seat_category'    => ['nullable', 'string', 'max:30'],
-            'prices.*.distance_km'      => ['nullable', 'numeric', 'min:0'],
+            'prices'                       => ['required', 'array'],
+            'prices.*.from_stop_order'     => ['required', 'integer', 'min:0'],
+            'prices.*.to_stop_order'       => ['required', 'integer', 'min:0'],
+            'prices.*.from_station'        => ['required', 'string', 'max:255'],
+            'prices.*.to_station'          => ['required', 'string', 'max:255'],
+            'prices.*.price'               => ['required', 'numeric', 'min:0'],
+            'prices.*.price_sleeper_upper' => ['nullable', 'numeric'],
+            'prices.*.price_sleeper_lower' => ['nullable', 'numeric'],
+            'prices.*.price_business'      => ['nullable', 'numeric'],
+            'prices.*.price_folding'       => ['nullable', 'numeric'],
+            'prices.*.seat_category'       => ['nullable', 'string', 'max:30'],
+            'prices.*.distance_km'         => ['nullable', 'numeric', 'min:0'],
         ]);
 
         DB::transaction(function () use ($routeId, $data) {
@@ -77,17 +81,21 @@ class RoutePricingController extends Controller
             $inserts = [];
             foreach ($data['prices'] as $p) {
                 $inserts[] = [
-                    'id'              => (string) Str::uuid(),
-                    'route_id'        => $routeId,
-                    'from_stop_order' => $p['from_stop_order'],
-                    'to_stop_order'   => $p['to_stop_order'],
-                    'from_station'    => $p['from_station'],
-                    'to_station'      => $p['to_station'],
-                    'price'           => $p['price'],
-                    'distance_km'     => $p['distance_km'] ?? null,
-                    'seat_category'   => $p['seat_category'] ?? 'standard',
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
+                    'id'                  => (string) Str::uuid(),
+                    'route_id'            => $routeId,
+                    'from_stop_order'     => $p['from_stop_order'],
+                    'to_stop_order'       => $p['to_stop_order'],
+                    'from_station'        => $p['from_station'],
+                    'to_station'          => $p['to_station'],
+                    'price'               => $p['price'],
+                    'price_sleeper_upper' => $p['price_sleeper_upper'] ?? null,
+                    'price_sleeper_lower' => $p['price_sleeper_lower'] ?? null,
+                    'price_business'      => $p['price_business'] ?? null,
+                    'price_folding'       => $p['price_folding'] ?? null,
+                    'distance_km'         => $p['distance_km'] ?? null,
+                    'seat_category'       => $p['seat_category'] ?? 'standard',
+                    'created_at'          => now(),
+                    'updated_at'          => now(),
                 ];
             }
 
