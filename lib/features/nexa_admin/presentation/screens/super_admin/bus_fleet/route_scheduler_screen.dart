@@ -868,8 +868,9 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
     for (final s in rawStations) {
       final name = (s['name']?.toString() ?? '')
           .trim()
-          .replaceAll(RegExp(r'\s+/\s+'), '/')
-          .replaceAll(RegExp(r'\s+-\s+'), '-')
+          .toLowerCase()
+          .replaceAll(RegExp(r'\s*/\s*'), '/')
+          .replaceAll(RegExp(r'\s*-\s*'), '-')
           .replaceAll(RegExp(r'\s+'), ' ');
       if (name.isNotEmpty && stationSet.add(name)) {
         stations.add({

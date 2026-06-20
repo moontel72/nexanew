@@ -95,6 +95,18 @@ class RoutePricingController extends Controller
             $inserts = array_filter($inserts, function ($p) {
                 return $p['from_station'] !== $p['to_station'];
             });
+
+            // Filter out duplicate station-name pairs after normalization
+            $seen = [];
+            $inserts = array_filter($inserts, function ($p) use (&$seen) {
+                $key = self::normalizeStation($p['from_station']) . '→'
+                     . self::normalizeStation($p['to_station']);
+                if (isset($seen[$key])) {
+                    return false;
+                }
+                $seen[$key] = true;
+                return true;
+            });
             $inserts = array_values($inserts);
 
             DB::table('route_segment_prices')->insert($inserts);
@@ -356,5 +368,19 @@ SVG;
                 'recent_trips'   => $trips,
             ],
         ]);
+    }
+
+    /**
+     * Normalize a station name for dedup comparison.
+     * Matches the Flutter-side normalize() logic.
+     */
+    private static function normalizeStation(string $name): string
+    {
+        $name = trim($name);
+        $name = strtolower($name);
+        $name = preg_replace('/\s*\/\s*/', '/', $name);
+        $name = preg_replace('/\s*-\s*/', '-', $name);
+        $name = preg_replace('/\s+/', ' ', $name);
+        return $name;
     }
 }

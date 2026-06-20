@@ -76,8 +76,9 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
       String normalize(String s) {
         return s
             .trim()
-            .replaceAll(RegExp(r'\s+/\s+'), '/')
-            .replaceAll(RegExp(r'\s+-\s+'), '-')
+            .toLowerCase()
+            .replaceAll(RegExp(r'\s*/\s*'), '/')
+            .replaceAll(RegExp(r'\s*-\s*'), '-')
             .replaceAll(RegExp(r'\s+'), ' ');
       }
 
