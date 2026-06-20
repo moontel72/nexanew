@@ -47,7 +47,10 @@ jobs:
       - name: Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts
+          ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts || true
+          echo 'Host 135.181.46.27' >> ~/.ssh/config
+          echo '  StrictHostKeyChecking accept-new' >> ~/.ssh/config
+          echo '  UserKnownHostsFile=/dev/null' >> ~/.ssh/config
 
       - name: Deploy backend via rsync
         run: |
