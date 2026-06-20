@@ -71,13 +71,20 @@ class _AllTicketsScreenState extends State<AllTicketsScreen> {
       }
 
       // Build full station list: Origin + waypoints + Destination
-      // Use a Set to deduplicate across ALL positions, not just adjacent.
-      // This prevents Stop-5=Naushahra and Dest=Naushahra from creating
-      // phantom duplicate pairs.
+      // Normalize names aggressively: collapse whitespace and standardize
+      // separators so "Naushahra / Purana" == "Naushahra/Purana"
+      String normalize(String s) {
+        return s
+            .trim()
+            .replaceAll(RegExp(r'\s+/\s+'), '/')
+            .replaceAll(RegExp(r'\s+-\s+'), '-')
+            .replaceAll(RegExp(r'\s+'), ' ');
+      }
+
       final stations = <String>[];
       final stationSet = <String>{};
       final addStation = (String raw) {
-        final name = raw.trim();
+        final name = normalize(raw);
         if (name.isNotEmpty && stationSet.add(name)) {
           stations.add(name);
         }

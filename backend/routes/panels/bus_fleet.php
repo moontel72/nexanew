@@ -12,6 +12,8 @@ Route::prefix('api/v1/bus-fleet')->group(function (): void {
     Route::get('absolute-layouts/{id}/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'showPublic']);
     // Public seat hold status (guest seat-grid browsing)
     Route::get('bookings/held/{tripId}', [\App\Http\Controllers\BusTransitController::class, 'listHeldSeats']);
+    // Public ticket PDF — no auth needed (ticket has SHA-256 hash)
+    Route::get('routes/{id}/pricing/{segId}/pdf', [\App\Http\Controllers\RoutePricingController::class, 'segmentPdf']);
 });
 
 Route::prefix('api/v1/bus-fleet')
@@ -141,7 +143,6 @@ Route::prefix('api/v1/bus-fleet')
         // Phase 4 — Pricing & Ticket Reports
         Route::get('routes/{id}/pricing', [\App\Http\Controllers\RoutePricingController::class, 'index']);
         Route::put('routes/{id}/pricing', [\App\Http\Controllers\RoutePricingController::class, 'update']);
-        Route::get('routes/{id}/pricing/{segId}/pdf', [\App\Http\Controllers\RoutePricingController::class, 'segmentPdf']);
         Route::get('routes/{id}/ticket-stats', [\App\Http\Controllers\RoutePricingController::class, 'ticketStats']);
 
         // Driver Dispatch (15A, 15B)

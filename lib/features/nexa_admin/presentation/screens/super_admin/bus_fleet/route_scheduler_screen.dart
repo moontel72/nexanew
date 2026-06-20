@@ -866,9 +866,17 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
     final stations = <Map<String, dynamic>>[];
     final stationSet = <String>{};
     for (final s in rawStations) {
-      final name = (s['name']?.toString() ?? '').trim();
+      final name = (s['name']?.toString() ?? '')
+          .trim()
+          .replaceAll(RegExp(r'\s+/\s+'), '/')
+          .replaceAll(RegExp(r'\s+-\s+'), '-')
+          .replaceAll(RegExp(r'\s+'), ' ');
       if (name.isNotEmpty && stationSet.add(name)) {
-        stations.add({'name': name, 'is_origin': s['is_origin'], 'is_dest': s['is_dest']});
+        stations.add({
+          'name': name,
+          'is_origin': s['is_origin'],
+          'is_dest': s['is_dest'],
+        });
       }
     }
     final widgets = <Widget>[];
