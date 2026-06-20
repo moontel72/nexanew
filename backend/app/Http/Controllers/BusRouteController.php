@@ -36,8 +36,17 @@ class BusRouteController extends Controller
     {
         $carrierId = $request->get('_carrier_company_id');
         $query = BusRoute::with('waypoints');
+        $user = $request->user();
+        $panelPrefix = $request->route()->getPrefix();
 
-        if ($carrierId) {
+        // Bus-owner panel: filter by owner_identity_id
+        if (str_contains($panelPrefix, 'bus-owner')) {
+            $ownerIdentityId = $user->global_identity_id ?? null;
+            if ($ownerIdentityId) {
+                $query->forOwner($ownerIdentityId);
+            }
+        } elseif ($carrierId) {
+            // Bus-fleet panel: filter by carrier_company_id
             $query->forCarrier($carrierId);
         }
 
@@ -66,6 +75,14 @@ class BusRouteController extends Controller
     public function store(Request $request): JsonResponse
     {
         $carrierId = $request->get('_carrier_company_id');
+        $user = $request->user();
+        $panelPrefix = $request->route()->getPrefix();
+        $ownerIdentityId = null;
+
+        // Bus-owner panel: auto-assign owner_identity_id
+        if (str_contains($panelPrefix, 'bus-owner')) {
+            $ownerIdentityId = $user->global_identity_id ?? null;
+        }
 
         $data = $request->validate([
             'route_code' => ['required', 'string', 'max:50', 'unique:transport_bus_routes,route_code'],
@@ -90,6 +107,7 @@ class BusRouteController extends Controller
             'destination_lat' => $data['destination_lat'] ?? 0,
             'destination_lng' => $data['destination_lng'] ?? 0,
             'carrier_company_id' => $carrierId,
+            'owner_identity_id' => $ownerIdentityId,
             'status' => BusRoute::STATUS_DRAFT,
         ]);
 

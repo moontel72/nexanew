@@ -183,8 +183,18 @@ Route::prefix('api/v1/bus-owner')
             Route::get('trip/{tripId}', [\App\Http\Controllers\BusOwnerController::class, 'tripSeatStatus']);
         });
 
-        // Phase 4 — Route Pricing & Ticket Reports (Cross-Panel)
+        // Phase 4 — Route CRUD & Pricing (Cross-Panel Parity)
+        Route::get('routes', [\App\Http\Controllers\BusRouteController::class, 'index']);
+        Route::post('routes', [\App\Http\Controllers\BusRouteController::class, 'store']);
+        Route::get('routes/{id}', [\App\Http\Controllers\BusRouteController::class, 'show']);
+        Route::put('routes/{id}', [\App\Http\Controllers\BusRouteController::class, 'update']);
+        Route::delete('routes/{id}', [\App\Http\Controllers\BusRouteController::class, 'destroy']);
+        Route::post('routes/{id}/publish', [\App\Http\Controllers\BusRouteController::class, 'publish']);
+        Route::post('routes/{id}/unpublish', [\App\Http\Controllers\BusRouteController::class, 'unpublish']);
+        Route::post('routes/{id}/waypoints', [\App\Http\Controllers\BusRouteController::class, 'saveWaypoints']);
+        // Pricing & Ticket Reports
         Route::get('routes/{id}/pricing', [\App\Http\Controllers\RoutePricingController::class, 'index']);
         Route::put('routes/{id}/pricing', [\App\Http\Controllers\RoutePricingController::class, 'update']);
+        Route::get('routes/{id}/pricing/{segId}/pdf', [\App\Http\Controllers\RoutePricingController::class, 'segmentPdf']);
         Route::get('routes/{id}/ticket-stats', [\App\Http\Controllers\RoutePricingController::class, 'ticketStats']);
     });

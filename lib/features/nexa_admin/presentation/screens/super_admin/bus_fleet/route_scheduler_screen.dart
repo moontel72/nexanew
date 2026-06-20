@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'all_tickets_screen.dart';
 
 class RouteSchedulerScreen extends StatefulWidget {
   final String panelPrefix;
@@ -238,13 +239,13 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                 const SizedBox(width: 8),
                 _actionBtn(
                   Icons.attach_money,
-                  'Pricing',
+                  'add tickets prices',
                   () => _showPricingEditor(r),
                 ),
                 const SizedBox(width: 8),
                 _actionBtn(
                   Icons.list_alt,
-                  'Prices',
+                  'View all tickets',
                   () => _showAllPrices(r),
                   color: const Color(0xFF0D9488),
                 ),
@@ -708,90 +709,18 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     return '';
   }
 
-  void _showAllPrices(Map<String, dynamic> route) async {
-    showDialog(
-      context: context,
-      builder: (_) => const AlertDialog(
-        title: Text('Loading...'),
-        content: Center(child: CircularProgressIndicator()),
-      ),
-    );
-    List prices = [];
-    String? error;
-    try {
-      final res = await _api.get(
-        '${widget.panelPrefix}/routes/${route['id']}/pricing',
-      );
-      final data = res?['data'];
-      prices = (data?['prices'] as List?) ?? [];
-    } catch (e) {
-      error = e.toString();
-    }
-    if (!mounted) return;
-    Navigator.pop(context); // close loading
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Prices: ${route['display_name'] ?? ''}'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: error != null
-              ? Text('Error: $error')
-              : prices.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No prices set yet.\n\nGo to Pricing to add prices for each segment.',
-                  ),
-                )
-              : SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ...prices.map<Widget>(
-                        (p) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '${p['from_station'] ?? ''} → ${p['to_station'] ?? ''}',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                'Rs. ${(p['price'] as num?)?.toStringAsFixed(0) ?? '0'}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF059669),
-                                ),
-                              ),
-                              if (p['distance_km'] != null &&
-                                  p['distance_km'] > 0)
-                                Text(
-                                  '  |  ${p['distance_km']} km',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+  void _showAllPrices(Map<String, dynamic> route) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AllTicketsScreen(
+          routeId: route['id'],
+          routeName: route['display_name'] ?? '',
+          originCity: route['origin_city'] ?? 'Origin',
+          destCity: route['destination_city'] ?? 'Destination',
+          waypoints: (route['waypoints'] as List<dynamic>?) ?? [],
+          panelPrefix: widget.panelPrefix,
         ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }
@@ -834,6 +763,7 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
   final _api = ApiService();
   List<Map<String, dynamic>> _prices = [];
   bool _loading = true;
+  final _renderedPairs = <String>{};
 
   @override
   void initState() {
@@ -933,10 +863,17 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
       {'name': widget.destCity, 'is_dest': true},
     ];
     final widgets = <Widget>[];
+    _renderedPairs.clear();
     for (int i = 0; i < stations.length; i++) {
       for (int j = i + 1; j < stations.length; j++) {
         final from = stations[i]['name'] ?? 'Stop $i';
         final to = stations[j]['name'] ?? 'Stop $j';
+        // Skip self-referencing segments (station cannot route to itself)
+        if (from == to) continue;
+        // Skip duplicate station-name pairs (same from→to already rendered)
+        final pairKey = '$from→$to';
+        if (_renderedPairs.contains(pairKey)) continue;
+        _renderedPairs.add(pairKey);
         final existing = _prices
             .where((p) => p['from_stop_order'] == i && p['to_stop_order'] == j)
             .firstOrNull;

@@ -27,7 +27,7 @@ class BusRoute extends Model
         'origin_lat', 'origin_lng',
         'destination_lat', 'destination_lng',
         'total_distance_km', 'estimated_duration_min',
-        'status', 'carrier_company_id', 'meta',
+        'status', 'carrier_company_id', 'owner_identity_id', 'meta',
     ];
 
     protected $casts = [
@@ -71,6 +71,11 @@ class BusRoute extends Model
     public function scopeForCarrier($query, string $carrierId)
     {
         return $query->where('carrier_company_id', $carrierId);
+    }
+
+    public function scopeForOwner($query, string $ownerIdentityId)
+    {
+        return $query->where('owner_identity_id', $ownerIdentityId);
     }
 
     // ── Helpers ─────────────────────────────────────────
