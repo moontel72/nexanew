@@ -182,4 +182,9 @@ Route::prefix('api/v1/bus-owner')
             Route::get('held/{tripId}', [\App\Http\Controllers\BusTransitController::class, 'listHeldSeats']);
             Route::get('trip/{tripId}', [\App\Http\Controllers\BusOwnerController::class, 'tripSeatStatus']);
         });
+
+        // Phase 4 — Route Pricing & Ticket Reports (Cross-Panel)
+        Route::get('routes/{id}/pricing', [\App\Http\Controllers\RoutePricingController::class, 'index']);
+        Route::put('routes/{id}/pricing', [\App\Http\Controllers\RoutePricingController::class, 'update']);
+        Route::get('routes/{id}/ticket-stats', [\App\Http\Controllers\RoutePricingController::class, 'ticketStats']);
     });
