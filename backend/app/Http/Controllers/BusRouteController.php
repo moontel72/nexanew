@@ -52,14 +52,17 @@ class BusRouteController extends Controller
 
         $routes = $query->latest()->get();
 
-        // Compute total_km: sum only consecutive segments (i → i+1)
+        // Compute total_km: always from consecutive segments (i → i+1)
+        // Never trust the stored total_distance_km — it may be inflated
+        // from an old publish() that summed all combinatorial rows.
         $routes->transform(function ($route) {
-            $km = $route->total_distance_km;
+            $km = DB::table('route_segment_prices')
+                ->where('route_id', $route->id)
+                ->whereRaw('to_stop_order = from_stop_order + 1')
+                ->sum('distance_km');
+            // If no pricing data, fall back to stored value
             if (empty($km) || $km <= 0) {
-                $km = DB::table('route_segment_prices')
-                    ->where('route_id', $route->id)
-                    ->whereRaw('to_stop_order = from_stop_order + 1')
-                    ->sum('distance_km');
+                $km = $route->total_distance_km;
             }
             $route->total_km = round((float) $km, 2);
             return $route;
@@ -180,10 +183,12 @@ class BusRouteController extends Controller
             );
         }
 
-        // Fallback: sum distance_km from segment prices if coordinates are all zero
+        // Fallback: sum distance_km from CONSECUTIVE segment prices only
+        // (NOT all combinatorial rows — that would inflate the total)
         if ($totalKm <= 0) {
             $totalKm = DB::table('route_segment_prices')
                 ->where('route_id', $id)
+                ->whereRaw('to_stop_order = from_stop_order + 1')
                 ->sum('distance_km');
         }
 
