@@ -87,6 +87,7 @@ jobs:
       - name: Server Post-Deployment Tasks
         run: |
           ssh root@135.181.46.27 "
+            set -e
             cd /var/www/traceodd/admin-panel
 
             if [ -f rust/target/release/trace_odd_rust ]; then
