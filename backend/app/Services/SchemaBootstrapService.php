@@ -31,14 +31,33 @@ class SchemaBootstrapService
         self::$booted = true;
 
         try {
-            self::ensureBusVouchersTable();
-            self::ensurePassengerLoyaltyLedgerTable();
-            self::ensureVoucherRedemptionsTable();
-            self::ensureTransportBusRoutesColumns();
-            self::ensureRouteSegmentPricesColumns();
+            self::ensureAllTablesAndColumns();
         } catch (\Throwable $e) {
             Log::warning('SchemaBootstrapService: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Public entry point — always runs, ignores $booted flag.
+     * Call this directly from controllers before DB writes.
+     */
+    public static function ensureColumns(): void
+    {
+        try {
+            self::ensureTransportBusRoutesColumns();
+            self::ensureRouteSegmentPricesColumns();
+        } catch (\Throwable $e) {
+            Log::warning('SchemaBootstrapService::ensureColumns: ' . $e->getMessage());
+        }
+    }
+
+    private static function ensureAllTablesAndColumns(): void
+    {
+        self::ensureBusVouchersTable();
+        self::ensurePassengerLoyaltyLedgerTable();
+        self::ensureVoucherRedemptionsTable();
+        self::ensureTransportBusRoutesColumns();
+        self::ensureRouteSegmentPricesColumns();
     }
 
     private static function ensureBusVouchersTable(): void

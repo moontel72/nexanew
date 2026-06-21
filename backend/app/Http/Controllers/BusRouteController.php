@@ -114,6 +114,9 @@ class BusRouteController extends Controller
             'destination_lng' => $data['destination_lng'] ?? 0,
             'carrier_company_id' => $carrierId,
             'owner_identity_id' => $ownerIdentityId,
+            'voucher_id' => $data['voucher_id'] ?? null,
+            'driver_bonus_id' => $data['driver_bonus_id'] ?? null,
+            'conductor_bonus_id' => $data['conductor_bonus_id'] ?? null,
             'status' => BusRoute::STATUS_DRAFT,
         ]);
 
@@ -152,6 +155,9 @@ class BusRouteController extends Controller
             'driver_bonus_id' => ['nullable', 'string'],
             'conductor_bonus_id' => ['nullable', 'string'],
         ]);
+
+        // Ensure the FK columns exist before writing (failsafe for prod)
+        \App\Services\SchemaBootstrapService::ensureColumns();
 
         $route->update($data);
 
