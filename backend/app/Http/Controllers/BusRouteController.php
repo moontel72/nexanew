@@ -7,6 +7,7 @@ use App\Models\Transport\BusRouteWaypoint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -52,10 +53,56 @@ class BusRouteController extends Controller
 
         $routes = $query->latest()->get();
 
+        // Collect all route IDs for batch pivot lookups
+        $routeIds = $routes->pluck('id')->toArray();
+
+        // Batch-fetch assigned vouchers
+        $assignedVouchers = collect();
+        $assignedBonuses = collect();
+
+        if (!empty($routeIds)) {
+            if (Schema::hasTable('route_assigned_vouchers') && Schema::hasTable('bus_vouchers')) {
+                $voucherRows = DB::table('route_assigned_vouchers')
+                    ->whereIn('route_id', $routeIds)
+                    ->get();
+                $voucherIds = $voucherRows->pluck('voucher_id')->unique()->toArray();
+                $vouchersById = !empty($voucherIds)
+                    ? DB::table('bus_vouchers')->whereIn('id', $voucherIds)->get()->keyBy('id')
+                    : collect();
+                $assignedVouchers = $voucherRows->groupBy('route_id')->map(function ($rows) use ($vouchersById) {
+                    return $rows->map(function ($r) use ($vouchersById) {
+                        $v = $vouchersById->get($r->voucher_id);
+                        return $v ? ['id' => $v->id, 'title' => $v->title ?? '', 'code' => $v->code ?? ''] : null;
+                    })->filter()->values();
+                });
+            }
+
+            if (Schema::hasTable('route_assigned_bonuses') && Schema::hasTable('staff_bonuses')) {
+                $bonusRows = DB::table('route_assigned_bonuses')
+                    ->whereIn('route_id', $routeIds)
+                    ->get();
+                $bonusIds = $bonusRows->pluck('bonus_id')->unique()->toArray();
+                $bonusesById = !empty($bonusIds)
+                    ? DB::table('staff_bonuses')->whereIn('id', $bonusIds)->get()->keyBy('id')
+                    : collect();
+                $assignedBonuses = $bonusRows->groupBy('route_id')->map(function ($rows) use ($bonusesById) {
+                    return $rows->map(function ($r) use ($bonusesById) {
+                        $b = $bonusesById->get($r->bonus_id);
+                        return $b ? [
+                            'id' => $b->id,
+                            'bonus_name' => $b->bonus_name ?? '',
+                            'staff_type' => $b->staff_type ?? '',
+                            'bonus_category' => $b->bonus_category ?? '',
+                        ] : null;
+                    })->filter()->values();
+                });
+            }
+        }
+
         // Compute total_km: always from consecutive segments (i → i+1)
         // Never trust the stored total_distance_km — it may be inflated
         // from an old publish() that summed all combinatorial rows.
-        $routes->transform(function ($route) {
+        $routes->transform(function ($route) use ($assignedVouchers, $assignedBonuses) {
             $km = DB::table('route_segment_prices')
                 ->where('route_id', $route->id)
                 ->whereRaw('to_stop_order = from_stop_order + 1')
@@ -65,6 +112,8 @@ class BusRouteController extends Controller
                 $km = $route->total_distance_km;
             }
             $route->total_km = round((float) $km, 2);
+            $route->assigned_vouchers = $assignedVouchers->get($route->id, collect())->values();
+            $route->assigned_bonuses = $assignedBonuses->get($route->id, collect())->values();
             return $route;
         });
 
@@ -97,13 +146,40 @@ class BusRouteController extends Controller
             'destination_lat' => ['nullable', 'numeric', 'between:-90,90'],
             'destination_lng' => ['nullable', 'numeric', 'between:-180,180'],
             'voucher_id' => ['nullable', 'string'],
+            'voucher_ids' => ['nullable', 'array'],
+            'voucher_ids.*' => ['string'],
             'driver_bonus_id' => ['nullable', 'string'],
             'conductor_bonus_id' => ['nullable', 'string'],
+            'bonus_ids' => ['nullable', 'array'],
+            'bonus_ids.*' => ['string'],
             'meta' => ['nullable', 'array'],
         ]);
 
+        // Resolve voucher_ids: prefer array, fall back to single legacy FK
+        $voucherIds = $data['voucher_ids'] ?? null;
+        if (empty($voucherIds) && !empty($data['voucher_id'] ?? null)) {
+            $voucherIds = [$data['voucher_id']];
+        }
+
+        // Resolve bonus_ids: prefer array, merge legacy single FKs
+        $bonusIds = $data['bonus_ids'] ?? null;
+        if (empty($bonusIds)) {
+            $bonusIds = [];
+            if (!empty($data['driver_bonus_id'] ?? null)) {
+                $bonusIds[] = $data['driver_bonus_id'];
+            }
+            if (!empty($data['conductor_bonus_id'] ?? null)) {
+                $bonusIds[] = $data['conductor_bonus_id'];
+            }
+            if (empty($bonusIds)) {
+                $bonusIds = null;
+            }
+        }
+
+        $routeId = (string) Str::uuid();
+
         $route = BusRoute::create([
-            'id' => (string) Str::uuid(),
+            'id' => $routeId,
             'route_code' => strtoupper($data['route_code']),
             'display_name' => $data['display_name'],
             'origin_city' => $data['origin_city'],
@@ -120,12 +196,63 @@ class BusRouteController extends Controller
             'status' => BusRoute::STATUS_DRAFT,
         ]);
 
+        // Sync pivot tables
+        \App\Services\SchemaBootstrapService::ensureColumns();
+        $now = now();
+
+        if (!empty($voucherIds)) {
+            $voucherInserts = array_map(fn($vid) => [
+                'route_id' => $routeId,
+                'voucher_id' => $vid,
+                'created_at' => $now,
+            ], $voucherIds);
+            DB::table('route_assigned_vouchers')->insert($voucherInserts);
+        }
+
+        if (!empty($bonusIds)) {
+            $bonusInserts = array_map(fn($bid) => [
+                'route_id' => $routeId,
+                'bonus_id' => $bid,
+                'created_at' => $now,
+            ], $bonusIds);
+            DB::table('route_assigned_bonuses')->insert($bonusInserts);
+        }
+
+        // Attach pivot data to response
+        $route->voucher_ids = $voucherIds ?? [];
+        $route->bonus_ids = $bonusIds ?? [];
+        $route->load('waypoints');
+
         return response()->json(['success' => true, 'data' => $route], 201);
     }
 
     public function show(string $id): JsonResponse
     {
         $route = BusRoute::with('waypoints')->findOrFail($id);
+
+        // Attach voucher_ids and bonus_ids from pivot tables
+        $voucherIds = DB::table('route_assigned_vouchers')
+            ->where('route_id', $id)
+            ->pluck('voucher_id')
+            ->toArray();
+        $bonusIds = DB::table('route_assigned_bonuses')
+            ->where('route_id', $id)
+            ->pluck('bonus_id')
+            ->toArray();
+
+        $route->voucher_ids = $voucherIds;
+        $route->bonus_ids = $bonusIds;
+
+        // Attach voucher/bonus display info
+        $route->assigned_vouchers = !empty($voucherIds)
+            ? DB::table('bus_vouchers')->whereIn('id', $voucherIds)
+                ->get(['id', 'title', 'code'])->toArray()
+            : [];
+
+        $route->assigned_bonuses = !empty($bonusIds)
+            ? DB::table('staff_bonuses')->whereIn('id', $bonusIds)
+                ->get(['id', 'bonus_name', 'staff_type', 'bonus_category'])->toArray()
+            : [];
 
         return response()->json(['success' => true, 'data' => $route]);
     }
@@ -152,16 +279,76 @@ class BusRouteController extends Controller
             'destination_lng' => ['sometimes', 'numeric'],
             'meta' => ['nullable', 'array'],
             'voucher_id' => ['sometimes', 'nullable', 'string'],
+            'voucher_ids' => ['sometimes', 'nullable', 'array'],
+            'voucher_ids.*' => ['string'],
             'driver_bonus_id' => ['sometimes', 'nullable', 'string'],
             'conductor_bonus_id' => ['sometimes', 'nullable', 'string'],
+            'bonus_ids' => ['sometimes', 'nullable', 'array'],
+            'bonus_ids.*' => ['string'],
         ]);
+
+        // Resolve voucher_ids: prefer array, fall back to single legacy FK
+        $voucherIds = $data['voucher_ids'] ?? null;
+        $hasVoucherIds = array_key_exists('voucher_ids', $data);
+        if (!$hasVoucherIds && array_key_exists('voucher_id', $data)) {
+            $voucherIds = !empty($data['voucher_id']) ? [$data['voucher_id']] : [];
+            $hasVoucherIds = true;
+        }
+
+        // Resolve bonus_ids: prefer array, merge legacy single FKs
+        $bonusIds = $data['bonus_ids'] ?? null;
+        $hasBonusIds = array_key_exists('bonus_ids', $data);
+        if (!$hasBonusIds && (array_key_exists('driver_bonus_id', $data) || array_key_exists('conductor_bonus_id', $data))) {
+            $bonusIds = array_filter([
+                $data['driver_bonus_id'] ?? null,
+                $data['conductor_bonus_id'] ?? null,
+            ]);
+            $hasBonusIds = true;
+        }
 
         // Ensure the FK columns exist before writing (failsafe for prod)
         \App\Services\SchemaBootstrapService::ensureColumns();
 
-        $route->update($data);
+        $updateData = collect($data)
+            ->except(['voucher_ids', 'bonus_ids'])
+            ->toArray();
 
-        return response()->json(['success' => true, 'data' => $route->fresh('waypoints')]);
+        $route->update($updateData);
+
+        // Sync pivot tables in a transaction
+        if ($hasVoucherIds || $hasBonusIds) {
+            DB::transaction(function () use ($id, $voucherIds, $hasVoucherIds, $bonusIds, $hasBonusIds) {
+                $now = now();
+
+                if ($hasVoucherIds) {
+                    DB::table('route_assigned_vouchers')->where('route_id', $id)->delete();
+                    if (!empty($voucherIds)) {
+                        $voucherInserts = array_map(fn($vid) => [
+                            'route_id' => $id,
+                            'voucher_id' => $vid,
+                            'created_at' => $now,
+                        ], $voucherIds);
+                        DB::table('route_assigned_vouchers')->insert($voucherInserts);
+                    }
+                }
+
+                if ($hasBonusIds) {
+                    DB::table('route_assigned_bonuses')->where('route_id', $id)->delete();
+                    if (!empty($bonusIds)) {
+                        $bonusInserts = array_map(fn($bid) => [
+                            'route_id' => $id,
+                            'bonus_id' => $bid,
+                            'created_at' => $now,
+                        ], $bonusIds);
+                        DB::table('route_assigned_bonuses')->insert($bonusInserts);
+                    }
+                }
+            });
+        }
+
+        $route = $route->fresh('waypoints');
+
+        return response()->json(['success' => true, 'data' => $route]);
     }
 
     public function destroy(string $id): JsonResponse

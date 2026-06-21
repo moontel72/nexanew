@@ -4,6 +4,7 @@ namespace App\Models\Transport;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -29,6 +30,8 @@ class BusRoute extends Model
         'total_distance_km', 'estimated_duration_min',
         'status', 'carrier_company_id', 'owner_identity_id', 'voucher_id', 'driver_bonus_id', 'conductor_bonus_id', 'meta',
     ];
+
+    protected $appends = ['voucher_ids', 'bonus_ids'];
 
     protected $casts = [
         'origin_lat' => 'float',
@@ -87,6 +90,27 @@ class BusRoute extends Model
     public function publish(): void
     {
         $this->update(['status' => self::STATUS_PUBLISHED]);
+    }
+
+    // ── Pivot Accessors ─────────────────────────────────
+    public function getVoucherIdsAttribute(): array
+    {
+        if (!$this->id) return [];
+
+        return DB::table('route_assigned_vouchers')
+            ->where('route_id', $this->id)
+            ->pluck('voucher_id')
+            ->toArray();
+    }
+
+    public function getBonusIdsAttribute(): array
+    {
+        if (!$this->id) return [];
+
+        return DB::table('route_assigned_bonuses')
+            ->where('route_id', $this->id)
+            ->pluck('bonus_id')
+            ->toArray();
     }
 }
 

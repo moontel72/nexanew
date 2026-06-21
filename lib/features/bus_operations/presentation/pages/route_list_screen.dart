@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/route_detail_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/route_editor_screen.dart';
 
 class RouteListScreen extends StatefulWidget {
@@ -150,6 +151,19 @@ class _RouteListScreenState extends State<RouteListScreen> {
                               tooltip: 'Publish',
                               onPressed: () => _publish(r['id']),
                             ),
+                          IconButton(
+                            icon: const Icon(Icons.visibility, size: 18),
+                            tooltip: 'View',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      RouteDetailScreen(routeId: r['id']),
+                                ),
+                              );
+                            },
+                          ),
                           IconButton(
                             icon: const Icon(Icons.edit, size: 18),
                             onPressed: () async {

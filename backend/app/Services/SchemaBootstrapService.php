@@ -46,6 +46,7 @@ class SchemaBootstrapService
         try {
             self::ensureTransportBusRoutesColumns();
             self::ensureRouteSegmentPricesColumns();
+            self::ensureRoutePivotTables();
         } catch (\Throwable $e) {
             Log::warning('SchemaBootstrapService::ensureColumns: ' . $e->getMessage());
         }
@@ -58,6 +59,7 @@ class SchemaBootstrapService
         self::ensureVoucherRedemptionsTable();
         self::ensureTransportBusRoutesColumns();
         self::ensureRouteSegmentPricesColumns();
+        self::ensureRoutePivotTables();
     }
 
     private static function ensureBusVouchersTable(): void
@@ -156,8 +158,43 @@ class SchemaBootstrapService
 
         if (!Schema::hasColumn('transport_bus_routes', 'driver_bonus_id')) {
             DB::statement('ALTER TABLE transport_bus_routes ADD COLUMN IF NOT EXISTS driver_bonus_id UUID');
+            Log::info('SchemaBootstrapService: added driver_bonus_id to transport_bus_routes');
+        }
+
+        if (!Schema::hasColumn('transport_bus_routes', 'conductor_bonus_id')) {
             DB::statement('ALTER TABLE transport_bus_routes ADD COLUMN IF NOT EXISTS conductor_bonus_id UUID');
-            Log::info('SchemaBootstrapService: added bonus_id columns to transport_bus_routes');
+            Log::info('SchemaBootstrapService: added conductor_bonus_id to transport_bus_routes');
+        }
+    }
+
+    private static function ensureRoutePivotTables(): void
+    {
+        if (!Schema::hasTable('route_assigned_vouchers')) {
+            DB::statement('
+                CREATE TABLE IF NOT EXISTS route_assigned_vouchers (
+                    route_id UUID NOT NULL,
+                    voucher_id UUID NOT NULL,
+                    created_at TIMESTAMP,
+                    PRIMARY KEY (route_id, voucher_id)
+                )
+            ');
+            DB::statement('CREATE INDEX IF NOT EXISTS rav_route_idx ON route_assigned_vouchers (route_id)');
+            DB::statement('CREATE INDEX IF NOT EXISTS rav_voucher_idx ON route_assigned_vouchers (voucher_id)');
+            Log::info('SchemaBootstrapService: created route_assigned_vouchers table');
+        }
+
+        if (!Schema::hasTable('route_assigned_bonuses')) {
+            DB::statement('
+                CREATE TABLE IF NOT EXISTS route_assigned_bonuses (
+                    route_id UUID NOT NULL,
+                    bonus_id UUID NOT NULL,
+                    created_at TIMESTAMP,
+                    PRIMARY KEY (route_id, bonus_id)
+                )
+            ');
+            DB::statement('CREATE INDEX IF NOT EXISTS rab_route_idx ON route_assigned_bonuses (route_id)');
+            DB::statement('CREATE INDEX IF NOT EXISTS rab_bonus_idx ON route_assigned_bonuses (bonus_id)');
+            Log::info('SchemaBootstrapService: created route_assigned_bonuses table');
         }
     }
 
