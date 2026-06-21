@@ -42,7 +42,6 @@ return new class extends Migration
                 'from_station',
                 'to_station',
                 DB::raw('COUNT(*) as cnt'),
-                DB::raw('MIN(id) as keeper_id'),
             )
             ->groupBy('route_id', 'from_station', 'to_station')
             ->having('cnt', '>', 1)
