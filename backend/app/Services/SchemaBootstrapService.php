@@ -40,15 +40,34 @@ class SchemaBootstrapService
     /**
      * Public entry point — always runs, ignores $booted flag.
      * Call this directly from controllers before DB writes.
+     *
+     * @throws \RuntimeException if pivot tables cannot be created
      */
     public static function ensureColumns(): void
     {
         try {
             self::ensureTransportBusRoutesColumns();
             self::ensureRouteSegmentPricesColumns();
+        } catch (\Throwable $e) {
+            Log::warning('SchemaBootstrapService::ensureColumns (non-critical): ' . $e->getMessage());
+        }
+
+        // Pivot tables are CRITICAL — verify they exist, throw if not
+        try {
             self::ensureRoutePivotTables();
         } catch (\Throwable $e) {
-            Log::warning('SchemaBootstrapService::ensureColumns: ' . $e->getMessage());
+            Log::error('SchemaBootstrapService: failed to create pivot tables — ' . $e->getMessage());
+            throw new \RuntimeException(
+                'Database schema is incomplete. Pivot tables for route vouchers/bonuses could not be created. ' .
+                'Please run: php artisan migrate --force or check PostgreSQL permissions.'
+            );
+        }
+
+        // Verify tables actually exist after creation
+        if (!Schema::hasTable('route_assigned_vouchers') || !Schema::hasTable('route_assigned_bonuses')) {
+            throw new \RuntimeException(
+                'Pivot tables route_assigned_vouchers / route_assigned_bonuses do not exist and could not be created.'
+            );
         }
     }
 

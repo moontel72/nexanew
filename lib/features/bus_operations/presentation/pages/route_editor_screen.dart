@@ -44,6 +44,14 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   static const _defaultLat = 31.5, _defaultLng = 73.0;
   final _minLat = 24.0, _maxLat = 37.0, _minLng = 61.0, _maxLng = 78.0;
 
+  bool _setsEqual(Set<String> a, Set<String> b) {
+    if (a.length != b.length) return false;
+    for (final x in a) {
+      if (!b.contains(x)) return false;
+    }
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -110,11 +118,23 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         _dropdownsReady = true;
         _loading = false;
       });
-    } catch (_) {
-      setState(() {
-        _dropdownsReady = true;
-        _loading = false;
-      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _dropdownsReady = false; // Keep chips hidden on error
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to load route data: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
       if (_routeId == null) _addDefaultWaypoints();
     }
   }
@@ -186,6 +206,23 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                 .toList(),
           },
         );
+      }
+      // Verify persistence: re-fetch and confirm voucher/bonus IDs stuck
+      if (_routeId != null) {
+        final verify = await _api.get('/bus-fleet/routes/$_routeId');
+        final vd = verify['data'];
+        final savedVoucherIds = ((vd['voucher_ids'] as List?) ?? [])
+            .map((e) => e.toString())
+            .toSet();
+        final savedBonusIds = ((vd['bonus_ids'] as List?) ?? [])
+            .map((e) => e.toString())
+            .toSet();
+        if (!_setsEqual(savedVoucherIds, _voucherIds) ||
+            !_setsEqual(savedBonusIds, _bonusIds)) {
+          throw Exception(
+            'Data mismatch after save. Vouchers: sent=${_voucherIds.length} saved=${savedVoucherIds.length}. Bonuses: sent=${_bonusIds.length} saved=${savedBonusIds.length}.',
+          );
+        }
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
