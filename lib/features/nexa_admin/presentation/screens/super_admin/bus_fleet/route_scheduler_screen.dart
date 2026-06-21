@@ -6,6 +6,7 @@
 // MODULE: 13B — Dynamic Route & Waypoint Line Scheduler
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'all_tickets_screen.dart';
 
@@ -464,6 +465,26 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
       }
     }
     final isEdit = route != null;
+    String? _voucherId = route?['voucher_id']?.toString();
+    List<Map<String, dynamic>> _vouchers = [];
+    bool _vouchersLoaded = false;
+
+    // Fetch active vouchers for dropdown
+    final loadVouchers = () async {
+      if (_vouchersLoaded) return;
+      try {
+        final res = await _api.get('${widget.panelPrefix}/vouchers');
+        final data = res?['data'];
+        if (data is List) {
+          _vouchers = data
+              .cast<Map<String, dynamic>>()
+              .where((v) => v['is_active'] == true)
+              .toList();
+        }
+      } catch (_) {}
+      _vouchersLoaded = true;
+    };
+    loadVouchers();
 
     showDialog(
       context: context,
@@ -528,6 +549,39 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Destination Arrival Time',
                     hintText: 'e.g. 21:00',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Assign Voucher / Promo',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 6),
+                StatefulBuilder(
+                  builder: (ctx, setSt) => DropdownButtonFormField<String>(
+                    value: _voucherId,
+                    decoration: const InputDecoration(
+                      labelText: 'Active Voucher',
+                      hintText: 'None (no discount)',
+                      border: OutlineInputBorder(),
+                    ),
+                    isExpanded: true,
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('— None —'),
+                      ),
+                      ..._vouchers.map(
+                        (v) => DropdownMenuItem<String>(
+                          value: v['id']?.toString(),
+                          child: Text(
+                            '${v['code']} — ${v['title']}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (v) => setSt(() => _voucherId = v),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -650,6 +704,7 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                     'departure_time': depCtrl.text,
                     'destination_arrival_time': destArrCtrl.text,
                   },
+                  'voucher_id': _voucherId,
                 };
                 try {
                   if (isEdit) {
@@ -903,13 +958,56 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
     }
     final widgets = <Widget>[];
     _renderedPairs.clear();
+
+    // Build 2D grid of FocusNodes for keyboard arrow navigation
+    final gridNodes = <String, FocusNode>{};
+    int rowIdx = 0;
+    // First pass: count rows and create focus nodes
+    for (int i = 0; i < stations.length; i++) {
+      for (int j = i + 1; j < stations.length; j++) {
+        final f = stations[i]['name'] ?? '';
+        final t = stations[j]['name'] ?? '';
+        if (f == t) continue;
+        final nk = '$f→$t';
+        if (_renderedPairs.contains(nk)) continue;
+        _renderedPairs.add(nk);
+        for (int col = 0; col < 6; col++) {
+          gridNodes['$rowIdx-$col'] = FocusNode(
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent) return KeyEventResult.ignored;
+              final key = event.logicalKey;
+              int nr = rowIdx, nc = col;
+              if (key == LogicalKeyboardKey.arrowRight)
+                nc = (col + 1) % 6;
+              else if (key == LogicalKeyboardKey.arrowLeft)
+                nc = (col - 1 + 6) % 6;
+              else if (key == LogicalKeyboardKey.arrowDown)
+                nr = rowIdx + 1;
+              else if (key == LogicalKeyboardKey.arrowUp)
+                nr = rowIdx - 1;
+              else
+                return KeyEventResult.ignored;
+              final tgt = gridNodes['$nr-$nc'];
+              if (tgt != null && tgt != node) {
+                tgt.requestFocus();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+          );
+        }
+        rowIdx++;
+      }
+    }
+
+    // Second pass: build widgets with focus nodes
+    _renderedPairs.clear();
+    rowIdx = 0;
     for (int i = 0; i < stations.length; i++) {
       for (int j = i + 1; j < stations.length; j++) {
         final from = stations[i]['name'] ?? 'Stop $i';
         final to = stations[j]['name'] ?? 'Stop $j';
-        // Skip self-referencing segments (station cannot route to itself)
         if (from == to) continue;
-        // Skip duplicate station-name pairs (same from→to already rendered)
         final pairKey = '$from→$to';
         if (_renderedPairs.contains(pairKey)) continue;
         _renderedPairs.add(pairKey);
@@ -993,7 +1091,14 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
                           'Sleeper Upper',
                           suCtrl,
                           (v) => _onPriceChanged(
-                              i, j, from, to, 'price_sleeper_upper', v),
+                            i,
+                            j,
+                            from,
+                            to,
+                            'price_sleeper_upper',
+                            v,
+                          ),
+                          focusNode: gridNodes['$rowIdx-2'],
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1002,7 +1107,14 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
                           'Sleeper Lower',
                           slCtrl,
                           (v) => _onPriceChanged(
-                              i, j, from, to, 'price_sleeper_lower', v),
+                            i,
+                            j,
+                            from,
+                            to,
+                            'price_sleeper_lower',
+                            v,
+                          ),
+                          focusNode: gridNodes['$rowIdx-3'],
                         ),
                       ),
                     ],
@@ -1015,7 +1127,14 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
                           'Business',
                           bizCtrl,
                           (v) => _onPriceChanged(
-                              i, j, from, to, 'price_business', v),
+                            i,
+                            j,
+                            from,
+                            to,
+                            'price_business',
+                            v,
+                          ),
+                          focusNode: gridNodes['$rowIdx-4'],
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1024,7 +1143,14 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
                           'Folding',
                           foldCtrl,
                           (v) => _onPriceChanged(
-                              i, j, from, to, 'price_folding', v),
+                            i,
+                            j,
+                            from,
+                            to,
+                            'price_folding',
+                            v,
+                          ),
+                          focusNode: gridNodes['$rowIdx-5'],
                         ),
                       ),
                     ],
@@ -1034,6 +1160,7 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
             ),
           ),
         );
+        rowIdx++;
       }
     }
     if (widgets.isEmpty)
@@ -1048,8 +1175,23 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
   Widget _seatPriceField(
     String label,
     TextEditingController controller,
-    ValueChanged<String> onChanged,
-  ) {
+    ValueChanged<String> onChanged, {
+    FocusNode? focusNode,
+  }) {
+    final tf = TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(
+        signed: true,
+        decimal: true,
+      ),
+      decoration: InputDecoration(
+        hintText: 'Rs.',
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+      onChanged: onChanged,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1060,23 +1202,9 @@ class _RoutePricingScreenState extends State<RoutePricingScreen> {
         const SizedBox(height: 2),
         SizedBox(
           height: 38,
-          child: TextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(
-              signed: true,
-              decimal: true,
-            ),
-            decoration: InputDecoration(
-              hintText: 'Rs.',
-              isDense: true,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-            onChanged: onChanged,
-          ),
+          child: focusNode != null
+              ? Focus(focusNode: focusNode, child: tf)
+              : tf,
         ),
       ],
     );
