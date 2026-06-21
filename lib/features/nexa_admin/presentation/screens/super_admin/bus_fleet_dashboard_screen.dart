@@ -16,6 +16,7 @@ import 'package:trace_odd/features/nexa_admin/data/models/company/bus_company_mo
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/route_scheduler_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/ticket_management_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/voucher_management_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/bonus_management_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
@@ -301,6 +302,14 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       subtitle: 'Loyalty & discount codes',
                       onTap: () => setState(() => _currentPage = 'vouchers'),
                     ),
+                    Missile3DButton(
+                      label: 'Staff Bonuses',
+                      icon: Icons.emoji_events,
+                      color: const Color(0xFF7C3AED),
+                      height: 56,
+                      subtitle: 'Driver & conductor incentives',
+                      onTap: () => setState(() => _currentPage = 'bonuses'),
+                    ),
                     const SizedBox(height: 8),
                     _sl('FLEET STAFF'),
                     Missile3DButton(
@@ -565,6 +574,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       ? 'Ticket Management'
                       : _currentPage == 'vouchers'
                       ? 'Vouchers / Promos'
+                      : _currentPage == 'bonuses'
+                      ? 'Staff Bonuses'
                       : 'Dashboard',
                   style: const TextStyle(
                     fontSize: 17,
@@ -595,6 +606,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
               ? const TicketManagementScreen()
               : _currentPage == 'vouchers'
               ? const VoucherManagementScreen()
+              : _currentPage == 'bonuses'
+              ? const BonusManagementScreen()
               : _home(),
         ),
       ],

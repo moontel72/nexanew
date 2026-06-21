@@ -204,4 +204,10 @@ Route::prefix('api/v1/bus-owner')
         Route::post('vouchers', [\App\Http\Controllers\VoucherController::class, 'store']);
         Route::put('vouchers/{id}', [\App\Http\Controllers\VoucherController::class, 'update']);
         Route::delete('vouchers/{id}', [\App\Http\Controllers\VoucherController::class, 'destroy']);
+
+        // Staff Bonuses (Bonus Engine)
+        Route::get('bonuses', [\App\Http\Controllers\StaffBonusController::class, 'index']);
+        Route::post('bonuses', [\App\Http\Controllers\StaffBonusController::class, 'store']);
+        Route::put('bonuses/{id}', [\App\Http\Controllers\StaffBonusController::class, 'update']);
+        Route::delete('bonuses/{id}', [\App\Http\Controllers\StaffBonusController::class, 'destroy']);
     });

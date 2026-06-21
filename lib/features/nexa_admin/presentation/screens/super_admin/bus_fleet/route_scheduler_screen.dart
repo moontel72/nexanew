@@ -466,8 +466,12 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     }
     final isEdit = route != null;
     String? _voucherId = route?['voucher_id']?.toString();
+    String? _driverBonusId = route?['driver_bonus_id']?.toString();
+    String? _conductorBonusId = route?['conductor_bonus_id']?.toString();
     List<Map<String, dynamic>> _vouchers = [];
+    List<Map<String, dynamic>> _bonuses = [];
     bool _vouchersLoaded = false;
+    bool _bonusesLoaded = false;
 
     // Fetch active vouchers for dropdown
     final loadVouchers = () async {
@@ -485,6 +489,23 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
       _vouchersLoaded = true;
     };
     loadVouchers();
+
+    // Fetch active bonuses for dropdowns
+    final loadBonuses = () async {
+      if (_bonusesLoaded) return;
+      try {
+        final res = await _api.get('${widget.panelPrefix}/bonuses');
+        final data = res?['data'];
+        if (data is List) {
+          _bonuses = data
+              .cast<Map<String, dynamic>>()
+              .where((b) => b['is_active'] == true)
+              .toList();
+        }
+      } catch (_) {}
+      _bonusesLoaded = true;
+    };
+    loadBonuses();
 
     showDialog(
       context: context,
@@ -582,6 +603,76 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                       ),
                     ],
                     onChanged: (v) => setSt(() => _voucherId = v),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Assign Driver Bonus',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 6),
+                StatefulBuilder(
+                  builder: (ctx, setSt) => DropdownButtonFormField<String>(
+                    value: _driverBonusId,
+                    decoration: const InputDecoration(
+                      labelText: 'Driver Bonus',
+                      hintText: 'None',
+                      border: OutlineInputBorder(),
+                    ),
+                    isExpanded: true,
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('— None —'),
+                      ),
+                      ..._bonuses
+                          .where((b) => b['staff_type'] == 'driver')
+                          .map(
+                            (b) => DropdownMenuItem<String>(
+                              value: b['id']?.toString(),
+                              child: Text(
+                                b['bonus_name'] ?? '',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                    ],
+                    onChanged: (v) => setSt(() => _driverBonusId = v),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Assign Conductor Bonus',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 6),
+                StatefulBuilder(
+                  builder: (ctx, setSt) => DropdownButtonFormField<String>(
+                    value: _conductorBonusId,
+                    decoration: const InputDecoration(
+                      labelText: 'Conductor Bonus',
+                      hintText: 'None',
+                      border: OutlineInputBorder(),
+                    ),
+                    isExpanded: true,
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('— None —'),
+                      ),
+                      ..._bonuses
+                          .where((b) => b['staff_type'] == 'conductor')
+                          .map(
+                            (b) => DropdownMenuItem<String>(
+                              value: b['id']?.toString(),
+                              child: Text(
+                                b['bonus_name'] ?? '',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                    ],
+                    onChanged: (v) => setSt(() => _conductorBonusId = v),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -705,6 +796,8 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                     'destination_arrival_time': destArrCtrl.text,
                   },
                   'voucher_id': _voucherId,
+                  'driver_bonus_id': _driverBonusId,
+                  'conductor_bonus_id': _conductorBonusId,
                 };
                 try {
                   if (isEdit) {
@@ -758,6 +851,12 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                     }
                   }
                   Navigator.pop(context);
+                  if (mounted)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Route updated successfully!'),
+                      ),
+                    );
                   _loadRoutes();
                 } catch (e) {
                   if (mounted)

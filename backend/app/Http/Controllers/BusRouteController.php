@@ -96,6 +96,9 @@ class BusRouteController extends Controller
             'origin_lng' => ['nullable', 'numeric', 'between:-180,180'],
             'destination_lat' => ['nullable', 'numeric', 'between:-90,90'],
             'destination_lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'voucher_id' => ['nullable', 'string'],
+            'driver_bonus_id' => ['nullable', 'string'],
+            'conductor_bonus_id' => ['nullable', 'string'],
             'meta' => ['nullable', 'array'],
         ]);
 
@@ -145,6 +148,9 @@ class BusRouteController extends Controller
             'destination_lat' => ['sometimes', 'numeric'],
             'destination_lng' => ['sometimes', 'numeric'],
             'meta' => ['nullable', 'array'],
+            'voucher_id' => ['nullable', 'string'],
+            'driver_bonus_id' => ['nullable', 'string'],
+            'conductor_bonus_id' => ['nullable', 'string'],
         ]);
 
         $route->update($data);

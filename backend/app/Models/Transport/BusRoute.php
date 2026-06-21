@@ -27,7 +27,7 @@ class BusRoute extends Model
         'origin_lat', 'origin_lng',
         'destination_lat', 'destination_lng',
         'total_distance_km', 'estimated_duration_min',
-        'status', 'carrier_company_id', 'owner_identity_id', 'voucher_id', 'meta',
+        'status', 'carrier_company_id', 'owner_identity_id', 'voucher_id', 'driver_bonus_id', 'conductor_bonus_id', 'meta',
     ];
 
     protected $casts = [

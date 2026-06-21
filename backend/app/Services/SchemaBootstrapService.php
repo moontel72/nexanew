@@ -124,12 +124,22 @@ class SchemaBootstrapService
 
     private static function ensureTransportBusRoutesColumns(): void
     {
-        if (Schema::hasColumn('transport_bus_routes', 'owner_identity_id')) return;
+        if (!Schema::hasColumn('transport_bus_routes', 'owner_identity_id')) {
+            DB::statement('ALTER TABLE transport_bus_routes ADD COLUMN IF NOT EXISTS owner_identity_id VARCHAR(255)');
+            DB::statement('CREATE INDEX IF NOT EXISTS tbr_owner_idx ON transport_bus_routes (owner_identity_id)');
+            Log::info('SchemaBootstrapService: added owner_identity_id to transport_bus_routes');
+        }
 
-        DB::statement('ALTER TABLE transport_bus_routes ADD COLUMN IF NOT EXISTS owner_identity_id VARCHAR(255)');
-        DB::statement('CREATE INDEX IF NOT EXISTS tbr_owner_idx ON transport_bus_routes (owner_identity_id)');
+        if (!Schema::hasColumn('transport_bus_routes', 'voucher_id')) {
+            DB::statement('ALTER TABLE transport_bus_routes ADD COLUMN IF NOT EXISTS voucher_id UUID');
+            Log::info('SchemaBootstrapService: added voucher_id to transport_bus_routes');
+        }
 
-        Log::info('SchemaBootstrapService: added owner_identity_id to transport_bus_routes');
+        if (!Schema::hasColumn('transport_bus_routes', 'driver_bonus_id')) {
+            DB::statement('ALTER TABLE transport_bus_routes ADD COLUMN IF NOT EXISTS driver_bonus_id UUID');
+            DB::statement('ALTER TABLE transport_bus_routes ADD COLUMN IF NOT EXISTS conductor_bonus_id UUID');
+            Log::info('SchemaBootstrapService: added bonus_id columns to transport_bus_routes');
+        }
     }
 
     private static function ensureRouteSegmentPricesColumns(): void

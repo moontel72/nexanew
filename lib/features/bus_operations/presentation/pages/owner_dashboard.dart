@@ -13,6 +13,7 @@ import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/route_scheduler_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/ticket_management_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/voucher_management_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/bonus_management_screen.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class OwnerButtonColors {
@@ -206,6 +207,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                     color: const Color(0xFFF59E0B),
                     onTap: () => setState(() => _currentPage = 'vouchers'),
                   ),
+                  Missile3DButton(
+                    label: 'Staff Bonuses',
+                    icon: Icons.emoji_events,
+                    color: const Color(0xFF7C3AED),
+                    onTap: () => setState(() => _currentPage = 'bonuses'),
+                  ),
                   Gap(8),
                   _sec('STAFF'),
                   Missile3DButton(
@@ -331,6 +338,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               ? const TicketManagementScreen(panelPrefix: '/bus-owner')
               : _currentPage == 'vouchers'
               ? const VoucherManagementScreen(panelPrefix: '/bus-owner')
+              : _currentPage == 'bonuses'
+              ? const BonusManagementScreen(panelPrefix: '/bus-owner')
               : _homePage(),
         ),
       ],
@@ -351,6 +360,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       ? 'Ticket Management'
       : _currentPage == 'vouchers'
       ? 'Vouchers / Promos'
+      : _currentPage == 'bonuses'
+      ? 'Staff Bonuses'
       : 'Dashboard';
   void _loadAll() {
     _loadDrivers();

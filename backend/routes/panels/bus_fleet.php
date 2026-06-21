@@ -151,6 +151,12 @@ Route::prefix('api/v1/bus-fleet')
         Route::put('vouchers/{id}', [\App\Http\Controllers\VoucherController::class, 'update']);
         Route::delete('vouchers/{id}', [\App\Http\Controllers\VoucherController::class, 'destroy']);
 
+        // Staff Bonuses (Bonus Engine)
+        Route::get('bonuses', [\App\Http\Controllers\StaffBonusController::class, 'index']);
+        Route::post('bonuses', [\App\Http\Controllers\StaffBonusController::class, 'store']);
+        Route::put('bonuses/{id}', [\App\Http\Controllers\StaffBonusController::class, 'update']);
+        Route::delete('bonuses/{id}', [\App\Http\Controllers\StaffBonusController::class, 'destroy']);
+
         // Driver Dispatch (15A, 15B)
         Route::prefix('driver')->group(function (): void {
             Route::post('start-trip/{id}', [\App\Http\Controllers\BusDispatchController::class, 'startTrip']);
