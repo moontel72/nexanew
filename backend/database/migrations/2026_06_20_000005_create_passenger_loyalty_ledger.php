@@ -23,6 +23,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('passenger_loyalty_ledger')) {
+            return;
+        }
+
         Schema::create('passenger_loyalty_ledger', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('passenger_id');          // FK → users.id

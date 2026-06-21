@@ -24,6 +24,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Guard: SchemaBootstrapService may have already created these
+        if (Schema::hasColumn('route_segment_prices', 'price_business')) {
+            return;
+        }
+
         Schema::table('route_segment_prices', function (Blueprint $table) {
             $table->decimal('price_sleeper_upper', 10, 2)->nullable()->after('price');
             $table->decimal('price_sleeper_lower', 10, 2)->nullable()->after('price_sleeper_upper');

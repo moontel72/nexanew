@@ -18,6 +18,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('voucher_redemptions')) {
+            return;
+        }
+
         Schema::create('voucher_redemptions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('voucher_id');              // FK → bus_vouchers.id

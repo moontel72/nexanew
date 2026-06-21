@@ -21,6 +21,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('bus_vouchers')) {
+            return;
+        }
+
         Schema::create('bus_vouchers', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('bus_company_id');        // owning fleet/owner
