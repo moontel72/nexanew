@@ -78,31 +78,26 @@ class RoutePricingController extends Controller
                 ->where('route_id', $routeId)
                 ->delete();
 
-            // Insert new prices — conditionally include seat-category columns
-            // so the endpoint works even before the migration runs.
-            $hasSeatCols = Schema::hasColumn('route_segment_prices', 'price_business');
+            // Insert new prices
             $inserts = [];
             foreach ($data['prices'] as $p) {
-                $row = [
-                    'id'              => (string) Str::uuid(),
-                    'route_id'        => $routeId,
-                    'from_stop_order' => $p['from_stop_order'],
-                    'to_stop_order'   => $p['to_stop_order'],
-                    'from_station'    => $p['from_station'],
-                    'to_station'      => $p['to_station'],
-                    'price'           => $p['price'],
-                    'distance_km'     => $p['distance_km'] ?? null,
-                    'seat_category'   => $p['seat_category'] ?? 'standard',
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
+                $inserts[] = [
+                    'id'                  => (string) Str::uuid(),
+                    'route_id'            => $routeId,
+                    'from_stop_order'     => $p['from_stop_order'],
+                    'to_stop_order'       => $p['to_stop_order'],
+                    'from_station'        => $p['from_station'],
+                    'to_station'          => $p['to_station'],
+                    'price'               => $p['price'],
+                    'price_sleeper_upper' => $p['price_sleeper_upper'] ?? null,
+                    'price_sleeper_lower' => $p['price_sleeper_lower'] ?? null,
+                    'price_business'      => $p['price_business'] ?? null,
+                    'price_folding'       => $p['price_folding'] ?? null,
+                    'distance_km'         => $p['distance_km'] ?? null,
+                    'seat_category'       => $p['seat_category'] ?? 'standard',
+                    'created_at'          => now(),
+                    'updated_at'          => now(),
                 ];
-                if ($hasSeatCols) {
-                    $row['price_sleeper_upper'] = $p['price_sleeper_upper'] ?? null;
-                    $row['price_sleeper_lower'] = $p['price_sleeper_lower'] ?? null;
-                    $row['price_business']      = $p['price_business'] ?? null;
-                    $row['price_folding']       = $p['price_folding'] ?? null;
-                }
-                $inserts[] = $row;
             }
 
             // Filter out self-referencing segments (same station → same station)

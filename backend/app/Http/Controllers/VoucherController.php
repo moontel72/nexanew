@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -29,6 +30,10 @@ class VoucherController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        if (! Schema::hasTable('bus_vouchers')) {
+            return response()->json(['success' => true, 'data' => [], 'count' => 0]);
+        }
+
         $user = $request->user();
         $carrierId = $request->get('_carrier_company_id');
         $ownerIdentityId = $user->global_identity_id ?? null;
