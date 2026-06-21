@@ -15,6 +15,7 @@ import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_
 import 'package:trace_odd/features/nexa_admin/data/models/company/bus_company_model.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/route_scheduler_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/ticket_management_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/voucher_management_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
@@ -292,6 +293,14 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       subtitle: 'Sales, holds & revenue',
                       onTap: () => setState(() => _currentPage = 'tickets'),
                     ),
+                    Missile3DButton(
+                      label: 'Vouchers / Promos',
+                      icon: Icons.card_giftcard,
+                      color: const Color(0xFFF59E0B),
+                      height: 56,
+                      subtitle: 'Loyalty & discount codes',
+                      onTap: () => setState(() => _currentPage = 'vouchers'),
+                    ),
                     const SizedBox(height: 8),
                     _sl('FLEET STAFF'),
                     Missile3DButton(
@@ -554,6 +563,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       ? 'Route Scheduler'
                       : _currentPage == 'tickets'
                       ? 'Ticket Management'
+                      : _currentPage == 'vouchers'
+                      ? 'Vouchers / Promos'
                       : 'Dashboard',
                   style: const TextStyle(
                     fontSize: 17,
@@ -582,6 +593,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
               ? const RouteSchedulerScreen()
               : _currentPage == 'tickets'
               ? const TicketManagementScreen()
+              : _currentPage == 'vouchers'
+              ? const VoucherManagementScreen()
               : _home(),
         ),
       ],

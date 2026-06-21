@@ -145,6 +145,12 @@ Route::prefix('api/v1/bus-fleet')
         Route::put('routes/{id}/pricing', [\App\Http\Controllers\RoutePricingController::class, 'update']);
         Route::get('routes/{id}/ticket-stats', [\App\Http\Controllers\RoutePricingController::class, 'ticketStats']);
 
+        // Vouchers & Promos (Loyalty Engine)
+        Route::get('vouchers', [\App\Http\Controllers\VoucherController::class, 'index']);
+        Route::post('vouchers', [\App\Http\Controllers\VoucherController::class, 'store']);
+        Route::put('vouchers/{id}', [\App\Http\Controllers\VoucherController::class, 'update']);
+        Route::delete('vouchers/{id}', [\App\Http\Controllers\VoucherController::class, 'destroy']);
+
         // Driver Dispatch (15A, 15B)
         Route::prefix('driver')->group(function (): void {
             Route::post('start-trip/{id}', [\App\Http\Controllers\BusDispatchController::class, 'startTrip']);
