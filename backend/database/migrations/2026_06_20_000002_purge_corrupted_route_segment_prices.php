@@ -37,14 +37,9 @@ return new class extends Migration
         // delete all others.
 
         $duplicates = DB::table('route_segment_prices')
-            ->select(
-                'route_id',
-                'from_station',
-                'to_station',
-                DB::raw('COUNT(*) as cnt'),
-            )
+            ->select('route_id', 'from_station', 'to_station')
             ->groupBy('route_id', 'from_station', 'to_station')
-            ->having('cnt', '>', 1)
+            ->havingRaw('COUNT(*) > 1')
             ->get();
 
         foreach ($duplicates as $dup) {
