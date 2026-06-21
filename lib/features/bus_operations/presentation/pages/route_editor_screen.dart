@@ -34,6 +34,15 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   bool _saving = false, _loading = true;
   String? _routeId;
 
+  // Voucher & Bonus dropdowns
+  String? _voucherId;
+  String? _driverBonusId;
+  String? _conductorBonusId;
+  List<Map<String, dynamic>> _vouchers = [];
+  List<Map<String, dynamic>> _driverBonuses = [];
+  List<Map<String, dynamic>> _conductorBonuses = [];
+  bool _loadingDropdowns = true;
+
   static const _defaultLat = 31.5, _defaultLng = 73.0;
   final _minLat = 24.0, _maxLat = 37.0, _minLng = 61.0, _maxLng = 78.0;
 
@@ -47,6 +56,27 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
       _loading = false;
       _addDefaultWaypoints();
     }
+    _loadDropdowns();
+  }
+
+  Future<void> _loadDropdowns() async {
+    try {
+      final vRes = await _api.get('/bus-fleet/vouchers');
+      final bRes = await _api.get('/bus-fleet/bonuses');
+      setState(() {
+        _vouchers = List<Map<String, dynamic>>.from(vRes['data'] ?? []);
+        final allBonuses = List<Map<String, dynamic>>.from(bRes['data'] ?? []);
+        _driverBonuses = allBonuses
+            .where((b) => b['staff_type'] == 'driver')
+            .toList();
+        _conductorBonuses = allBonuses
+            .where((b) => b['staff_type'] == 'conductor')
+            .toList();
+        _loadingDropdowns = false;
+      });
+    } catch (_) {
+      setState(() => _loadingDropdowns = false);
+    }
   }
 
   Future<void> _loadRoute() async {
@@ -57,6 +87,9 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
       _codeCtrl.text = data['route_code'] ?? '';
       _originCtrl.text = data['origin_city'] ?? '';
       _destCtrl.text = data['destination_city'] ?? '';
+      _voucherId = data['voucher_id']?.toString();
+      _driverBonusId = data['driver_bonus_id']?.toString();
+      _conductorBonusId = data['conductor_bonus_id']?.toString();
       final wps = data['waypoints'] as List? ?? [];
       _waypoints = wps.asMap().entries.map((e) {
         final w = Map<String, dynamic>.from(e.value);
@@ -103,7 +136,8 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     }
     setState(() => _saving = true);
     try {
-      final body = {
+      final isUpdate = _routeId != null;
+      final body = <String, dynamic>{
         'route_code': _codeCtrl.text,
         'display_name': _nameCtrl.text,
         'origin_city': _originCtrl.text,
@@ -113,7 +147,27 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         'destination_lat': _waypoints.last.lat,
         'destination_lng': _waypoints.last.lng,
       };
-      if (_routeId == null) {
+      // On CREATE: only send voucher/bonus if explicitly chosen.
+      // On UPDATE: always send (so user can clear to None => null).
+      if (isUpdate || (_voucherId != null && _voucherId != 'None')) {
+        body['voucher_id'] = (_voucherId != null && _voucherId != 'None')
+            ? _voucherId
+            : null;
+      }
+      if (isUpdate || (_driverBonusId != null && _driverBonusId != 'None')) {
+        body['driver_bonus_id'] =
+            (_driverBonusId != null && _driverBonusId != 'None')
+            ? _driverBonusId
+            : null;
+      }
+      if (isUpdate ||
+          (_conductorBonusId != null && _conductorBonusId != 'None')) {
+        body['conductor_bonus_id'] =
+            (_conductorBonusId != null && _conductorBonusId != 'None')
+            ? _conductorBonusId
+            : null;
+      }
+      if (!isUpdate) {
         final r = await _api.post('/bus-fleet/routes', body: body);
         _routeId = r['data']['id']?.toString();
       } else {
@@ -216,57 +270,215 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   Widget _buildForm() => Container(
     padding: const EdgeInsets.all(12),
     color: Colors.white,
-    child: Row(
+    child: Column(
       children: [
-        Expanded(
-          child: TextField(
-            controller: _codeCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Code',
-              hintText: 'LHR-ISB-001',
-              isDense: true,
-              border: OutlineInputBorder(),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _codeCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Code',
+                  hintText: 'LHR-ISB-001',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
             ),
-          ),
+            const Gap(8),
+            Expanded(
+              flex: 2,
+              child: TextField(
+                controller: _nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'Lahore → Islamabad Express',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const Gap(8),
+            Expanded(
+              child: TextField(
+                controller: _originCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Origin',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const Gap(8),
+            Expanded(
+              child: TextField(
+                controller: _destCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Dest.',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
         ),
         const Gap(8),
-        Expanded(
-          flex: 2,
-          child: TextField(
-            controller: _nameCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              hintText: 'Lahore → Islamabad Express',
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ),
-        const Gap(8),
-        Expanded(
-          child: TextField(
-            controller: _originCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Origin',
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ),
-        const Gap(8),
-        Expanded(
-          child: TextField(
-            controller: _destCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Dest.',
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-          ),
+        Row(
+          children: [
+            Expanded(child: _buildVoucherDropdown()),
+            const Gap(8),
+            Expanded(child: _buildDriverBonusDropdown()),
+            const Gap(8),
+            Expanded(child: _buildConductorBonusDropdown()),
+          ],
         ),
       ],
     ),
   );
+
+  Widget _buildVoucherDropdown() {
+    if (_loadingDropdowns) {
+      return const SizedBox(
+        height: 40,
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    // If current selection is no longer in the list, reset to None.
+    if (_voucherId != null &&
+        _voucherId != 'None' &&
+        !_vouchers.any((v) => v['id']?.toString() == _voucherId)) {
+      _voucherId = null;
+    }
+    final items = <DropdownMenuItem<String?>>[
+      const DropdownMenuItem(
+        value: null,
+        child: Text('None', style: TextStyle(color: Color(0xFF94A3B8))),
+      ),
+      for (final v in _vouchers)
+        DropdownMenuItem(
+          value: v['id']?.toString(),
+          child: Text(
+            v['title']?.toString() ?? v['code']?.toString() ?? '',
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+    ];
+    return DropdownButtonFormField<String?>(
+      value: _voucherId,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Voucher',
+        isDense: true,
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      ),
+      style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B)),
+      items: items,
+      onChanged: (v) => setState(() => _voucherId = v),
+    );
+  }
+
+  Widget _buildDriverBonusDropdown() {
+    if (_loadingDropdowns) {
+      return const SizedBox(
+        height: 40,
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    if (_driverBonusId != null &&
+        _driverBonusId != 'None' &&
+        !_driverBonuses.any((b) => b['id']?.toString() == _driverBonusId)) {
+      _driverBonusId = null;
+    }
+    final items = <DropdownMenuItem<String?>>[
+      const DropdownMenuItem(
+        value: null,
+        child: Text('None', style: TextStyle(color: Color(0xFF94A3B8))),
+      ),
+      for (final b in _driverBonuses)
+        DropdownMenuItem(
+          value: b['id']?.toString(),
+          child: Text(
+            b['bonus_name']?.toString() ?? '',
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+    ];
+    return DropdownButtonFormField<String?>(
+      value: _driverBonusId,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Driver Bonus',
+        isDense: true,
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      ),
+      style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B)),
+      items: items,
+      onChanged: (v) => setState(() => _driverBonusId = v),
+    );
+  }
+
+  Widget _buildConductorBonusDropdown() {
+    if (_loadingDropdowns) {
+      return const SizedBox(
+        height: 40,
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    if (_conductorBonusId != null &&
+        _conductorBonusId != 'None' &&
+        !_conductorBonuses.any(
+          (b) => b['id']?.toString() == _conductorBonusId,
+        )) {
+      _conductorBonusId = null;
+    }
+    final items = <DropdownMenuItem<String?>>[
+      const DropdownMenuItem(
+        value: null,
+        child: Text('None', style: TextStyle(color: Color(0xFF94A3B8))),
+      ),
+      for (final b in _conductorBonuses)
+        DropdownMenuItem(
+          value: b['id']?.toString(),
+          child: Text(
+            b['bonus_name']?.toString() ?? '',
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+    ];
+    return DropdownButtonFormField<String?>(
+      value: _conductorBonusId,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Conductor Bonus',
+        isDense: true,
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      ),
+      style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B)),
+      items: items,
+      onChanged: (v) => setState(() => _conductorBonusId = v),
+    );
+  }
 
   Widget _buildCanvas() => LayoutBuilder(
     builder: (ctx, constraints) => GestureDetector(

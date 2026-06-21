@@ -151,9 +151,9 @@ class BusRouteController extends Controller
             'destination_lat' => ['sometimes', 'numeric'],
             'destination_lng' => ['sometimes', 'numeric'],
             'meta' => ['nullable', 'array'],
-            'voucher_id' => ['nullable', 'string'],
-            'driver_bonus_id' => ['nullable', 'string'],
-            'conductor_bonus_id' => ['nullable', 'string'],
+            'voucher_id' => ['sometimes', 'nullable', 'string'],
+            'driver_bonus_id' => ['sometimes', 'nullable', 'string'],
+            'conductor_bonus_id' => ['sometimes', 'nullable', 'string'],
         ]);
 
         // Ensure the FK columns exist before writing (failsafe for prod)
