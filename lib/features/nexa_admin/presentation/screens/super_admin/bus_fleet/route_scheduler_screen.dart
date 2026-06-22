@@ -332,6 +332,28 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                   'Distance',
                   '${r['total_km'] ?? r['total_distance_km']} km',
                 ),
+              ..._buildDetailBadges(
+                label: 'Assigned Vouchers',
+                items:
+                    (r['assigned_vouchers'] as List?)
+                        ?.cast<Map<String, dynamic>>() ??
+                    [],
+                chipColor: const Color(0xFF3B82F6),
+                icon: Icons.card_giftcard,
+                nameKey: 'title',
+                subKey: 'code',
+              ),
+              ..._buildDetailBadges(
+                label: 'Assigned Bonuses',
+                items:
+                    (r['assigned_bonuses'] as List?)
+                        ?.cast<Map<String, dynamic>>() ??
+                    [],
+                chipColor: const Color(0xFFF59E0B),
+                icon: Icons.star,
+                nameKey: 'bonus_name',
+                subKey: 'staff_type',
+              ),
               if (waypoints.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 const Text(
@@ -431,8 +453,34 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     ),
   );
 
-  // ═══ ROUTE EDITOR DIALOG ═══
-  void _showRouteEditor({Map<String, dynamic>? route}) {
+  // ═══ ROUTE EDITOR DIALOG (CHIP-BASED MULTI-SELECT) ═══
+  Future<void> _showRouteEditor({Map<String, dynamic>? route}) async {
+    // ── Pre-fetch: show loading, fetch dropdown data ──
+    // Show a brief loading overlay so the dialog never renders
+    // before dropdown data is fully resolved (eliminates 3-click race).
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    List<Map<String, dynamic>> _vouchers = [];
+    List<Map<String, dynamic>> _bonuses = [];
+    try {
+      final vRes = await _api.get('${widget.panelPrefix}/vouchers');
+      final vData = vRes?['data'];
+      if (vData is List) _vouchers = vData.cast<Map<String, dynamic>>();
+    } catch (_) {}
+    try {
+      final bRes = await _api.get('${widget.panelPrefix}/bonuses');
+      final bData = bRes?['data'];
+      if (bData is List) _bonuses = bData.cast<Map<String, dynamic>>();
+    } catch (_) {}
+
+    // Dismiss loading overlay
+    if (mounted) Navigator.of(context, rootNavigator: true).pop();
+
+    // ── Form controllers ──
     final nameCtrl = TextEditingController(text: route?['display_name'] ?? '');
     final codeCtrl = TextEditingController(text: route?['route_code'] ?? '');
     final originCtrl = TextEditingController(text: route?['origin_city'] ?? '');
@@ -465,48 +513,23 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
       }
     }
     final isEdit = route != null;
-    String? _voucherId = route?['voucher_id']?.toString();
-    String? _driverBonusId = route?['driver_bonus_id']?.toString();
-    String? _conductorBonusId = route?['conductor_bonus_id']?.toString();
-    List<Map<String, dynamic>> _vouchers = [];
-    List<Map<String, dynamic>> _bonuses = [];
-    bool _vouchersLoaded = false;
-    bool _bonusesLoaded = false;
 
-    // Fetch active vouchers for dropdown
-    final loadVouchers = () async {
-      if (_vouchersLoaded) return;
-      try {
-        final res = await _api.get('${widget.panelPrefix}/vouchers');
-        final data = res?['data'];
-        if (data is List) {
-          _vouchers = data
-              .cast<Map<String, dynamic>>()
-              .where((v) => v['is_active'] == true)
-              .toList();
-        }
-      } catch (_) {}
-      _vouchersLoaded = true;
-    };
-    loadVouchers();
+    // ── Multi-select state: hydrate IDs from route's array fields ──
+    // The backend returns voucher_ids / bonus_ids as arrays (many-to-many).
+    Set<String> voucherIds = {};
+    Set<String> bonusIds = {};
+    if (route != null) {
+      final vList = route['voucher_ids'] as List?;
+      if (vList != null && vList.isNotEmpty) {
+        voucherIds = vList.map((e) => e.toString()).toSet();
+      }
+      final bList = route['bonus_ids'] as List?;
+      if (bList != null && bList.isNotEmpty) {
+        bonusIds = bList.map((e) => e.toString()).toSet();
+      }
+    }
 
-    // Fetch active bonuses for dropdowns
-    final loadBonuses = () async {
-      if (_bonusesLoaded) return;
-      try {
-        final res = await _api.get('${widget.panelPrefix}/bonuses');
-        final data = res?['data'];
-        if (data is List) {
-          _bonuses = data
-              .cast<Map<String, dynamic>>()
-              .where((b) => b['is_active'] == true)
-              .toList();
-        }
-      } catch (_) {}
-      _bonusesLoaded = true;
-    };
-    loadBonuses();
-
+    // ── Show the edit dialog with pre-loaded data ──
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -573,107 +596,31 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
-                  'Assign Voucher / Promo',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
-                const SizedBox(height: 6),
-                StatefulBuilder(
-                  builder: (ctx, setSt) => DropdownButtonFormField<String>(
-                    value: _voucherId,
-                    decoration: const InputDecoration(
-                      labelText: 'Active Voucher',
-                      hintText: 'None (no discount)',
-                      border: OutlineInputBorder(),
-                    ),
-                    isExpanded: true,
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('— None —'),
-                      ),
-                      ..._vouchers.map(
-                        (v) => DropdownMenuItem<String>(
-                          value: v['id']?.toString(),
-                          child: Text(
-                            '${v['code']} — ${v['title']}',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                    onChanged: (v) => setSt(() => _voucherId = v),
-                  ),
+                // ═══ VOUCHER MULTI-SELECT CHIPS ═══
+                _buildDialogChipSection(
+                  label: 'Assigned Vouchers',
+                  selectedIds: voucherIds,
+                  allItems: _vouchers,
+                  idKey: 'id',
+                  nameKey: 'title',
+                  fallbackNameKey: 'code',
+                  chipColor: const Color(0xFF3B82F6),
+                  icon: Icons.card_giftcard,
+                  onChanged: (updated) => setDlg(() => voucherIds = updated),
                 ),
                 const SizedBox(height: 14),
-                const Text(
-                  'Assign Driver Bonus',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
-                const SizedBox(height: 6),
-                StatefulBuilder(
-                  builder: (ctx, setSt) => DropdownButtonFormField<String>(
-                    value: _driverBonusId,
-                    decoration: const InputDecoration(
-                      labelText: 'Driver Bonus',
-                      hintText: 'None',
-                      border: OutlineInputBorder(),
-                    ),
-                    isExpanded: true,
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('— None —'),
-                      ),
-                      ..._bonuses
-                          .where((b) => b['staff_type'] == 'driver')
-                          .map(
-                            (b) => DropdownMenuItem<String>(
-                              value: b['id']?.toString(),
-                              child: Text(
-                                b['bonus_name'] ?? '',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                    ],
-                    onChanged: (v) => setSt(() => _driverBonusId = v),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Assign Conductor Bonus',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
-                const SizedBox(height: 6),
-                StatefulBuilder(
-                  builder: (ctx, setSt) => DropdownButtonFormField<String>(
-                    value: _conductorBonusId,
-                    decoration: const InputDecoration(
-                      labelText: 'Conductor Bonus',
-                      hintText: 'None',
-                      border: OutlineInputBorder(),
-                    ),
-                    isExpanded: true,
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('— None —'),
-                      ),
-                      ..._bonuses
-                          .where((b) => b['staff_type'] == 'conductor')
-                          .map(
-                            (b) => DropdownMenuItem<String>(
-                              value: b['id']?.toString(),
-                              child: Text(
-                                b['bonus_name'] ?? '',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                    ],
-                    onChanged: (v) => setSt(() => _conductorBonusId = v),
-                  ),
+                // ═══ BONUS MULTI-SELECT CHIPS ═══
+                _buildDialogChipSection(
+                  label: 'Assigned Bonuses',
+                  selectedIds: bonusIds,
+                  allItems: _bonuses,
+                  idKey: 'id',
+                  nameKey: 'bonus_name',
+                  fallbackNameKey: null,
+                  chipColor: const Color(0xFFF59E0B),
+                  icon: Icons.star,
+                  subKey: 'staff_type',
+                  onChanged: (updated) => setDlg(() => bonusIds = updated),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -795,9 +742,8 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                     'departure_time': depCtrl.text,
                     'destination_arrival_time': destArrCtrl.text,
                   },
-                  'voucher_id': _voucherId,
-                  'driver_bonus_id': _driverBonusId,
-                  'conductor_bonus_id': _conductorBonusId,
+                  'voucher_ids': voucherIds.toList(),
+                  'bonus_ids': bonusIds.toList(),
                 };
                 try {
                   if (isEdit) {
@@ -878,6 +824,188 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
     final meta = obj['meta'];
     if (meta is Map) return (meta[key] ?? '').toString();
     return '';
+  }
+
+  // ═══ FIX 3: Detail-view badge chips ═══
+  /// Renders coloured Chip badges for assigned vouchers/bonuses
+  /// in the View Route detail dialog. Returns empty list when
+  /// no items exist (zero wasted vertical space).
+  List<Widget> _buildDetailBadges({
+    required String label,
+    required List<Map<String, dynamic>> items,
+    required Color chipColor,
+    required IconData icon,
+    required String nameKey,
+    String? subKey,
+  }) {
+    if (items.isEmpty) return [];
+    return [
+      const SizedBox(height: 12),
+      Text(
+        '$label:',
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+          color: Color(0xFF1E293B),
+        ),
+      ),
+      const SizedBox(height: 6),
+      Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: items.map((item) {
+          final name = (item[nameKey] ?? '').toString();
+          final sub = subKey != null ? (item[subKey] ?? '').toString() : '';
+          return Chip(
+            avatar: Icon(icon, size: 14, color: chipColor),
+            label: sub.isNotEmpty
+                ? Text('$name · $sub', style: const TextStyle(fontSize: 12))
+                : Text(name, style: const TextStyle(fontSize: 12)),
+            backgroundColor: chipColor.withValues(alpha: 0.08),
+            side: BorderSide(color: chipColor.withValues(alpha: 0.3)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          );
+        }).toList(),
+      ),
+    ];
+  }
+
+  // ═══ FIX 1 & 2: Chip-based multi-select for edit dialog ═══
+  Widget _buildDialogChipSection({
+    required String label,
+    required Set<String> selectedIds,
+    required List<Map<String, dynamic>> allItems,
+    required String idKey,
+    required String nameKey,
+    String? fallbackNameKey,
+    required Color chipColor,
+    required IconData icon,
+    String? subKey,
+    required void Function(Set<String>) onChanged,
+  }) {
+    // Build selected items list (preserves insertion order)
+    final selectedItems = <Map<String, dynamic>>[];
+    for (final id in selectedIds) {
+      final match = allItems.cast<Map<String, dynamic>?>().firstWhere(
+        (item) => item?[idKey]?.toString() == id,
+        orElse: () => null,
+      );
+      if (match != null) selectedItems.add(match);
+    }
+
+    // Available items (not yet selected)
+    final available = allItems
+        .where((item) => !selectedIds.contains(item[idKey]?.toString()))
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const Spacer(),
+            if (available.isNotEmpty)
+              PopupMenuButton<String>(
+                offset: const Offset(0, 36),
+                constraints: const BoxConstraints(maxWidth: 260),
+                onSelected: (id) {
+                  final updated = Set<String>.from(selectedIds)..add(id);
+                  onChanged(updated);
+                },
+                itemBuilder: (_) => available.map((item) {
+                  final name = (item[nameKey] ?? item[fallbackNameKey] ?? '')
+                      .toString();
+                  final sub = subKey != null
+                      ? (item[subKey] ?? '').toString()
+                      : '';
+                  final display = sub.isNotEmpty ? '$name · $sub' : name;
+                  return PopupMenuItem<String>(
+                    value: item[idKey]?.toString(),
+                    child: Text(
+                      display,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  );
+                }).toList(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16A34A).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: const Color(0xFF16A34A).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, size: 14, color: Color(0xFF16A34A)),
+                      SizedBox(width: 4),
+                      Text(
+                        'Add',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF16A34A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        if (selectedItems.isEmpty)
+          const Text(
+            'None assigned',
+            style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+          )
+        else
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: selectedItems.map((item) {
+              final name = (item[nameKey] ?? item[fallbackNameKey] ?? '')
+                  .toString();
+              final sub = subKey != null ? (item[subKey] ?? '').toString() : '';
+              return Chip(
+                avatar: Icon(icon, size: 14, color: chipColor),
+                label: sub.isNotEmpty
+                    ? Text('$name · $sub', style: const TextStyle(fontSize: 12))
+                    : Text(name, style: const TextStyle(fontSize: 12)),
+                deleteIcon: const Icon(Icons.close, size: 16),
+                onDeleted: () {
+                  final updated = Set<String>.from(selectedIds)
+                    ..remove(item[idKey]?.toString() ?? '');
+                  onChanged(updated);
+                },
+                backgroundColor: chipColor.withValues(alpha: 0.08),
+                side: BorderSide(color: chipColor.withValues(alpha: 0.3)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+              );
+            }).toList(),
+          ),
+      ],
+    );
   }
 
   void _showAllPrices(Map<String, dynamic> route) {
