@@ -402,21 +402,59 @@ class FleetDispatchController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════════
-    // DROPDOWN RESOURCES (with waypoints for handover stop)
+    // DROPDOWN RESOURCES (merged cross-tenant with vendor badges)
     // ═══════════════════════════════════════════════════════════
     public function resources(Request $request): JsonResponse
     {
         $busCompanyId = $request->get('bus_company_id');
         $routeId = $request->get('route_id');
 
+        // ── Cross-tenant: collect main + linked company IDs ──
+        $allCompanyIds = $busCompanyId ? [$busCompanyId] : [];
+        $ownerNames = []; // companyId => ownerDisplayName
+
+        if ($busCompanyId) {
+            // Find linked third-party owners active for this fleet
+            $linkedOwners = DB::table('fleet_assignments')
+                ->where('carrier_company_id', $busCompanyId)
+                ->where('role', 'owner')
+                ->where('fleet_type', 'bus')
+                ->where('status', 'active')
+                ->pluck('global_identity_id');
+
+            if ($linkedOwners->isNotEmpty()) {
+                $linkedTenants = DB::table('tenant_accounts')
+                    ->whereIn('global_identity_id', $linkedOwners)
+                    ->get(['id', 'account_name', 'global_identity_id']);
+
+                foreach ($linkedTenants as $tenant) {
+                    $allCompanyIds[] = $tenant->id;
+                    $ownerNames[$tenant->id] = $tenant->account_name ?? 'Linked Owner';
+                }
+            }
+        }
+
+        // ── Vehicles: merge own + linked, annotate with owner badge ──
         $vehicles = DB::table('absolute_bus_layouts')
             ->where('layout_status', '!=', 'archived')
-            ->when($busCompanyId && Schema::hasColumn('absolute_bus_layouts', 'carrier_company_id'),
-                fn($q) => $q->where('carrier_company_id', $busCompanyId))
-            ->select('id', 'display_name AS name')
+            ->when(!empty($allCompanyIds) && Schema::hasColumn('absolute_bus_layouts', 'carrier_company_id'),
+                fn($q) => $q->whereIn('carrier_company_id', $allCompanyIds))
+            ->select('id', 'display_name AS name', 'carrier_company_id')
             ->orderBy('display_name')
-            ->get();
+            ->get()
+            ->map(function ($v) use ($busCompanyId, $ownerNames) {
+                $owner = ($v->carrier_company_id && $v->carrier_company_id !== $busCompanyId)
+                    ? ($ownerNames[$v->carrier_company_id] ?? null)
+                    : null;
+                return [
+                    'id'       => $v->id,
+                    'name'     => $v->name,
+                    'owner'    => $owner,
+                    'external' => $owner !== null,
+                ];
+            });
 
+        // ── Routes (always main company's routes — guard: third-party only sees assigned route) ──
         $routes = DB::table('transport_bus_routes')
             ->where('status', 'published')
             ->select('id', 'display_name AS name', 'origin_city', 'destination_city')
@@ -449,25 +487,49 @@ class FleetDispatchController extends Controller
                 });
         }
 
+        // ── Drivers: merge own + linked, annotate with owner badge ──
         $drivers = DB::table('fleet_assignments AS fa')
             ->join('global_identities AS gi', 'fa.global_identity_id', '=', 'gi.id')
             ->where('fa.role', 'driver')
             ->where('fa.fleet_type', 'bus')
             ->where('fa.status', 'active')
-            ->when($busCompanyId, fn($q) => $q->where('fa.carrier_company_id', $busCompanyId))
-            ->select('fa.id', 'gi.display_name AS name')
+            ->when(!empty($allCompanyIds), fn($q) => $q->whereIn('fa.carrier_company_id', $allCompanyIds))
+            ->select('fa.id', 'gi.display_name AS name', 'fa.carrier_company_id')
             ->orderBy('gi.display_name')
-            ->get();
+            ->get()
+            ->map(function ($d) use ($busCompanyId, $ownerNames) {
+                $owner = ($d->carrier_company_id && $d->carrier_company_id !== $busCompanyId)
+                    ? ($ownerNames[$d->carrier_company_id] ?? null)
+                    : null;
+                return [
+                    'id'       => $d->id,
+                    'name'     => $d->name,
+                    'owner'    => $owner,
+                    'external' => $owner !== null,
+                ];
+            });
 
+        // ── Conductors: merge own + linked, annotate with owner badge ──
         $conductors = DB::table('fleet_assignments AS fa')
             ->join('global_identities AS gi', 'fa.global_identity_id', '=', 'gi.id')
             ->where('fa.role', 'conductor')
             ->where('fa.fleet_type', 'bus')
             ->where('fa.status', 'active')
-            ->when($busCompanyId, fn($q) => $q->where('fa.carrier_company_id', $busCompanyId))
-            ->select('fa.id', 'gi.display_name AS name')
+            ->when(!empty($allCompanyIds), fn($q) => $q->whereIn('fa.carrier_company_id', $allCompanyIds))
+            ->select('fa.id', 'gi.display_name AS name', 'fa.carrier_company_id')
             ->orderBy('gi.display_name')
-            ->get();
+            ->get()
+            ->map(function ($c) use ($busCompanyId, $ownerNames) {
+                $owner = ($c->carrier_company_id && $c->carrier_company_id !== $busCompanyId)
+                    ? ($ownerNames[$c->carrier_company_id] ?? null)
+                    : null;
+                return [
+                    'id'       => $c->id,
+                    'name'     => $c->name,
+                    'owner'    => $owner,
+                    'external' => $owner !== null,
+                ];
+            });
 
         return response()->json([
             'success' => true,

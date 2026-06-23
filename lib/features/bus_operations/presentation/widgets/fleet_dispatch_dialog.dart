@@ -88,9 +88,13 @@ Widget _dd(
       (i) => DropdownMenuItem<String>(
         value: i['id']?.toString(),
         child: Text(
-          itemBuilder?.call(i) ?? i['name']?.toString() ?? '',
+          itemBuilder?.call(i) ??
+              '${i['name']?.toString() ?? ''}${i['external'] == true ? ' — (Owner: ${i['owner']})' : ''}',
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 13),
+          style: TextStyle(
+            fontSize: 13,
+            color: i['external'] == true ? const Color(0xFFD97706) : null,
+          ),
         ),
       ),
     ),
