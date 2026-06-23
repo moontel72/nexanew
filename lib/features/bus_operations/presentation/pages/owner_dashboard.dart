@@ -1,5 +1,5 @@
-// Bus Owner Dashboard — Full Dynamic Seat Layout Generator
-// 4-step wizard: Bus Details → Grid Setup → Preview/Edit → Save
+// Bus Owner Dashboard — Vehicle Fleet Management
+// Manage vehicles, drivers, conductors, and routes
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/fleet_dispatch_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/route_scheduler_screen.dart';
@@ -179,13 +180,19 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                     onTap: () => setState(() => _currentPage = 'dashboard'),
                   ),
                   Missile3DButton(
-                    label: 'Seat Layouts',
-                    icon: Icons.event_seat,
+                    label: 'Vehicles Management',
+                    icon: Icons.directions_bus,
                     color: OwnerButtonColors.seats,
                     onTap: () {
                       setState(() => _currentPage = 'layouts');
                       if (_layouts.isEmpty) _loadLayouts();
                     },
+                  ),
+                  Missile3DButton(
+                    label: 'Live Dispatch & Duty',
+                    icon: Icons.assignment_turned_in,
+                    color: const Color(0xFF0D9488),
+                    onTap: _openDispatchDialog,
                   ),
                   Gap(8),
                   _sec('OPERATIONS'),
@@ -351,7 +358,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       : _currentPage == 'conductors'
       ? 'Bus Conductors'
       : _currentPage == 'layouts'
-      ? 'Seat Layouts'
+      ? 'Vehicles Management'
       : _currentPage == 'carrier'
       ? 'Carrier Link'
       : _currentPage == 'routes'
@@ -1046,7 +1053,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             color: const Color(0xFF16A34A),
             title: 'Linked with $carrierName',
             subtitle:
-                'Your fleet staff and seat layouts are visible to this carrier.',
+                'Your fleet staff and vehicles are visible to this carrier.',
             bgColor: const Color(0xFF052E16),
             action: TextButton.icon(
               onPressed: () => _leaveCarrier(assignmentId, carrierName),
@@ -1329,7 +1336,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Your drivers, conductors, and layouts are visible to this carrier via the Fleet Panel.',
+                              'Your drivers, conductors, and vehicles are visible to this carrier via the Fleet Panel.',
                               style: TextStyle(
                                 color: Color(0xFF86EFAC),
                                 fontSize: 11,
@@ -1520,7 +1527,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         ),
         Gap(4),
         Text(
-          '$_driverCount drivers • $_conductorCount conductors • $_layoutCount layouts',
+          '$_driverCount drivers • $_conductorCount conductors • $_layoutCount vehicles',
           style: TextStyle(color: Color(0xFF8899AA), fontSize: 13),
         ),
         Gap(24),
@@ -1541,25 +1548,25 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ),
             SizedBox(width: 12.w),
             _kpi(
-              'Layouts',
+              'Vehicles',
               '$_layoutCount',
-              Icons.event_seat,
+              Icons.directions_bus,
               OwnerButtonColors.seats,
             ),
           ],
         ),
         Gap(24),
         Missile3DButton(
-          label: 'New Layout',
+          label: '+ Add New Vehicle',
           icon: Icons.add,
           color: const Color(0xFF0891B2),
           height: 56,
           onTap: _openAbsoluteLayoutDesigner,
         ),
-        Gap(8),
+        const Gap(12),
         Missile3DButton(
-          label: 'View All Layouts ($_layoutCount)',
-          icon: Icons.event_seat,
+          label: 'View All Vehicles ($_layoutCount)',
+          icon: Icons.directions_bus,
           color: OwnerButtonColors.seats,
           height: 56,
           onTap: () {
@@ -2050,7 +2057,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           style: TextStyle(color: Colors.white),
         ),
         content: Text(
-          'This will archive ALL ${_layouts.length} of your seat layouts. '
+          'This will archive ALL ${_layouts.length} of your vehicles. '
           'This action cannot be undone. Proceed?',
           style: const TextStyle(color: Color(0xFF8899AA)),
         ),
@@ -2100,10 +2107,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               color: Colors.white.withValues(alpha: .15),
             ),
             Gap(12),
-            Text(
-              'No seat layouts yet',
-              style: TextStyle(color: Color(0xFF8899AA)),
-            ),
+            Text('No vehicles yet', style: TextStyle(color: Color(0xFF8899AA))),
             Gap(12),
             ElevatedButton.icon(
               onPressed: () => _openAbsoluteLayoutDesigner(),
@@ -2144,7 +2148,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               FloatingActionButton.extended(
                 onPressed: () => _openAbsoluteLayoutDesigner(),
                 icon: const Icon(Icons.add),
-                label: const Text('New Layout'),
+                label: const Text('+ Add New Vehicle'),
                 backgroundColor: OwnerButtonColors.seats,
                 foregroundColor: Colors.white,
               ),
@@ -2287,6 +2291,17 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       );
       if (mounted && result == true) _loadLayouts();
     }
+  }
+
+  void _openDispatchDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => FleetDispatchDialog(
+        apiPrefix: '/bus-owner',
+        busCompanyId: _companyId.isNotEmpty ? _companyId : null,
+        onChanged: _loadAll,
+      ),
+    );
   }
 
   // ═══ DELETE LEGACY BUILDER — replaced by Absolute Canvas ═══

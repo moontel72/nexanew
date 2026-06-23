@@ -152,6 +152,16 @@ Route::prefix('api/v1/bus-owner')
             Route::delete('/{id}', [\App\Http\Controllers\BusOwnerController::class, 'destroyConductor']);
         });
 
+        // ─── Live Dispatch & Duty Assignment ────────────────
+        Route::prefix('dispatch')->group(function (): void {
+            Route::get('resources', [\App\Http\Controllers\FleetDispatchController::class, 'resources']);
+            Route::get('assignments', [\App\Http\Controllers\FleetDispatchController::class, 'index']);
+            Route::post('assignments', [\App\Http\Controllers\FleetDispatchController::class, 'store']);
+            Route::get('assignments/{id}', [\App\Http\Controllers\FleetDispatchController::class, 'show']);
+            Route::put('assignments/{id}', [\App\Http\Controllers\FleetDispatchController::class, 'update']);
+            Route::delete('assignments/{id}', [\App\Http\Controllers\FleetDispatchController::class, 'destroy']);
+        });
+
         // ─── Absolute Layouts (Freeform Canvas) ───────────────
         Route::prefix('absolute-layouts')->group(function (): void {
             Route::get('/', [\App\Http\Controllers\AbsoluteLayoutController::class, 'index']);

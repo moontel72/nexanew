@@ -307,6 +307,16 @@ Route::prefix('api/v1/bus-fleet')
             Route::get('{plate}', [\App\Http\Controllers\BusShiftController::class, 'getShiftRoster']);
         });
 
+        // ─── Live Dispatch & Duty Assignment ────────────────
+        Route::prefix('dispatch')->group(function (): void {
+            Route::get('resources', [\App\Http\Controllers\FleetDispatchController::class, 'resources']);
+            Route::get('assignments', [\App\Http\Controllers\FleetDispatchController::class, 'index']);
+            Route::post('assignments', [\App\Http\Controllers\FleetDispatchController::class, 'store']);
+            Route::get('assignments/{id}', [\App\Http\Controllers\FleetDispatchController::class, 'show']);
+            Route::put('assignments/{id}', [\App\Http\Controllers\FleetDispatchController::class, 'update']);
+            Route::delete('assignments/{id}', [\App\Http\Controllers\FleetDispatchController::class, 'destroy']);
+        });
+
         Route::prefix('link-requests')->group(function (): void {
             Route::get('/', [\App\Http\Controllers\FleetManagementController::class, 'listLinkRequests']);
             Route::post('{id}/accept', [\App\Http\Controllers\FleetManagementController::class, 'acceptLinkRequest']);

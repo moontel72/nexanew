@@ -1,5 +1,5 @@
 ﻿// Bus Fleet Dashboard — Company Admin Panel (Module 13)
-// Management hub: Owners, Drivers, Conductors, Seat Layouts, Fleet Overview
+// Management hub: Owners, Drivers, Conductors, Vehicles, Fleet Overview
 // 3D Pencil Sidebar Layout (unified with Sub-Admin theme)
 // Phase 4: Live data wired to all tabs — no placeholders
 
@@ -24,6 +24,7 @@ import 'package:trace_odd/shared/models/company/company_model.dart';
 import 'package:trace_odd/core/constants/app_constants.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/fleet_dispatch_dialog.dart';
 
 class BusFleetDashboardScreen extends StatefulWidget {
   final String? companyId;
@@ -377,29 +378,40 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                     const SizedBox(height: 8),
                     _sl('FLEET ASSETS'),
                     Missile3DButton(
-                      label: 'New Seat Layout',
+                      label: 'Add New Vehicles',
                       icon: Icons.add,
                       color: const Color(0xFF0891B2),
                       height: 56,
-                      subtitle: 'Drag & drop canvas designer',
+                      subtitle: 'Register buses, coaches & HiAce vans',
                       onTap: () => _openLayoutDesigner(),
                     ),
+                    const SizedBox(height: 12),
                     Missile3DButton(
-                      label: 'View Layouts ($_layoutCount)',
-                      icon: Icons.event_seat,
+                      label: 'View All Vehicles',
+                      icon: Icons.directions_bus,
                       color: const Color(0xFF0891B2),
                       height: 56,
                       onTap: () => setState(() => _currentPage = 'layouts'),
                     ),
                     if (_layoutCount > 0)
                       Missile3DButton(
-                        label: 'Purge All Layouts',
+                        label: 'Purge All Vehicles',
                         icon: Icons.delete_sweep,
                         color: const Color(0xFFDC2626),
                         height: 56,
-                        subtitle: 'Archive $_layoutCount layout(s)',
+                        subtitle: 'Archive $_layoutCount vehicle(s)',
                         onTap: _confirmPurgeLayouts,
                       ),
+                    const SizedBox(height: 8),
+                    _sl('FLEET SCHEDULING'),
+                    Missile3DButton(
+                      label: 'Live Dispatch & Duty',
+                      icon: Icons.assignment_turned_in,
+                      color: const Color(0xFF0D9488),
+                      height: 56,
+                      subtitle: 'Assign vehicles, routes & staff',
+                      onTap: () => _openDispatchDialog(),
+                    ),
                     const SizedBox(height: 8),
                     _sl('SYSTEM'),
                     Missile3DButton(
@@ -448,7 +460,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     final cId = widget.companyId ?? _company?.id.toString() ?? '';
     if (cId.isEmpty) return;
     if (layoutId == null) {
-      // New layout: show bus config setup first (number plate, maker, specs, seats)
+      // New vehicle: show bus config setup first (number plate, maker, specs, seats)
       final result = await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => BusConfigSetupScreen(
@@ -475,13 +487,24 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     }
   }
 
+  void _openDispatchDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => FleetDispatchDialog(
+        apiPrefix: '/bus-fleet',
+        busCompanyId: widget.companyId ?? _company?.id.toString(),
+        onChanged: _loadAll,
+      ),
+    );
+  }
+
   void _confirmPurgeLayouts() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Purge All Layouts?'),
+        title: const Text('Purge All Vehicles?'),
         content: Text(
-          'This will archive ALL $_layoutCount seat layout(s). '
+          'This will archive ALL $_layoutCount vehicle(s). '
           'This action cannot be undone. Proceed?',
         ),
         actions: [
@@ -563,7 +586,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       : _currentPage == 'conductors'
                       ? 'Fleet Conductors'
                       : _currentPage == 'layouts'
-                      ? 'Seat Layouts'
+                      ? 'Vehicles Management'
                       : _currentPage == 'linkreqs'
                       ? 'Pending Link Requests'
                       : _currentPage == 'inbox'
