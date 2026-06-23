@@ -164,7 +164,7 @@ class _FleetConductorsScreenState extends State<FleetConductorsScreen> {
             ),
           )
         : _items.isEmpty
-        : Center(child: Text('No conductor / cabin crew registered'))
+        ? const Center(child: Text('No conductor / cabin crew registered'))
         : ListView.separated(
             padding: EdgeInsets.all(16.w),
             itemCount: _items.length,
