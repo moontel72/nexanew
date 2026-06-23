@@ -433,9 +433,20 @@ class FleetDispatchController extends Controller
         if ($routeId && Schema::hasTable('transport_bus_route_waypoints')) {
             $waypoints = DB::table('transport_bus_route_waypoints')
                 ->where('route_id', $routeId)
-                ->select('id', 'station_name AS name', 'stop_order')
+                ->select('id', 'station_name AS name', 'stop_order', 'meta')
                 ->orderBy('stop_order')
-                ->get();
+                ->get()
+                ->map(function ($wp) {
+                    $meta = json_decode($wp->meta ?? '{}', true) ?: [];
+                    return [
+                        'id'          => $wp->id,
+                        'name'        => $wp->name,
+                        'stop_order'  => $wp->stop_order,
+                        'arrival'     => $meta['arrival_time'] ?? null,
+                        'departure'   => $meta['departure_time'] ?? null,
+                        'stay'        => $meta['stay_minutes'] ?? null,
+                    ];
+                });
         }
 
         $drivers = DB::table('fleet_assignments AS fa')

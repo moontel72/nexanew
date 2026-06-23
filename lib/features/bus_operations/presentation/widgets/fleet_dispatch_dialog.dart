@@ -565,8 +565,15 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                             _handover,
                             _wp,
                             (v) => setState(() => _handover = v),
-                            itemBuilder: (w) =>
-                                'Stop ${w['stop_order'] ?? '?'}: ${w['name'] ?? ''}',
+                            itemBuilder: (w) {
+                              final a = w['arrival'];
+                              final d = w['departure'];
+                              final timing = [
+                                if (a != null) 'Arr: $a',
+                                if (d != null) 'Dep: $d',
+                              ].join(' · ');
+                              return 'Stop ${w['stop_order'] ?? '?'}: ${w['name'] ?? ''}${timing.isNotEmpty ? ' ($timing)' : ''}';
+                            },
                           ),
                         const Gap(12),
                         SwitchListTile(
@@ -935,8 +942,15 @@ class _FleetDispatchEditDialogState extends State<FleetDispatchEditDialog> {
                             _handover,
                             _wp,
                             (v) => setState(() => _handover = v),
-                            itemBuilder: (w) =>
-                                'Stop ${w['stop_order'] ?? '?'}: ${w['name'] ?? ''}',
+                            itemBuilder: (w) {
+                              final a = w['arrival'];
+                              final d = w['departure'];
+                              final timing = [
+                                if (a != null) 'Arr: $a',
+                                if (d != null) 'Dep: $d',
+                              ].join(' · ');
+                              return 'Stop ${w['stop_order'] ?? '?'}: ${w['name'] ?? ''}${timing.isNotEmpty ? ' ($timing)' : ''}';
+                            },
                           ),
                         const Gap(12),
                         Row(
