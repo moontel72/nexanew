@@ -409,8 +409,8 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       icon: Icons.assignment_turned_in,
                       color: const Color(0xFF0D9488),
                       height: 56,
-                      subtitle: 'Assign vehicles, routes & staff',
-                      onTap: () => _openDispatchDialog(),
+                      subtitle: 'Create · View Assignments',
+                      onTap: () => _showDispatchMenu(),
                     ),
                     const SizedBox(height: 8),
                     _sl('SYSTEM'),
@@ -487,13 +487,64 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
     }
   }
 
-  void _openDispatchDialog() {
+  void _showDispatchMenu() {
+    showMenu<String>(
+      context: context,
+      position: const RelativeRect.fromLTRB(100, 300, 100, 0),
+      items: [
+        const PopupMenuItem<String>(
+          value: 'create',
+          child: ListTile(
+            leading: Icon(Icons.add_task, color: Color(0xFF0D9488)),
+            title: Text('Create Assignment'),
+            subtitle: Text(
+              'Link vehicle, route & staff',
+              style: TextStyle(fontSize: 12),
+            ),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'list',
+          child: ListTile(
+            leading: Icon(Icons.list_alt, color: Color(0xFF0D9488)),
+            title: Text('Active Assignments List'),
+            subtitle: Text(
+              'View today\'s dispatch board',
+              style: TextStyle(fontSize: 12),
+            ),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value == 'create') {
+        _openDispatchForm();
+      } else if (value == 'list') {
+        _openDispatchList();
+      }
+    });
+  }
+
+  void _openDispatchForm() {
     showDialog(
       context: context,
-      builder: (_) => FleetDispatchDialog(
+      builder: (_) => FleetDispatchForm(
         apiPrefix: '/bus-fleet',
         busCompanyId: widget.companyId ?? _company?.id.toString(),
-        onChanged: _loadAll,
+        onSaved: _loadAll,
+      ),
+    );
+  }
+
+  void _openDispatchList() {
+    showDialog(
+      context: context,
+      builder: (_) => FleetDispatchList(
+        apiPrefix: '/bus-fleet',
+        busCompanyId: widget.companyId ?? _company?.id.toString(),
       ),
     );
   }

@@ -192,7 +192,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                     label: 'Live Dispatch & Duty',
                     icon: Icons.assignment_turned_in,
                     color: const Color(0xFF0D9488),
-                    onTap: _openDispatchDialog,
+                    onTap: _showDispatchMenu,
                   ),
                   Gap(8),
                   _sec('OPERATIONS'),
@@ -2293,13 +2293,64 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     }
   }
 
-  void _openDispatchDialog() {
+  void _showDispatchMenu() {
+    showMenu<String>(
+      context: context,
+      position: const RelativeRect.fromLTRB(100, 300, 100, 0),
+      items: [
+        const PopupMenuItem<String>(
+          value: 'create',
+          child: ListTile(
+            leading: Icon(Icons.add_task, color: Color(0xFF0D9488)),
+            title: Text('Create Assignment'),
+            subtitle: Text(
+              'Link vehicle, route & staff',
+              style: TextStyle(fontSize: 12),
+            ),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'list',
+          child: ListTile(
+            leading: Icon(Icons.list_alt, color: Color(0xFF0D9488)),
+            title: Text('Active Assignments List'),
+            subtitle: Text(
+              'View today\'s dispatch board',
+              style: TextStyle(fontSize: 12),
+            ),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value == 'create') {
+        _openDispatchForm();
+      } else if (value == 'list') {
+        _openDispatchList();
+      }
+    });
+  }
+
+  void _openDispatchForm() {
     showDialog(
       context: context,
-      builder: (_) => FleetDispatchDialog(
+      builder: (_) => FleetDispatchForm(
         apiPrefix: '/bus-owner',
         busCompanyId: _companyId.isNotEmpty ? _companyId : null,
-        onChanged: _loadAll,
+        onSaved: _loadAll,
+      ),
+    );
+  }
+
+  void _openDispatchList() {
+    showDialog(
+      context: context,
+      builder: (_) => FleetDispatchList(
+        apiPrefix: '/bus-owner',
+        busCompanyId: _companyId.isNotEmpty ? _companyId : null,
       ),
     );
   }

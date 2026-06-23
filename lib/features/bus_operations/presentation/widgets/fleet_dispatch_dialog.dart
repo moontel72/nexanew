@@ -1,9 +1,8 @@
 // NEXATRACE — LIVE DISPATCH & DUTY ASSIGNMENT ENGINE
 // ======================================================
-// Reusable dialog/screen for assigning vehicles, routes,
-// drivers, and conductors on a daily/shift basis.
-//
-// Used by both /bus-fleet/dashboard and /bus-owner/dashboard.
+// Two independent views for assigning and viewing fleet
+// dispatch entries. Used by both bus-fleet and bus-owner
+// dashboards via a sub-menu button pattern.
 //
 // MODULE: 14C — Active Fleet Scheduling
 
@@ -11,77 +10,62 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 
-class FleetDispatchDialog extends StatefulWidget {
-  /// API prefix: '/bus-fleet' or '/bus-owner'
+// ═══════════════════════════════════════════════════════════
+// SHARED CONSTANTS
+// ═══════════════════════════════════════════════════════════
+const _shifts = ['morning', 'evening', 'night', 'special'];
+const _shiftColors = <String, Color>{
+  'morning': Color(0xFFF59E0B),
+  'evening': Color(0xFF8B5CF6),
+  'night': Color(0xFF1E293B),
+  'special': Color(0xFFEF4444),
+};
+
+// ═══════════════════════════════════════════════════════════
+// FLEET DISPATCH FORM (Create Assignment)
+// ═══════════════════════════════════════════════════════════
+class FleetDispatchForm extends StatefulWidget {
   final String apiPrefix;
-
-  /// Optional bus company ID for data isolation
   final String? busCompanyId;
+  final VoidCallback? onSaved;
 
-  /// Callback when an assignment is created/cancelled
-  final VoidCallback? onChanged;
-
-  const FleetDispatchDialog({
+  const FleetDispatchForm({
     super.key,
     required this.apiPrefix,
     this.busCompanyId,
-    this.onChanged,
+    this.onSaved,
   });
 
   @override
-  State<FleetDispatchDialog> createState() => _FleetDispatchDialogState();
+  State<FleetDispatchForm> createState() => _FleetDispatchFormState();
 }
 
-class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
+class _FleetDispatchFormState extends State<FleetDispatchForm> {
   final _api = ApiService();
 
-  // Dropdown resource arrays
   List<Map<String, dynamic>> _vehicles = [];
   List<Map<String, dynamic>> _routes = [];
   List<Map<String, dynamic>> _drivers = [];
   List<Map<String, dynamic>> _conductors = [];
 
-  // Assignment list
-  List<Map<String, dynamic>> _assignments = [];
-
-  bool _loadingResources = true;
-  bool _loadingAssignments = true;
+  bool _loading = true;
   bool _saving = false;
-  String? _error;
 
-  // Selected date (defaults to today)
   DateTime _selectedDate = DateTime.now();
-
-  // Form state
   String? _selectedVehicleId;
   String? _selectedRouteId;
   String? _selectedDriverId;
   String? _selectedConductorId;
   String _selectedShift = 'morning';
 
-  static const _shifts = ['morning', 'evening', 'night', 'special'];
-  static const _shiftColors = {
-    'morning': Color(0xFFF59E0B),
-    'evening': Color(0xFF8B5CF6),
-    'night': Color(0xFF1E293B),
-    'special': Color(0xFFEF4444),
-  };
-
   @override
   void initState() {
     super.initState();
-    _loadAll();
-  }
-
-  Future<void> _loadAll() async {
-    await Future.wait([_loadResources(), _loadAssignments()]);
+    _loadResources();
   }
 
   Future<void> _loadResources() async {
-    setState(() {
-      _loadingResources = true;
-      _error = null;
-    });
+    setState(() => _loading = true);
     try {
       final params = <String, dynamic>{};
       if (widget.busCompanyId != null) {
@@ -92,6 +76,7 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
         queryParams: params,
       );
       final data = res?['data'] as Map<String, dynamic>? ?? {};
+      if (!mounted) return;
       setState(() {
         _vehicles =
             (data['vehicles'] as List?)?.cast<Map<String, dynamic>>() ?? [];
@@ -100,39 +85,14 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
             (data['drivers'] as List?)?.cast<Map<String, dynamic>>() ?? [];
         _conductors =
             (data['conductors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-        _loadingResources = false;
+        _loading = false;
       });
-    } catch (e) {
-      setState(() {
-        _loadingResources = false;
-        _error = e.toString();
-      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _loadAssignments() async {
-    setState(() => _loadingAssignments = true);
-    try {
-      final dateStr =
-          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
-      final res = await _api.get(
-        '${widget.apiPrefix}/dispatch/assignments',
-        queryParams: {'date': dateStr, 'status': 'active'},
-      );
-      setState(() {
-        _assignments =
-            (res?['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-        _loadingAssignments = false;
-      });
-    } catch (e) {
-      setState(() {
-        _loadingAssignments = false;
-        _assignments = [];
-      });
-    }
-  }
-
-  Future<void> _saveAssignment() async {
+  Future<void> _save() async {
     if (_selectedVehicleId == null ||
         _selectedRouteId == null ||
         _selectedDriverId == null) {
@@ -141,8 +101,7 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
     }
     setState(() => _saving = true);
     try {
-      final dateStr =
-          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+      final dateStr = _fmtDate(_selectedDate);
       final body = <String, dynamic>{
         if (widget.busCompanyId != null) 'bus_company_id': widget.busCompanyId,
         'vehicle_id': _selectedVehicleId,
@@ -158,17 +117,14 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
       );
       if (res?['success'] == true) {
         _snack('Assignment created!', const Color(0xFF16A34A));
-        // Reset form
         setState(() {
           _selectedVehicleId = null;
           _selectedRouteId = null;
           _selectedDriverId = null;
           _selectedConductorId = null;
         });
-        _loadAssignments();
-        widget.onChanged?.call();
+        widget.onSaved?.call();
       } else {
-        // Conflict detected
         final conflicts = res?['conflicts'] as List? ?? [];
         final msg = conflicts.isNotEmpty
             ? conflicts.join('\n')
@@ -184,17 +140,6 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
     setState(() => _saving = false);
   }
 
-  Future<void> _cancelAssignment(String id) async {
-    try {
-      await _api.delete('${widget.apiPrefix}/dispatch/assignments/$id');
-      _snack('Assignment cancelled.', const Color(0xFFF59E0B));
-      _loadAssignments();
-      widget.onChanged?.call();
-    } catch (e) {
-      _snack('Error cancelling assignment.', Colors.red);
-    }
-  }
-
   void _snack(String msg, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -207,164 +152,102 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
     );
   }
 
+  String _fmtDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Dialog(
       insetPadding: const EdgeInsets.all(16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 700, maxHeight: 800),
+        constraints: const BoxConstraints(maxWidth: 600),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Header ──
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: const BoxDecoration(
-                color: Color(0xFF1E293B),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.assignment_turned_in,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                  const Gap(10),
-                  const Expanded(
-                    child: Text(
-                      'Live Dispatch & Duty Assignment',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.close,
-                      color: Colors.white70,
-                      size: 20,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Body ──
+            _header(),
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Date picker + Shift selector
-                    _buildDateShiftRow(),
-
-                    const Gap(14),
-
-                    if (_loadingResources)
-                      const Center(
+                child: _loading
+                    ? const Center(
                         child: Padding(
                           padding: EdgeInsets.all(24),
                           child: CircularProgressIndicator(),
                         ),
                       )
-                    else ...[
-                      // ── Assignment Form ──
-                      _buildSectionLabel('Assignment Details'),
-                      const Gap(8),
-                      _buildDropdown(
-                        label: 'Vehicle',
-                        icon: Icons.directions_bus,
-                        value: _selectedVehicleId,
-                        items: _vehicles,
-                        hint: 'Select vehicle...',
-                        onChanged: (v) =>
-                            setState(() => _selectedVehicleId = v),
-                      ),
-                      const Gap(10),
-                      _buildDropdown(
-                        label: 'Route',
-                        icon: Icons.alt_route,
-                        value: _selectedRouteId,
-                        items: _routes,
-                        hint: 'Select route...',
-                        itemBuilder: (r) => r['description'] != null
-                            ? '${r['name']} (${r['description']})'
-                            : r['name']?.toString() ?? '',
-                        onChanged: (v) => setState(() => _selectedRouteId = v),
-                      ),
-                      const Gap(10),
-                      _buildDropdown(
-                        label: 'Driver',
-                        icon: Icons.person,
-                        value: _selectedDriverId,
-                        items: _drivers,
-                        hint: 'Select driver...',
-                        onChanged: (v) => setState(() => _selectedDriverId = v),
-                      ),
-                      const Gap(10),
-                      _buildDropdown(
-                        label: 'Conductor (optional)',
-                        icon: Icons.person_outline,
-                        value: _selectedConductorId,
-                        items: _conductors,
-                        hint: 'Select conductor...',
-                        onChanged: (v) =>
-                            setState(() => _selectedConductorId = v),
-                      ),
-                      const Gap(14),
-
-                      // Save button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 44,
-                        child: FilledButton.icon(
-                          onPressed: _saving ? null : _saveAssignment,
-                          icon: _saving
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.save, size: 18),
-                          label: Text(_saving ? 'Saving...' : 'Assign Duty'),
-                        ),
-                      ),
-
-                      const Gap(20),
-                      const Divider(),
-                      const Gap(8),
-
-                      // ── Active Assignments ──
-                      _buildSectionLabel(
-                        'Active Assignments — ${_selectedDate.toLocal().toString().split(' ')[0]}',
-                      ),
-                      const Gap(8),
-
-                      if (_loadingAssignments)
-                        const Center(child: CircularProgressIndicator())
-                      else if (_assignments.isEmpty)
-                        const Text(
-                          'No active assignments for this date.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF94A3B8),
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _dateShiftRow(),
+                          const Gap(14),
+                          _sectionLabel('Assignment Details'),
+                          const Gap(8),
+                          _dropdown(
+                            label: 'Vehicle',
+                            icon: Icons.directions_bus,
+                            value: _selectedVehicleId,
+                            items: _vehicles,
+                            hint: 'Select vehicle...',
+                            onChanged: (v) =>
+                                setState(() => _selectedVehicleId = v),
                           ),
-                        )
-                      else
-                        ..._assignments.map(_buildAssignmentCard),
-                    ],
-                  ],
-                ),
+                          const Gap(10),
+                          _dropdown(
+                            label: 'Route',
+                            icon: Icons.alt_route,
+                            value: _selectedRouteId,
+                            items: _routes,
+                            hint: 'Select route...',
+                            itemBuilder: (r) => r['description'] != null
+                                ? '${r['name']} (${r['description']})'
+                                : r['name']?.toString() ?? '',
+                            onChanged: (v) =>
+                                setState(() => _selectedRouteId = v),
+                          ),
+                          const Gap(10),
+                          _dropdown(
+                            label: 'Driver',
+                            icon: Icons.person,
+                            value: _selectedDriverId,
+                            items: _drivers,
+                            hint: 'Select driver...',
+                            onChanged: (v) =>
+                                setState(() => _selectedDriverId = v),
+                          ),
+                          const Gap(10),
+                          _dropdown(
+                            label: 'Conductor (optional)',
+                            icon: Icons.person_outline,
+                            value: _selectedConductorId,
+                            items: _conductors,
+                            hint: 'Select conductor...',
+                            onChanged: (v) =>
+                                setState(() => _selectedConductorId = v),
+                          ),
+                          const Gap(14),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 44,
+                            child: FilledButton.icon(
+                              onPressed: _saving ? null : _save,
+                              icon: _saving
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.save, size: 18),
+                              label: Text(
+                                _saving ? 'Saving...' : 'Assign Duty',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
           ],
@@ -373,10 +256,35 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
     );
   }
 
-  // ──────────────────────────────────────────────────────────
-  // Date + Shift Row
-  // ──────────────────────────────────────────────────────────
-  Widget _buildDateShiftRow() {
+  Widget _header() => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+    decoration: const BoxDecoration(
+      color: Color(0xFF1E293B),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.add_task, color: Colors.white, size: 22),
+        const Gap(10),
+        const Expanded(
+          child: Text(
+            'Create Assignment',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ],
+    ),
+  );
+
+  Widget _dateShiftRow() {
     return Row(
       children: [
         Expanded(
@@ -389,10 +297,7 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
                 firstDate: DateTime(2024),
                 lastDate: DateTime(2030),
               );
-              if (picked != null) {
-                setState(() => _selectedDate = picked);
-                _loadAssignments();
-              }
+              if (picked != null) setState(() => _selectedDate = picked);
             },
             icon: const Icon(Icons.calendar_today, size: 16),
             label: Text(
@@ -428,10 +333,7 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
     );
   }
 
-  // ──────────────────────────────────────────────────────────
-  // Dropdown Builder
-  // ──────────────────────────────────────────────────────────
-  Widget _buildDropdown({
+  Widget _dropdown({
     required String label,
     required IconData icon,
     required String? value,
@@ -478,10 +380,203 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
     );
   }
 
-  // ──────────────────────────────────────────────────────────
-  // Assignment Card
-  // ──────────────────────────────────────────────────────────
-  Widget _buildAssignmentCard(Map<String, dynamic> a) {
+  Widget _sectionLabel(String text) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+      color: Color(0xFF1E293B),
+    ),
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// FLEET DISPATCH LIST (Active Assignments)
+// ═══════════════════════════════════════════════════════════
+class FleetDispatchList extends StatefulWidget {
+  final String apiPrefix;
+  final String? busCompanyId;
+
+  const FleetDispatchList({
+    super.key,
+    required this.apiPrefix,
+    this.busCompanyId,
+  });
+
+  @override
+  State<FleetDispatchList> createState() => _FleetDispatchListState();
+}
+
+class _FleetDispatchListState extends State<FleetDispatchList> {
+  final _api = ApiService();
+  List<Map<String, dynamic>> _assignments = [];
+  bool _loading = true;
+  DateTime _selectedDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final dateStr = _fmtDate(_selectedDate);
+      final res = await _api.get(
+        '${widget.apiPrefix}/dispatch/assignments',
+        queryParams: {'date': dateStr, 'status': 'active'},
+      );
+      if (!mounted) return;
+      setState(() {
+        _assignments =
+            (res?['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted)
+        setState(() {
+          _loading = false;
+          _assignments = [];
+        });
+    }
+  }
+
+  Future<void> _cancel(String id) async {
+    try {
+      await _api.delete('${widget.apiPrefix}/dispatch/assignments/$id');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Assignment cancelled.'),
+            backgroundColor: Color(0xFFF59E0B),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      _load();
+    } catch (_) {}
+  }
+
+  String _fmtDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700, maxHeight: 750),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Header ──
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: const BoxDecoration(
+                color: Color(0xFF1E293B),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.list_alt, color: Colors.white, size: 22),
+                  const Gap(10),
+                  const Expanded(
+                    child: Text(
+                      'Active Assignments',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Date filter ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: Color(0xFF64748B),
+                  ),
+                  const Gap(8),
+                  Text(
+                    '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left, size: 20),
+                    onPressed: () {
+                      setState(
+                        () => _selectedDate = _selectedDate.subtract(
+                          const Duration(days: 1),
+                        ),
+                      );
+                      _load();
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right, size: 20),
+                    onPressed: () {
+                      setState(
+                        () => _selectedDate = _selectedDate.add(
+                          const Duration(days: 1),
+                        ),
+                      );
+                      _load();
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // ── List body ──
+            Flexible(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _assignments.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No active assignments for this date.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _assignments.length,
+                      itemBuilder: (_, i) => _card(_assignments[i]),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _card(Map<String, dynamic> a) {
     final shiftColor = _shiftColors[a['shift_type']] ?? const Color(0xFF64748B);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -520,7 +615,7 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
                     color: Color(0xFFEF4444),
                   ),
                   tooltip: 'Cancel assignment',
-                  onPressed: () => _cancelAssignment(a['id']),
+                  onPressed: () => _cancel(a['id']),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -583,20 +678,6 @@ class _FleetDispatchDialogState extends State<FleetDispatchDialog> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ──────────────────────────────────────────────────────────
-  // Section Label
-  // ──────────────────────────────────────────────────────────
-  Widget _buildSectionLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFF1E293B),
       ),
     );
   }
