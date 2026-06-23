@@ -1,5 +1,5 @@
 ﻿// Bus Fleet Dashboard — Company Admin Panel (Module 13)
-// Management hub: Owners, Drivers, Conductors, Vehicles, Fleet Overview
+// Management hub: Owners, Drivers, Conductor / Cabin Crew, Vehicles, Fleet Overview
 // 3D Pencil Sidebar Layout (unified with Sub-Admin theme)
 // Phase 4: Live data wired to all tabs — no placeholders
 
@@ -308,7 +308,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       icon: Icons.emoji_events,
                       color: const Color(0xFF7C3AED),
                       height: 56,
-                      subtitle: 'Driver & conductor incentives',
+                      subtitle: 'Driver & conductor / cabin crew incentives',
                       onTap: () => setState(() => _currentPage = 'bonuses'),
                     ),
                     const SizedBox(height: 8),
@@ -342,14 +342,14 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       onTap: () => setState(() => _currentPage = 'drivers'),
                     ),
                     Missile3DButton(
-                      label: 'Add New Conductor',
+                      label: 'Add Conductor / Cabin Crew',
                       icon: Icons.group_add,
                       color: const Color(0xFF16A34A),
                       height: 56,
                       onTap: () => _showStaffAddDialog('conductors'),
                     ),
                     Missile3DButton(
-                      label: 'View Conductors ($_conductorCount)',
+                      label: 'View Conductor / Cabin Crew ($_conductorCount)',
                       icon: Icons.group_rounded,
                       color: const Color(0xFF16A34A),
                       height: 56,
@@ -635,7 +635,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
                       : _currentPage == 'drivers'
                       ? 'Fleet Drivers'
                       : _currentPage == 'conductors'
-                      ? 'Fleet Conductors'
+                      ? 'Conductor / Cabin Crew'
                       : _currentPage == 'layouts'
                       ? 'Vehicles Management'
                       : _currentPage == 'linkreqs'
@@ -1921,7 +1921,7 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
         SizedBox(width: 10.w),
         Expanded(
           child: _mgmtCard(
-            'Conductors',
+            'Conductor / Cabin Crew',
             '$_conductorCount',
             Icons.group_rounded,
             const Color(0xFF16A34A),

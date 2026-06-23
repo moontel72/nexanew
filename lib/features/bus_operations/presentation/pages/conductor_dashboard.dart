@@ -84,7 +84,7 @@ class _ConductorDashboardScreenState extends State<ConductorDashboardScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Conductor Terminal',
+          'Conductor / Cabin Crew Terminal',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         backgroundColor: AppColors.primary,

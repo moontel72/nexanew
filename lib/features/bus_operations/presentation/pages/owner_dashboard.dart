@@ -232,7 +232,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                     },
                   ),
                   Missile3DButton(
-                    label: 'Conductors',
+                    label: 'Conductor / Cabin Crew',
                     icon: Icons.group_rounded,
                     color: OwnerButtonColors.conductors,
                     onTap: () {
@@ -356,7 +356,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   String get _pageTitle => _currentPage == 'drivers'
       ? 'Bus Drivers'
       : _currentPage == 'conductors'
-      ? 'Bus Conductors'
+      ? 'Conductor / Cabin Crew'
       : _currentPage == 'layouts'
       ? 'Vehicles Management'
       : _currentPage == 'carrier'
@@ -1336,7 +1336,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Your drivers, conductors, and vehicles are visible to this carrier via the Fleet Panel.',
+                              'Your drivers, conductor / cabin crew, and vehicles are visible to this carrier via the Fleet Panel.',
                               style: TextStyle(
                                 color: Color(0xFF86EFAC),
                                 fontSize: 11,

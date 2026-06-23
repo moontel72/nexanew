@@ -536,10 +536,10 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                           (v) => setState(() => _relDrv = v),
                         ),
                         const Gap(12),
-                        _section('Staff — Conductors'),
+                        _section('Staff — Conductor / Cabin Crew'),
                         const Gap(8),
                         _dd(
-                          'Primary Conductor',
+                          'Primary Conductor / Cabin Crew',
                           Icons.person_outline,
                           _con,
                           _c,
@@ -547,7 +547,7 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                         ),
                         if (_c.isNotEmpty)
                           _chipSection(
-                            'Additional Conductors',
+                            'Additional Conductor / Cabin Crew',
                             _conIds,
                             _c,
                             'id',
@@ -558,7 +558,7 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                           ),
                         const Gap(8),
                         _dd(
-                          'Relief Conductor (handover)',
+                          'Relief Conductor / Cabin Crew (handover)',
                           Icons.airline_seat_recline_extra,
                           _relCon,
                           _c,
@@ -646,10 +646,10 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                             (v) => setState(() => _retRelDrv = v),
                           ),
                           const Gap(8),
-                          _section('Return — Conductors'),
+                          _section('Return — Conductor / Cabin Crew'),
                           const Gap(8),
                           _dd(
-                            'Return Conductor',
+                            'Return Conductor / Cabin Crew',
                             Icons.person_outline,
                             _retCon,
                             _c,
@@ -657,7 +657,7 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                           ),
                           if (_c.isNotEmpty)
                             _chipSection(
-                              'Return Add. Conductors',
+                              'Return Add. Conductor / Cabin Crew',
                               _retConIds,
                               _c,
                               'id',
@@ -668,7 +668,7 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                             ),
                           const Gap(8),
                           _dd(
-                            'Return Relief Conductor',
+                            'Return Relief Conductor / Cabin Crew',
                             Icons.airline_seat_recline_extra,
                             _retRelCon,
                             _c,
@@ -917,10 +917,10 @@ class _FleetDispatchEditDialogState extends State<FleetDispatchEditDialog> {
                           (v) => setState(() => _relDrv = v),
                         ),
                         const Gap(12),
-                        _section('Staff — Conductors'),
+                        _section('Staff — Conductor / Cabin Crew'),
                         const Gap(8),
                         _dd(
-                          'Conductor',
+                          'Conductor / Cabin Crew',
                           Icons.person_outline,
                           _con,
                           _c,
@@ -928,7 +928,7 @@ class _FleetDispatchEditDialogState extends State<FleetDispatchEditDialog> {
                         ),
                         if (_c.isNotEmpty)
                           _chipSection(
-                            'Additional Conductors',
+                            'Additional Conductor / Cabin Crew',
                             _conIds,
                             _c,
                             'id',
@@ -939,7 +939,7 @@ class _FleetDispatchEditDialogState extends State<FleetDispatchEditDialog> {
                           ),
                         const Gap(8),
                         _dd(
-                          'Relief Conductor',
+                          'Relief Conductor / Cabin Crew',
                           Icons.airline_seat_recline_extra,
                           _relCon,
                           _c,
@@ -1385,7 +1385,7 @@ class _FleetDispatchListState extends State<FleetDispatchList> {
                           if (a['relief_driver_name'] != null)
                             'D: ${a['relief_driver_name']}',
                           if (a['relief_conductor_name'] != null)
-                            'C: ${a['relief_conductor_name']}',
+                            'Crew: ${a['relief_conductor_name']}',
                         ].join(' · '),
                         style: const TextStyle(
                           fontSize: 12,

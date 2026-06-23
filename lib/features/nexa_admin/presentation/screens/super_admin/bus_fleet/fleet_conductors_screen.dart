@@ -52,7 +52,7 @@ class _FleetConductorsScreenState extends State<FleetConductorsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Bus Conductor'),
+        title: const Text('Add Conductor / Cabin Crew'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -104,7 +104,7 @@ class _FleetConductorsScreenState extends State<FleetConductorsScreen> {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Conductor added'),
+            content: Text('Conductor / Cabin Crew added'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -145,7 +145,7 @@ class _FleetConductorsScreenState extends State<FleetConductorsScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Bus Conductors'),
+      title: const Text('Conductor / Cabin Crew'),
       backgroundColor: AppColors.warning,
       foregroundColor: Colors.white,
       actions: [IconButton(icon: const Icon(Icons.add), onPressed: _showAdd)],
@@ -164,7 +164,7 @@ class _FleetConductorsScreenState extends State<FleetConductorsScreen> {
             ),
           )
         : _items.isEmpty
-        ? const Center(child: Text('No conductors registered'))
+        : Center(child: Text('No conductor / cabin crew registered'))
         : ListView.separated(
             padding: EdgeInsets.all(16.w),
             itemCount: _items.length,

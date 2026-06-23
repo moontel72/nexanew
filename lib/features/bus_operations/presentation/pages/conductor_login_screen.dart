@@ -18,7 +18,7 @@ class FleetConductorLoginScreen extends StatefulWidget {
   const FleetConductorLoginScreen({
     super.key,
     this.loginEndpoint = '/bus-fleet/conductor-login',
-    this.appTitle = 'Bus Conductor Portal',
+    this.appTitle = 'Bus Conductor / Cabin Crew Portal',
     this.appIcon = Icons.group_rounded,
     this.dashboardPath = '/bus-conductor/dashboard',
   });
