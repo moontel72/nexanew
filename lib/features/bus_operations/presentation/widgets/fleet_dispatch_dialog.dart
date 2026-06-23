@@ -20,35 +20,34 @@ const _shiftColors = <String, Color>{
 // SHARED BUILDERS (used by both Create and Edit dialogs)
 // ═══════════════════════════════════════════════════════════
 
-Widget _header(String title, IconData icon) => Container(
-  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-  decoration: const BoxDecoration(
-    color: Color(0xFF1E293B),
-    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-  ),
-  child: Row(
-    children: [
-      Icon(icon, color: Colors.white, size: 22),
-      const Gap(10),
-      Expanded(
-        child: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
+Widget _header(String title, IconData icon, {required VoidCallback onClose}) =>
+    Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E293B),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white, size: 22),
+          const Gap(10),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-        ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+            onPressed: onClose,
+          ),
+        ],
       ),
-      IconButton(
-        icon: const Icon(Icons.close, color: Colors.white70, size: 20),
-        onPressed: () {
-          /* pop handled per dialog */
-        },
-      ),
-    ],
-  ),
-);
+    );
 
 Widget _section(String t) => Text(
   t,
@@ -403,7 +402,11 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _header('Create Assignment', Icons.add_task),
+          _header(
+            'Create Assignment',
+            Icons.add_task,
+            onClose: () => Navigator.pop(context),
+          ),
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -845,7 +848,11 @@ class _FleetDispatchEditDialogState extends State<FleetDispatchEditDialog> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _header('Edit Assignment', Icons.edit),
+          _header(
+            'Edit Assignment',
+            Icons.edit,
+            onClose: () => Navigator.pop(context),
+          ),
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
