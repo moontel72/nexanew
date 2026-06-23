@@ -55,6 +55,8 @@ class FleetDispatchController extends Controller
             ->leftJoin('global_identities AS gi_drv', 'fa_drv.global_identity_id', '=', 'gi_drv.id')
             ->leftJoin('fleet_assignments AS fa_rel', 'fda.relief_driver_id', '=', 'fa_rel.id')
             ->leftJoin('global_identities AS gi_rel', 'fa_rel.global_identity_id', '=', 'gi_rel.id')
+            ->leftJoin('fleet_assignments AS fa_rcon', 'fda.relief_conductor_id', '=', 'fa_rcon.id')
+            ->leftJoin('global_identities AS gi_rcon', 'fa_rcon.global_identity_id', '=', 'gi_rcon.id')
             ->leftJoin('fleet_assignments AS fa_con', 'fda.conductor_id', '=', 'fa_con.id')
             ->leftJoin('global_identities AS gi_con', 'fa_con.global_identity_id', '=', 'gi_con.id')
             ->when($date, fn($q) => $q->where('fda.assignment_date', $date))
@@ -72,9 +74,12 @@ class FleetDispatchController extends Controller
                 'fda.vehicle_id', 'v.display_name AS vehicle_name',
                 'fda.route_id', 'r.display_name AS route_name', 'r.origin_city', 'r.destination_city',
                 'fda.driver_id', 'gi_drv.display_name AS driver_name',
+                'fda.driver_ids',
                 'fda.relief_driver_id', 'gi_rel.display_name AS relief_driver_name',
                 'fda.conductor_id', 'gi_con.display_name AS conductor_name',
-                'fda.conductor_ids', 'fda.handover_stop_id',
+                'fda.conductor_ids',
+                'fda.relief_conductor_id', 'gi_rcon.display_name AS relief_conductor_name',
+                'fda.handover_stop_id',
                 'fda.route_leg_start_stop_id', 'fda.route_leg_end_stop_id',
                 'fda.created_at', 'fda.updated_at'
             )
@@ -83,9 +88,12 @@ class FleetDispatchController extends Controller
             ->orderBy('fda.created_at', 'desc')
             ->get()
             ->map(function ($row) {
-                // Decode JSONB conductor_ids array
+                // Decode JSONB arrays
                 if (isset($row->conductor_ids) && is_string($row->conductor_ids)) {
                     $row->conductor_ids = json_decode($row->conductor_ids, true) ?? [];
+                }
+                if (isset($row->driver_ids) && is_string($row->driver_ids)) {
+                    $row->driver_ids = json_decode($row->driver_ids, true) ?? [];
                 }
                 return $row;
             });
@@ -173,6 +181,8 @@ class FleetDispatchController extends Controller
             ->leftJoin('global_identities AS gi_drv', 'fa_drv.global_identity_id', '=', 'gi_drv.id')
             ->leftJoin('fleet_assignments AS fa_rel', 'fda.relief_driver_id', '=', 'fa_rel.id')
             ->leftJoin('global_identities AS gi_rel', 'fa_rel.global_identity_id', '=', 'gi_rel.id')
+            ->leftJoin('fleet_assignments AS fa_rcon', 'fda.relief_conductor_id', '=', 'fa_rcon.id')
+            ->leftJoin('global_identities AS gi_rcon', 'fa_rcon.global_identity_id', '=', 'gi_rcon.id')
             ->leftJoin('fleet_assignments AS fa_con', 'fda.conductor_id', '=', 'fa_con.id')
             ->leftJoin('global_identities AS gi_con', 'fa_con.global_identity_id', '=', 'gi_con.id')
             ->where('fda.id', $id)
@@ -182,6 +192,7 @@ class FleetDispatchController extends Controller
                 'r.display_name AS route_name', 'r.origin_city', 'r.destination_city',
                 'gi_drv.display_name AS driver_name',
                 'gi_rel.display_name AS relief_driver_name',
+                'gi_rcon.display_name AS relief_conductor_name',
                 'gi_con.display_name AS conductor_name'
             )
             ->first();
@@ -193,6 +204,9 @@ class FleetDispatchController extends Controller
         // Decode JSONB fields
         if (isset($assignment->conductor_ids) && is_string($assignment->conductor_ids)) {
             $assignment->conductor_ids = json_decode($assignment->conductor_ids, true) ?? [];
+        }
+        if (isset($assignment->driver_ids) && is_string($assignment->driver_ids)) {
+            $assignment->driver_ids = json_decode($assignment->driver_ids, true) ?? [];
         }
 
         return response()->json(['success' => true, 'data' => $assignment]);
@@ -208,10 +222,13 @@ class FleetDispatchController extends Controller
             'vehicle_id'            => ['required', 'string', 'uuid'],
             'route_id'              => ['required', 'string', 'uuid'],
             'driver_id'             => ['required', 'string', 'uuid'],
+            'driver_ids'            => ['sometimes', 'array'],
+            'driver_ids.*'          => ['string', 'uuid'],
             'relief_driver_id'      => ['sometimes', 'nullable', 'string', 'uuid'],
             'conductor_id'          => ['sometimes', 'nullable', 'string', 'uuid'],
             'conductor_ids'         => ['sometimes', 'array'],
             'conductor_ids.*'       => ['string', 'uuid'],
+            'relief_conductor_id'   => ['sometimes', 'nullable', 'string', 'uuid'],
             'handover_stop_id'      => ['sometimes', 'nullable', 'string', 'uuid'],
             'assignment_date'       => ['required', 'date'],
             'departure_time'        => ['sometimes', 'nullable', 'date_format:H:i'],
@@ -249,9 +266,11 @@ class FleetDispatchController extends Controller
             'vehicle_id'        => $validated['vehicle_id'],
             'route_id'          => $validated['route_id'],
             'driver_id'         => $validated['driver_id'],
+            'driver_ids'        => !empty($validated['driver_ids']) ? json_encode($validated['driver_ids']) : null,
             'relief_driver_id'  => $validated['relief_driver_id'] ?? null,
             'conductor_id'      => $validated['conductor_id'] ?? null,
             'conductor_ids'     => !empty($conductorIds) ? json_encode($conductorIds) : null,
+            'relief_conductor_id' => $validated['relief_conductor_id'] ?? null,
             'handover_stop_id'  => $validated['handover_stop_id'] ?? null,
             'assignment_date'   => $date,
             'departure_time'    => $validated['departure_time'] ?? null,
@@ -275,9 +294,11 @@ class FleetDispatchController extends Controller
                 'vehicle_id'        => $validated['vehicle_id'],
                 'route_id'          => $validated['route_id'],
                 'driver_id'         => $validated['return_driver_id'] ?? $validated['driver_id'],
+                'driver_ids'        => !empty($validated['return_driver_ids']) ? json_encode($validated['return_driver_ids']) : null,
                 'relief_driver_id'  => $validated['return_relief_driver_id'] ?? null,
                 'conductor_id'      => $validated['return_conductor_id'] ?? null,
                 'conductor_ids'     => !empty($validated['return_conductor_ids']) ? json_encode($validated['return_conductor_ids']) : null,
+                'relief_conductor_id' => $validated['return_relief_conductor_id'] ?? null,
                 'handover_stop_id'  => $validated['handover_stop_id'] ?? null,
                 'assignment_date'   => $date,
                 'departure_time'    => $validated['return_departure_time'] ?? null,
@@ -314,10 +335,13 @@ class FleetDispatchController extends Controller
             'vehicle_id'            => ['sometimes', 'string', 'uuid'],
             'route_id'              => ['sometimes', 'string', 'uuid'],
             'driver_id'             => ['sometimes', 'string', 'uuid'],
+            'driver_ids'            => ['sometimes', 'array'],
+            'driver_ids.*'          => ['string', 'uuid'],
             'relief_driver_id'      => ['sometimes', 'nullable', 'string', 'uuid'],
             'conductor_id'          => ['sometimes', 'nullable', 'string', 'uuid'],
             'conductor_ids'         => ['sometimes', 'array'],
             'conductor_ids.*'       => ['string', 'uuid'],
+            'relief_conductor_id'   => ['sometimes', 'nullable', 'string', 'uuid'],
             'handover_stop_id'      => ['sometimes', 'nullable', 'string', 'uuid'],
             'departure_time'        => ['sometimes', 'nullable', 'date_format:H:i'],
             'shift_type'            => ['sometimes', Rule::in(self::VALID_SHIFTS)],
@@ -328,7 +352,7 @@ class FleetDispatchController extends Controller
         ]);
 
         $updates = [];
-        foreach (['vehicle_id', 'route_id', 'driver_id', 'relief_driver_id',
+        foreach (['vehicle_id', 'route_id', 'driver_id', 'relief_driver_id', 'relief_conductor_id',
                    'handover_stop_id', 'departure_time', 'shift_type', 'leg_type',
                    'status', 'route_leg_start_stop_id', 'route_leg_end_stop_id'] as $field) {
             if (array_key_exists($field, $validated)) {
@@ -341,6 +365,10 @@ class FleetDispatchController extends Controller
         if (array_key_exists('conductor_ids', $validated)) {
             $updates['conductor_ids'] = !empty($validated['conductor_ids'])
                 ? json_encode($validated['conductor_ids']) : null;
+        }
+        if (array_key_exists('driver_ids', $validated)) {
+            $updates['driver_ids'] = !empty($validated['driver_ids'])
+                ? json_encode($validated['driver_ids']) : null;
         }
         if (!empty($updates)) {
             $updates['updated_at'] = now();
