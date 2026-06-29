@@ -330,4 +330,41 @@ Route::prefix('api/v1/bus-fleet')
             Route::get('{assignmentId}', [\App\Http\Controllers\FleetManagementController::class, 'listMessages']);
             Route::post('{assignmentId}', [\App\Http\Controllers\FleetManagementController::class, 'sendMessage']);
         });
+
+        // ═══════════════════════════════════════════════════════════
+        // STOREKEEPER — Catering & Inventory (Module 16)
+        // Accessible to: bus company admins, owners, and store_keeper role.
+        // RBAC: A store_keeper sees ONLY these routes + dashboard/profile.
+        // ═══════════════════════════════════════════════════════════
+        Route::prefix('storekeeper')->group(function (): void {
+            $inv = \App\Http\Controllers\Transport\StoreKeeperInventoryController::class;
+
+            // Dashboard
+            Route::get('dashboard', [$inv, 'dashboard']);
+
+            // Categories
+            Route::get('categories', [$inv, 'listCategories']);
+            Route::post('categories', [$inv, 'storeCategory']);
+            Route::put('categories/{id}', [$inv, 'updateCategory']);
+            Route::delete('categories/{id}', [$inv, 'destroyCategory']);
+
+            // Items
+            Route::get('items', [$inv, 'listItems']);
+            Route::get('items/{id}', [$inv, 'showItem']);
+            Route::post('items', [$inv, 'storeItem']);
+            Route::put('items/{id}', [$inv, 'updateItem']);
+            Route::delete('items/{id}', [$inv, 'destroyItem']);
+            Route::post('items/{id}/adjust-stock', [$inv, 'adjustStock']);
+
+            // Issuances
+            Route::get('issuances', [$inv, 'listIssuances']);
+            Route::get('issuances/{id}', [$inv, 'showIssuance']);
+            Route::post('issuances', [$inv, 'createIssuance']);
+            Route::post('issuances/{id}/issue', [$inv, 'issueItems']);
+
+            // Reconciliations
+            Route::get('reconciliations', [$inv, 'listReconciliations']);
+            Route::post('issuances/{issuanceId}/reconcile', [$inv, 'reconcile']);
+            Route::post('reconciliations/{reconciliationId}/confirm', [$inv, 'confirmReconciliation']);
+        });
     });

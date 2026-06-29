@@ -21,6 +21,14 @@ class UserRoles {
   static const List<String> factoryRoles = [factoryAdmin, storeKeeper, driver];
   static const List<String> universalRoles = [reseller, shop, customer];
 
+  /// Fleet roles that can appear in fleet_assignments (bus or truck).
+  static const List<String> fleetAssignmentRoles = [
+    'owner',
+    'driver',
+    'conductor',
+    'store_keeper',
+  ];
+
   // Check if role is valid
   static bool isValidRole(String role) {
     return allRoles.contains(role);
@@ -70,5 +78,10 @@ class UserRoles {
   // Check if role has platform admin access
   static bool hasPlatformAdminAccess(String role) {
     return platformRoles.contains(role);
+  }
+
+  /// Check if a fleet_assignment role is a storekeeper (bus fleet inventory).
+  static bool isFleetStorekeeper(String fleetRole) {
+    return fleetRole == 'store_keeper';
   }
 }

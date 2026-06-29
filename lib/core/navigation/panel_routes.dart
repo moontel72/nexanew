@@ -260,7 +260,7 @@ class PanelRouteConfig {
     '/api/v1/freight/stats',
   ];
 
-  /// Bus Fleet panel (10 endpoints) — Modules 13, 14, 15
+  /// Bus Fleet panel (10+ endpoints) — Modules 13, 14, 15, 16
   static const busFleetEndpoints = <String>[
     '/api/v1/bus-fleet/trips',
     '/api/v1/bus-fleet/trips/active',
@@ -272,6 +272,12 @@ class PanelRouteConfig {
     '/api/v1/bus-fleet/qr/scan',
     '/api/v1/bus-fleet/bookings',
     '/api/v1/bus-fleet/vouchers/create',
+    // Storekeeper Inventory (Module 16)
+    '/api/v1/bus-fleet/storekeeper/dashboard',
+    '/api/v1/bus-fleet/storekeeper/categories',
+    '/api/v1/bus-fleet/storekeeper/items',
+    '/api/v1/bus-fleet/storekeeper/issuances',
+    '/api/v1/bus-fleet/storekeeper/reconciliations',
   ];
 
   /// Customer panel (4 endpoints) — Modules 8, 25

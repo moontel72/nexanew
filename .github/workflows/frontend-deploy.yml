@@ -110,6 +110,18 @@ jobs:
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/bus-owner/
 
       # ──────────────────────────────────────────────────────────────
+      # STEP E: Build & Deploy Bus Fleet Admin Panel (main_bus_fleet.dart)
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Bus Fleet Admin (main_bus_fleet.dart)
+        run: flutter build web --release --target=lib/main_bus_fleet.dart --base-href "/bus-fleet/"
+
+      - name: Deploy Bus Fleet Admin to /bus-fleet/
+        continue-on-error: true
+        run: |
+          rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/bus-fleet/
+
+      # ──────────────────────────────────────────────────────────────
       # Post-Deployment: Fix permissions for all apps
       # ──────────────────────────────────────────────────────────────
 
@@ -125,5 +137,7 @@ jobs:
             chmod -R 755 /var/www/traceodd/driver && \
             chown -R www-data:www-data /var/www/traceodd/bus-owner && \
             chmod -R 755 /var/www/traceodd/bus-owner && \
+            chown -R www-data:www-data /var/www/traceodd/bus-fleet && \
+            chmod -R 755 /var/www/traceodd/bus-fleet && \
             systemctl reload nginx
           "

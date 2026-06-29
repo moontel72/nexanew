@@ -50,7 +50,7 @@ class GlobalAuthController extends Controller
             'identifier' => ['required', 'string', 'max:255'],
             'claim_type' => ['nullable', 'string', 'in:phone,email,cnic_old,cnic_new,passport,driving_license,device_fingerprint'],
             'password'   => ['required', 'string'],
-            'fleet_role' => ['nullable', 'string', 'in:owner,driver,conductor,customer'],
+            'fleet_role' => ['nullable', 'string', 'in:owner,driver,conductor,customer,store_keeper'],
             'fleet_type' => ['nullable', 'string', 'in:bus,truck,factory'],
         ]);
 

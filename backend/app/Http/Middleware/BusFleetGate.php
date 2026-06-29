@@ -43,11 +43,11 @@ class BusFleetGate
             return $next($request);
         }
 
-        // Otherwise must hold an owner/driver/conductor assignment in bus fleet
+        // Otherwise must hold an owner/driver/conductor/store_keeper assignment in bus fleet
         $assignment = DB::table('fleet_assignments')
             ->where('global_identity_id', $user->global_identity_id)
             ->where('fleet_type', 'bus')
-            ->whereIn('role', ['owner', 'driver', 'conductor'])
+            ->whereIn('role', ['owner', 'driver', 'conductor', 'store_keeper'])
             ->whereIn('status', ['active', 'pending_acceptance'])
             ->first();
 
@@ -58,7 +58,10 @@ class BusFleetGate
             ], 403);
         }
 
-        $request->merge(['_carrier_company_id' => $assignment->carrier_company_id]);
+        $request->merge([
+            '_carrier_company_id' => $assignment->carrier_company_id,
+            '_fleet_role'         => $assignment->role,
+        ]);
         return $next($request);
     }
 }
