@@ -152,6 +152,23 @@ Route::prefix('api/v1/bus-owner')
             Route::delete('/{id}', [\App\Http\Controllers\BusOwnerController::class, 'destroyConductor']);
         });
 
+        // ─── Storekeeper Management (HR) ──────────────────
+        Route::prefix('storekeepers')->group(function (): void {
+            $fm = \App\Http\Controllers\FleetManagementController::class;
+            Route::get('/', [$fm, 'listStorekeepers']);
+            Route::post('/', [$fm, 'storeStorekeeper']);
+            Route::get('/{id}', [$fm, 'showStorekeeper']);
+            Route::put('/{id}', [$fm, 'updateStorekeeper']);
+            Route::delete('/{id}', [$fm, 'destroyStorekeeper']);
+        });
+
+        // ─── Storekeeper Activity & Reports ────────────────
+        Route::prefix('storekeeper-reports')->group(function (): void {
+            $inv = \App\Http\Controllers\Transport\StoreKeeperInventoryController::class;
+            Route::get('audit-trail', [$inv, 'auditTrail']);
+            Route::get('settlement', [$inv, 'settlementReport']);
+        });
+
         // ─── Live Dispatch & Duty Assignment ────────────────
         Route::prefix('dispatch')->group(function (): void {
             Route::get('resources', [\App\Http\Controllers\FleetDispatchController::class, 'resources']);

@@ -78,6 +78,7 @@ class FleetManagementController extends Controller
             'owners'      => 'owner',
             'drivers'     => 'driver',
             'conductors'  => 'conductor',
+            'storekeepers' => 'store_keeper',
             default       => $staffType,
         };
     }
@@ -102,6 +103,8 @@ class FleetManagementController extends Controller
             'license_number'      => $meta['license_number'] ?? null,
             'vehicle_plate'       => $meta['vehicle_plate'] ?? null,
             'salary'              => $meta['salary'] ?? null,
+            'terminal'            => $meta['terminal'] ?? null,
+            'station'             => $meta['station'] ?? null,
             'hire_date'           => $row->hire_date ?? null,
             'kyc_status'          => $row->kyc_status ?? 'unverified',
             'kyc_tier'            => $row->kyc_tier ?? 0,
@@ -191,6 +194,11 @@ class FleetManagementController extends Controller
         return $this->listStaff($request, 'conductors');
     }
 
+    public function listStorekeepers(Request $request): JsonResponse
+    {
+        return $this->listStaff($request, 'storekeepers');
+    }
+
     private function listStaff(Request $request, string $type): JsonResponse
     {
         try {
@@ -255,12 +263,18 @@ class FleetManagementController extends Controller
         return $this->storeStaff($request, 'conductor');
     }
 
+    public function storeStorekeeper(Request $request): JsonResponse
+    {
+        return $this->storeStaff($request, 'store_keeper');
+    }
+
     private function storeStaff(Request $request, string $role): JsonResponse
     {
         try {
             $isDriver = ($role === 'driver');
             $isOwner  = ($role === 'owner');
             $isConductor = ($role === 'conductor');
+            $isStorekeeper = ($role === 'store_keeper');
 
             $rules = [
                 'name'     => ['required', 'string', 'max:255'],
@@ -276,6 +290,10 @@ class FleetManagementController extends Controller
                 }
                 $rules['vehicle_plate'] = ['nullable', 'string', 'max:50'];
                 $rules['salary']        = ['nullable', 'numeric', 'min:0'];
+            }
+            if ($isStorekeeper) {
+                $rules['terminal'] = ['nullable', 'string', 'max:255'];
+                $rules['station']  = ['nullable', 'string', 'max:255'];
             }
 
             $data = $request->validate($rules);
@@ -307,10 +325,11 @@ class FleetManagementController extends Controller
                     'kyc_tier'       => 0,
                     'status'         => 'active',
                     'identity_type'  => match ($role) {
-                        'owner'      => 'owner',
-                        'driver'     => 'driver',
-                        'conductor'  => 'conductor',
-                        default      => 'mixed',
+                        'owner'        => 'owner',
+                        'driver'       => 'driver',
+                        'conductor'    => 'conductor',
+                        'store_keeper' => 'store_keeper',
+                        default        => 'mixed',
                     },
                     'risk_score'     => 0.00,
                     'created_at'     => now(),
@@ -365,8 +384,8 @@ class FleetManagementController extends Controller
                     'phone_number'        => $data['phone'],
                     'is_independent'      => $isOwner,
                     'account_type'        => $fleet === 'bus'
-                        ? ($isOwner ? 'bus_owner' : ($isDriver ? 'bus_driver' : 'bus_conductor'))
-                        : ($isOwner ? 'truck_owner' : ($isDriver ? 'truck_driver' : 'truck_conductor')),
+                        ? ($isOwner ? 'bus_owner' : ($isDriver ? 'bus_driver' : ($isConductor ? 'bus_conductor' : ($isStorekeeper ? 'bus_storekeeper' : 'bus_staff'))))
+                        : ($isOwner ? 'truck_owner' : ($isDriver ? 'truck_driver' : ($isConductor ? 'truck_conductor' : 'truck_staff'))),
                     'status'              => 'active',
                     'created_at'          => now(),
                     'updated_at'          => now(),
@@ -381,6 +400,10 @@ class FleetManagementController extends Controller
                     }
                     $meta['vehicle_plate']  = $data['vehicle_plate'] ?? null;
                     $meta['salary']         = $data['salary'] ?? null;
+                }
+                if ($isStorekeeper) {
+                    $meta['terminal'] = $data['terminal'] ?? null;
+                    $meta['station']  = $data['station'] ?? null;
                 }
                 if (!empty($data['cnic'])) {
                     $meta['cnic'] = $data['cnic'];
@@ -460,6 +483,11 @@ class FleetManagementController extends Controller
         return $this->showStaff($id, 'conductor');
     }
 
+    public function showStorekeeper(string $id): JsonResponse
+    {
+        return $this->showStaff($id, 'store_keeper');
+    }
+
     private function showStaff(string $assignmentId, string $role): JsonResponse
     {
         try {
@@ -520,6 +548,11 @@ class FleetManagementController extends Controller
         return $this->updateStaff($id, $request, 'conductor');
     }
 
+    public function updateStorekeeper(string $id, Request $request): JsonResponse
+    {
+        return $this->updateStaff($id, $request, 'store_keeper');
+    }
+
     private function updateStaff(string $assignmentId, Request $request, string $role): JsonResponse
     {
         try {
@@ -533,6 +566,8 @@ class FleetManagementController extends Controller
             }
 
             $isDriver = ($role === 'driver');
+            $isConductor = ($role === 'conductor');
+            $isStorekeeper = ($role === 'store_keeper');
             $rules = [
                 'name'    => ['sometimes', 'string', 'max:255'],
                 'email'   => ['sometimes', 'email'],
@@ -542,12 +577,16 @@ class FleetManagementController extends Controller
                 'address' => ['nullable', 'string', 'max:500'],
                 'status'  => ['sometimes', 'string', 'in:active,suspended,pending_acceptance'],
             ];
-            if ($isDriver || $role === 'conductor') {
+            if ($isDriver || $isConductor) {
                 if ($isDriver) {
                     $rules['license_number'] = ['sometimes', 'string', 'max:100'];
                 }
                 $rules['vehicle_plate'] = ['nullable', 'string', 'max:50'];
                 $rules['salary']        = ['nullable', 'numeric', 'min:0'];
+            }
+            if ($isStorekeeper) {
+                $rules['terminal'] = ['nullable', 'string', 'max:255'];
+                $rules['station']  = ['nullable', 'string', 'max:255'];
             }
             $data = $request->validate($rules);
 
@@ -589,10 +628,14 @@ class FleetManagementController extends Controller
 
                 // Update fleet_assignments assignment_meta
                 $meta = json_decode($assignment->assignment_meta ?? '{}', true) ?: [];
-                if ($isDriver || $role === 'conductor') {
+                if ($isDriver || $isConductor) {
                     if ($isDriver && isset($data['license_number'])) $meta['license_number'] = $data['license_number'];
                     if (isset($data['vehicle_plate']))  $meta['vehicle_plate']  = $data['vehicle_plate'];
                     if (isset($data['salary']))         $meta['salary']         = $data['salary'];
+                }
+                if ($isStorekeeper) {
+                    if (isset($data['terminal'])) $meta['terminal'] = $data['terminal'];
+                    if (isset($data['station']))  $meta['station']  = $data['station'];
                 }
                 if (isset($data['cnic']))    $meta['cnic']    = $data['cnic'];
                 if (isset($data['address'])) $meta['address'] = $data['address'];
@@ -1113,6 +1156,11 @@ class FleetManagementController extends Controller
     public function destroyConductor(string $id): JsonResponse
     {
         return $this->destroyStaff($id, 'conductor');
+    }
+
+    public function destroyStorekeeper(string $id): JsonResponse
+    {
+        return $this->destroyStaff($id, 'store_keeper');
     }
 
     private function destroyStaff(string $assignmentId, string $role): JsonResponse

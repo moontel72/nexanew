@@ -501,6 +501,128 @@ class StoreKeeperInventoryController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════════
+    // AUDIT TRAIL & SETTLEMENT REPORTS
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Issuance Audit Trail — which storekeeper issued what to which bus, when.
+     */
+    public function auditTrail(Request $request)
+    {
+        $companyId = $this->resolveCompanyId($request);
+
+        $query = DB::table('catering_issuances AS ci')
+            ->leftJoin('store_keepers AS sk', 'ci.storekeeper_id', '=', 'sk.id')
+            ->select(
+                'ci.id',
+                'ci.bus_reg_number',
+                'ci.conductor_name',
+                'ci.status',
+                'ci.issued_at',
+                'ci.created_at',
+                'sk.name AS storekeeper_name',
+                'sk.employee_id AS storekeeper_employee_id',
+            )
+            ->where('ci.company_id', $companyId)
+            ->orderByDesc('ci.created_at');
+
+        if ($storekeeperId = $request->query('storekeeper_id')) {
+            $query->where('ci.storekeeper_id', $storekeeperId);
+        }
+        if ($status = $request->query('status')) {
+            $query->where('ci.status', $status);
+        }
+
+        $page  = (int) $request->query('page', 1);
+        $limit = min(100, max(1, (int) $request->query('limit', 30)));
+
+        $paginator = $query->paginate($limit, ['*'], 'page', $page);
+
+        // Enrich each row with item count
+        $items = collect($paginator->items())->map(function ($row) {
+            $row->item_count = DB::table('catering_issuance_items')
+                ->where('issuance_id', $row->id)
+                ->count();
+            $row->total_quantity = DB::table('catering_issuance_items')
+                ->where('issuance_id', $row->id)
+                ->sum('quantity_issued');
+            return $row;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data'    => $items,
+            'meta'    => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'total'        => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Financial Settlement Report — per-trip reconciliation ledger.
+     * Tracks total cash collected vs inventory variance (shortages/losses).
+     */
+    public function settlementReport(Request $request)
+    {
+        $companyId = $this->resolveCompanyId($request);
+
+        $query = DB::table('catering_reconciliations AS cr')
+            ->join('catering_issuances AS ci', 'cr.issuance_id', '=', 'ci.id')
+            ->leftJoin('store_keepers AS sk', 'cr.storekeeper_id', '=', 'sk.id')
+            ->select(
+                'cr.id AS reconciliation_id',
+                'ci.id AS issuance_id',
+                'ci.bus_reg_number',
+                'ci.conductor_name',
+                'ci.issued_at',
+                'cr.total_issued_value_paisa',
+                'cr.total_returned_value_paisa',
+                'cr.total_sold_value_paisa',
+                'cr.variance_paisa',
+                'cr.status AS reconciliation_status',
+                'cr.reconciled_at',
+                'cr.notes',
+                'sk.name AS storekeeper_name',
+            )
+            ->where('cr.company_id', $companyId)
+            ->orderByDesc('cr.created_at');
+
+        if ($storekeeperId = $request->query('storekeeper_id')) {
+            $query->where('cr.storekeeper_id', $storekeeperId);
+        }
+        if ($status = $request->query('status')) {
+            $query->where('cr.status', $status);
+        }
+
+        $page  = (int) $request->query('page', 1);
+        $limit = min(100, max(1, (int) $request->query('limit', 30)));
+
+        $paginator = $query->paginate($limit, ['*'], 'page', $page);
+
+        // Compute totals
+        $totals = DB::table('catering_reconciliations AS cr')
+            ->where('cr.company_id', $companyId)
+            ->when($storekeeperId, fn($q) => $q->where('cr.storekeeper_id', $storekeeperId))
+            ->when($status, fn($q) => $q->where('cr.status', $status))
+            ->selectRaw('SUM(cr.total_sold_value_paisa) AS total_cash_collected, SUM(cr.variance_paisa) AS total_variance')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $paginator->items(),
+            'meta'    => [
+                'current_page'         => $paginator->currentPage(),
+                'last_page'            => $paginator->lastPage(),
+                'total'                => $paginator->total(),
+                'total_cash_collected' => (int) ($totals->total_cash_collected ?? 0),
+                'total_variance'       => (int) ($totals->total_variance ?? 0),
+            ],
+        ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // HELPERS
     // ═══════════════════════════════════════════════════════════
 

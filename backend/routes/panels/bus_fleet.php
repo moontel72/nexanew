@@ -302,6 +302,13 @@ Route::prefix('api/v1/bus-fleet')
         Route::put('conductors/{id}', [\App\Http\Controllers\FleetManagementController::class, 'updateConductor']);
         Route::delete('conductors/{id}', [\App\Http\Controllers\FleetManagementController::class, 'destroyConductor']);
 
+        // ─── Storekeeper Management (HR) ──────────────────
+        Route::get('storekeepers', [\App\Http\Controllers\FleetManagementController::class, 'listStorekeepers']);
+        Route::post('storekeepers', [\App\Http\Controllers\FleetManagementController::class, 'storeStorekeeper']);
+        Route::get('storekeepers/{id}', [\App\Http\Controllers\FleetManagementController::class, 'showStorekeeper']);
+        Route::put('storekeepers/{id}', [\App\Http\Controllers\FleetManagementController::class, 'updateStorekeeper']);
+        Route::delete('storekeepers/{id}', [\App\Http\Controllers\FleetManagementController::class, 'destroyStorekeeper']);
+
         Route::prefix('shifts')->group(function (): void {
             Route::post('save', [\App\Http\Controllers\BusShiftController::class, 'saveShiftRoster']);
             Route::get('{plate}', [\App\Http\Controllers\BusShiftController::class, 'getShiftRoster']);
@@ -366,5 +373,9 @@ Route::prefix('api/v1/bus-fleet')
             Route::get('reconciliations', [$inv, 'listReconciliations']);
             Route::post('issuances/{issuanceId}/reconcile', [$inv, 'reconcile']);
             Route::post('reconciliations/{reconciliationId}/confirm', [$inv, 'confirmReconciliation']);
+
+            // Activity Logs & Settlement Reports (Admin/Owner view)
+            Route::get('audit-trail', [$inv, 'auditTrail']);
+            Route::get('settlement-report', [$inv, 'settlementReport']);
         });
     });

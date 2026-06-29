@@ -278,6 +278,11 @@ class PanelRouteConfig {
     '/api/v1/bus-fleet/storekeeper/items',
     '/api/v1/bus-fleet/storekeeper/issuances',
     '/api/v1/bus-fleet/storekeeper/reconciliations',
+    // Storekeeper HR Management
+    '/api/v1/bus-fleet/storekeepers',
+    // Storekeeper Reports
+    '/api/v1/bus-fleet/storekeeper/audit-trail',
+    '/api/v1/bus-fleet/storekeeper/settlement-report',
   ];
 
   /// Customer panel (4 endpoints) — Modules 8, 25
