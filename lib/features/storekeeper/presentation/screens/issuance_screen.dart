@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/features/storekeeper/data/repositories/storekeeper_repository.dart';
 import 'package:trace_odd/features/storekeeper/domain/models/catering_issuance.dart';
+import 'package:trace_odd/features/storekeeper/domain/models/catering_item.dart';
 
 class IssuanceScreen extends StatefulWidget {
   const IssuanceScreen({super.key});
