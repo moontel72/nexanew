@@ -9,6 +9,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/core/constants/app_constants.dart';
+import 'package:trace_odd/core/constants/user_roles.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
@@ -24,7 +25,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  String _selectedRole = 'owner'; // Bus Owner or store_keeper
+  String _selectedRole = 'owner'; // Bus Owner or store_keeper (via UserRoles)
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
@@ -189,8 +190,8 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
             icon: Icon(Icons.directions_bus, size: 16, color: Colors.white),
           ),
           ButtonSegment(
-            value: 'store_keeper',
-            label: Text(
+            value: UserRoles.storeKeeper,
+            label: const Text(
               'Storekeeper',
               style: TextStyle(
                 fontSize: 13,

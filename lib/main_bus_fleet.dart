@@ -18,6 +18,7 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/owner_dashboard.dart';
 import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_dashboard_screen.dart';
 import 'package:trace_odd/shared/app_scaffold.dart';
+import 'package:trace_odd/core/constants/user_roles.dart';
 
 void main() => FleetApp.run(
   title: 'NexaTrace Bus Fleet',
@@ -40,8 +41,7 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
 
-  String _selectedRole =
-      'owner'; // NOT a TextEditingController — plain enum state
+  String _selectedRole = 'owner'; // Admin or store_keeper (via UserRoles)
   bool _obscure = true;
   bool _loading = false;
   String? _error;
@@ -167,8 +167,8 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
                         ),
                       ),
                       ButtonSegment(
-                        value: 'store_keeper',
-                        label: Text(
+                        value: UserRoles.storeKeeper,
+                        label: const Text(
                           'Storekeeper',
                           style: TextStyle(
                             fontSize: 13,
@@ -331,7 +331,7 @@ class _BusFleetRouterState extends State<_BusFleetRouter> {
     final role = prefs.getString('fleet_role') ?? '';
     if (mounted) {
       setState(() {
-        _isStorekeeper = role == 'store_keeper';
+        _isStorekeeper = UserRoles.isFleetStorekeeper(role);
         _checking = false;
       });
     }
