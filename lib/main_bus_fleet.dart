@@ -40,7 +40,8 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
 
-  String _selectedRole = 'owner'; // NOT a TextEditingController — plain enum state
+  String _selectedRole =
+      'owner'; // NOT a TextEditingController — plain enum state
   bool _obscure = true;
   bool _loading = false;
   String? _error;
@@ -73,10 +74,11 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
       );
 
       if (res == null || res['token'] == null) {
-        if (mounted) setState(() {
-          _error = 'Invalid credentials';
-          _loading = false;
-        });
+        if (mounted)
+          setState(() {
+            _error = 'Invalid credentials';
+            _loading = false;
+          });
         return;
       }
 
@@ -100,10 +102,11 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
 
       if (mounted) context.go('/bus-fleet/dashboard');
     } catch (e) {
-      if (mounted) setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      if (mounted)
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
       return;
     }
     // Loading reset handled in catch and early-return paths above
@@ -139,29 +142,45 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Admin & Storekeeper Panel',
+                    'Corporate Fleet Panel',
                     style: TextStyle(color: Colors.white54, fontSize: 13),
                   ),
                   const SizedBox(height: 32),
 
-                  // Role selector
+                  // Role selector — Admin or Storekeeper for corporate fleet
                   SegmentedButton<String>(
                     segments: const [
                       ButtonSegment(
                         value: 'owner',
                         label: Text(
-                          'Admin / Owner',
-                          style: TextStyle(fontSize: 12),
+                          'Admin',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        icon: Icon(Icons.admin_panel_settings, size: 16),
+                        icon: Icon(
+                          Icons.admin_panel_settings,
+                          size: 16,
+                          color: Colors.white,
+                        ),
                       ),
                       ButtonSegment(
                         value: 'store_keeper',
                         label: Text(
                           'Storekeeper',
-                          style: TextStyle(fontSize: 12),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        icon: Icon(Icons.inventory_2, size: 16),
+                        icon: Icon(
+                          Icons.inventory_2,
+                          size: 16,
+                          color: Colors.white,
+                        ),
                       ),
                     ],
                     selected: {_selectedRole},
@@ -169,11 +188,26 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
                         ? null
                         : (v) => setState(() => _selectedRole = v.first),
                     style: ButtonStyle(
+                      padding: WidgetStateProperty.all(
+                        const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
                       backgroundColor: WidgetStateProperty.resolveWith((s) {
                         if (s.contains(WidgetState.selected)) {
-                          return const Color(0xFF00B4D8).withOpacity(0.2);
+                          return const Color(0xFF00B4D8).withOpacity(0.35);
                         }
                         return const Color(0xFF1B2838);
+                      }),
+                      side: WidgetStateProperty.resolveWith((s) {
+                        if (s.contains(WidgetState.selected)) {
+                          return const BorderSide(
+                            color: Color(0xFF00B4D8),
+                            width: 1.5,
+                          );
+                        }
+                        return BorderSide.none;
                       }),
                     ),
                   ),

@@ -24,6 +24,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  String _selectedRole = 'owner'; // Bus Owner or store_keeper
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
@@ -49,14 +50,18 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
         data: {
           'identifier': _identifierController.text.trim(),
           'password': _passwordController.text,
-          'fleet_role': 'owner',
+          'fleet_role': _selectedRole,
           'fleet_type': 'bus',
         },
         requiresAuth: false,
       );
 
       if (res == null || res['token'] == null) {
-        setState(() => _errorMessage = 'Invalid credentials');
+        if (mounted)
+          setState(() {
+            _errorMessage = 'Invalid credentials';
+            _isLoading = false;
+          });
         return;
       }
 
@@ -80,11 +85,13 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
       // Navigate to dashboard
       if (mounted) context.go('/bus-owner/dashboard');
     } catch (e) {
-      setState(() {
-        _errorMessage =
-            'Login failed: ${e.toString().replaceAll('Exception: ', '')}';
-        _isLoading = false;
-      });
+      if (mounted)
+        setState(() {
+          _errorMessage =
+              'Login failed: ${e.toString().replaceAll('Exception: ', '')}';
+          _isLoading = false;
+        });
+      return;
     }
   }
 
@@ -163,6 +170,57 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
         style: TextStyle(
           color: Colors.white.withValues(alpha: 0.5),
           fontSize: 14,
+        ),
+      ),
+      const Gap(24),
+      // Role selector — Bus Owner or Storekeeper for third-party vendors
+      SegmentedButton<String>(
+        segments: const [
+          ButtonSegment(
+            value: 'owner',
+            label: Text(
+              'Bus Owner',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            icon: Icon(Icons.directions_bus, size: 16, color: Colors.white),
+          ),
+          ButtonSegment(
+            value: 'store_keeper',
+            label: Text(
+              'Storekeeper',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            icon: Icon(Icons.inventory_2, size: 16, color: Colors.white),
+          ),
+        ],
+        selected: {_selectedRole},
+        onSelectionChanged: _isLoading
+            ? null
+            : (v) => setState(() => _selectedRole = v.first),
+        style: ButtonStyle(
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith((s) {
+            if (s.contains(WidgetState.selected)) {
+              return const Color(0xFF00C49F).withOpacity(0.35);
+            }
+            return const Color(0xFF1A2A3A);
+          }),
+          side: WidgetStateProperty.resolveWith((s) {
+            if (s.contains(WidgetState.selected)) {
+              return const BorderSide(color: Color(0xFF00C49F), width: 1.5);
+            }
+            return BorderSide.none;
+          }),
         ),
       ),
     ],
