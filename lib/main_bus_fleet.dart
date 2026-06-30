@@ -20,12 +20,12 @@ import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_
 import 'package:trace_odd/shared/app_scaffold.dart';
 
 void main() => FleetApp.run(
-      title: 'NexaTrace Bus Fleet',
-      loginScreen: const BusFleetLoginScreen(),
-      dashboardScreen: const _BusFleetRouter(),
-      loginPath: '/bus-fleet/login',
-      dashboardPath: '/bus-fleet/dashboard',
-    );
+  title: 'NexaTrace Bus Fleet',
+  loginScreen: const BusFleetLoginScreen(),
+  dashboardScreen: const _BusFleetRouter(),
+  loginPath: '/bus-fleet/login',
+  dashboardPath: '/bus-fleet/dashboard',
+);
 
 /// Bus Fleet Login — accepts owner or storekeeper credentials.
 class BusFleetLoginScreen extends StatefulWidget {
@@ -81,7 +81,8 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
       final token = res['token'] as String;
       final userData = res['data'] as Map<String, dynamic>? ?? {};
       final assignment = userData['assignment'] as Map<String, dynamic>? ?? {};
-      final fleetRole = assignment['role']?.toString() ??
+      final fleetRole =
+          assignment['role']?.toString() ??
           userData['fleet_role']?.toString() ??
           _roleCtrl.text.trim();
 
@@ -117,39 +118,51 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.directions_bus,
-                      size: 48, color: Color(0xFF00B4D8)),
+                  const Icon(
+                    Icons.directions_bus,
+                    size: 48,
+                    color: Color(0xFF00B4D8),
+                  ),
                   const SizedBox(height: 8),
-                  const Text('NexaTrace Bus Fleet',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold)),
+                  const Text(
+                    'NexaTrace Bus Fleet',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  const Text('Admin & Storekeeper Panel',
-                      style: TextStyle(color: Colors.white54, fontSize: 13)),
+                  const Text(
+                    'Admin & Storekeeper Panel',
+                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
                   const SizedBox(height: 32),
 
                   // Role selector
                   SegmentedButton<String>(
                     segments: const [
                       ButtonSegment(
-                          value: 'owner',
-                          label:
-                              Text('Admin / Owner', style: TextStyle(fontSize: 12)),
-                          icon:
-                              Icon(Icons.admin_panel_settings, size: 16)),
+                        value: 'owner',
+                        label: Text(
+                          'Admin / Owner',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        icon: Icon(Icons.admin_panel_settings, size: 16),
+                      ),
                       ButtonSegment(
-                          value: 'store_keeper',
-                          label:
-                              Text('Storekeeper', style: TextStyle(fontSize: 12)),
-                          icon: Icon(Icons.inventory_2, size: 16)),
+                        value: 'store_keeper',
+                        label: Text(
+                          'Storekeeper',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        icon: Icon(Icons.inventory_2, size: 16),
+                      ),
                     ],
                     selected: {_roleCtrl.text},
                     onSelectionChanged: (v) => _roleCtrl.text = v.first,
                     style: ButtonStyle(
-                      backgroundColor:
-                          WidgetStateProperty.resolveWith((s) {
+                      backgroundColor: WidgetStateProperty.resolveWith((s) {
                         if (s.contains(WidgetState.selected)) {
                           return const Color(0xFF00B4D8).withOpacity(0.2);
                         }
@@ -176,12 +189,10 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
                     decoration: _dec('Password').copyWith(
                       suffixIcon: IconButton(
                         icon: Icon(
-                            _obscure
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: Colors.white38),
-                        onPressed: () =>
-                            setState(() => _obscure = !_obscure),
+                          _obscure ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.white38,
+                        ),
+                        onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),
                     validator: (v) =>
@@ -192,10 +203,14 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(_error!,
-                          style: const TextStyle(
-                              color: Colors.redAccent, fontSize: 13),
-                          textAlign: TextAlign.center),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
 
                   SizedBox(
@@ -205,7 +220,8 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
                         backgroundColor: const Color(0xFF00B4D8),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       onPressed: _loading ? null : _login,
                       child: _loading
@@ -213,11 +229,17 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
-                          : const Text('Sign In',
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Sign In',
                               style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600)),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -230,17 +252,16 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
   }
 
   InputDecoration _dec(String hint) => InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white38),
-        filled: true,
-        fillColor: const Color(0xFF1B2838),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      );
+    hintText: hint,
+    hintStyle: const TextStyle(color: Colors.white38),
+    filled: true,
+    fillColor: const Color(0xFF1B2838),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide.none,
+    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+  );
 }
 
 /// Router widget: decides which dashboard to show based on stored fleet_role.
@@ -288,6 +309,9 @@ class _BusFleetRouterState extends State<_BusFleetRouter> {
       return const StorekeeperDashboardScreen(isStorekeeperOnly: true);
     }
 
-    return const OwnerDashboardScreen();
+    return const OwnerDashboardScreen(
+      loginRoute: '/bus-fleet/login',
+      panelPrefix: '/bus-fleet',
+    );
   }
 }

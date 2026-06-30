@@ -29,7 +29,13 @@ class OwnerButtonColors {
 }
 
 class OwnerDashboardScreen extends StatefulWidget {
-  const OwnerDashboardScreen({super.key});
+  final String loginRoute;
+  final String panelPrefix;
+  const OwnerDashboardScreen({
+    super.key,
+    this.loginRoute = '/bus-owner/login',
+    this.panelPrefix = '/bus-owner',
+  });
   @override
   State<OwnerDashboardScreen> createState() => _OwnerDashboardScreenState();
 }
@@ -73,13 +79,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     final t = p.getString('auth_token') ?? '';
     if (!mounted) return;
     if (t.isEmpty) {
-      context.go('/bus-owner/login');
+      context.go(widget.loginRoute);
       return;
     }
     _ownerName = p.getString('bus_owner_name') ?? 'Owner';
     // Fetch company ID from profile
     try {
-      final r = await ApiService().get('/bus-owner/profile');
+      final r = await ApiService().get('${widget.panelPrefix}/profile');
       _companyId = r?['data']?['id']?.toString() ?? '';
     } catch (_) {
       _companyId = '';
@@ -89,7 +95,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   void _logout() async {
     await (await SharedPreferences.getInstance()).remove('auth_token');
-    if (mounted) context.go('/bus-owner/login');
+    if (mounted) context.go(widget.loginRoute);
   }
 
   @override
@@ -372,13 +378,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               : _currentPage == 'inbox'
               ? _inboxPage()
               : _currentPage == 'routes'
-              ? const RouteSchedulerScreen(panelPrefix: '/bus-owner')
+              ? RouteSchedulerScreen(panelPrefix: widget.panelPrefix)
               : _currentPage == 'tickets'
-              ? const TicketManagementScreen(panelPrefix: '/bus-owner')
+              ? TicketManagementScreen(panelPrefix: widget.panelPrefix)
               : _currentPage == 'vouchers'
-              ? const VoucherManagementScreen(panelPrefix: '/bus-owner')
+              ? VoucherManagementScreen(panelPrefix: widget.panelPrefix)
               : _currentPage == 'bonuses'
-              ? const BonusManagementScreen(panelPrefix: '/bus-owner')
+              ? BonusManagementScreen(panelPrefix: widget.panelPrefix)
               : _currentPage == 'storekeepers'
               ? const StorekeeperManagementScreen()
               : _currentPage == 'catering'
@@ -431,7 +437,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _loadLinkStatus() async {
     setState(() => _linkLoading = true);
     try {
-      final r = await ApiService().get('/bus-owner/link-status');
+      final r = await ApiService().get('${widget.panelPrefix}/link-status');
       if (!mounted) return;
       setState(() {
         _linkStatus = (r?['data'] as Map<String, dynamic>?) ?? {};
@@ -449,7 +455,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     setState(() => _companiesLoading = true);
     try {
       final r = await ApiService().get(
-        '/bus-owner/available-companies',
+        '${widget.panelPrefix}/available-companies',
         queryParams: {if (search.isNotEmpty) 'search': search},
       );
       if (!mounted) return;
@@ -474,7 +480,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _sendLinkRequest(String carrierId, String carrierName) async {
     try {
       final r = await ApiService().post(
-        '/bus-owner/link-request',
+        '${widget.panelPrefix}/link-request',
         data: {
           'carrier_company_id': carrierId,
           'message': _linkMsgCtrl.text.trim().isNotEmpty
@@ -536,7 +542,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
     if (ok != true) return;
     try {
-      await ApiService().post('/bus-owner/link-request/$assignmentId/leave');
+      await ApiService().post(
+        '${widget.panelPrefix}/link-request/$assignmentId/leave',
+      );
       if (!mounted) return;
       _snack('You have left $carrierName.', AppColors.success);
       _loadLinkStatus();
@@ -574,7 +582,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
     if (ok != true) return;
     try {
-      await ApiService().post('/bus-owner/link-request/$assignmentId/cancel');
+      await ApiService().post(
+        '${widget.panelPrefix}/link-request/$assignmentId/cancel',
+      );
       if (!mounted) return;
       _snack('Link request cancelled', AppColors.success);
       _loadLinkStatus();
@@ -590,7 +600,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     setState(() => _chatLoading = true);
     try {
       final r = await ApiService().get(
-        '/bus-owner/link-messages/$assignmentId',
+        '${widget.panelPrefix}/link-messages/$assignmentId',
       );
       if (!mounted) return;
       final list = (r?['data'] as List?) ?? [];
@@ -611,7 +621,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     if (msg.isEmpty) return;
     try {
       await ApiService().post(
-        '/bus-owner/link-messages/$assignmentId',
+        '${widget.panelPrefix}/link-messages/$assignmentId',
         data: {'message_body': msg},
       );
       _chatCtrl.clear();
@@ -629,7 +639,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _loadInboxMessages() async {
     setState(() => _inboxLoading = true);
     try {
-      final r = await ApiService().get('/bus-owner/link-messages');
+      final r = await ApiService().get('${widget.panelPrefix}/link-messages');
       if (!mounted) return;
       final list = (r?['data'] as List?) ?? [];
       final raw = list
@@ -675,7 +685,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     });
     try {
       final r = await ApiService().get(
-        '/bus-owner/link-messages/$assignmentId',
+        '${widget.panelPrefix}/link-messages/$assignmentId',
       );
       if (!mounted) return;
       final list = (r?['data'] as List?) ?? [];
@@ -696,7 +706,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     if (msg.isEmpty) return;
     try {
       await ApiService().post(
-        '/bus-owner/link-messages/$assignmentId',
+        '${widget.panelPrefix}/link-messages/$assignmentId',
         data: {'message_body': msg},
       );
       _inboxReplyCtrl.clear();
@@ -1665,7 +1675,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _loadDrivers() async {
     setState(() => _driversLoading = true);
     try {
-      final r = await ApiService().get('/bus-owner/drivers');
+      final r = await ApiService().get('${widget.panelPrefix}/drivers');
       final d = r['data'] as Map<String, dynamic>?;
       if (mounted)
         setState(() {
@@ -1734,7 +1744,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     if (ok != true) return;
     try {
       await ApiService().post(
-        '/bus-owner/drivers',
+        '${widget.panelPrefix}/drivers',
         data: {
           'name': n.text.trim(),
           'phone': p.text.trim(),
@@ -1826,7 +1836,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _loadConductors() async {
     setState(() => _conductorsLoading = true);
     try {
-      final r = await ApiService().get('/bus-owner/conductors');
+      final r = await ApiService().get('${widget.panelPrefix}/conductors');
       final d = r['data'] as Map<String, dynamic>?;
       if (mounted)
         setState(() {
@@ -1889,7 +1899,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     if (ok != true) return;
     try {
       await ApiService().post(
-        '/bus-owner/conductors',
+        '${widget.panelPrefix}/conductors',
         data: {
           'name': n.text.trim(),
           'phone': p.text.trim(),
@@ -1981,7 +1991,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _loadLayouts() async {
     setState(() => _layoutsLoading = true);
     try {
-      final r = await ApiService().get('/bus-owner/absolute-layouts');
+      final r = await ApiService().get(
+        '${widget.panelPrefix}/absolute-layouts',
+      );
       if (!mounted) return;
       final d = r?['data'];
       if (d is List) {
@@ -2016,7 +2028,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   Future<void> _publishLayout(String id, String name) async {
     try {
-      await ApiService().post('/bus-owner/absolute-layouts/$id/publish');
+      await ApiService().post(
+        '${widget.panelPrefix}/absolute-layouts/$id/publish',
+      );
       _loadLayouts();
       _snack('$name published', AppColors.success);
     } catch (e) {
@@ -2052,7 +2066,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
     if (ok != true) return;
     try {
-      await ApiService().delete('/bus-owner/absolute-layouts/$id');
+      await ApiService().delete('${widget.panelPrefix}/absolute-layouts/$id');
       _loadLayouts();
       _snack('$name archived', AppColors.success);
     } catch (e) {
@@ -2086,7 +2100,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     if (ok != true) return;
     try {
       await ApiService().delete(
-        '/bus-owner/absolute-layouts/$id?permanent=true',
+        '${widget.panelPrefix}/absolute-layouts/$id?permanent=true',
       );
       _loadLayouts();
       _snack('Layout deleted', AppColors.success);
@@ -2130,7 +2144,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _purgeLayouts() async {
     try {
       final res = await ApiService().delete(
-        '/bus-owner/absolute-layouts/purge/all',
+        '${widget.panelPrefix}/absolute-layouts/purge/all',
       );
       final msg = res?['message'] ?? 'Purge completed';
       _loadLayouts();
@@ -2386,7 +2400,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     showDialog(
       context: context,
       builder: (_) => FleetDispatchForm(
-        apiPrefix: '/bus-owner',
+        apiPrefix: widget.panelPrefix,
         busCompanyId: _companyId.isNotEmpty ? _companyId : null,
         onSaved: _loadAll,
       ),
@@ -2397,7 +2411,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     showDialog(
       context: context,
       builder: (_) => FleetDispatchList(
-        apiPrefix: '/bus-owner',
+        apiPrefix: widget.panelPrefix,
         busCompanyId: _companyId.isNotEmpty ? _companyId : null,
       ),
     );
