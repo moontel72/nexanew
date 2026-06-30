@@ -15,6 +15,10 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/b
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/ticket_management_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/voucher_management_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/bonus_management_screen.dart';
+import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_dashboard_screen.dart';
+import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_management_screen.dart';
+import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_activity_log_screen.dart';
+import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_settlement_report_screen.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class OwnerButtonColors {
@@ -240,6 +244,34 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                       if (_conductors.isEmpty) _loadConductors();
                     },
                   ),
+                  Missile3DButton(
+                    label: 'Terminal Storekeepers',
+                    icon: Icons.inventory_2_rounded,
+                    color: const Color(0xFF00B4D8),
+                    onTap: () => setState(() => _currentPage = 'storekeepers'),
+                  ),
+                  Gap(8),
+                  _sec('INVENTORY'),
+                  Missile3DButton(
+                    label: 'Bus Catering Inventory',
+                    icon: Icons.restaurant_menu,
+                    color: const Color(0xFFE65100),
+                    onTap: () => setState(() => _currentPage = 'catering'),
+                  ),
+                  Gap(8),
+                  _sec('REPORTS'),
+                  Missile3DButton(
+                    label: 'Activity Logs',
+                    icon: Icons.receipt_long_rounded,
+                    color: const Color(0xFF7C3AED),
+                    onTap: () => setState(() => _currentPage = 'activity_log'),
+                  ),
+                  Missile3DButton(
+                    label: 'Settlement Reports',
+                    icon: Icons.account_balance_wallet,
+                    color: const Color(0xFF059669),
+                    onTap: () => setState(() => _currentPage = 'settlement'),
+                  ),
                   Gap(8),
                   _sec('CARRIER'),
                   Missile3DButton(
@@ -347,6 +379,14 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               ? const VoucherManagementScreen(panelPrefix: '/bus-owner')
               : _currentPage == 'bonuses'
               ? const BonusManagementScreen(panelPrefix: '/bus-owner')
+              : _currentPage == 'storekeepers'
+              ? const StorekeeperManagementScreen()
+              : _currentPage == 'catering'
+              ? const StorekeeperDashboardScreen(isStorekeeperOnly: false)
+              : _currentPage == 'activity_log'
+              ? const StorekeeperActivityLogScreen()
+              : _currentPage == 'settlement'
+              ? const StorekeeperSettlementReportScreen()
               : _homePage(),
         ),
       ],
@@ -369,6 +409,14 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       ? 'Vouchers / Promos'
       : _currentPage == 'bonuses'
       ? 'Staff Bonuses'
+      : _currentPage == 'storekeepers'
+      ? 'Terminal Storekeepers'
+      : _currentPage == 'catering'
+      ? 'Bus Catering Inventory'
+      : _currentPage == 'activity_log'
+      ? 'Activity Logs'
+      : _currentPage == 'settlement'
+      ? 'Settlement Reports'
       : 'Dashboard';
   void _loadAll() {
     _loadDrivers();
