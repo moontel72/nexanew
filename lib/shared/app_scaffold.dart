@@ -70,11 +70,11 @@ class _FleetMaterialApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final router = GoRouter(
-      initialLocation: loginPath,
       routes: [
         GoRoute(path: loginPath, builder: (_, __) => loginScreen),
         GoRoute(path: dashboardPath, builder: (_, __) => dashboardScreen),
       ],
+      errorBuilder: (context, state) => loginScreen,
     );
 
     return ScreenUtilInit(
