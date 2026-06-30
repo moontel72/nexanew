@@ -41,7 +41,8 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
 
-  String _selectedRole = 'owner'; // Admin or store_keeper (via UserRoles)
+  String _selectedRole =
+      'owner'; // Admin (no fleet_role sent) or store_keeper (via UserRoles)
   bool _obscure = true;
   bool _loading = false;
   String? _error;
@@ -62,14 +63,18 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
     });
 
     try {
+      final payload = <String, dynamic>{
+        'identifier': _emailCtrl.text.trim(),
+        'password': _passCtrl.text,
+        'fleet_type': 'bus',
+      };
+      // Only storekeepers send fleet_role — admins authenticate via account_type pass-through
+      if (_selectedRole == UserRoles.storeKeeper) {
+        payload['fleet_role'] = UserRoles.storeKeeper;
+      }
       final res = await ApiService().post(
         '/auth/login',
-        data: {
-          'identifier': _emailCtrl.text.trim(),
-          'password': _passCtrl.text,
-          'fleet_role': _selectedRole,
-          'fleet_type': 'bus',
-        },
+        data: payload,
         requiresAuth: false,
       );
 

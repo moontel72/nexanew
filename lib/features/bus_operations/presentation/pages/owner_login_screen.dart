@@ -46,14 +46,18 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
     });
 
     try {
+      final payload = <String, dynamic>{
+        'identifier': _identifierController.text.trim(),
+        'password': _passwordController.text,
+        'fleet_type': 'bus',
+      };
+      // Only storekeepers send fleet_role — owners authenticate via account_type
+      if (_selectedRole == UserRoles.storeKeeper) {
+        payload['fleet_role'] = UserRoles.storeKeeper;
+      }
       final res = await ApiService().post(
         '/auth/login',
-        data: {
-          'identifier': _identifierController.text.trim(),
-          'password': _passwordController.text,
-          'fleet_role': _selectedRole,
-          'fleet_type': 'bus',
-        },
+        data: payload,
         requiresAuth: false,
       );
 
