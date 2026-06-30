@@ -39,8 +39,8 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  final _roleCtrl = TextEditingController(text: 'owner');
 
+  String _selectedRole = 'owner'; // NOT a TextEditingController — plain enum state
   bool _obscure = true;
   bool _loading = false;
   String? _error;
@@ -49,7 +49,6 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
   void dispose() {
     _emailCtrl.dispose();
     _passCtrl.dispose();
-    _roleCtrl.dispose();
     super.dispose();
   }
 
@@ -67,14 +66,17 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
         data: {
           'identifier': _emailCtrl.text.trim(),
           'password': _passCtrl.text,
-          'fleet_role': _roleCtrl.text.trim(),
+          'fleet_role': _selectedRole,
           'fleet_type': 'bus',
         },
         requiresAuth: false,
       );
 
       if (res == null || res['token'] == null) {
-        setState(() => _error = 'Invalid credentials');
+        if (mounted) setState(() {
+          _error = 'Invalid credentials';
+          _loading = false;
+        });
         return;
       }
 
@@ -84,7 +86,7 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
       final fleetRole =
           assignment['role']?.toString() ??
           userData['fleet_role']?.toString() ??
-          _roleCtrl.text.trim();
+          _selectedRole;
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', token);
@@ -98,10 +100,13 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
 
       if (mounted) context.go('/bus-fleet/dashboard');
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+      return;
     }
+    // Loading reset handled in catch and early-return paths above
   }
 
   @override
@@ -159,8 +164,10 @@ class _BusFleetLoginScreenState extends State<BusFleetLoginScreen> {
                         icon: Icon(Icons.inventory_2, size: 16),
                       ),
                     ],
-                    selected: {_roleCtrl.text},
-                    onSelectionChanged: (v) => _roleCtrl.text = v.first,
+                    selected: {_selectedRole},
+                    onSelectionChanged: _loading
+                        ? null
+                        : (v) => setState(() => _selectedRole = v.first),
                     style: ButtonStyle(
                       backgroundColor: WidgetStateProperty.resolveWith((s) {
                         if (s.contains(WidgetState.selected)) {
