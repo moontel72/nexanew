@@ -352,7 +352,10 @@ class _BusFleetRouterState extends State<_BusFleetRouter> {
     }
 
     if (_isStorekeeper) {
-      return const StorekeeperDashboardScreen(isStorekeeperOnly: true);
+      return const StorekeeperDashboardScreen(
+        isStorekeeperOnly: true,
+        panel: 'bus-fleet',
+      );
     }
 
     return const OwnerDashboardScreen(

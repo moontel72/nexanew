@@ -9,7 +9,8 @@ import 'package:trace_odd/features/storekeeper/domain/models/catering_issuance.d
 import 'package:trace_odd/features/storekeeper/domain/models/catering_item.dart';
 
 class IssuanceScreen extends StatefulWidget {
-  const IssuanceScreen({super.key});
+  final String panel;
+  const IssuanceScreen({super.key, this.panel = 'bus-fleet'});
 
   @override
   State<IssuanceScreen> createState() => _IssuanceScreenState();
@@ -56,7 +57,9 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
   Future<void> _createIssuance() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const _CreateIssuancePage()),
+      MaterialPageRoute(
+        builder: (_) => _CreateIssuancePage(panel: widget.panel),
+      ),
     );
     if (result == true) _load();
   }
@@ -121,7 +124,9 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
                         _load();
                       }),
                       const Gap(6),
-                      _FilterChip('Reconciled', 'reconciled', _statusFilter, (v) {
+                      _FilterChip('Reconciled', 'reconciled', _statusFilter, (
+                        v,
+                      ) {
                         _statusFilter = v;
                         _page = 1;
                         _load();
@@ -132,8 +137,7 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
               ),
               const Gap(8),
               IconButton(
-                icon:
-                    const Icon(Icons.add_circle, color: Color(0xFF00B4D8)),
+                icon: const Icon(Icons.add_circle, color: Color(0xFF00B4D8)),
                 tooltip: 'New Issuance',
                 onPressed: _createIssuance,
               ),
@@ -145,20 +149,25 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _error != null
-                  ? Center(
-                      child: Text('Error: $_error',
-                          style: const TextStyle(color: Colors.redAccent)))
-                  : _issuances.isEmpty
-                      ? const Center(
-                          child: Text('No issuances yet.',
-                              style: TextStyle(color: Colors.white54)))
-                      : isWide
-                          ? _buildTable()
-                          : _buildCardList(),
+              ? Center(
+                  child: Text(
+                    'Error: $_error',
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                )
+              : _issuances.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No issuances yet.',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                )
+              : isWide
+              ? _buildTable()
+              : _buildCardList(),
         ),
         // Pagination
-        if (_meta != null)
-          _buildPagination(),
+        if (_meta != null) _buildPagination(),
       ],
     );
   }
@@ -176,11 +185,57 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
           ),
           child: const Row(
             children: [
-              Expanded(flex: 2, child: Text('Bus / Trip', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-              Expanded(flex: 1, child: Text('Items', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-              Expanded(flex: 1, child: Text('Status', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-              Expanded(flex: 1, child: Text('Date', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-              SizedBox(width: 40, child: Text('', style: TextStyle(color: Colors.white54, fontSize: 11))),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'Bus / Trip',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text(
+                  'Items',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text(
+                  'Status',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text(
+                  'Date',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 40,
+                child: Text(
+                  '',
+                  style: TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+              ),
             ],
           ),
         ),
@@ -209,8 +264,10 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
           ),
           Expanded(
             flex: 1,
-            child: Text('${i.items.length} items',
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            child: Text(
+              '${i.items.length} items',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
           ),
           Expanded(
             flex: 1,
@@ -222,7 +279,11 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
               ),
               child: Text(
                 i.status[0].toUpperCase() + i.status.substring(1),
-                style: TextStyle(color: _statusColor(i.status), fontSize: 11, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: _statusColor(i.status),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -235,7 +296,11 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
           ),
           if (i.isPending)
             IconButton(
-              icon: const Icon(Icons.local_shipping, size: 16, color: Color(0xFF00B4D8)),
+              icon: const Icon(
+                Icons.local_shipping,
+                size: 16,
+                color: Color(0xFF00B4D8),
+              ),
               tooltip: 'Issue items',
               onPressed: () => _issueItems(i),
               constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
@@ -267,14 +332,21 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: _statusColor(i.status).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     i.status[0].toUpperCase() + i.status.substring(1),
-                    style: TextStyle(color: _statusColor(i.status), fontSize: 11, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: _statusColor(i.status),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const Spacer(),
@@ -296,14 +368,18 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
               style: const TextStyle(color: Colors.white, fontSize: 13),
             ),
             const Gap(4),
-            Text('${i.items.length} items  •  ${_formatDate(i.createdAt)}',
-                style: const TextStyle(color: Colors.white38, fontSize: 11)),
+            Text(
+              '${i.items.length} items  •  ${_formatDate(i.createdAt)}',
+              style: const TextStyle(color: Colors.white38, fontSize: 11),
+            ),
             if (i.notes != null && i.notes!.isNotEmpty) ...[
               const Gap(4),
-              Text(i.notes!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white30, fontSize: 11)),
+              Text(
+                i.notes!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white30, fontSize: 11),
+              ),
             ],
           ],
         ),
@@ -329,8 +405,10 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
                   }
                 : null,
           ),
-          Text('$current / $last',
-              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(
+            '$current / $last',
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
           IconButton(
             icon: const Icon(Icons.chevron_right, color: Colors.white54),
             onPressed: current < last
@@ -362,14 +440,19 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final active = selected == value;
     return ChoiceChip(
-      label: Text(label,
-          style: TextStyle(
-              color: active ? Colors.white : Colors.white70, fontSize: 12)),
+      label: Text(
+        label,
+        style: TextStyle(
+          color: active ? Colors.white : Colors.white70,
+          fontSize: 12,
+        ),
+      ),
       selected: active,
       selectedColor: const Color(0xFF00B4D8).withOpacity(0.3),
       backgroundColor: const Color(0xFF1B2838),
       side: BorderSide(
-          color: active ? const Color(0xFF00B4D8) : Colors.white12),
+        color: active ? const Color(0xFF00B4D8) : Colors.white12,
+      ),
       onSelected: (_) => onSelect(value),
     );
   }
@@ -378,14 +461,15 @@ class _FilterChip extends StatelessWidget {
 // ─── Create Issuance Page ────────────────────────────────────
 
 class _CreateIssuancePage extends StatefulWidget {
-  const _CreateIssuancePage();
+  final String panel;
+  const _CreateIssuancePage({required this.panel});
 
   @override
   State<_CreateIssuancePage> createState() => _CreateIssuancePageState();
 }
 
 class _CreateIssuancePageState extends State<_CreateIssuancePage> {
-  final _repo = StorekeeperRepository();
+  late final StorekeeperRepository _repo;
   final _formKey = GlobalKey<FormState>();
   final _busCtrl = TextEditingController();
   final _conductorCtrl = TextEditingController();
@@ -396,7 +480,6 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
   bool _loadingItems = true;
   bool _submitting = false;
 
-  // Active dispatch assignments
   List<Map<String, dynamic>> _activeAssignments = [];
   bool _loadingAssignments = false;
   String? _selectedAssignmentId;
@@ -404,6 +487,7 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
   @override
   void initState() {
     super.initState();
+    _repo = StorekeeperRepository(panel: widget.panel);
     _loadItems();
     _loadActiveAssignments();
   }
@@ -478,7 +562,10 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least one item.'), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text('Add at least one item.'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -489,12 +576,10 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
         'bus_reg_number': _busCtrl.text.trim(),
         'conductor_name': _conductorCtrl.text.trim(),
         'notes': _notesCtrl.text.trim(),
-        if (_selectedAssignmentId != null) 'assignment_id': _selectedAssignmentId,
+        if (_selectedAssignmentId != null)
+          'assignment_id': _selectedAssignmentId,
         'items': _selectedItems
-            .map((s) => {
-                  'item_id': s.item.id,
-                  'quantity_issued': s.quantity,
-                })
+            .map((s) => {'item_id': s.item.id, 'quantity_issued': s.quantity})
             .toList(),
       });
       if (mounted) Navigator.pop(context, true);
@@ -515,7 +600,10 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
       backgroundColor: const Color(0xFF0D1B2A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1B2838),
-        title: const Text('New Issuance', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'New Issuance',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
       body: Form(
         key: _formKey,
@@ -538,8 +626,10 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                 items: [
                   const DropdownMenuItem<String>(
                     value: null,
-                    child: Text('\u2014 Manual Entry \u2014',
-                        style: TextStyle(color: Colors.white38)),
+                    child: Text(
+                      '\u2014 Manual Entry \u2014',
+                      style: TextStyle(color: Colors.white38),
+                    ),
                   ),
                   ..._activeAssignments.map((a) {
                     final plate = a['bus_reg_number']?.toString() ?? '';
@@ -548,7 +638,10 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                       value: a['id']?.toString(),
                       child: Text(
                         '$route | $plate',
-                        style: const TextStyle(fontSize: 13, color: Colors.white),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     );
@@ -578,11 +671,14 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
               maxLines: 2,
             ),
             const Gap(16),
-            const Text('Select Items',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14)),
+            const Text(
+              'Select Items',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
             const Gap(8),
             if (_loadingItems)
               const Center(child: CircularProgressIndicator())
@@ -592,65 +688,79 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                 spacing: 6,
                 runSpacing: 6,
                 children: _availableItems.map((item) {
-                  final alreadyAdded =
-                      _selectedItems.any((s) => s.item.id == item.id);
+                  final alreadyAdded = _selectedItems.any(
+                    (s) => s.item.id == item.id,
+                  );
                   return ActionChip(
                     label: Text(
                       '${item.name} (${item.stockOnHand})',
                       style: TextStyle(
-                          color: alreadyAdded ? Colors.white38 : Colors.white,
-                          fontSize: 12),
+                        color: alreadyAdded ? Colors.white38 : Colors.white,
+                        fontSize: 12,
+                      ),
                     ),
                     backgroundColor: const Color(0xFF1B2838),
                     side: const BorderSide(color: Colors.white12),
-                    onPressed:
-                        alreadyAdded ? null : () => _addItem(item),
+                    onPressed: alreadyAdded ? null : () => _addItem(item),
                   );
                 }).toList(),
               ),
               const Gap(12),
               // Selected items
-              ..._selectedItems.map((s) => Card(
-                    color: const Color(0xFF1B2838),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(s.item.name,
-                                style: const TextStyle(color: Colors.white)),
+              ..._selectedItems.map(
+                (s) => Card(
+                  color: const Color(0xFF1B2838),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            s.item.name,
+                            style: const TextStyle(color: Colors.white),
                           ),
-                          SizedBox(
-                            width: 60,
-                            child: TextFormField(
-                              initialValue: s.quantity.toString(),
-                              keyboardType: TextInputType.number,
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 13),
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                contentPadding:
-                                    EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                              ),
-                              onChanged: (v) {
-                                s.quantity =
-                                    int.tryParse(v) ?? s.quantity;
-                              },
+                        ),
+                        SizedBox(
+                          width: 60,
+                          child: TextFormField(
+                            initialValue: s.quantity.toString(),
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close, size: 14,
-                                color: Colors.redAccent),
-                            onPressed: () {
-                              setState(() => _selectedItems.remove(s));
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 4,
+                              ),
+                            ),
+                            onChanged: (v) {
+                              s.quantity = int.tryParse(v) ?? s.quantity;
                             },
-                            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                            padding: EdgeInsets.zero,
                           ),
-                        ],
-                      ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Colors.redAccent,
+                          ),
+                          onPressed: () {
+                            setState(() => _selectedItems.remove(s));
+                          },
+                          constraints: const BoxConstraints(
+                            minWidth: 30,
+                            minHeight: 30,
+                          ),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ],
                     ),
-                  )),
+                  ),
+                ),
+              ),
             ],
             const Gap(20),
             ElevatedButton(
@@ -663,9 +773,15 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Create Issuance',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Create Issuance',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
             ),
           ],
         ),
@@ -674,15 +790,15 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
   }
 
   InputDecoration _inputDec(String hint) => InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white38),
-        filled: true,
-        fillColor: const Color(0xFF1B2838),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-      );
+    hintText: hint,
+    hintStyle: const TextStyle(color: Colors.white38),
+    filled: true,
+    fillColor: const Color(0xFF1B2838),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide.none,
+    ),
+  );
 }
 
 class _SelectedItem {

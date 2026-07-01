@@ -388,7 +388,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               : _currentPage == 'storekeepers'
               ? const StorekeeperManagementScreen()
               : _currentPage == 'catering'
-              ? const StorekeeperDashboardScreen(isStorekeeperOnly: false)
+              ? StorekeeperDashboardScreen(
+                  isStorekeeperOnly: false,
+                  panel: widget.panelPrefix == '/bus-fleet'
+                      ? 'bus-fleet'
+                      : 'bus-owner',
+                )
               : _currentPage == 'activity_log'
               ? const StorekeeperActivityLogScreen()
               : _currentPage == 'settlement'

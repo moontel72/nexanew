@@ -9,7 +9,8 @@ import 'package:trace_odd/features/storekeeper/domain/models/catering_issuance.d
 import 'package:trace_odd/features/storekeeper/domain/models/catering_reconciliation.dart';
 
 class ReconciliationScreen extends StatefulWidget {
-  const ReconciliationScreen({super.key});
+  final String panel;
+  const ReconciliationScreen({super.key, this.panel = 'bus-fleet'});
 
   @override
   State<ReconciliationScreen> createState() => _ReconciliationScreenState();
@@ -54,8 +55,7 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
     }
   }
 
-  Future<void> _doReconciliation(
-      CateringIssuance issuance) async {
+  Future<void> _doReconciliation(CateringIssuance issuance) async {
     if (issuance.items.isEmpty) {
       _showMessage('No items in this issuance.');
       return;
@@ -71,7 +71,7 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
       try {
         await _repo.reconcile(issuance.id, result);
         _load();
-     } catch (e) {
+      } catch (e) {
         _showMessage(e.toString());
       }
     }
@@ -88,8 +88,10 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
 
   void _showMessage(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg),
-          backgroundColor: msg.contains('Error') ? Colors.red : null),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: msg.contains('Error') ? Colors.red : null,
+      ),
     );
   }
 
@@ -108,8 +110,10 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
           context: context,
           builder: (ctx) => SimpleDialog(
             backgroundColor: const Color(0xFF1B2838),
-            title: const Text('Select Issuance to Reconcile',
-                style: TextStyle(color: Colors.white)),
+            title: const Text(
+              'Select Issuance to Reconcile',
+              style: TextStyle(color: Colors.white),
+            ),
             children: issuances.map((i) {
               return SimpleDialogOption(
                 onPressed: () => Navigator.pop(ctx, i),
@@ -194,34 +198,42 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _error != null
-                  ? Center(
-                      child: Text('Error: $_error',
-                          style: const TextStyle(color: Colors.redAccent)))
-                  : _reconciliations.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.receipt_long,
-                                  size: 48, color: Colors.white24),
-                              const Gap(8),
-                              const Text('No reconciliations yet.',
-                                  style: TextStyle(color: Colors.white54)),
-                              const Gap(12),
-                              ElevatedButton.icon(
-                                icon: const Icon(Icons.add, size: 16),
-                                label: const Text('Reconcile Issuance'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF00B4D8),
-                                ),
-                                onPressed: _loadActiveIssuancesForReconcile,
-                              ),
-                            ],
-                          ),
-                        )
-                      : isWide
-                          ? _buildTable()
-                          : _buildCardList(),
+              ? Center(
+                  child: Text(
+                    'Error: $_error',
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                )
+              : _reconciliations.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.receipt_long,
+                        size: 48,
+                        color: Colors.white24,
+                      ),
+                      const Gap(8),
+                      const Text(
+                        'No reconciliations yet.',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                      const Gap(12),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Reconcile Issuance'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00B4D8),
+                        ),
+                        onPressed: _loadActiveIssuancesForReconcile,
+                      ),
+                    ],
+                  ),
+                )
+              : isWide
+              ? _buildTable()
+              : _buildCardList(),
         ),
         if (_meta != null) _buildPagination(),
       ],
@@ -240,12 +252,65 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
           ),
           child: const Row(
             children: [
-              Expanded(flex: 1, child: Text('Status', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-              Expanded(flex: 1, child: Text('Issued', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-              Expanded(flex: 1, child: Text('Returned', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-              Expanded(flex: 1, child: Text('Sold', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-              Expanded(flex: 1, child: Text('Variance', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-              SizedBox(width: 40, child: Text('', style: TextStyle(color: Colors.white54))),
+              Expanded(
+                flex: 1,
+                child: Text(
+                  'Status',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text(
+                  'Issued',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text(
+                  'Returned',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text(
+                  'Sold',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text(
+                  'Variance',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 40,
+                child: Text('', style: TextStyle(color: Colors.white54)),
+              ),
             ],
           ),
         ),
@@ -258,7 +323,9 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
   Widget _buildTableRow(CateringReconciliation r) {
     final varianceColor = r.variancePaisa == 0
         ? Colors.green
-        : r.variancePaisa > 0 ? Colors.orange : Colors.redAccent;
+        : r.variancePaisa > 0
+        ? Colors.orange
+        : Colors.redAccent;
     final varianceSign = r.variancePaisa >= 0 ? '+' : '';
 
     return Container(
@@ -280,33 +347,53 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
               ),
               child: Text(
                 r.status[0].toUpperCase() + r.status.substring(1),
-                style: TextStyle(color: _statusColor(r.status), fontSize: 11, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: _statusColor(r.status),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
           Expanded(
             flex: 1,
-            child: Text('\$${(r.totalIssuedValuePaisa / 100).toStringAsFixed(0)}',
-                style: const TextStyle(color: Colors.white, fontSize: 12)),
+            child: Text(
+              '\$${(r.totalIssuedValuePaisa / 100).toStringAsFixed(0)}',
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
           ),
           Expanded(
             flex: 1,
-            child: Text('\$${(r.totalReturnedValuePaisa / 100).toStringAsFixed(0)}',
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            child: Text(
+              '\$${(r.totalReturnedValuePaisa / 100).toStringAsFixed(0)}',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
           ),
           Expanded(
             flex: 1,
-            child: Text('\$${(r.totalSoldValuePaisa / 100).toStringAsFixed(0)}',
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            child: Text(
+              '\$${(r.totalSoldValuePaisa / 100).toStringAsFixed(0)}',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
           ),
           Expanded(
             flex: 1,
-            child: Text('$varianceSign\$${(r.variancePaisa / 100).toStringAsFixed(0)}',
-                style: TextStyle(color: varianceColor, fontSize: 12, fontWeight: FontWeight.w600)),
+            child: Text(
+              '$varianceSign\$${(r.variancePaisa / 100).toStringAsFixed(0)}',
+              style: TextStyle(
+                color: varianceColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           if (r.isDraft)
             IconButton(
-              icon: const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+              icon: const Icon(
+                Icons.check_circle_outline,
+                size: 16,
+                color: Colors.green,
+              ),
               tooltip: 'Confirm',
               onPressed: () => _confirm(r),
               constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
@@ -329,7 +416,9 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
   Widget _buildCard(CateringReconciliation r) {
     final varianceColor = r.variancePaisa == 0
         ? Colors.green
-        : r.variancePaisa > 0 ? Colors.orange : Colors.redAccent;
+        : r.variancePaisa > 0
+        ? Colors.orange
+        : Colors.redAccent;
 
     return Card(
       color: const Color(0xFF1B2838),
@@ -342,21 +431,31 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: _statusColor(r.status).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     r.status[0].toUpperCase() + r.status.substring(1),
-                    style: TextStyle(color: _statusColor(r.status), fontSize: 11, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: _statusColor(r.status),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const Spacer(),
                 if (r.isDraft)
                   TextButton.icon(
                     icon: const Icon(Icons.check_circle_outline, size: 14),
-                    label: const Text('Confirm', style: TextStyle(fontSize: 12)),
+                    label: const Text(
+                      'Confirm',
+                      style: TextStyle(fontSize: 12),
+                    ),
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.green,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -368,16 +467,34 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
             const Gap(8),
             Row(
               children: [
-                _buildValueCol('Issued', r.totalIssuedValuePaisa, Colors.white70),
+                _buildValueCol(
+                  'Issued',
+                  r.totalIssuedValuePaisa,
+                  Colors.white70,
+                ),
                 const Gap(16),
-                _buildValueCol('Returned', r.totalReturnedValuePaisa, Colors.white70),
+                _buildValueCol(
+                  'Returned',
+                  r.totalReturnedValuePaisa,
+                  Colors.white70,
+                ),
                 const Gap(16),
-                _buildValueCol('Sold', r.totalSoldValuePaisa, const Color(0xFF00B4D8)),
+                _buildValueCol(
+                  'Sold',
+                  r.totalSoldValuePaisa,
+                  const Color(0xFF00B4D8),
+                ),
               ],
             ),
             const Gap(4),
-            Text('Variance: \$${(r.variancePaisa / 100).toStringAsFixed(2)}',
-                style: TextStyle(color: varianceColor, fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(
+              'Variance: \$${(r.variancePaisa / 100).toStringAsFixed(2)}',
+              style: TextStyle(
+                color: varianceColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
@@ -388,9 +505,18 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 10)),
-        Text('\$${(paisa / 100).toStringAsFixed(2)}',
-            style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white38, fontSize: 10),
+        ),
+        Text(
+          '\$${(paisa / 100).toStringAsFixed(2)}',
+          style: TextStyle(
+            color: color,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }
@@ -413,8 +539,10 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
                   }
                 : null,
           ),
-          Text('$current / $last',
-              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(
+            '$current / $last',
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
           IconButton(
             icon: const Icon(Icons.chevron_right, color: Colors.white54),
             onPressed: current < last
@@ -442,14 +570,19 @@ class _FiltChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final active = selected == value;
     return ChoiceChip(
-      label: Text(label,
-          style: TextStyle(
-              color: active ? Colors.white : Colors.white70, fontSize: 12)),
+      label: Text(
+        label,
+        style: TextStyle(
+          color: active ? Colors.white : Colors.white70,
+          fontSize: 12,
+        ),
+      ),
       selected: active,
       selectedColor: const Color(0xFF00B4D8).withOpacity(0.3),
       backgroundColor: const Color(0xFF1B2838),
       side: BorderSide(
-          color: active ? const Color(0xFF00B4D8) : Colors.white12),
+        color: active ? const Color(0xFF00B4D8) : Colors.white12,
+      ),
       onSelected: (_) => onSelect(value),
     );
   }
@@ -493,14 +626,16 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
   Future<void> _submit() async {
     setState(() => _submitting = true);
     final payload = {
-      'items': _counts.entries.map((e) => {
-            'item_id': e.key,
-            'quantity_returned': e.value.returned,
-            'quantity_sold': e.value.sold,
-          }).toList(),
-      'notes': _notesCtrl.text.trim().isEmpty
-          ? null
-          : _notesCtrl.text.trim(),
+      'items': _counts.entries
+          .map(
+            (e) => {
+              'item_id': e.key,
+              'quantity_returned': e.value.returned,
+              'quantity_sold': e.value.sold,
+            },
+          )
+          .toList(),
+      'notes': _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
     };
     Navigator.pop(context, payload);
   }
@@ -511,8 +646,10 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
       backgroundColor: const Color(0xFF0D1B2A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1B2838),
-        title: const Text('Reconcile Issuance',
-            style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Reconcile Issuance',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -528,11 +665,14 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    'Bus: ${widget.issuance.busRegNumber ?? 'N/A'}  •  Conductor: ${widget.issuance.conductorName ?? 'N/A'}',
-                    style: const TextStyle(color: Colors.white70)),
+                  'Bus: ${widget.issuance.busRegNumber ?? 'N/A'}  •  Conductor: ${widget.issuance.conductorName ?? 'N/A'}',
+                  style: const TextStyle(color: Colors.white70),
+                ),
                 const Gap(4),
-                Text('${widget.issuance.items.length} items issued',
-                    style: const TextStyle(color: Colors.white38)),
+                Text(
+                  '${widget.issuance.items.length} items issued',
+                  style: const TextStyle(color: Colors.white38),
+                ),
               ],
             ),
           ),
@@ -556,19 +696,24 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
                           child: Text(
                             item.itemName ?? 'Item',
                             style: const TextStyle(
-                                color: Colors.white, fontWeight: FontWeight.w600),
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                        Text('Issued: ${counts.issued}',
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 12)),
+                        Text(
+                          'Issued: ${counts.issued}',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                     const Gap(8),
                     Row(
                       children: [
-                        _buildCountField(
-                            'Returned', counts.returned, (v) {
+                        _buildCountField('Returned', counts.returned, (v) {
                           counts.returned = v;
                           setState(() {});
                         }),
@@ -581,16 +726,23 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Outstanding',
-                                style: TextStyle(
-                                    color: Colors.white38, fontSize: 10)),
-                            Text('$outstanding',
-                                style: TextStyle(
-                                    color: outstanding > 0
-                                        ? Colors.orange
-                                        : Colors.green,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14)),
+                            const Text(
+                              'Outstanding',
+                              style: TextStyle(
+                                color: Colors.white38,
+                                fontSize: 10,
+                              ),
+                            ),
+                            Text(
+                              '$outstanding',
+                              style: TextStyle(
+                                color: outstanding > 0
+                                    ? Colors.orange
+                                    : Colors.green,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -622,10 +774,17 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
             onPressed: _submitting ? null : _submit,
             child: _submitting
                 ? const SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Submit Reconciliation',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Submit Reconciliation',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
           ),
         ],
       ),
@@ -633,12 +792,17 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
   }
 
   Widget _buildCountField(
-      String label, int value, void Function(int) onChanged) {
+    String label,
+    int value,
+    void Function(int) onChanged,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(color: Colors.white38, fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white38, fontSize: 10),
+        ),
         SizedBox(
           width: 70,
           child: TextFormField(
@@ -647,8 +811,7 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
             style: const TextStyle(color: Colors.white, fontSize: 13),
             decoration: const InputDecoration(
               isDense: true,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               filled: true,
               fillColor: Color(0xFF0D1B2A),
               border: OutlineInputBorder(borderSide: BorderSide.none),

@@ -11,8 +11,13 @@ import 'package:trace_odd/features/storekeeper/presentation/widgets/storekeeper_
 
 class CateringManagementScreen extends StatefulWidget {
   final String? preselectedCategoryId;
+  final String panel;
 
-  const CateringManagementScreen({super.key, this.preselectedCategoryId});
+  const CateringManagementScreen({
+    super.key,
+    this.preselectedCategoryId,
+    this.panel = 'bus-fleet',
+  });
 
   @override
   State<CateringManagementScreen> createState() =>
@@ -98,10 +103,8 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
   Future<void> _editItem(CateringItem item) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => CateringItemDialog(
-        categories: _categories,
-        existing: item,
-      ),
+      builder: (_) =>
+          CateringItemDialog(categories: _categories, existing: item),
     );
     if (result != null) {
       try {
@@ -134,16 +137,22 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1B2838),
         title: const Text('Delete Item', style: TextStyle(color: Colors.white)),
-        content: Text('Delete "${item.name}"?\nThis cannot be undone.',
-            style: const TextStyle(color: Colors.white70)),
+        content: Text(
+          'Delete "${item.name}"?\nThis cannot be undone.',
+          style: const TextStyle(color: Colors.white70),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete',
-                  style: TextStyle(color: Colors.redAccent))),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
         ],
       ),
     );
@@ -159,8 +168,9 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
 
   void _showError(String msg) {
     if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
     }
   }
 
@@ -182,16 +192,17 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
                   decoration: InputDecoration(
                     hintText: 'Search items...',
                     hintStyle: const TextStyle(color: Colors.white38),
-                    prefixIcon:
-                        const Icon(Icons.search, color: Colors.white38),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white38),
                     filled: true,
                     fillColor: const Color(0xFF1B2838),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                   onSubmitted: (v) {
                     _search = v;
@@ -224,17 +235,19 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
                   ? _selectedCategoryId == null
                   : _selectedCategoryId == cat!.id;
               return ChoiceChip(
-                label: Text(isAll ? 'All' : cat!.name,
-                    style: TextStyle(
-                        color: selected ? Colors.white : Colors.white70,
-                        fontSize: 12)),
+                label: Text(
+                  isAll ? 'All' : cat!.name,
+                  style: TextStyle(
+                    color: selected ? Colors.white : Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
                 selected: selected,
                 selectedColor: const Color(0xFF00B4D8).withOpacity(0.3),
                 backgroundColor: const Color(0xFF1B2838),
                 side: BorderSide(
-                    color: selected
-                        ? const Color(0xFF00B4D8)
-                        : Colors.white12),
+                  color: selected ? const Color(0xFF00B4D8) : Colors.white12,
+                ),
                 onSelected: (_) => _selectCategory(isAll ? null : cat!.id),
               );
             },
@@ -246,18 +259,23 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _error != null
-                  ? Center(
-                      child: Text('Error: $_error',
-                          style: const TextStyle(color: Colors.redAccent)))
-                  : _items.isEmpty
-                      ? const Center(
-                          child: Text('No items found.',
-                              style: TextStyle(color: Colors.white54)))
-                      : _buildItemList(isWide),
+              ? Center(
+                  child: Text(
+                    'Error: $_error',
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                )
+              : _items.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No items found.',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                )
+              : _buildItemList(isWide),
         ),
         // Pagination
-        if (_itemMeta != null)
-          _buildPagination(),
+        if (_itemMeta != null) _buildPagination(),
       ],
     );
   }
@@ -277,11 +295,57 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
             ),
             child: const Row(
               children: [
-                Expanded(flex: 3, child: Text('Item', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-                Expanded(flex: 1, child: Text('SKU', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-                Expanded(flex: 1, child: Text('Stock', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-                Expanded(flex: 1, child: Text('Price', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
-                SizedBox(width: 80, child: Text('', style: TextStyle(color: Colors.white54, fontSize: 11))),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'Item',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'SKU',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Stock',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Price',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    '',
+                    style: TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                ),
               ],
             ),
           ),
@@ -318,54 +382,65 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.name,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w500)),
+                Text(
+                  item.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 if (item.categoryName != null)
-                  Text(item.categoryName!,
-                      style:
-                          const TextStyle(color: Colors.white38, fontSize: 11)),
+                  Text(
+                    item.categoryName!,
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
               ],
             ),
           ),
           Expanded(
             flex: 1,
-            child: Text(item.sku ?? '-',
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            child: Text(
+              item.sku ?? '-',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
           ),
           Expanded(
             flex: 1,
             child: Row(
               children: [
                 Icon(
-                    item.isLowStock
-                        ? Icons.warning_amber
-                        : Icons.check_circle,
-                    size: 14,
-                    color: item.isLowStock
-                        ? Colors.orange
-                        : Colors.green),
+                  item.isLowStock ? Icons.warning_amber : Icons.check_circle,
+                  size: 14,
+                  color: item.isLowStock ? Colors.orange : Colors.green,
+                ),
                 const Gap(4),
-                Text('${item.stockOnHand}',
-                    style: TextStyle(
-                        color: item.isLowStock
-                            ? Colors.orange
-                            : Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13)),
+                Text(
+                  '${item.stockOnHand}',
+                  style: TextStyle(
+                    color: item.isLowStock ? Colors.orange : Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
           ),
           Expanded(
             flex: 1,
-            child: Text('\$${item.unitPriceInMain.toStringAsFixed(2)}',
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            child: Text(
+              '\$${item.unitPriceInMain.toStringAsFixed(2)}',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
           ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.add, size: 16, color: Colors.greenAccent),
+                icon: const Icon(
+                  Icons.add,
+                  size: 16,
+                  color: Colors.greenAccent,
+                ),
                 tooltip: 'Add stock',
                 onPressed: () => _adjustStock(item),
                 constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
@@ -379,8 +454,11 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
                 padding: EdgeInsets.zero,
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline, size: 14,
-                    color: Colors.redAccent),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 14,
+                  color: Colors.redAccent,
+                ),
                 tooltip: 'Delete',
                 onPressed: () => _deleteItem(item),
                 constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
@@ -405,45 +483,68 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
             if (item.isLowStock)
               const Padding(
                 padding: EdgeInsets.only(right: 6),
-                child: Icon(Icons.warning_amber, color: Colors.orange, size: 18),
+                child: Icon(
+                  Icons.warning_amber,
+                  color: Colors.orange,
+                  size: 18,
+                ),
               ),
             // Item info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.name,
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                  Text(
+                    item.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
                   const Gap(2),
                   Row(
                     children: [
                       if (item.categoryName != null) ...[
-                        Text(item.categoryName!,
-                            style: const TextStyle(
-                                color: Colors.white38, fontSize: 11)),
+                        Text(
+                          item.categoryName!,
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 11,
+                          ),
+                        ),
                         const Gap(8),
                       ],
-                      Text('SKU: ${item.sku ?? '-'}',
-                          style: const TextStyle(
-                              color: Colors.white38, fontSize: 11)),
+                      Text(
+                        'SKU: ${item.sku ?? '-'}',
+                        style: const TextStyle(
+                          color: Colors.white38,
+                          fontSize: 11,
+                        ),
+                      ),
                     ],
                   ),
                   const Gap(4),
                   Row(
                     children: [
-                      Text('Stock: ${item.stockOnHand}',
-                          style: TextStyle(
-                              color: item.isLowStock
-                                  ? Colors.orange
-                                  : Colors.white70,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500)),
+                      Text(
+                        'Stock: ${item.stockOnHand}',
+                        style: TextStyle(
+                          color: item.isLowStock
+                              ? Colors.orange
+                              : Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       const Gap(12),
                       Text(
-                          '\$${item.unitPriceInMain.toStringAsFixed(2)} / ${item.unit}',
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 11)),
+                        '\$${item.unitPriceInMain.toStringAsFixed(2)} / ${item.unit}',
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 11,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -467,9 +568,24 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
                 }
               },
               itemBuilder: (_) => [
-                const PopupMenuItem(value: 'adjust', child: Text('Adjust Stock', style: TextStyle(color: Colors.white))),
-                const PopupMenuItem(value: 'edit', child: Text('Edit', style: TextStyle(color: Colors.white))),
-                const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.redAccent))),
+                const PopupMenuItem(
+                  value: 'adjust',
+                  child: Text(
+                    'Adjust Stock',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Text('Edit', style: TextStyle(color: Colors.white)),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Text(
+                    'Delete',
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
+                ),
               ],
             ),
           ],
@@ -496,8 +612,10 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
                   }
                 : null,
           ),
-          Text('$current / $last',
-              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(
+            '$current / $last',
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
           IconButton(
             icon: const Icon(Icons.chevron_right, color: Colors.white54),
             onPressed: current < last

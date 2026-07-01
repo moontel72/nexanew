@@ -10,9 +10,12 @@ import 'package:trace_odd/features/storekeeper/domain/models/storekeeper_dashboa
 
 class StorekeeperRepository {
   final ApiService _api;
+  final String _panel; // 'bus-fleet' or 'bus-owner'
   static const _prefix = '/api/v1/bus-fleet/storekeeper';
 
-  StorekeeperRepository({ApiService? api}) : _api = api ?? ApiService();
+  StorekeeperRepository({ApiService? api, String panel = 'bus-fleet'})
+    : _api = api ?? ApiService(),
+      _panel = panel;
 
   // ─── Dashboard ──────────────────────────────────────────────
 
@@ -34,7 +37,10 @@ class StorekeeperRepository {
     return CateringCategory.fromJson(r['data']);
   }
 
-  Future<CateringCategory> updateCategory(String id, Map<String, dynamic> data) async {
+  Future<CateringCategory> updateCategory(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     final r = await _api.put('$_prefix/categories/$id', body: data);
     return CateringCategory.fromJson(r['data']);
   }
@@ -94,10 +100,10 @@ class StorekeeperRepository {
   }
 
   Future<int> adjustStock(String id, int adjustment, {String? reason}) async {
-    final r = await _api.post('$_prefix/items/$id/adjust-stock', body: {
-      'adjustment': adjustment,
-      if (reason != null) 'reason': reason,
-    });
+    final r = await _api.post(
+      '$_prefix/items/$id/adjust-stock',
+      body: {'adjustment': adjustment, if (reason != null) 'reason': reason},
+    );
     final stock = r['data']?['stock_on_hand'] ?? 0;
     return stock is int ? stock : int.tryParse(stock.toString()) ?? 0;
   }
@@ -170,7 +176,9 @@ class StorekeeperRepository {
   }
 
   Future<CateringReconciliation> reconcile(
-      String issuanceId, Map<String, dynamic> data) async {
+    String issuanceId,
+    Map<String, dynamic> data,
+  ) async {
     final r = await _api.post(
       '$_prefix/issuances/$issuanceId/reconcile',
       body: data,
@@ -179,7 +187,8 @@ class StorekeeperRepository {
   }
 
   Future<CateringReconciliation> confirmReconciliation(
-      String reconciliationId) async {
+    String reconciliationId,
+  ) async {
     final r = await _api.post(
       '$_prefix/reconciliations/$reconciliationId/confirm',
     );
@@ -190,7 +199,7 @@ class StorekeeperRepository {
 
   Future<List<Map<String, dynamic>>> getActiveAssignments() async {
     final r = await _api.get(
-      '/api/v1/bus-fleet/dispatch/assignments',
+      '/api/v1/$_panel/dispatch/assignments',
       queryParams: {'status': 'active', 'limit': '50'},
     );
     final data = r['data'] as Map<String, dynamic>? ?? {};

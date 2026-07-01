@@ -15,10 +15,14 @@ import 'package:trace_odd/features/storekeeper/presentation/screens/issuance_scr
 import 'package:trace_odd/features/storekeeper/presentation/screens/reconciliation_screen.dart';
 
 class StorekeeperDashboardScreen extends StatefulWidget {
-  /// If true, only storekeeper tabs are shown (hide fleet management tabs).
   final bool isStorekeeperOnly;
+  final String panel; // 'bus-fleet' or 'bus-owner'
 
-  const StorekeeperDashboardScreen({super.key, this.isStorekeeperOnly = false});
+  const StorekeeperDashboardScreen({
+    super.key,
+    this.isStorekeeperOnly = false,
+    this.panel = 'bus-fleet',
+  });
 
   @override
   State<StorekeeperDashboardScreen> createState() =>
@@ -28,7 +32,7 @@ class StorekeeperDashboardScreen extends StatefulWidget {
 class _StorekeeperDashboardScreenState extends State<StorekeeperDashboardScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  final _repo = StorekeeperRepository();
+  late final StorekeeperRepository _repo;
 
   StorekeeperDashboardData _dashboardData = const StorekeeperDashboardData();
   bool _loading = true;
@@ -39,6 +43,7 @@ class _StorekeeperDashboardScreenState extends State<StorekeeperDashboardScreen>
   @override
   void initState() {
     super.initState();
+    _repo = StorekeeperRepository(panel: widget.panel);
     _tabController = TabController(length: _tabs.length, vsync: this);
     _loadDashboard();
   }
@@ -73,7 +78,10 @@ class _StorekeeperDashboardScreenState extends State<StorekeeperDashboardScreen>
       backgroundColor: const Color(0xFF0D1B2A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1B2838),
-        title: const Text('Store Keeper', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Store Keeper',
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white70),
@@ -96,10 +104,10 @@ class _StorekeeperDashboardScreenState extends State<StorekeeperDashboardScreen>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: const [
-                CateringManagementScreen(),
-                IssuanceScreen(),
-                ReconciliationScreen(),
+              children: [
+                CateringManagementScreen(panel: widget.panel),
+                IssuanceScreen(panel: widget.panel),
+                ReconciliationScreen(panel: widget.panel),
               ],
             ),
           ),
@@ -119,29 +127,52 @@ class _StorekeeperDashboardScreenState extends State<StorekeeperDashboardScreen>
     if (_error != null) {
       return Padding(
         padding: const EdgeInsets.all(12),
-        child: Text('Error: $_error',
-            style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+        child: Text(
+          'Error: $_error',
+          style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+        ),
       );
     }
 
     final kpis = [
-      _Kpi('Total Items', _dashboardData.totalItems.toString(),
-          Icons.inventory_2_outlined, const Color(0xFF7C3AED)),
-      _Kpi('Low Stock', _dashboardData.lowStockItems.toString(),
-          Icons.warning_amber_rounded,
-          _dashboardData.lowStockItems > 0
-              ? const Color(0xFFDC2626)
-              : const Color(0xFF16A34A)),
-      _Kpi('Pending', _dashboardData.pendingIssuances.toString(),
-          Icons.pending_actions, const Color(0xFFF59E0B)),
-      _Kpi('Active Issued',
-          _dashboardData.activeIssuances.toString(), Icons.local_shipping,
-          const Color(0xFF00B4D8)),
-      _Kpi('To Reconcile', _dashboardData.draftReconciliations.toString(),
-          Icons.receipt_long, const Color(0xFFDB2777)),
-      _Kpi('Outstanding',
-          '\$${_dashboardData.outstandingValueMain.toStringAsFixed(2)}',
-          Icons.account_balance_wallet, const Color(0xFF16A34A)),
+      _Kpi(
+        'Total Items',
+        _dashboardData.totalItems.toString(),
+        Icons.inventory_2_outlined,
+        const Color(0xFF7C3AED),
+      ),
+      _Kpi(
+        'Low Stock',
+        _dashboardData.lowStockItems.toString(),
+        Icons.warning_amber_rounded,
+        _dashboardData.lowStockItems > 0
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF16A34A),
+      ),
+      _Kpi(
+        'Pending',
+        _dashboardData.pendingIssuances.toString(),
+        Icons.pending_actions,
+        const Color(0xFFF59E0B),
+      ),
+      _Kpi(
+        'Active Issued',
+        _dashboardData.activeIssuances.toString(),
+        Icons.local_shipping,
+        const Color(0xFF00B4D8),
+      ),
+      _Kpi(
+        'To Reconcile',
+        _dashboardData.draftReconciliations.toString(),
+        Icons.receipt_long,
+        const Color(0xFFDB2777),
+      ),
+      _Kpi(
+        'Outstanding',
+        '\$${_dashboardData.outstandingValueMain.toStringAsFixed(2)}',
+        Icons.account_balance_wallet,
+        const Color(0xFF16A34A),
+      ),
     ];
 
     if (isWide) {
@@ -149,11 +180,7 @@ class _StorekeeperDashboardScreenState extends State<StorekeeperDashboardScreen>
         color: const Color(0xFF1B2838),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
-          children: kpis
-              .map((k) => Expanded(
-                    child: _KpiTile(kpi: k),
-                  ))
-              .toList(),
+          children: kpis.map((k) => Expanded(child: _KpiTile(kpi: k))).toList(),
         ),
       );
     }
@@ -205,16 +232,21 @@ class _KpiTile extends StatelessWidget {
           children: [
             Icon(kpi.icon, color: kpi.color, size: 18),
             const Gap(4),
-            Text(kpi.value,
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15)),
-            Text(kpi.label,
-                style: const TextStyle(color: Colors.white54, fontSize: 10),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
+            Text(
+              kpi.value,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            Text(
+              kpi.label,
+              style: const TextStyle(color: Colors.white54, fontSize: 10),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       );
@@ -235,13 +267,18 @@ class _KpiTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(kpi.value,
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 17)),
-              Text(kpi.label,
-                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              Text(
+                kpi.value,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                ),
+              ),
+              Text(
+                kpi.label,
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
             ],
           ),
         ],
