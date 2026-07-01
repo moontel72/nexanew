@@ -396,10 +396,16 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
   bool _loadingItems = true;
   bool _submitting = false;
 
+  // Active dispatch assignments
+  List<Map<String, dynamic>> _activeAssignments = [];
+  bool _loadingAssignments = false;
+  String? _selectedAssignmentId;
+
   @override
   void initState() {
     super.initState();
     _loadItems();
+    _loadActiveAssignments();
   }
 
   @override
@@ -421,6 +427,43 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
       }
     } catch (e) {
       if (mounted) setState(() => _loadingItems = false);
+    }
+  }
+
+  Future<void> _loadActiveAssignments() async {
+    setState(() => _loadingAssignments = true);
+    try {
+      final result = await _repo.getActiveAssignments();
+      if (mounted) {
+        setState(() {
+          _activeAssignments = result;
+          _loadingAssignments = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingAssignments = false);
+    }
+  }
+
+  void _onAssignmentSelected(String? assignmentId) {
+    if (assignmentId == null) {
+      setState(() {
+        _selectedAssignmentId = null;
+        _busCtrl.clear();
+        _conductorCtrl.clear();
+      });
+      return;
+    }
+    final assignment = _activeAssignments.firstWhere(
+      (a) => a['id']?.toString() == assignmentId,
+      orElse: () => {},
+    );
+    if (assignment.isNotEmpty) {
+      setState(() {
+        _selectedAssignmentId = assignmentId;
+        _busCtrl.text = assignment['bus_reg_number']?.toString() ?? '';
+        _conductorCtrl.text = assignment['conductor_name']?.toString() ?? '';
+      });
     }
   }
 
@@ -446,6 +489,7 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
         'bus_reg_number': _busCtrl.text.trim(),
         'conductor_name': _conductorCtrl.text.trim(),
         'notes': _notesCtrl.text.trim(),
+        if (_selectedAssignmentId != null) 'assignment_id': _selectedAssignmentId,
         'items': _selectedItems
             .map((s) => {
                   'item_id': s.item.id,
@@ -478,16 +522,53 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Trip-linked dropdown
+            if (_loadingAssignments)
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
+              DropdownButtonFormField<String>(
+                value: _selectedAssignmentId,
+                decoration: _inputDec('Select Active Assignment / Trip'),
+                isExpanded: true,
+                dropdownColor: const Color(0xFF1B2838),
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: null,
+                    child: Text('\u2014 Manual Entry \u2014',
+                        style: TextStyle(color: Colors.white38)),
+                  ),
+                  ..._activeAssignments.map((a) {
+                    final plate = a['bus_reg_number']?.toString() ?? '';
+                    final route = a['route_name']?.toString() ?? '';
+                    return DropdownMenuItem<String>(
+                      value: a['id']?.toString(),
+                      child: Text(
+                        '$route | $plate',
+                        style: const TextStyle(fontSize: 13, color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }),
+                ],
+                onChanged: _onAssignmentSelected,
+              ),
+            const Gap(12),
             TextFormField(
               controller: _busCtrl,
               style: const TextStyle(color: Colors.white),
               decoration: _inputDec('Bus Registration Number'),
+              readOnly: _selectedAssignmentId != null,
             ),
             const Gap(12),
             TextFormField(
               controller: _conductorCtrl,
               style: const TextStyle(color: Colors.white),
               decoration: _inputDec('Conductor Name'),
+              readOnly: _selectedAssignmentId != null,
             ),
             const Gap(12),
             TextFormField(

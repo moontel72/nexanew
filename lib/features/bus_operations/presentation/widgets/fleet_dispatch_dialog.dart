@@ -250,7 +250,8 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
   final _api = ApiService();
   List<Map<String, dynamic>> _v = [], _r = [], _d = [], _c = [], _wp = [];
   bool _loading = true, _saving = false;
-  DateTime _date = DateTime.now();
+  DateTime _dateFrom = DateTime.now();
+  DateTime? _dateTo; // null = single day, non-null = date range
   TimeOfDay _time = const TimeOfDay(hour: 8, minute: 0);
 
   String? _veh, _route, _drv, _relDrv, _con, _relCon, _handover;
@@ -311,7 +312,8 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
         if (_conIds.isNotEmpty) 'conductor_ids': _conIds.toList(),
         if (_relCon != null) 'relief_conductor_id': _relCon,
         if (_handover != null) 'handover_stop_id': _handover,
-        'assignment_date': _fmtDate(_date),
+        'assignment_date': _fmtDate(_dateFrom),
+        if (_dateTo != null) 'assignment_date_to': _fmtDate(_dateTo!),
         'departure_time': _fmtTime(_time),
         'shift_type': _shift,
         'create_return_trip': _ret,
@@ -415,31 +417,44 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Date + Time + Shift
+                        // Date Range + Time + Shift
                         Row(
                           children: [
                             Expanded(
                               flex: 2,
                               child: OutlinedButton.icon(
                                 onPressed: () async {
-                                  final p = await showDatePicker(
+                                  final range = await showDateRangePicker(
                                     context: c,
-                                    initialDate: _date,
                                     firstDate: DateTime(2024),
                                     lastDate: DateTime(2030),
+                                    initialDateRange: _dateTo != null
+                                        ? DateTimeRange(start: _dateFrom, end: _dateTo!)
+                                        : null,
+                                    currentDate: _dateFrom,
                                   );
-                                  if (p != null) setState(() => _date = p);
+                                  if (range != null) {
+                                    setState(() {
+                                      _dateFrom = range.start;
+                                      _dateTo = range.end;
+                                    });
+                                  }
                                 },
-                                icon: const Icon(
-                                  Icons.calendar_today,
-                                  size: 16,
-                                ),
+                                icon: const Icon(Icons.date_range, size: 16),
                                 label: Text(
-                                  '${_date.day}/${_date.month}/${_date.year}',
-                                  style: const TextStyle(fontSize: 13),
+                                  _dateTo != null
+                                      ? '${_dateFrom.day}/${_dateFrom.month} \u2013 ${_dateTo!.day}/${_dateTo!.month}/${_dateTo!.year}'
+                                      : '${_dateFrom.day}/${_dateFrom.month}/${_dateFrom.year}',
+                                  style: const TextStyle(fontSize: 12),
                                 ),
                               ),
                             ),
+                            if (_dateTo != null)
+                              IconButton(
+                                icon: const Icon(Icons.clear, size: 16),
+                                onPressed: () => setState(() => _dateTo = null),
+                                tooltip: 'Clear end date',
+                              ),
                             const Gap(8),
                             Expanded(
                               flex: 2,

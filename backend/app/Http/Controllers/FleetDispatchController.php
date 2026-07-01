@@ -71,7 +71,7 @@ class FleetDispatchController extends Controller
             ->select(
                 'fda.id', 'fda.assignment_date', 'fda.shift_type', 'fda.status',
                 'fda.leg_type', 'fda.parent_assignment_id', 'fda.departure_time',
-                'fda.vehicle_id', 'v.display_name AS vehicle_name',
+                'fda.vehicle_id', 'v.display_name AS vehicle_name', 'v.display_name AS bus_reg_number',
                 'fda.route_id', 'r.display_name AS route_name', 'r.origin_city', 'r.destination_city',
                 'fda.driver_id', 'gi_drv.display_name AS driver_name',
                 'fda.driver_ids',
@@ -231,6 +231,7 @@ class FleetDispatchController extends Controller
             'relief_conductor_id'   => ['sometimes', 'nullable', 'string', 'uuid'],
             'handover_stop_id'      => ['sometimes', 'nullable', 'string', 'uuid'],
             'assignment_date'       => ['required', 'date'],
+            'assignment_date_to'    => ['sometimes', 'nullable', 'date', 'after_or_equal:assignment_date'],
             'departure_time'        => ['sometimes', 'nullable', 'date_format:H:i'],
             'shift_type'            => ['required', Rule::in(self::VALID_SHIFTS)],
             'leg_type'              => ['sometimes', Rule::in(self::VALID_LEG_TYPES)],
@@ -242,16 +243,36 @@ class FleetDispatchController extends Controller
         ]);
 
         $date = $validated['assignment_date'];
+        $dateTo = $validated['assignment_date_to'] ?? null;
         $shift = $validated['shift_type'];
         $createReturn = $validated['create_return_trip'] ?? false;
 
-        // ── Conflict Prevention ────────────────────────────
-        $conflicts = $this->checkConflicts($validated, $date, $shift);
-        if (!empty($conflicts)) {
-            return response()->json([
-                'success' => false, 'message' => 'Assignment conflict detected.', 'conflicts' => $conflicts,
-            ], 409);
+        // Generate date range — single day or multi-day span
+        $dates = [$date];
+        if ($dateTo && $dateTo !== $date) {
+            $current = \DateTime::createFromFormat('Y-m-d', $date);
+            $end = \DateTime::createFromFormat('Y-m-d', $dateTo);
+            while ($current < $end) {
+                $current->modify('+1 day');
+                $dates[] = $current->format('Y-m-d');
+            }
         }
+
+        $createdIds = [];
+        foreach ($dates as $dayDate) {
+            // Conflict check per day
+            $conflicts = $this->checkConflicts($validated, $dayDate, $shift);
+            if (!empty($conflicts)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Assignment conflict on $dayDate.",
+                    'conflicts' => $conflicts,
+                ], 409);
+            }
+        }
+
+        // Create assignments for each day in range
+        foreach ($dates as $dayDate) {
 
         $conductorIds = $validated['conductor_ids'] ?? [];
         if (!empty($validated['conductor_id']) && !in_array($validated['conductor_id'], $conductorIds)) {
@@ -272,7 +293,7 @@ class FleetDispatchController extends Controller
             'conductor_ids'     => !empty($conductorIds) ? json_encode($conductorIds) : null,
             'relief_conductor_id' => $validated['relief_conductor_id'] ?? null,
             'handover_stop_id'  => $validated['handover_stop_id'] ?? null,
-            'assignment_date'   => $date,
+            'assignment_date'   => $dayDate,
             'departure_time'    => $validated['departure_time'] ?? null,
             'shift_type'        => $shift,
             'leg_type'          => 'outbound',
@@ -283,41 +304,47 @@ class FleetDispatchController extends Controller
             'created_at'        => now(),
             'updated_at'        => now(),
         ]);
+        $createdIds[] = $outboundId;
 
-        // ── Create Return Trip if requested ─────────────────
-        $returnId = null;
-        if ($createReturn) {
-            $returnId = (string) Str::uuid();
-            DB::table('fleet_dispatch_assignments')->insert([
-                'id'                => $returnId,
-                'bus_company_id'    => $validated['bus_company_id'] ?? null,
-                'vehicle_id'        => $validated['vehicle_id'],
-                'route_id'          => $validated['route_id'],
-                'driver_id'         => $validated['return_driver_id'] ?? $validated['driver_id'],
-                'driver_ids'        => !empty($validated['return_driver_ids']) ? json_encode($validated['return_driver_ids']) : null,
-                'relief_driver_id'  => $validated['return_relief_driver_id'] ?? null,
-                'conductor_id'      => $validated['return_conductor_id'] ?? null,
-                'conductor_ids'     => !empty($validated['return_conductor_ids']) ? json_encode($validated['return_conductor_ids']) : null,
-                'relief_conductor_id' => $validated['return_relief_conductor_id'] ?? null,
-                'handover_stop_id'  => $validated['handover_stop_id'] ?? null,
-                'assignment_date'   => $date,
-                'departure_time'    => $validated['return_departure_time'] ?? null,
-                'shift_type'        => $shift,
-                'leg_type'          => 'inbound',
-                'parent_assignment_id' => $outboundId,
-                'status'            => 'active',
-                'created_at'        => now(),
-                'updated_at'        => now(),
-            ]);
-        }
+        // ── Create Return Trip if requested (per day) ────────
+            $returnId = null;
+            if ($createReturn) {
+                $returnId = (string) Str::uuid();
+                DB::table('fleet_dispatch_assignments')->insert([
+                    'id'                => $returnId,
+                    'bus_company_id'    => $validated['bus_company_id'] ?? null,
+                    'vehicle_id'        => $validated['vehicle_id'],
+                    'route_id'          => $validated['route_id'],
+                    'driver_id'         => $validated['return_driver_id'] ?? $validated['driver_id'],
+                    'driver_ids'        => !empty($validated['return_driver_ids']) ? json_encode($validated['return_driver_ids']) : null,
+                    'relief_driver_id'  => $validated['return_relief_driver_id'] ?? null,
+                    'conductor_id'      => $validated['return_conductor_id'] ?? null,
+                    'conductor_ids'     => !empty($validated['return_conductor_ids']) ? json_encode($validated['return_conductor_ids']) : null,
+                    'relief_conductor_id' => $validated['return_relief_conductor_id'] ?? null,
+                    'handover_stop_id'  => $validated['handover_stop_id'] ?? null,
+                    'assignment_date'   => $dayDate,
+                    'departure_time'    => $validated['return_departure_time'] ?? null,
+                    'shift_type'        => $shift,
+                    'leg_type'          => 'inbound',
+                    'parent_assignment_id' => $outboundId,
+                    'status'            => 'active',
+                    'created_at'        => now(),
+                    'updated_at'        => now(),
+                ]);
+            }
+        } // end date loop
 
-        $data = $this->show($outboundId)->getData(true)['data'] ?? null;
+        $firstId = $createdIds[0] ?? null;
+        $data = $firstId ? $this->show($firstId)->getData(true)['data'] ?? null : null;
 
         return response()->json([
             'success' => true,
-            'message' => $createReturn ? 'Outbound + return trip assignments created.' : 'Dispatch assignment created.',
+            'message' => count($dates) > 1
+                ? count($dates) . ' daily assignments created' . ($createReturn ? ' with return trips.' : '.')
+                : ($createReturn ? 'Outbound + return trip assignments created.' : 'Dispatch assignment created.'),
             'data' => $data,
-            'return_trip_id' => $returnId,
+            'return_trip_id' => $returnId ?? null,
+            'dates_created' => count($dates),
         ], 201);
     }
 

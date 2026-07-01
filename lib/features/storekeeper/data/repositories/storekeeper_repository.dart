@@ -185,4 +185,16 @@ class StorekeeperRepository {
     );
     return CateringReconciliation.fromJson(r['data']);
   }
+
+  // ─── Active Dispatch Assignments ───────────────────────────
+
+  Future<List<Map<String, dynamic>>> getActiveAssignments() async {
+    final r = await _api.get(
+      '/api/v1/bus-fleet/dispatch/assignments',
+      queryParams: {'status': 'active', 'limit': '50'},
+    );
+    final data = r['data'] as Map<String, dynamic>? ?? {};
+    final list = (data['data'] as List<dynamic>?) ?? [];
+    return list.cast<Map<String, dynamic>>();
+  }
 }
