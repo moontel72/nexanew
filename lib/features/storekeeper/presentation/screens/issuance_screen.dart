@@ -530,14 +530,7 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
   }
 
   void _onAssignmentSelected(String? assignmentId) {
-    if (assignmentId == null) {
-      setState(() {
-        _selectedAssignmentId = null;
-        _busCtrl.clear();
-        _conductorCtrl.clear();
-      });
-      return;
-    }
+    if (assignmentId == null) return;
     final assignment = _activeAssignments.firstWhere(
       (a) => a['id']?.toString() == assignmentId,
       orElse: () => {},
@@ -623,14 +616,8 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                 isExpanded: true,
                 dropdownColor: const Color(0xFF1B2838),
                 style: const TextStyle(color: Colors.white, fontSize: 14),
+                validator: (v) => v == null ? 'Please select an assignment' : null,
                 items: [
-                  const DropdownMenuItem<String>(
-                    value: null,
-                    child: Text(
-                      '\u2014 Manual Entry \u2014',
-                      style: TextStyle(color: Colors.white38),
-                    ),
-                  ),
                   ..._activeAssignments.map((a) {
                     final plate = a['bus_reg_number']?.toString() ?? '';
                     final route = a['route_name']?.toString() ?? '';
@@ -638,10 +625,7 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                       value: a['id']?.toString(),
                       child: Text(
                         '$route | $plate',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.white,
-                        ),
+                        style: const TextStyle(fontSize: 13, color: Colors.white),
                         overflow: TextOverflow.ellipsis,
                       ),
                     );
@@ -649,75 +633,38 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                 ],
                 onChanged: _onAssignmentSelected,
               ),
-            const Gap(12),
-            // Show auto-populated trip info OR manual fields
+            // Auto-populated badges when assignment selected
             if (_selectedAssignmentId != null) ...[
-              // Assignment selected — show info card, hide manual fields
+              const Gap(12),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: const Color(0xFF00B4D8).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(0xFF00B4D8).withOpacity(0.3),
-                  ),
+                  border: Border.all(color: const Color(0xFF00B4D8).withOpacity(0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(
-                          Icons.directions_bus,
-                          size: 16,
-                          color: Color(0xFF00B4D8),
-                        ),
+                        const Icon(Icons.directions_bus, size: 16, color: Color(0xFF00B4D8)),
                         const Gap(6),
-                        Text(
-                          _busCtrl.text,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        Text(_busCtrl.text,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                       ],
                     ),
                     const Gap(4),
                     Row(
                       children: [
-                        const Icon(
-                          Icons.person,
-                          size: 14,
-                          color: Colors.white54,
-                        ),
+                        const Icon(Icons.person, size: 14, color: Colors.white54),
                         const Gap(6),
-                        Text(
-                          _conductorCtrl.text,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                          ),
-                        ),
+                        Text(_conductorCtrl.text,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13)),
                       ],
                     ),
                   ],
                 ),
-              ),
-            ] else ...[
-              TextFormField(
-                controller: _busCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: _inputDec('Bus Registration Number'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              const Gap(12),
-              TextFormField(
-                controller: _conductorCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: _inputDec('Conductor Name'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
             ],
             const Gap(12),

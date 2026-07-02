@@ -250,8 +250,7 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
   List<Map<String, dynamic>> _v = [], _r = [], _d = [], _c = [], _wp = [];
   bool _loading = true, _saving = false;
   DateTime _dateFrom = DateTime.now();
-  DateTime? _dateTo; // null = single day, non-null = date range
-  TimeOfDay _time = const TimeOfDay(hour: 8, minute: 0);
+  DateTime? _dateTo;
 
   String? _veh, _route, _drv, _relDrv, _con, _relCon, _handover;
   Set<String> _drvIds = {}, _conIds = {};
@@ -259,7 +258,6 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
   bool _ret = false;
   String? _retDrv, _retRelDrv, _retCon, _retRelCon;
   Set<String> _retDrvIds = {}, _retConIds = {};
-  TimeOfDay _retTime = const TimeOfDay(hour: 16, minute: 0);
 
   @override
   void initState() {
@@ -313,7 +311,6 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
         if (_handover != null) 'handover_stop_id': _handover,
         'assignment_date': _fmtDate(_dateFrom),
         if (_dateTo != null) 'assignment_date_to': _fmtDate(_dateTo!),
-        'departure_time': _fmtTime(_time),
         'shift_type': _shift,
         'create_return_trip': _ret,
         if (_ret) ...{
@@ -324,7 +321,6 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
           if (_retConIds.isNotEmpty)
             'return_conductor_ids': _retConIds.toList(),
           if (_retRelCon != null) 'return_relief_conductor_id': _retRelCon,
-          'return_departure_time': _fmtTime(_retTime),
         },
       };
       final res = await _api.post(
@@ -378,20 +374,6 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
     );
   }
 
-  Future<void> _pickT(bool ret) async {
-    final t = await showTimePicker(
-      context: context,
-      initialTime: ret ? _retTime : _time,
-    );
-    if (t != null)
-      setState(() {
-        if (ret)
-          _retTime = t;
-        else
-          _time = t;
-      });
-  }
-
   bool get _hasHandover => _relDrv != null || _relCon != null;
 
   @override
@@ -416,38 +398,73 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Date Range + Time + Shift
+                        // Start Date + End Date (separate pickers)
                         Row(
                           children: [
                             Expanded(
-                              flex: 2,
                               child: OutlinedButton.icon(
                                 onPressed: () async {
-                                  final range = await showDateRangePicker(
+                                  final p = await showDatePicker(
                                     context: c,
-                                    firstDate: DateTime(2024),
+                                    initialDate: _dateFrom,
+                                    firstDate: DateTime.now(),
                                     lastDate: DateTime(2030),
-                                    initialDateRange: _dateTo != null
-                                        ? DateTimeRange(
-                                            start: _dateFrom,
-                                            end: _dateTo!,
-                                          )
-                                        : null,
-                                    currentDate: _dateFrom,
                                   );
-                                  if (range != null) {
-                                    setState(() {
-                                      _dateFrom = range.start;
-                                      _dateTo = range.end;
-                                    });
-                                  }
+                                  if (p != null) setState(() => _dateFrom = p);
                                 },
-                                icon: const Icon(Icons.date_range, size: 16),
+                                icon: const Icon(
+                                  Icons.calendar_today,
+                                  size: 14,
+                                ),
+                                label: Text(
+                                  _fmtDate(_dateFrom),
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 10,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const Gap(8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  final p = await showDatePicker(
+                                    context: c,
+                                    initialDate: _dateTo ?? _dateFrom,
+                                    firstDate: _dateFrom,
+                                    lastDate: DateTime(2030),
+                                  );
+                                  if (p != null) setState(() => _dateTo = p);
+                                },
+                                icon: Icon(
+                                  _dateTo != null
+                                      ? Icons.event
+                                      : Icons.event_outlined,
+                                  size: 14,
+                                ),
                                 label: Text(
                                   _dateTo != null
-                                      ? '${_dateFrom.day}/${_dateFrom.month} \u2013 ${_dateTo!.day}/${_dateTo!.month}/${_dateTo!.year}'
-                                      : '${_dateFrom.day}/${_dateFrom.month}/${_dateFrom.year}',
-                                  style: const TextStyle(fontSize: 12),
+                                      ? _fmtDate(_dateTo!)
+                                      : 'End Date',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: _dateTo != null
+                                        ? null
+                                        : Colors.white54,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 10,
+                                  ),
+                                  side: _dateTo != null
+                                      ? null
+                                      : const BorderSide(color: Colors.white24),
                                 ),
                               ),
                             ),
@@ -456,48 +473,39 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                                 icon: const Icon(Icons.clear, size: 16),
                                 onPressed: () => setState(() => _dateTo = null),
                                 tooltip: 'Clear end date',
-                              ),
-                            const Gap(8),
-                            Expanded(
-                              flex: 2,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _pickT(false),
-                                icon: const Icon(Icons.access_time, size: 16),
-                                label: Text(
-                                  _time.format(c),
-                                  style: const TextStyle(fontSize: 13),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 28,
+                                  minHeight: 28,
                                 ),
                               ),
-                            ),
-                            const Gap(8),
-                            Expanded(
-                              flex: 3,
-                              child: SegmentedButton<String>(
-                                segments: _shifts
-                                    .map(
-                                      (s) => ButtonSegment<String>(
-                                        value: s,
-                                        label: Text(
-                                          s[0].toUpperCase() + s.substring(1),
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: _shift == s
-                                                ? Colors.white
-                                                : _shiftColors[s],
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                                selected: {_shift},
-                                onSelectionChanged: (s) =>
-                                    setState(() => _shift = s.first),
-                                style: ButtonStyle(
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              ),
-                            ),
                           ],
+                        ),
+                        const Gap(8),
+                        // Shift selector
+                        SegmentedButton<String>(
+                          segments: _shifts
+                              .map(
+                                (s) => ButtonSegment<String>(
+                                  value: s,
+                                  label: Text(
+                                    s[0].toUpperCase() + s.substring(1),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: _shift == s
+                                          ? Colors.white
+                                          : _shiftColors[s],
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          selected: {_shift},
+                          onSelectionChanged: (s) =>
+                              setState(() => _shift = s.first),
+                          style: const ButtonStyle(
+                            visualDensity: VisualDensity.compact,
+                          ),
                         ),
                         const Gap(12),
                         _section('Route & Vehicle'),
@@ -618,21 +626,6 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                           contentPadding: EdgeInsets.zero,
                         ),
                         if (_ret) ...[
-                          const Gap(4),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () => _pickT(true),
-                                  icon: const Icon(Icons.access_time, size: 16),
-                                  label: Text(
-                                    'Return: ${_retTime.format(c)}',
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                           const Gap(8),
                           _section('Return — Drivers'),
                           const Gap(8),
