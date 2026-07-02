@@ -650,19 +650,76 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                 onChanged: _onAssignmentSelected,
               ),
             const Gap(12),
-            TextFormField(
-              controller: _busCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: _inputDec('Bus Registration Number'),
-              readOnly: _selectedAssignmentId != null,
-            ),
-            const Gap(12),
-            TextFormField(
-              controller: _conductorCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: _inputDec('Conductor Name'),
-              readOnly: _selectedAssignmentId != null,
-            ),
+            // Show auto-populated trip info OR manual fields
+            if (_selectedAssignmentId != null) ...[
+              // Assignment selected — show info card, hide manual fields
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00B4D8).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFF00B4D8).withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.directions_bus,
+                          size: 16,
+                          color: Color(0xFF00B4D8),
+                        ),
+                        const Gap(6),
+                        Text(
+                          _busCtrl.text,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Gap(4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.person,
+                          size: 14,
+                          color: Colors.white54,
+                        ),
+                        const Gap(6),
+                        Text(
+                          _conductorCtrl.text,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              TextFormField(
+                controller: _busCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: _inputDec('Bus Registration Number'),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+              ),
+              const Gap(12),
+              TextFormField(
+                controller: _conductorCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: _inputDec('Conductor Name'),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+              ),
+            ],
             const Gap(12),
             TextFormField(
               controller: _notesCtrl,
