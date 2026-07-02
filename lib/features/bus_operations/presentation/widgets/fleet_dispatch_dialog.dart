@@ -1,8 +1,7 @@
-// NEXATRACE — ADVANCED DISPATCH ENGINE v2.1
+// NEXATRACE — ADVANCED DISPATCH ENGINE v2.2
 // =========================================
 // Supports: multi-driver, relief conductor, handover for both driver + conductor.
-//
-// MODULE: 14C — Active Fleet Scheduling
+// v2.2: Date range scheduling (From/To) + trip-linked catering issuance.
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -429,7 +428,10 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                                     firstDate: DateTime(2024),
                                     lastDate: DateTime(2030),
                                     initialDateRange: _dateTo != null
-                                        ? DateTimeRange(start: _dateFrom, end: _dateTo!)
+                                        ? DateTimeRange(
+                                            start: _dateFrom,
+                                            end: _dateTo!,
+                                          )
                                         : null,
                                     currentDate: _dateFrom,
                                   );
