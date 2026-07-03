@@ -294,7 +294,11 @@ class StoreKeeperInventoryController extends Controller
 
             foreach ($data['items'] as $itemInput) {
                 $cateringItem = CateringItem::forCompany($companyId)
-                    ->findOrFail($itemInput['item_id']);
+                    ->find($itemInput['item_id']);
+
+                if (!$cateringItem) {
+                    continue;
+                }
 
                 $unitPrice = $cateringItem->unit_price_paisa;
 
@@ -330,8 +334,10 @@ class StoreKeeperInventoryController extends Controller
 
         DB::transaction(function () use ($issuance) {
             foreach ($issuance->items as $issuanceItem) {
-                $item = CateringItem::findOrFail($issuanceItem->item_id);
-                $item->decrementStock($issuanceItem->quantity_issued);
+                $item = CateringItem::find($issuanceItem->item_id);
+                if ($item) {
+                    $item->decrementStock($issuanceItem->quantity_issued);
+                }
             }
             $issuance->markIssued();
         });
@@ -399,7 +405,10 @@ class StoreKeeperInventoryController extends Controller
             $totalSold     = 0;
 
             foreach ($data['items'] as $input) {
-                $issuanceItem = $issuance->items()->where('item_id', $input['item_id'])->firstOrFail();
+                $issuanceItem = $issuance->items()->where('item_id', $input['item_id'])->first();
+                if (!$issuanceItem) {
+                    continue; // Skip items not in this issuance
+                }
 
                 $returned = (int) ($input['quantity_returned'] ?? 0);
                 $sold     = (int) ($input['quantity_sold'] ?? 0);
@@ -411,8 +420,10 @@ class StoreKeeperInventoryController extends Controller
 
                 // Return unsold items to stock
                 if ($returned > 0) {
-                    $cateringItem = CateringItem::findOrFail($issuanceItem->item_id);
-                    $cateringItem->incrementStock($returned);
+                    $cateringItem = CateringItem::find($issuanceItem->item_id);
+                    if ($cateringItem) {
+                        $cateringItem->incrementStock($returned);
+                    }
                 }
 
                 $totalIssued   += $issuanceItem->issued_value_paisa;
