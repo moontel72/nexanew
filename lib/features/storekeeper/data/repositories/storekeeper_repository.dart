@@ -202,8 +202,15 @@ class StorekeeperRepository {
       '/api/v1/$_panel/dispatch/assignments',
       queryParams: {'status': 'active', 'limit': '50'},
     );
-    final data = r['data'] as Map<String, dynamic>? ?? {};
-    final list = (data['data'] as List<dynamic>?) ?? [];
+    final raw = r['data'];
+    List<dynamic> list;
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map) {
+      list = (raw['data'] as List<dynamic>?) ?? [];
+    } else {
+      list = [];
+    }
     return list.cast<Map<String, dynamic>>();
   }
 }

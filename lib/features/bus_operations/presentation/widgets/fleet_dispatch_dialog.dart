@@ -398,87 +398,88 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Start Date + End Date (separate pickers)
-                        Row(
+                        // Start Date + End Date with labels
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () async {
-                                  final p = await showDatePicker(
-                                    context: c,
-                                    initialDate: _dateFrom,
-                                    firstDate: DateTime.now(),
-                                    lastDate: DateTime(2030),
-                                  );
-                                  if (p != null) setState(() => _dateFrom = p);
-                                },
-                                icon: const Icon(
-                                  Icons.calendar_today,
-                                  size: 14,
-                                ),
-                                label: Text(
-                                  _fmtDate(_dateFrom),
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 10,
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Start Date',
+                                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                                      const Gap(4),
+                                      OutlinedButton.icon(
+                                        onPressed: () async {
+                                          final p = await showDatePicker(
+                                            context: c,
+                                            initialDate: _dateFrom,
+                                            firstDate: DateTime.now(),
+                                            lastDate: DateTime(2030),
+                                          );
+                                          if (p != null) setState(() => _dateFrom = p);
+                                        },
+                                        icon: const Icon(Icons.calendar_today, size: 14, color: Colors.white),
+                                        label: Text(_fmtDate(_dateFrom),
+                                            style: const TextStyle(fontSize: 13, color: Colors.white)),
+                                        style: OutlinedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF1E293B),
+                                          side: const BorderSide(color: Color(0xFF475569)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
+                                const Gap(8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('End Date',
+                                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                                      const Gap(4),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton.icon(
+                                              onPressed: () async {
+                                                final p = await showDatePicker(
+                                                  context: c,
+                                                  initialDate: _dateTo ?? _dateFrom,
+                                                  firstDate: _dateFrom,
+                                                  lastDate: DateTime(2030),
+                                                );
+                                                if (p != null) setState(() => _dateTo = p);
+                                              },
+                                              icon: Icon(_dateTo != null ? Icons.event : Icons.event_outlined,
+                                                  size: 14, color: Colors.white),
+                                              label: Text(_dateTo != null ? _fmtDate(_dateTo!) : 'Optional',
+                                                  style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                                              style: OutlinedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF1E293B),
+                                                side: const BorderSide(color: Color(0xFF475569)),
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                              ),
+                                            ),
+                                          ),
+                                          if (_dateTo != null)
+                                            IconButton(
+                                              icon: const Icon(Icons.clear, size: 16, color: Colors.white54),
+                                              onPressed: () => setState(() => _dateTo = null),
+                                              tooltip: 'Clear end date',
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            const Gap(8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () async {
-                                  final p = await showDatePicker(
-                                    context: c,
-                                    initialDate: _dateTo ?? _dateFrom,
-                                    firstDate: _dateFrom,
-                                    lastDate: DateTime(2030),
-                                  );
-                                  if (p != null) setState(() => _dateTo = p);
-                                },
-                                icon: Icon(
-                                  _dateTo != null
-                                      ? Icons.event
-                                      : Icons.event_outlined,
-                                  size: 14,
-                                ),
-                                label: Text(
-                                  _dateTo != null
-                                      ? _fmtDate(_dateTo!)
-                                      : 'End Date',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _dateTo != null
-                                        ? null
-                                        : Colors.white54,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 10,
-                                  ),
-                                  side: _dateTo != null
-                                      ? null
-                                      : const BorderSide(color: Colors.white24),
-                                ),
-                              ),
-                            ),
-                            if (_dateTo != null)
-                              IconButton(
-                                icon: const Icon(Icons.clear, size: 16),
-                                onPressed: () => setState(() => _dateTo = null),
-                                tooltip: 'Clear end date',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 28,
-                                  minHeight: 28,
-                                ),
-                              ),
                           ],
                         ),
                         const Gap(8),
