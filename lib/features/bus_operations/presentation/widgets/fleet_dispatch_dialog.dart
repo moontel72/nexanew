@@ -497,7 +497,7 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                                                 _dateTo != null
                                                     ? _fmtDate(_dateTo!)
                                                     : 'Optional',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 13,
                                                   color: _dateTo != null
                                                       ? Colors.black
