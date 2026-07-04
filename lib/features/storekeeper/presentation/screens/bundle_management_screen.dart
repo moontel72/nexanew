@@ -53,7 +53,7 @@ class _BundleManagementScreenState extends State<BundleManagementScreen> {
   Future<void> _createBundle() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const _CreateBundlePage()),
+      MaterialPageRoute(builder: (_) => const CreateBundlePage()),
     );
     if (result == true) _load();
   }
@@ -277,14 +277,14 @@ class _BundleManagementScreenState extends State<BundleManagementScreen> {
 
 // ─── Create Bundle Page ─────────────────────────────────────
 
-class _CreateBundlePage extends StatefulWidget {
-  const _CreateBundlePage();
+class CreateBundlePage extends StatefulWidget {
+  const CreateBundlePage({super.key});
 
   @override
-  State<_CreateBundlePage> createState() => _CreateBundlePageState();
+  State<CreateBundlePage> createState() => _CreateBundlePageState();
 }
 
-class _CreateBundlePageState extends State<_CreateBundlePage> {
+class _CreateBundlePageState extends State<CreateBundlePage> {
   final _api = ApiService();
   static const _prefix = '/api/v1/bus-fleet/storekeeper';
   final _nameCtrl = TextEditingController();
