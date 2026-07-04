@@ -565,12 +565,20 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
   bool _loadingAssignments = false;
   String? _selectedAssignmentId;
 
+  // Bundle/Packet hierarchy
+  List<Map<String, dynamic>> _bundles = [];
+  List<Map<String, dynamic>> _packets = [];
+  bool _loadingBundles = false;
+  String? _selectedBundleId;
+  String? _selectedPacketId;
+
   @override
   void initState() {
     super.initState();
     _repo = StorekeeperRepository(panel: widget.panel);
     _loadItems();
     _loadActiveAssignments();
+    _loadBundles();
   }
 
   @override
@@ -607,6 +615,52 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
       }
     } catch (_) {
       if (mounted) setState(() => _loadingAssignments = false);
+    }
+  }
+
+  Future<void> _loadBundles() async {
+    setState(() => _loadingBundles = true);
+    try {
+      final r = await _repo.getBundles();
+      if (mounted) {
+        setState(() {
+          _bundles = r;
+          _loadingBundles = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingBundles = false);
+    }
+  }
+
+  void _onBundleSelected(String? bundleId) {
+    setState(() {
+      _selectedBundleId = bundleId;
+      _selectedPacketId = null;
+      _packets = [];
+    });
+    if (bundleId == null) return;
+    final bundle = _bundles.firstWhere((b) => b['id'] == bundleId, orElse: () => {});
+    if (bundle.isNotEmpty) {
+      final pkts = (bundle['packets'] as List<dynamic>?) ?? [];
+      setState(() => _packets = pkts.cast<Map<String, dynamic>>());
+    }
+  }
+
+  void _onPacketSelected(String? packetId) {
+    setState(() => _selectedPacketId = packetId);
+    if (packetId == null) return;
+    final packet = _packets.firstWhere((p) => p['id'] == packetId, orElse: () => {});
+    if (packet.isEmpty) return;
+    final itemId = packet['item_id']?.toString();
+    final totalUnits = int.tryParse(packet['total_units']?.toString() ?? '0') ?? 0;
+    if (itemId != null) {
+      final existing = _availableItems.where((i) => i.id == itemId).toList();
+      if (existing.isNotEmpty && !_selectedItems.any((s) => s.item.id == existing.first.id)) {
+        setState(() {
+          _selectedItems.add(_SelectedItem(item: existing.first, quantity: totalUnits > 0 ? totalUnits : 1));
+        });
+      }
     }
   }
 
@@ -652,6 +706,8 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
         'notes': _notesCtrl.text.trim(),
         if (_selectedAssignmentId != null)
           'assignment_id': _selectedAssignmentId,
+        if (_selectedBundleId != null) 'bundle_id': _selectedBundleId,
+        if (_selectedPacketId != null) 'packet_id': _selectedPacketId,
         'items': _selectedItems
             .map((s) => {'item_id': s.item.id, 'quantity_issued': s.quantity})
             .toList(),
@@ -775,6 +831,44 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                   ],
                 ),
               ),
+            ],
+            // Bundle ➔ Packet hierarchy
+            if (_selectedAssignmentId != null) ...[
+              const Gap(12),
+              if (_loadingBundles)
+                const Center(child: CircularProgressIndicator())
+              else ...[\n                DropdownButtonFormField<String>(
+                  value: _selectedBundleId,
+                  decoration: _inputDec('Select Bundle (Lot)'),
+                  isExpanded: true,
+                  dropdownColor: const Color(0xFF1B2838),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  items: [
+                    ..._bundles.map((b) => DropdownMenuItem<String>(
+                      value: b['id']?.toString(),
+                      child: Text(b['name']?.toString() ?? '', style: const TextStyle(fontSize: 13, color: Colors.white)),
+                    )),
+                  ],
+                  onChanged: _onBundleSelected,
+                ),
+                if (_packets.isNotEmpty) ...[\n                  const Gap(8),
+                  DropdownButtonFormField<String>(
+                    value: _selectedPacketId,
+                    decoration: _inputDec('Select Packet (Smart Code)'),
+                    isExpanded: true,
+                    dropdownColor: const Color(0xFF1B2838),
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    items: [
+                      ..._packets.map((p) => DropdownMenuItem<String>(
+                        value: p['id']?.toString(),
+                        child: Text('${p['smart_code'] ?? ''} - ${p['name'] ?? ''}',
+                            style: const TextStyle(fontSize: 13, color: Colors.white)),
+                      )),
+                    ],
+                    onChanged: _onPacketSelected,
+                  ),
+                ],
+              ],
             ],
             const Gap(12),
             TextFormField(

@@ -213,4 +213,11 @@ class StorekeeperRepository {
     }
     return list.cast<Map<String, dynamic>>();
   }
+
+  Future<List<Map<String, dynamic>>> getBundles() async {
+    final r = await _api.get('/api/v1/$_panel/storekeeper/bundles');
+    final data = r['data'];
+    if (data is List) return data.cast<Map<String, dynamic>>();
+    return [];
+  }
 }

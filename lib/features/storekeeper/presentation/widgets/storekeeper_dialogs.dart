@@ -87,20 +87,18 @@ class _CateringItemDialogState extends State<CateringItemDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _field('Name *', _nameCtrl, validator: (v) =>
+              _field('Name *', _nameCtrl, hint: 'e.g. Lays Chips', validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Required' : null),
               const SizedBox(height: 10),
-              _field('SKU', _skuCtrl),
+              _field('SKU (optional)', _skuCtrl, hint: 'e.g. LAY-001'),
               const SizedBox(height: 10),
-              _field('Unit', _unitCtrl),
+              _field('Price', _priceCtrl, hint: 'e.g. 50.00', keyboardType: TextInputType.number),
               const SizedBox(height: 10),
-              _field('Price', _priceCtrl, keyboardType: TextInputType.number),
-              const SizedBox(height: 10),
-              _field('Low Stock Threshold', _thresholdCtrl,
+              _field('Low Stock Threshold', _thresholdCtrl, hint: 'e.g. 10',
                   keyboardType: TextInputType.number),
               const SizedBox(height: 10),
               if (!isEditing)
-                _field('Initial Stock', _stockCtrl,
+                _field('Initial Stock', _stockCtrl, hint: 'e.g. 100',
                     keyboardType: TextInputType.number),
               if (!isEditing) const SizedBox(height: 10),
               // Category dropdown
@@ -156,12 +154,12 @@ class _CateringItemDialogState extends State<CateringItemDialog> {
   }
 
   Widget _field(String label, TextEditingController ctrl,
-      {TextInputType? keyboardType, String? Function(String?)? validator}) {
+      {TextInputType? keyboardType, String? Function(String?)? validator, String? hint}) {
     return TextFormField(
       controller: ctrl,
       keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white, fontSize: 13),
-      decoration: _dec(label),
+      decoration: _dec(label).copyWith(hintText: hint, hintStyle: const TextStyle(color: Colors.white30, fontSize: 12)),
       validator: validator,
     );
   }

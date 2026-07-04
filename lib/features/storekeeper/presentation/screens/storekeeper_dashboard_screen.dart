@@ -171,7 +171,7 @@ class _StorekeeperDashboardScreenState extends State<StorekeeperDashboardScreen>
       ),
       _Kpi(
         'Outstanding',
-        '\$${_dashboardData.outstandingValueMain.toStringAsFixed(2)}',
+        'Rs. ${_dashboardData.outstandingValueMain.toStringAsFixed(0)}',
         Icons.account_balance_wallet,
         const Color(0xFF16A34A),
       ),
