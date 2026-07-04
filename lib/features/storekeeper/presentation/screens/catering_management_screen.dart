@@ -4,7 +4,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:trace_odd/features/storekeeper/presentation/screens/bundle_management_screen.dart';
 import 'package:trace_odd/features/storekeeper/data/repositories/storekeeper_repository.dart';
 import 'package:trace_odd/features/storekeeper/domain/models/catering_category.dart';
 import 'package:trace_odd/features/storekeeper/domain/models/catering_item.dart';
@@ -87,11 +86,18 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
   }
 
   Future<void> _createItem() async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => const CreateBundlePage()),
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => CateringItemDialog(categories: _categories),
     );
-    if (result == true) _load();
+    if (result != null) {
+      try {
+        await _repo.createItem(result);
+        _load();
+      } catch (e) {
+        _showError(e.toString());
+      }
+    }
   }
 
   Future<void> _editItem(CateringItem item) async {
@@ -208,7 +214,7 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
               const Gap(8),
               IconButton(
                 icon: const Icon(Icons.add_circle, color: Color(0xFF00B4D8)),
-                tooltip: 'New Bundle',
+                tooltip: 'Add Item',
                 onPressed: _createItem,
               ),
             ],

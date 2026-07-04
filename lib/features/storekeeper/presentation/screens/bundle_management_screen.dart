@@ -292,10 +292,48 @@ class _CreateBundlePageState extends State<CreateBundlePage> {
   final List<_PacketEntry> _packets = [];
   bool _saving = false;
 
+  List<Map<String, dynamic>> _allItems = [];
+  bool _loadingItems = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    try {
+      final r = await _api.get(
+        '$_prefix/items',
+        queryParams: {'status': 'active', 'limit': '200'},
+      );
+      final raw = r['data'];
+      List list;
+      if (raw is List) {
+        list = raw;
+      } else if (raw is Map) {
+        list = (raw['data'] as List?) ?? [];
+      } else {
+        list = [];
+      }
+      if (mounted)
+        setState(() {
+          _allItems = list.cast<Map<String, dynamic>>();
+          _loadingItems = false;
+        });
+    } catch (_) {
+      if (mounted) setState(() => _loadingItems = false);
+    }
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
     _descCtrl.dispose();
+    for (final p in _packets) {
+      p.nameCtrl.dispose();
+      p.unitsCtrl.dispose();
+    }
     super.dispose();
   }
 
@@ -304,7 +342,23 @@ class _CreateBundlePageState extends State<CreateBundlePage> {
   }
 
   void _removePacket(int i) {
+    _packets[i].nameCtrl.dispose();
+    _packets[i].unitsCtrl.dispose();
     setState(() => _packets.removeAt(i));
+  }
+
+  void _onItemSelected(int idx, String? itemId) {
+    if (itemId == null) return;
+    final item = _allItems.firstWhere(
+      (i) => i['id'] == itemId,
+      orElse: () => {},
+    );
+    if (item.isNotEmpty) {
+      setState(() {
+        _packets[idx].itemId = itemId;
+        _packets[idx].nameCtrl.text = item['name']?.toString() ?? '';
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -328,6 +382,7 @@ class _CreateBundlePageState extends State<CreateBundlePage> {
                 (p) => {
                   'name': p.nameCtrl.text.trim(),
                   'total_units': int.tryParse(p.unitsCtrl.text) ?? 1,
+                  if (p.itemId != null) 'item_id': p.itemId,
                 },
               )
               .toList(),
@@ -457,6 +512,24 @@ class _CreateBundlePageState extends State<CreateBundlePage> {
                       ],
                     ),
                     const Gap(8),
+                    // Item selector dropdown — link to existing inventory
+                    if (_allItems.isNotEmpty)
+                      DropdownButtonFormField<String>(
+                        value: p.itemId,
+                        decoration: _dec('Link to Inventory Item'),
+                        isExpanded: true,
+                        dropdownColor: const Color(0xFF1B2838),
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        items: [
+                          ..._allItems.map((item) => DropdownMenuItem<String>(
+                            value: item['id']?.toString(),
+                            child: Text('${item['name']} (${item['stock_on_hand'] ?? 0})',
+                                style: const TextStyle(fontSize: 13, color: Colors.white)),
+                          )),
+                        ],
+                        onChanged: (v) => _onItemSelected(i, v),
+                      ),
+                    const Gap(8),
                     TextFormField(
                       controller: p.nameCtrl,
                       style: const TextStyle(color: Colors.white),
@@ -520,4 +593,5 @@ class _CreateBundlePageState extends State<CreateBundlePage> {
 class _PacketEntry {
   final nameCtrl = TextEditingController();
   final unitsCtrl = TextEditingController(text: '1');
+  String? itemId;
 }
