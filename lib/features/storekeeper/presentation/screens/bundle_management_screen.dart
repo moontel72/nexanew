@@ -3,7 +3,6 @@ library;
 
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 
@@ -293,7 +292,7 @@ class _CreateBundlePageState extends State<CreateBundlePage> {
   bool _saving = false;
 
   List<Map<String, dynamic>> _allItems = [];
-  bool _loadingItems = true;
+  bool _loadingItems = false;
 
   @override
   void initState() {
@@ -519,13 +518,23 @@ class _CreateBundlePageState extends State<CreateBundlePage> {
                         decoration: _dec('Link to Inventory Item'),
                         isExpanded: true,
                         dropdownColor: const Color(0xFF1B2838),
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
                         items: [
-                          ..._allItems.map((item) => DropdownMenuItem<String>(
-                            value: item['id']?.toString(),
-                            child: Text('${item['name']} (${item['stock_on_hand'] ?? 0})',
-                                style: const TextStyle(fontSize: 13, color: Colors.white)),
-                          )),
+                          ..._allItems.map(
+                            (item) => DropdownMenuItem<String>(
+                              value: item['id']?.toString(),
+                              child: Text(
+                                '${item['name']} (${item['stock_on_hand'] ?? 0})',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                         onChanged: (v) => _onItemSelected(i, v),
                       ),
