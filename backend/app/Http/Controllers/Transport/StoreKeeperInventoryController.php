@@ -663,4 +663,182 @@ class StoreKeeperInventoryController extends Controller
         return CateringIssuance::forCompany($this->resolveCompanyId($request))
             ->findOrFail($id);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // BUNDLE & SMART CODE MANAGEMENT
+    // ═══════════════════════════════════════════════════════════
+
+    public function listBundles(Request $request)
+    {
+        $companyId = $this->resolveCompanyId($request);
+        $bundles = DB::table('catering_bundles')
+            ->where('company_id', $companyId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($b) use ($companyId) {
+                $b->packets = DB::table('catering_packets')
+                    ->where('bundle_id', $b->id)
+                    ->get();
+                return $b;
+            });
+
+        return response()->json(['success' => true, 'data' => $bundles]);
+    }
+
+    public function storeBundle(Request $request)
+    {
+        $data = $request->validate([
+            'name'        => ['required', 'string', 'max:200'],
+            'description' => ['nullable', 'string'],
+            'packets'     => ['required', 'array', 'min:1'],
+            'packets.*.name'         => ['required', 'string', 'max:200'],
+            'packets.*.item_id'      => ['nullable', 'uuid'],
+            'packets.*.total_units'  => ['required', 'integer', 'min:1'],
+        ]);
+
+        $companyId = $this->resolveCompanyId($request);
+
+        return DB::transaction(function () use ($data, $companyId) {
+            $bundleId = (string) \Illuminate\Support\Str::orderedUuid();
+
+            DB::table('catering_bundles')->insert([
+                'id'          => $bundleId,
+                'company_id'  => $companyId,
+                'name'        => $data['name'],
+                'description' => $data['description'] ?? null,
+                'status'      => 'active',
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+
+            $packets = [];
+            foreach ($data['packets'] as $pkt) {
+                $smartCode = '#' . $this->generateSmartCode();
+                $totalUnits = (int) $pkt['total_units'];
+                $packetId = (string) \Illuminate\Support\Str::orderedUuid();
+
+                DB::table('catering_packets')->insert([
+                    'id'              => $packetId,
+                    'bundle_id'       => $bundleId,
+                    'company_id'      => $companyId,
+                    'item_id'         => $pkt['item_id'] ?? null,
+                    'name'            => $pkt['name'],
+                    'smart_code'      => $smartCode,
+                    'total_units'     => $totalUnits,
+                    'units_remaining' => $totalUnits,
+                    'status'          => 'active',
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+
+                $packets[] = [
+                    'id'              => $packetId,
+                    'name'            => $pkt['name'],
+                    'smart_code'      => $smartCode,
+                    'total_units'     => $totalUnits,
+                    'units_remaining' => $totalUnits,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'id'          => $bundleId,
+                    'name'        => $data['name'],
+                    'description' => $data['description'] ?? null,
+                    'status'      => 'active',
+                    'packets'     => $packets,
+                ],
+            ], 201);
+        });
+    }
+
+    public function showBundle(Request $request, string $id)
+    {
+        $companyId = $this->resolveCompanyId($request);
+        $bundle = DB::table('catering_bundles')
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->first();
+
+        if (!$bundle) {
+            return response()->json(['success' => false, 'message' => 'Bundle not found.'], 404);
+        }
+
+        $bundle->packets = DB::table('catering_packets')
+            ->where('bundle_id', $id)
+            ->get();
+
+        return response()->json(['success' => true, 'data' => $bundle]);
+    }
+
+    public function updateBundle(Request $request, string $id)
+    {
+        $companyId = $this->resolveCompanyId($request);
+        $bundle = DB::table('catering_bundles')
+            ->where('company_id', $companyId)->where('id', $id)->first();
+
+        if (!$bundle) {
+            return response()->json(['success' => false, 'message' => 'Bundle not found.'], 404);
+        }
+
+        $data = $request->validate([
+            'name'        => ['sometimes', 'string', 'max:200'],
+            'description' => ['nullable', 'string'],
+            'status'      => ['sometimes', 'in:draft,active,archived'],
+        ]);
+
+        DB::table('catering_bundles')->where('id', $id)->update([
+            'name'        => $data['name'] ?? $bundle->name,
+            'description' => $data['description'] ?? $bundle->description,
+            'status'      => $data['status'] ?? $bundle->status,
+            'updated_at'  => now(),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Bundle updated.']);
+    }
+
+    public function destroyBundle(Request $request, string $id)
+    {
+        $companyId = $this->resolveCompanyId($request);
+        DB::table('catering_packets')->where('bundle_id', $id)->delete();
+        DB::table('catering_bundles')->where('company_id', $companyId)->where('id', $id)->delete();
+
+        return response()->json(['success' => true, 'message' => 'Bundle deleted.']);
+    }
+
+    public function findPacketByCode(Request $request, string $code)
+    {
+        $packet = DB::table('catering_packets')->where('smart_code', '#' . $code)->first();
+
+        if (!$packet) {
+            return response()->json(['success' => false, 'message' => 'Smart code not found.'], 404);
+        }
+
+        return response()->json(['success' => true, 'data' => $packet]);
+    }
+
+    public function uploadPacketPhoto(Request $request, string $id)
+    {
+        $request->validate(['photo' => ['required', 'image', 'max:10240']]);
+
+        $path = $request->file('photo')->store('catering/packets', 'public');
+
+        DB::table('catering_packets')->where('id', $id)->update([
+            'photo_url' => '/storage/' . $path,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['success' => true, 'data' => ['photo_url' => '/storage/' . $path]]);
+    }
+
+    private function generateSmartCode(int $attempts = 0): string
+    {
+        if ($attempts > 10) {
+            throw new \RuntimeException('Unable to generate unique smart code.');
+        }
+        $code = str_pad((string) random_int(0, 99999), 5, '0', STR_PAD_LEFT);
+        $exists = DB::table('catering_packets')->where('smart_code', '#' . $code)->exists();
+        return $exists ? $this->generateSmartCode($attempts + 1) : $code;
+    }
 }

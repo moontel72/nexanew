@@ -10,6 +10,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/features/storekeeper/data/repositories/storekeeper_repository.dart';
 import 'package:trace_odd/features/storekeeper/domain/models/storekeeper_dashboard.dart';
+import 'package:trace_odd/features/storekeeper/presentation/screens/bundle_management_screen.dart';
 import 'package:trace_odd/features/storekeeper/presentation/screens/catering_management_screen.dart';
 import 'package:trace_odd/features/storekeeper/presentation/screens/issuance_screen.dart';
 import 'package:trace_odd/features/storekeeper/presentation/screens/reconciliation_screen.dart';
@@ -38,7 +39,7 @@ class _StorekeeperDashboardScreenState extends State<StorekeeperDashboardScreen>
   bool _loading = true;
   String? _error;
 
-  static const _tabs = ['Catering', 'Issuance', 'Reconciliation'];
+  static const _tabs = ['Catering', 'Issuance', 'Reconciliation', 'Bundles'];
 
   @override
   void initState() {
@@ -108,6 +109,7 @@ class _StorekeeperDashboardScreenState extends State<StorekeeperDashboardScreen>
                 CateringManagementScreen(panel: widget.panel),
                 IssuanceScreen(panel: widget.panel),
                 ReconciliationScreen(panel: widget.panel),
+                const BundleManagementScreen(),
               ],
             ),
           ),

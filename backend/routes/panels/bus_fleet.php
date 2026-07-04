@@ -377,5 +377,14 @@ Route::prefix('api/v1/bus-fleet')
             // Activity Logs & Settlement Reports (Admin/Owner view)
             Route::get('audit-trail', [$inv, 'auditTrail']);
             Route::get('settlement-report', [$inv, 'settlementReport']);
+
+            // Bundle & Smart Code Management
+            Route::get('bundles', [$inv, 'listBundles']);
+            Route::post('bundles', [$inv, 'storeBundle']);
+            Route::get('bundles/{id}', [$inv, 'showBundle']);
+            Route::put('bundles/{id}', [$inv, 'updateBundle']);
+            Route::delete('bundles/{id}', [$inv, 'destroyBundle']);
+            Route::get('packets/by-code/{code}', [$inv, 'findPacketByCode']);
+            Route::post('packets/{id}/photo', [$inv, 'uploadPacketPhoto']);
         });
     });
