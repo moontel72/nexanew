@@ -24,6 +24,7 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
   String? _error;
   int _page = 1;
   String? _statusFilter;
+  String? _expandedId;
 
   @override
   void initState() {
@@ -240,74 +241,154 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
           ),
         ),
         const Gap(4),
-        ..._issuances.map(_buildTableRow),
+        ..._issuances.map((i) => _buildTableRow(i)),
       ],
     );
   }
 
   Widget _buildTableRow(CateringIssuance i) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1B2838),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              i.busRegNumber ?? i.conductorName ?? i.tripId ?? '—',
-              style: const TextStyle(color: Colors.white, fontSize: 13),
+    final expanded = _expandedId == i.id;
+    return Column(
+      children: [
+        InkWell(
+          onTap: () => setState(() => _expandedId = expanded ? null : i.id),
+          child: Container(
+            margin: EdgeInsets.only(bottom: expanded ? 0 : 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B2838),
+              borderRadius: expanded
+                  ? const BorderRadius.vertical(top: Radius.circular(6))
+                  : BorderRadius.circular(6),
             ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              '${i.items.length} items',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: _statusColor(i.status).withOpacity(0.15),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                i.status[0].toUpperCase() + i.status.substring(1),
-                style: TextStyle(
-                  color: _statusColor(i.status),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    i.busRegNumber ?? i.conductorName ?? i.tripId ?? '\u2014',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
                 ),
-              ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    '${i.items.length} items',
+                    style: const TextStyle(
+                      color: Color(0xFF00B4D8),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _statusColor(i.status).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      i.status[0].toUpperCase() + i.status.substring(1),
+                      style: TextStyle(
+                        color: _statusColor(i.status),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    _formatDate(i.createdAt),
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
+                ),
+                if (i.isPending)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.local_shipping,
+                      size: 16,
+                      color: Color(0xFF00B4D8),
+                    ),
+                    tooltip: 'Issue items',
+                    onPressed: () => _issueItems(i),
+                    constraints: const BoxConstraints(
+                      minWidth: 30,
+                      minHeight: 30,
+                    ),
+                    padding: EdgeInsets.zero,
+                  ),
+              ],
             ),
           ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              _formatDate(i.createdAt),
-              style: const TextStyle(color: Colors.white38, fontSize: 11),
+        ),
+        if (expanded)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F1F30),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(6),
+              ),
+              border: Border(
+                top: BorderSide(color: Colors.white.withOpacity(0.05)),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Issued Items',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Gap(6),
+                ...i.items.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.inventory_2,
+                          size: 12,
+                          color: Colors.white38,
+                        ),
+                        const Gap(6),
+                        Expanded(
+                          child: Text(
+                            item.itemName ?? '\u2014',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Qty: ${item.quantityIssued}',
+                          style: const TextStyle(
+                            color: Color(0xFF00B4D8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          if (i.isPending)
-            IconButton(
-              icon: const Icon(
-                Icons.local_shipping,
-                size: 16,
-                color: Color(0xFF00B4D8),
-              ),
-              tooltip: 'Issue items',
-              onPressed: () => _issueItems(i),
-              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-              padding: EdgeInsets.zero,
-            ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -620,7 +701,8 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                 isExpanded: true,
                 dropdownColor: const Color(0xFF1B2838),
                 style: const TextStyle(color: Colors.white, fontSize: 14),
-                validator: (v) => v == null ? 'Please select an assignment' : null,
+                validator: (v) =>
+                    v == null ? 'Please select an assignment' : null,
                 items: [
                   ..._activeAssignments.map((a) {
                     final plate = a['bus_reg_number']?.toString() ?? '';
@@ -629,7 +711,10 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                       value: a['id']?.toString(),
                       child: Text(
                         '$route | $plate',
-                        style: const TextStyle(fontSize: 13, color: Colors.white),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     );
@@ -645,26 +730,46 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF00B4D8).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF00B4D8).withOpacity(0.3)),
+                  border: Border.all(
+                    color: const Color(0xFF00B4D8).withOpacity(0.3),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.directions_bus, size: 16, color: Color(0xFF00B4D8)),
+                        const Icon(
+                          Icons.directions_bus,
+                          size: 16,
+                          color: Color(0xFF00B4D8),
+                        ),
                         const Gap(6),
-                        Text(_busCtrl.text,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                        Text(
+                          _busCtrl.text,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                     const Gap(4),
                     Row(
                       children: [
-                        const Icon(Icons.person, size: 14, color: Colors.white54),
+                        const Icon(
+                          Icons.person,
+                          size: 14,
+                          color: Colors.white54,
+                        ),
                         const Gap(6),
-                        Text(_conductorCtrl.text,
-                            style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                        Text(
+                          _conductorCtrl.text,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -781,7 +886,10 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
                 const Gap(12),
@@ -794,10 +902,17 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                     onPressed: _submitting ? null : _submit,
                     child: _submitting
                         ? const SizedBox(
-                            width: 20, height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : const Text('Create Issuance', style: TextStyle(fontWeight: FontWeight.bold)),
+                        : const Text(
+                            'Create Issuance',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                   ),
                 ),
               ],
