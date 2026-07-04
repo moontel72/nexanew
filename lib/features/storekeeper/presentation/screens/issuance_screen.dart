@@ -24,6 +24,7 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
   String? _error;
   int _page = 1;
   String? _statusFilter;
+  String? _expandedIssuanceId; // expandable row tracking
 
   @override
   void initState() {
@@ -240,7 +241,210 @@ class _IssuanceScreenState extends State<IssuanceScreen> {
           ),
         ),
         const Gap(4),
-        ..._issuances.map(_buildTableRow),
+        ..._issuances.map((i) {
+          final isExpanded = _expandedIssuanceId == i.id;
+          return Column(
+            children: [
+              GestureDetector(
+                onTap: () => setState(() =>
+                    _expandedIssuanceId = isExpanded ? null : i.id),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: isExpanded ? 0 : 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1B2838),
+                    borderRadius: isExpanded
+                        ? const BorderRadius.vertical(top: Radius.circular(6))
+                        : BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          i.busRegNumber ?? i.conductorName ?? i.tripId ?? '\u2014',
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          '${i.items.length} items',
+                          style: const TextStyle(color: Color(0xFF00B4D8), fontSize: 12, decoration: TextDecoration.underline),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _statusColor(i.status).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            i.status[0].toUpperCase() + i.status.substring(1),
+                            style: TextStyle(
+                              color: _statusColor(i.status),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          _formatDate(i.createdAt),
+                          style: const TextStyle(color: Colors.white38, fontSize: 11),
+                        ),
+                      ),
+                      if (i.isPending)
+                        IconButton(
+                          icon: const Icon(Icons.local_shipping, size: 16, color: Color(0xFF00B4D8)),
+                          tooltip: 'Issue items',
+                          onPressed: () => _issueItems(i),
+                          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            Widget _buildTableRow(CateringIssuance i) {
+              final isExpanded = _expandedIssuanceId == i.id;
+              return Column(
+                children: [
+                  GestureDetector(
+                    onTap: () => setState(() => _expandedIssuanceId = isExpanded ? null : i.id),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: isExpanded ? 0 : 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1B2838),
+                        borderRadius: isExpanded
+                            ? const BorderRadius.vertical(top: Radius.circular(6))
+                            : BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              i.busRegNumber ?? i.conductorName ?? i.tripId ?? '\u2014',
+                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: Text(
+                              '${i.items.length} items',
+                              style: const TextStyle(color: Color(0xFF00B4D8), fontSize: 12, decoration: TextDecoration.underline),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: _buildStatusBadge(i),
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: Text(_formatDate(i.createdAt),
+                                style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                          ),
+                          if (i.isPending)
+                            IconButton(
+                              icon: const Icon(Icons.local_shipping, size: 16, color: Color(0xFF00B4D8)),
+                              tooltip: 'Issue items',
+                              onPressed: () => _issueItems(i),
+                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (isExpanded) _buildItemDetails(i),
+                ],
+              );
+            }
+
+            Widget _buildItemDetails(CateringIssuance i) => Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F1F30),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(6)),
+                border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: i.items.map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.inventory_2, size: 12, color: Colors.white38),
+                      const Gap(6),
+                      Expanded(
+                        child: Text(item.itemName ?? '\u2014',
+                            style: const TextStyle(color: Colors.white, fontSize: 12)),
+                      ),
+                      Text('Qty: ${item.quantityIssued}',
+                          style: const TextStyle(color: Color(0xFF00B4D8), fontSize: 12, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                )).toList(),
+              ),
+            );
+
+            Widget _buildStatusBadge(CateringIssuance i) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: _statusColor(i.status).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                i.status[0].toUpperCase() + i.status.substring(1),
+                style: TextStyle(
+                  color: _statusColor(i.status),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            );
+              ),
+              // Expanded item details
+              if (isExpanded)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 4),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F1F30),
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(6)),
+                    border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: i.items.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.inventory_2, size: 12, color: Colors.white38),
+                          const Gap(6),
+                          Expanded(
+                            child: Text(item.itemName ?? '—',
+                                style: const TextStyle(color: Colors.white, fontSize: 12)),
+                          ),
+                          Text('Qty: ${item.quantityIssued}',
+                              style: const TextStyle(color: Color(0xFF00B4D8), fontSize: 12, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    )).toList(),
+                  ),
+                ),
+            ],
+          );
+        }),
       ],
     );
   }

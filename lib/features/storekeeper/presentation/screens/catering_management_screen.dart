@@ -428,7 +428,7 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
           Expanded(
             flex: 1,
             child: Text(
-              '\$${item.unitPriceInMain.toStringAsFixed(2)}',
+              'Rs. ${item.unitPriceInMain.toStringAsFixed(0)}',
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
           ),
@@ -539,7 +539,7 @@ class _CateringManagementScreenState extends State<CateringManagementScreen> {
                       ),
                       const Gap(12),
                       Text(
-                        '\$${item.unitPriceInMain.toStringAsFixed(2)} / ${item.unit}',
+                        'Rs. ${item.unitPriceInMain.toStringAsFixed(0)} / ${item.unit}',
                         style: const TextStyle(
                           color: Colors.white54,
                           fontSize: 11,

@@ -57,7 +57,7 @@ class _StorekeeperSettlementReportScreenState
 
   String _fmtPaisa(dynamic v) {
     final p = v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
-    return '\$${(p / 100).toStringAsFixed(2)}';
+    return 'Rs. ${(p / 100).toStringAsFixed(0)}';
   }
 
   @override

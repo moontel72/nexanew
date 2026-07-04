@@ -412,7 +412,7 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                                       const Text(
                                         'Start Date',
                                         style: TextStyle(
-                                          color: Colors.white,
+                                          color: Colors.black,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -465,7 +465,7 @@ class _FleetDispatchFormState extends State<FleetDispatchForm> {
                                       const Text(
                                         'End Date',
                                         style: TextStyle(
-                                          color: Colors.white,
+                                          color: Colors.black,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),

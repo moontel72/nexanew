@@ -358,28 +358,28 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
           Expanded(
             flex: 1,
             child: Text(
-              '\$${(r.totalIssuedValuePaisa / 100).toStringAsFixed(0)}',
+              'Rs. ${(r.totalIssuedValuePaisa / 100).toStringAsFixed(0)}',
               style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),
           Expanded(
             flex: 1,
             child: Text(
-              '\$${(r.totalReturnedValuePaisa / 100).toStringAsFixed(0)}',
+              'Rs. ${(r.totalReturnedValuePaisa / 100).toStringAsFixed(0)}',
               style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ),
           Expanded(
             flex: 1,
             child: Text(
-              '\$${(r.totalSoldValuePaisa / 100).toStringAsFixed(0)}',
+              'Rs. ${(r.totalSoldValuePaisa / 100).toStringAsFixed(0)}',
               style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ),
           Expanded(
             flex: 1,
             child: Text(
-              '$varianceSign\$${(r.variancePaisa / 100).toStringAsFixed(0)}',
+              '$varianceSign Rs. ${(r.variancePaisa / 100).abs().toStringAsFixed(0)}',
               style: TextStyle(
                 color: varianceColor,
                 fontSize: 12,
