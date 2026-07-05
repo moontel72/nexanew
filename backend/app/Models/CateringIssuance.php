@@ -19,6 +19,8 @@ class CateringIssuance extends Model
         'route_id',
         'bus_reg_number',
         'conductor_name',
+        'bundle_id',
+        'packet_id',
         'status',
         'notes',
         'issued_at',

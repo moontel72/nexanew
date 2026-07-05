@@ -2,7 +2,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/features/storekeeper/data/repositories/storekeeper_repository.dart';
 import 'package:trace_odd/features/storekeeper/domain/models/catering_issuance.dart';
@@ -624,7 +623,10 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
       final r = await _repo.getBundles();
       if (mounted) {
         setState(() {
-          _bundles = r;
+          // Only show ACTIVE bundles in the dropdown
+          _bundles = r
+              .where((b) => b['status']?.toString().toLowerCase() == 'active')
+              .toList();
           _loadingBundles = false;
         });
       }
@@ -638,30 +640,50 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
       _selectedBundleId = bundleId;
       _selectedPacketId = null;
       _packets = [];
+      _selectedItems.clear(); // Clear items when bundle changes
     });
     if (bundleId == null) return;
-    final bundle = _bundles.firstWhere((b) => b['id'] == bundleId, orElse: () => {});
+    final bundle = _bundles.firstWhere(
+      (b) => b['id'] == bundleId,
+      orElse: () => {},
+    );
     if (bundle.isNotEmpty) {
       final pkts = (bundle['packets'] as List<dynamic>?) ?? [];
-      setState(() => _packets = pkts.cast<Map<String, dynamic>>());
+      // Only show ACTIVE packets linked to this bundle
+      final activePackets = pkts
+          .where(
+            (p) =>
+                (p as Map<String, dynamic>)['status']
+                    ?.toString()
+                    .toLowerCase() ==
+                'active',
+          )
+          .toList();
+      setState(() => _packets = activePackets.cast<Map<String, dynamic>>());
     }
   }
 
   void _onPacketSelected(String? packetId) {
     setState(() => _selectedPacketId = packetId);
     if (packetId == null) return;
-    final packet = _packets.firstWhere((p) => p['id'] == packetId, orElse: () => {});
-    if (packet.isEmpty) return;
-    final itemId = packet['item_id']?.toString();
-    final totalUnits = int.tryParse(packet['total_units']?.toString() ?? '0') ?? 0;
-    if (itemId != null) {
-      final existing = _availableItems.where((i) => i.id == itemId).toList();
-      if (existing.isNotEmpty && !_selectedItems.any((s) => s.item.id == existing.first.id)) {
-        setState(() {
-          _selectedItems.add(_SelectedItem(item: existing.first, quantity: totalUnits > 0 ? totalUnits : 1));
-        });
+
+    // ── Auto-populate ALL items from ALL active packets in this bundle ──
+    _selectedItems.clear();
+    for (final p in _packets) {
+      final itemId = p['item_id']?.toString();
+      if (itemId == null || itemId.isEmpty) continue;
+      final remaining =
+          int.tryParse(p['units_remaining']?.toString() ?? '0') ?? 0;
+      final total = int.tryParse(p['total_units']?.toString() ?? '0') ?? 0;
+      final qty = remaining > 0 ? remaining : (total > 0 ? total : 1);
+
+      final match = _availableItems.where((i) => i.id == itemId).toList();
+      if (match.isNotEmpty &&
+          !_selectedItems.any((s) => s.item.id == match.first.id)) {
+        _selectedItems.add(_SelectedItem(item: match.first, quantity: qty));
       }
     }
+    setState(() {}); // trigger rebuild to show populated items
   }
 
   void _onAssignmentSelected(String? assignmentId) {
@@ -836,40 +858,113 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
             if (_selectedAssignmentId != null) ...[
               const Gap(12),
               if (_loadingBundles)
-                const Center(child: CircularProgressIndicator())
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_bundles.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                      Gap(8),
+                      Expanded(
+                        child: Text(
+                          'No active bundles. Create a bundle first.',
+                          style: TextStyle(color: Colors.orange, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
               else ...[
+                // ── Parent: Active Bundle Dropdown ──
                 DropdownButtonFormField<String>(
                   value: _selectedBundleId,
-                  decoration: _inputDec('Select Bundle (Lot)'),
+                  decoration: _inputDec('Select Active Bundle').copyWith(
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: Icon(
+                        Icons.inventory_2,
+                        size: 18,
+                        color: Color(0xFF00B4D8),
+                      ),
+                    ),
+                  ),
                   isExpanded: true,
                   dropdownColor: const Color(0xFF1B2838),
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   items: [
-                    ..._bundles.map((b) => DropdownMenuItem<String>(
-                      value: b['id']?.toString(),
-                      child: Text(b['name']?.toString() ?? '', style: const TextStyle(fontSize: 13, color: Colors.white)),
-                    )),
+                    ..._bundles.map(
+                      (b) => DropdownMenuItem<String>(
+                        value: b['id']?.toString(),
+                        child: Text(
+                          b['name']?.toString() ?? '',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                   onChanged: _onBundleSelected,
                 ),
-                if (_packets.isNotEmpty) ...[
+                // ── Child: Packets Dropdown ──
+                if (_selectedBundleId != null && _packets.isNotEmpty) ...[
                   const Gap(8),
                   DropdownButtonFormField<String>(
                     value: _selectedPacketId,
-                    decoration: _inputDec('Select Packet (Smart Code)'),
+                    decoration: _inputDec('Select Packet (Smart Code)')
+                        .copyWith(
+                          prefixIcon: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            child: Icon(
+                              Icons.qr_code,
+                              size: 18,
+                              color: Color(0xFF00B4D8),
+                            ),
+                          ),
+                        ),
                     isExpanded: true,
                     dropdownColor: const Color(0xFF1B2838),
                     style: const TextStyle(color: Colors.white, fontSize: 13),
                     items: [
-                      ..._packets.map((p) => DropdownMenuItem<String>(
-                        value: p['id']?.toString(),
-                        child: Text('${p['smart_code'] ?? ''} - ${p['name'] ?? ''}',
-                            style: const TextStyle(fontSize: 13, color: Colors.white)),
-                      )),
+                      ..._packets.map(
+                        (p) => DropdownMenuItem<String>(
+                          value: p['id']?.toString(),
+                          child: Text(
+                            '${p['smart_code'] ?? ''} — ${p['name'] ?? ''} (${p['units_remaining'] ?? 0} left)',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
                     ],
                     onChanged: _onPacketSelected,
                   ),
-                ],
+                ] else if (_selectedBundleId != null && _packets.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'This bundle has no active packets.',
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                  ),
               ],
             ],
             const Gap(12),
@@ -880,13 +975,35 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
               maxLines: 2,
             ),
             const Gap(16),
-            const Text(
-              'Select Items',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
+            // ── Section header with bundle info ──
+            Row(
+              children: [
+                const Text(
+                  'Select Items',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                if (_selectedPacketId != null) ...[
+                  const Gap(8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00B4D8).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'Auto-populated from packet',
+                      style: TextStyle(color: Color(0xFF00B4D8), fontSize: 10),
+                    ),
+                  ),
+                ],
+              ],
             ),
             const Gap(8),
             if (_loadingItems)
@@ -914,62 +1031,103 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                   );
                 }).toList(),
               ),
-              const Gap(12),
-              // Selected items
-              ..._selectedItems.map(
-                (s) => Card(
-                  color: const Color(0xFF1B2838),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            s.item.name,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 60,
-                          child: TextFormField(
-                            initialValue: s.quantity.toString(),
-                            keyboardType: TextInputType.number,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
+              if (_selectedItems.isNotEmpty) ...[
+                const Gap(12),
+                // Selected items
+                ..._selectedItems.map(
+                  (s) => Card(
+                    color: const Color(0xFF1B2838),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  s.item.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  'Unit: ${s.item.unit}',
+                                  style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
                             ),
-                            decoration: const InputDecoration(
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 4,
+                          ),
+                          SizedBox(
+                            width: 70,
+                            child: TextFormField(
+                              initialValue: s.quantity.toString(),
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
                               ),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                labelText: 'Qty',
+                                labelStyle: const TextStyle(
+                                  color: Colors.white38,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 6,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: const BorderSide(
+                                    color: Colors.white24,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: const BorderSide(
+                                    color: Colors.white24,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF00B4D8),
+                                  ),
+                                ),
+                              ),
+                              onChanged: (v) {
+                                s.quantity = int.tryParse(v) ?? s.quantity;
+                              },
                             ),
-                            onChanged: (v) {
-                              s.quantity = int.tryParse(v) ?? s.quantity;
+                          ),
+                          const Gap(6),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.close,
+                              size: 18,
+                              color: Colors.redAccent,
+                            ),
+                            tooltip: 'Remove item',
+                            onPressed: () {
+                              setState(() => _selectedItems.remove(s));
                             },
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
+                            padding: EdgeInsets.zero,
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.close,
-                            size: 14,
-                            color: Colors.redAccent,
-                          ),
-                          onPressed: () {
-                            setState(() => _selectedItems.remove(s));
-                          },
-                          constraints: const BoxConstraints(
-                            minWidth: 30,
-                            minHeight: 30,
-                          ),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ],
             const Gap(20),
             Row(

@@ -272,6 +272,9 @@ class StoreKeeperInventoryController extends Controller
             'bus_reg_number' => ['nullable', 'string', 'max:50'],
             'conductor_name'  => ['nullable', 'string', 'max:200'],
             'notes'          => ['nullable', 'string'],
+            'bundle_id'      => ['nullable', 'uuid'],
+            'packet_id'      => ['nullable', 'uuid'],
+            'assignment_id'  => ['nullable', 'uuid'],
             'items'          => ['required', 'array', 'min:1'],
             'items.*.item_id'         => ['required', 'uuid'],
             'items.*.quantity_issued' => ['required', 'integer', 'min:1'],
@@ -284,10 +287,12 @@ class StoreKeeperInventoryController extends Controller
             $issuance = CateringIssuance::create([
                 'company_id'     => $companyId,
                 'storekeeper_id' => $storekeeperId,
-                'trip_id'        => $data['trip_id'] ?? null,
+                'trip_id'        => $data['trip_id'] ?? ($data['assignment_id'] ?? null),
                 'route_id'       => $data['route_id'] ?? null,
                 'bus_reg_number' => $data['bus_reg_number'] ?? null,
                 'conductor_name'  => $data['conductor_name'] ?? null,
+                'bundle_id'      => $data['bundle_id'] ?? null,
+                'packet_id'      => $data['packet_id'] ?? null,
                 'status'         => 'pending',
                 'notes'          => $data['notes'] ?? null,
             ]);
@@ -340,6 +345,18 @@ class StoreKeeperInventoryController extends Controller
                 }
             }
             $issuance->markIssued();
+
+            // Track packet consumption when linked to a bundle
+            if ($issuance->packet_id) {
+                $totalQty = $issuance->items()->sum('quantity_issued');
+                DB::table('catering_packets')
+                    ->where('id', $issuance->packet_id)
+                    ->update([
+                        'units_issued'   => DB::raw("units_issued + {$totalQty}"),
+                        'units_remaining' => DB::raw("GREATEST(units_remaining - {$totalQty}, 0)"),
+                        'updated_at'     => now(),
+                    ]);
+            }
         });
 
         $issuance->load(['items.item.category']);
