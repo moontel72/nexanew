@@ -2,7 +2,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 import 'package:trace_odd/features/storekeeper/data/repositories/storekeeper_repository.dart';
 import 'package:trace_odd/features/storekeeper/domain/models/catering_issuance.dart';
@@ -488,7 +487,7 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
             ),
             const Gap(4),
             Text(
-              'Variance: \$${(r.variancePaisa / 100).toStringAsFixed(2)}',
+              'Variance: Rs. ${(r.variancePaisa / 100).toStringAsFixed(0)}',
               style: TextStyle(
                 color: varianceColor,
                 fontSize: 12,
@@ -510,7 +509,7 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
           style: const TextStyle(color: Colors.white38, fontSize: 10),
         ),
         Text(
-          '\$${(paisa / 100).toStringAsFixed(2)}',
+          'Rs. ${(paisa / 100).toStringAsFixed(0)}',
           style: TextStyle(
             color: color,
             fontSize: 14,
@@ -609,10 +608,10 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
   void initState() {
     super.initState();
     for (final item in widget.issuance.items) {
-      _counts[item.id] = _Counts(
+      _counts[item.itemId] = _Counts(
         issued: item.quantityIssued,
-        returned: 0,
-        sold: 0,
+        returned: item.quantityReturned,
+        sold: item.quantitySold,
       );
     }
   }
@@ -670,7 +669,7 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
                 ),
                 const Gap(4),
                 Text(
-                  '${widget.issuance.items.length} items issued',
+                  'Rs. {widget.issuance.items.length} items issued',
                   style: const TextStyle(color: Colors.white38),
                 ),
               ],
@@ -679,7 +678,7 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
           const Gap(16),
           // Items
           ...widget.issuance.items.map((item) {
-            final counts = _counts[item.id]!;
+            final counts = _counts[item.itemId]!;
             final outstanding = counts.issued - counts.returned - counts.sold;
 
             return Card(
@@ -734,7 +733,7 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
                               ),
                             ),
                             Text(
-                              '$outstanding',
+                              'Rs. outstanding',
                               style: TextStyle(
                                 color: outstanding > 0
                                     ? Colors.orange

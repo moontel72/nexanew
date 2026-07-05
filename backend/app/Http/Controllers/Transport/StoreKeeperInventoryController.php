@@ -421,6 +421,20 @@ class StoreKeeperInventoryController extends Controller
             $totalReturned = 0;
             $totalSold     = 0;
 
+            // Reverse previous stock changes if updating an existing reconciliation
+            $existing = CateringReconciliation::where('issuance_id', $issuance->id)->first();
+            if ($existing) {
+                foreach ($issuance->items as $oldItem) {
+                    $prevReturned = (int) ($oldItem->quantity_returned ?? 0);
+                    if ($prevReturned > 0) {
+                        $cateringItem = CateringItem::find($oldItem->item_id);
+                        if ($cateringItem) {
+                            $cateringItem->decrementStock($prevReturned);
+                        }
+                    }
+                }
+            }
+
             foreach ($data['items'] as $input) {
                 $issuanceItem = $issuance->items()->where('item_id', $input['item_id'])->first();
                 if (!$issuanceItem) {
@@ -435,7 +449,7 @@ class StoreKeeperInventoryController extends Controller
                     'quantity_sold'     => $sold,
                 ]);
 
-                // Compute values directly (model attributes stale after update)
+                // Compute values from the updated model
                 $unitPrice = (int) ($issuanceItem->unit_price_paisa ?? 0);
                 $qtyIssued = (int) ($issuanceItem->quantity_issued ?? 0);
 
