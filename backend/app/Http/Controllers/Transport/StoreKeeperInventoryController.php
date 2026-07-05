@@ -418,7 +418,10 @@ class StoreKeeperInventoryController extends Controller
                     'quantity_sold'     => $sold,
                 ]);
 
-                // Return unsold items to stock
+                // Compute values directly (model attributes stale after update)
+                $unitPrice = (int) ($issuanceItem->unit_price_paisa ?? 0);
+                $qtyIssued = (int) ($issuanceItem->quantity_issued ?? 0);
+
                 if ($returned > 0) {
                     $cateringItem = CateringItem::find($issuanceItem->item_id);
                     if ($cateringItem) {
@@ -426,9 +429,9 @@ class StoreKeeperInventoryController extends Controller
                     }
                 }
 
-                $totalIssued   += $issuanceItem->issued_value_paisa;
-                $totalReturned += $issuanceItem->returned_value_paisa;
-                $totalSold     += $issuanceItem->sold_value_paisa;
+                $totalIssued   += $qtyIssued * $unitPrice;
+                $totalReturned += $returned * $unitPrice;
+                $totalSold     += $sold * $unitPrice;
             }
 
             $variance = ($totalReturned + $totalSold) - $totalIssued;
