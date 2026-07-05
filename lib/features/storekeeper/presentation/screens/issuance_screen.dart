@@ -775,7 +775,20 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
             else
               DropdownButtonFormField<String>(
                 value: _selectedAssignmentId,
-                decoration: _inputDec('Select Active Assignment / Trip'),
+                hint: const Text(
+                  'Select Active Assignment / Trip',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                decoration: _inputDec('').copyWith(
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(
+                      Icons.alt_route,
+                      size: 18,
+                      color: Color(0xFF00B4D8),
+                    ),
+                  ),
+                ),
                 isExpanded: true,
                 dropdownColor: const Color(0xFF1B2838),
                 style: const TextStyle(color: Colors.white, fontSize: 14),
