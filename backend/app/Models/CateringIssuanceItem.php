@@ -18,6 +18,9 @@ class CateringIssuanceItem extends Model
         'quantity_issued',
         'quantity_returned',
         'quantity_sold',
+        'quantity_wasted',
+        'quantity_staff',
+        'quantity_complimentary',
         'unit_price_paisa',
     ];
 
@@ -25,6 +28,9 @@ class CateringIssuanceItem extends Model
         'quantity_issued'   => 'integer',
         'quantity_returned' => 'integer',
         'quantity_sold'     => 'integer',
+        'quantity_wasted'        => 'integer',
+        'quantity_staff'         => 'integer',
+        'quantity_complimentary' => 'integer',
         'unit_price_paisa'  => 'integer',
     ];
 
@@ -50,7 +56,7 @@ class CateringIssuanceItem extends Model
 
     public function getOutstandingQuantityAttribute(): int
     {
-        return max(0, $this->quantity_issued - $this->quantity_returned - $this->quantity_sold);
+        return max(0, $this->quantity_issued - $this->quantity_returned - $this->quantity_sold - $this->quantity_wasted - $this->quantity_staff - $this->quantity_complimentary);
     }
 
     public function getIssuedValuePaisaAttribute(): int
@@ -64,6 +70,20 @@ class CateringIssuanceItem extends Model
     }
 
     public function getSoldValuePaisaAttribute(): int
+n    public function getWastedValuePaisaAttribute(): int
+    {
+        return $this->quantity_wasted * $this->unit_price_paisa;
+    }
+
+    public function getStaffValuePaisaAttribute(): int
+    {
+        return $this->quantity_staff * $this->unit_price_paisa;
+    }
+
+    public function getComplimentaryValuePaisaAttribute(): int
+    {
+        return $this->quantity_complimentary * $this->unit_price_paisa;
+    }
     {
         return $this->quantity_sold * $this->unit_price_paisa;
     }

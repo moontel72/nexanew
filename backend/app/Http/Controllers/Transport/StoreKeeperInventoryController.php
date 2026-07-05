@@ -410,6 +410,9 @@ class StoreKeeperInventoryController extends Controller
             'items.*.item_id'            => ['required', 'uuid'],
             'items.*.quantity_returned'  => ['nullable', 'integer', 'min:0'],
             'items.*.quantity_sold'      => ['nullable', 'integer', 'min:0'],
+            'items.*.quantity_wasted'       => ['nullable', 'integer', 'min:0'],
+            'items.*.quantity_staff'        => ['nullable', 'integer', 'min:0'],
+            'items.*.quantity_complimentary' => ['nullable', 'integer', 'min:0'],
             'notes'  => ['nullable', 'string'],
         ]);
 
@@ -420,6 +423,9 @@ class StoreKeeperInventoryController extends Controller
             $totalIssued   = 0;
             $totalReturned = 0;
             $totalSold     = 0;
+            $totalWasted   = 0;
+            $totalStaff    = 0;
+            $totalComplimentary = 0;
 
             // Reverse previous stock changes if updating an existing reconciliation
             $existing = CateringReconciliation::where('issuance_id', $issuance->id)->first();
@@ -443,10 +449,16 @@ class StoreKeeperInventoryController extends Controller
 
                 $returned = (int) ($input['quantity_returned'] ?? 0);
                 $sold     = (int) ($input['quantity_sold'] ?? 0);
+                $wasted  = (int) ($input['quantity_wasted'] ?? 0);
+                $staff   = (int) ($input['quantity_staff'] ?? 0);
+                $complimentary = (int) ($input['quantity_complimentary'] ?? 0);
 
                 $issuanceItem->update([
                     'quantity_returned' => $returned,
                     'quantity_sold'     => $sold,
+                    'quantity_wasted'        => $wasted,
+                    'quantity_staff'         => $staff,
+                    'quantity_complimentary' => $complimentary,
                 ]);
 
                 // Compute values from the updated model
@@ -463,9 +475,12 @@ class StoreKeeperInventoryController extends Controller
                 $totalIssued   += $qtyIssued * $unitPrice;
                 $totalReturned += $returned * $unitPrice;
                 $totalSold     += $sold * $unitPrice;
+                $totalWasted   += $wasted * $unitPrice;
+                $totalStaff    += $staff * $unitPrice;
+                $totalComplimentary += $complimentary * $unitPrice;
             }
 
-            $variance = ($totalReturned + $totalSold) - $totalIssued;
+            $variance = ($totalReturned + $totalSold + $totalWasted + $totalStaff + $totalComplimentary) - $totalIssued;
 
             // Check for existing reconciliation (update or create)
             $reconciliation = CateringReconciliation::updateOrCreate(
@@ -476,6 +491,9 @@ class StoreKeeperInventoryController extends Controller
                     'total_issued_value_paisa'   => $totalIssued,
                     'total_returned_value_paisa' => $totalReturned,
                     'total_sold_value_paisa'     => $totalSold,
+                    'total_wasted_value_paisa'       => $totalWasted,
+                    'total_staff_value_paisa'        => $totalStaff,
+                    'total_complimentary_value_paisa' => $totalComplimentary,
                     'variance_paisa'             => $variance,
                     'status'                     => 'draft',
                     'notes'                      => $data['notes'] ?? null,

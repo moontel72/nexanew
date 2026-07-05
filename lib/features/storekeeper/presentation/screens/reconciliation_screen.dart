@@ -249,68 +249,21 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
             color: Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(6),
           ),
-          child: const Row(
-            children: [
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Status',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Issued',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Returned',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Sold',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Variance',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 40,
-                child: Text('', style: TextStyle(color: Colors.white54)),
-              ),
-            ],
+          child: const SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                SizedBox(width: 70, child: Text('Status', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
+                SizedBox(width: 70, child: Text('Issued', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
+                SizedBox(width: 70, child: Text('Returned', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
+                SizedBox(width: 65, child: Text('Sold', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
+                SizedBox(width: 60, child: Text('Wasted', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
+                SizedBox(width: 55, child: Text('Staff', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
+                SizedBox(width: 80, child: Text('Complim.', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
+                SizedBox(width: 70, child: Text('Variance', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
+                SizedBox(width: 40),
+              ],
+            ),
           ),
         ),
         const Gap(4),
@@ -327,82 +280,51 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
         : Colors.redAccent;
     final varianceSign = r.variancePaisa >= 0 ? '+' : '';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1B2838),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 1,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: _statusColor(r.status).withOpacity(0.15),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                r.status[0].toUpperCase() + r.status.substring(1),
-                style: TextStyle(
-                  color: _statusColor(r.status),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1B2838),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 70,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _statusColor(r.status).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  r.status[0].toUpperCase() + r.status.substring(1),
+                  style: TextStyle(color: _statusColor(r.status), fontSize: 11, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              'Rs. ${(r.totalIssuedValuePaisa / 100).toStringAsFixed(0)}',
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              'Rs. ${(r.totalReturnedValuePaisa / 100).toStringAsFixed(0)}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              'Rs. ${(r.totalSoldValuePaisa / 100).toStringAsFixed(0)}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              '$varianceSign Rs. ${(r.variancePaisa / 100).abs().toStringAsFixed(0)}',
-              style: TextStyle(
-                color: varianceColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+            SizedBox(width: 70, child: Text('Rs. ${(r.totalIssuedValuePaisa / 100).toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontSize: 12))),
+            SizedBox(width: 70, child: Text('Rs. ${(r.totalReturnedValuePaisa / 100).toStringAsFixed(0)}', style: const TextStyle(color: Colors.white70, fontSize: 12))),
+            SizedBox(width: 65, child: Text('Rs. ${(r.totalSoldValuePaisa / 100).toStringAsFixed(0)}', style: const TextStyle(color: Colors.white70, fontSize: 12))),
+            SizedBox(width: 60, child: Text('Rs. ${(r.totalWastedValuePaisa / 100).toStringAsFixed(0)}', style: const TextStyle(color: Colors.orange, fontSize: 11))),
+            SizedBox(width: 55, child: Text('Rs. ${(r.totalStaffValuePaisa / 100).toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 11))),
+            SizedBox(width: 80, child: Text('Rs. ${(r.totalComplimentaryValuePaisa / 100).toStringAsFixed(0)}', style: const TextStyle(color: Colors.purpleAccent, fontSize: 11))),
+            SizedBox(width: 70, child: Text('$varianceSign Rs. ${(r.variancePaisa / 100).abs().toStringAsFixed(0)}', style: TextStyle(color: varianceColor, fontSize: 12, fontWeight: FontWeight.w600))),
+            if (r.isDraft)
+              IconButton(
+                icon: const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                tooltip: 'Confirm',
+                onPressed: () => _confirm(r),
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                padding: EdgeInsets.zero,
               ),
-            ),
-          ),
-          if (r.isDraft)
-            IconButton(
-              icon: const Icon(
-                Icons.check_circle_outline,
-                size: 16,
-                color: Colors.green,
-              ),
-              tooltip: 'Confirm',
-              onPressed: () => _confirm(r),
-              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-              padding: EdgeInsets.zero,
-            ),
         ],
       ),
-    );
-  }
-
+    ),
+  );
+}
   Widget _buildCardList() {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -483,6 +405,12 @@ class _ReconciliationScreenState extends State<ReconciliationScreen> {
                   r.totalSoldValuePaisa,
                   const Color(0xFF00B4D8),
                 ),
+                const Gap(16),
+                _buildValueCol('Wasted', r.totalWastedValuePaisa, Colors.orange),
+                const Gap(16),
+                _buildValueCol('Staff', r.totalStaffValuePaisa, Colors.blueGrey),
+                const Gap(16),
+                _buildValueCol('Complimentary', r.totalComplimentaryValuePaisa, Colors.purpleAccent),
               ],
             ),
             const Gap(4),
@@ -612,6 +540,9 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
         issued: item.quantityIssued,
         returned: item.quantityReturned,
         sold: item.quantitySold,
+        wasted: item.quantityWasted,
+        staff: item.quantityStaff,
+        complimentary: item.quantityComplimentary,
       );
     }
   }
@@ -631,6 +562,9 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
               'item_id': e.key,
               'quantity_returned': e.value.returned,
               'quantity_sold': e.value.sold,
+              'quantity_wasted': e.value.wasted,
+              'quantity_staff': e.value.staff,
+              'quantity_complimentary': e.value.complimentary,
             },
           )
           .toList(),
@@ -716,32 +650,36 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
                           counts.returned = v;
                           setState(() {});
                         }),
-                        const Gap(12),
+                        const Gap(6),
                         _buildCountField('Sold', counts.sold, (v) {
                           counts.sold = v;
                           setState(() {});
                         }),
-                        const Gap(12),
+                        const Gap(6),
+                        _buildCountField('Wasted', counts.wasted, (v) {
+                          counts.wasted = v;
+                          setState(() {});
+                        }),
+                      ],
+                    ),
+                    const Gap(6),
+                    Row(
+                      children: [
+                        _buildCountField('Staff', counts.staff, (v) {
+                          counts.staff = v;
+                          setState(() {});
+                        }),
+                        const Gap(6),
+                        _buildCountField('Complimentary', counts.complimentary, (v) {
+                          counts.complimentary = v;
+                          setState(() {});
+                        }),
+                        const Gap(6),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Outstanding',
-                              style: TextStyle(
-                                color: Colors.white38,
-                                fontSize: 10,
-                              ),
-                            ),
-                            Text(
-                              'Rs. outstanding',
-                              style: TextStyle(
-                                color: outstanding > 0
-                                    ? Colors.orange
-                                    : Colors.green,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
+                            const Text('Outstanding', style: TextStyle(color: Colors.white38, fontSize: 10)),
+                            Text('$outstanding', style: TextStyle(color: outstanding > 0 ? Colors.orange : Colors.green, fontWeight: FontWeight.w600, fontSize: 14)),
                           ],
                         ),
                       ],
@@ -829,5 +767,15 @@ class _Counts {
   final int issued;
   int returned;
   int sold;
-  _Counts({required this.issued, this.returned = 0, this.sold = 0});
+  int wasted;
+  int staff;
+  int complimentary;
+  _Counts({
+    required this.issued,
+    this.returned = 0,
+    this.sold = 0,
+    this.wasted = 0,
+    this.staff = 0,
+    this.complimentary = 0,
+  });
 }

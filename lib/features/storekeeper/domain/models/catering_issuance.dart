@@ -66,6 +66,9 @@ class CateringIssuanceItem {
   final int quantityIssued;
   final int quantityReturned;
   final int quantitySold;
+  final int quantityWasted;
+  final int quantityStaff;
+  final int quantityComplimentary;
   final int unitPricePaisa;
 
   const CateringIssuanceItem({
@@ -77,10 +80,13 @@ class CateringIssuanceItem {
     this.quantityIssued = 0,
     this.quantityReturned = 0,
     this.quantitySold = 0,
+    this.quantityWasted = 0,
+    this.quantityStaff = 0,
+    this.quantityComplimentary = 0,
     this.unitPricePaisa = 0,
   });
 
-  int get outstandingQuantity => (quantityIssued - quantityReturned - quantitySold).clamp(0, 999999);
+  int get outstandingQuantity => (quantityIssued - quantityReturned - quantitySold - quantityWasted - quantityStaff - quantityComplimentary).clamp(0, 999999);
 
   factory CateringIssuanceItem.fromJson(Map<String, dynamic> json) {
     return CateringIssuanceItem(
@@ -92,6 +98,9 @@ class CateringIssuanceItem {
       quantityIssued: _parseInt(json['quantity_issued']),
       quantityReturned: _parseInt(json['quantity_returned']),
       quantitySold: _parseInt(json['quantity_sold']),
+      quantityWasted: _parseInt(json['quantity_wasted']),
+      quantityStaff: _parseInt(json['quantity_staff']),
+      quantityComplimentary: _parseInt(json['quantity_complimentary']),
       unitPricePaisa: _parseInt(json['unit_price_paisa']),
     );
   }

@@ -7,6 +7,9 @@ class CateringReconciliation {
   final int totalIssuedValuePaisa;
   final int totalReturnedValuePaisa;
   final int totalSoldValuePaisa;
+  final int totalWastedValuePaisa;
+  final int totalStaffValuePaisa;
+  final int totalComplimentaryValuePaisa;
   final int variancePaisa;
   final String status; // draft | confirmed | disputed
   final String? notes;
@@ -21,6 +24,9 @@ class CateringReconciliation {
     this.totalIssuedValuePaisa = 0,
     this.totalReturnedValuePaisa = 0,
     this.totalSoldValuePaisa = 0,
+    this.totalWastedValuePaisa = 0,
+    this.totalStaffValuePaisa = 0,
+    this.totalComplimentaryValuePaisa = 0,
     this.variancePaisa = 0,
     this.status = 'draft',
     this.notes,
@@ -40,10 +46,15 @@ class CateringReconciliation {
       totalIssuedValuePaisa: _parseInt(json['total_issued_value_paisa']),
       totalReturnedValuePaisa: _parseInt(json['total_returned_value_paisa']),
       totalSoldValuePaisa: _parseInt(json['total_sold_value_paisa']),
+      totalWastedValuePaisa: _parseInt(json['total_wasted_value_paisa']),
+      totalStaffValuePaisa: _parseInt(json['total_staff_value_paisa']),
+      totalComplimentaryValuePaisa: _parseInt(json['total_complimentary_value_paisa']),
       variancePaisa: _parseInt(json['variance_paisa']),
       status: json['status'] ?? 'draft',
       notes: json['notes'],
-      reconciledAt: json['reconciled_at'] != null ? DateTime.tryParse(json['reconciled_at']) : null,
+      reconciledAt: json['reconciled_at'] != null
+          ? DateTime.tryParse(json['reconciled_at'])
+          : null,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
     );
   }
