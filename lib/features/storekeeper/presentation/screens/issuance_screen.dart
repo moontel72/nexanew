@@ -887,7 +887,11 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                 // ── Parent: Active Bundle Dropdown ──
                 DropdownButtonFormField<String>(
                   value: _selectedBundleId,
-                  decoration: _inputDec('Select Active Bundle').copyWith(
+                  hint: const Text(
+                    'Select Active Bundle',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  decoration: _inputDec('').copyWith(
                     prefixIcon: const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 10),
                       child: Icon(
@@ -921,17 +925,20 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                   const Gap(8),
                   DropdownButtonFormField<String>(
                     value: _selectedPacketId,
-                    decoration: _inputDec('Select Packet (Smart Code)')
-                        .copyWith(
-                          prefixIcon: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            child: Icon(
-                              Icons.qr_code,
-                              size: 18,
-                              color: Color(0xFF00B4D8),
-                            ),
-                          ),
+                    hint: const Text(
+                      'Select Packet (Smart Code)',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    decoration: _inputDec('').copyWith(
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Icon(
+                          Icons.qr_code,
+                          size: 18,
+                          color: Color(0xFF00B4D8),
                         ),
+                      ),
+                    ),
                     isExpanded: true,
                     dropdownColor: const Color(0xFF1B2838),
                     style: const TextStyle(color: Colors.white, fontSize: 13),
@@ -1179,7 +1186,7 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
 
   InputDecoration _inputDec(String hint) => InputDecoration(
     hintText: hint,
-    hintStyle: const TextStyle(color: Colors.white38),
+    hintStyle: const TextStyle(color: Colors.white54),
     filled: true,
     fillColor: const Color(0xFF1B2838),
     border: OutlineInputBorder(
