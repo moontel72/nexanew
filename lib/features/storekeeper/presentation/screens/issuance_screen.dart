@@ -837,7 +837,8 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
               const Gap(12),
               if (_loadingBundles)
                 const Center(child: CircularProgressIndicator())
-              else ...[\n                DropdownButtonFormField<String>(
+              else ...[
+                DropdownButtonFormField<String>(
                   value: _selectedBundleId,
                   decoration: _inputDec('Select Bundle (Lot)'),
                   isExpanded: true,
@@ -851,7 +852,8 @@ class _CreateIssuancePageState extends State<_CreateIssuancePage> {
                   ],
                   onChanged: _onBundleSelected,
                 ),
-                if (_packets.isNotEmpty) ...[\n                  const Gap(8),
+                if (_packets.isNotEmpty) ...[
+                  const Gap(8),
                   DropdownButtonFormField<String>(
                     value: _selectedPacketId,
                     decoration: _inputDec('Select Packet (Smart Code)'),
