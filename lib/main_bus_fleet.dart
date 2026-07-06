@@ -1,10 +1,7 @@
-/// Bus Fleet Admin Web Panel — Unified entry point (Wave 0 BLoC)
-///
-/// Role-based routing:
-///   - Admins / Fleet Owners → Full OwnerDashboardScreen
-///   - Bus Catering Storekeepers  → ONLY the StorekeeperDashboardScreen (3 tabs)
+/// Bus Fleet Admin Web Panel — Wave 1 BLoC Dashboard
 ///
 /// Auth via PanelAuthBloc → FleetBlocLoginScreen shared widget.
+/// Dashboard via FleetDashboardBloc → FleetDashboardPage.
 ///
 /// Deployed at /var/www/traceodd/bus-fleet/
 /// Served via Nginx: location /bus-fleet/
@@ -15,7 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/constants/user_roles.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/owner_dashboard.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/fleet_dashboard_page.dart';
 import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_dashboard_screen.dart';
 import 'package:trace_odd/shared/app_scaffold.dart';
 import 'package:trace_odd/shared/utils/fleet_bloc_setup.dart';
@@ -23,7 +20,7 @@ import 'package:trace_odd/shared/widgets/fleet_bloc_login_screen.dart';
 
 void main() => FleetApp.run(
   title: 'NexaTrace Bus Fleet',
-  loginScreen: FleetBlocLoginScreen(
+  loginScreen: const FleetBlocLoginScreen(
     panel: UserPanel.busFleet,
     loginConfig: FleetLoginConfig.busFleet(),
   ),
@@ -76,10 +73,10 @@ class _BusFleetRouterState extends State<_BusFleetRouter> {
         panel: 'bus-fleet',
       );
     }
-    return const OwnerDashboardScreen(
-      loginRoute: '/bus-fleet/login',
-      panelPrefix: '/bus-fleet',
+    return const FleetDashboardPage(
       storagePrefix: 'busFleet',
+      panelPrefix: '/bus-fleet',
+      loginRoute: '/bus-fleet/login',
     );
   }
 }
