@@ -2,7 +2,8 @@
 // Matches the backend data structure from Setup 1's PanelAuthState.
 
 import 'package:equatable/equatable.dart';
-import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart'
+    hide PanelAuthState;
 import 'package:trace_odd/features/auth/data/repositories/panel_auth_repository.dart';
 
 abstract class PanelAuthState extends Equatable {
@@ -65,10 +66,10 @@ class PanelAuthError extends PanelAuthState {
 
   @override
   List<Object?> get props => [
-        message,
-        isNetworkError,
-        isInvalidCredentials,
-        isDriverTypeMismatch,
-        isAccountSuspended,
-      ];
+    message,
+    isNetworkError,
+    isInvalidCredentials,
+    isDriverTypeMismatch,
+    isAccountSuspended,
+  ];
 }

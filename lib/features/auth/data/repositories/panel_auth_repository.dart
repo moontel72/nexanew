@@ -54,8 +54,8 @@ class PanelAuthRepository {
   PanelAuthRepository({
     required NexaTraceApiClient client,
     required FlutterSecureStorage secureStorage,
-  })  : _client = client,
-        _secureStorage = secureStorage;
+  }) : _client = client,
+       _secureStorage = secureStorage;
 
   // ── Login ─────────────────────────────────────────────────
 
@@ -74,13 +74,20 @@ class PanelAuthRepository {
     required String password,
     bool rememberMe = false,
     String? companyId, // Factory context identifier
+    String?
+    identifier, // Raw user input (email or phone) — sent as 'identifier'
+    Map<String, dynamic> metadata = const {}, // Extra fields merged into body
   }) async {
     final endpoint = _loginEndpointFor(panel);
     final body = <String, dynamic>{
-      'email': email.trim().toLowerCase(),
       'password': password,
       'remember_me': rememberMe,
+      if (identifier != null && identifier.isNotEmpty)
+        'identifier': identifier.trim()
+      else
+        'email': email.trim().toLowerCase(),
       if (companyId != null && companyId.isNotEmpty) 'company_id': companyId,
+      ...metadata,
     };
 
     if (kDebugMode) {
@@ -101,13 +108,11 @@ class PanelAuthRepository {
         : <String, dynamic>{};
 
     final driverType = user['driver_type']?.toString().toLowerCase();
-    final userId = user['id']?.toString() ??
-        user['user_id']?.toString() ??
-        '';
-    final cId = user['company_id']?.toString() ??
-        data['company_id']?.toString();
-    final cName = user['company_name']?.toString() ??
-        data['company_name']?.toString();
+    final userId = user['id']?.toString() ?? user['user_id']?.toString() ?? '';
+    final cId =
+        user['company_id']?.toString() ?? data['company_id']?.toString();
+    final cName =
+        user['company_name']?.toString() ?? data['company_name']?.toString();
 
     // ── Persist tokens ──────────────────────────────────
     await _persistSession(panel, token, user);
@@ -232,9 +237,7 @@ class PanelAuthRepository {
     );
     await _secureStorage.write(
       key: '${storageKey}_expiry',
-      value: DateTime.now()
-          .add(const Duration(hours: 24))
-          .toIso8601String(),
+      value: DateTime.now().add(const Duration(hours: 24)).toIso8601String(),
     );
 
     final driverType = user['driver_type']?.toString();

@@ -55,6 +55,8 @@ class PanelAuthBloc extends Bloc<PanelAuthEvent, PanelAuthState> {
         password: event.password,
         rememberMe: event.rememberMe,
         companyId: event.companyId,
+        identifier: event.identifier,
+        metadata: event.metadata,
       );
 
       if (kDebugMode) {
@@ -72,35 +74,35 @@ class PanelAuthBloc extends Bloc<PanelAuthEvent, PanelAuthState> {
           'actual=${e.actualDriverType}, required=${e.requiredDriverType}',
         );
       }
-      emit(PanelAuthError(
-        message:
-            'Access denied: Driver type \'${e.actualDriverType}\' is not '
-            'authorized for this panel. Allowed: ${e.requiredDriverType}.',
-        isDriverTypeMismatch: true,
-      ));
+      emit(
+        PanelAuthError(
+          message:
+              'Access denied: Driver type \'${e.actualDriverType}\' is not '
+              'authorized for this panel. Allowed: ${e.requiredDriverType}.',
+          isDriverTypeMismatch: true,
+        ),
+      );
     } on UnauthorizedException {
-      emit(const PanelAuthError(
-        message: 'Invalid email or password. Please try again.',
-        isInvalidCredentials: true,
-      ));
+      emit(
+        const PanelAuthError(
+          message: 'Invalid email or password. Please try again.',
+          isInvalidCredentials: true,
+        ),
+      );
     } on NetworkException catch (e) {
-      emit(PanelAuthError(
-        message: e.message,
-        isNetworkError: true,
-      ));
+      emit(PanelAuthError(message: e.message, isNetworkError: true));
     } on AuthException catch (e) {
-      emit(PanelAuthError(
-        message: e.message,
-        isInvalidCredentials:
-            e.message.toLowerCase().contains('invalid') ||
-            e.message.toLowerCase().contains('password'),
-        isAccountSuspended:
-            e.message.toLowerCase().contains('suspended'),
-      ));
+      emit(
+        PanelAuthError(
+          message: e.message,
+          isInvalidCredentials:
+              e.message.toLowerCase().contains('invalid') ||
+              e.message.toLowerCase().contains('password'),
+          isAccountSuspended: e.message.toLowerCase().contains('suspended'),
+        ),
+      );
     } catch (e) {
-      emit(PanelAuthError(
-        message: 'Login failed: ${e.toString()}',
-      ));
+      emit(PanelAuthError(message: 'Login failed: ${e.toString()}'));
     }
   }
 
@@ -118,9 +120,7 @@ class PanelAuthBloc extends Bloc<PanelAuthEvent, PanelAuthState> {
       // Always clear local state even if API call fails.
     }
 
-    emit(PanelAuthUnauthenticated(
-      message: 'You have been logged out.',
-    ));
+    emit(PanelAuthUnauthenticated(message: 'You have been logged out.'));
   }
 
   // ── Session check handler ─────────────────────────────────
@@ -135,8 +135,7 @@ class PanelAuthBloc extends Bloc<PanelAuthEvent, PanelAuthState> {
       final isAuthed = await _repository.isAuthenticated(event.panel);
       if (isAuthed) {
         final token = await _repository.getStoredToken(event.panel);
-        final driverType =
-            await _repository.getStoredDriverType(event.panel);
+        final driverType = await _repository.getStoredDriverType(event.panel);
 
         if (token != null) {
           // Build a minimal response from stored data.
@@ -159,10 +158,7 @@ class PanelAuthBloc extends Bloc<PanelAuthEvent, PanelAuthState> {
 
   // ── Clear error handler ───────────────────────────────────
 
-  void _onClearError(
-    ClearPanelAuthErrors event,
-    Emitter<PanelAuthState> emit,
-  ) {
+  void _onClearError(ClearPanelAuthErrors event, Emitter<PanelAuthState> emit) {
     emit(const PanelAuthInitial());
   }
 }

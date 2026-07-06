@@ -17,16 +17,34 @@ class PanelLoginRequested extends PanelAuthEvent {
   final bool rememberMe;
   final String? companyId;
 
+  /// Raw user input (email or phone number). When set, takes precedence
+  /// over [email] in the API payload so fleet panels can send `identifier`.
+  final String? identifier;
+
+  /// Arbitrary key-value pairs forwarded to the login endpoint body.
+  /// Used for panel-specific fields like `fleet_type`, `fleet_role`.
+  final Map<String, dynamic> metadata;
+
   const PanelLoginRequested({
     required this.panel,
     required this.email,
     required this.password,
     this.rememberMe = false,
     this.companyId,
+    this.identifier,
+    this.metadata = const {},
   });
 
   @override
-  List<Object?> get props => [panel, email, password, rememberMe, companyId];
+  List<Object?> get props => [
+    panel,
+    email,
+    password,
+    rememberMe,
+    companyId,
+    identifier,
+    metadata,
+  ];
 }
 
 /// User tapped "Logout".

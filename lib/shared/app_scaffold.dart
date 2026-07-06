@@ -3,17 +3,24 @@
 // Single factory for all fleet panel Flutter apps (Bus/Truck × Owner/Driver/Conductor).
 // Eliminates 8 near-identical main_*.dart entry points.
 //
-// Usage:
+// Basic usage (legacy setState screens):
 //   void main() => FleetApp.run(
 //     title: 'NexaTrace Bus Owner',
 //     loginScreen: const OwnerLoginScreen(),
 //     dashboardScreen: const OwnerDashboardScreen(),
-//     loginPath: '/bus-owner/login',
-//     dashboardPath: '/bus-owner/dashboard',
+//   );
+//
+// BLoC usage (Wave 0+):
+//   void main() => FleetApp.run(
+//     title: 'NexaTrace Bus Fleet',
+//     loginScreen: const FleetBlocLoginScreen(panel: UserPanel.busFleet),
+//     dashboardBuilder: (ctx) { ... read Bloc, decide dashboard ... },
+//     blocProviders: [BlocProvider<PanelAuthBloc>(...), ...],
 //   );
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
@@ -21,12 +28,17 @@ import 'package:trace_odd/core/theme/app_scroll_behavior.dart';
 
 class FleetApp {
   /// Bootstrap a fleet panel app with standard configuration.
+  ///
+  /// [dashboardBuilder] takes precedence over [dashboardScreen] when both
+  /// are provided, enabling BLoC-driven dashboard resolution.
   static void run({
     required String title,
     required Widget loginScreen,
-    required Widget dashboardScreen,
+    Widget? dashboardScreen,
+    Widget Function(BuildContext)? dashboardBuilder,
     String loginPath = '/login',
     String dashboardPath = '/dashboard',
+    List<BlocProvider> blocProviders = const [],
     Color? seedColor,
     Size designSize = const Size(390, 844),
   }) {
@@ -39,8 +51,10 @@ class FleetApp {
         title: title,
         loginScreen: loginScreen,
         dashboardScreen: dashboardScreen,
+        dashboardBuilder: dashboardBuilder,
         loginPath: loginPath,
         dashboardPath: dashboardPath,
+        blocProviders: blocProviders,
         seedColor: seedColor,
         designSize: designSize,
       ),
@@ -51,18 +65,22 @@ class FleetApp {
 class _FleetMaterialApp extends StatelessWidget {
   final String title;
   final Widget loginScreen;
-  final Widget dashboardScreen;
+  final Widget? dashboardScreen;
+  final Widget Function(BuildContext)? dashboardBuilder;
   final String loginPath;
   final String dashboardPath;
+  final List<BlocProvider> blocProviders;
   final Color? seedColor;
   final Size designSize;
 
   const _FleetMaterialApp({
     required this.title,
     required this.loginScreen,
-    required this.dashboardScreen,
+    this.dashboardScreen,
+    this.dashboardBuilder,
     required this.loginPath,
     required this.dashboardPath,
+    required this.blocProviders,
     this.seedColor,
     required this.designSize,
   });
@@ -72,12 +90,20 @@ class _FleetMaterialApp extends StatelessWidget {
     final router = GoRouter(
       routes: [
         GoRoute(path: loginPath, builder: (_, __) => loginScreen),
-        GoRoute(path: dashboardPath, builder: (_, __) => dashboardScreen),
+        GoRoute(
+          path: dashboardPath,
+          builder: (_, __) {
+            if (dashboardBuilder != null) {
+              return Builder(builder: (ctx) => dashboardBuilder!(ctx));
+            }
+            return dashboardScreen ?? loginScreen;
+          },
+        ),
       ],
       errorBuilder: (context, state) => loginScreen,
     );
 
-    return ScreenUtilInit(
+    Widget app = ScreenUtilInit(
       designSize: designSize,
       builder: (_, __) => MaterialApp.router(
         title: title,
@@ -90,5 +116,12 @@ class _FleetMaterialApp extends StatelessWidget {
         ),
       ),
     );
+
+    // Wrap with MultiBlocProvider if any providers are supplied
+    if (blocProviders.isNotEmpty) {
+      app = MultiBlocProvider(providers: blocProviders, child: app);
+    }
+
+    return app;
   }
 }

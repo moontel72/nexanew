@@ -1,19 +1,21 @@
-// Truck Conductor App — independent Flutter build
+// Truck Conductor App — Wave 0 BLoC
 // Deployed at: /var/www/traceodd/truck-conductor/
-// Hits: POST /api/v1/goods-fleet/conductor-login
+// Auth via unified PanelAuthBloc with fleet_type: truck
 
-import 'package:flutter/material.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/conductor_login_screen.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/conductor_dashboard.dart';
 import 'package:trace_odd/shared/app_scaffold.dart';
+import 'package:trace_odd/shared/utils/fleet_bloc_setup.dart';
+import 'package:trace_odd/shared/widgets/fleet_bloc_login_screen.dart';
 
 void main() => FleetApp.run(
   title: 'NexaTrace Truck Conductor',
-  loginScreen: const FleetConductorLoginScreen(
-    loginEndpoint: '/goods-fleet/conductor-login',
-    appTitle: 'Truck Conductor Portal',
-    appIcon: Icons.local_shipping_rounded,
-    dashboardPath: '/truck-conductor/dashboard',
+  loginScreen: FleetBlocLoginScreen(
+    panel: UserPanel.truckFleet,
+    loginConfig: FleetLoginConfig.truckConductor(),
   ),
   dashboardScreen: const ConductorDashboardScreen(),
+  loginPath: '/truck-conductor/login',
+  dashboardPath: '/truck-conductor/dashboard',
+  blocProviders: [fleetBlocProvider()],
 );
