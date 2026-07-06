@@ -29,6 +29,9 @@ class OwnerDashboardBloc
     on<CancelLinkRequest>(_onCancelLink);
     on<LeaveCarrier>(_onLeave);
     on<ClearOwnerError>(_onClear);
+    on<LoadOwnerInbox>(_onInbox);
+    on<LoadOwnerConversation>(_onConv);
+    on<SendOwnerMessage>(_onSendMsg);
   }
 
   Future<void> _onBoot(
@@ -294,6 +297,88 @@ class OwnerDashboardBloc
     } catch (_) {
     } finally {
       emit(state.copyWith(isMutating: false));
+    }
+  }
+
+  // ── Chat Inbox ──
+  Future<void> _onInbox(
+    LoadOwnerInbox e,
+    Emitter<OwnerDashboardState> emit,
+  ) async {
+    emit(state.copyWith(inboxLoading: true, chatError: null));
+    try {
+      final r = await _api.get('$_prefix/link-messages');
+      final list = (r?['data'] as List?) ?? [];
+      final raw = list
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+      final Map<String, Map<String, dynamic>> convMap = {};
+      for (final m in raw) {
+        final aid =
+            m['fleet_assignment_id']?.toString() ??
+            m['assignment_id']?.toString() ??
+            '';
+        if (aid.isEmpty) continue;
+        convMap.putIfAbsent(
+          aid,
+          () => {
+            'id': aid,
+            'owner_name': m['sender_name'] ?? 'Owner',
+            'latest_body': '',
+            'latest_at': '',
+          },
+        );
+        convMap[aid]!['latest_body'] = m['message_body']?.toString() ?? '';
+        convMap[aid]!['latest_at'] = m['created_at']?.toString() ?? '';
+      }
+      emit(
+        state.copyWith(
+          inboxConversations: convMap.values.toList(),
+          inboxLoading: false,
+        ),
+      );
+    } catch (ex) {
+      emit(state.copyWith(inboxLoading: false, chatError: ex.toString()));
+    }
+  }
+
+  Future<void> _onConv(
+    LoadOwnerConversation e,
+    Emitter<OwnerDashboardState> emit,
+  ) async {
+    try {
+      final r = await _api.get('$_prefix/link-messages/${e.assignmentId}');
+      final list = (r?['data'] as List?) ?? [];
+      emit(
+        state.copyWith(
+          activeChatMessages: list
+              .whereType<Map>()
+              .map((m) => Map<String, dynamic>.from(m))
+              .toList(),
+          expandedConversationId: e.assignmentId,
+        ),
+      );
+    } catch (ex) {
+      emit(state.copyWith(chatError: ex.toString()));
+    }
+  }
+
+  Future<void> _onSendMsg(
+    SendOwnerMessage e,
+    Emitter<OwnerDashboardState> emit,
+  ) async {
+    emit(state.copyWith(chatSending: true));
+    try {
+      await _api.post(
+        '$_prefix/link-messages/${e.assignmentId}',
+        data: {'message_body': e.message},
+      );
+      add(LoadOwnerConversation(e.assignmentId));
+      add(const LoadOwnerInbox());
+      emit(state.copyWith(chatSending: false));
+    } catch (ex) {
+      emit(state.copyWith(chatSending: false, chatError: ex.toString()));
     }
   }
 

@@ -8,6 +8,7 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashbo
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_state.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbox_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/layout_list_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/staff_list_section.dart';
@@ -47,11 +48,16 @@ class _OwnerView extends StatelessWidget {
         }
         final bloc = ctx.read<OwnerDashboardBloc>();
         final wide = MediaQuery.of(ctx).size.width > 900;
-        // Auto-load link status when on carrier tab
+        // Auto-load data on tab change
         if (state.currentPage == 'carrier' &&
             !state.linkLoading &&
             state.linkStatus == null) {
           bloc.add(const LoadOwnerLinkStatus());
+        }
+        if (state.currentPage == 'inbox' &&
+            !state.inboxLoading &&
+            state.inboxConversations.isEmpty) {
+          bloc.add(const LoadOwnerInbox());
         }
         return Scaffold(
           backgroundColor: const Color(0xFF0D1B2A),
@@ -118,6 +124,18 @@ class _OwnerView extends StatelessWidget {
         );
       case 'carrier':
         return _carrierLinkTab(ctx, bloc, state);
+      case 'inbox':
+        return ChatInboxSection(
+          conversations: state.inboxConversations,
+          activeMessages: state.activeChatMessages,
+          isLoading: state.inboxLoading,
+          isSending: state.chatSending,
+          expandedId: state.expandedConversationId,
+          error: state.chatError,
+          onExpand: (id) => bloc.add(LoadOwnerConversation(id)),
+          onSend: (id, msg) =>
+              bloc.add(SendOwnerMessage(assignmentId: id, message: msg)),
+        );
       default:
         return _homeTab(ctx, bloc, state);
     }
@@ -522,6 +540,7 @@ class _Sidebar extends StatelessWidget {
                 _nav('Vehicles', Icons.directions_bus, 'layouts'),
                 _sec('CARRIER'),
                 _nav('Carrier Link', Icons.link_rounded, 'carrier'),
+                _nav('Inbox', Icons.message_rounded, 'inbox'),
               ],
             ),
           ),

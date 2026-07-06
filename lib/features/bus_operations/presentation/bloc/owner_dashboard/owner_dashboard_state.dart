@@ -12,10 +12,14 @@ class OwnerDashboardState extends Equatable {
   final String? error, actionError;
 
   // ── Carrier link (owner-side) ──
-  final Map<String, dynamic>?
-  linkStatus; // {linked, status, carrier_name, assignment_id, ...}
+  final Map<String, dynamic>? linkStatus;
   final List<Map<String, dynamic>> availableCompanies;
   final bool linkLoading, companiesLoading;
+
+  // ── Chat inbox ──
+  final List<Map<String, dynamic>> inboxConversations, activeChatMessages;
+  final bool inboxLoading, chatSending;
+  final String? expandedConversationId, chatError;
 
   const OwnerDashboardState({
     this.status = OwnerDashboardStatus.initial,
@@ -38,6 +42,12 @@ class OwnerDashboardState extends Equatable {
     this.availableCompanies = const [],
     this.linkLoading = false,
     this.companiesLoading = false,
+    this.inboxConversations = const [],
+    this.activeChatMessages = const [],
+    this.inboxLoading = false,
+    this.chatSending = false,
+    this.expandedConversationId,
+    this.chatError,
   });
 
   OwnerDashboardState copyWith({
@@ -61,6 +71,12 @@ class OwnerDashboardState extends Equatable {
     List<Map<String, dynamic>>? availableCompanies,
     bool? linkLoading,
     bool? companiesLoading,
+    List<Map<String, dynamic>>? inboxConversations,
+    List<Map<String, dynamic>>? activeChatMessages,
+    bool? inboxLoading,
+    bool? chatSending,
+    String? expandedConversationId,
+    String? chatError,
   }) => OwnerDashboardState(
     status: status ?? this.status,
     ownerName: ownerName ?? this.ownerName,
@@ -82,6 +98,13 @@ class OwnerDashboardState extends Equatable {
     availableCompanies: availableCompanies ?? this.availableCompanies,
     linkLoading: linkLoading ?? this.linkLoading,
     companiesLoading: companiesLoading ?? this.companiesLoading,
+    inboxConversations: inboxConversations ?? this.inboxConversations,
+    activeChatMessages: activeChatMessages ?? this.activeChatMessages,
+    inboxLoading: inboxLoading ?? this.inboxLoading,
+    chatSending: chatSending ?? this.chatSending,
+    expandedConversationId:
+        expandedConversationId ?? this.expandedConversationId,
+    chatError: chatError,
   );
 
   bool get isLinked => linkStatus?['linked'] == true;
@@ -108,5 +131,11 @@ class OwnerDashboardState extends Equatable {
     availableCompanies,
     linkLoading,
     companiesLoading,
+    inboxConversations,
+    activeChatMessages,
+    inboxLoading,
+    chatSending,
+    expandedConversationId,
+    chatError,
   ];
 }

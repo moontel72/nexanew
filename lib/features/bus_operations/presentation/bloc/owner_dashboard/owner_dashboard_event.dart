@@ -123,3 +123,22 @@ class LeaveCarrier extends OwnerDashboardEvent {
 class ClearOwnerError extends OwnerDashboardEvent {
   const ClearOwnerError();
 }
+
+// Chat inbox
+class LoadOwnerInbox extends OwnerDashboardEvent {
+  const LoadOwnerInbox();
+}
+
+class LoadOwnerConversation extends OwnerDashboardEvent {
+  final String assignmentId;
+  const LoadOwnerConversation(this.assignmentId);
+  @override
+  List<Object?> get props => [assignmentId];
+}
+
+class SendOwnerMessage extends OwnerDashboardEvent {
+  final String assignmentId, message;
+  const SendOwnerMessage({required this.assignmentId, required this.message});
+  @override
+  List<Object?> get props => [assignmentId, message];
+}
