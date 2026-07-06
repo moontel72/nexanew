@@ -180,6 +180,41 @@ class AbsoluteLayoutComponent {
       meta: _safeCastMap(json['meta']),
     );
   }
+
+  /// Create a copy with optional field overrides.
+  AbsoluteLayoutComponent copyWith({
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+    double? rotation,
+    String? seatId,
+    int? seatNumber,
+    String? berthLabel,
+    bool? isReverseFacing,
+    bool? bookable,
+    BookingMode? bookingMode,
+    String? genderRestriction,
+    String? customLabel,
+    Map<String, dynamic>? meta,
+  }) => AbsoluteLayoutComponent(
+    id: id,
+    type: type,
+    x: x ?? this.x,
+    y: y ?? this.y,
+    width: width ?? this.width,
+    height: height ?? this.height,
+    rotation: rotation ?? this.rotation,
+    seatId: seatId ?? this.seatId,
+    seatNumber: seatNumber ?? this.seatNumber,
+    berthLabel: berthLabel ?? this.berthLabel,
+    isReverseFacing: isReverseFacing ?? this.isReverseFacing,
+    bookable: bookable ?? this.bookable,
+    bookingMode: bookingMode ?? this.bookingMode,
+    genderRestriction: genderRestriction ?? this.genderRestriction,
+    customLabel: customLabel ?? this.customLabel,
+    meta: meta ?? this.meta,
+  );
 }
 
 /// Safely cast a dynamic value to Map<String, dynamic>.

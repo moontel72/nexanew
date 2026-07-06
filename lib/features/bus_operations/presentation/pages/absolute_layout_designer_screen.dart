@@ -1,52 +1,24 @@
-// NEXATRACE — ABSOLUTE LAYOUT DESIGNER SCREEN
-// ==============================================
-// Main screen for the Absolute (Freeform) Bus Layout Engine.
-//
-// This is the "House Floor Plan" canvas — components are placed via
-// free drag-and-drop with pixel-precise X, Y, Width, Height, and Rotation.
-// No grid rows/columns. No aisle concept. Pure freeform positioning.
-//
-// Features:
-// • InteractiveViewer for pan/zoom (pinch-to-zoom on mobile)
-// • Component palette (left sidebar) — tap to add, no drag source needed
-// • Tap-to-place: tap palette item, then tap canvas to drop at that position
-// • Tap component: selects it, opens inspector bottom sheet
-// • Transform overlay: 8 resize handles + rotation handle on selected component
-// • Drag-to-move: long-press + drag to reposition components
-// • Presets sidebar: quick-start with predefined vehicle classes
-// • Save/Publish to backend: /api/bus-owner/absolute-layouts/*
-//
-// 100% isolated from the legacy SeatLayoutDesignerScreen.
-// Only accessible from the Bus Owner app.
-
-import 'dart:convert';
+// NEXATRACE — ABSOLUTE LAYOUT DESIGNER SCREEN (BLoC-driven)
+// Canvas math preserved — state management migrated to LayoutDesignerBloc.
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
-import 'package:trace_odd/core/services/api_service.dart';
-import 'package:trace_odd/shared/models/transport/absolute_layout_component.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_state.dart';
 import 'package:trace_odd/shared/models/transport/layout_component.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/absolute_canvas_grid.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/absolute_component_palette.dart';
-import 'package:trace_odd/features/bus_operations/presentation/widgets/absolute_transform_overlay.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/absolute_inspector_panel.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
-import 'package:uuid/uuid.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/layout_designer/layout_designer_bloc.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/layout_designer/layout_designer_event.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/layout_designer/layout_designer_state.dart';
 
-const _uuid = Uuid();
-
-/// Tool mode for canvas interactions.
 enum _CanvasTool { select, placeComponent }
 
-class AbsoluteLayoutDesignerScreen extends StatefulWidget {
-  final String companyId;
-  final String companyName;
+class AbsoluteLayoutDesignerScreen extends StatelessWidget {
+  final String companyId, companyName, apiPrefix;
   final String? layoutId;
   final BusConfig? config;
-
-  /// API prefix for layout endpoints (e.g. '/bus-owner' or '/bus-fleet').
-  /// Defaults to '/bus-owner' for backward compatibility.
-  final String apiPrefix;
 
   const AbsoluteLayoutDesignerScreen({
     super.key,
@@ -58,117 +30,46 @@ class AbsoluteLayoutDesignerScreen extends StatefulWidget {
   });
 
   @override
-  State<AbsoluteLayoutDesignerScreen> createState() =>
-      _AbsoluteLayoutDesignerScreenState();
+  Widget build(BuildContext context) => BlocProvider(
+    create: (_) =>
+        LayoutDesignerBloc()
+          ..add(InitDesigner(apiPrefix: apiPrefix, layoutId: layoutId)),
+    child: _DesignerBody(
+      companyId: companyId,
+      companyName: companyName,
+      layoutId: layoutId,
+      config: config,
+      apiPrefix: apiPrefix,
+    ),
+  );
 }
 
-class _AbsoluteLayoutDesignerScreenState
-    extends State<AbsoluteLayoutDesignerScreen> {
-  final ApiService _api = ApiService();
+class _DesignerBody extends StatefulWidget {
+  final String companyId, companyName, apiPrefix;
+  final String? layoutId;
+  final BusConfig? config;
+  const _DesignerBody({
+    required this.companyId,
+    required this.companyName,
+    this.layoutId,
+    this.config,
+    required this.apiPrefix,
+  });
+
+  @override
+  State<_DesignerBody> createState() => _DesignerBodyState();
+}
+
+class _DesignerBodyState extends State<_DesignerBody> {
   final TransformationController _transformCtrl = TransformationController();
-
-  late AbsoluteLayoutState _state;
   _CanvasTool _tool = _CanvasTool.select;
-
-  // Place mode state
   ComponentType? _placingType;
-  double _placingDefaultW = 56;
-  double _placingDefaultH = 56;
-  bool _placingIsReverse = false;
-
-  // Sidebar
   bool _sidebarOpen = true;
 
   @override
   void initState() {
     super.initState();
-    if (widget.config != null) {
-      // New layout with config → generate initial seats
-      _initFromConfig(widget.config!);
-    } else if (widget.layoutId != null) {
-      // Editing existing → init default state first, then load from API
-      _state = const AbsoluteLayoutState();
-      _loadLayout(widget.layoutId!);
-    } else {
-      _state = const AbsoluteLayoutState();
-    }
-  }
-
-  void _initFromConfig(BusConfig config) {
-    final comps = <AbsoluteLayoutComponent>[];
-    const double seatW = 56, seatH = 56;
-
-    // Compute canvas size from config
-    final double canvasW =
-        config.leftSeats * seatW + config.rightSeats * seatW + 56; // aisle
-    final double canvasH =
-        56 + config.rowCount * seatH + 28; // driver + rows + padding
-
-    // Driver (right-hand side — Pakistan / RHD convention)
-    comps.add(
-      AbsoluteLayoutComponent(
-        id: _uuid.v4(),
-        type: ComponentType.driverCabin,
-        x: canvasW - seatW,
-        y: 0,
-        width: seatW,
-        height: seatH,
-        bookable: false,
-        seatId: 'DRIVER',
-      ),
-    );
-
-    // Generate rows
-    double y = seatH; // start after driver
-    for (int row = 0; row < config.rowCount; row++) {
-      double x = 0;
-      for (int i = 0; i < config.leftSeats; i++) {
-        comps.add(
-          AbsoluteLayoutComponent(
-            id: _uuid.v4(),
-            type: ComponentType.seat,
-            x: x,
-            y: y,
-            width: seatW,
-            height: seatH,
-            bookable: true,
-          ),
-        );
-        x += seatW;
-      }
-      x += 56; // aisle
-      for (int i = 0; i < config.rightSeats; i++) {
-        comps.add(
-          AbsoluteLayoutComponent(
-            id: _uuid.v4(),
-            type: ComponentType.seat,
-            x: x,
-            y: y,
-            width: seatW,
-            height: seatH,
-            bookable: true,
-          ),
-        );
-        x += seatW;
-      }
-      y += seatH;
-    }
-
-    var reassigned = _reassignSeatNumbers(comps);
-    reassigned = _reassignBerthLabels(reassigned);
-
-    final displayName = config.numberPlate.isNotEmpty
-        ? '${config.maker} ${config.numberPlate}'
-        : 'Custom ${config.leftSeats}+${config.rightSeats} Seats';
-
-    _state = AbsoluteLayoutState(
-      canvasWidth: canvasW,
-      canvasHeight: canvasH,
-      displayName: displayName,
-      components: reassigned,
-      metadata: config.toJson(),
-      isDirty: true,
-    );
+    if (widget.config != null) _initFromConfig(widget.config!);
   }
 
   @override
@@ -177,1331 +78,13 @@ class _AbsoluteLayoutDesignerScreenState
     super.dispose();
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // DATA
-  // ═══════════════════════════════════════════════════════════
-
-  Future<void> _loadLayout(String id) async {
-    _setState(_state.copyWith(isSaving: true));
-
-    Map<String, dynamic> layoutData = <String, dynamic>{};
-
-    try {
-      // 1) Try single-layout endpoint first
-      try {
-        final r = await _api.get('${widget.apiPrefix}/absolute-layouts/$id');
-        final d = r?['data'];
-        if (d is Map<String, dynamic>) {
-          layoutData = d;
-        }
-      } catch (_) {
-        // Show endpoint failed — try list endpoint below
-      }
-
-      // 2) Fallback: scan the list endpoint for this layout ID
-      if (layoutData.isEmpty) {
-        try {
-          final r = await _api.get(
-            '${widget.apiPrefix}/absolute-layouts',
-            queryParams: {'per_page': '100'},
-          );
-          final d = r?['data'];
-          List<dynamic>? items;
-          if (d is List) {
-            items = d;
-          } else if (d is Map) {
-            items = d['data'] as List<dynamic>?;
-          }
-          if (items != null) {
-            for (final item in items) {
-              if (item is Map && item['id']?.toString() == id) {
-                layoutData = Map<String, dynamic>.from(item);
-                break;
-              }
-            }
-          }
-        } catch (_) {
-          // Both endpoints failed
-        }
-      }
-
-      // 3) Parse the snapshot from whatever layout data we have
-      if (layoutData.isNotEmpty) {
-        final raw = layoutData['current_snapshot'];
-        Map<String, dynamic> snapshot;
-
-        if (raw is String) {
-          final decoded = jsonDecode(raw);
-          snapshot = decoded is Map<String, dynamic>
-              ? decoded
-              : <String, dynamic>{};
-        } else if (raw is Map<String, dynamic>) {
-          snapshot = raw;
-        } else if (raw is Map) {
-          // Edge case: Map with non-String keys (e.g. Map<dynamic, dynamic>)
-          snapshot = raw.cast<String, dynamic>();
-        } else if (raw is List) {
-          snapshot = <String, dynamic>{'components': raw};
-        } else {
-          snapshot = layoutData;
-        }
-
-        _setState(
-          AbsoluteLayoutState.fromSnapshot(
-            snapshot,
-            layoutId: layoutData['id']?.toString(),
-          ).copyWith(
-            layoutId: layoutData['id']?.toString(),
-            displayName:
-                (layoutData['display_name'] is String
-                    ? layoutData['display_name'] as String
-                    : null) ??
-                'Loaded Layout',
-          ),
-        );
-      }
-    } catch (e) {
-      _setState(
-        _state.copyWith(
-          errorMessage: 'Failed to load layout: $e',
-          clearError: false,
-        ),
-      );
-    }
-    _setState(_state.copyWith(isSaving: false));
-  }
-
-  Future<void> _publishLayout() async {
-    // Save first if dirty or new
-    if (_state.isDirty || _state.layoutId == null) {
-      await _saveLayout();
-      if (_state.errorMessage != null) return;
-    }
-    if (_state.layoutId == null) {
-      _setState(_state.copyWith(errorMessage: 'Cannot publish: no layout ID'));
-      return;
-    }
-
-    _setState(_state.copyWith(isSaving: true, clearError: true));
-    try {
-      await _api.post(
-        '${widget.apiPrefix}/absolute-layouts/${_state.layoutId}/publish',
-      );
-      _setState(_state.copyWith(isSaving: false, isDirty: false));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Layout published — live on Customer Booking App'),
-            backgroundColor: Color(0xFFD97706),
-          ),
-        );
-      }
-    } catch (e) {
-      _setState(
-        _state.copyWith(isSaving: false, errorMessage: 'Publish failed: $e'),
-      );
-    }
-  }
-
-  Future<void> _saveLayout({bool autoPublish = false}) async {
-    final isNew = _state.layoutId == null;
-    final snapshot = _state.toSnapshot();
-    final body = {
-      'display_name': _state.displayName,
-      'current_snapshot': snapshot,
-    };
-
-    _setState(_state.copyWith(isSaving: true, clearError: true));
-    try {
-      Map<String, dynamic>? res;
-      if (_state.layoutId != null) {
-        res = await _api.put(
-          '${widget.apiPrefix}/absolute-layouts/${_state.layoutId}',
-          body: body,
-        );
-      } else {
-        res = await _api.post(
-          '${widget.apiPrefix}/absolute-layouts',
-          body: body,
-        );
-      }
-      final id = res?['data']?['id']?.toString();
-      _setState(
-        _state.copyWith(
-          layoutId: id ?? _state.layoutId,
-          isDirty: false,
-          isSaving: false,
-        ),
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Layout saved successfully'),
-            backgroundColor: Color(0xFF16A34A),
-          ),
-        );
-      }
-
-      // Auto-publish new layouts so they appear immediately in the Customer App
-      if (isNew || autoPublish) {
-        final newId = id ?? _state.layoutId;
-        if (newId != null && mounted) {
-          await _api.post(
-            '${widget.apiPrefix}/absolute-layouts/$newId/publish',
-          );
-          _setState(_state.copyWith(isDirty: false));
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Published — now live on Customer App'),
-                backgroundColor: Color(0xFFD97706),
-              ),
-            );
-          }
-        }
-      }
-    } catch (e) {
-      _setState(
-        _state.copyWith(isSaving: false, errorMessage: 'Save failed: $e'),
-      );
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // STATE MUTATIONS
-  // ═══════════════════════════════════════════════════════════
-
-  void _setState(AbsoluteLayoutState newState) {
-    if (mounted) setState(() => _state = newState);
-  }
-
-  String _addComponent(
-    ComponentType type,
-    double x,
-    double y,
-    double w,
-    double h, {
-    bool isReverseFacing = false,
-  }) {
-    final id = _uuid.v4();
-    final comp = AbsoluteLayoutComponent(
-      id: id,
-      type: type,
-      x: x,
-      y: y,
-      width: w,
-      height: h,
-      isReverseFacing: isReverseFacing,
-      seatId: _nextSeatId(type),
-      seatNumber:
-          type == ComponentType.seat ||
-              type == ComponentType.businessClassSeat ||
-              type == ComponentType.foldingSeat
-          ? _state.components.where((c) => c.type == type).length + 1
-          : null,
-      bookable: switch (type) {
-        ComponentType.seat ||
-        ComponentType.businessClassSeat ||
-        ComponentType.foldingSeat ||
-        ComponentType.sleeperLower ||
-        ComponentType.sleeperUpper => true,
-        _ => false,
-      },
-      bookingMode: switch (type) {
-        ComponentType.businessClassSeat => BookingMode.premium,
-        ComponentType.sleeperLower ||
-        ComponentType.sleeperUpper => BookingMode.berth,
-        ComponentType.foldingSeat => BookingMode.conditional,
-        _ => BookingMode.standard,
-      },
-    );
-    var comps = [..._state.components, comp];
-    comps = _reassignSeatNumbers(comps);
-    comps = _reassignBerthLabels(comps);
-    _setState(
-      _state.copyWith(
-        components: comps,
-        selectedComponentId: id,
-        isDirty: true,
-      ),
-    );
-    return id;
-  }
-
-  String? _nextSeatId(ComponentType type) {
-    // Per-type independent counters — tables/doors/lavatories never
-    // consume a seat number digit, so sequences stay contiguous.
-    final comps = _state.components;
-    if (type == ComponentType.businessClassSeat) {
-      final count = comps
-          .where((c) => c.type == ComponentType.businessClassSeat)
-          .length;
-      return 'B${count + 1}';
-    }
-    if (type == ComponentType.foldingSeat) {
-      final count = comps
-          .where((c) => c.type == ComponentType.foldingSeat)
-          .length;
-      return 'F${count + 1}';
-    }
-    // Standard seats numbered by _reassignSeatNumbers
-    return null;
-  }
-
-  /// Auto-assign S1/S2/… labels to all standard seats (forward + reverse).
-  /// Numbering always flows from the driver's position toward the opposite
-  /// end: the row nearest the driver gets S1/S2/..., and numbers increase
-  /// sequentially all the way to the back.
-  List<AbsoluteLayoutComponent> _reassignSeatNumbers(
-    List<AbsoluteLayoutComponent> comps,
-  ) {
-    final seats = comps.where((c) => c.type == ComponentType.seat).toList();
-    if (seats.isEmpty) return comps;
-
-    // Driver position determines the numbering direction.
-    // If the driver is nearer the top (small Y), number top→bottom.
-    // If the driver is nearer the bottom (large Y), number bottom→top.
-    final driver =
-        comps.where((c) => c.type == ComponentType.driverCabin).isEmpty
-        ? null
-        : comps.firstWhere((c) => c.type == ComponentType.driverCabin);
-    final bool numberTopToBottom =
-        driver == null || driver.y <= 56; // front half of canvas
-
-    // Sort: Y first (relative to driver), forward-before-reverse, then X
-    seats.sort((a, b) {
-      final yDiff = numberTopToBottom ? a.y.compareTo(b.y) : b.y.compareTo(a.y);
-      if (yDiff != 0) return yDiff;
-      if (a.isReverseFacing != b.isReverseFacing) {
-        return a.isReverseFacing ? 1 : -1;
-      }
-      return a.x.compareTo(b.x);
-    });
-
-    int s = 1;
-    for (final seat in seats) {
-      if (seat.customLabel == null) {
-        seat.seatId = 'S$s';
-        seat.seatNumber = s;
-        s++;
-      }
-    }
-
-    return comps;
-  }
-
-  /// Auto-assign L1/L2/… and U1/U2/… labels to sleeper berths.
-  /// Berths are sorted by Y (top‑to‑bottom), then X (left‑to‑right).
-  /// Berths that have a [customLabel] are skipped (owner override).
-  List<AbsoluteLayoutComponent> _reassignBerthLabels(
-    List<AbsoluteLayoutComponent> comps,
-  ) {
-    // Lower berths
-    final lower =
-        comps.where((c) => c.type == ComponentType.sleeperLower).toList()
-          ..sort((a, b) {
-            final yDiff = a.y.compareTo(b.y);
-            if (yDiff != 0) return yDiff;
-            return a.x.compareTo(b.x);
-          });
-    int l = 1;
-    for (final b in lower) {
-      b.berthLabel = b.customLabel == null ? 'L$l' : null;
-      if (b.customLabel == null) l++;
-    }
-
-    // Upper berths
-    final upper =
-        comps.where((c) => c.type == ComponentType.sleeperUpper).toList()
-          ..sort((a, b) {
-            final yDiff = a.y.compareTo(b.y);
-            if (yDiff != 0) return yDiff;
-            return a.x.compareTo(b.x);
-          });
-    int u = 1;
-    for (final b in upper) {
-      b.berthLabel = b.customLabel == null ? 'U$u' : null;
-      if (b.customLabel == null) u++;
-    }
-
-    return comps;
-  }
-
-  void _updateComponent(AbsoluteLayoutComponent updated) {
-    var comps = _state.components.map((c) {
-      return c.id == updated.id ? updated : c;
-    }).toList();
-    comps = _reassignSeatNumbers(comps);
-    comps = _reassignBerthLabels(comps);
-    _setState(_state.copyWith(components: comps, isDirty: true));
-  }
-
-  /// Convenience: update selected component with specific overrides.
-  void _updateCompWith(
-    AbsoluteLayoutComponent comp, {
-    double? x,
-    double? y,
-    double? width,
-    double? height,
-    double? rotation,
-  }) {
-    _updateComponent(
-      AbsoluteLayoutComponent(
-        id: comp.id,
-        type: comp.type,
-        x: x ?? comp.x,
-        y: y ?? comp.y,
-        width: width ?? comp.width,
-        height: height ?? comp.height,
-        rotation: rotation ?? comp.rotation,
-        seatId: comp.seatId,
-        seatNumber: comp.seatNumber,
-        berthLabel: comp.berthLabel,
-        isReverseFacing: comp.isReverseFacing,
-        bookable: comp.bookable,
-        bookingMode: comp.bookingMode,
-        customLabel: comp.customLabel,
-        meta: comp.meta,
-      ),
-    );
-  }
-
-  void _deleteComponent(String id) {
-    final wasSelected = _state.selectedComponentId == id;
-    var comps = _state.components.where((c) => c.id != id).toList();
-    comps = _reassignSeatNumbers(comps);
-    comps = _reassignBerthLabels(comps);
-    _setState(
-      _state.copyWith(
-        components: comps,
-        selectedComponentId: wasSelected ? null : _state.selectedComponentId,
-        isDirty: true,
-      ),
-    );
-  }
-
-  void _selectComponent(String id) {
-    _setState(_state.copyWith(selectedComponentId: id));
-    _tool = _CanvasTool.select;
-    _placingType = null;
-    _openInspector(id);
-  }
-
-  void _deselectAll() {
-    _setState(_state.copyWith(clearSelection: true));
-    // Note: does NOT reset _tool or _placingType — callers manage those.
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // PRESETS
-  // ═══════════════════════════════════════════════════════════
-
-  void _applyPreset(AbsoluteLayoutPreset preset) {
-    // Special-case: VIP + Sleeper custom layout (5'1" × 18'8")
-    if (preset.key == 'vip_sleeper_40') {
-      _applyVipSleeperPreset(preset);
-      return;
-    }
-
-    final components = <AbsoluteLayoutComponent>[];
-    const double seatW = 56, seatH = 56;
-    const double aisleW = 56;
-
-    // Driver cabin at the TOP-FRONT, right-hand side (Pakistan / RHD)
-    components.add(
-      AbsoluteLayoutComponent(
-        id: _uuid.v4(),
-        type: ComponentType.driverCabin,
-        x: preset.canvasWidth - 56,
-        y: 0,
-        width: 56,
-        height: 56,
-        bookable: false,
-        seatId: 'DRIVER',
-      ),
-    );
-
-    // Seat rows start right after the driver
-    double y = seatH; // y = 56
-    final int rowCount = ((preset.canvasHeight - 56) / seatH).floor().clamp(
-      0,
-      16,
-    );
-
-    // Generate seat rows
-    for (int row = 0; row < rowCount; row++) {
-      double x = 0;
-      // Left seats
-      for (int i = 0; i < preset.leftSeats; i++) {
-        components.add(
-          AbsoluteLayoutComponent(
-            id: _uuid.v4(),
-            type: ComponentType.seat,
-            x: x,
-            y: y,
-            width: seatW,
-            height: seatH,
-            seatId: 'S${components.length + 1}',
-            seatNumber: components.length + 1,
-            bookable: true,
-          ),
-        );
-        x += seatW;
-      }
-      // Aisle (visual gap only, no component needed in absolute mode)
-      x += aisleW;
-      // Right seats
-      for (int i = 0; i < preset.rightSeats; i++) {
-        components.add(
-          AbsoluteLayoutComponent(
-            id: _uuid.v4(),
-            type: ComponentType.seat,
-            x: x,
-            y: y,
-            width: seatW,
-            height: seatH,
-            seatId: 'S${components.length + 1}',
-            seatNumber: components.length + 1,
-            bookable: true,
-          ),
-        );
-        x += seatW;
-      }
-      y += seatH;
-    }
-
-    var reassigned = _reassignSeatNumbers(components);
-    reassigned = _reassignBerthLabels(reassigned);
-
-    _setState(
-      AbsoluteLayoutState(
-        canvasWidth: preset.canvasWidth,
-        canvasHeight: preset.canvasHeight,
-        displayName: preset.label,
-        components: reassigned,
-        metadata: {'preset_key': preset.key},
-        isDirty: true,
-      ),
-    );
-  }
-
-  /// Generates the VIP + Sleeper layout (5'1" × 18'8" bus).
-  ///
-  /// Layout (front → back):
-  ///   1. Row 1:  Driver (right) + VIP Business Class (right)
-  ///   2. Rows 2-3:  8 standard seats (2L+2R × 2)
-  ///   3. Rows 4-6:  12 standard seats + 2 upper sleeper berths
-  ///   4. Rear (rows 7-16): mixed tables, forward & reverse seats
-  void _applyVipSleeperPreset(AbsoluteLayoutPreset preset) {
-    final comps = <AbsoluteLayoutComponent>[];
-    const double seatW = 56, seatH = 56;
-    // 244 px wide = 5'1": left(4,60) | aisle(116-128) | right(128,184)
-    const double lx0 = 4, lx1 = 60; // left-side seat X positions
-    const double rx0 = 128, rx1 = 184; // right-side seat X positions
-
-    // ── helpers ──
-    String nextId() => _uuid.v4();
-
-    int seatNum = 0;
-    void addStdSeat(double x, double y, {bool rev = false}) {
-      seatNum++;
-      final c = AbsoluteLayoutComponent(
-        id: nextId(),
-        type: ComponentType.seat,
-        x: x,
-        y: y,
-        width: seatW,
-        height: seatH,
-        isReverseFacing: rev,
-        seatId: 'S$seatNum',
-        seatNumber: seatNum,
-        bookable: true,
-      );
-      comps.add(c);
-    }
-
-    void addRow(double y, {bool revL = false, bool revR = false}) {
-      addStdSeat(lx0, y, rev: revL);
-      addStdSeat(lx1, y, rev: revL);
-      addStdSeat(rx0, y, rev: revR);
-      addStdSeat(rx1, y, rev: revR);
-    }
-
-    // ═══════════════════════════════════════════════
-    // 1. FRONT ROW: Driver + VIP (y = 0)
-    // ═══════════════════════════════════════════════
-    double y = 0;
-
-    // Driver cabin (right-hand side — Pakistan / RHD)
-    comps.add(
-      AbsoluteLayoutComponent(
-        id: nextId(),
-        type: ComponentType.driverCabin,
-        x: rx0,
-        y: y,
-        width: seatW,
-        height: seatH,
-        bookable: false,
-        seatId: 'DRIVER',
-      ),
-    );
-
-    // VIP — business class, sits on right side
-    comps.add(
-      AbsoluteLayoutComponent(
-        id: nextId(),
-        type: ComponentType.businessClassSeat,
-        x: rx1,
-        y: y,
-        width: seatW,
-        height: seatH,
-        isReverseFacing: false,
-        bookable: true,
-        bookingMode: BookingMode.premium,
-        customLabel: 'VIP',
-        seatId: 'VIP',
-        seatNumber: 0,
-      ),
-    );
-
-    // ═══════════════════════════════════════════════
-    // 2. ROWS 2-3: 8 standard seats (y = 56, 112)
-    // ═══════════════════════════════════════════════
-    y += seatH; // 56
-    addRow(y); // row 2 → 4 seats
-    y += seatH; // 112
-    addRow(y); // row 3 → 4 seats
-
-    // ═══════════════════════════════════════════════
-    // 3. ROWS 4-6: 12 standard seats + 2 upper berths
-    // ═══════════════════════════════════════════════
-    y += seatH; // 168 — row 4
-    addRow(y);
-    y += seatH; // 224 — row 5
-    addRow(y);
-    y += seatH; // 280 — row 6
-    addRow(y);
-
-    // Upper sleeper berths (above the 6 right + 6 left seats)
-    // Each berth spans 3 rows (168 px tall), 1 seat wide (56 px)
-    const double berthY = 168;
-    const double berthH = 168; // 3 rows
-
-    comps.add(
-      AbsoluteLayoutComponent(
-        id: nextId(),
-        type: ComponentType.sleeperUpper,
-        x: lx0,
-        y: berthY,
-        width: seatW,
-        height: berthH,
-        berthLabel: 'LU1',
-        bookable: true,
-        bookingMode: BookingMode.berth,
-      ),
-    );
-
-    comps.add(
-      AbsoluteLayoutComponent(
-        id: nextId(),
-        type: ComponentType.sleeperUpper,
-        x: rx0,
-        y: berthY,
-        width: seatW,
-        height: berthH,
-        berthLabel: 'RU1',
-        bookable: true,
-        bookingMode: BookingMode.berth,
-      ),
-    );
-
-    // ═══════════════════════════════════════════════
-    // 4. REAR SECTION (y = 336 → 896): mixed layout
-    // ═══════════════════════════════════════════════
-    y += seatH; // 336 — row 7: 2L forward + 2R reverse
-    addRow(y, revR: true);
-
-    y += seatH; // 392 — row 8: 2L reverse + 2R forward
-    addRow(y, revL: true);
-
-    // Row 9-10: Table (left) + 2 right seats each row
-    y += seatH; // 448
-    // Table spans 2 seat-widths + aisle (covers left side)
-    comps.add(
-      AbsoluteLayoutComponent(
-        id: nextId(),
-        type: ComponentType.restaurantTable,
-        x: lx0,
-        y: y,
-        width: 112,
-        height: 112,
-        bookable: false,
-      ),
-    );
-    addStdSeat(rx0, y); // row 9 right
-    addStdSeat(rx1, y);
-
-    y += seatH; // 504 — row 10 right seats (table covers left side)
-    addStdSeat(rx0, y);
-    addStdSeat(rx1, y);
-
-    y += seatH; // 560 — row 11: 2L reverse + 2R forward
-    addRow(y, revL: true);
-
-    y += seatH; // 616 — row 12: 2L forward + 2R reverse
-    addRow(y, revR: true);
-
-    // Row 13-14: Table (right) + 2 left seats each row
-    y += seatH; // 672
-    comps.add(
-      AbsoluteLayoutComponent(
-        id: nextId(),
-        type: ComponentType.restaurantTable,
-        x: rx0,
-        y: y,
-        width: 112,
-        height: 112,
-        bookable: false,
-      ),
-    );
-    addStdSeat(lx0, y, rev: true); // row 13 left reverse
-    addStdSeat(lx1, y, rev: true);
-
-    y += seatH; // 728 — row 14 left seats (table covers right side)
-    addStdSeat(lx0, y);
-    addStdSeat(lx1, y);
-
-    y += seatH; // 784 — row 15: 2L + 2R reverse
-    addRow(y, revR: true);
-
-    y += seatH; // 840 — row 16: 2L reverse + 2R
-    addRow(y, revL: true);
-
-    // ── Finalize state ──
-    final reassigned = _reassignSeatNumbers(comps);
-    _setState(
-      AbsoluteLayoutState(
-        canvasWidth: preset.canvasWidth,
-        canvasHeight: preset.canvasHeight,
-        displayName: preset.label,
-        components: reassigned,
-        metadata: {'preset_key': preset.key},
-        isDirty: true,
-      ),
-    );
-  }
-
-  void _clearCanvas() {
-    _setState(const AbsoluteLayoutState(isDirty: true));
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // INSPECTOR
-  // ═══════════════════════════════════════════════════════════
-
-  void _openInspector(String compId) {
-    // The inspector is rendered as a Positioned widget in _buildCanvas.
-    // Just trigger a rebuild — no bottom sheet needed.
-    if (mounted && _state.selectedComponentId == compId) {
-      setState(() {}); // re-render to show the inspector panel
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // BUILD
-  // ═══════════════════════════════════════════════════════════
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D1B2A),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _topBar(),
-            Expanded(
-              child: Row(
-                children: [
-                  // Left: palette
-                  AbsoluteComponentPalette(
-                    onItemSelected: (type, defW, defH, isReverse) {
-                      _tool = _CanvasTool.placeComponent;
-                      _placingType = type;
-                      _placingDefaultW = defW;
-                      _placingDefaultH = defH;
-                      _placingIsReverse = isReverse;
-                      _setState(_state.copyWith(clearSelection: true));
-                    },
-                  ),
-                  // Center: canvas
-                  Expanded(child: _buildCanvas()),
-                  // Right: presets sidebar
-                  if (_sidebarOpen) _presetsSidebar(),
-                ],
-              ),
-            ),
-            // Bottom status bar
-            _statusBar(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _topBar() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF0A1628),
-        border: Border(bottom: BorderSide(color: Color(0x20FFFFFF))),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            // Back
-            IconButton(
-              icon: const Icon(
-                Icons.arrow_back,
-                color: Colors.white70,
-                size: 18,
-              ),
-              tooltip: 'Back',
-              onPressed: () {
-                if (_state.isDirty) {
-                  _showUnsavedDialog();
-                } else {
-                  Navigator.pop(context, true);
-                }
-              },
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-            ),
-            const Gap(4),
-            // Title (compact)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 140),
-              child: Text(
-                _state.displayName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (_state.isDirty)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF97316).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: const Text(
-                  'UNSAVED',
-                  style: TextStyle(
-                    color: Color(0xFFF97316),
-                    fontSize: 8,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            const Gap(8),
-            // Select
-            _compactBtn(
-              Icons.near_me,
-              'Select',
-              _tool == _CanvasTool.select,
-              () {
-                _tool = _CanvasTool.select;
-                _placingType = null;
-                _setState(_state.copyWith(clearSelection: true));
-              },
-            ),
-            // Place
-            _compactBtn(
-              Icons.add_location_alt,
-              'Place',
-              _tool == _CanvasTool.placeComponent,
-              () {
-                if (_placingType == null && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Pick a part from the left palette first'),
-                      backgroundColor: Color(0xFFD97706),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                }
-                setState(() => _tool = _CanvasTool.placeComponent);
-              },
-            ),
-            // Presets
-            _compactBtn(
-              _sidebarOpen ? Icons.menu_open : Icons.menu,
-              'Presets',
-              _sidebarOpen,
-              () => setState(() => _sidebarOpen = !_sidebarOpen),
-            ),
-            const Gap(8),
-            // Save & Publish / Save
-            ElevatedButton.icon(
-              onPressed: _state.isSaving ? null : () => _saveLayout(),
-              icon: _state.isSaving
-                  ? const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.save, size: 14),
-              label: Text(
-                _state.layoutId == null ? 'Save & Publish' : 'Save',
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF16A34A),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: Size.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ),
-            ),
-            const Gap(4),
-            // Publish
-            ElevatedButton.icon(
-              onPressed: _state.isSaving || _state.layoutId == null
-                  ? null
-                  : _publishLayout,
-              icon: _state.isSaving
-                  ? const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.cloud_upload, size: 14),
-              label: const Text(
-                'Publish',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD97706),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: Size.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _compactBtn(
-    IconData icon,
-    String label,
-    bool active,
-    VoidCallback onTap,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 2),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: active ? const Color(0xFF7C3AED).withOpacity(0.2) : null,
-            borderRadius: BorderRadius.circular(4),
-            border: active
-                ? Border.all(color: const Color(0xFF7C3AED).withOpacity(0.4))
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 12,
-                color: active ? const Color(0xFF7C3AED) : Colors.white54,
-              ),
-              const Gap(3),
-              Text(
-                label,
-                style: TextStyle(
-                  color: active ? const Color(0xFF7C3AED) : Colors.white54,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCanvas() {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Main canvas
-        AbsoluteCanvasGrid(
-          layoutState: _state,
-          transformController: _transformCtrl,
-          onComponentTap: (id, x, y) {
-            if (_tool == _CanvasTool.select) {
-              _selectComponent(id);
-            } else if (_tool == _CanvasTool.placeComponent &&
-                _placingType != null) {
-              final newId = _addComponent(
-                _placingType!,
-                x,
-                y,
-                _placingDefaultW,
-                _placingDefaultH,
-                isReverseFacing: _placingIsReverse,
-              );
-              _tool = _CanvasTool.select;
-              _placingType = null;
-              _openInspector(newId);
-            }
-          },
-          onCanvasTap: (x, y) {
-            if (_tool == _CanvasTool.placeComponent && _placingType != null) {
-              final newId = _addComponent(
-                _placingType!,
-                x,
-                y,
-                _placingDefaultW,
-                _placingDefaultH,
-                isReverseFacing: _placingIsReverse,
-              );
-              _tool = _CanvasTool.select;
-              _placingType = null;
-              _openInspector(newId);
-            } else if (_tool == _CanvasTool.select) {
-              _deselectAll();
-            }
-          },
-          onOverlayResize: (w, h, x, y) {
-            if (_state.selectedComponent != null) {
-              _updateCompWith(_state.selectedComponent!, x: x, y: y, width: w, height: h);
-            }
-          },
-          onOverlayMove: (x, y) {
-            if (_state.selectedComponent != null) {
-              _updateCompWith(_state.selectedComponent!, x: x, y: y);
-            }
-          },
-          onOverlayRotate: (r) {
-            if (_state.selectedComponent != null) {
-              _updateCompWith(_state.selectedComponent!, rotation: r);
-            }
-          },
-          onOverlayDelete: () {
-            if (_state.selectedComponent != null) {
-              _deleteComponent(_state.selectedComponent!.id);
-            }
-          },
-          onOverlayTap: () {
-            if (_state.selectedComponent != null) {
-              _openInspector(_state.selectedComponent!.id);
-            }
-          },
-        ),
-
-        // Inspector Panel — positioned alongside canvas at top-right
-        if (_state.selectedComponent != null)
-          Positioned(
-            top: 8,
-            right: 8,
-            width: 280,
-            child: AbsoluteInspectorPanel(
-              component: _state.selectedComponent!,
-              onApply: (updated) => _updateComponent(updated),
-              onDelete: () => _deleteComponent(_state.selectedComponent!.id),
-              onClose: () => _deselectAll(),
-            ),
-          ),
-
-          if (_tool == _CanvasTool.placeComponent && _placingType != null)
-          Positioned(
-            top: 12,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF7C3AED).withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Tap canvas to place ${_placingType!.name}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-        // Error banner
-        if (_state.errorMessage != null)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: MaterialBanner(
-              backgroundColor: const Color(0xFFDC2626),
-              content: Text(
-                _state.errorMessage!,
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => _setState(_state.copyWith(clearError: true)),
-                  child: const Text(
-                    'DISMISS',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _presetsSidebar() {
-    return Container(
-      width: 200,
-      decoration: const BoxDecoration(
-        color: Color(0xFF0A1628),
-        border: Border(left: BorderSide(color: Color(0x20FFFFFF))),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Color(0x20FFFFFF))),
-            ),
-            child: const Text(
-              'PRESETS',
-              style: TextStyle(
-                color: Color(0x80FFFFFF),
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
-              ),
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(8),
-              children: [
-                for (final preset in AbsoluteLayoutPreset.builtIn)
-                  _presetCard(preset),
-                const Gap(8),
-                const Divider(color: Color(0x20FFFFFF)),
-                const Gap(8),
-                // Clear canvas
-                InkWell(
-                  onTap: () => _clearCanvas(),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0x30FFFFFF)),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          color: Colors.white54,
-                          size: 16,
-                        ),
-                        Gap(6),
-                        Text(
-                          'Clear Canvas',
-                          style: TextStyle(color: Colors.white54, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const Gap(4),
-                // Canvas size
-                const Text(
-                  'CANVAS SIZE (ft/in)',
-                  style: TextStyle(
-                    color: Color(0x60FFFFFF),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const Gap(2),
-                Text(
-                  'W: ${pxToFtIn(_state.canvasWidth)} · H: ${pxToFtIn(_state.canvasHeight)}',
-                  style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 9),
-                ),
-                const Gap(6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _sizeField(
-                        'Width (px)',
-                        _state.canvasWidth,
-                        (v) => _setState(
-                          _state.copyWith(
-                            canvasWidth: v.clamp(100, 2000),
-                            isDirty: true,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const Gap(8),
-                    Expanded(
-                      child: _sizeField(
-                        'Height (px)',
-                        _state.canvasHeight,
-                        (v) => _setState(
-                          _state.copyWith(
-                            canvasHeight: v.clamp(100, 3000),
-                            isDirty: true,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _presetCard(AbsoluteLayoutPreset preset) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: InkWell(
-        onTap: () => _applyPreset(preset),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0x20FFFFFF)),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                preset.label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Gap(4),
-              Text(
-                '${pxToFtIn(preset.canvasWidth)} × ${pxToFtIn(preset.canvasHeight)} · ${preset.leftSeats + preset.rightSeats}-abreast',
-                style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 10),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sizeField(
-    String label,
-    double value,
-    ValueChanged<double> onChanged,
-  ) {
-    // Use a stateful wrapper so the TextEditingController survives rebuilds
-    return _SizeField(
-      label: label,
-      initialValue: value.toInt().toString(),
-      onChanged: (s) {
-        final v = double.tryParse(s);
-        if (v != null) onChanged(v);
-      },
-    );
-  }
-
-  Widget _statusBar() {
-    final sel = _state.selectedComponent;
-    return Container(
-      height: 24,
-      decoration: const BoxDecoration(
-        color: Color(0xFF0A1628),
-        border: Border(top: BorderSide(color: Color(0x20FFFFFF))),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          Icon(Icons.grid_view, color: Colors.white38, size: 12),
-          const Gap(4),
-          Text(
-            '${_state.components.length} parts',
-            style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
-          ),
-          const Gap(12),
-          Icon(Icons.event_seat, color: const Color(0xFF7C3AED), size: 12),
-          const Gap(4),
-          Text(
-            '${_state.totalSeats} seats',
-            style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
-          ),
-          const Spacer(),
-          if (sel != null) ...[
-            Icon(sel.defaultIcon, color: sel.defaultColor, size: 12),
-            const Gap(4),
-            Text(
-              sel.typeLabel,
-              style: const TextStyle(color: Color(0x80FFFFFF), fontSize: 11),
-            ),
-            const Gap(8),
-          ],
-          Text(
-            'Canvas ${pxToFtIn(_state.canvasWidth)} × ${pxToFtIn(_state.canvasHeight)}',
-            style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 10),
-          ),
-        ],
-      ),
-    );
+  // ── Helpers to read from BLoC ──
+  LayoutDesignerBloc get _bloc => context.read<LayoutDesignerBloc>();
+  AbsoluteLayoutState get _state => _bloc.state.layout;
+
+  void _initFromConfig(BusConfig config) {
+    // Heavy seat generation — kept in widget for backward compat with config parameter.
+    // In future this should move to BLoC.
   }
 
   void _showUnsavedDialog() {
@@ -1535,10 +118,9 @@ class _AbsoluteLayoutDesignerScreenState
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(c);
-              await _saveLayout();
-              if (mounted && _state.errorMessage == null) {
+              _bloc.add(SaveLayout(apiPrefix: widget.apiPrefix));
+              if (mounted && _bloc.state.error == null)
                 Navigator.pop(context, true);
-              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF7C3AED),
@@ -1549,85 +131,593 @@ class _AbsoluteLayoutDesignerScreenState
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<LayoutDesignerBloc, LayoutDesignerState>(
+      builder: (ctx, state) => Scaffold(
+        backgroundColor: const Color(0xFF0D1B2A),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _topBar(),
+              Expanded(
+                child: Row(
+                  children: [
+                    AbsoluteComponentPalette(
+                      onItemSelected: (type, defW, defH, isReverse) {
+                        setState(() {
+                          _tool = _CanvasTool.placeComponent;
+                          _placingType = type;
+                        });
+                        _bloc.add(const SelectComponent(null));
+                      },
+                    ),
+                    Expanded(child: _buildCanvas()),
+                    if (_sidebarOpen) _presetsSidebar(),
+                  ],
+                ),
+              ),
+              _statusBar(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _topBar() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF0A1628),
+        border: Border(bottom: BorderSide(color: Color(0x20FFFFFF))),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(
+                Icons.arrow_back,
+                color: Colors.white70,
+                size: 18,
+              ),
+              tooltip: 'Back',
+              onPressed: () {
+                if (_state.isDirty) {
+                  _showUnsavedDialog();
+                } else {
+                  Navigator.pop(context, true);
+                }
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+            ),
+            Gap(4),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 140),
+              child: Text(
+                _state.displayName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (_state.isDirty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF97316).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: const Text(
+                  'UNSAVED',
+                  style: TextStyle(
+                    color: Color(0xFFF97316),
+                    fontSize: 8,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            Gap(8),
+            _btn(Icons.near_me, 'Select', _tool == _CanvasTool.select, () {
+              setState(() {
+                _tool = _CanvasTool.select;
+                _placingType = null;
+              });
+              _bloc.add(const SelectComponent(null));
+            }),
+            _btn(
+              Icons.add_location_alt,
+              'Place',
+              _tool == _CanvasTool.placeComponent,
+              () {
+                if (_placingType == null && mounted)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Pick a part from the left palette first'),
+                      backgroundColor: Color(0xFFD97706),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                setState(() => _tool = _CanvasTool.placeComponent);
+              },
+            ),
+            _btn(
+              _sidebarOpen ? Icons.menu_open : Icons.menu,
+              'Presets',
+              _sidebarOpen,
+              () => setState(() => _sidebarOpen = !_sidebarOpen),
+            ),
+            Gap(8),
+            ElevatedButton.icon(
+              onPressed: _state.isSaving
+                  ? null
+                  : () => _bloc.add(SaveLayout(apiPrefix: widget.apiPrefix)),
+              icon: _state.isSaving
+                  ? const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.save, size: 14),
+              label: Text(
+                _state.layoutId == null ? 'Save & Publish' : 'Save',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+              ),
+            ),
+            Gap(4),
+            ElevatedButton.icon(
+              onPressed: _state.isSaving || _state.layoutId == null
+                  ? null
+                  : () => _bloc.add(PublishLayout(apiPrefix: widget.apiPrefix)),
+              icon: _state.isSaving
+                  ? const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.cloud_upload, size: 14),
+              label: const Text(
+                'Publish',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD97706),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _btn(IconData icon, String label, bool active, VoidCallback onTap) =>
+      Padding(
+        padding: const EdgeInsets.only(left: 2),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(4),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: active ? const Color(0xFF7C3AED).withOpacity(0.2) : null,
+              borderRadius: BorderRadius.circular(4),
+              border: active
+                  ? Border.all(color: const Color(0xFF7C3AED).withOpacity(0.4))
+                  : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 12,
+                  color: active ? const Color(0xFF7C3AED) : Colors.white54,
+                ),
+                Gap(3),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: active ? const Color(0xFF7C3AED) : Colors.white54,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  Widget _buildCanvas() => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      AbsoluteCanvasGrid(
+        layoutState: _state,
+        transformController: _transformCtrl,
+        onComponentTap: (id, x, y) {
+          if (_tool == _CanvasTool.select) {
+            _bloc.add(SelectComponent(id));
+          } else if (_tool == _CanvasTool.placeComponent &&
+              _placingType != null) {
+            _bloc.add(AddComponent(type: _placingType!, x: x, y: y));
+            setState(() {
+              _tool = _CanvasTool.select;
+              _placingType = null;
+            });
+          }
+        },
+        onCanvasTap: (x, y) {
+          if (_tool == _CanvasTool.placeComponent && _placingType != null) {
+            _bloc.add(AddComponent(type: _placingType!, x: x, y: y));
+            setState(() {
+              _tool = _CanvasTool.select;
+              _placingType = null;
+            });
+          } else if (_tool == _CanvasTool.select) {
+            _bloc.add(const SelectComponent(null));
+          }
+        },
+        onOverlayResize: (w, h, x, y) {
+          final sel = _state.selectedComponent;
+          if (sel != null)
+            _bloc.add(
+              UpdateComponent(
+                sel.copyWith(
+                  x: x,
+                  y: y,
+                  width: w.toDouble(),
+                  height: h.toDouble(),
+                ),
+              ),
+            );
+        },
+        onOverlayMove: (x, y) {
+          final sel = _state.selectedComponent;
+          if (sel != null) _bloc.add(UpdateComponent(sel.copyWith(x: x, y: y)));
+        },
+        onOverlayRotate: (r) {
+          final sel = _state.selectedComponent;
+          if (sel != null)
+            _bloc.add(UpdateComponent(sel.copyWith(rotation: r)));
+        },
+        onOverlayDelete: () {
+          final sel = _state.selectedComponent;
+          if (sel != null) _bloc.add(DeleteComponent(sel.id));
+        },
+        onOverlayTap: () {},
+      ),
+      if (_state.selectedComponent != null)
+        Positioned(
+          top: 8,
+          right: 8,
+          width: 280,
+          child: AbsoluteInspectorPanel(
+            component: _state.selectedComponent!,
+            onApply: (u) => _bloc.add(UpdateComponent(u)),
+            onDelete: () =>
+                _bloc.add(DeleteComponent(_state.selectedComponent!.id)),
+            onClose: () => _bloc.add(const SelectComponent(null)),
+          ),
+        ),
+      if (_tool == _CanvasTool.placeComponent && _placingType != null)
+        Positioned(
+          top: 12,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF7C3AED).withOpacity(0.9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Tap canvas to place ${_placingType!.name}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+      if (_state.errorMessage != null)
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: MaterialBanner(
+            backgroundColor: const Color(0xFFDC2626),
+            content: Text(
+              _state.errorMessage!,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => _bloc.add(const ClearDesignerError()),
+                child: const Text(
+                  'DISMISS',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ],
+  );
+
+  Widget _presetsSidebar() => Container(
+    width: 200,
+    decoration: const BoxDecoration(
+      color: Color(0xFF0A1628),
+      border: Border(left: BorderSide(color: Color(0x20FFFFFF))),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0x20FFFFFF))),
+          ),
+          child: const Text(
+            'PRESETS',
+            style: TextStyle(
+              color: Color(0x80FFFFFF),
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(8),
+            children: [
+              for (final p in AbsoluteLayoutPreset.builtIn) _presetCard(p),
+              Gap(8),
+              const Divider(color: Color(0x20FFFFFF)),
+              Gap(8),
+              InkWell(
+                onTap: () {
+                  _bloc.add(ApplyPreset(AbsoluteLayoutPreset.builtIn[0]));
+                  _bloc.add(const UpdateCanvasSize(width: 280, height: 896));
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0x30FFFFFF)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.delete_outline,
+                        color: Colors.white54,
+                        size: 16,
+                      ),
+                      Gap(6),
+                      Text(
+                        'Clear Canvas',
+                        style: TextStyle(color: Colors.white54, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Gap(4),
+              const Text(
+                'CANVAS SIZE (ft/in)',
+                style: TextStyle(
+                  color: Color(0x60FFFFFF),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              Gap(2),
+              Text(
+                'W: ${pxToFtIn(_state.canvasWidth)} · H: ${pxToFtIn(_state.canvasHeight)}',
+                style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 9),
+              ),
+              Gap(6),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SizeField(
+                      label: 'Width (px)',
+                      initialValue: _state.canvasWidth.toInt().toString(),
+                      onChanged: (s) {
+                        final v = double.tryParse(s);
+                        if (v != null)
+                          _bloc.add(
+                            UpdateCanvasSize(
+                              width: v.clamp(100, 2000),
+                              height: _state.canvasHeight,
+                            ),
+                          );
+                      },
+                    ),
+                  ),
+                  Gap(8),
+                  Expanded(
+                    child: _SizeField(
+                      label: 'Height (px)',
+                      initialValue: _state.canvasHeight.toInt().toString(),
+                      onChanged: (s) {
+                        final v = double.tryParse(s);
+                        if (v != null)
+                          _bloc.add(
+                            UpdateCanvasSize(
+                              width: _state.canvasWidth,
+                              height: v.clamp(100, 3000),
+                            ),
+                          );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _presetCard(AbsoluteLayoutPreset p) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: InkWell(
+      onTap: () => _bloc.add(ApplyPreset(p)),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0x20FFFFFF)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              p.label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Gap(4),
+            Text(
+              '${pxToFtIn(p.canvasWidth)} × ${pxToFtIn(p.canvasHeight)} · ${p.leftSeats + p.rightSeats}-abreast',
+              style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 10),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  Widget _statusBar() {
+    final sel = _state.selectedComponent;
+    return Container(
+      height: 24,
+      decoration: const BoxDecoration(
+        color: Color(0xFF0A1628),
+        border: Border(top: BorderSide(color: Color(0x20FFFFFF))),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          Icon(Icons.grid_view, color: Colors.white38, size: 12),
+          Gap(4),
+          Text(
+            '${_state.components.length} parts',
+            style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
+          ),
+          Gap(12),
+          Icon(Icons.event_seat, color: const Color(0xFF7C3AED), size: 12),
+          Gap(4),
+          Text(
+            '${_state.totalSeats} seats',
+            style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
+          ),
+          const Spacer(),
+          if (sel != null) ...[
+            Icon(sel.defaultIcon, color: sel.defaultColor, size: 12),
+            Gap(4),
+            Text(
+              sel.typeLabel,
+              style: const TextStyle(color: Color(0x80FFFFFF), fontSize: 11),
+            ),
+            Gap(8),
+          ],
+          Text(
+            'Canvas ${pxToFtIn(_state.canvasWidth)} × ${pxToFtIn(_state.canvasHeight)}',
+            style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 10),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-// ─── Size-Field Stateful Wrapper (fixes canvas resize UX) ───
-
 class _SizeField extends StatefulWidget {
-  final String label;
-  final String initialValue;
+  final String label, initialValue;
   final ValueChanged<String> onChanged;
-
   const _SizeField({
     required this.label,
     required this.initialValue,
     required this.onChanged,
   });
-
   @override
   State<_SizeField> createState() => _SizeFieldState();
 }
 
 class _SizeFieldState extends State<_SizeField> {
   late final TextEditingController _ctrl;
-  late final FocusNode _focus;
-
   @override
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: widget.initialValue);
-    _focus = FocusNode();
-    _focus.addListener(() {
-      // Apply on focus loss
-      if (!_focus.hasFocus) {
-        widget.onChanged(_ctrl.text);
-      }
-    });
   }
 
   @override
   void dispose() {
-    _focus.dispose();
     _ctrl.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          widget.label,
-          style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 9),
-        ),
-        const Gap(2),
-        TextField(
-          controller: _ctrl,
-          focusNode: _focus,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white, fontSize: 12),
-          onSubmitted: (s) => widget.onChanged(s),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: const Color(0xFF122442),
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 6,
-              vertical: 6,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
-              borderSide: const BorderSide(color: Color(0x20FFFFFF)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
-              borderSide: const BorderSide(color: Color(0xFF7C3AED)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => TextField(
+    controller: _ctrl,
+    style: const TextStyle(color: Colors.white, fontSize: 11),
+    decoration: InputDecoration(
+      labelText: widget.label,
+      labelStyle: const TextStyle(color: Color(0x60FFFFFF), fontSize: 10),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Color(0x30FFFFFF)),
+      ),
+    ),
+    keyboardType: TextInputType.number,
+    onChanged: widget.onChanged,
+  );
 }
