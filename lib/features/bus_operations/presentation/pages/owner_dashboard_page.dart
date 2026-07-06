@@ -8,7 +8,8 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashbo
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_state.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
-import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbox_section.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbox_section.dart'
+    as chat;
 import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/layout_list_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/staff_list_section.dart';
@@ -125,7 +126,7 @@ class _OwnerView extends StatelessWidget {
       case 'carrier':
         return _carrierLinkTab(ctx, bloc, state);
       case 'inbox':
-        return ChatInboxSection(
+        return chat.ChatInboxSection(
           conversations: state.inboxConversations,
           activeMessages: state.activeChatMessages,
           isLoading: state.inboxLoading,
