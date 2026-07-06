@@ -20,7 +20,7 @@ import 'package:trace_odd/shared/widgets/fleet_bloc_login_screen.dart';
 
 void main() => FleetApp.run(
   title: 'NexaTrace Bus Fleet',
-  loginScreen: const FleetBlocLoginScreen(
+  loginScreen: FleetBlocLoginScreen(
     panel: UserPanel.busFleet,
     loginConfig: FleetLoginConfig.busFleet(),
   ),
@@ -73,7 +73,7 @@ class _BusFleetRouterState extends State<_BusFleetRouter> {
         panel: 'bus-fleet',
       );
     }
-    return const FleetDashboardPage(
+    return FleetDashboardPage(
       storagePrefix: 'busFleet',
       panelPrefix: '/bus-fleet',
       loginRoute: '/bus-fleet/login',
