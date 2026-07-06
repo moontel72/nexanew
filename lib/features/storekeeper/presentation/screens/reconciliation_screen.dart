@@ -603,7 +603,7 @@ class _ReconciliationFormPageState extends State<_ReconciliationFormPage> {
                 ),
                 const Gap(4),
                 Text(
-                  'Rs. {widget.issuance.items.length} items issued',
+                  '${widget.issuance.items.length} items issued',
                   style: const TextStyle(color: Colors.white38),
                 ),
               ],
