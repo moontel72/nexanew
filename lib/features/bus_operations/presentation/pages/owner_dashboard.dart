@@ -1687,15 +1687,30 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _loadDrivers() async {
     setState(() => _driversLoading = true);
     try {
-      final r = await ApiService().get('${widget.panelPrefix}/drivers');
-      final d = r['data'] as Map<String, dynamic>?;
+      final isBusFleet = widget.panelPrefix == '/bus-fleet';
+      final ep = isBusFleet
+          ? '${widget.panelPrefix}/staff/drivers'
+          : '${widget.panelPrefix}/drivers';
+      final r = await ApiService().get(ep);
+      final rawData = r?['data'];
+      List<dynamic> list;
+      if (rawData is List) {
+        // FleetStaffController returns {data: [...]}
+        list = rawData;
+      } else if (rawData is Map) {
+        // BusOwnerController returns {data: {data: [...], total: N}}
+        list = (rawData['data'] as List?) ?? [];
+        _driverCount = rawData['total'] ?? list.length;
+      } else {
+        list = [];
+      }
       if (mounted)
         setState(() {
-          _drivers = (d?['data'] as List? ?? [])
+          _drivers = list
               .whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
               .toList();
-          _driverCount = d?['total'] ?? _drivers.length;
+          if (rawData is! Map) _driverCount = _drivers.length;
           _driversLoading = false;
         });
     } catch (_) {
@@ -1848,15 +1863,28 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   Future<void> _loadConductors() async {
     setState(() => _conductorsLoading = true);
     try {
-      final r = await ApiService().get('${widget.panelPrefix}/conductors');
-      final d = r['data'] as Map<String, dynamic>?;
+      final isBusFleet = widget.panelPrefix == '/bus-fleet';
+      final ep = isBusFleet
+          ? '${widget.panelPrefix}/staff/conductors'
+          : '${widget.panelPrefix}/conductors';
+      final r = await ApiService().get(ep);
+      final rawData = r?['data'];
+      List<dynamic> list;
+      if (rawData is List) {
+        list = rawData;
+      } else if (rawData is Map) {
+        list = (rawData['data'] as List?) ?? [];
+        _conductorCount = rawData['total'] ?? list.length;
+      } else {
+        list = [];
+      }
       if (mounted)
         setState(() {
-          _conductors = (d?['data'] as List? ?? [])
+          _conductors = list
               .whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
               .toList();
-          _conductorCount = d?['total'] ?? _conductors.length;
+          if (rawData is! Map) _conductorCount = _conductors.length;
           _conductorsLoading = false;
         });
     } catch (_) {
