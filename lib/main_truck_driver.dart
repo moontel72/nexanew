@@ -1,9 +1,8 @@
-// Truck Driver App — Wave 0 BLoC
+// Truck Driver App — Wave 2 BLoC Dashboard
 // Deployed at: /var/www/traceodd/truck-driver/
-// Auth via unified PanelAuthBloc with fleet_type: truck
 
 import 'package:trace_odd/core/navigation/panel_routes.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/driver_dashboard.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/driver_dashboard_page.dart';
 import 'package:trace_odd/shared/app_scaffold.dart';
 import 'package:trace_odd/shared/utils/fleet_bloc_setup.dart';
 import 'package:trace_odd/shared/widgets/fleet_bloc_login_screen.dart';
@@ -14,7 +13,7 @@ void main() => FleetApp.run(
     panel: UserPanel.truckFleet,
     loginConfig: FleetLoginConfig.truckDriver(),
   ),
-  dashboardScreen: const DriverDashboardScreen(storagePrefix: 'truckFleet'),
+  dashboardScreen: const DriverDashboardPage(storagePrefix: 'truckFleet'),
   loginPath: '/truck-driver/login',
   dashboardPath: '/truck-driver/dashboard',
   blocProviders: [fleetBlocProvider()],
