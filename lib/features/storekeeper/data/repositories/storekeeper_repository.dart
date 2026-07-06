@@ -11,11 +11,13 @@ import 'package:trace_odd/features/storekeeper/domain/models/storekeeper_dashboa
 class StorekeeperRepository {
   final ApiService _api;
   final String _panel; // 'bus-fleet' or 'bus-owner'
-  static const _prefix = '/api/v1/bus-fleet/storekeeper';
+  late final String _prefix; // e.g. '/api/v1/bus-fleet/storekeeper'
 
   StorekeeperRepository({ApiService? api, String panel = 'bus-fleet'})
     : _api = api ?? ApiService(),
-      _panel = panel;
+      _panel = panel {
+    _prefix = '/api/v1/$_panel/storekeeper';
+  }
 
   // ─── Dashboard ──────────────────────────────────────────────
 

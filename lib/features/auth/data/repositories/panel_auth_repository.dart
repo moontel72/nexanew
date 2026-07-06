@@ -311,6 +311,11 @@ class PanelAuthRepository {
   /// routers (e.g. _BusFleetRouter) can resolve the correct surface.
   /// Keys are scoped per-panel to prevent cross-contamination when
   /// multiple fleet apps share the same origin.
+  ///
+  /// Also writes the token to the legacy generic 'auth_token' key so
+  /// the old ApiClient (used by pre-Wave-1 dashboard screens) can find
+  /// it for authenticated API calls.  This will be removed once
+  /// dashboards migrate to NexaTraceApiClient in Wave 1.
   Future<void> _persistFleetMetadata(
     UserPanel panel,
     String token,
@@ -320,8 +325,13 @@ class PanelAuthRepository {
     final prefs = await SharedPreferences.getInstance();
     final scope = panel.name; // e.g. 'busFleet', 'truckFleet'
 
-    // Store token under scoped key so dashboards can find it.
+    // Store token under scoped key for dashboard isolation.
     await prefs.setString('${scope}_auth_token', token);
+
+    // ALSO write to the legacy generic key for backward compat with the
+    // old ApiClient (http package) still used by dashboard screens.
+    // TODO: remove when dashboards migrate to NexaTraceApiClient (Wave 1).
+    await prefs.setString('auth_token', token);
 
     final fleetRole =
         metadata['fleet_role']?.toString() ?? user['fleet_role']?.toString();
