@@ -15,9 +15,9 @@
 //   final response = await client.post('/factory/production/batches', body: {...});
 
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:trace_odd/core/network/auth_interceptor.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'package:trace_odd/core/services/web_safe_storage.dart';
 
 /// Singleton Dio wrapper configured for the NexaTrace backend.
 class NexaTraceApiClient {
@@ -25,7 +25,7 @@ class NexaTraceApiClient {
 
   late final Dio _dio;
   late AuthInterceptor _authInterceptor;
-  late final FlutterSecureStorage _secureStorage;
+  late final WebSafeStorage _storage;
 
   /// Stored callbacks so they survive interceptor rebuilds.
   TokenRefreshCallback? _onTokenExpired;
@@ -64,7 +64,7 @@ class NexaTraceApiClient {
   // ── Singleton access ──────────────────────────────────────
 
   factory NexaTraceApiClient({
-    required FlutterSecureStorage secureStorage,
+    required WebSafeStorage storage,
     TokenRefreshCallback? onTokenExpired,
     DriverTypeMismatchCallback? onDriverTypeMismatch,
     AIChatGuardViolationCallback? onAIChatGuardViolation,
@@ -72,7 +72,7 @@ class NexaTraceApiClient {
     AntiFraudVelocityCallback? onAntiFraudVelocity,
   }) {
     _instance ??= NexaTraceApiClient._internal(
-      secureStorage: secureStorage,
+      storage: storage,
       onTokenExpired: onTokenExpired,
       onDriverTypeMismatch: onDriverTypeMismatch,
       onAIChatGuardViolation: onAIChatGuardViolation,
@@ -86,21 +86,21 @@ class NexaTraceApiClient {
     if (_instance == null) {
       throw StateError(
         'NexaTraceApiClient not initialized. '
-        'Call NexaTraceApiClient(secureStorage: ...) first.',
+        'Call NexaTraceApiClient(storage: ...) first.',
       );
     }
     return _instance!;
   }
 
   NexaTraceApiClient._internal({
-    required FlutterSecureStorage secureStorage,
+    required WebSafeStorage storage,
     TokenRefreshCallback? onTokenExpired,
     DriverTypeMismatchCallback? onDriverTypeMismatch,
     AIChatGuardViolationCallback? onAIChatGuardViolation,
     CupOfTeaPenaltyCallback? onCupOfTeaPenalty,
     AntiFraudVelocityCallback? onAntiFraudVelocity,
   }) {
-    _secureStorage = secureStorage;
+    _storage = storage;
     _onTokenExpired = onTokenExpired;
     _onDriverTypeMismatch = onDriverTypeMismatch;
     _onAIChatGuardViolation = onAIChatGuardViolation;
@@ -108,7 +108,7 @@ class NexaTraceApiClient {
     _onAntiFraudVelocity = onAntiFraudVelocity;
 
     _authInterceptor = AuthInterceptor(
-      secureStorage: secureStorage,
+      storage: storage,
       onTokenExpired: onTokenExpired,
       onDriverTypeMismatch: onDriverTypeMismatch,
       onAIChatGuardViolation: onAIChatGuardViolation,
@@ -122,21 +122,23 @@ class NexaTraceApiClient {
   // ── Dio factory ───────────────────────────────────────────
 
   Dio _createDio(AuthInterceptor interceptor) {
-    final dio = Dio(BaseOptions(
-      baseUrl: PanelRouteConfig.baseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-      sendTimeout: const Duration(seconds: 30),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-      validateStatus: (status) {
-        // Only 2xx is success → 4xx/5xx trigger onError in interceptor.
-        return status != null && status >= 200 && status < 300;
-      },
-    ));
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: PanelRouteConfig.baseUrl,
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        validateStatus: (status) {
+          // Only 2xx is success → 4xx/5xx trigger onError in interceptor.
+          return status != null && status >= 200 && status < 300;
+        },
+      ),
+    );
 
     dio.interceptors.add(interceptor);
 
@@ -154,7 +156,7 @@ class NexaTraceApiClient {
     // Remove old interceptor and add a new one with updated callbacks.
     _dio.interceptors.remove(_authInterceptor);
     _authInterceptor = AuthInterceptor(
-      secureStorage: _secureStorage,
+      storage: _storage,
       onTokenExpired: _onTokenExpired,
       onDriverTypeMismatch: _onDriverTypeMismatch,
       onAIChatGuardViolation: _onAIChatGuardViolation,

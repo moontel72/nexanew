@@ -14,9 +14,9 @@
 
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:trace_odd/core/network/network_exceptions.dart';
 import 'package:trace_odd/core/errors/app_exceptions.dart';
+import 'package:trace_odd/core/services/web_safe_storage.dart';
 
 /// Callback invoked when the backend signals a 401 and a token refresh
 /// should be attempted.  Return a fresh access-token string or null to
@@ -26,29 +26,25 @@ typedef TokenRefreshCallback = Future<String?> Function();
 /// Callback invoked when a driver.type mismatch 403 is detected.
 /// Receives the full [DriverTypeMismatchException] so the UI layer can
 /// render the appropriate access-denied overlay.
-typedef DriverTypeMismatchCallback = void Function(
-  DriverTypeMismatchException exception,
-);
+typedef DriverTypeMismatchCallback =
+    void Function(DriverTypeMismatchException exception);
 
 /// Callback invoked when an AI Chat Guard 422 violation is detected.
 /// Receives the [AIChatGuardViolationException] so the chat UI can
 /// freeze the input stream and show the masked payload.
-typedef AIChatGuardViolationCallback = void Function(
-  AIChatGuardViolationException exception,
-);
+typedef AIChatGuardViolationCallback =
+    void Function(AIChatGuardViolationException exception);
 
 /// Callback invoked when a Cup of Tea penalty is applied (422).
-typedef CupOfTeaPenaltyCallback = void Function(
-  CupOfTeaPenaltyException exception,
-);
+typedef CupOfTeaPenaltyCallback =
+    void Function(CupOfTeaPenaltyException exception);
 
 /// Callback invoked when the anti-fraud velocity check blocks a cash-out (422).
-typedef AntiFraudVelocityCallback = void Function(
-  AntiFraudVelocityException exception,
-);
+typedef AntiFraudVelocityCallback =
+    void Function(AntiFraudVelocityException exception);
 
 class AuthInterceptor extends Interceptor {
-  final FlutterSecureStorage _secureStorage;
+  final WebSafeStorage _storage;
   final TokenRefreshCallback? _onTokenExpired;
   final DriverTypeMismatchCallback? _onDriverTypeMismatch;
   final AIChatGuardViolationCallback? _onAIChatGuardViolation;
@@ -67,13 +63,13 @@ class AuthInterceptor extends Interceptor {
   _pendingRequests = [];
 
   AuthInterceptor({
-    required FlutterSecureStorage secureStorage,
+    required WebSafeStorage storage,
     TokenRefreshCallback? onTokenExpired,
     DriverTypeMismatchCallback? onDriverTypeMismatch,
     AIChatGuardViolationCallback? onAIChatGuardViolation,
     CupOfTeaPenaltyCallback? onCupOfTeaPenalty,
     AntiFraudVelocityCallback? onAntiFraudVelocity,
-  }) : _secureStorage = secureStorage,
+  }) : _storage = storage,
        _onTokenExpired = onTokenExpired,
        _onDriverTypeMismatch = onDriverTypeMismatch,
        _onAIChatGuardViolation = onAIChatGuardViolation,
@@ -208,14 +204,15 @@ class AuthInterceptor extends Interceptor {
   Future<String?> _resolveToken(String path) async {
     final normalized = path.startsWith('/') ? path : '/$path';
 
-    final isFactoryRoute = normalized.contains('/factory/') ||
+    final isFactoryRoute =
+        normalized.contains('/factory/') ||
         normalized.contains('/codes/') ||
         normalized.contains('/production/');
 
     if (isFactoryRoute) {
-      return await _secureStorage.read(key: _factoryAuthTokenKey);
+      return await _storage.read(key: _factoryAuthTokenKey);
     }
-    return await _secureStorage.read(key: _authTokenKey);
+    return await _storage.read(key: _authTokenKey);
   }
 
   /// Whether the given path is an auth endpoint that should NOT receive
@@ -240,10 +237,7 @@ class AuthInterceptor extends Interceptor {
   ) async {
     if (_isRefreshing) {
       // Queue this request — it will be retried after refresh completes.
-      _pendingRequests.add((
-        options: err.requestOptions,
-        handler: handler,
-      ));
+      _pendingRequests.add((options: err.requestOptions, handler: handler));
       return;
     }
 
@@ -252,7 +246,7 @@ class AuthInterceptor extends Interceptor {
       final newToken = await _onTokenExpired?.call();
       if (newToken != null && newToken.isNotEmpty) {
         // Update stored token.
-        await _secureStorage.write(key: _authTokenKey, value: newToken);
+        await _storage.write(key: _authTokenKey, value: newToken);
 
         // Retry the original request with the new token.
         final opts = err.requestOptions;
@@ -312,8 +306,9 @@ class AuthInterceptor extends Interceptor {
   ];
 
   bool _isDriverTypeMismatch(String message) {
-    return _driverTypeMismatchPhrases
-        .every((phrase) => message.contains(phrase));
+    return _driverTypeMismatchPhrases.every(
+      (phrase) => message.contains(phrase),
+    );
   }
 
   DriverTypeMismatchException _parseDriverTypeMismatch(
@@ -347,10 +342,7 @@ class AuthInterceptor extends Interceptor {
     'violates',
   ];
 
-  bool _isAIChatGuardViolation(
-    String message,
-    Map<String, dynamic>? body,
-  ) {
+  bool _isAIChatGuardViolation(String message, Map<String, dynamic>? body) {
     if (_chatGuardPhrases.every((p) => message.contains(p))) return true;
     // Also check for 'detected_pattern' key in body.
     if (body?['detected_pattern'] != null) return true;
@@ -366,8 +358,7 @@ class AuthInterceptor extends Interceptor {
     return AIChatGuardViolationException(
       detectedPattern:
           body?['detected_pattern']?.toString() ?? 'unknown_pattern',
-      maskedPayload:
-          body?['masked_payload']?.toString() ?? '[REDACTED]',
+      maskedPayload: body?['masked_payload']?.toString() ?? '[REDACTED]',
       leakType: body?['leak_type']?.toString() ?? 'unknown',
       errors: errors,
     );
@@ -377,10 +368,7 @@ class AuthInterceptor extends Interceptor {
   // 422 — Cup of Tea penalty detection
   // ──────────────────────────────────────────────────────────
 
-  bool _isCupOfTeaPenalty(
-    String message,
-    Map<String, dynamic>? body,
-  ) {
+  bool _isCupOfTeaPenalty(String message, Map<String, dynamic>? body) {
     final lower = message.toLowerCase();
     if (lower.contains('cup of tea') || lower.contains('penalty')) return true;
     if (body?['penalty_amount'] != null) return true;
@@ -393,8 +381,7 @@ class AuthInterceptor extends Interceptor {
     Map<String, String> errors,
   ) {
     final failedBids = (body?['failed_bid_count'] as num?)?.toInt() ?? 2;
-    final penalty =
-        (body?['penalty_amount'] as num?)?.toDouble() ?? 50.0;
+    final penalty = (body?['penalty_amount'] as num?)?.toDouble() ?? 50.0;
 
     return CupOfTeaPenaltyException(
       failedBidCount: failedBids,
@@ -406,13 +393,11 @@ class AuthInterceptor extends Interceptor {
   // 422 — Anti-Fraud velocity block detection
   // ──────────────────────────────────────────────────────────
 
-  bool _isAntiFraudBlock(
-    String message,
-    Map<String, dynamic>? body,
-  ) {
+  bool _isAntiFraudBlock(String message, Map<String, dynamic>? body) {
     final lower = message.toLowerCase();
     if (lower.contains('cash-out blocked') ||
-        lower.contains('usage') && lower.contains('70%')) return true;
+        lower.contains('usage') && lower.contains('70%'))
+      return true;
     if (body?['usage_ratio'] != null) return true;
     return false;
   }
@@ -423,10 +408,7 @@ class AuthInterceptor extends Interceptor {
     Map<String, String> errors,
   ) {
     final ratio = (body?['usage_ratio'] as num?)?.toDouble() ?? 0.0;
-    return AntiFraudVelocityException(
-      usageRatio: ratio,
-      errors: errors,
-    );
+    return AntiFraudVelocityException(usageRatio: ratio, errors: errors);
   }
 
   // ──────────────────────────────────────────────────────────
@@ -452,10 +434,8 @@ class AuthInterceptor extends Interceptor {
     final raw = body['errors'];
     if (raw is Map) {
       return raw.map<String, String>(
-        (k, v) => MapEntry(
-          k.toString(),
-          v is List ? v.join(', ') : v.toString(),
-        ),
+        (k, v) =>
+            MapEntry(k.toString(), v is List ? v.join(', ') : v.toString()),
       );
     }
     return {};

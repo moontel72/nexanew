@@ -12,11 +12,11 @@
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
 import 'package:trace_odd/core/network/api_client_v2.dart';
 import 'package:trace_odd/core/network/network_exceptions.dart';
+import 'package:trace_odd/core/services/web_safe_storage.dart';
 
 /// Data class returned after successful authentication.
 class PanelAuthResponse {
@@ -50,13 +50,13 @@ class PanelAuthResponse {
 /// Repository that handles login/logout for all 6 panels via Dio.
 class PanelAuthRepository {
   final NexaTraceApiClient _client;
-  final FlutterSecureStorage _secureStorage;
+  final WebSafeStorage _storage;
 
   PanelAuthRepository({
     required NexaTraceApiClient client,
-    required FlutterSecureStorage secureStorage,
+    required WebSafeStorage storage,
   }) : _client = client,
-       _secureStorage = secureStorage;
+       _storage = storage;
 
   // ── Login ─────────────────────────────────────────────────
 
@@ -175,17 +175,17 @@ class PanelAuthRepository {
       // Even if the API call fails, clear local storage.
     }
 
-    await _secureStorage.delete(key: panel.tokenStorageKey);
-    await _secureStorage.delete(key: '${panel.tokenStorageKey}_user');
-    await _secureStorage.delete(key: '${panel.tokenStorageKey}_expiry');
-    await _secureStorage.delete(key: '${panel.tokenStorageKey}_driver_type');
+    await _storage.delete(key: panel.tokenStorageKey);
+    await _storage.delete(key: '${panel.tokenStorageKey}_user');
+    await _storage.delete(key: '${panel.tokenStorageKey}_expiry');
+    await _storage.delete(key: '${panel.tokenStorageKey}_driver_type');
   }
 
   // ── Session check ─────────────────────────────────────────
 
   Future<bool> isAuthenticated(UserPanel panel) async {
-    final token = await _secureStorage.read(key: panel.tokenStorageKey);
-    final expiryStr = await _secureStorage.read(
+    final token = await _storage.read(key: panel.tokenStorageKey);
+    final expiryStr = await _storage.read(
       key: '${panel.tokenStorageKey}_expiry',
     );
 
@@ -198,12 +198,12 @@ class PanelAuthRepository {
   }
 
   Future<String?> getStoredToken(UserPanel panel) async {
-    return _secureStorage.read(key: panel.tokenStorageKey);
+    return _storage.read(key: panel.tokenStorageKey);
   }
 
   /// Returns the stored driver_type for this panel context, or null.
   Future<String?> getStoredDriverType(UserPanel panel) async {
-    return _secureStorage.read(key: '${panel.tokenStorageKey}_driver_type');
+    return _storage.read(key: '${panel.tokenStorageKey}_driver_type');
   }
 
   // ── Private helpers ───────────────────────────────────────
@@ -294,22 +294,16 @@ class PanelAuthRepository {
     Map<String, dynamic> user,
   ) async {
     final storageKey = panel.tokenStorageKey;
-    await _secureStorage.write(key: storageKey, value: token);
-    await _secureStorage.write(
-      key: '${storageKey}_user',
-      value: jsonEncode(user),
-    );
-    await _secureStorage.write(
+    await _storage.write(key: storageKey, value: token);
+    await _storage.write(key: '${storageKey}_user', value: jsonEncode(user));
+    await _storage.write(
       key: '${storageKey}_expiry',
       value: DateTime.now().add(const Duration(hours: 24)).toIso8601String(),
     );
 
     final driverType = user['driver_type']?.toString();
     if (driverType != null) {
-      await _secureStorage.write(
-        key: '${storageKey}_driver_type',
-        value: driverType,
-      );
+      await _storage.write(key: '${storageKey}_driver_type', value: driverType);
     }
   }
 
