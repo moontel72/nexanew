@@ -9,6 +9,8 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashbo
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbox_section.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/fleet_carrier_link_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/layout_list_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/staff_list_section.dart';
 
@@ -64,6 +66,9 @@ class _FleetDashboardView extends StatelessWidget {
 
         final bloc = ctx.read<FleetDashboardBloc>();
         final wide = MediaQuery.of(ctx).size.width > 900;
+
+        // ── Load data on page change ──
+        _loadDataForPage(bloc, state.currentPage);
 
         if (state.staffActionError != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -129,6 +134,38 @@ class _FleetDashboardView extends StatelessWidget {
           onDelete: (id, name) => _showDeleteConfirm(ctx, bloc, id, name),
           onAdd: () => _openLayoutDesigner(ctx, state),
           onPurgeAll: () => _showPurgeConfirm(ctx, bloc, state.layouts.length),
+        );
+      case 'carrier':
+        return FleetCarrierLinkSection(
+          incomingRequests: state.incomingRequests,
+          linkedCarriers: state.linkedCarriers,
+          isLoading: state.linkLoading,
+          onAccept: (id) => bloc.add(
+            AcceptCarrierRequest(panelPrefix: '/bus-fleet', assignmentId: id),
+          ),
+          onReject: (id) => bloc.add(
+            RejectCarrierRequest(panelPrefix: '/bus-fleet', assignmentId: id),
+          ),
+          onUnlink: (id, name) => _showUnlinkConfirm(ctx, bloc, id, name),
+        );
+      case 'inbox':
+        return ChatInboxSection(
+          conversations: state.inboxConversations,
+          activeMessages: state.activeChatMessages,
+          isLoading: state.inboxLoading,
+          isSending: state.chatSending,
+          expandedId: state.expandedConversationId,
+          error: state.chatError,
+          onExpand: (id) => bloc.add(
+            LoadConversation(panelPrefix: '/bus-fleet', assignmentId: id),
+          ),
+          onSend: (id, msg) => bloc.add(
+            SendChatMessage(
+              panelPrefix: '/bus-fleet',
+              assignmentId: id,
+              message: msg,
+            ),
+          ),
         );
       default:
         return _homeTab(ctx, bloc, state);
@@ -379,6 +416,40 @@ class _FleetDashboardView extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // ── Page navigation side-effects ────────────────────
+
+  void _loadDataForPage(FleetDashboardBloc bloc, String page) {
+    switch (page) {
+      case 'carrier':
+        if (!bloc.state.linkLoading &&
+            bloc.state.incomingRequests.isEmpty &&
+            bloc.state.linkedCarriers.isEmpty) {
+          bloc.add(const LoadCarrierLink(panelPrefix: '/bus-fleet'));
+        }
+        break;
+      case 'inbox':
+        if (!bloc.state.inboxLoading && bloc.state.inboxConversations.isEmpty) {
+          bloc.add(const LoadInboxMessages(panelPrefix: '/bus-fleet'));
+        }
+        break;
+    }
+  }
+
+  Future<void> _showUnlinkConfirm(
+    BuildContext ctx,
+    FleetDashboardBloc bloc,
+    String id,
+    String name,
+  ) async {
+    final ok = await _confirm(
+      ctx,
+      'Terminate Link',
+      'Unlink "$name" from your fleet? Their staff will no longer be visible.',
+    );
+    if (ok == true)
+      bloc.add(UnlinkCarrier(panelPrefix: '/bus-fleet', assignmentId: id));
   }
 }
 

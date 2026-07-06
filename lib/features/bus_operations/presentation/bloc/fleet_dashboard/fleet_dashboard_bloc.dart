@@ -20,16 +20,23 @@ class FleetDashboardBloc
     on<LogoutRequested>(_onLogout);
     on<RegisterStaff>(_onRegisterStaff);
     on<RemoveStaff>(_onRemoveStaff);
-    on<ClearStaffError>(_onClearStaffError);
-    on<PublishLayout>(_onPublishLayout);
-    on<ArchiveLayout>(_onArchiveLayout);
-    on<DeleteLayout>(_onDeleteLayout);
-    on<PurgeAllLayouts>(_onPurgeLayouts);
-    on<ClearLayoutError>(_onClearLayoutError);
+    on<ClearStaffError>(_onClearS);
+    on<PublishLayout>(_onPublish);
+    on<ArchiveLayout>(_onArchive);
+    on<DeleteLayout>(_onDelete);
+    on<PurgeAllLayouts>(_onPurge);
+    on<ClearLayoutError>(_onClearL);
+    on<LoadCarrierLink>(_onLoadLink);
+    on<AcceptCarrierRequest>(_onAcceptLink);
+    on<RejectCarrierRequest>(_onRejectLink);
+    on<UnlinkCarrier>(_onUnlink);
+    on<LoadInboxMessages>(_onLoadInbox);
+    on<LoadConversation>(_onLoadConv);
+    on<SendChatMessage>(_onSendMsg);
+    on<ClearChatError>(_onClearChat);
   }
 
   // ── Bootstrap ──────────────────────────────────────────
-
   Future<void> _onBootstrap(
     BootstrapDashboard e,
     Emitter<FleetDashboardState> emit,
@@ -46,17 +53,10 @@ class FleetDashboardBloc
       );
       return;
     }
-    final name = p.getString('${e.storagePrefix}_owner_name') ?? 'Fleet';
-    String cid = '';
-    try {
-      final r = await _api.get('${e.panelPrefix}/profile');
-      cid = r?['data']?['id']?.toString() ?? '';
-    } catch (_) {}
     emit(
       state.copyWith(
         status: FleetDashboardStatus.loaded,
-        ownerName: name,
-        companyId: cid,
+        ownerName: p.getString('${e.storagePrefix}_owner_name') ?? 'Fleet',
       ),
     );
     add(FetchDashboardMetrics(panelPrefix: e.panelPrefix));
@@ -72,7 +72,6 @@ class FleetDashboardBloc
   }
 
   // ── Staff ──────────────────────────────────────────────
-
   Future<void> _onLoadDrivers(
     LoadDrivers e,
     Emitter<FleetDashboardState> emit,
@@ -81,13 +80,10 @@ class FleetDashboardBloc
     try {
       final r = await _api.get('${e.panelPrefix}/staff/drivers');
       final d = r?['data'];
-      List<Map<String, dynamic>> list = d is List
-          ? d.cast<Map<String, dynamic>>()
-          : [];
       emit(
         state.copyWith(
-          drivers: list,
-          driverCount: list.length,
+          drivers: d is List ? d.cast<Map<String, dynamic>>() : [],
+          driverCount: d is List ? d.length : 0,
           driversLoading: false,
         ),
       );
@@ -104,13 +100,10 @@ class FleetDashboardBloc
     try {
       final r = await _api.get('${e.panelPrefix}/staff/conductors');
       final d = r?['data'];
-      List<Map<String, dynamic>> list = d is List
-          ? d.cast<Map<String, dynamic>>()
-          : [];
       emit(
         state.copyWith(
-          conductors: list,
-          conductorCount: list.length,
+          conductors: d is List ? d.cast<Map<String, dynamic>>() : [],
+          conductorCount: d is List ? d.length : 0,
           conductorsLoading: false,
         ),
       );
@@ -161,15 +154,10 @@ class FleetDashboardBloc
     }
   }
 
-  void _onClearStaffError(
-    ClearStaffError e,
-    Emitter<FleetDashboardState> emit,
-  ) {
-    emit(state.copyWith(staffActionError: null));
-  }
+  void _onClearS(ClearStaffError e, Emitter<FleetDashboardState> emit) =>
+      emit(state.copyWith(staffActionError: null));
 
   // ── Layouts ────────────────────────────────────────────
-
   Future<void> _onLoadLayouts(
     LoadLayouts e,
     Emitter<FleetDashboardState> emit,
@@ -178,12 +166,11 @@ class FleetDashboardBloc
     try {
       final r = await _api.get('${e.panelPrefix}/absolute-layouts');
       final d = r?['data'];
-      List<Map<String, dynamic>> list = [];
-      if (d is List) {
-        list = d.cast<Map<String, dynamic>>();
-      } else if (d is Map && d['data'] is List) {
-        list = (d['data'] as List).cast<Map<String, dynamic>>();
-      }
+      List<Map<String, dynamic>> list = d is List
+          ? d.cast<Map<String, dynamic>>()
+          : (d is Map && d['data'] is List
+                ? (d['data'] as List).cast<Map<String, dynamic>>()
+                : []);
       emit(
         state.copyWith(
           layouts: list,
@@ -196,99 +183,229 @@ class FleetDashboardBloc
     }
   }
 
-  Future<void> _onPublishLayout(
+  Future<void> _onPublish(
     PublishLayout e,
     Emitter<FleetDashboardState> emit,
   ) async {
-    emit(state.copyWith(isLayoutMutating: true, layoutActionError: null));
+    emit(state.copyWith(isLayoutMutating: true));
     try {
       await _api.post(
         '${e.panelPrefix}/absolute-layouts/${e.layoutId}/publish',
       );
       add(LoadLayouts(panelPrefix: e.panelPrefix));
+    } catch (_) {
+    } finally {
       emit(state.copyWith(isLayoutMutating: false));
-    } catch (ex) {
-      emit(
-        state.copyWith(
-          isLayoutMutating: false,
-          layoutActionError: ex.toString(),
-        ),
-      );
     }
   }
 
-  Future<void> _onArchiveLayout(
+  Future<void> _onArchive(
     ArchiveLayout e,
     Emitter<FleetDashboardState> emit,
   ) async {
-    emit(state.copyWith(isLayoutMutating: true, layoutActionError: null));
+    emit(state.copyWith(isLayoutMutating: true));
     try {
       await _api.delete('${e.panelPrefix}/absolute-layouts/${e.layoutId}');
       add(LoadLayouts(panelPrefix: e.panelPrefix));
+    } catch (_) {
+    } finally {
       emit(state.copyWith(isLayoutMutating: false));
-    } catch (ex) {
-      emit(
-        state.copyWith(
-          isLayoutMutating: false,
-          layoutActionError: ex.toString(),
-        ),
-      );
     }
   }
 
-  Future<void> _onDeleteLayout(
+  Future<void> _onDelete(
     DeleteLayout e,
     Emitter<FleetDashboardState> emit,
   ) async {
-    emit(state.copyWith(isLayoutMutating: true, layoutActionError: null));
+    emit(state.copyWith(isLayoutMutating: true));
     try {
       await _api.delete(
         '${e.panelPrefix}/absolute-layouts/${e.layoutId}?permanent=true',
       );
       add(LoadLayouts(panelPrefix: e.panelPrefix));
+    } catch (_) {
+    } finally {
       emit(state.copyWith(isLayoutMutating: false));
-    } catch (ex) {
-      emit(
-        state.copyWith(
-          isLayoutMutating: false,
-          layoutActionError: ex.toString(),
-        ),
-      );
     }
   }
 
-  Future<void> _onPurgeLayouts(
+  Future<void> _onPurge(
     PurgeAllLayouts e,
     Emitter<FleetDashboardState> emit,
   ) async {
-    emit(state.copyWith(isLayoutMutating: true, layoutActionError: null));
+    emit(state.copyWith(isLayoutMutating: true));
     try {
       await _api.delete('${e.panelPrefix}/absolute-layouts/purge/all');
       add(LoadLayouts(panelPrefix: e.panelPrefix));
+    } catch (_) {
+    } finally {
       emit(state.copyWith(isLayoutMutating: false));
-    } catch (ex) {
-      emit(
-        state.copyWith(
-          isLayoutMutating: false,
-          layoutActionError: ex.toString(),
-        ),
-      );
     }
   }
 
-  void _onClearLayoutError(
-    ClearLayoutError e,
+  void _onClearL(ClearLayoutError e, Emitter<FleetDashboardState> emit) =>
+      emit(state.copyWith(layoutActionError: null));
+
+  // ── Carrier Link ───────────────────────────────────────
+  Future<void> _onLoadLink(
+    LoadCarrierLink e,
     Emitter<FleetDashboardState> emit,
-  ) {
-    emit(state.copyWith(layoutActionError: null));
+  ) async {
+    emit(state.copyWith(linkLoading: true, linkActionError: null));
+    try {
+      final inc = await _api.get('${e.panelPrefix}/link/incoming');
+      final act = await _api.get('${e.panelPrefix}/link/active');
+      List<Map<String, dynamic>> incList = (inc?['data'] is List)
+          ? (inc!['data'] as List).cast<Map<String, dynamic>>()
+          : [];
+      List<Map<String, dynamic>> actList = (act?['data'] is List)
+          ? (act!['data'] as List).cast<Map<String, dynamic>>()
+          : [];
+      emit(
+        state.copyWith(
+          incomingRequests: incList,
+          linkedCarriers: actList,
+          linkLoading: false,
+        ),
+      );
+    } catch (ex) {
+      emit(state.copyWith(linkLoading: false, linkActionError: ex.toString()));
+    }
   }
 
-  // ── Navigation ─────────────────────────────────────────
-
-  void _onNavigate(NavigateToPage e, Emitter<FleetDashboardState> emit) {
-    emit(state.copyWith(currentPage: e.page));
+  Future<void> _onAcceptLink(
+    AcceptCarrierRequest e,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    try {
+      await _api.post('${e.panelPrefix}/link/${e.assignmentId}/accept');
+      add(LoadCarrierLink(panelPrefix: e.panelPrefix));
+    } catch (ex) {
+      emit(state.copyWith(linkActionError: ex.toString()));
+    }
   }
 
+  Future<void> _onRejectLink(
+    RejectCarrierRequest e,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    try {
+      await _api.post('${e.panelPrefix}/link/${e.assignmentId}/reject');
+      add(LoadCarrierLink(panelPrefix: e.panelPrefix));
+    } catch (ex) {
+      emit(state.copyWith(linkActionError: ex.toString()));
+    }
+  }
+
+  Future<void> _onUnlink(
+    UnlinkCarrier e,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    try {
+      await _api.post('${e.panelPrefix}/link/${e.assignmentId}/unlink');
+      add(LoadCarrierLink(panelPrefix: e.panelPrefix));
+    } catch (ex) {
+      emit(state.copyWith(linkActionError: ex.toString()));
+    }
+  }
+
+  // ── Chat Inbox ─────────────────────────────────────────
+  Future<void> _onLoadInbox(
+    LoadInboxMessages e,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    emit(state.copyWith(inboxLoading: true, chatError: null));
+    try {
+      final r = await _api.get('${e.panelPrefix}/link-messages');
+      final list = (r?['data'] as List?) ?? [];
+      final raw = list
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+      // Group by assignment_id into conversations
+      final Map<String, Map<String, dynamic>> convMap = {};
+      for (final m in raw) {
+        final aid =
+            m['fleet_assignment_id']?.toString() ??
+            m['assignment_id']?.toString() ??
+            '';
+        if (aid.isEmpty) continue;
+        convMap.putIfAbsent(
+          aid,
+          () => {
+            'id': aid,
+            'owner_name': m['sender_name'] ?? m['owner_name'] ?? 'Owner',
+            'messages': <Map<String, dynamic>>[],
+            'latest_body': '',
+            'latest_at': '',
+          },
+        );
+        convMap[aid]!['latest_body'] = m['message_body']?.toString() ?? '';
+        convMap[aid]!['latest_at'] = m['created_at']?.toString() ?? '';
+      }
+      emit(
+        state.copyWith(
+          inboxConversations: convMap.values.toList(),
+          inboxLoading: false,
+        ),
+      );
+    } catch (ex) {
+      emit(state.copyWith(inboxLoading: false, chatError: ex.toString()));
+    }
+  }
+
+  Future<void> _onLoadConv(
+    LoadConversation e,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    try {
+      final r = await _api.get(
+        '${e.panelPrefix}/link-messages/${e.assignmentId}',
+      );
+      final list = (r?['data'] as List?) ?? [];
+      final msgs = list
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+      emit(
+        state.copyWith(
+          activeChatMessages: msgs,
+          expandedConversationId: e.assignmentId,
+        ),
+      );
+    } catch (ex) {
+      emit(state.copyWith(chatError: ex.toString()));
+    }
+  }
+
+  Future<void> _onSendMsg(
+    SendChatMessage e,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    emit(state.copyWith(chatSending: true));
+    try {
+      await _api.post(
+        '${e.panelPrefix}/link-messages/${e.assignmentId}',
+        data: {'message_body': e.message},
+      );
+      add(
+        LoadConversation(
+          panelPrefix: e.panelPrefix,
+          assignmentId: e.assignmentId,
+        ),
+      );
+      add(LoadInboxMessages(panelPrefix: e.panelPrefix));
+      emit(state.copyWith(chatSending: false));
+    } catch (ex) {
+      emit(state.copyWith(chatSending: false, chatError: ex.toString()));
+    }
+  }
+
+  void _onClearChat(ClearChatError e, Emitter<FleetDashboardState> emit) =>
+      emit(state.copyWith(chatError: null));
+
+  void _onNavigate(NavigateToPage e, Emitter<FleetDashboardState> emit) =>
+      emit(state.copyWith(currentPage: e.page));
   Future<void> _onLogout(
     LogoutRequested e,
     Emitter<FleetDashboardState> emit,

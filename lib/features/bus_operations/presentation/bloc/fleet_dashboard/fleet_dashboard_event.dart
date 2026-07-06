@@ -87,8 +87,6 @@ class ClearStaffError extends FleetDashboardEvent {
   const ClearStaffError();
 }
 
-// ── Layout events ──────────────────────────────────────
-
 class PublishLayout extends FleetDashboardEvent {
   final String panelPrefix, layoutId, name;
   const PublishLayout({
@@ -131,4 +129,74 @@ class PurgeAllLayouts extends FleetDashboardEvent {
 
 class ClearLayoutError extends FleetDashboardEvent {
   const ClearLayoutError();
+}
+
+// ── Carrier Link ──────────────────────────────────────
+
+class LoadCarrierLink extends FleetDashboardEvent {
+  final String panelPrefix;
+  const LoadCarrierLink({required this.panelPrefix});
+  @override
+  List<Object?> get props => [panelPrefix];
+}
+
+class AcceptCarrierRequest extends FleetDashboardEvent {
+  final String panelPrefix, assignmentId;
+  const AcceptCarrierRequest({
+    required this.panelPrefix,
+    required this.assignmentId,
+  });
+  @override
+  List<Object?> get props => [panelPrefix, assignmentId];
+}
+
+class RejectCarrierRequest extends FleetDashboardEvent {
+  final String panelPrefix, assignmentId;
+  const RejectCarrierRequest({
+    required this.panelPrefix,
+    required this.assignmentId,
+  });
+  @override
+  List<Object?> get props => [panelPrefix, assignmentId];
+}
+
+class UnlinkCarrier extends FleetDashboardEvent {
+  final String panelPrefix, assignmentId;
+  const UnlinkCarrier({required this.panelPrefix, required this.assignmentId});
+  @override
+  List<Object?> get props => [panelPrefix, assignmentId];
+}
+
+// ── Chat Inbox ────────────────────────────────────────
+
+class LoadInboxMessages extends FleetDashboardEvent {
+  final String panelPrefix;
+  const LoadInboxMessages({required this.panelPrefix});
+  @override
+  List<Object?> get props => [panelPrefix];
+}
+
+class LoadConversation extends FleetDashboardEvent {
+  final String panelPrefix, assignmentId;
+  const LoadConversation({
+    required this.panelPrefix,
+    required this.assignmentId,
+  });
+  @override
+  List<Object?> get props => [panelPrefix, assignmentId];
+}
+
+class SendChatMessage extends FleetDashboardEvent {
+  final String panelPrefix, assignmentId, message;
+  const SendChatMessage({
+    required this.panelPrefix,
+    required this.assignmentId,
+    required this.message,
+  });
+  @override
+  List<Object?> get props => [panelPrefix, assignmentId, message];
+}
+
+class ClearChatError extends FleetDashboardEvent {
+  const ClearChatError();
 }
