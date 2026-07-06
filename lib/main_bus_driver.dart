@@ -14,7 +14,7 @@ void main() => FleetApp.run(
     panel: UserPanel.busFleet,
     loginConfig: FleetLoginConfig.driver(appTitle: 'Bus Driver Portal'),
   ),
-  dashboardScreen: const DriverDashboardScreen(),
+  dashboardScreen: const DriverDashboardScreen(storagePrefix: 'busFleet'),
   loginPath: '/bus-driver/login',
   dashboardPath: '/bus-driver/dashboard',
   blocProviders: [fleetBlocProvider()],

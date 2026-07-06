@@ -31,10 +31,15 @@ class OwnerButtonColors {
 class OwnerDashboardScreen extends StatefulWidget {
   final String loginRoute;
   final String panelPrefix;
+
+  /// SharedPreferences key prefix to isolate data between panels
+  /// sharing the same origin (e.g. 'busFleet' vs 'busOwner').
+  final String storagePrefix;
   const OwnerDashboardScreen({
     super.key,
     this.loginRoute = '/bus-owner/login',
     this.panelPrefix = '/bus-owner',
+    this.storagePrefix = 'busFleet',
   });
   @override
   State<OwnerDashboardScreen> createState() => _OwnerDashboardScreenState();
@@ -76,13 +81,14 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   Future<void> _bootstrap() async {
     final p = await SharedPreferences.getInstance();
-    final t = p.getString('auth_token') ?? '';
+    final sp = widget.storagePrefix;
+    final t = p.getString('${sp}_auth_token') ?? '';
     if (!mounted) return;
     if (t.isEmpty) {
       context.go(widget.loginRoute);
       return;
     }
-    _ownerName = p.getString('bus_owner_name') ?? 'Owner';
+    _ownerName = p.getString('${sp}_owner_name') ?? 'Owner';
     // Fetch company ID from profile
     try {
       final r = await ApiService().get('${widget.panelPrefix}/profile');
@@ -94,7 +100,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   }
 
   void _logout() async {
-    await (await SharedPreferences.getInstance()).remove('auth_token');
+    final p = await SharedPreferences.getInstance();
+    await p.remove('${widget.storagePrefix}_auth_token');
     if (mounted) context.go(widget.loginRoute);
   }
 

@@ -9,7 +9,9 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class DriverDashboardScreen extends StatefulWidget {
-  const DriverDashboardScreen({super.key});
+  /// SharedPreferences key prefix to isolate data between panels.
+  final String storagePrefix;
+  const DriverDashboardScreen({super.key, this.storagePrefix = 'busFleet'});
 
   @override
   State<DriverDashboardScreen> createState() => _DriverDashboardScreenState();
@@ -34,12 +36,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
 
   Future<void> _bootstrap() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
+    final sp = widget.storagePrefix;
+    final token = prefs.getString('${sp}_auth_token') ?? '';
     if (token.isEmpty) {
       if (mounted) context.go('/bus-driver/login');
       return;
     }
-    setState(() => _driverName = prefs.getString('driver_name') ?? 'Driver');
+    setState(
+      () => _driverName = prefs.getString('${sp}_driver_name') ?? 'Driver',
+    );
     await _loadData();
   }
 
@@ -76,7 +81,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
 
   void _logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
+    await prefs.remove('${widget.storagePrefix}_auth_token');
     if (mounted) context.go('/bus-driver/login');
   }
 

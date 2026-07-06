@@ -16,7 +16,7 @@ void main() => FleetApp.run(
       appTitle: 'Bus Conductor / Cabin Crew',
     ),
   ),
-  dashboardScreen: const ConductorDashboardScreen(),
+  dashboardScreen: const ConductorDashboardScreen(storagePrefix: 'busFleet'),
   loginPath: '/bus-conductor/login',
   dashboardPath: '/bus-conductor/dashboard',
   blocProviders: [fleetBlocProvider()],

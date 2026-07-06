@@ -14,7 +14,11 @@ void main() => FleetApp.run(
     panel: UserPanel.busFleet,
     loginConfig: FleetLoginConfig.busOwner(),
   ),
-  dashboardScreen: const OwnerDashboardScreen(),
+  dashboardScreen: const OwnerDashboardScreen(
+    storagePrefix: 'busFleet',
+    loginRoute: '/bus-owner/login',
+    panelPrefix: '/bus-owner',
+  ),
   loginPath: '/bus-owner/login',
   dashboardPath: '/bus-owner/dashboard',
   blocProviders: [fleetBlocProvider()],

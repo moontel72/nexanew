@@ -53,7 +53,7 @@ class _BusFleetRouterState extends State<_BusFleetRouter> {
 
   Future<void> _resolve() async {
     final prefs = await SharedPreferences.getInstance();
-    final role = prefs.getString('fleet_role') ?? '';
+    final role = prefs.getString('busFleet_fleet_role') ?? '';
     if (mounted) {
       setState(() {
         _isStorekeeper = UserRoles.isFleetStorekeeper(role);
@@ -79,6 +79,7 @@ class _BusFleetRouterState extends State<_BusFleetRouter> {
     return const OwnerDashboardScreen(
       loginRoute: '/bus-fleet/login',
       panelPrefix: '/bus-fleet',
+      storagePrefix: 'busFleet',
     );
   }
 }

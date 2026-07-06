@@ -9,7 +9,9 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class ConductorDashboardScreen extends StatefulWidget {
-  const ConductorDashboardScreen({super.key});
+  /// SharedPreferences key prefix to isolate data between panels.
+  final String storagePrefix;
+  const ConductorDashboardScreen({super.key, this.storagePrefix = 'busFleet'});
 
   @override
   State<ConductorDashboardScreen> createState() =>
@@ -33,13 +35,15 @@ class _ConductorDashboardScreenState extends State<ConductorDashboardScreen> {
 
   Future<void> _bootstrap() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
+    final sp = widget.storagePrefix;
+    final token = prefs.getString('${sp}_auth_token') ?? '';
     if (token.isEmpty) {
       if (mounted) context.go('/bus-conductor/login');
       return;
     }
     setState(
-      () => _conductorName = prefs.getString('conductor_name') ?? 'Conductor',
+      () => _conductorName =
+          prefs.getString('${sp}_conductor_name') ?? 'Conductor',
     );
     await _loadData();
   }
@@ -74,7 +78,7 @@ class _ConductorDashboardScreenState extends State<ConductorDashboardScreen> {
 
   void _logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
+    await prefs.remove('${widget.storagePrefix}_auth_token');
     if (mounted) context.go('/bus-conductor/login');
   }
 

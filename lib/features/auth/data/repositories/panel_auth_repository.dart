@@ -140,7 +140,7 @@ class PanelAuthRepository {
     await _persistSession(panel, token, user);
 
     // ── Fleet metadata → SharedPreferences (dashboard routers read this) ──
-    await _persistFleetMetadata(user, metadata);
+    await _persistFleetMetadata(panel, token, user, metadata);
 
     final authResponse = PanelAuthResponse(
       panel: panel,
@@ -309,30 +309,32 @@ class PanelAuthRepository {
 
   /// Persist fleet routing metadata to SharedPreferences so dashboard
   /// routers (e.g. _BusFleetRouter) can resolve the correct surface.
+  /// Keys are scoped per-panel to prevent cross-contamination when
+  /// multiple fleet apps share the same origin.
   Future<void> _persistFleetMetadata(
+    UserPanel panel,
+    String token,
     Map<String, dynamic> user,
     Map<String, dynamic> metadata,
   ) async {
     final prefs = await SharedPreferences.getInstance();
+    final scope = panel.name; // e.g. 'busFleet', 'truckFleet'
+
+    // Store token under scoped key so dashboards can find it.
+    await prefs.setString('${scope}_auth_token', token);
 
     final fleetRole =
         metadata['fleet_role']?.toString() ?? user['fleet_role']?.toString();
     if (fleetRole != null && fleetRole.isNotEmpty) {
-      await prefs.setString('fleet_role', fleetRole);
+      await prefs.setString('${scope}_fleet_role', fleetRole);
     }
 
     final accountName =
         user['account_name']?.toString() ?? user['display_name']?.toString();
     if (accountName != null && accountName.isNotEmpty) {
-      await prefs.setString('bus_owner_name', accountName);
-    }
-
-    // Driver / Conductor name for their respective dashboards.
-    final driverName =
-        user['account_name']?.toString() ?? user['display_name']?.toString();
-    if (driverName != null && driverName.isNotEmpty) {
-      await prefs.setString('driver_name', driverName);
-      await prefs.setString('conductor_name', driverName);
+      await prefs.setString('${scope}_owner_name', accountName);
+      await prefs.setString('${scope}_driver_name', accountName);
+      await prefs.setString('${scope}_conductor_name', accountName);
     }
   }
 }

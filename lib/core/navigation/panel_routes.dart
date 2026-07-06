@@ -97,13 +97,22 @@ enum UserPanel {
   }
 
   /// Token storage key used by flutter_secure_storage for this panel.
-  /// Factory uses a separate token; all others share the main auth token.
+  /// Each panel gets its own key to prevent cross-contamination when
+  /// multiple fleet apps share the same origin (e.g. on web).
   String get tokenStorageKey {
     switch (this) {
+      case UserPanel.superAdmin:
+        return 'super_admin_auth_token';
       case UserPanel.factory:
         return 'factory_auth_token';
-      default:
-        return 'auth_token';
+      case UserPanel.marketplace:
+        return 'marketplace_auth_token';
+      case UserPanel.truckFleet:
+        return 'truck_fleet_auth_token';
+      case UserPanel.busFleet:
+        return 'bus_fleet_auth_token';
+      case UserPanel.customer:
+        return 'customer_auth_token';
     }
   }
 
@@ -150,7 +159,9 @@ enum UserPanel {
       case 'customer':
         return UserPanel.customer;
       default:
-        debugPrint('PANEL_ROUTES: Unknown panel type "$value", defaulting to customer');
+        debugPrint(
+          'PANEL_ROUTES: Unknown panel type "$value", defaulting to customer',
+        );
         return UserPanel.customer;
     }
   }
