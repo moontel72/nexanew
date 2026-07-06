@@ -18,6 +18,9 @@ class FleetDashboardBloc
     on<LoadLayouts>(_onLoadLayouts);
     on<NavigateToPage>(_onNavigate);
     on<LogoutRequested>(_onLogout);
+    on<RegisterStaff>(_onRegisterStaff);
+    on<RemoveStaff>(_onRemoveStaff);
+    on<ClearStaffError>(_onClearError);
   }
 
   Future<void> _onBootstrap(
@@ -25,13 +28,10 @@ class FleetDashboardBloc
     Emitter<FleetDashboardState> emit,
   ) async {
     emit(state.copyWith(status: FleetDashboardStatus.loading));
-
     final p = await SharedPreferences.getInstance();
     final sp = event.storagePrefix;
     final t = p.getString('${sp}_auth_token') ?? '';
-
     if (t.isEmpty) {
-      // Will be handled by the page's BlocListener to navigate to login.
       emit(
         state.copyWith(
           status: FleetDashboardStatus.initial,
@@ -40,14 +40,12 @@ class FleetDashboardBloc
       );
       return;
     }
-
     final name = p.getString('${sp}_owner_name') ?? 'Fleet';
     String companyId = '';
     try {
       final r = await _api.get('${event.panelPrefix}/profile');
       companyId = r?['data']?['id']?.toString() ?? '';
     } catch (_) {}
-
     emit(
       state.copyWith(
         status: FleetDashboardStatus.loaded,
@@ -55,8 +53,6 @@ class FleetDashboardBloc
         companyId: companyId,
       ),
     );
-
-    // Auto-fetch metrics after bootstrap.
     add(FetchDashboardMetrics(panelPrefix: event.panelPrefix));
   }
 
@@ -78,9 +74,7 @@ class FleetDashboardBloc
       final r = await _api.get('${event.panelPrefix}/staff/drivers');
       final d = r?['data'];
       List<Map<String, dynamic>> list = [];
-      if (d is List) {
-        list = d.cast<Map<String, dynamic>>();
-      }
+      if (d is List) list = d.cast<Map<String, dynamic>>();
       emit(
         state.copyWith(
           drivers: list,
@@ -102,9 +96,7 @@ class FleetDashboardBloc
       final r = await _api.get('${event.panelPrefix}/staff/conductors');
       final d = r?['data'];
       List<Map<String, dynamic>> list = [];
-      if (d is List) {
-        list = d.cast<Map<String, dynamic>>();
-      }
+      if (d is List) list = d.cast<Map<String, dynamic>>();
       emit(
         state.copyWith(
           conductors: list,
@@ -141,6 +133,59 @@ class FleetDashboardBloc
     } catch (_) {
       emit(state.copyWith(layoutsLoading: false));
     }
+  }
+
+  // ── Staff CRUD ─────────────────────────────────────────
+
+  Future<void> _onRegisterStaff(
+    RegisterStaff event,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    emit(state.copyWith(isStaffSubmitting: true, staffActionError: null));
+    try {
+      await _api.post('${event.panelPrefix}/${event.role}s', data: event.data);
+      // Reload the list after successful add.
+      if (event.role == 'driver') {
+        add(LoadDrivers(panelPrefix: event.panelPrefix));
+      } else {
+        add(LoadConductors(panelPrefix: event.panelPrefix));
+      }
+      emit(state.copyWith(isStaffSubmitting: false));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isStaffSubmitting: false,
+          staffActionError: e.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onRemoveStaff(
+    RemoveStaff event,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    emit(state.copyWith(isStaffSubmitting: true, staffActionError: null));
+    try {
+      await _api.delete('${event.panelPrefix}/${event.role}s/${event.staffId}');
+      if (event.role == 'driver') {
+        add(LoadDrivers(panelPrefix: event.panelPrefix));
+      } else {
+        add(LoadConductors(panelPrefix: event.panelPrefix));
+      }
+      emit(state.copyWith(isStaffSubmitting: false));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isStaffSubmitting: false,
+          staffActionError: e.toString(),
+        ),
+      );
+    }
+  }
+
+  void _onClearError(ClearStaffError event, Emitter<FleetDashboardState> emit) {
+    emit(state.copyWith(staffActionError: null));
   }
 
   void _onNavigate(NavigateToPage event, Emitter<FleetDashboardState> emit) {

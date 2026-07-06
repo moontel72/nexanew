@@ -1,71 +1,22 @@
 // Fleet Dashboard Page — thin BLoC-driven root for bus-fleet panel
-// ===================================================================
-// Replaces the 2500-line OwnerDashboardScreen for /bus-fleet/.
-// Delegates all state to FleetDashboardBloc; UI is assembled from
-// shared widgets in presentation/widgets/.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_state.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/staff_list_section.dart';
 
-/// Botón 3D estilo "misil" (mismo que existía en el dashboard legacy).
-class _MissileButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final double height;
-  final VoidCallback onTap;
-  const _MissileButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    this.height = 56,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              color.withValues(alpha: 0.3),
-              color.withValues(alpha: 0.08),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 20),
-            SizedBox(width: 10.w),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+abstract class FleetColors {
+  static const bg = Color(0xFF0D1B2A);
+  static const card = Color(0xFF1A2A3A);
+  static const drivers = Color(0xFF00B4D8);
+  static const conductors = Color(0xFF7C3AED);
+  static const seats = Color(0xFF2563EB);
 }
 
 class FleetDashboardPage extends StatelessWidget {
@@ -101,51 +52,82 @@ class _FleetDashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<FleetDashboardBloc, FleetDashboardState>(
-      listener: (ctx, state) {
-        if (state.status == FleetDashboardStatus.initial &&
-            state.errorMessage == 'Not authenticated') {
-          // Navigate handled by GoRouter via the page's loginRoute.
-        }
-      },
-      child: BlocBuilder<FleetDashboardBloc, FleetDashboardState>(
-        builder: (ctx, state) {
-          if (state.status == FleetDashboardStatus.loading) {
-            return const Scaffold(
-              backgroundColor: Color(0xFF0D1B2A),
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          return Scaffold(
-            backgroundColor: const Color(0xFF0D1B2A),
-            appBar: _appBar(ctx, state),
-            body: _body(ctx, state),
+    return BlocBuilder<FleetDashboardBloc, FleetDashboardState>(
+      builder: (ctx, state) {
+        if (state.status == FleetDashboardStatus.loading) {
+          return const Scaffold(
+            backgroundColor: FleetColors.bg,
+            body: Center(child: CircularProgressIndicator()),
           );
-        },
-      ),
-    );
-  }
+        }
 
-  PreferredSizeWidget _appBar(BuildContext ctx, FleetDashboardState state) {
-    return AppBar(
-      backgroundColor: const Color(0xFF1B2838),
-      title: Text(
-        state.ownerName,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh, color: Colors.white60),
-          onPressed: () => ctx.read<FleetDashboardBloc>().add(
-            FetchDashboardMetrics(panelPrefix: ''),
+        final bloc = ctx.read<FleetDashboardBloc>();
+        final wide = MediaQuery.of(ctx).size.width > 900;
+
+        if (state.staffActionError != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ScaffoldMessenger.of(ctx).showSnackBar(
+              SnackBar(
+                content: Text(state.staffActionError!),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+            bloc.add(const ClearStaffError());
+          });
+        }
+
+        return Scaffold(
+          backgroundColor: FleetColors.bg,
+          body: Row(
+            children: [
+              if (wide) _SidebarWidget(bloc: bloc, state: state),
+              Expanded(child: _pageContent(ctx, bloc, state)),
+            ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget _body(BuildContext ctx, FleetDashboardState state) {
+  Widget _pageContent(
+    BuildContext ctx,
+    FleetDashboardBloc bloc,
+    FleetDashboardState state,
+  ) {
+    switch (state.currentPage) {
+      case 'drivers':
+        return StaffListSection(
+          title: 'Bus Drivers',
+          accentColor: FleetColors.drivers,
+          icon: Icons.badge,
+          items: state.drivers,
+          isLoading: state.driversLoading,
+          emptyMessage: 'No drivers registered',
+          onAdd: () => _openAddStaff(ctx, bloc, 'driver'),
+          onRemove: (id, name) => _confirmRemove(ctx, bloc, id, name, 'driver'),
+        );
+      case 'conductors':
+        return StaffListSection(
+          title: 'Conductors / Cabin Crew',
+          accentColor: FleetColors.conductors,
+          icon: Icons.group,
+          items: state.conductors,
+          isLoading: state.conductorsLoading,
+          emptyMessage: 'No conductors registered',
+          onAdd: () => _openAddStaff(ctx, bloc, 'conductor'),
+          onRemove: (id, name) =>
+              _confirmRemove(ctx, bloc, id, name, 'conductor'),
+        );
+      default:
+        return _homeTab(ctx, bloc, state);
+    }
+  }
+
+  Widget _homeTab(
+    BuildContext ctx,
+    FleetDashboardBloc bloc,
+    FleetDashboardState state,
+  ) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.all(16.w),
@@ -168,44 +150,275 @@ class _FleetDashboardView extends StatelessWidget {
           driverCount: state.driverCount,
           conductorCount: state.conductorCount,
           layoutCount: state.layoutCount,
-          onDriversTap: () => ctx.read<FleetDashboardBloc>().add(
-            const NavigateToPage('drivers'),
-          ),
-          onConductorsTap: () => ctx.read<FleetDashboardBloc>().add(
-            const NavigateToPage('conductors'),
-          ),
-          onLayoutsTap: () => ctx.read<FleetDashboardBloc>().add(
-            const NavigateToPage('layouts'),
-          ),
+          onDriversTap: () => bloc.add(const NavigateToPage('drivers')),
+          onConductorsTap: () => bloc.add(const NavigateToPage('conductors')),
+          onLayoutsTap: () => bloc.add(const NavigateToPage('layouts')),
         ),
         Gap(24),
-        _MissileButton(
-          label: '+ Add New Vehicle',
-          icon: Icons.add,
-          color: const Color(0xFF0891B2),
-          height: 56,
-          onTap: () => Navigator.push(
-            ctx,
-            MaterialPageRoute(
-              builder: (_) => AbsoluteLayoutDesignerScreen(
-                companyId: state.companyId,
-                companyName: state.ownerName,
-                apiPrefix: '/bus-fleet',
+        _missileBtn(
+          '+ Add New Vehicle',
+          Icons.add,
+          const Color(0xFF0891B2),
+          () {
+            Navigator.push(
+              ctx,
+              MaterialPageRoute(
+                builder: (_) => AbsoluteLayoutDesignerScreen(
+                  companyId: state.companyId,
+                  companyName: state.ownerName,
+                  apiPrefix: '/bus-fleet',
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
         Gap(12),
-        _MissileButton(
-          label: 'View All Vehicles (${state.layoutCount})',
-          icon: Icons.directions_bus,
-          color: const Color(0xFF2563EB),
-          height: 56,
-          onTap: () => ctx.read<FleetDashboardBloc>().add(
-            const NavigateToPage('layouts'),
-          ),
+        _missileBtn(
+          'View All Vehicles (${state.layoutCount})',
+          Icons.directions_bus,
+          FleetColors.seats,
+          () => bloc.add(const NavigateToPage('layouts')),
         ),
       ],
     );
   }
+
+  Widget _missileBtn(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback tap,
+  ) {
+    return GestureDetector(
+      onTap: tap,
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              color.withValues(alpha: 0.3),
+              color.withValues(alpha: 0.08),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 20),
+            SizedBox(width: 10.w),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openAddStaff(
+    BuildContext ctx,
+    FleetDashboardBloc bloc,
+    String role,
+  ) async {
+    final data = await AddStaffDialog.show(
+      ctx,
+      title: role == 'driver' ? 'Add Bus Driver' : 'Add Conductor',
+    );
+    if (data != null) {
+      bloc.add(
+        RegisterStaff(panelPrefix: '/bus-fleet', role: role, data: data),
+      );
+    }
+  }
+
+  Future<void> _confirmRemove(
+    BuildContext ctx,
+    FleetDashboardBloc bloc,
+    String id,
+    String name,
+    String role,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        backgroundColor: const Color(0xFF1B2838),
+        title: const Text(
+          'Remove Staff',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Remove "$name"?',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      bloc.add(RemoveStaff(panelPrefix: '/bus-fleet', staffId: id, role: role));
+    }
+  }
+}
+
+// ── Sidebar Widget ────────────────────────────────────────
+
+class _SidebarWidget extends StatelessWidget {
+  final FleetDashboardBloc bloc;
+  final FleetDashboardState state;
+  const _SidebarWidget({required this.bloc, required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 260,
+      color: const Color(0xFF162438),
+      child: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.all(20.w),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.directions_bus,
+                  color: FleetColors.drivers,
+                  size: 28,
+                ),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Text(
+                    state.ownerName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(color: Color(0xFF2A3A4A), height: 1),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.symmetric(vertical: 8.h),
+              children: [
+                _nav('Dashboard', Icons.dashboard, 'dashboard'),
+                _sec('FLEET MANAGEMENT'),
+                _nav(
+                  'Drivers',
+                  Icons.badge,
+                  'drivers',
+                  color: FleetColors.drivers,
+                ),
+                _nav(
+                  'Conductors',
+                  Icons.group,
+                  'conductors',
+                  color: FleetColors.conductors,
+                ),
+                _nav(
+                  'Vehicles',
+                  Icons.directions_bus,
+                  'layouts',
+                  color: FleetColors.seats,
+                ),
+                _sec('OPERATIONS'),
+                _nav('Route Scheduler', Icons.alt_route_rounded, 'routes'),
+                _nav(
+                  'Ticket Management',
+                  Icons.confirmation_num_rounded,
+                  'tickets',
+                ),
+                _nav('Vouchers / Promos', Icons.card_giftcard, 'vouchers'),
+                _nav('Staff Bonuses', Icons.emoji_events, 'bonuses'),
+                _sec('CARRIER'),
+                _nav('Carrier Link', Icons.link_rounded, 'carrier'),
+                _nav('Inbox', Icons.message_rounded, 'inbox'),
+                _sec('STOREKEEPER'),
+                _nav(
+                  'Terminal Storekeepers',
+                  Icons.inventory_2_rounded,
+                  'storekeepers',
+                ),
+                _nav(
+                  'Bus Catering Inventory',
+                  Icons.restaurant_menu,
+                  'catering',
+                ),
+                _nav(
+                  'Activity Logs',
+                  Icons.receipt_long_rounded,
+                  'activity_log',
+                ),
+                _nav(
+                  'Settlement Reports',
+                  Icons.account_balance_wallet,
+                  'settlement',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _nav(String label, IconData icon, String page, {Color? color}) {
+    final active = state.currentPage == page;
+    return ListTile(
+      dense: true,
+      leading: Icon(
+        icon,
+        size: 20,
+        color: active
+            ? (color ?? FleetColors.drivers)
+            : const Color(0xFF667788),
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: active ? Colors.white : const Color(0xFF8899AA),
+          fontSize: 13,
+        ),
+      ),
+      selected: active,
+      selectedTileColor: FleetColors.drivers.withValues(alpha: .1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      onTap: () => bloc.add(NavigateToPage(page)),
+    );
+  }
+
+  Widget _sec(String label) => Padding(
+    padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 4.h),
+    child: Text(
+      label,
+      style: const TextStyle(
+        color: Color(0xFF556677),
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
 }

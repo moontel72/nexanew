@@ -17,8 +17,9 @@ class FleetDashboardState extends Equatable {
   final bool conductorsLoading;
   final bool layoutsLoading;
   final String? errorMessage;
-  final String
-  currentPage; // 'dashboard', 'drivers', 'conductors', 'layouts', 'carrier', 'inbox', etc.
+  final String currentPage;
+  final bool isStaffSubmitting;
+  final String? staffActionError;
 
   const FleetDashboardState({
     this.status = FleetDashboardStatus.initial,
@@ -35,6 +36,8 @@ class FleetDashboardState extends Equatable {
     this.layoutsLoading = true,
     this.errorMessage,
     this.currentPage = 'dashboard',
+    this.isStaffSubmitting = false,
+    this.staffActionError,
   });
 
   FleetDashboardState copyWith({
@@ -52,6 +55,8 @@ class FleetDashboardState extends Equatable {
     bool? layoutsLoading,
     String? errorMessage,
     String? currentPage,
+    bool? isStaffSubmitting,
+    String? staffActionError,
   }) {
     return FleetDashboardState(
       status: status ?? this.status,
@@ -68,6 +73,8 @@ class FleetDashboardState extends Equatable {
       layoutsLoading: layoutsLoading ?? this.layoutsLoading,
       errorMessage: errorMessage ?? this.errorMessage,
       currentPage: currentPage ?? this.currentPage,
+      isStaffSubmitting: isStaffSubmitting ?? this.isStaffSubmitting,
+      staffActionError: staffActionError,
     );
   }
 
@@ -87,5 +94,7 @@ class FleetDashboardState extends Equatable {
     layoutsLoading,
     errorMessage,
     currentPage,
+    isStaffSubmitting,
+    staffActionError,
   ];
 }
