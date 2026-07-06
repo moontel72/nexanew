@@ -13,6 +13,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
 import 'package:trace_odd/core/network/api_client_v2.dart';
 import 'package:trace_odd/core/network/network_exceptions.dart';
@@ -97,14 +98,19 @@ class PanelAuthRepository {
     final response = await _client.post(endpoint, body: body);
     final data = _extractData(response.data);
 
-    // Extract fields — backend returns { data: { token, user: {...} } }
+    // Extract fields — backend returns { token: "...", data: { user: {...} } }
+    // Fleet panels may return { token: "...", data: { id, account_name, ... } }
     final token = data['token']?.toString() ?? '';
     if (token.isEmpty) {
       throw Exception('No authentication token received from backend');
     }
 
+    // User object: new identity spine wraps it in data.user;
+    // fleet endpoints place user fields directly inside data.
     final user = (data['user'] is Map)
         ? Map<String, dynamic>.from(data['user'] as Map)
+        : (data.containsKey('id') || data.containsKey('account_name'))
+        ? Map<String, dynamic>.from(data)
         : <String, dynamic>{};
 
     final driverType = user['driver_type']?.toString().toLowerCase();
@@ -116,6 +122,9 @@ class PanelAuthRepository {
 
     // ── Persist tokens ──────────────────────────────────
     await _persistSession(panel, token, user);
+
+    // ── Fleet metadata → SharedPreferences (dashboard routers read this) ──
+    await _persistFleetMetadata(user, metadata);
 
     final authResponse = PanelAuthResponse(
       panel: panel,
@@ -212,14 +221,31 @@ class PanelAuthRepository {
   }
 
   /// Safely extract `data` from a response that may be wrapped.
+  ///
+  /// Backend auth responses use the shape:
+  ///   { "token": "...", "data": { "user": {...}, ... } }
+  ///
+  /// Top-level keys (token, message, etc.) are merged into the nested
+  /// `data` object so callers can access everything from a single map.
   Map<String, dynamic> _extractData(dynamic responseBody) {
     if (responseBody == null) return {};
     if (responseBody is Map<String, dynamic>) {
-      // Backend wraps in { data: {...} }
-      if (responseBody['data'] is Map<String, dynamic>) {
-        return responseBody['data'] as Map<String, dynamic>;
+      // Unwrap the nested `data` key if present.
+      final nested = responseBody['data'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(
+              responseBody['data'] as Map<String, dynamic>,
+            )
+          : <String, dynamic>{};
+
+      // Merge top-level keys (token, message, etc.) into the result.
+      // Nested values take priority on collision.
+      for (final entry in responseBody.entries) {
+        if (entry.key != 'data') {
+          nested.putIfAbsent(entry.key, () => entry.value);
+        }
       }
-      return responseBody;
+
+      return nested.isNotEmpty ? nested : responseBody;
     }
     return {};
   }
@@ -246,6 +272,36 @@ class PanelAuthRepository {
         key: '${storageKey}_driver_type',
         value: driverType,
       );
+    }
+  }
+
+  /// Persist fleet routing metadata to SharedPreferences so dashboard
+  /// routers (e.g. _BusFleetRouter) can resolve the correct surface.
+  Future<void> _persistFleetMetadata(
+    Map<String, dynamic> user,
+    Map<String, dynamic> metadata,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final fleetRole =
+        metadata['fleet_role']?.toString() ??
+        user['fleet_role']?.toString();
+    if (fleetRole != null && fleetRole.isNotEmpty) {
+      await prefs.setString('fleet_role', fleetRole);
+    }
+
+    final accountName =
+        user['account_name']?.toString() ?? user['display_name']?.toString();
+    if (accountName != null && accountName.isNotEmpty) {
+      await prefs.setString('bus_owner_name', accountName);
+    }
+
+    // Driver / Conductor name for their respective dashboards.
+    final driverName =
+        user['account_name']?.toString() ?? user['display_name']?.toString();
+    if (driverName != null && driverName.isNotEmpty) {
+      await prefs.setString('driver_name', driverName);
+      await prefs.setString('conductor_name', driverName);
     }
   }
 }
