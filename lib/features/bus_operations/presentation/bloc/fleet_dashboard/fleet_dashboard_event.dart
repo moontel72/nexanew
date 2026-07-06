@@ -8,9 +8,7 @@ abstract class FleetDashboardEvent extends Equatable {
 }
 
 class BootstrapDashboard extends FleetDashboardEvent {
-  final String storagePrefix;
-  final String panelPrefix;
-  final String loginRoute;
+  final String storagePrefix, panelPrefix, loginRoute;
   const BootstrapDashboard({
     required this.storagePrefix,
     required this.panelPrefix,
@@ -62,10 +60,8 @@ class LogoutRequested extends FleetDashboardEvent {
   List<Object?> get props => [storagePrefix];
 }
 
-/// Register a new driver or conductor.
 class RegisterStaff extends FleetDashboardEvent {
-  final String panelPrefix;
-  final String role; // 'driver' or 'conductor'
+  final String panelPrefix, role;
   final Map<String, dynamic> data;
   const RegisterStaff({
     required this.panelPrefix,
@@ -76,11 +72,8 @@ class RegisterStaff extends FleetDashboardEvent {
   List<Object?> get props => [panelPrefix, role, data];
 }
 
-/// Remove (soft-delete) a driver or conductor.
 class RemoveStaff extends FleetDashboardEvent {
-  final String panelPrefix;
-  final String staffId;
-  final String role; // 'driver' or 'conductor'
+  final String panelPrefix, staffId, role;
   const RemoveStaff({
     required this.panelPrefix,
     required this.staffId,
@@ -92,4 +85,50 @@ class RemoveStaff extends FleetDashboardEvent {
 
 class ClearStaffError extends FleetDashboardEvent {
   const ClearStaffError();
+}
+
+// ── Layout events ──────────────────────────────────────
+
+class PublishLayout extends FleetDashboardEvent {
+  final String panelPrefix, layoutId, name;
+  const PublishLayout({
+    required this.panelPrefix,
+    required this.layoutId,
+    required this.name,
+  });
+  @override
+  List<Object?> get props => [panelPrefix, layoutId, name];
+}
+
+class ArchiveLayout extends FleetDashboardEvent {
+  final String panelPrefix, layoutId, name;
+  const ArchiveLayout({
+    required this.panelPrefix,
+    required this.layoutId,
+    required this.name,
+  });
+  @override
+  List<Object?> get props => [panelPrefix, layoutId, name];
+}
+
+class DeleteLayout extends FleetDashboardEvent {
+  final String panelPrefix, layoutId, name;
+  const DeleteLayout({
+    required this.panelPrefix,
+    required this.layoutId,
+    required this.name,
+  });
+  @override
+  List<Object?> get props => [panelPrefix, layoutId, name];
+}
+
+class PurgeAllLayouts extends FleetDashboardEvent {
+  final String panelPrefix;
+  const PurgeAllLayouts({required this.panelPrefix});
+  @override
+  List<Object?> get props => [panelPrefix];
+}
+
+class ClearLayoutError extends FleetDashboardEvent {
+  const ClearLayoutError();
 }

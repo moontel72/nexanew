@@ -9,6 +9,7 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashbo
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/layout_list_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/staff_list_section.dart';
 
 abstract class FleetColors {
@@ -118,6 +119,17 @@ class _FleetDashboardView extends StatelessWidget {
           onRemove: (id, name) =>
               _confirmRemove(ctx, bloc, id, name, 'conductor'),
         );
+      case 'layouts':
+        return LayoutListSection(
+          layouts: state.layouts,
+          isLoading: state.layoutsLoading,
+          isMutating: state.isLayoutMutating,
+          onPublish: (id, name) => _showPublishConfirm(ctx, bloc, id, name),
+          onArchive: (id, name) => _showArchiveConfirm(ctx, bloc, id, name),
+          onDelete: (id, name) => _showDeleteConfirm(ctx, bloc, id, name),
+          onAdd: () => _openLayoutDesigner(ctx, state),
+          onPurgeAll: () => _showPurgeConfirm(ctx, bloc, state.layouts.length),
+        );
       default:
         return _homeTab(ctx, bloc, state);
     }
@@ -159,18 +171,7 @@ class _FleetDashboardView extends StatelessWidget {
           '+ Add New Vehicle',
           Icons.add,
           const Color(0xFF0891B2),
-          () {
-            Navigator.push(
-              ctx,
-              MaterialPageRoute(
-                builder: (_) => AbsoluteLayoutDesignerScreen(
-                  companyId: state.companyId,
-                  companyName: state.ownerName,
-                  apiPrefix: '/bus-fleet',
-                ),
-              ),
-            );
-          },
+          () => _openLayoutDesigner(ctx, state),
         ),
         Gap(12),
         _missileBtn(
@@ -277,6 +278,107 @@ class _FleetDashboardView extends StatelessWidget {
     if (ok == true) {
       bloc.add(RemoveStaff(panelPrefix: '/bus-fleet', staffId: id, role: role));
     }
+  }
+
+  // ── Layout actions ─────────────────────────────────
+
+  void _openLayoutDesigner(BuildContext ctx, FleetDashboardState state) {
+    Navigator.push(
+      ctx,
+      MaterialPageRoute(
+        builder: (_) => AbsoluteLayoutDesignerScreen(
+          companyId: state.companyId,
+          companyName: state.ownerName,
+          apiPrefix: '/bus-fleet',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showPublishConfirm(
+    BuildContext ctx,
+    FleetDashboardBloc bloc,
+    String id,
+    String name,
+  ) async {
+    final ok = await _confirm(
+      ctx,
+      'Publish Layout',
+      'Publish "$name" to make it live?',
+    );
+    if (ok == true)
+      bloc.add(
+        PublishLayout(panelPrefix: '/bus-fleet', layoutId: id, name: name),
+      );
+  }
+
+  Future<void> _showArchiveConfirm(
+    BuildContext ctx,
+    FleetDashboardBloc bloc,
+    String id,
+    String name,
+  ) async {
+    final ok = await _confirm(
+      ctx,
+      'Archive Layout',
+      'Archive "$name"? It can be restored later.',
+    );
+    if (ok == true)
+      bloc.add(
+        ArchiveLayout(panelPrefix: '/bus-fleet', layoutId: id, name: name),
+      );
+  }
+
+  Future<void> _showDeleteConfirm(
+    BuildContext ctx,
+    FleetDashboardBloc bloc,
+    String id,
+    String name,
+  ) async {
+    final ok = await _confirm(
+      ctx,
+      'Delete Layout',
+      'Permanently delete "$name"? This cannot be undone.',
+    );
+    if (ok == true)
+      bloc.add(
+        DeleteLayout(panelPrefix: '/bus-fleet', layoutId: id, name: name),
+      );
+  }
+
+  Future<void> _showPurgeConfirm(
+    BuildContext ctx,
+    FleetDashboardBloc bloc,
+    int count,
+  ) async {
+    final ok = await _confirm(
+      ctx,
+      'Purge All Layouts',
+      'Archive ALL $count vehicles? This cannot be undone.',
+    );
+    if (ok == true) bloc.add(const PurgeAllLayouts(panelPrefix: '/bus-fleet'));
+  }
+
+  Future<bool?> _confirm(BuildContext ctx, String title, String msg) {
+    return showDialog<bool>(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        backgroundColor: const Color(0xFF162438),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: Text(msg, style: const TextStyle(color: Color(0xFF8899AA))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

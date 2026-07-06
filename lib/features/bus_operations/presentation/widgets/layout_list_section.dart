@@ -1,0 +1,256 @@
+// Layout List Section — shared vehicle/layout list widget
+// Used by both Fleet and Owner dashboards.
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:gap/gap.dart';
+
+class LayoutListSection extends StatelessWidget {
+  final List<Map<String, dynamic>> layouts;
+  final bool isLoading;
+  final bool isMutating;
+  final String emptyMessage;
+  final void Function(String id, String name) onPublish;
+  final void Function(String id, String name) onArchive;
+  final void Function(String id, String name) onDelete;
+  final VoidCallback onAdd;
+  final VoidCallback? onPurgeAll;
+
+  const LayoutListSection({
+    super.key,
+    required this.layouts,
+    required this.isLoading,
+    this.isMutating = false,
+    this.emptyMessage = 'No vehicles yet',
+    required this.onPublish,
+    required this.onArchive,
+    required this.onDelete,
+    required this.onAdd,
+    this.onPurgeAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) return const Center(child: CircularProgressIndicator());
+
+    if (layouts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.event_seat,
+              size: 48,
+              color: Colors.white.withValues(alpha: .15),
+            ),
+            Gap(12),
+            Text(
+              emptyMessage,
+              style: const TextStyle(color: Color(0xFF8899AA)),
+            ),
+            Gap(12),
+            ElevatedButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add),
+              label: const Text('Create Your First Layout'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(16.w, 16.w, 16.w, 80.h),
+          itemCount: layouts.length,
+          itemBuilder: (_, i) {
+            final l = layouts[i];
+            final id = l['id']?.toString() ?? '';
+            final name =
+                l['display_name']?.toString() ??
+                l['name']?.toString() ??
+                'Unnamed';
+            final status =
+                l['layout_status']?.toString() ??
+                l['status']?.toString() ??
+                'draft';
+            final seats =
+                l['total_seats']?.toString() ??
+                l['seat_count']?.toString() ??
+                '—';
+            final updated =
+                l['updated_at']?.toString() ??
+                l['created_at']?.toString() ??
+                '';
+            final isPublished = status == 'published';
+            final statusColor = isPublished
+                ? const Color(0xFF16A34A)
+                : const Color(0xFFF59E0B);
+
+            return Card(
+              color: const Color(0xFF1A2A3A),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              margin: EdgeInsets.only(bottom: 10.h),
+              child: Padding(
+                padding: EdgeInsets.all(14.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: const Color(
+                            0xFF2563EB,
+                          ).withValues(alpha: .15),
+                          child: const Icon(
+                            Icons.directions_bus,
+                            color: Color(0xFF2563EB),
+                            size: 20,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              SizedBox(height: 2.h),
+                              Text(
+                                updated.isNotEmpty ? 'Updated $updated' : '',
+                                style: const TextStyle(
+                                  color: Color(0xFF667788),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 3.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: .15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            status.toUpperCase(),
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Gap(10),
+                    Row(
+                      children: [
+                        _chip(Icons.event_seat, '$seats seats'),
+                        SizedBox(width: 16.w),
+                        if (l['bus_plate'] != null)
+                          _chip(
+                            Icons.confirmation_num,
+                            l['bus_plate'].toString(),
+                          ),
+                      ],
+                    ),
+                    Gap(10),
+                    Row(
+                      children: [
+                        if (!isPublished)
+                          Expanded(
+                            child: _btn(
+                              'Publish',
+                              Icons.publish,
+                              const Color(0xFF16A34A),
+                              isMutating ? null : () => onPublish(id, name),
+                            ),
+                          ),
+                        if (!isPublished) SizedBox(width: 8.w),
+                        Expanded(
+                          child: _btn(
+                            'Archive',
+                            Icons.archive,
+                            const Color(0xFFF59E0B),
+                            isMutating ? null : () => onArchive(id, name),
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: _btn(
+                            'Delete',
+                            Icons.delete_outline,
+                            Colors.redAccent,
+                            isMutating ? null : () => onDelete(id, name),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        if (onPurgeAll != null)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton.extended(
+              onPressed: isMutating ? null : onPurgeAll,
+              icon: const Icon(Icons.delete_sweep),
+              label: const Text('Purge All'),
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _chip(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: const Color(0xFF667788)),
+        SizedBox(width: 4.w),
+        Text(
+          label,
+          style: const TextStyle(color: Color(0xFF8899AA), fontSize: 11),
+        ),
+      ],
+    );
+  }
+
+  Widget _btn(String label, IconData icon, Color color, VoidCallback? onTap) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 14),
+      label: Text(label, style: const TextStyle(fontSize: 11)),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color.withValues(alpha: .5)),
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+}

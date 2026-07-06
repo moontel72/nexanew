@@ -20,17 +20,23 @@ class FleetDashboardBloc
     on<LogoutRequested>(_onLogout);
     on<RegisterStaff>(_onRegisterStaff);
     on<RemoveStaff>(_onRemoveStaff);
-    on<ClearStaffError>(_onClearError);
+    on<ClearStaffError>(_onClearStaffError);
+    on<PublishLayout>(_onPublishLayout);
+    on<ArchiveLayout>(_onArchiveLayout);
+    on<DeleteLayout>(_onDeleteLayout);
+    on<PurgeAllLayouts>(_onPurgeLayouts);
+    on<ClearLayoutError>(_onClearLayoutError);
   }
 
+  // ── Bootstrap ──────────────────────────────────────────
+
   Future<void> _onBootstrap(
-    BootstrapDashboard event,
+    BootstrapDashboard e,
     Emitter<FleetDashboardState> emit,
   ) async {
     emit(state.copyWith(status: FleetDashboardStatus.loading));
     final p = await SharedPreferences.getInstance();
-    final sp = event.storagePrefix;
-    final t = p.getString('${sp}_auth_token') ?? '';
+    final t = p.getString('${e.storagePrefix}_auth_token') ?? '';
     if (t.isEmpty) {
       emit(
         state.copyWith(
@@ -40,41 +46,44 @@ class FleetDashboardBloc
       );
       return;
     }
-    final name = p.getString('${sp}_owner_name') ?? 'Fleet';
-    String companyId = '';
+    final name = p.getString('${e.storagePrefix}_owner_name') ?? 'Fleet';
+    String cid = '';
     try {
-      final r = await _api.get('${event.panelPrefix}/profile');
-      companyId = r?['data']?['id']?.toString() ?? '';
+      final r = await _api.get('${e.panelPrefix}/profile');
+      cid = r?['data']?['id']?.toString() ?? '';
     } catch (_) {}
     emit(
       state.copyWith(
         status: FleetDashboardStatus.loaded,
         ownerName: name,
-        companyId: companyId,
+        companyId: cid,
       ),
     );
-    add(FetchDashboardMetrics(panelPrefix: event.panelPrefix));
+    add(FetchDashboardMetrics(panelPrefix: e.panelPrefix));
   }
 
   Future<void> _onFetchMetrics(
-    FetchDashboardMetrics event,
+    FetchDashboardMetrics e,
     Emitter<FleetDashboardState> emit,
   ) async {
-    add(LoadDrivers(panelPrefix: event.panelPrefix));
-    add(LoadConductors(panelPrefix: event.panelPrefix));
-    add(LoadLayouts(panelPrefix: event.panelPrefix));
+    add(LoadDrivers(panelPrefix: e.panelPrefix));
+    add(LoadConductors(panelPrefix: e.panelPrefix));
+    add(LoadLayouts(panelPrefix: e.panelPrefix));
   }
 
+  // ── Staff ──────────────────────────────────────────────
+
   Future<void> _onLoadDrivers(
-    LoadDrivers event,
+    LoadDrivers e,
     Emitter<FleetDashboardState> emit,
   ) async {
     emit(state.copyWith(driversLoading: true));
     try {
-      final r = await _api.get('${event.panelPrefix}/staff/drivers');
+      final r = await _api.get('${e.panelPrefix}/staff/drivers');
       final d = r?['data'];
-      List<Map<String, dynamic>> list = [];
-      if (d is List) list = d.cast<Map<String, dynamic>>();
+      List<Map<String, dynamic>> list = d is List
+          ? d.cast<Map<String, dynamic>>()
+          : [];
       emit(
         state.copyWith(
           drivers: list,
@@ -88,15 +97,16 @@ class FleetDashboardBloc
   }
 
   Future<void> _onLoadConductors(
-    LoadConductors event,
+    LoadConductors e,
     Emitter<FleetDashboardState> emit,
   ) async {
     emit(state.copyWith(conductorsLoading: true));
     try {
-      final r = await _api.get('${event.panelPrefix}/staff/conductors');
+      final r = await _api.get('${e.panelPrefix}/staff/conductors');
       final d = r?['data'];
-      List<Map<String, dynamic>> list = [];
-      if (d is List) list = d.cast<Map<String, dynamic>>();
+      List<Map<String, dynamic>> list = d is List
+          ? d.cast<Map<String, dynamic>>()
+          : [];
       emit(
         state.copyWith(
           conductors: list,
@@ -109,13 +119,64 @@ class FleetDashboardBloc
     }
   }
 
+  Future<void> _onRegisterStaff(
+    RegisterStaff e,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    emit(state.copyWith(isStaffSubmitting: true, staffActionError: null));
+    try {
+      await _api.post('${e.panelPrefix}/${e.role}s', data: e.data);
+      e.role == 'driver'
+          ? add(LoadDrivers(panelPrefix: e.panelPrefix))
+          : add(LoadConductors(panelPrefix: e.panelPrefix));
+      emit(state.copyWith(isStaffSubmitting: false));
+    } catch (ex) {
+      emit(
+        state.copyWith(
+          isStaffSubmitting: false,
+          staffActionError: ex.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onRemoveStaff(
+    RemoveStaff e,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    emit(state.copyWith(isStaffSubmitting: true, staffActionError: null));
+    try {
+      await _api.delete('${e.panelPrefix}/${e.role}s/${e.staffId}');
+      e.role == 'driver'
+          ? add(LoadDrivers(panelPrefix: e.panelPrefix))
+          : add(LoadConductors(panelPrefix: e.panelPrefix));
+      emit(state.copyWith(isStaffSubmitting: false));
+    } catch (ex) {
+      emit(
+        state.copyWith(
+          isStaffSubmitting: false,
+          staffActionError: ex.toString(),
+        ),
+      );
+    }
+  }
+
+  void _onClearStaffError(
+    ClearStaffError e,
+    Emitter<FleetDashboardState> emit,
+  ) {
+    emit(state.copyWith(staffActionError: null));
+  }
+
+  // ── Layouts ────────────────────────────────────────────
+
   Future<void> _onLoadLayouts(
-    LoadLayouts event,
+    LoadLayouts e,
     Emitter<FleetDashboardState> emit,
   ) async {
     emit(state.copyWith(layoutsLoading: true));
     try {
-      final r = await _api.get('${event.panelPrefix}/absolute-layouts');
+      final r = await _api.get('${e.panelPrefix}/absolute-layouts');
       final d = r?['data'];
       List<Map<String, dynamic>> list = [];
       if (d is List) {
@@ -135,69 +196,105 @@ class FleetDashboardBloc
     }
   }
 
-  // ── Staff CRUD ─────────────────────────────────────────
-
-  Future<void> _onRegisterStaff(
-    RegisterStaff event,
+  Future<void> _onPublishLayout(
+    PublishLayout e,
     Emitter<FleetDashboardState> emit,
   ) async {
-    emit(state.copyWith(isStaffSubmitting: true, staffActionError: null));
+    emit(state.copyWith(isLayoutMutating: true, layoutActionError: null));
     try {
-      await _api.post('${event.panelPrefix}/${event.role}s', data: event.data);
-      // Reload the list after successful add.
-      if (event.role == 'driver') {
-        add(LoadDrivers(panelPrefix: event.panelPrefix));
-      } else {
-        add(LoadConductors(panelPrefix: event.panelPrefix));
-      }
-      emit(state.copyWith(isStaffSubmitting: false));
-    } catch (e) {
+      await _api.post(
+        '${e.panelPrefix}/absolute-layouts/${e.layoutId}/publish',
+      );
+      add(LoadLayouts(panelPrefix: e.panelPrefix));
+      emit(state.copyWith(isLayoutMutating: false));
+    } catch (ex) {
       emit(
         state.copyWith(
-          isStaffSubmitting: false,
-          staffActionError: e.toString(),
+          isLayoutMutating: false,
+          layoutActionError: ex.toString(),
         ),
       );
     }
   }
 
-  Future<void> _onRemoveStaff(
-    RemoveStaff event,
+  Future<void> _onArchiveLayout(
+    ArchiveLayout e,
     Emitter<FleetDashboardState> emit,
   ) async {
-    emit(state.copyWith(isStaffSubmitting: true, staffActionError: null));
+    emit(state.copyWith(isLayoutMutating: true, layoutActionError: null));
     try {
-      await _api.delete('${event.panelPrefix}/${event.role}s/${event.staffId}');
-      if (event.role == 'driver') {
-        add(LoadDrivers(panelPrefix: event.panelPrefix));
-      } else {
-        add(LoadConductors(panelPrefix: event.panelPrefix));
-      }
-      emit(state.copyWith(isStaffSubmitting: false));
-    } catch (e) {
+      await _api.delete('${e.panelPrefix}/absolute-layouts/${e.layoutId}');
+      add(LoadLayouts(panelPrefix: e.panelPrefix));
+      emit(state.copyWith(isLayoutMutating: false));
+    } catch (ex) {
       emit(
         state.copyWith(
-          isStaffSubmitting: false,
-          staffActionError: e.toString(),
+          isLayoutMutating: false,
+          layoutActionError: ex.toString(),
         ),
       );
     }
   }
 
-  void _onClearError(ClearStaffError event, Emitter<FleetDashboardState> emit) {
-    emit(state.copyWith(staffActionError: null));
+  Future<void> _onDeleteLayout(
+    DeleteLayout e,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    emit(state.copyWith(isLayoutMutating: true, layoutActionError: null));
+    try {
+      await _api.delete(
+        '${e.panelPrefix}/absolute-layouts/${e.layoutId}?permanent=true',
+      );
+      add(LoadLayouts(panelPrefix: e.panelPrefix));
+      emit(state.copyWith(isLayoutMutating: false));
+    } catch (ex) {
+      emit(
+        state.copyWith(
+          isLayoutMutating: false,
+          layoutActionError: ex.toString(),
+        ),
+      );
+    }
   }
 
-  void _onNavigate(NavigateToPage event, Emitter<FleetDashboardState> emit) {
-    emit(state.copyWith(currentPage: event.page));
+  Future<void> _onPurgeLayouts(
+    PurgeAllLayouts e,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    emit(state.copyWith(isLayoutMutating: true, layoutActionError: null));
+    try {
+      await _api.delete('${e.panelPrefix}/absolute-layouts/purge/all');
+      add(LoadLayouts(panelPrefix: e.panelPrefix));
+      emit(state.copyWith(isLayoutMutating: false));
+    } catch (ex) {
+      emit(
+        state.copyWith(
+          isLayoutMutating: false,
+          layoutActionError: ex.toString(),
+        ),
+      );
+    }
+  }
+
+  void _onClearLayoutError(
+    ClearLayoutError e,
+    Emitter<FleetDashboardState> emit,
+  ) {
+    emit(state.copyWith(layoutActionError: null));
+  }
+
+  // ── Navigation ─────────────────────────────────────────
+
+  void _onNavigate(NavigateToPage e, Emitter<FleetDashboardState> emit) {
+    emit(state.copyWith(currentPage: e.page));
   }
 
   Future<void> _onLogout(
-    LogoutRequested event,
+    LogoutRequested e,
     Emitter<FleetDashboardState> emit,
   ) async {
     final p = await SharedPreferences.getInstance();
-    await p.remove('${event.storagePrefix}_auth_token');
+    await p.remove('${e.storagePrefix}_auth_token');
     await p.remove('auth_token');
   }
 }

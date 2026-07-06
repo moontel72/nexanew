@@ -20,6 +20,8 @@ class FleetDashboardState extends Equatable {
   final String currentPage;
   final bool isStaffSubmitting;
   final String? staffActionError;
+  final bool isLayoutMutating;
+  final String? layoutActionError;
 
   const FleetDashboardState({
     this.status = FleetDashboardStatus.initial,
@@ -38,6 +40,8 @@ class FleetDashboardState extends Equatable {
     this.currentPage = 'dashboard',
     this.isStaffSubmitting = false,
     this.staffActionError,
+    this.isLayoutMutating = false,
+    this.layoutActionError,
   });
 
   FleetDashboardState copyWith({
@@ -57,6 +61,8 @@ class FleetDashboardState extends Equatable {
     String? currentPage,
     bool? isStaffSubmitting,
     String? staffActionError,
+    bool? isLayoutMutating,
+    String? layoutActionError,
   }) {
     return FleetDashboardState(
       status: status ?? this.status,
@@ -75,6 +81,8 @@ class FleetDashboardState extends Equatable {
       currentPage: currentPage ?? this.currentPage,
       isStaffSubmitting: isStaffSubmitting ?? this.isStaffSubmitting,
       staffActionError: staffActionError,
+      isLayoutMutating: isLayoutMutating ?? this.isLayoutMutating,
+      layoutActionError: layoutActionError,
     );
   }
 
@@ -96,5 +104,7 @@ class FleetDashboardState extends Equatable {
     currentPage,
     isStaffSubmitting,
     staffActionError,
+    isLayoutMutating,
+    layoutActionError,
   ];
 }
