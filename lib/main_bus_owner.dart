@@ -1,9 +1,9 @@
-// Bus Owner App — Wave 0 BLoC
+// Bus Owner App — Wave 1 BLoC Dashboard
 // Deployed at: /var/www/traceodd/bus-owner/
-// Auth via unified PanelAuthBloc with fleet_type: bus
+// Auth via unified PanelAuthBloc, dashboard via OwnerDashboardBloc.
 
 import 'package:trace_odd/core/navigation/panel_routes.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/owner_dashboard.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/owner_dashboard_page.dart';
 import 'package:trace_odd/shared/app_scaffold.dart';
 import 'package:trace_odd/shared/utils/fleet_bloc_setup.dart';
 import 'package:trace_odd/shared/widgets/fleet_bloc_login_screen.dart';
@@ -14,11 +14,7 @@ void main() => FleetApp.run(
     panel: UserPanel.busFleet,
     loginConfig: FleetLoginConfig.busOwner(),
   ),
-  dashboardScreen: const OwnerDashboardScreen(
-    storagePrefix: 'busFleet',
-    loginRoute: '/bus-owner/login',
-    panelPrefix: '/bus-owner',
-  ),
+  dashboardScreen: const OwnerDashboardPage(),
   loginPath: '/bus-owner/login',
   dashboardPath: '/bus-owner/dashboard',
   blocProviders: [fleetBlocProvider()],

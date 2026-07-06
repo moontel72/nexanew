@@ -13,6 +13,14 @@ import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbo
 import 'package:trace_odd/features/bus_operations/presentation/widgets/fleet_carrier_link_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/layout_list_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/staff_list_section.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/route_scheduler_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/ticket_management_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/voucher_management_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/bonus_management_screen.dart';
+import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_dashboard_screen.dart';
+import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_management_screen.dart';
+import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_activity_log_screen.dart';
+import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_settlement_report_screen.dart';
 
 abstract class FleetColors {
   static const bg = Color(0xFF0D1B2A);
@@ -167,6 +175,25 @@ class _FleetDashboardView extends StatelessWidget {
             ),
           ),
         );
+      case 'routes':
+        return RouteSchedulerScreen(panelPrefix: '/bus-fleet');
+      case 'tickets':
+        return TicketManagementScreen(panelPrefix: '/bus-fleet');
+      case 'vouchers':
+        return VoucherManagementScreen(panelPrefix: '/bus-fleet');
+      case 'bonuses':
+        return BonusManagementScreen(panelPrefix: '/bus-fleet');
+      case 'storekeepers':
+        return const StorekeeperManagementScreen();
+      case 'catering':
+        return const StorekeeperDashboardScreen(
+          isStorekeeperOnly: false,
+          panel: 'bus-fleet',
+        );
+      case 'activity_log':
+        return const StorekeeperActivityLogScreen();
+      case 'settlement':
+        return const StorekeeperSettlementReportScreen();
       default:
         return _homeTab(ctx, bloc, state);
     }
