@@ -96,13 +96,29 @@ class PanelAuthRepository {
     }
 
     final response = await _client.post(endpoint, body: body);
+
+    // Log raw response shape for debugging fleet auth
+    if (kDebugMode) {
+      debugPrint('PANEL_AUTH raw response type: ${response.data.runtimeType}');
+      if (response.data is Map) {
+        debugPrint(
+          'PANEL_AUTH top-level keys: ${(response.data as Map).keys.toList()}',
+        );
+      }
+    }
+
     final data = _extractData(response.data);
 
     // Extract fields — backend returns { token: "...", data: { user: {...} } }
     // Fleet panels may return { token: "...", data: { id, account_name, ... } }
     final token = data['token']?.toString() ?? '';
     if (token.isEmpty) {
-      throw Exception('No authentication token received from backend');
+      final preview = response.data.toString();
+      throw Exception(
+        'No authentication token received from backend. '
+        'Response type: ${response.data.runtimeType}. '
+        'Preview: ${preview.length > 300 ? '${preview.substring(0, 300)}...' : preview}',
+      );
     }
 
     // User object: new identity spine wraps it in data.user;
@@ -227,8 +243,24 @@ class PanelAuthRepository {
   ///
   /// Top-level keys (token, message, etc.) are merged into the nested
   /// `data` object so callers can access everything from a single map.
+  /// Also handles raw String responses (Dio may not auto-parse on web).
   Map<String, dynamic> _extractData(dynamic responseBody) {
     if (responseBody == null) return {};
+
+    // Dio on web may return a raw JSON string instead of a parsed Map.
+    if (responseBody is String) {
+      try {
+        final decoded = jsonDecode(responseBody);
+        if (decoded is Map<String, dynamic>) {
+          responseBody = decoded;
+        } else {
+          return {};
+        }
+      } catch (_) {
+        return {};
+      }
+    }
+
     if (responseBody is Map<String, dynamic>) {
       // Unwrap the nested `data` key if present.
       final nested = responseBody['data'] is Map<String, dynamic>
@@ -246,6 +278,12 @@ class PanelAuthRepository {
       }
 
       return nested.isNotEmpty ? nested : responseBody;
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        'PANEL_AUTH: Unexpected response type: ${responseBody.runtimeType}',
+      );
     }
     return {};
   }
@@ -284,8 +322,7 @@ class PanelAuthRepository {
     final prefs = await SharedPreferences.getInstance();
 
     final fleetRole =
-        metadata['fleet_role']?.toString() ??
-        user['fleet_role']?.toString();
+        metadata['fleet_role']?.toString() ?? user['fleet_role']?.toString();
     if (fleetRole != null && fleetRole.isNotEmpty) {
       await prefs.setString('fleet_role', fleetRole);
     }
