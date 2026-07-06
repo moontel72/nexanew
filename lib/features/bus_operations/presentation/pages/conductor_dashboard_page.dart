@@ -8,6 +8,7 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/conductor_da
 import 'package:trace_odd/features/bus_operations/presentation/bloc/conductor_dashboard/conductor_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/conductor_dashboard/conductor_dashboard_state.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/conductor_dashboard/conductor_models.dart';
+import 'package:trace_odd/shared/widgets/fleet/fleet_shared_widgets.dart';
 
 class ConductorDashboardPage extends StatelessWidget {
   final String storagePrefix;
@@ -68,7 +69,7 @@ class _ConductorView extends StatelessWidget {
           ),
           body:
               state.status == ConductorDashboardStatus.error && profile == null
-              ? _ErrorView(
+              ? FleetErrorView(
                   error: state.error ?? 'Error',
                   onRetry: () => bloc.add(const RefreshConductorData()),
                 )
@@ -393,34 +394,4 @@ class _Seat extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ErrorView extends StatelessWidget {
-  final String error;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.error, required this.onRetry});
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-          Gap(16),
-          Text(
-            error,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.gray600),
-          ),
-          Gap(20),
-          ElevatedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-          ),
-        ],
-      ),
-    ),
-  );
 }

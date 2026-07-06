@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:trace_odd/core/navigation/panel_routes.dart';
 import 'package:trace_odd/features/nexa_admin/data/repositories/admin_auth_repository.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/dashboard_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/super_admin_shell.dart';
@@ -31,16 +32,13 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/g
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_drivers_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_conductors_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet_dashboard_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/owner_login_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/owner_dashboard.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/driver_login_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/driver_dashboard.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/conductor_login_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/conductor_dashboard.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/owner_dashboard_page.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/driver_dashboard_page.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/conductor_dashboard_page.dart';
+import 'package:trace_odd/shared/widgets/fleet_bloc_login_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/customer_super_app_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/passenger_seat_selection_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/live_transit_tracking_screen.dart';
-import 'package:trace_odd/features/goods_operations/presentation/pages/truck_owner_login_screen.dart';
 import 'package:trace_odd/features/goods_operations/presentation/pages/truck_owner_dashboard.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_owners_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/bus_fleet/fleet_drivers_screen.dart';
@@ -104,7 +102,6 @@ import 'package:trace_odd/features/factory/driver/presentation/screens/performan
 import 'package:trace_odd/features/factory/driver/presentation/screens/settings_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/drivers/drivers_list_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/drivers/create_driver_screen.dart';
-import 'package:trace_odd/features/factory/driver/presentation/screens/driver_login_screen.dart';
 
 class AppRouter {
   late final GoRouter router;
@@ -326,37 +323,51 @@ class AppRouter {
     GoRoute(
       path: '/bus-owner/login',
       name: 'bus_owner_login',
-      builder: (context, state) => const OwnerLoginScreen(),
+      builder: (context, state) => FleetBlocLoginScreen(
+        panel: UserPanel.busFleet,
+        loginConfig: FleetLoginConfig.busOwner(),
+      ),
     ),
     GoRoute(
       path: '/bus-owner/dashboard',
       name: 'bus_owner_dashboard',
-      builder: (context, state) => const OwnerDashboardScreen(),
+      builder: (context, state) => const OwnerDashboardPage(),
     ),
     GoRoute(
       path: '/bus-driver/login',
       name: 'bus_driver_login',
-      builder: (context, state) => const FleetDriverLoginScreen(),
+      builder: (context, state) => FleetBlocLoginScreen(
+        panel: UserPanel.busFleet,
+        loginConfig: FleetLoginConfig.driver(appTitle: 'Bus Driver Portal'),
+      ),
     ),
     GoRoute(
       path: '/bus-driver/dashboard',
       name: 'bus_driver_dashboard',
-      builder: (context, state) => const DriverDashboardScreen(),
+      builder: (context, state) => const DriverDashboardPage(),
     ),
     GoRoute(
       path: '/bus-conductor/login',
       name: 'bus_conductor_login',
-      builder: (context, state) => const FleetConductorLoginScreen(),
+      builder: (context, state) => FleetBlocLoginScreen(
+        panel: UserPanel.busFleet,
+        loginConfig: FleetLoginConfig.conductor(
+          appTitle: 'Bus Conductor / Cabin Crew',
+        ),
+      ),
     ),
     GoRoute(
       path: '/bus-conductor/dashboard',
       name: 'bus_conductor_dashboard',
-      builder: (context, state) => const ConductorDashboardScreen(),
+      builder: (context, state) => const ConductorDashboardPage(),
     ),
     GoRoute(
       path: '/truck-owner/login',
       name: 'truck_owner_login',
-      builder: (context, state) => const TruckOwnerLoginScreen(),
+      builder: (context, state) => FleetBlocLoginScreen(
+        panel: UserPanel.truckFleet,
+        loginConfig: FleetLoginConfig.truckOwner(),
+      ),
     ),
     GoRoute(
       path: '/truck-owner/dashboard',
@@ -366,32 +377,30 @@ class AppRouter {
     GoRoute(
       path: '/truck-driver/login',
       name: 'truck_driver_login',
-      builder: (context, state) => const FleetDriverLoginScreen(
-        loginEndpoint: '/goods-fleet/driver-login',
-        appTitle: 'Truck Driver Portal',
-        appIcon: Icons.local_shipping_rounded,
-        dashboardPath: '/truck-driver/dashboard',
+      builder: (context, state) => FleetBlocLoginScreen(
+        panel: UserPanel.truckFleet,
+        loginConfig: FleetLoginConfig.truckDriver(),
       ),
     ),
     GoRoute(
       path: '/truck-driver/dashboard',
       name: 'truck_driver_dashboard',
-      builder: (context, state) => const DriverDashboardScreen(),
+      builder: (context, state) =>
+          const DriverDashboardPage(storagePrefix: 'truckFleet'),
     ),
     GoRoute(
       path: '/truck-conductor/login',
       name: 'truck_conductor_login',
-      builder: (context, state) => const FleetConductorLoginScreen(
-        loginEndpoint: '/goods-fleet/conductor-login',
-        appTitle: 'Truck Conductor Portal',
-        appIcon: Icons.local_shipping_rounded,
-        dashboardPath: '/truck-conductor/dashboard',
+      builder: (context, state) => FleetBlocLoginScreen(
+        panel: UserPanel.truckFleet,
+        loginConfig: FleetLoginConfig.truckConductor(),
       ),
     ),
     GoRoute(
       path: '/truck-conductor/dashboard',
       name: 'truck_conductor_dashboard',
-      builder: (context, state) => const ConductorDashboardScreen(),
+      builder: (context, state) =>
+          const ConductorDashboardPage(storagePrefix: 'truckFleet'),
     ),
     GoRoute(
       path: '/goods-fleet/dashboard',
@@ -761,7 +770,10 @@ class AppRouter {
     ),
     GoRoute(
       path: '/factory/driver/login',
-      builder: (context, state) => const FleetDriverLoginScreen(),
+      builder: (context, state) => FleetBlocLoginScreen(
+        panel: UserPanel.factory,
+        loginConfig: FleetLoginConfig.driver(appTitle: 'Factory Driver Portal'),
+      ),
     ),
     GoRoute(
       path: '/factory/store-keeper/dashboard',

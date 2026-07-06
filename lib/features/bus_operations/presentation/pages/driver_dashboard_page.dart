@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/fleet/fleet_shared_widgets.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/driver_dashboard/driver_dashboard_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/driver_dashboard/driver_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/driver_dashboard/driver_dashboard_state.dart';
@@ -14,14 +15,12 @@ class DriverDashboardPage extends StatelessWidget {
   const DriverDashboardPage({super.key, this.storagePrefix = 'busFleet'});
 
   @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) =>
-          DriverDashboardBloc()
-            ..add(LoadDriverProfile(storagePrefix: storagePrefix)),
-      child: const _DriverView(),
-    );
-  }
+  Widget build(BuildContext context) => BlocProvider(
+    create: (_) =>
+        DriverDashboardBloc()
+          ..add(LoadDriverProfile(storagePrefix: storagePrefix)),
+    child: const _DriverView(),
+  );
 }
 
 class _DriverView extends StatelessWidget {
@@ -66,8 +65,8 @@ class _DriverView extends StatelessWidget {
             ],
           ),
           body: state.status == DriverDashboardStatus.error
-              ? _ErrorView(
-                  error: state.error ?? 'Unknown error',
+              ? FleetErrorView(
+                  error: state.error ?? 'Error',
                   onRetry: () => bloc.add(const RefreshDriverProfile()),
                 )
               : profile == null
@@ -90,81 +89,6 @@ class _DashboardBody extends StatelessWidget {
   final bool isRefreshing;
   const _DashboardBody({required this.profile, this.isRefreshing = false});
 
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isRefreshing) const LinearProgressIndicator(),
-          Text(
-            'Welcome, ${profile.name}',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-          Gap(4),
-          Text(
-            'Plate: ${profile.vehiclePlate}',
-            style: const TextStyle(fontSize: 14, color: AppColors.gray500),
-          ),
-          Gap(24),
-          _SectionCard(
-            title: 'Active Route',
-            icon: Icons.alt_route_rounded,
-            color: AppColors.primary,
-            children: [
-              _Row('Route', profile.activeRoute),
-              _Row(
-                'Status',
-                profile.scheduleStatus.toUpperCase(),
-                _statusColor,
-              ),
-              _Row('Next Stop', profile.nextStop),
-            ],
-          ),
-          Gap(16),
-          _SectionCard(
-            title: 'Seat Manifest',
-            icon: Icons.event_seat_rounded,
-            color: const Color(0xFF2563EB),
-            children: [
-              _Row('Total Seats', '${profile.totalSeats}'),
-              _Row('Booked', '${profile.bookedSeats}', const Color(0xFF2563EB)),
-              _Row('Vacant', '${profile.vacantSeats}', AppColors.gray400),
-              Gap(8),
-              _OccupancyBar(
-                total: profile.totalSeats,
-                booked: profile.bookedSeats,
-              ),
-            ],
-          ),
-          Gap(16),
-          _SectionCard(
-            title: 'GPS Tracking',
-            icon: Icons.gps_fixed_rounded,
-            color: AppColors.secondary,
-            children: [
-              _Row('Live Beacon', 'Active', AppColors.success),
-              _Row('Last Sync', 'Just now'),
-              _Row('Accuracy', '3.2 meters'),
-            ],
-          ),
-          Gap(16),
-          _SectionCard(
-            title: 'Dispatch Alerts',
-            icon: Icons.campaign_rounded,
-            color: AppColors.warning,
-            children: [
-              _Row('Traffic', 'Clear ahead'),
-              _Row('ETA', 'On schedule'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Color get _statusColor {
     switch (profile.scheduleStatus.toLowerCase()) {
       case 'active':
@@ -178,145 +102,85 @@ class _DashboardBody extends StatelessWidget {
         return AppColors.gray400;
     }
   }
-}
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final List<Widget> children;
-  const _SectionCard({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.children,
-  });
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      boxShadow: [
-        BoxShadow(color: Colors.black.withValues(alpha: .04), blurRadius: 8),
-      ],
-    ),
+  Widget build(BuildContext context) => SingleChildScrollView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.all(20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        if (isRefreshing) const LinearProgressIndicator(),
+        Text(
+          'Welcome, ${profile.name}',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
+        Gap(4),
+        Text(
+          'Plate: ${profile.vehiclePlate}',
+          style: const TextStyle(fontSize: 14, color: AppColors.gray500),
+        ),
+        Gap(24),
+        FleetSectionCard(
+          title: 'Active Route',
+          icon: Icons.alt_route_rounded,
+          color: AppColors.primary,
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: .1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: color, size: 20),
+            FleetDetailRow('Route', profile.activeRoute),
+            FleetDetailRow(
+              'Status',
+              profile.scheduleStatus.toUpperCase(),
+              _statusColor,
             ),
-            Gap(12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+            FleetDetailRow('Next Stop', profile.nextStop),
+          ],
+        ),
+        Gap(16),
+        FleetSectionCard(
+          title: 'Seat Manifest',
+          icon: Icons.event_seat_rounded,
+          color: const Color(0xFF2563EB),
+          children: [
+            FleetDetailRow('Total Seats', '${profile.totalSeats}'),
+            FleetDetailRow(
+              'Booked',
+              '${profile.bookedSeats}',
+              const Color(0xFF2563EB),
+            ),
+            FleetDetailRow(
+              'Vacant',
+              '${profile.vacantSeats}',
+              AppColors.gray400,
+            ),
+            Gap(8),
+            FleetOccupancyBar(
+              total: profile.totalSeats,
+              booked: profile.bookedSeats,
             ),
           ],
         ),
         Gap(16),
-        ...children,
-      ],
-    ),
-  );
-}
-
-class _Row extends StatelessWidget {
-  final String label, value;
-  final Color? color;
-  const _Row(this.label, this.value, [this.color]);
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, color: AppColors.gray500),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: color ?? AppColors.textPrimary,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _OccupancyBar extends StatelessWidget {
-  final int total, booked;
-  const _OccupancyBar({required this.total, required this.booked});
-  @override
-  Widget build(BuildContext context) {
-    final safe = total > 0 ? total : 1;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(5),
-      child: SizedBox(
-        height: 12,
-        child: Row(
+        FleetSectionCard(
+          title: 'GPS Tracking',
+          icon: Icons.gps_fixed_rounded,
+          color: AppColors.secondary,
           children: [
-            Flexible(
-              flex: booked.clamp(0, safe),
-              child: Container(color: const Color(0xFF2563EB)),
-            ),
-            Flexible(
-              flex: (total - booked).clamp(0, safe),
-              child: Container(color: Colors.grey.shade200),
-            ),
+            FleetDetailRow('Live Beacon', 'Active', AppColors.success),
+            FleetDetailRow('Last Sync', 'Just now'),
+            FleetDetailRow('Accuracy', '3.2 meters'),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  final String error;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.error, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-          Gap(16),
-          Text(
-            error,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.gray600),
-          ),
-          Gap(20),
-          ElevatedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-          ),
-        ],
-      ),
+        Gap(16),
+        FleetSectionCard(
+          title: 'Dispatch Alerts',
+          icon: Icons.campaign_rounded,
+          color: AppColors.warning,
+          children: [
+            FleetDetailRow('Traffic', 'Clear ahead'),
+            FleetDetailRow('ETA', 'On schedule'),
+          ],
+        ),
+      ],
     ),
   );
 }
