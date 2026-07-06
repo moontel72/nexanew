@@ -62,6 +62,11 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   String _companySearch = '';
   final _linkMsgCtrl = TextEditingController();
 
+  // Fleet-side Carrier Link state (bus-fleet panel only)
+  List<Map<String, dynamic>> _incomingRequests = [];
+  List<Map<String, dynamic>> _linkedCarriers = [];
+  bool _linkRequestsLoading = false, _linkedCarriersLoading = false;
+
   // Chat inbox state
   List<Map<String, dynamic>> _chatMessages = [];
   bool _chatLoading = false;
@@ -446,7 +451,15 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   // CARRIER LINK
   // ═══════════════════════════════════════════════════════
 
+  bool get _isBusFleet => widget.panelPrefix == '/bus-fleet';
+
   Future<void> _loadLinkStatus() async {
+    if (_isBusFleet) {
+      _loadIncomingRequests();
+      _loadLinkedCarriers();
+      return;
+    }
+    // ── Bus-Owner side (unchanged) ──
     setState(() => _linkLoading = true);
     try {
       final r = await ApiService().get('${widget.panelPrefix}/link-status');
@@ -455,12 +468,92 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         _linkStatus = (r?['data'] as Map<String, dynamic>?) ?? {};
         _linkLoading = false;
       });
-      // Load chat if we have an assignment
       final aid = _linkStatus?['assignment_id']?.toString();
       if (aid != null && aid.isNotEmpty) _loadChatMessages(aid);
     } catch (_) {
       if (mounted) setState(() => _linkLoading = false);
     }
+  }
+
+  // ── Fleet-side: incoming pending requests ──
+  Future<void> _loadIncomingRequests() async {
+    setState(() => _linkRequestsLoading = true);
+    try {
+      final r = await ApiService().get('${widget.panelPrefix}/link/incoming');
+      final d = r?['data'];
+      if (d is List) {
+        _incomingRequests = d.cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _linkRequestsLoading = false);
+  }
+
+  // ── Fleet-side: active linked carriers with stats ──
+  Future<void> _loadLinkedCarriers() async {
+    setState(() => _linkedCarriersLoading = true);
+    try {
+      final r = await ApiService().get('${widget.panelPrefix}/link/active');
+      final d = r?['data'];
+      if (d is List) {
+        _linkedCarriers = d.cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _linkedCarriersLoading = false);
+  }
+
+  Future<void> _acceptRequest(String assignmentId) async {
+    try {
+      await ApiService().post(
+        '${widget.panelPrefix}/link/$assignmentId/accept',
+      );
+      _loadLinkStatus();
+    } catch (_) {}
+  }
+
+  Future<void> _rejectRequest(String assignmentId) async {
+    try {
+      await ApiService().post(
+        '${widget.panelPrefix}/link/$assignmentId/reject',
+      );
+      _loadLinkStatus();
+    } catch (_) {}
+  }
+
+  Future<void> _unlinkCarrier(String assignmentId, String name) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1B2838),
+        title: const Text(
+          'Terminate Link',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Unlink $name from your fleet? Their staff and assets will no longer be visible.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Unlink',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService().post(
+        '${widget.panelPrefix}/link/$assignmentId/unlink',
+      );
+      _loadLinkStatus();
+    } catch (_) {}
   }
 
   Future<void> _loadBusCompanies({String search = ''}) async {
@@ -1103,6 +1196,284 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   // ═══════════════════════════════════════════════════════
 
   Widget _carrierLinkPage() {
+    if (_isBusFleet) return _fleetCarrierLinkPage();
+    return _ownerCarrierLinkPage();
+  }
+
+  // ── BUS-FLEET: Incoming Requests + Linked Carriers ─────
+
+  Widget _fleetCarrierLinkPage() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.all(16.w),
+      children: [
+        // ── SECTION 1: Incoming Pending Requests ──────
+        Text(
+          'Incoming Link Requests',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        Gap(4),
+        Text(
+          'Third-party owners requesting to join your fleet.',
+          style: TextStyle(color: const Color(0xFF8899AA), fontSize: 12),
+        ),
+        Gap(12),
+        if (_linkRequestsLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (_incomingRequests.isEmpty)
+          _emptyState('No pending requests', Icons.inbox_outlined)
+        else
+          ...(_incomingRequests.map((req) => _incomingRequestCard(req))),
+
+        Gap(32),
+
+        // ── SECTION 2: Active Linked Carriers ─────────
+        Text(
+          'Linked Carriers',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        Gap(4),
+        Text(
+          'Owners currently connected to your fleet with active staff and assets.',
+          style: TextStyle(color: const Color(0xFF8899AA), fontSize: 12),
+        ),
+        Gap(12),
+        if (_linkedCarriersLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (_linkedCarriers.isEmpty)
+          _emptyState('No linked carriers', Icons.link_off_rounded)
+        else
+          ...(_linkedCarriers.map((c) => _linkedCarrierCard(c))),
+      ],
+    );
+  }
+
+  Widget _incomingRequestCard(Map<String, dynamic> req) {
+    final name = req['owner_name']?.toString() ?? '—';
+    final email = req['email']?.toString() ?? '';
+    final id = req['id']?.toString() ?? '';
+    final at = req['created_at']?.toString() ?? '';
+    return Card(
+      color: const Color(0xFF1A2A3A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      margin: EdgeInsets.only(bottom: 8.h),
+      child: Padding(
+        padding: EdgeInsets.all(14.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: const Color(
+                    0xFFF59E0B,
+                  ).withValues(alpha: 0.15),
+                  child: const Icon(
+                    Icons.person,
+                    color: Color(0xFFF59E0B),
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (email.isNotEmpty)
+                        Text(
+                          email,
+                          style: const TextStyle(
+                            color: Color(0xFF667788),
+                            fontSize: 11,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            Gap(10),
+            Text(
+              'Requested: $at',
+              style: const TextStyle(color: Color(0xFF556677), fontSize: 11),
+            ),
+            Gap(10),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _acceptRequest(id),
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text('Accept'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _rejectRequest(id),
+                    icon: const Icon(Icons.close, size: 16),
+                    label: const Text('Reject'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      side: const BorderSide(color: Colors.redAccent),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _linkedCarrierCard(Map<String, dynamic> c) {
+    final name = c['owner_name']?.toString() ?? '—';
+    final drivers = c['driver_count'] ?? 0;
+    final conductors = c['conductor_count'] ?? 0;
+    final buses = c['bus_count'] ?? 0;
+    final since = c['linked_since']?.toString() ?? '';
+    final id = c['assignment_id']?.toString() ?? '';
+    return Card(
+      color: const Color(0xFF1A2A3A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      margin: EdgeInsets.only(bottom: 8.h),
+      child: Padding(
+        padding: EdgeInsets.all(14.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: const Color(
+                    0xFF16A34A,
+                  ).withValues(alpha: 0.15),
+                  child: const Icon(
+                    Icons.directions_bus,
+                    color: Color(0xFF16A34A),
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Active · Since $since',
+                        style: const TextStyle(
+                          color: Color(0xFF667788),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _unlinkCarrier(id, name),
+                  icon: const Icon(Icons.link_off, size: 14),
+                  label: const Text('Unlink', style: TextStyle(fontSize: 11)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                  ),
+                ),
+              ],
+            ),
+            Gap(10),
+            Row(
+              children: [
+                _statChip('$drivers Drivers', Icons.badge),
+                SizedBox(width: 10.w),
+                _statChip('$conductors Conductors', Icons.group),
+                SizedBox(width: 10.w),
+                _statChip('$buses Buses', Icons.directions_bus),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statChip(String label, IconData icon) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1B2A),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFF2A3A4A)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: const Color(0xFF667788)),
+          SizedBox(width: 4.w),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF8899AA), fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState(String msg, IconData icon) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(32.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2A3A),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 36, color: const Color(0xFF556677)),
+          Gap(8),
+          Text(
+            msg,
+            style: const TextStyle(color: Color(0xFF667788), fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── BUS-OWNER: Existing Link UI (UNCHANGED) ───────────
+
+  Widget _ownerCarrierLinkPage() {
     if (_linkLoading) {
       return const Center(child: CircularProgressIndicator());
     }

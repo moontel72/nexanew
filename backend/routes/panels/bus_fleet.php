@@ -302,6 +302,125 @@ Route::prefix('api/v1/bus-fleet')
         Route::put('conductors/{id}', [\App\Http\Controllers\FleetManagementController::class, 'updateConductor']);
         Route::delete('conductors/{id}', [\App\Http\Controllers\FleetManagementController::class, 'destroyConductor']);
 
+        // ═══════════════════════════════════════════════════════════
+        // FLEET LINK MANAGEMENT — Incoming Requests & Linked Carriers
+        // ═══════════════════════════════════════════════════════════
+        Route::prefix('link')->group(function (): void {
+            // Incoming pending requests from owners wanting to link
+            Route::get('incoming', function (\Illuminate\Http\Request $request) {
+                $carrierId = $request->get('_carrier_company_id');
+                if (!$carrierId) {
+                    return response()->json(['status' => 'error', 'message' => 'No carrier context.'], 400);
+                }
+                $requests = \Illuminate\Support\Facades\DB::table('fleet_assignments AS fa')
+                    ->join('global_identities AS gi', 'fa.global_identity_id', '=', 'gi.id')
+                    ->join('tenant_accounts AS ta', 'gi.id', '=', 'ta.global_identity_id')
+                    ->where('fa.carrier_company_id', $carrierId)
+                    ->where('fa.role', 'owner')
+                    ->where('fa.fleet_type', 'bus')
+                    ->where('fa.status', 'pending_acceptance')
+                    ->select('fa.id', 'fa.created_at', 'gi.display_name AS owner_name',
+                             'ta.id AS tenant_id', 'ta.email', 'ta.phone_number AS phone')
+                    ->orderBy('fa.created_at', 'desc')
+                    ->get();
+                return response()->json(['status' => 'success', 'data' => $requests]);
+            });
+
+            // Active linked carriers with staff/asset counts
+            Route::get('active', function (\Illuminate\Http\Request $request) {
+                $carrierId = $request->get('_carrier_company_id');
+                if (!$carrierId) {
+                    return response()->json(['status' => 'error', 'message' => 'No carrier context.'], 400);
+                }
+                $linked = \Illuminate\Support\Facades\DB::table('fleet_assignments AS fa')
+                    ->join('global_identities AS gi', 'fa.global_identity_id', '=', 'gi.id')
+                    ->join('tenant_accounts AS ta', 'gi.id', '=', 'ta.global_identity_id')
+                    ->where('fa.carrier_company_id', $carrierId)
+                    ->where('fa.role', 'owner')
+                    ->where('fa.fleet_type', 'bus')
+                    ->where('fa.status', 'active')
+                    ->select('fa.id AS assignment_id', 'fa.accepted_at', 'ta.id AS tenant_id',
+                             'gi.display_name AS owner_name', 'ta.email', 'ta.phone_number AS phone')
+                    ->get()
+                    ->map(function ($row) {
+                        $driverCount = \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                            ->where('carrier_company_id', $row->tenant_id)
+                            ->where('role', 'driver')->where('status', 'active')->count();
+                        $conductorCount = \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                            ->where('carrier_company_id', $row->tenant_id)
+                            ->where('role', 'conductor')->where('status', 'active')->count();
+                        $busCount = \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
+                            ->where('owner_identity_id', function ($q) use ($row) {
+                                $q->select('global_identity_id')->from('tenant_accounts')->where('id', $row->tenant_id);
+                            })->where('layout_status', '!=', 'archived')->count();
+                        return [
+                            'assignment_id'    => $row->assignment_id,
+                            'owner_name'       => $row->owner_name,
+                            'email'            => $row->email,
+                            'phone'            => $row->phone,
+                            'linked_since'     => $row->accepted_at,
+                            'driver_count'     => $driverCount,
+                            'conductor_count'  => $conductorCount,
+                            'bus_count'        => $busCount,
+                        ];
+                    });
+                return response()->json(['status' => 'success', 'data' => $linked]);
+            });
+
+            // Accept a pending link request
+            Route::post('{id}/accept', function (\Illuminate\Http\Request $request, string $id) {
+                $carrierId = $request->get('_carrier_company_id');
+                $assignment = \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                    ->where('id', $id)->where('carrier_company_id', $carrierId)
+                    ->where('status', 'pending_acceptance')->first();
+                if (!$assignment) {
+                    return response()->json(['status' => 'error', 'message' => 'Request not found.'], 404);
+                }
+                \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                    ->where('id', $id)->update(['status' => 'active', 'accepted_at' => now(), 'updated_at' => now()]);
+                return response()->json(['status' => 'success', 'message' => 'Link request accepted.']);
+            });
+
+            // Reject a pending link request
+            Route::post('{id}/reject', function (\Illuminate\Http\Request $request, string $id) {
+                $carrierId = $request->get('_carrier_company_id');
+                $assignment = \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                    ->where('id', $id)->where('carrier_company_id', $carrierId)
+                    ->where('status', 'pending_acceptance')->first();
+                if (!$assignment) {
+                    return response()->json(['status' => 'error', 'message' => 'Request not found.'], 404);
+                }
+                \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                    ->where('id', $id)->update([
+                        'status' => 'unassigned', 'unassigned_at' => now(),
+                        'unassign_reason' => 'Rejected by fleet company', 'updated_at' => now()
+                    ]);
+                return response()->json(['status' => 'success', 'message' => 'Link request rejected.']);
+            });
+
+            // Unlink an active carrier
+            Route::post('{id}/unlink', function (\Illuminate\Http\Request $request, string $id) {
+                $carrierId = $request->get('_carrier_company_id');
+                $assignment = \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                    ->where('id', $id)->where('carrier_company_id', $carrierId)
+                    ->where('status', 'active')->first();
+                if (!$assignment) {
+                    return response()->json(['status' => 'error', 'message' => 'Active link not found.'], 404);
+                }
+                \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                    ->where('id', $id)->update([
+                        'status' => 'unassigned', 'unassigned_at' => now(),
+                        'unassign_reason' => 'Terminated by fleet company', 'updated_at' => now()
+                    ]);
+                // Also deactivate allowance grants
+                \Illuminate\Support\Facades\DB::table('tenant_allowance_grants')
+                    ->where('carrier_company_id', $carrierId)
+                    ->where('owner_identity_id', $assignment->global_identity_id)
+                    ->update(['is_active' => false, 'updated_at' => now()]);
+                return response()->json(['status' => 'success', 'message' => 'Carrier unlinked.']);
+            });
+        });
+
         // ─── Storekeeper Management (HR) ──────────────────
         Route::get('storekeepers', [\App\Http\Controllers\FleetManagementController::class, 'listStorekeepers']);
         Route::post('storekeepers', [\App\Http\Controllers\FleetManagementController::class, 'storeStorekeeper']);
