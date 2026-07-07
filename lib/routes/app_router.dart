@@ -372,7 +372,7 @@ class AppRouter {
     GoRoute(
       path: '/truck-owner/dashboard',
       name: 'truck_owner_dashboard',
-      builder: (context, state) => const TruckOwnerDashboardScreen(),
+      builder: (context, state) => const TruckOwnerDashboardPage(),
     ),
     GoRoute(
       path: '/truck-driver/login',
