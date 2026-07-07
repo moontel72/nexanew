@@ -34,8 +34,9 @@ class AdminMiddleware
 
         // Resolve the global_identity_id from the authenticated model.
         // TenantAccount has a dedicated global_identity_id column.
+        // GlobalIdentity (unified auth) uses its own `id` as the identity.
         $globalIdentityId = $user->global_identity_id
-            ?? $user->global_identity_id
+            ?? $user->id
             ?? null;
 
         if (!$globalIdentityId) {

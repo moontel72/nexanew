@@ -23,7 +23,7 @@ class SubAdminMiddleware
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $globalIdentityId = $user->global_identity_id ?? null;
+        $globalIdentityId = $user->global_identity_id ?? $user->id ?? null;
 
         if (!$globalIdentityId) {
             return response()->json(['message' => 'Forbidden — no identity spine link'], 403);
