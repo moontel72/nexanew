@@ -20,6 +20,8 @@ class StorekeeperDashboardState extends Equatable {
   final bool isMutating;
   final List<dynamic> issuances, reconciliations, bundles;
   final bool issuancesLoading, reconciliationsLoading, bundlesLoading;
+  final List<dynamic> storekeepers, activityLog, settlementReport;
+  final bool storekeepersLoading, activityLogLoading, settlementLoading;
 
   const StorekeeperDashboardState({
     this.status = StorekeeperStatus.initial,
@@ -42,6 +44,12 @@ class StorekeeperDashboardState extends Equatable {
     this.issuancesLoading = false,
     this.reconciliationsLoading = false,
     this.bundlesLoading = false,
+    this.storekeepers = const [],
+    this.activityLog = const [],
+    this.settlementReport = const [],
+    this.storekeepersLoading = false,
+    this.activityLogLoading = false,
+    this.settlementLoading = false,
   });
 
   StorekeeperDashboardState copyWith({
@@ -65,6 +73,12 @@ class StorekeeperDashboardState extends Equatable {
     bool? issuancesLoading,
     bool? reconciliationsLoading,
     bool? bundlesLoading,
+    List<dynamic>? storekeepers,
+    List<dynamic>? activityLog,
+    List<dynamic>? settlementReport,
+    bool? storekeepersLoading,
+    bool? activityLogLoading,
+    bool? settlementLoading,
   }) => StorekeeperDashboardState(
     status: status ?? this.status,
     totalItems: totalItems ?? this.totalItems,
@@ -87,6 +101,12 @@ class StorekeeperDashboardState extends Equatable {
     reconciliationsLoading:
         reconciliationsLoading ?? this.reconciliationsLoading,
     bundlesLoading: bundlesLoading ?? this.bundlesLoading,
+    storekeepers: storekeepers ?? this.storekeepers,
+    activityLog: activityLog ?? this.activityLog,
+    settlementReport: settlementReport ?? this.settlementReport,
+    storekeepersLoading: storekeepersLoading ?? this.storekeepersLoading,
+    activityLogLoading: activityLogLoading ?? this.activityLogLoading,
+    settlementLoading: settlementLoading ?? this.settlementLoading,
   );
 
   @override
@@ -111,5 +131,11 @@ class StorekeeperDashboardState extends Equatable {
     issuancesLoading,
     reconciliationsLoading,
     bundlesLoading,
+    storekeepers,
+    activityLog,
+    settlementReport,
+    storekeepersLoading,
+    activityLogLoading,
+    settlementLoading,
   ];
 }

@@ -149,3 +149,21 @@ class LoadBundles extends StorekeeperEvent {
   @override
   List<Object?> get props => [panel];
 }
+
+class LoadStorekeepers extends StorekeeperEvent {
+  const LoadStorekeepers();
+}
+
+class LoadActivityLog extends StorekeeperEvent {
+  final int page;
+  const LoadActivityLog({this.page = 1});
+  @override
+  List<Object?> get props => [page];
+}
+
+class LoadSettlementReport extends StorekeeperEvent {
+  final int page;
+  const LoadSettlementReport({this.page = 1});
+  @override
+  List<Object?> get props => [page];
+}

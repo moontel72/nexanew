@@ -1,5 +1,6 @@
 // Storekeeper Dashboard Bloc — manages all storekeeper operations
 import 'package:bloc/bloc.dart';
+import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/storekeeper/data/repositories/storekeeper_repository.dart';
 import 'storekeeper_event.dart';
 import 'storekeeper_state.dart';
@@ -23,6 +24,9 @@ class StorekeeperDashboardBloc
     on<LoadIssuances>(_onLoadIssuances);
     on<LoadReconciliations>(_onLoadReconciliations);
     on<LoadBundles>(_onLoadBundles);
+    on<LoadStorekeepers>(_onLoadStorekeepers);
+    on<LoadActivityLog>(_onLoadActivityLog);
+    on<LoadSettlementReport>(_onLoadSettlementReport);
   }
 
   StorekeeperRepository _repo(String panel) =>
@@ -230,6 +234,56 @@ class StorekeeperDashboardBloc
       emit(state.copyWith(bundles: res, bundlesLoading: false));
     } catch (_) {
       emit(state.copyWith(bundlesLoading: false));
+    }
+  }
+
+  Future<void> _onLoadStorekeepers(
+    LoadStorekeepers e,
+    Emitter<StorekeeperDashboardState> emit,
+  ) async {
+    emit(state.copyWith(storekeepersLoading: true));
+    try {
+      final api = ApiService();
+      final r = await api.get('/api/v1/bus-fleet/storekeepers');
+      final data = r['data'] as Map<String, dynamic>? ?? {};
+      final list = (data['data'] as List<dynamic>?) ?? [];
+      emit(state.copyWith(storekeepers: list, storekeepersLoading: false));
+    } catch (_) {
+      emit(state.copyWith(storekeepersLoading: false));
+    }
+  }
+
+  Future<void> _onLoadActivityLog(
+    LoadActivityLog e,
+    Emitter<StorekeeperDashboardState> emit,
+  ) async {
+    emit(state.copyWith(activityLogLoading: true));
+    try {
+      final api = ApiService();
+      final r = await api.get(
+        '/api/v1/bus-fleet/storekeeper/audit-trail?page=${e.page}&limit=30',
+      );
+      final list = (r['data'] as List<dynamic>?) ?? [];
+      emit(state.copyWith(activityLog: list, activityLogLoading: false));
+    } catch (_) {
+      emit(state.copyWith(activityLogLoading: false));
+    }
+  }
+
+  Future<void> _onLoadSettlementReport(
+    LoadSettlementReport e,
+    Emitter<StorekeeperDashboardState> emit,
+  ) async {
+    emit(state.copyWith(settlementLoading: true));
+    try {
+      final api = ApiService();
+      final r = await api.get(
+        '/api/v1/bus-fleet/storekeeper/settlement-report?page=${e.page}&limit=30',
+      );
+      final list = (r['data'] as List<dynamic>?) ?? [];
+      emit(state.copyWith(settlementReport: list, settlementLoading: false));
+    } catch (_) {
+      emit(state.copyWith(settlementLoading: false));
     }
   }
 
