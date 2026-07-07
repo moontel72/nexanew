@@ -123,6 +123,15 @@ jobs:
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/bus-fleet/
 
       # ──────────────────────────────────────────────────────────────
+      # STEP F: Copy Nginx config & reload
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Deploy Nginx Configuration
+        run: |
+          scp .nginx/traceodd.conf root@135.181.46.27:/etc/nginx/sites-available/traceodd
+          ssh root@135.181.46.27 "nginx -t && systemctl reload nginx"
+
+      # ──────────────────────────────────────────────────────────────
       # Post-Deployment: Fix permissions for all apps
       # ──────────────────────────────────────────────────────────────
 
