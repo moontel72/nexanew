@@ -191,7 +191,7 @@ class StorekeeperDashboardBloc
       ).getIssuances(page: e.page, status: e.statusFilter);
       emit(
         state.copyWith(
-          issuances: (res['data'] as List?) ?? [],
+          issuances: (res['issuances'] as List?) ?? [],
           issuancesLoading: false,
         ),
       );
@@ -211,7 +211,7 @@ class StorekeeperDashboardBloc
       ).getReconciliations(page: e.page, status: e.statusFilter);
       emit(
         state.copyWith(
-          reconciliations: (res['data'] as List?) ?? [],
+          reconciliations: (res['reconciliations'] as List?) ?? [],
           reconciliationsLoading: false,
         ),
       );

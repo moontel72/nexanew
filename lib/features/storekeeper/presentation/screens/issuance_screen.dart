@@ -1,1216 +1,199 @@
-/// Issuance Screen — Issue catering items to buses/trips.
+/// Issuance Screen — BLoC-driven (P1 wired)
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
-import 'package:trace_odd/features/storekeeper/data/repositories/storekeeper_repository.dart';
 import 'package:trace_odd/features/storekeeper/domain/models/catering_issuance.dart';
-import 'package:trace_odd/features/storekeeper/domain/models/catering_item.dart';
+import 'package:trace_odd/features/storekeeper/presentation/bloc/storekeeper_bloc.dart';
+import 'package:trace_odd/features/storekeeper/presentation/bloc/storekeeper_event.dart';
+import 'package:trace_odd/features/storekeeper/presentation/bloc/storekeeper_state.dart';
 
-class IssuanceScreen extends StatefulWidget {
+class IssuanceScreen extends StatelessWidget {
   final String panel;
   const IssuanceScreen({super.key, this.panel = 'bus-fleet'});
 
   @override
-  State<IssuanceScreen> createState() => _IssuanceScreenState();
-}
-
-class _IssuanceScreenState extends State<IssuanceScreen> {
-  final _repo = StorekeeperRepository();
-  List<CateringIssuance> _issuances = [];
-  Map<String, dynamic>? _meta;
-  bool _loading = true;
-  String? _error;
-  int _page = 1;
-  String? _statusFilter;
-  String? _expandedId;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final result = await _repo.getIssuances(
-        status: _statusFilter,
-        page: _page,
-      );
-      if (mounted) {
-        setState(() {
-          _issuances = result['issuances'] as List<CateringIssuance>;
-          _meta = result['meta'] as Map<String, dynamic>?;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _createIssuance() async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _CreateIssuancePage(panel: widget.panel),
-      ),
-    );
-    if (result == true) _load();
-  }
-
-  Future<void> _issueItems(CateringIssuance issuance) async {
-    try {
-      await _repo.issueItems(issuance.id);
-      _load();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return Colors.orange;
-      case 'issued':
-        return const Color(0xFF00B4D8);
-      case 'reconciled':
-        return Colors.green;
-      default:
-        return Colors.white54;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width > 900;
+    final bloc = context.read<StorekeeperDashboardBloc>();
+    return BlocBuilder<StorekeeperDashboardBloc, StorekeeperDashboardState>(
+      builder: (ctx, state) {
+        final issuances = (state.issuances)
+            .whereType<CateringIssuance>()
+            .toList();
+        final isWide =
+            MediaQuery.of(ctx).size.width >
+            900; // retained for layout if needed
 
-    return Column(
-      children: [
-        // Filter + Add bar
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _FilterChip('All', null, _statusFilter, (v) {
-                        _statusFilter = v;
-                        _page = 1;
-                        _load();
-                      }),
-                      const Gap(6),
-                      _FilterChip('Pending', 'pending', _statusFilter, (v) {
-                        _statusFilter = v;
-                        _page = 1;
-                        _load();
-                      }),
-                      const Gap(6),
-                      _FilterChip('Issued', 'issued', _statusFilter, (v) {
-                        _statusFilter = v;
-                        _page = 1;
-                        _load();
-                      }),
-                      const Gap(6),
-                      _FilterChip('Reconciled', 'reconciled', _statusFilter, (
-                        v,
-                      ) {
-                        _statusFilter = v;
-                        _page = 1;
-                        _load();
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-              const Gap(8),
-              IconButton(
-                icon: const Icon(Icons.add_circle, color: Color(0xFF00B4D8)),
-                tooltip: 'New Issuance',
-                onPressed: _createIssuance,
-              ),
-            ],
-          ),
-        ),
-        // Issuances list
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-              ? Center(
-                  child: Text(
-                    'Error: $_error',
-                    style: const TextStyle(color: Colors.redAccent),
-                  ),
-                )
-              : _issuances.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No issuances yet.',
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                )
-              : isWide
-              ? _buildTable()
-              : _buildCardList(),
-        ),
-        // Pagination
-        if (_meta != null) _buildPagination(),
-      ],
-    );
-  }
-
-  Widget _buildTable() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      children: [
-        // Header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: Text(
-                  'Bus / Trip',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Items',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Status',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Date',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 40,
-                child: Text(
-                  '',
-                  style: TextStyle(color: Colors.white54, fontSize: 11),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Gap(4),
-        ..._issuances.map((i) => _buildTableRow(i)),
-      ],
-    );
-  }
-
-  Widget _buildTableRow(CateringIssuance i) {
-    final expanded = _expandedId == i.id;
-    return Column(
-      children: [
-        InkWell(
-          onTap: () => setState(() => _expandedId = expanded ? null : i.id),
-          child: Container(
-            margin: EdgeInsets.only(bottom: expanded ? 0 : 4),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1B2838),
-              borderRadius: expanded
-                  ? const BorderRadius.vertical(top: Radius.circular(6))
-                  : BorderRadius.circular(6),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    i.busRegNumber ?? i.conductorName ?? i.tripId ?? '\u2014',
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Text(
-                    '${i.items.length} items',
-                    style: const TextStyle(
-                      color: Color(0xFF00B4D8),
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _statusColor(i.status).withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
                     child: Text(
-                      i.status[0].toUpperCase() + i.status.substring(1),
-                      style: TextStyle(
-                        color: _statusColor(i.status),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                      'Issuances (${issuances.length})',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Text(
-                    _formatDate(i.createdAt),
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
-                  ),
-                ),
-                if (i.isPending)
                   IconButton(
                     icon: const Icon(
-                      Icons.local_shipping,
-                      size: 16,
+                      Icons.add_circle,
                       color: Color(0xFF00B4D8),
                     ),
-                    tooltip: 'Issue items',
-                    onPressed: () => _issueItems(i),
-                    constraints: const BoxConstraints(
-                      minWidth: 30,
-                      minHeight: 30,
-                    ),
-                    padding: EdgeInsets.zero,
+                    tooltip: 'New Issuance',
+                    onPressed: () => _showCreateIssuance(ctx, bloc),
                   ),
-              ],
-            ),
-          ),
-        ),
-        if (expanded)
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(bottom: 4),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F1F30),
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(6),
-              ),
-              border: Border(
-                top: BorderSide(color: Colors.white.withOpacity(0.05)),
+                ],
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Issued Items',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Gap(6),
-                ...i.items.map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.inventory_2,
-                          size: 12,
-                          color: Colors.white38,
-                        ),
-                        const Gap(6),
-                        Expanded(
-                          child: Text(
-                            item.itemName ?? '\u2014',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          'Qty: ${item.quantityIssued}',
-                          style: const TextStyle(
-                            color: Color(0xFF00B4D8),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+            Expanded(
+              child: state.issuancesLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : state.error != null
+                  ? Center(
+                      child: Text(
+                        'Error: ${state.error}',
+                        style: const TextStyle(color: Colors.redAccent),
+                      ),
+                    )
+                  : issuances.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No issuances',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: issuances.length,
+                      itemBuilder: (_, i) =>
+                          _issuanceCard(ctx, bloc, issuances[i]),
                     ),
-                  ),
-                ),
-              ],
             ),
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildCardList() {
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      itemCount: _issuances.length,
-      separatorBuilder: (_, __) => const Gap(6),
-      itemBuilder: (_, idx) => _buildCard(_issuances[idx]),
-    );
-  }
-
-  Widget _buildCard(CateringIssuance i) {
+  Widget _issuanceCard(
+    BuildContext ctx,
+    StorekeeperDashboardBloc bloc,
+    CateringIssuance iss,
+  ) {
+    final color = _statusColor(iss.status ?? 'pending');
     return Card(
       color: const Color(0xFF1B2838),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _statusColor(i.status).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    i.status[0].toUpperCase() + i.status.substring(1),
-                    style: TextStyle(
-                      color: _statusColor(i.status),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                if (i.isPending)
-                  TextButton.icon(
-                    icon: const Icon(Icons.local_shipping, size: 14),
-                    label: const Text('Issue', style: TextStyle(fontSize: 12)),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF00B4D8),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    onPressed: () => _issueItems(i),
-                  ),
-              ],
-            ),
-            const Gap(8),
-            Text(
-              'Bus: ${i.busRegNumber ?? 'N/A'}  •  Conductor: ${i.conductorName ?? 'N/A'}',
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-            ),
-            const Gap(4),
-            Text(
-              '${i.items.length} items  •  ${_formatDate(i.createdAt)}',
-              style: const TextStyle(color: Colors.white38, fontSize: 11),
-            ),
-            if (i.notes != null && i.notes!.isNotEmpty) ...[
-              const Gap(4),
-              Text(
-                i.notes!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white30, fontSize: 11),
-              ),
-            ],
-          ],
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withValues(alpha: 0.2),
+          child: Icon(Icons.inventory_2, color: color, size: 18),
         ),
+        title: Text(
+          '${iss.busRegNumber ?? 'Bus'}: ${iss.items.length} items',
+          style: const TextStyle(color: Colors.white),
+        ),
+        subtitle: Text(
+          '${iss.status?.toUpperCase() ?? 'PENDING'} · ${_fmt(iss.createdAt)}',
+          style: TextStyle(color: color, fontSize: 11),
+        ),
+        trailing: iss.status == 'pending'
+            ? IconButton(
+                icon: const Icon(
+                  Icons.check_circle_outline,
+                  color: Color(0xFF00B4D8),
+                ),
+                tooltip: 'Issue Items',
+                onPressed: () =>
+                    bloc.add(IssueItems(panel: panel, issuanceId: iss.id)),
+              )
+            : null,
+        onTap: iss.status == 'pending'
+            ? () => _showIssueDialog(ctx, bloc, iss)
+            : null,
       ),
     );
   }
 
-  Widget _buildPagination() {
-    final current = (_meta?['current_page'] ?? 1) as int;
-    final last = (_meta?['last_page'] ?? 1) as int;
+  Color _statusColor(String s) => switch (s) {
+    'pending' => Colors.orange,
+    'issued' => const Color(0xFF00B4D8),
+    'reconciled' => Colors.green,
+    _ => Colors.white54,
+  };
 
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left, color: Colors.white54),
-            onPressed: current > 1
-                ? () {
-                    _page = current - 1;
-                    _load();
-                  }
-                : null,
+  String _fmt(DateTime? dt) => dt != null
+      ? '${dt.day}/${dt.month} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}'
+      : '—';
+
+  void _showIssueDialog(
+    BuildContext ctx,
+    StorekeeperDashboardBloc bloc,
+    CateringIssuance iss,
+  ) {
+    showDialog(
+      context: ctx,
+      builder: (dctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1B2838),
+        title: const Text('Issue Items', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Mark all items for ${iss.busRegNumber ?? 'bus'} as issued?',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dctx),
+            child: const Text('Cancel'),
           ),
-          Text(
-            '$current / $last',
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right, color: Colors.white54),
-            onPressed: current < last
-                ? () {
-                    _page = current + 1;
-                    _load();
-                  }
-                : null,
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dctx);
+              bloc.add(IssueItems(panel: panel, issuanceId: iss.id));
+            },
+            child: const Text('Issue'),
           ),
         ],
       ),
     );
   }
 
-  String _formatDate(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final String? value;
-  final String? selected;
-  final void Function(String?) onSelect;
-
-  const _FilterChip(this.label, this.value, this.selected, this.onSelect);
-
-  @override
-  Widget build(BuildContext context) {
-    final active = selected == value;
-    return ChoiceChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          color: active ? Colors.white : Colors.white70,
-          fontSize: 12,
-        ),
-      ),
-      selected: active,
-      selectedColor: const Color(0xFF00B4D8).withOpacity(0.3),
-      backgroundColor: const Color(0xFF1B2838),
-      side: BorderSide(
-        color: active ? const Color(0xFF00B4D8) : Colors.white12,
-      ),
-      onSelected: (_) => onSelect(value),
-    );
-  }
-}
-
-// ─── Create Issuance Page ────────────────────────────────────
-
-class _CreateIssuancePage extends StatefulWidget {
-  final String panel;
-  const _CreateIssuancePage({required this.panel});
-
-  @override
-  State<_CreateIssuancePage> createState() => _CreateIssuancePageState();
-}
-
-class _CreateIssuancePageState extends State<_CreateIssuancePage> {
-  late final StorekeeperRepository _repo;
-  final _formKey = GlobalKey<FormState>();
-  final _busCtrl = TextEditingController();
-  final _conductorCtrl = TextEditingController();
-  final _notesCtrl = TextEditingController();
-
-  List<CateringItem> _availableItems = [];
-  final List<_SelectedItem> _selectedItems = [];
-  bool _loadingItems = true;
-  bool _submitting = false;
-
-  List<Map<String, dynamic>> _activeAssignments = [];
-  bool _loadingAssignments = false;
-  String? _selectedAssignmentId;
-
-  // Bundle/Packet hierarchy
-  List<Map<String, dynamic>> _bundles = [];
-  List<Map<String, dynamic>> _packets = [];
-  bool _loadingBundles = false;
-  String? _selectedBundleId;
-  String? _selectedPacketId;
-
-  @override
-  void initState() {
-    super.initState();
-    _repo = StorekeeperRepository(panel: widget.panel);
-    _loadItems();
-    _loadActiveAssignments();
-    _loadBundles();
-  }
-
-  @override
-  void dispose() {
-    _busCtrl.dispose();
-    _conductorCtrl.dispose();
-    _notesCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadItems() async {
-    try {
-      final result = await _repo.getItems(status: 'active', limit: 100);
-      if (mounted) {
-        setState(() {
-          _availableItems = result['items'] as List<CateringItem>;
-          _loadingItems = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _loadingItems = false);
-    }
-  }
-
-  Future<void> _loadActiveAssignments() async {
-    setState(() => _loadingAssignments = true);
-    try {
-      final result = await _repo.getActiveAssignments();
-      if (mounted) {
-        setState(() {
-          _activeAssignments = result;
-          _loadingAssignments = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loadingAssignments = false);
-    }
-  }
-
-  Future<void> _loadBundles() async {
-    setState(() => _loadingBundles = true);
-    try {
-      final r = await _repo.getBundles();
-      if (mounted) {
-        setState(() {
-          // Only show ACTIVE bundles in the dropdown
-          _bundles = r
-              .where((b) => b['status']?.toString().toLowerCase() == 'active')
-              .toList();
-          _loadingBundles = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loadingBundles = false);
-    }
-  }
-
-  void _onBundleSelected(String? bundleId) {
-    setState(() {
-      _selectedBundleId = bundleId;
-      _selectedPacketId = null;
-      _packets = [];
-      _selectedItems.clear(); // Clear items when bundle changes
-    });
-    if (bundleId == null) return;
-    final bundle = _bundles.firstWhere(
-      (b) => b['id'] == bundleId,
-      orElse: () => {},
-    );
-    if (bundle.isNotEmpty) {
-      final pkts = (bundle['packets'] as List<dynamic>?) ?? [];
-      // Only show ACTIVE packets linked to this bundle
-      final activePackets = pkts
-          .where(
-            (p) =>
-                (p as Map<String, dynamic>)['status']
-                    ?.toString()
-                    .toLowerCase() ==
-                'active',
-          )
-          .toList();
-      setState(() => _packets = activePackets.cast<Map<String, dynamic>>());
-    }
-  }
-
-  void _onPacketSelected(String? packetId) {
-    setState(() => _selectedPacketId = packetId);
-    if (packetId == null) return;
-
-    // ── Auto-populate ALL items from ALL active packets in this bundle ──
-    _selectedItems.clear();
-    for (final p in _packets) {
-      final itemId = p['item_id']?.toString();
-      if (itemId == null || itemId.isEmpty) continue;
-      final remaining =
-          int.tryParse(p['units_remaining']?.toString() ?? '0') ?? 0;
-      final total = int.tryParse(p['total_units']?.toString() ?? '0') ?? 0;
-      final qty = remaining > 0 ? remaining : (total > 0 ? total : 1);
-
-      final match = _availableItems.where((i) => i.id == itemId).toList();
-      if (match.isNotEmpty &&
-          !_selectedItems.any((s) => s.item.id == match.first.id)) {
-        _selectedItems.add(_SelectedItem(item: match.first, quantity: qty));
-      }
-    }
-    setState(() {}); // trigger rebuild to show populated items
-  }
-
-  void _onAssignmentSelected(String? assignmentId) {
-    if (assignmentId == null) return;
-    final assignment = _activeAssignments.firstWhere(
-      (a) => a['id']?.toString() == assignmentId,
-      orElse: () => {},
-    );
-    if (assignment.isNotEmpty) {
-      setState(() {
-        _selectedAssignmentId = assignmentId;
-        _busCtrl.text = assignment['bus_reg_number']?.toString() ?? '';
-        _conductorCtrl.text = assignment['conductor_name']?.toString() ?? '';
-      });
-    }
-  }
-
-  void _addItem(CateringItem item) {
-    if (_selectedItems.any((s) => s.item.id == item.id)) return;
-    setState(() {
-      _selectedItems.add(_SelectedItem(item: item, quantity: 1));
-    });
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_selectedItems.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Add at least one item.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _submitting = true);
-    try {
-      await _repo.createIssuance({
-        'bus_reg_number': _busCtrl.text.trim(),
-        'conductor_name': _conductorCtrl.text.trim(),
-        'notes': _notesCtrl.text.trim(),
-        if (_selectedAssignmentId != null)
-          'assignment_id': _selectedAssignmentId,
-        if (_selectedBundleId != null) 'bundle_id': _selectedBundleId,
-        if (_selectedPacketId != null) 'packet_id': _selectedPacketId,
-        'items': _selectedItems
-            .map((s) => {'item_id': s.item.id, 'quantity_issued': s.quantity})
-            .toList(),
-      });
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D1B2A),
-      appBar: AppBar(
+  void _showCreateIssuance(BuildContext ctx, StorekeeperDashboardBloc bloc) {
+    // Keep existing CreateIssuancePage flow — navigates to form, then refreshes on return.
+    // In full BLoC migration, this would dispatch CreateIssuance event from the form.
+    showDialog(
+      context: ctx,
+      builder: (dctx) => AlertDialog(
         backgroundColor: const Color(0xFF1B2838),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: const Text(
-          'New Issuance',
+          'Create Issuance',
           style: TextStyle(color: Colors.white),
         ),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Trip-linked dropdown
-            if (_loadingAssignments)
-              const Padding(
-                padding: EdgeInsets.all(12),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else
-              DropdownButtonFormField<String>(
-                value: _selectedAssignmentId,
-                hint: const Text(
-                  'Select Active Assignment / Trip',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                decoration: _inputDec('').copyWith(
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Icon(
-                      Icons.alt_route,
-                      size: 18,
-                      color: Color(0xFF00B4D8),
-                    ),
-                  ),
-                ),
-                isExpanded: true,
-                dropdownColor: const Color(0xFF1B2838),
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                validator: (v) =>
-                    v == null ? 'Please select an assignment' : null,
-                items: [
-                  ..._activeAssignments.map((a) {
-                    final plate = a['bus_reg_number']?.toString() ?? '';
-                    final route = a['route_name']?.toString() ?? '';
-                    return DropdownMenuItem<String>(
-                      value: a['id']?.toString(),
-                      child: Text(
-                        '$route | $plate',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.white,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }),
-                ],
-                onChanged: _onAssignmentSelected,
-              ),
-            // Auto-populated badges when assignment selected
-            if (_selectedAssignmentId != null) ...[
-              const Gap(12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00B4D8).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(0xFF00B4D8).withOpacity(0.3),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.directions_bus,
-                          size: 16,
-                          color: Color(0xFF00B4D8),
-                        ),
-                        const Gap(6),
-                        Text(
-                          _busCtrl.text,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Gap(4),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.person,
-                          size: 14,
-                          color: Colors.white54,
-                        ),
-                        const Gap(6),
-                        Text(
-                          _conductorCtrl.text,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            // Bundle ➔ Packet hierarchy
-            if (_selectedAssignmentId != null) ...[
-              const Gap(12),
-              if (_loadingBundles)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_bundles.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.orange, size: 18),
-                      Gap(8),
-                      Expanded(
-                        child: Text(
-                          'No active bundles. Create a bundle first.',
-                          style: TextStyle(color: Colors.orange, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else ...[
-                // ── Parent: Active Bundle Dropdown ──
-                DropdownButtonFormField<String>(
-                  value: _selectedBundleId,
-                  hint: const Text(
-                    'Select Active Bundle',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  decoration: _inputDec('').copyWith(
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Icon(
-                        Icons.inventory_2,
-                        size: 18,
-                        color: Color(0xFF00B4D8),
-                      ),
-                    ),
-                  ),
-                  isExpanded: true,
-                  dropdownColor: const Color(0xFF1B2838),
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                  items: [
-                    ..._bundles.map(
-                      (b) => DropdownMenuItem<String>(
-                        value: b['id']?.toString(),
-                        child: Text(
-                          b['name']?.toString() ?? '',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  onChanged: _onBundleSelected,
-                ),
-                // ── Child: Packets Dropdown ──
-                if (_selectedBundleId != null && _packets.isNotEmpty) ...[
-                  const Gap(8),
-                  DropdownButtonFormField<String>(
-                    value: _selectedPacketId,
-                    hint: const Text(
-                      'Select Packet (Smart Code)',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
-                    ),
-                    decoration: _inputDec('').copyWith(
-                      prefixIcon: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: Icon(
-                          Icons.qr_code,
-                          size: 18,
-                          color: Color(0xFF00B4D8),
-                        ),
-                      ),
-                    ),
-                    isExpanded: true,
-                    dropdownColor: const Color(0xFF1B2838),
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    items: [
-                      ..._packets.map(
-                        (p) => DropdownMenuItem<String>(
-                          value: p['id']?.toString(),
-                          child: Text(
-                            '${p['smart_code'] ?? ''} — ${p['name'] ?? ''} (${p['units_remaining'] ?? 0} left)',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.white,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                    onChanged: _onPacketSelected,
-                  ),
-                ] else if (_selectedBundleId != null && _packets.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    margin: const EdgeInsets.only(top: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      'This bundle has no active packets.',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
-                    ),
-                  ),
-              ],
-            ],
-            const Gap(12),
-            TextFormField(
-              controller: _notesCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: _inputDec('Notes (optional)'),
-              maxLines: 2,
-            ),
-            const Gap(16),
-            // ── Section header with bundle info ──
-            Row(
-              children: [
-                const Text(
-                  'Select Items',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                if (_selectedPacketId != null) ...[
-                  const Gap(8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00B4D8).withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Auto-populated from packet',
-                      style: TextStyle(color: Color(0xFF00B4D8), fontSize: 10),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const Gap(8),
-            if (_loadingItems)
-              const Center(child: CircularProgressIndicator())
-            else ...[
-              // Available items
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _availableItems.map((item) {
-                  final alreadyAdded = _selectedItems.any(
-                    (s) => s.item.id == item.id,
-                  );
-                  return ActionChip(
-                    label: Text(
-                      '${item.name} (${item.stockOnHand})',
-                      style: TextStyle(
-                        color: alreadyAdded ? Colors.white38 : Colors.white,
-                        fontSize: 12,
-                      ),
-                    ),
-                    backgroundColor: const Color(0xFF1B2838),
-                    side: const BorderSide(color: Colors.white12),
-                    onPressed: alreadyAdded ? null : () => _addItem(item),
-                  );
-                }).toList(),
-              ),
-              if (_selectedItems.isNotEmpty) ...[
-                const Gap(12),
-                // Selected items
-                ..._selectedItems.map(
-                  (s) => Card(
-                    color: const Color(0xFF1B2838),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  s.item.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                Text(
-                                  'Unit: ${s.item.unit}',
-                                  style: const TextStyle(
-                                    color: Colors.white38,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(
-                            width: 70,
-                            child: TextFormField(
-                              initialValue: s.quantity.toString(),
-                              keyboardType: TextInputType.number,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                              ),
-                              decoration: InputDecoration(
-                                isDense: true,
-                                labelText: 'Qty',
-                                labelStyle: const TextStyle(
-                                  color: Colors.white38,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 6,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(4),
-                                  borderSide: const BorderSide(
-                                    color: Colors.white24,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(4),
-                                  borderSide: const BorderSide(
-                                    color: Colors.white24,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(4),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF00B4D8),
-                                  ),
-                                ),
-                              ),
-                              onChanged: (v) {
-                                s.quantity = int.tryParse(v) ?? s.quantity;
-                              },
-                            ),
-                          ),
-                          const Gap(6),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.close,
-                              size: 18,
-                              color: Colors.redAccent,
-                            ),
-                            tooltip: 'Remove item',
-                            onPressed: () {
-                              setState(() => _selectedItems.remove(s));
-                            },
-                            constraints: const BoxConstraints(
-                              minWidth: 36,
-                              minHeight: 36,
-                            ),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-            const Gap(20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white70,
-                      side: const BorderSide(color: Colors.white24),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const Gap(12),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00B4D8),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onPressed: _submitting ? null : _submit,
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Create Issuance',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+        content: const Text(
+          'Issuance creation flow — use the full form page.',
+          style: TextStyle(color: Colors.white70),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dctx),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dctx);
+              bloc.add(LoadIssuances(panel: panel));
+            },
+            child: const Text('Refresh'),
+          ),
+        ],
       ),
     );
   }
-
-  InputDecoration _inputDec(String hint) => InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(color: Colors.white54),
-    filled: true,
-    fillColor: const Color(0xFF1B2838),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide.none,
-    ),
-  );
-}
-
-class _SelectedItem {
-  final CateringItem item;
-  int quantity;
-  _SelectedItem({required this.item, this.quantity = 1});
 }

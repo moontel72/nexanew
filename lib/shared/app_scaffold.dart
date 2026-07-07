@@ -3,11 +3,14 @@
 // Single factory for all fleet panel Flutter apps (Bus/Truck × Owner/Driver/Conductor).
 // Eliminates 8 near-identical main_*.dart entry points.
 //
-// Basic usage (legacy setState screens):
+// Modern BLoC-driven usage:
 //   void main() => FleetApp.run(
 //     title: 'NexaTrace Bus Owner',
-//     loginScreen: const OwnerLoginScreen(),
-//     dashboardScreen: const OwnerDashboardScreen(),
+//     loginScreen: FleetBlocLoginScreen(panel: UserPanel.busFleet, loginConfig: FleetLoginConfig.busOwner()),
+//     dashboardScreen: const OwnerDashboardPage(),
+//     loginPath: '/bus-owner/login',
+//     dashboardPath: '/bus-owner/dashboard',
+//     blocProviders: [fleetBlocProvider()],
 //   );
 //
 // BLoC usage (Wave 0+):
