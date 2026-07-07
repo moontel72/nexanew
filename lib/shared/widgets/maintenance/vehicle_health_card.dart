@@ -9,17 +9,14 @@ import 'package:gap/gap.dart';
 import 'package:trace_odd/shared/bloc/fleet_ops_maintenance/fleet_ops_bloc.dart';
 import 'package:trace_odd/shared/bloc/fleet_ops_maintenance/fleet_ops_state.dart';
 import 'package:trace_odd/shared/models/fleet_maintenance_models.dart';
+import 'package:trace_odd/shared/models/geofence_models.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 
 class VehicleHealthCard extends StatelessWidget {
   final String vehicleId;
   final VoidCallback? onTap;
 
-  const VehicleHealthCard({
-    super.key,
-    required this.vehicleId,
-    this.onTap,
-  });
+  const VehicleHealthCard({super.key, required this.vehicleId, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -56,55 +53,93 @@ class VehicleHealthCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Header
-                  Row(children: [
-                    Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(
-                        color: criticalCount > 0
-                            ? AppColors.error.withValues(alpha: 0.15)
-                            : AppColors.success.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        criticalCount > 0 ? Icons.warning_amber : Icons.check_circle,
-                        color: criticalCount > 0 ? AppColors.error : AppColors.success,
-                        size: 20,
-                      ),
-                    ),
-                    const Gap(10),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(health.vehicleName.isNotEmpty ? health.vehicleName : vehicleId,
-                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                        Text('${health.currentOdometerKm.toStringAsFixed(0)} km',
-                            style: const TextStyle(color: Colors.white54, fontSize: 11)),
-                      ]),
-                    ),
-                    if (criticalCount > 0)
+                  Row(
+                    children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
+                          color: criticalCount > 0
+                              ? AppColors.error.withValues(alpha: 0.15)
+                              : AppColors.success.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text('$criticalCount due',
-                            style: const TextStyle(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.w700)),
+                        child: Icon(
+                          criticalCount > 0
+                              ? Icons.warning_amber
+                              : Icons.check_circle,
+                          color: criticalCount > 0
+                              ? AppColors.error
+                              : AppColors.success,
+                          size: 20,
+                        ),
                       ),
-                  ]),
+                      const Gap(10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              health.vehicleName.isNotEmpty
+                                  ? health.vehicleName
+                                  : vehicleId,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              '${health.currentOdometerKm.toStringAsFixed(0)} km',
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (criticalCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '$criticalCount due',
+                            style: const TextStyle(
+                              color: AppColors.error,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                   const Gap(12),
 
                   // Maintenance progress bars
                   if (vehicleAlerts.isNotEmpty)
                     ...vehicleAlerts.take(4).map((a) => _AlertBar(alert: a))
                   else
-                    _AlertBar(alert: MaintenanceAlert(
-                      id: '', vehicleId: vehicleId,
-                      type: MaintenanceType.generalInspection,
-                      label: 'All clear',
-                      severity: GeofenceSeverity.info,
-                      currentKm: 0, thresholdKm: 25000, remainingKm: 25000,
-                      percentUsed: 0.3, triggeredAt: DateTime.now(),
-                    )),
+                    _AlertBar(
+                      alert: MaintenanceAlert(
+                        id: '',
+                        vehicleId: vehicleId,
+                        type: MaintenanceType.generalInspection,
+                        label: 'All clear',
+                        severity: GeofenceSeverity.info,
+                        currentKm: 0,
+                        thresholdKm: 25000,
+                        remainingKm: 25000,
+                        percentUsed: 0.3,
+                        triggeredAt: DateTime.now(),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -129,28 +164,44 @@ class _AlertBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-            child: Text(alert.label,
-                style: TextStyle(color: _barColor, fontSize: 11, fontWeight: FontWeight.w600)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  alert.label,
+                  style: TextStyle(
+                    color: _barColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                alert.isOverdue
+                    ? 'OVERDUE'
+                    : '${alert.remainingKm.toStringAsFixed(0)} km left',
+                style: TextStyle(
+                  color: _barColor.withValues(alpha: 0.7),
+                  fontSize: 10,
+                ),
+              ),
+            ],
           ),
-          Text(
-            alert.isOverdue ? 'OVERDUE' : '${alert.remainingKm.toStringAsFixed(0)} km left',
-            style: TextStyle(color: _barColor.withValues(alpha: 0.7), fontSize: 10),
+          const Gap(3),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: alert.percentUsed.clamp(0.0, 1.0),
+              minHeight: 6,
+              backgroundColor: const Color(0x20FFFFFF),
+              valueColor: AlwaysStoppedAnimation(_barColor),
+            ),
           ),
-        ]),
-        const Gap(3),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: LinearProgressIndicator(
-            value: alert.percentUsed.clamp(0.0, 1.0),
-            minHeight: 6,
-            backgroundColor: const Color(0x20FFFFFF),
-            valueColor: AlwaysStoppedAnimation(_barColor),
-          ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }
