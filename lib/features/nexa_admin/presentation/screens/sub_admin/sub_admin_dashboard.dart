@@ -300,100 +300,241 @@ class _DashboardView extends StatelessWidget {
     final name =
         c['account_name']?.toString() ?? c['name']?.toString() ?? 'Unknown';
     final email = c['email']?.toString() ?? '';
-    final status = c['status']?.toString() ?? 'active';
-    final isActive = status == 'active';
+    final status = c['status']?.toString() ?? 'pending';
     final id = c['id']?.toString() ?? '';
+    final statusColor = _statusColor(status);
+    final statusLabel = _statusLabel(status);
 
     return Card(
       color: const Color(0xFF1B3A4B),
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: isActive
-              ? const Color(0xFF059669)
-              : AppColors.warning,
-          child: Text(
-            name.isNotEmpty ? name[0].toUpperCase() : '?',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        title: Text(
-          name,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        subtitle: Text(
-          '$email · ${isActive ? "Active" : "Suspended"}',
-          style: TextStyle(
-            color: isActive ? AppColors.success : AppColors.warning,
-            fontSize: 11,
-          ),
-        ),
-        trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Colors.white54),
-          color: const Color(0xFF1B3A4B),
-          onSelected: (action) {
-            switch (action) {
-              case 'toggle':
-                bloc.add(ToggleBusCompanyStatus(id));
-                break;
-              case 'delete':
-                showDialog(
-                  context: ctx,
-                  builder: (dctx) => AlertDialog(
-                    title: const Text('Delete Company?'),
-                    content: Text('This will archive $name.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(dctx),
-                        child: const Text('Cancel'),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.error,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: statusColor,
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
                         ),
-                        onPressed: () {
-                          Navigator.pop(dctx);
-                          bloc.add(DeleteBusCompany(id));
-                        },
-                        child: const Text('Delete'),
+                      ),
+                      Text(
+                        email,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
-                );
-                break;
-            }
-          },
-          itemBuilder: (_) => [
-            PopupMenuItem(
-              value: 'toggle',
-              child: ListTile(
-                leading: Icon(
-                  isActive ? Icons.block : Icons.check_circle,
-                  color: isActive ? AppColors.warning : AppColors.success,
                 ),
-                title: Text(isActive ? 'Suspend' : 'Activate'),
-                dense: true,
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: ListTile(
-                leading: Icon(Icons.delete, color: AppColors.error),
-                title: Text('Delete'),
-                dense: true,
-              ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.white54),
+                  color: const Color(0xFF1B3A4B),
+                  onSelected: (action) {
+                    switch (action) {
+                      case 'verified':
+                        bloc.add(
+                          UpdateBusCompanyStatus(
+                            companyId: id,
+                            newStatus: 'verified',
+                          ),
+                        );
+                        break;
+                      case 'active':
+                        bloc.add(
+                          UpdateBusCompanyStatus(
+                            companyId: id,
+                            newStatus: 'active',
+                          ),
+                        );
+                        break;
+                      case 'inactive':
+                        bloc.add(
+                          UpdateBusCompanyStatus(
+                            companyId: id,
+                            newStatus: 'inactive',
+                          ),
+                        );
+                        break;
+                      case 'suspended':
+                        bloc.add(
+                          UpdateBusCompanyStatus(
+                            companyId: id,
+                            newStatus: 'suspended',
+                          ),
+                        );
+                        break;
+                      case 'edit':
+                        _showEditBusCompanySheet(ctx, bloc, c);
+                        break;
+                      case 'delete':
+                        showDialog(
+                          context: ctx,
+                          builder: (dctx) => AlertDialog(
+                            title: const Text('Delete Company?'),
+                            content: Text('This will archive $name.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dctx),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.error,
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(dctx);
+                                  bloc.add(DeleteBusCompany(id));
+                                },
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                        break;
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'verified',
+                      child: ListTile(
+                        leading: Icon(Icons.verified, color: Color(0xFF2563EB)),
+                        title: Text('Verified'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'active',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF059669),
+                        ),
+                        title: Text('Active'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'inactive',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.pause_circle,
+                          color: Color(0xFFD97706),
+                        ),
+                        title: Text('Inactive'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'suspended',
+                      child: ListTile(
+                        leading: Icon(Icons.block, color: AppColors.warning),
+                        title: Text('Suspend'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: Icon(Icons.edit, color: Color(0xFF1F5E6B)),
+                        title: Text('Update'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(Icons.delete, color: AppColors.error),
+                        title: Text('Delete'),
+                        dense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'active':
+        return const Color(0xFF059669);
+      case 'verified':
+        return const Color(0xFF2563EB);
+      case 'pending':
+        return const Color(0xFFD97706);
+      case 'inactive':
+        return Colors.grey;
+      case 'suspended':
+        return AppColors.warning;
+      case 'deleted':
+        return AppColors.error;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'active':
+        return 'Active';
+      case 'verified':
+        return 'Verified';
+      case 'pending':
+        return 'Pending';
+      case 'inactive':
+        return 'Inactive';
+      case 'suspended':
+        return 'Suspended';
+      case 'deleted':
+        return 'Deleted';
+      default:
+        return status;
+    }
   }
 
   // ── Add Bus Company Bottom Sheet ──
@@ -517,6 +658,164 @@ class _DashboardView extends StatelessWidget {
                         ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Edit Bus Company Bottom Sheet ──
+  void _showEditBusCompanySheet(
+    BuildContext context,
+    SubAdminBloc bloc,
+    Map<String, dynamic> company,
+  ) {
+    final id = company['id']?.toString() ?? '';
+    final nameCtrl = TextEditingController(
+      text:
+          company['account_name']?.toString() ??
+          company['name']?.toString() ??
+          '',
+    );
+    final emailCtrl = TextEditingController(
+      text: company['email']?.toString() ?? '',
+    );
+    final phoneCtrl = TextEditingController(
+      text:
+          company['phone_number']?.toString() ??
+          company['phone']?.toString() ??
+          '',
+    );
+    final passwordCtrl = TextEditingController();
+    final metadata = company['metadata'] is Map
+        ? Map<String, dynamic>.from(company['metadata'] as Map)
+        : <String, dynamic>{};
+    final regCtrl = TextEditingController(
+      text: metadata['registration_code']?.toString() ?? '',
+    );
+    final fleetCtrl = TextEditingController(
+      text: metadata['fleet_size']?.toString() ?? '',
+    );
+    final licenseCtrl = TextEditingController(
+      text: metadata['transit_license']?.toString() ?? '',
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1B3A4B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: BlocConsumer<SubAdminBloc, SubAdminState>(
+          listener: (lctx, state) {
+            if (state.actionSuccess != null) {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.actionSuccess!),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            }
+          },
+          builder: (lctx, state) => Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(lctx).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Edit Bus Company',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Gap(16),
+                  _sheetField('Company Name', nameCtrl),
+                  const Gap(10),
+                  _sheetField('Email', emailCtrl, TextInputType.emailAddress),
+                  const Gap(10),
+                  _sheetField('Phone', phoneCtrl, TextInputType.phone),
+                  const Gap(10),
+                  _sheetField('Registration Code', regCtrl),
+                  const Gap(10),
+                  _sheetField('Fleet Size', fleetCtrl, TextInputType.number),
+                  const Gap(10),
+                  _sheetField('License Number', licenseCtrl),
+                  const Gap(10),
+                  _sheetField(
+                    'New Password (leave blank to keep existing)',
+                    passwordCtrl,
+                    TextInputType.visiblePassword,
+                  ),
+                  if (state.actionError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        state.actionError!,
+                        style: const TextStyle(
+                          color: AppColors.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  const Gap(16),
+                  ElevatedButton(
+                    onPressed: state.actionLoading
+                        ? null
+                        : () {
+                            final data = <String, dynamic>{
+                              'name': nameCtrl.text.trim(),
+                              'email': emailCtrl.text.trim(),
+                              'phone': phoneCtrl.text.trim(),
+                              'registration_code': regCtrl.text.trim(),
+                              'fleet_size': fleetCtrl.text.trim(),
+                              'license': licenseCtrl.text.trim(),
+                            };
+                            final pwd = passwordCtrl.text;
+                            if (pwd.isNotEmpty) {
+                              data['password'] = pwd;
+                            }
+                            bloc.add(EditBusCompany(companyId: id, data: data));
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1F5E6B),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: state.actionLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Save Changes',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

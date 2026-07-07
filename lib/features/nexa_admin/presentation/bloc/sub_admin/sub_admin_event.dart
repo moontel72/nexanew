@@ -10,7 +10,10 @@ abstract class SubAdminEvent extends Equatable {
 // ── Auth ──
 class SubAdminLoginRequested extends SubAdminEvent {
   final String identifier, password;
-  const SubAdminLoginRequested({required this.identifier, required this.password});
+  const SubAdminLoginRequested({
+    required this.identifier,
+    required this.password,
+  });
   @override
   List<Object?> get props => [identifier, password];
 }
@@ -41,7 +44,15 @@ class CreateBusCompany extends SubAdminEvent {
     required this.license,
   });
   @override
-  List<Object?> get props => [name, email, password, phone, regCode, fleetSize, license];
+  List<Object?> get props => [
+    name,
+    email,
+    password,
+    phone,
+    regCode,
+    fleetSize,
+    license,
+  ];
 }
 
 class FetchBusCompanies extends SubAdminEvent {
@@ -55,6 +66,17 @@ class ToggleBusCompanyStatus extends SubAdminEvent {
   List<Object?> get props => [companyId];
 }
 
+class UpdateBusCompanyStatus extends SubAdminEvent {
+  final String companyId;
+  final String newStatus; // verified, active, inactive, suspended, deleted
+  const UpdateBusCompanyStatus({
+    required this.companyId,
+    required this.newStatus,
+  });
+  @override
+  List<Object?> get props => [companyId, newStatus];
+}
+
 class EditBusCompany extends SubAdminEvent {
   final String companyId;
   final Map<String, dynamic> data;
@@ -65,7 +87,10 @@ class EditBusCompany extends SubAdminEvent {
 
 class ResetBusCompanyPassword extends SubAdminEvent {
   final String companyId, newPassword;
-  const ResetBusCompanyPassword({required this.companyId, required this.newPassword});
+  const ResetBusCompanyPassword({
+    required this.companyId,
+    required this.newPassword,
+  });
   @override
   List<Object?> get props => [companyId, newPassword];
 }
@@ -120,14 +145,20 @@ class EditSubAdmin extends SubAdminEvent {
 
 class ChangeSubAdminVertical extends SubAdminEvent {
   final String adminId, newVertical;
-  const ChangeSubAdminVertical({required this.adminId, required this.newVertical});
+  const ChangeSubAdminVertical({
+    required this.adminId,
+    required this.newVertical,
+  });
   @override
   List<Object?> get props => [adminId, newVertical];
 }
 
 class ResetSubAdminPassword extends SubAdminEvent {
   final String adminId, newPassword;
-  const ResetSubAdminPassword({required this.adminId, required this.newPassword});
+  const ResetSubAdminPassword({
+    required this.adminId,
+    required this.newPassword,
+  });
   @override
   List<Object?> get props => [adminId, newPassword];
 }

@@ -17,6 +17,7 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     on<CreateBusCompany>(_onCreateBusCo);
     on<FetchBusCompanies>(_onFetchBusCos);
     on<ToggleBusCompanyStatus>(_onToggleBusCo);
+    on<UpdateBusCompanyStatus>(_onUpdateBusCoStatus);
     on<EditBusCompany>(_onEditBusCo);
     on<ResetBusCompanyPassword>(_onResetBusCoPwd);
     on<DeleteBusCompany>(_onDelBusCo);
@@ -212,11 +213,42 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
   ) async {
     emit(state.copyWith(actionLoading: true));
     try {
+      // Use explicit status update: toggle between active and suspended
+      final company = state.busCompanies.firstWhere(
+        (c) => c['id']?.toString() == e.companyId,
+        orElse: () => <String, dynamic>{},
+      );
+      final currentStatus = company['status']?.toString() ?? 'active';
+      final newStatus = currentStatus == 'active' ? 'suspended' : 'active';
+
       await _api.patch(
         '${ApiConfig.apiBaseUrl}/admin/bus-companies/${e.companyId}/status',
+        data: {'status': newStatus},
       );
       emit(
         state.copyWith(actionLoading: false, actionSuccess: 'Status updated'),
+      );
+      add(const FetchBusCompanies());
+    } catch (ex) {
+      emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
+    }
+  }
+
+  Future<void> _onUpdateBusCoStatus(
+    UpdateBusCompanyStatus e,
+    Emitter<SubAdminState> emit,
+  ) async {
+    emit(state.copyWith(actionLoading: true));
+    try {
+      await _api.patch(
+        '${ApiConfig.apiBaseUrl}/admin/bus-companies/${e.companyId}/status',
+        data: {'status': e.newStatus},
+      );
+      emit(
+        state.copyWith(
+          actionLoading: false,
+          actionSuccess: 'Status set to ${e.newStatus}',
+        ),
       );
       add(const FetchBusCompanies());
     } catch (ex) {
@@ -230,9 +262,26 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
   ) async {
     emit(state.copyWith(actionLoading: true));
     try {
+      // Map frontend field names to backend field names
+      final body = <String, dynamic>{};
+      if (e.data['name'] != null) body['company_name'] = e.data['name'];
+      if (e.data['email'] != null) body['email'] = e.data['email'];
+      if (e.data['phone'] != null) body['phone'] = e.data['phone'];
+      if (e.data['registration_code'] != null)
+        body['registration_code'] = e.data['registration_code'];
+      if (e.data['fleet_size'] != null)
+        body['fleet_size'] = e.data['fleet_size'];
+      if (e.data['license'] != null)
+        body['transit_license'] = e.data['license'];
+      // Only include password if non-empty (otherwise backend keeps existing)
+      if (e.data['password'] != null &&
+          (e.data['password'] as String).isNotEmpty) {
+        body['password'] = e.data['password'];
+      }
+
       await _api.put(
         '${ApiConfig.apiBaseUrl}/admin/bus-companies/${e.companyId}',
-        data: e.data,
+        data: body,
       );
       emit(
         state.copyWith(actionLoading: false, actionSuccess: 'Company updated'),

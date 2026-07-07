@@ -71,7 +71,7 @@ class SubAdminBusCompanyController extends Controller
             'identity_type'  => 'owner',
             'kyc_status'     => 'pending',
             'kyc_tier'       => 1,
-            'status'         => 'active',
+            'status'         => 'pending',
             'primary_locale' => 'en-PK',
         ]);
 
@@ -107,7 +107,7 @@ class SubAdminBusCompanyController extends Controller
             'parent_account_id'  => $subAdmin->id,
             'is_independent'     => false,
             'account_type'       => 'bus_company',
-            'status'             => 'active',
+            'status'             => 'pending',
             'metadata'           => json_encode([
                 'registration_code'    => $validated['registration_code'] ?? null,
                 'fleet_size'           => $validated['fleet_size'] ?? 0,
@@ -151,7 +151,49 @@ class SubAdminBusCompanyController extends Controller
     }
 
     /**
-     * Toggle bus company status (active ↔ suspended).
+     * Update bus company status to a specific value.
+     * Accepts: verified, active, inactive, suspended, deleted.
+     */
+    public function updateStatus(Request $request, string $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'string', 'in:verified,active,inactive,suspended,deleted'],
+        ]);
+
+        $company = TenantAccount::where('id', $id)
+            ->where('account_type', 'bus_company')
+            ->first();
+
+        if (!$company) {
+            return response()->json(['message' => 'Bus company not found'], 404);
+        }
+
+        $newStatus = $validated['status'];
+
+        // Handle soft-delete special case
+        if ($newStatus === 'deleted') {
+            $company->update(['status' => 'deleted', 'deleted_at' => now()]);
+            if ($company->global_identity_id) {
+                GlobalIdentity::where('id', $company->global_identity_id)
+                    ->update(['status' => 'deleted', 'deleted_at' => now()]);
+            }
+        } else {
+            $company->update(['status' => $newStatus, 'deleted_at' => null]);
+            if ($company->global_identity_id) {
+                GlobalIdentity::where('id', $company->global_identity_id)
+                    ->update(['status' => $newStatus, 'deleted_at' => null]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Bus company status updated to {$newStatus}",
+            'data'    => ['status' => $newStatus],
+        ]);
+    }
+
+    /**
+     * Toggle bus company status (active ↔ suspended) — legacy, kept for backward compat.
      */
     public function toggleStatus(string $id): JsonResponse
     {
@@ -166,7 +208,6 @@ class SubAdminBusCompanyController extends Controller
         $newStatus = $company->status === 'active' ? 'suspended' : 'active';
         $company->update(['status' => $newStatus]);
 
-        // Also update the linked GlobalIdentity
         if ($company->global_identity_id) {
             GlobalIdentity::where('id', $company->global_identity_id)
                 ->update(['status' => $newStatus]);
