@@ -3,6 +3,7 @@
 // Defines route boundaries, geofence alerts, corridor speeds, and
 // historical trip analytics used by FleetAnalyticsBloc.
 import 'package:equatable/equatable.dart';
+import 'dart:math';
 
 /// A single waypoint on a route.
 class RouteWaypoint extends Equatable {
@@ -140,9 +141,11 @@ class GeoPolygon extends Equatable {
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       type: json['type']?.toString() ?? 'safe_zone',
-      vertices: vertRaw.map((v) {
+      vertices: vertRaw.map<(double, double)>((v) {
         final m = Map<String, dynamic>.from(v);
-        return ((m['lat'] ?? 0).toDouble(), (m['lng'] ?? 0).toDouble());
+        final lat = (m['lat'] ?? 0).toDouble();
+        final lng = (m['lng'] ?? 0).toDouble();
+        return (lat, lng);
       }).toList(),
     );
   }
