@@ -149,14 +149,20 @@ class _DashboardBody extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _StatCard('Booked', '$booked', const Color(0xFF2563EB)),
+                child: FleetStatCard(
+                  'Booked',
+                  '$booked',
+                  const Color(0xFF2563EB),
+                ),
               ),
               Gap(12),
               Expanded(
-                child: _StatCard('Vacant', '$vacant', AppColors.gray400),
+                child: FleetStatCard('Vacant', '$vacant', AppColors.gray400),
               ),
               Gap(12),
-              Expanded(child: _StatCard('Total', '$total', AppColors.primary)),
+              Expanded(
+                child: FleetStatCard('Total', '$total', AppColors.primary),
+              ),
             ],
           ),
           if ((manifest?.totalRevenue ?? 0) > 0) ...[
@@ -195,16 +201,16 @@ class _DashboardBody extends StatelessWidget {
           // Legend
           Row(
             children: [
-              _Dot(const Color(0xFF2563EB), 'Booked'),
+              FleetDot(const Color(0xFF2563EB), 'Booked'),
               Gap(16),
-              _Dot(Colors.grey.shade300, 'Vacant'),
+              FleetDot(Colors.grey.shade300, 'Vacant'),
             ],
           ),
           Gap(16),
           if (manifest != null && manifest!.seats.isNotEmpty)
-            _SeatGrid(seats: manifest!.seats)
+            FleetSeatGrid(seats: manifest!.seats)
           else
-            _SeatGrid(
+            FleetSeatGrid(
               seats: List.generate(
                 total,
                 (i) => {
@@ -226,172 +232,4 @@ class _DashboardBody extends StatelessWidget {
 
   String _fmt(DateTime dt) =>
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}:${dt.second.toString().padLeft(2, '0')}';
-}
-
-class _StatCard extends StatelessWidget {
-  final String label, value;
-  final Color color;
-  const _StatCard(this.label, this.value, this.color);
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(color: Colors.black.withValues(alpha: .04), blurRadius: 6),
-      ],
-    ),
-    child: Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
-        ),
-        Gap(2),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: AppColors.gray500),
-        ),
-      ],
-    ),
-  );
-}
-
-class _Dot extends StatelessWidget {
-  final Color color;
-  final String label;
-  const _Dot(this.color, this.label);
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: 10,
-        height: 10,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      ),
-      Gap(6),
-      Text(
-        label,
-        style: const TextStyle(fontSize: 12, color: AppColors.gray600),
-      ),
-    ],
-  );
-}
-
-class _SeatGrid extends StatelessWidget {
-  final List<Map<String, dynamic>> seats;
-  const _SeatGrid({required this.seats});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      boxShadow: [
-        BoxShadow(color: Colors.black.withValues(alpha: .04), blurRadius: 6),
-      ],
-    ),
-    child: Column(
-      children: [
-        Container(
-          width: double.infinity,
-          height: 30,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: .1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Center(
-            child: Text(
-              '🚌 DRIVER',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-        ),
-        Gap(12),
-        ...List.generate((seats.length / 4).ceil(), (row) {
-          final start = row * 4;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              children: [
-                ...List.generate(
-                  2,
-                  (i) => start + i < seats.length
-                      ? _Seat(seats[start + i])
-                      : const SizedBox(width: 55),
-                ),
-                const SizedBox(width: 20),
-                ...List.generate(
-                  2,
-                  (i) => start + 2 + i < seats.length
-                      ? _Seat(seats[start + 2 + i])
-                      : const SizedBox(width: 55),
-                ),
-              ],
-            ),
-          );
-        }),
-        Gap(12),
-        Container(
-          width: double.infinity,
-          height: 24,
-          decoration: BoxDecoration(
-            color: AppColors.gray100,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Center(
-            child: Text(
-              'REAR',
-              style: TextStyle(fontSize: 9, color: AppColors.gray500),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _Seat extends StatelessWidget {
-  final Map<String, dynamic> seat;
-  const _Seat(this.seat);
-  @override
-  Widget build(BuildContext context) {
-    final isBooked =
-        seat['status']?.toString() == 'booked' || seat['booked'] == true;
-    final num =
-        seat['number']?.toString() ?? seat['seat_no']?.toString() ?? '?';
-    final color = isBooked ? const Color(0xFF2563EB) : Colors.grey.shade300;
-    return Expanded(
-      child: Container(
-        height: 44,
-        margin: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: isBooked ? color.withValues(alpha: .12) : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color, width: 1.5),
-        ),
-        child: Center(
-          child: Text(
-            num,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

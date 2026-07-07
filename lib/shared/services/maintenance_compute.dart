@@ -49,12 +49,6 @@ MaintenanceEvalResult _evalMaint(_MaintInput input) {
       .toList();
 
   final alerts = <MaintenanceAlert>[];
-  final newOdo = Map<MaintenanceType, double>.from(
-    input.health.lastServiceOdometer,
-  );
-  final newHrs = Map<MaintenanceType, double>.from(
-    input.health.lastServiceHours,
-  );
 
   for (final t in thresholds) {
     final lastOdo = input.health.lastServiceOdometer[t.type] ?? 0;

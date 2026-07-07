@@ -9,7 +9,6 @@ import 'package:gap/gap.dart';
 import 'package:trace_odd/shared/bloc/fleet_ops_maintenance/fleet_ops_bloc.dart';
 import 'package:trace_odd/shared/bloc/fleet_ops_maintenance/fleet_ops_state.dart';
 import 'package:trace_odd/shared/models/fleet_maintenance_models.dart';
-import 'package:trace_odd/shared/theme/colors.dart';
 
 class FuelEfficiencyLedger extends StatelessWidget {
   /// Optional owner ID for multi-tenant filtering.

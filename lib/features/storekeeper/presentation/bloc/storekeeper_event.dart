@@ -119,3 +119,33 @@ class CreateBundle extends StorekeeperEvent {
 class ClearStorekeeperError extends StorekeeperEvent {
   const ClearStorekeeperError();
 }
+
+// List events for sub-screens
+class LoadIssuances extends StorekeeperEvent {
+  final String panel;
+  final int page;
+  final String? statusFilter;
+  const LoadIssuances({required this.panel, this.page = 1, this.statusFilter});
+  @override
+  List<Object?> get props => [panel, page, statusFilter];
+}
+
+class LoadReconciliations extends StorekeeperEvent {
+  final String panel;
+  final int page;
+  final String? statusFilter;
+  const LoadReconciliations({
+    required this.panel,
+    this.page = 1,
+    this.statusFilter,
+  });
+  @override
+  List<Object?> get props => [panel, page, statusFilter];
+}
+
+class LoadBundles extends StorekeeperEvent {
+  final String panel;
+  const LoadBundles({required this.panel});
+  @override
+  List<Object?> get props => [panel];
+}

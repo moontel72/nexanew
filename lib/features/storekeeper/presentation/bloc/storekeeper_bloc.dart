@@ -20,6 +20,9 @@ class StorekeeperDashboardBloc
     on<ReconcileIssuance>(_onReconcile);
     on<CreateBundle>(_onCreateBundle);
     on<ClearStorekeeperError>(_onClear);
+    on<LoadIssuances>(_onLoadIssuances);
+    on<LoadReconciliations>(_onLoadReconciliations);
+    on<LoadBundles>(_onLoadBundles);
   }
 
   StorekeeperRepository _repo(String panel) =>
@@ -174,6 +177,65 @@ class StorekeeperDashboardBloc
       /* bundle creation via repo */
     } catch (_) {}
     emit(state.copyWith(isMutating: false));
+  }
+
+  // ── List events for sub-screens ──
+  Future<void> _onLoadIssuances(
+    LoadIssuances e,
+    Emitter<StorekeeperDashboardState> emit,
+  ) async {
+    emit(state.copyWith(issuancesLoading: true));
+    try {
+      final res = await _repo(
+        e.panel,
+      ).getIssuances(page: e.page, status: e.statusFilter);
+      emit(
+        state.copyWith(
+          issuances: (res['data'] as List?) ?? [],
+          issuancesLoading: false,
+        ),
+      );
+    } catch (_) {
+      emit(state.copyWith(issuancesLoading: false));
+    }
+  }
+
+  Future<void> _onLoadReconciliations(
+    LoadReconciliations e,
+    Emitter<StorekeeperDashboardState> emit,
+  ) async {
+    emit(state.copyWith(reconciliationsLoading: true));
+    try {
+      final res = await _repo(
+        e.panel,
+      ).getReconciliations(page: e.page, status: e.statusFilter);
+      emit(
+        state.copyWith(
+          reconciliations: (res['data'] as List?) ?? [],
+          reconciliationsLoading: false,
+        ),
+      );
+    } catch (_) {
+      emit(state.copyWith(reconciliationsLoading: false));
+    }
+  }
+
+  Future<void> _onLoadBundles(
+    LoadBundles e,
+    Emitter<StorekeeperDashboardState> emit,
+  ) async {
+    emit(state.copyWith(bundlesLoading: true));
+    try {
+      final res = await _repo(e.panel).getBundles();
+      emit(
+        state.copyWith(
+          bundles: (res['data'] as List?) ?? [],
+          bundlesLoading: false,
+        ),
+      );
+    } catch (_) {
+      emit(state.copyWith(bundlesLoading: false));
+    }
   }
 
   void _onClear(

@@ -18,6 +18,8 @@ class StorekeeperDashboardState extends Equatable {
 
   // Issuance / Reconciliation / Bundle — delegates to sub-screens
   final bool isMutating;
+  final List<dynamic> issuances, reconciliations, bundles;
+  final bool issuancesLoading, reconciliationsLoading, bundlesLoading;
 
   const StorekeeperDashboardState({
     this.status = StorekeeperStatus.initial,
@@ -34,6 +36,12 @@ class StorekeeperDashboardState extends Equatable {
     this.itemPage = 1,
     this.itemSearch = '',
     this.isMutating = false,
+    this.issuances = const [],
+    this.reconciliations = const [],
+    this.bundles = const [],
+    this.issuancesLoading = false,
+    this.reconciliationsLoading = false,
+    this.bundlesLoading = false,
   });
 
   StorekeeperDashboardState copyWith({
@@ -51,6 +59,12 @@ class StorekeeperDashboardState extends Equatable {
     int? itemPage,
     String? itemSearch,
     bool? isMutating,
+    List<dynamic>? issuances,
+    List<dynamic>? reconciliations,
+    List<dynamic>? bundles,
+    bool? issuancesLoading,
+    bool? reconciliationsLoading,
+    bool? bundlesLoading,
   }) => StorekeeperDashboardState(
     status: status ?? this.status,
     totalItems: totalItems ?? this.totalItems,
@@ -66,6 +80,13 @@ class StorekeeperDashboardState extends Equatable {
     itemPage: itemPage ?? this.itemPage,
     itemSearch: itemSearch ?? this.itemSearch,
     isMutating: isMutating ?? this.isMutating,
+    issuances: issuances ?? this.issuances,
+    reconciliations: reconciliations ?? this.reconciliations,
+    bundles: bundles ?? this.bundles,
+    issuancesLoading: issuancesLoading ?? this.issuancesLoading,
+    reconciliationsLoading:
+        reconciliationsLoading ?? this.reconciliationsLoading,
+    bundlesLoading: bundlesLoading ?? this.bundlesLoading,
   );
 
   @override
@@ -84,5 +105,11 @@ class StorekeeperDashboardState extends Equatable {
     itemPage,
     itemSearch,
     isMutating,
+    issuances,
+    reconciliations,
+    bundles,
+    issuancesLoading,
+    reconciliationsLoading,
+    bundlesLoading,
   ];
 }
