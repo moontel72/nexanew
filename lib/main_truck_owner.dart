@@ -14,7 +14,7 @@ void main() => FleetApp.run(
     panel: UserPanel.truckFleet,
     loginConfig: FleetLoginConfig.truckOwner(),
   ),
-  dashboardScreen: const TruckOwnerDashboardScreen(),
+  dashboardScreen: const TruckOwnerDashboardPage(),
   loginPath: '/truck-owner/login',
   dashboardPath: '/truck-owner/dashboard',
   blocProviders: [fleetBlocProvider()],

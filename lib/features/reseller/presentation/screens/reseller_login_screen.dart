@@ -21,6 +21,8 @@ class ResellerLoginScreen extends StatefulWidget {
 class _ResellerLoginScreenState extends State<ResellerLoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  // Password visibility is a pure UI toggle — zero data mutation.
+  // Allowed per project convention (same as FleetBlocLoginScreen).
   bool _obscurePassword = true;
 
   @override
