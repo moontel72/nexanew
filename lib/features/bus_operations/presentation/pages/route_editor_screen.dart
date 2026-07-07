@@ -142,15 +142,7 @@ class _EditorView extends StatelessWidget {
                         CustomPaint(
                           size: Size.infinite,
                           painter: RouteMapEditorPainter(
-                            waypoints: state.waypoints
-                                .map(
-                                  (w) => Map<String, dynamic>.from({
-                                    'lat': w.lat,
-                                    'lng': w.lng,
-                                    'station_name': w.label,
-                                  }),
-                                )
-                                .toList(),
+                            waypoints: state.waypoints,
                           ),
                         ),
                         ...state.waypoints.asMap().entries.map(
@@ -196,7 +188,7 @@ class _EditorView extends StatelessWidget {
                       .map(
                         (w) => Chip(
                           label: Text(
-                            w.label,
+                            w.stationName,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 11,
@@ -309,7 +301,7 @@ class _EditorView extends StatelessWidget {
         destination: state.destination,
         carrierCompanyId: state.carrierCompanyId,
         waypoints: state.waypoints
-            .map((w) => {'lat': w.lat, 'lng': w.lng, 'label': w.label})
+            .map((w) => {'lat': w.lat, 'lng': w.lng, 'label': w.stationName})
             .toList(),
         voucherIds: state.voucherIds.toList(),
         bonusIds: state.bonusIds.toList(),

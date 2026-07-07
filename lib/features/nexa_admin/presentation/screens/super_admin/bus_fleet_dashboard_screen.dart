@@ -529,23 +529,20 @@ class _BusFleetDashboardScreenState extends State<BusFleetDashboardScreen> {
   }
 
   void _openDispatchForm() {
-    showDialog(
-      context: context,
-      builder: (_) => FleetDispatchForm(
-        apiPrefix: '/bus-fleet',
-        busCompanyId: widget.companyId ?? _company?.id.toString(),
-        onSaved: _loadAll,
-      ),
+    FleetDispatchDialog.show(
+      context,
+      apiPrefix: '/bus-fleet',
+      busCompanyId: widget.companyId ?? _company?.id.toString(),
+      onSaved: _loadAll,
     );
   }
 
   void _openDispatchList() {
-    showDialog(
-      context: context,
-      builder: (_) => FleetDispatchList(
-        apiPrefix: '/bus-fleet',
-        busCompanyId: widget.companyId ?? _company?.id.toString(),
-      ),
+    FleetDispatchDialog.show(
+      context,
+      apiPrefix: '/bus-fleet',
+      busCompanyId: widget.companyId ?? _company?.id.toString(),
+      onSaved: _loadAll,
     );
   }
 
