@@ -271,14 +271,15 @@ return reset();case _:
 
 
 class _LoadCompanies with DiagnosticableTreeMixin implements CompanyManagementEvent {
-  const _LoadCompanies({this.search = '', this.status, this.verificationStatus, this.country, this.planType, this.sortBy = 'created_at', this.sortOrder = 'desc', this.page = 1, this.perPage = 20});
-  
+  const _LoadCompanies({this.search = '', this.status, this.verificationStatus, this.country, this.planType, this.companyType, this.sortBy = 'created_at', this.sortOrder = 'desc', this.page = 1, this.perPage = 20});
+
 
 @JsonKey() final  String search;
  final  String? status;
  final  String? verificationStatus;
  final  String? country;
  final  String? planType;
+ final  String? companyType;
 @JsonKey() final  String sortBy;
 @JsonKey() final  String sortOrder;
 @JsonKey() final  int page;
@@ -295,21 +296,21 @@ _$LoadCompaniesCopyWith<_LoadCompanies> get copyWith => __$LoadCompaniesCopyWith
 void debugFillProperties(DiagnosticPropertiesBuilder properties) {
   properties
     ..add(DiagnosticsProperty('type', 'CompanyManagementEvent.loadCompanies'))
-    ..add(DiagnosticsProperty('search', search))..add(DiagnosticsProperty('status', status))..add(DiagnosticsProperty('verificationStatus', verificationStatus))..add(DiagnosticsProperty('country', country))..add(DiagnosticsProperty('planType', planType))..add(DiagnosticsProperty('sortBy', sortBy))..add(DiagnosticsProperty('sortOrder', sortOrder))..add(DiagnosticsProperty('page', page))..add(DiagnosticsProperty('perPage', perPage));
+    ..add(DiagnosticsProperty('search', search))..add(DiagnosticsProperty('status', status))..add(DiagnosticsProperty('verificationStatus', verificationStatus))..add(DiagnosticsProperty('country', country))..add(DiagnosticsProperty('planType', planType))..add(DiagnosticsProperty('companyType', companyType))..add(DiagnosticsProperty('sortBy', sortBy))..add(DiagnosticsProperty('sortOrder', sortOrder))..add(DiagnosticsProperty('page', page))..add(DiagnosticsProperty('perPage', perPage));
 }
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoadCompanies&&(identical(other.search, search) || other.search == search)&&(identical(other.status, status) || other.status == status)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.country, country) || other.country == country)&&(identical(other.planType, planType) || other.planType == planType)&&(identical(other.sortBy, sortBy) || other.sortBy == sortBy)&&(identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder)&&(identical(other.page, page) || other.page == page)&&(identical(other.perPage, perPage) || other.perPage == perPage));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoadCompanies&&(identical(other.search, search) || other.search == search)&&(identical(other.status, status) || other.status == status)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.country, country) || other.country == country)&&(identical(other.planType, planType) || other.planType == planType)&&(identical(other.companyType, companyType) || other.companyType == companyType)&&(identical(other.sortBy, sortBy) || other.sortBy == sortBy)&&(identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder)&&(identical(other.page, page) || other.page == page)&&(identical(other.perPage, perPage) || other.perPage == perPage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,search,status,verificationStatus,country,planType,sortBy,sortOrder,page,perPage);
+int get hashCode => Object.hash(runtimeType,search,status,verificationStatus,country,planType,companyType,sortBy,sortOrder,page,perPage);
 
 @override
 String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
-  return 'CompanyManagementEvent.loadCompanies(search: $search, status: $status, verificationStatus: $verificationStatus, country: $country, planType: $planType, sortBy: $sortBy, sortOrder: $sortOrder, page: $page, perPage: $perPage)';
+  return 'CompanyManagementEvent.loadCompanies(search: $search, status: $status, verificationStatus: $verificationStatus, country: $country, planType: $planType, companyType: $companyType, sortBy: $sortBy, sortOrder: $sortOrder, page: $page, perPage: $perPage)';
 }
 
 
@@ -320,7 +321,7 @@ abstract mixin class _$LoadCompaniesCopyWith<$Res> implements $CompanyManagement
   factory _$LoadCompaniesCopyWith(_LoadCompanies value, $Res Function(_LoadCompanies) _then) = __$LoadCompaniesCopyWithImpl;
 @useResult
 $Res call({
- String search, String? status, String? verificationStatus, String? country, String? planType, String sortBy, String sortOrder, int page, int perPage
+ String search, String? status, String? verificationStatus, String? country, String? planType, String? companyType, String sortBy, String sortOrder, int page, int perPage
 });
 
 
@@ -337,13 +338,14 @@ class __$LoadCompaniesCopyWithImpl<$Res>
 
 /// Create a copy of CompanyManagementEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? search = null,Object? status = freezed,Object? verificationStatus = freezed,Object? country = freezed,Object? planType = freezed,Object? sortBy = null,Object? sortOrder = null,Object? page = null,Object? perPage = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? search = null,Object? status = freezed,Object? verificationStatus = freezed,Object? country = freezed,Object? planType = freezed,Object? companyType = freezed,Object? sortBy = null,Object? sortOrder = null,Object? page = null,Object? perPage = null,}) {
   return _then(_LoadCompanies(
 search: null == search ? _self.search : search // ignore: cast_nullable_to_non_nullable
 as String,status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String?,verificationStatus: freezed == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
 as String?,country: freezed == country ? _self.country : country // ignore: cast_nullable_to_non_nullable
 as String?,planType: freezed == planType ? _self.planType : planType // ignore: cast_nullable_to_non_nullable
+as String?,companyType: freezed == companyType ? _self.companyType : companyType // ignore: cast_nullable_to_non_nullable
 as String?,sortBy: null == sortBy ? _self.sortBy : sortBy // ignore: cast_nullable_to_non_nullable
 as String,sortOrder: null == sortOrder ? _self.sortOrder : sortOrder // ignore: cast_nullable_to_non_nullable
 as String,page: null == page ? _self.page : page // ignore: cast_nullable_to_non_nullable
@@ -360,7 +362,7 @@ as int,
 
 class _LoadCompany with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _LoadCompany(this.id);
-  
+
 
  final  String id;
 
@@ -432,7 +434,7 @@ as String,
 
 class _CreateCompany with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _CreateCompany({required this.name, required this.businessRegistrationNumber, this.taxId, required this.companyType, required this.industryType, required this.email, this.phone, this.website, required this.country, required this.city, this.address, this.postalCode, required this.contactPersonName, required this.contactPersonEmail, required this.contactPersonPhone, this.contactPersonPosition, this.timezone, this.language, this.currency, this.planId, this.billingCycle, final  List<CompanyDocumentInput>? documents, this.adminNotes}): _documents = documents;
-  
+
 
  final  String name;
  final  String businessRegistrationNumber;
@@ -556,7 +558,7 @@ as String?,
 
 class _UpdateCompany with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _UpdateCompany({required this.id, this.name, this.businessRegistrationNumber, this.taxId, this.companyType, this.industryType, this.email, this.phone, this.website, this.country, this.city, this.address, this.postalCode, this.contactPersonName, this.contactPersonEmail, this.contactPersonPhone, this.contactPersonPosition, this.status, this.verificationStatus, this.verificationNotes, this.timezone, this.language, this.currency, this.planId, this.billingCycle, this.adminNotes});
-  
+
 
  final  String id;
  final  String? name;
@@ -678,7 +680,7 @@ as String?,
 
 class _DeleteCompany with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _DeleteCompany(this.id);
-  
+
 
  final  String id;
 
@@ -750,7 +752,7 @@ as String,
 
 class _UpdateCompanyStatus with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _UpdateCompanyStatus({required this.id, required this.status, this.reason});
-  
+
 
  final  String id;
  final  String status;
@@ -826,7 +828,7 @@ as String?,
 
 class _UpdateVerificationStatus with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _UpdateVerificationStatus({required this.id, required this.verificationStatus, this.verificationNotes});
-  
+
 
  final  String id;
  final  String verificationStatus;
@@ -902,7 +904,7 @@ as String?,
 
 class _AssignPlan with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _AssignPlan({required this.companyId, required this.planId, this.billingCycle, this.autoRenew, this.startsAt, this.endsAt});
-  
+
 
  final  String companyId;
  final  String planId;
@@ -984,7 +986,7 @@ as DateTime?,
 
 class _UploadDocument with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _UploadDocument({required this.companyId, required this.documentType, required this.documentName, required this.filePath});
-  
+
 
  final  String companyId;
  final  String documentType;
@@ -1062,7 +1064,7 @@ as String,
 
 class _DeleteDocument with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _DeleteDocument({required this.companyId, required this.documentId});
-  
+
 
  final  String companyId;
  final  String documentId;
@@ -1136,7 +1138,7 @@ as String,
 
 class _LoadCompanyStatistics with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _LoadCompanyStatistics();
-  
+
 
 
 
@@ -1174,7 +1176,7 @@ String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
 
 class _ExportCompanies with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _ExportCompanies({this.search, this.status, this.verificationStatus, this.country, this.planType});
-  
+
 
  final  String? search;
  final  String? status;
@@ -1254,7 +1256,7 @@ as String?,
 
 class _SendWelcomeEmail with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _SendWelcomeEmail(this.companyId);
-  
+
 
  final  String companyId;
 
@@ -1326,7 +1328,7 @@ as String,
 
 class _ResetCompanyPassword with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _ResetCompanyPassword(this.companyId);
-  
+
 
  final  String companyId;
 
@@ -1398,7 +1400,7 @@ as String,
 
 class _ClearError with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _ClearError();
-  
+
 
 
 
@@ -1436,7 +1438,7 @@ String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
 
 class _Reset with DiagnosticableTreeMixin implements CompanyManagementEvent {
   const _Reset();
-  
+
 
 
 
@@ -1736,7 +1738,7 @@ return error(_that.message,_that.isNetworkError,_that.isServerError,_that.isVali
 
 class _Initial with DiagnosticableTreeMixin implements CompanyManagementState {
   const _Initial();
-  
+
 
 
 
@@ -1774,7 +1776,7 @@ String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
 
 class _Loading with DiagnosticableTreeMixin implements CompanyManagementState {
   const _Loading();
-  
+
 
 
 
@@ -1812,7 +1814,7 @@ String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
 
 class _Loaded with DiagnosticableTreeMixin implements CompanyManagementState {
   const _Loaded({required final  List<Company> companies, required this.total, required this.page, required this.perPage, required this.totalPages, required this.search, this.status, this.verificationStatus, this.country, this.planType, required this.sortBy, required this.sortOrder, required this.statistics, required this.filterOptions}): _companies = companies;
-  
+
 
  final  List<Company> _companies;
  List<Company> get companies {
@@ -1916,7 +1918,7 @@ as CompanyFilterOptions,
 
 class _CompanyDetailLoaded with DiagnosticableTreeMixin implements CompanyManagementState {
   const _CompanyDetailLoaded({required this.company, required this.usageStats, required final  List<SubscriptionPlan> availablePlans, required this.filterOptions}): _availablePlans = availablePlans;
-  
+
 
  final  Company company;
  final  CompanyUsageStats usageStats;
@@ -1997,7 +1999,7 @@ as CompanyFilterOptions,
 @override
 @pragma('vm:prefer-inline')
 $CompanyCopyWith<$Res> get company {
-  
+
   return $CompanyCopyWith<$Res>(_self.company, (value) {
     return _then(_self.copyWith(company: value));
   });
@@ -2006,7 +2008,7 @@ $CompanyCopyWith<$Res> get company {
 @override
 @pragma('vm:prefer-inline')
 $CompanyUsageStatsCopyWith<$Res> get usageStats {
-  
+
   return $CompanyUsageStatsCopyWith<$Res>(_self.usageStats, (value) {
     return _then(_self.copyWith(usageStats: value));
   });
@@ -2018,7 +2020,7 @@ $CompanyUsageStatsCopyWith<$Res> get usageStats {
 
 class _CompanyCreated with DiagnosticableTreeMixin implements CompanyManagementState {
   const _CompanyCreated({required this.company, required this.message});
-  
+
 
  final  Company company;
  final  String message;
@@ -2089,7 +2091,7 @@ as String,
 @override
 @pragma('vm:prefer-inline')
 $CompanyCopyWith<$Res> get company {
-  
+
   return $CompanyCopyWith<$Res>(_self.company, (value) {
     return _then(_self.copyWith(company: value));
   });
@@ -2101,7 +2103,7 @@ $CompanyCopyWith<$Res> get company {
 
 class _CompanyUpdated with DiagnosticableTreeMixin implements CompanyManagementState {
   const _CompanyUpdated({required this.company, required this.message});
-  
+
 
  final  Company company;
  final  String message;
@@ -2172,7 +2174,7 @@ as String,
 @override
 @pragma('vm:prefer-inline')
 $CompanyCopyWith<$Res> get company {
-  
+
   return $CompanyCopyWith<$Res>(_self.company, (value) {
     return _then(_self.copyWith(company: value));
   });
@@ -2184,7 +2186,7 @@ $CompanyCopyWith<$Res> get company {
 
 class _CompanyDeleted with DiagnosticableTreeMixin implements CompanyManagementState {
   const _CompanyDeleted({required this.companyId, required this.message});
-  
+
 
  final  String companyId;
  final  String message;
@@ -2258,7 +2260,7 @@ as String,
 
 class _CompanyStatusUpdated with DiagnosticableTreeMixin implements CompanyManagementState {
   const _CompanyStatusUpdated({required this.companyId, required this.status, required this.message});
-  
+
 
  final  String companyId;
  final  String status;
@@ -2334,7 +2336,7 @@ as String,
 
 class _VerificationStatusUpdated with DiagnosticableTreeMixin implements CompanyManagementState {
   const _VerificationStatusUpdated({required this.companyId, required this.verificationStatus, required this.message});
-  
+
 
  final  String companyId;
  final  String verificationStatus;
@@ -2410,7 +2412,7 @@ as String,
 
 class _PlanAssigned with DiagnosticableTreeMixin implements CompanyManagementState {
   const _PlanAssigned({required this.companyId, required this.plan, required this.message});
-  
+
 
  final  String companyId;
  final  SubscriptionPlan plan;
@@ -2486,7 +2488,7 @@ as String,
 
 class _DocumentUploaded with DiagnosticableTreeMixin implements CompanyManagementState {
   const _DocumentUploaded({required this.companyId, required this.document, required this.message});
-  
+
 
  final  String companyId;
  final  CompanyDocument document;
@@ -2559,7 +2561,7 @@ as String,
 @override
 @pragma('vm:prefer-inline')
 $CompanyDocumentCopyWith<$Res> get document {
-  
+
   return $CompanyDocumentCopyWith<$Res>(_self.document, (value) {
     return _then(_self.copyWith(document: value));
   });
@@ -2571,7 +2573,7 @@ $CompanyDocumentCopyWith<$Res> get document {
 
 class _DocumentDeleted with DiagnosticableTreeMixin implements CompanyManagementState {
   const _DocumentDeleted({required this.companyId, required this.documentId, required this.message});
-  
+
 
  final  String companyId;
  final  String documentId;
@@ -2647,7 +2649,7 @@ as String,
 
 class _Exporting with DiagnosticableTreeMixin implements CompanyManagementState {
   const _Exporting();
-  
+
 
 
 
@@ -2685,7 +2687,7 @@ String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
 
 class _Exported with DiagnosticableTreeMixin implements CompanyManagementState {
   const _Exported({required this.filePath, required this.message});
-  
+
 
  final  String filePath;
  final  String message;
@@ -2759,7 +2761,7 @@ as String,
 
 class _WelcomeEmailSent with DiagnosticableTreeMixin implements CompanyManagementState {
   const _WelcomeEmailSent({required this.companyId, required this.message});
-  
+
 
  final  String companyId;
  final  String message;
@@ -2833,7 +2835,7 @@ as String,
 
 class _PasswordReset with DiagnosticableTreeMixin implements CompanyManagementState {
   const _PasswordReset({required this.companyId, required this.message});
-  
+
 
  final  String companyId;
  final  String message;
@@ -2907,7 +2909,7 @@ as String,
 
 class _Error with DiagnosticableTreeMixin implements CompanyManagementState {
   const _Error({required this.message, this.isNetworkError = false, this.isServerError = false, this.isValidationError = false, this.stackTrace});
-  
+
 
  final  String message;
 @JsonKey() final  bool isNetworkError;

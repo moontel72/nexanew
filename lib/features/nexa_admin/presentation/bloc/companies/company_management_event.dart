@@ -10,6 +10,7 @@ abstract class CompanyManagementEvent with _$CompanyManagementEvent {
     String? verificationStatus,
     String? country,
     String? planType,
+    String? companyType,
     @Default('created_at') String sortBy,
     @Default('desc') String sortOrder,
     @Default(1) int page,
@@ -219,11 +220,11 @@ class VerificationStatusUpdate extends Equatable {
 
   @override
   List<Object?> get props => [
-        verificationStatus,
-        verificationNotes,
-        verifiedAt,
-        verifiedBy,
-      ];
+    verificationStatus,
+    verificationNotes,
+    verifiedAt,
+    verifiedBy,
+  ];
 
   @override
   bool get stringify => true;

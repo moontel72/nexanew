@@ -43,6 +43,10 @@ class AdminCompanyController extends Controller
             $query->where('country', $country);
         }
 
+        if ($companyType = $request->query('company_type')) {
+            $query->where('company_type', $companyType);
+        }
+
         $sortBy = (string) $request->query('sort_by', 'created_at');
         $sortOrder = strtolower((string) $request->query('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
         if (!in_array($sortBy, ['created_at', 'updated_at', 'name', 'status', 'verification_status', 'country'], true)) {

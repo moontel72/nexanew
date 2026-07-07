@@ -106,16 +106,16 @@ class SuperAdminShell extends StatelessWidget {
         ],
       ),
       AdminSidebarSection(
-        title: 'Companies',
+        title: 'Factories',
         color: Color(0xFF2563EB),
         items: [
           AdminSidebarItem(
-            label: 'View All Companies',
+            label: 'View All Factories',
             icon: Icons.apartment,
             route: '/companies',
           ),
           AdminSidebarItem(
-            label: 'Create New Company',
+            label: 'Create New Factory',
             icon: Icons.add_business,
             route: '/companies/register',
           ),
@@ -224,8 +224,8 @@ class SuperAdminShell extends StatelessWidget {
     if (location.startsWith('/resellers')) return 'Reseller Management';
     if (location.startsWith('/sub-admins/add')) return 'Add Sub-Admin';
     if (location.startsWith('/sub-admins')) return 'Sub-Admin Management';
-    if (location.startsWith('/companies/register')) return 'Create New Company';
-    if (location.startsWith('/companies')) return 'Company Management';
+    if (location.startsWith('/companies/register')) return 'Create New Factory';
+    if (location.startsWith('/companies')) return 'Factory Management';
     if (location.startsWith('/goods-companies/add')) return 'Add Goods Company';
     if (location.startsWith('/goods-companies'))
       return 'Goods Logistics Companies';
@@ -255,10 +255,10 @@ class SuperAdminShell extends StatelessWidget {
       return const ['Sub Admins', 'View All Sub-Admins'];
     }
     if (location.startsWith('/companies/register')) {
-      return const ['Companies', 'Create New Company'];
+      return const ['Factories', 'Create New Factory'];
     }
     if (location.startsWith('/companies')) {
-      return const ['Companies', 'View All Companies'];
+      return const ['Factories', 'View All Factories'];
     }
     if (location.startsWith('/goods-companies/add')) {
       return const ['Goods Fleet', 'Add Goods Company'];

@@ -62,6 +62,7 @@ class CompanyManagementBloc
         verificationStatus: event.verificationStatus,
         country: event.country,
         planType: event.planType,
+        companyType: event.companyType,
         sortBy: event.sortBy,
         sortOrder: event.sortOrder,
         page: event.page,

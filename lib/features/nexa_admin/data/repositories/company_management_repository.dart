@@ -21,6 +21,7 @@ class CompanyManagementRepository {
     String? verificationStatus,
     String? country,
     String? planType,
+    String? companyType,
     String sortBy = 'created_at',
     String sortOrder = 'desc',
     int page = 1,
@@ -34,6 +35,8 @@ class CompanyManagementRepository {
           'verification_status': verificationStatus,
         if (country != null && country.isNotEmpty) 'country': country,
         if (planType != null && planType.isNotEmpty) 'plan_type': planType,
+        if (companyType != null && companyType.isNotEmpty)
+          'company_type': companyType,
         'sort_by': sortBy,
         'sort_order': sortOrder,
         'page': page.toString(),
@@ -513,7 +516,8 @@ class CompanyManagementRepository {
       if (kDebugMode) {
         try {
           final prefs = await SharedPreferences.getInstance();
-          final token = (prefs.getString(AppConstants.authTokenKey) ?? '').trim();
+          final token = (prefs.getString(AppConstants.authTokenKey) ?? '')
+              .trim();
           print('DEBUG: Super Admin token present: ${token.isNotEmpty}');
         } catch (e) {
           print('DEBUG: Failed to read auth token: $e');
