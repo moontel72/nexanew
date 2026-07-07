@@ -5,22 +5,21 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Admin Authorization Middleware
  *
- * Validates that the authenticated user (via Sanctum token on TenantAccount)
- * has an active Master Admin assignment in the Global Identity Spine.
+ * Validates that the authenticated user has administrative privileges.
  *
- * Flow:
- *  1. Extract authenticated user from request (TenantAccount via auth:sanctum)
- *  2. Read global_identity_id from TenantAccount
- *  3. Verify an unrevoked row exists in master_admin_assignments
- *  4. Pass or 403
+ * Three-tier verification (any ONE passing grants access):
+ *  1. master_admin_assignments — explicit Master Admin role (Section 10.2.4)
+ *  2. TenantAccount->isAdmin() — account_type === 'master_admin' (seeded)
+ *  3. sub_admin_assignments — delegated Sub-Admin role (Section 10.2.2)
  *
- * This replaces the legacy $user->isAdmin() pattern which relied on
- * model-specific methods that don't exist on TenantAccount.
+ * The Sanctum token is issued on TenantAccount (via GlobalAuthController).
+ * $request->user() returns TenantAccount, which has global_identity_id.
  */
 class AdminMiddleware
 {
@@ -32,29 +31,49 @@ class AdminMiddleware
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        // Resolve the global_identity_id from the authenticated model.
-        // TenantAccount has a dedicated global_identity_id column.
-        // GlobalIdentity (unified auth) uses its own `id` as the identity.
+        // ── Tier 1: TenantAccount.isAdmin() (account_type === 'master_admin') ──
+        if (method_exists($user, 'isAdmin') && $user->isAdmin()) {
+            return $next($request);
+        }
+
+        // ── Tier 2: GlobalIdentity.identity_type === 'admin' ──
+        if (method_exists($user, 'getAttribute')) {
+            $identityType = $user->getAttribute('identity_type');
+            if ($identityType === 'admin' && $user->getAttribute('status') === 'active') {
+                return $next($request);
+            }
+        }
+
+        // ── Tier 3: Resolve global_identity_id and check assignment tables ──
         $globalIdentityId = $user->global_identity_id
             ?? $user->id
             ?? null;
 
         if (!$globalIdentityId) {
+            Log::warning('AdminMiddleware: no global_identity_id resolvable', [
+                'user_class' => get_class($user),
+                'user_id'    => $user->id ?? 'unknown',
+            ]);
             return response()->json(['message' => 'Forbidden — no identity spine link'], 403);
         }
 
-        // Verify an active Master Admin OR Sub-Admin assignment exists
+        // Check master_admin_assignments (Section 10.2.4)
         $isMasterAdmin = DB::table('master_admin_assignments')
             ->where('global_identity_id', $globalIdentityId)
             ->whereNull('revoked_at')
             ->exists();
 
+        // Check sub_admin_assignments (Section 10.2.2)
         $isSubAdmin = DB::table('sub_admin_assignments')
             ->where('global_identity_id', $globalIdentityId)
             ->whereNull('revoked_at')
             ->exists();
 
         if (!$isMasterAdmin && !$isSubAdmin) {
+            Log::warning('AdminMiddleware: identity not authorized', [
+                'global_identity_id' => $globalIdentityId,
+                'user_class'         => get_class($user),
+            ]);
             return response()->json(['message' => 'Forbidden — not a system administrator'], 403);
         }
 
