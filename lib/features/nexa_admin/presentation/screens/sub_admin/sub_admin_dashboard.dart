@@ -42,14 +42,14 @@ class _DashboardView extends StatelessWidget {
           backgroundColor: const Color(0xFF0C1D2C),
           body: Row(children: [
             if (wide) _Sidebar(bloc: bloc, state: state),
-            Expanded(child: _content(bloc, state, wide)),
+            Expanded(child: _content(ctx, bloc, state, wide)),
           ]),
         );
       },
     );
   }
 
-  Widget _content(SubAdminBloc bloc, SubAdminState state, bool wide) {
+  Widget _content(BuildContext ctx, SubAdminBloc bloc, SubAdminState state, bool wide) {
     return Column(children: [
       _topBar(state, wide),
       Expanded(
@@ -59,7 +59,7 @@ class _DashboardView extends StatelessWidget {
                 // Determine which sub-page to show (managed inside bloc via events or local index)
                 // For simplicity, we'll keep the dashboard + bus company list as the main view
                 // since the BLoC already loads bus companies on bootstrap.
-                return _mainView(bloc, state);
+                return _mainView(ctx, bloc, state);
               }),
       ),
     ]);
@@ -93,7 +93,7 @@ class _DashboardView extends StatelessWidget {
   }
 
   // ── Main Dashboard View ──
-  Widget _mainView(SubAdminBloc bloc, SubAdminState state) {
+  Widget _mainView(BuildContext ctx, SubAdminBloc bloc, SubAdminState state) {
     return ListView(padding: const EdgeInsets.all(20), children: [
       // KPI Cards
       Row(children: [
@@ -109,7 +109,7 @@ class _DashboardView extends StatelessWidget {
       const Text('Quick Actions', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
       const Gap(12),
       Wrap(spacing: 12, runSpacing: 12, children: [
-        _actionBtn(Icons.add_business, 'Add Bus Company', () => _showAddBusCompanySheet(context, bloc)),
+        _actionBtn(Icons.add_business, 'Add Bus Company', () => _showAddBusCompanySheet(ctx, bloc)),
         _actionBtn(Icons.list_alt, 'View Companies', () {}),
         _actionBtn(Icons.people, 'Manage Staff', () {}),
         _actionBtn(Icons.receipt_long, 'Reports', () {}),
@@ -139,7 +139,7 @@ class _DashboardView extends StatelessWidget {
           ),
         )
       else
-        ...state.busCompanies.map((c) => _busCompanyCard(bloc, c)),
+        ...state.busCompanies.map((c) => _busCompanyCard(ctx, bloc, c)),
     ]);
   }
 
@@ -186,7 +186,7 @@ class _DashboardView extends StatelessWidget {
   }
 
   // ── Bus Company Card ──
-  Widget _busCompanyCard(SubAdminBloc bloc, Map<String, dynamic> c) {
+  Widget _busCompanyCard(BuildContext ctx, SubAdminBloc bloc, Map<String, dynamic> c) {
     final name = c['name']?.toString() ?? 'Unknown';
     final email = c['email']?.toString() ?? '';
     final status = c['status']?.toString() ?? 'active';
@@ -213,7 +213,7 @@ class _DashboardView extends StatelessWidget {
             switch (action) {
               case 'toggle': bloc.add(ToggleBusCompanyStatus(id)); break;
               case 'delete':
-                showDialog(context: context, builder: (dctx) => AlertDialog(
+                showDialog(context: ctx, builder: (dctx) => AlertDialog(
                   title: const Text('Delete Company?'),
                   content: Text('This will archive $name.'),
                   actions: [

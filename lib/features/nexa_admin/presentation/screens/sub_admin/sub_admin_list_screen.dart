@@ -121,7 +121,6 @@ class SubAdminListScreen extends StatelessWidget {
     final vertical = sa['vertical'] as String?;
     final color = _color(vertical);
     final isActive = sa['status'] == 'active';
-    final id = sa['id'] as String;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12), elevation: 1,
