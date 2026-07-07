@@ -122,22 +122,6 @@ class SuperAdminShell extends StatelessWidget {
         ],
       ),
       AdminSidebarSection(
-        title: 'Bus Fleet',
-        color: Color(0xFF16A34A),
-        items: [
-          AdminSidebarItem(
-            label: 'View Bus Companies',
-            icon: Icons.directions_bus,
-            route: '/bus-companies',
-          ),
-          AdminSidebarItem(
-            label: 'Add Bus Company',
-            icon: Icons.add_road,
-            route: '/bus-companies/add',
-          ),
-        ],
-      ),
-      AdminSidebarSection(
         title: 'Goods Fleet',
         color: Color(0xFFDC2626),
         items: [
@@ -242,8 +226,6 @@ class SuperAdminShell extends StatelessWidget {
     if (location.startsWith('/sub-admins')) return 'Sub-Admin Management';
     if (location.startsWith('/companies/register')) return 'Create New Company';
     if (location.startsWith('/companies')) return 'Company Management';
-    if (location.startsWith('/bus-companies/add')) return 'Add Bus Company';
-    if (location.startsWith('/bus-companies')) return 'Bus Fleet Companies';
     if (location.startsWith('/goods-companies/add')) return 'Add Goods Company';
     if (location.startsWith('/goods-companies'))
       return 'Goods Logistics Companies';
@@ -277,12 +259,6 @@ class SuperAdminShell extends StatelessWidget {
     }
     if (location.startsWith('/companies')) {
       return const ['Companies', 'View All Companies'];
-    }
-    if (location.startsWith('/bus-companies/add')) {
-      return const ['Bus Fleet', 'Add Bus Company'];
-    }
-    if (location.startsWith('/bus-companies')) {
-      return const ['Bus Fleet', 'View Bus Companies'];
     }
     if (location.startsWith('/goods-companies/add')) {
       return const ['Goods Fleet', 'Add Goods Company'];
