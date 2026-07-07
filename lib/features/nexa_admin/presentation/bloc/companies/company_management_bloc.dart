@@ -73,7 +73,9 @@ class CompanyManagementBloc
       CompanyStatistics? statistics;
       if (event.page == 1) {
         try {
-          statistics = await _repository.getCompanyStatistics();
+          statistics = await _repository.getCompanyStatistics(
+            companyType: event.companyType,
+          );
         } catch (error) {
           // Don't fail if statistics fail
           if (kDebugMode) {

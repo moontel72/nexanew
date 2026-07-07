@@ -361,10 +361,16 @@ class AdminCompanyController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function statistics()
+    public function statistics(Request $request)
     {
-        $total = Company::query()->count();
-        $byStatus = Company::query()
+        $query = Company::query();
+
+        if ($companyType = $request->query('company_type')) {
+            $query->where('company_type', $companyType);
+        }
+
+        $total = $query->count();
+        $byStatus = (clone $query)
             ->selectRaw('status, count(*) as c')
             ->groupBy('status')
             ->get()

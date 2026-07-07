@@ -24,11 +24,17 @@ class CompanyStatistics {
   });
 
   factory CompanyStatistics.fromJson(Map<String, dynamic> json) {
+    // Parse by_status map if present (backend statistics endpoint format)
+    final byStatus = (json['by_status'] as Map<String, dynamic>?) ?? const {};
+
     if (json.containsKey('data')) {
       final data = Map<String, dynamic>.from(json['data'] as Map);
-      final companyStats = Map<String, dynamic>.from(data['company_stats'] as Map);
+      final companyStats = Map<String, dynamic>.from(
+        data['company_stats'] as Map,
+      );
 
-      final growthData = (data['monthly_growth'] as Map?)?.cast<String, dynamic>() ??
+      final growthData =
+          (data['monthly_growth'] as Map?)?.cast<String, dynamic>() ??
           <String, dynamic>{};
       final months = (growthData['months'] as List?) ?? const [];
       final companyGrowth = (growthData['company_growth'] as List?) ?? const [];
@@ -61,23 +67,34 @@ class CompanyStatistics {
     }
 
     return CompanyStatistics(
-      totalCompanies: (json['total'] as num?)?.toInt() ??
+      totalCompanies:
+          (json['total'] as num?)?.toInt() ??
           (json['total_companies'] as num?)?.toInt() ??
           0,
-      activeCompanies: (json['active'] as num?)?.toInt() ??
+      activeCompanies:
+          (json['active'] as num?)?.toInt() ??
           (json['active_companies'] as num?)?.toInt() ??
+          (byStatus['active'] as num?)?.toInt() ??
           0,
-      pendingCompanies: (json['pending'] as num?)?.toInt() ??
+      pendingCompanies:
+          (json['pending'] as num?)?.toInt() ??
           (json['pending_companies'] as num?)?.toInt() ??
+          (byStatus['pending'] as num?)?.toInt() ??
           0,
-      suspendedCompanies: (json['suspended'] as num?)?.toInt() ??
+      suspendedCompanies:
+          (json['suspended'] as num?)?.toInt() ??
           (json['suspended_companies'] as num?)?.toInt() ??
+          (byStatus['suspended'] as num?)?.toInt() ??
           0,
-      verifiedCompanies: (json['verified'] as num?)?.toInt() ??
+      verifiedCompanies:
+          (json['verified'] as num?)?.toInt() ??
           (json['verified_companies'] as num?)?.toInt() ??
+          (byStatus['verified'] as num?)?.toInt() ??
           0,
-      pendingVerification: (json['pending_verification'] as num?)?.toInt() ??
+      pendingVerification:
+          (json['pending_verification'] as num?)?.toInt() ??
           (json['pendingVerification'] as num?)?.toInt() ??
+          (byStatus['pending_verification'] as num?)?.toInt() ??
           0,
       companiesByCountry: const {},
       companiesByPlan: const {},

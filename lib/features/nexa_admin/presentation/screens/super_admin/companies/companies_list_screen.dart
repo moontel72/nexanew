@@ -247,7 +247,7 @@ class _CompaniesListScreenState extends State<CompaniesListScreen> {
                           child: Row(
                             children: [
                               DashboardStatisticsCard(
-                                title: 'Total Companies',
+                                title: 'Total Factories',
                                 value: int.parse(
                                   statistics.totalCompanies.toString(),
                                 ),

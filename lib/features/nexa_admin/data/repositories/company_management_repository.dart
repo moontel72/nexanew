@@ -430,10 +430,16 @@ class CompanyManagementRepository {
     }
   }
 
-  Future<CompanyStatistics> getCompanyStatistics() async {
+  Future<CompanyStatistics> getCompanyStatistics({String? companyType}) async {
     try {
+      final queryParams = <String, dynamic>{};
+      if (companyType != null && companyType.isNotEmpty) {
+        queryParams['company_type'] = companyType;
+      }
+
       final response = await _apiService.get(
         '${ApiEndpoints.adminCompanies}/statistics',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
       );
 
       final data =
