@@ -43,11 +43,11 @@ class TicketVaultScreen extends StatelessWidget {
                           color: Color(0xFFF59E0B),
                         ),
                         title: Text(
-                          t['passenger_name']?.toString() ?? 'Ticket #${i + 1}',
+                          t.busDisplayName,
                           style: const TextStyle(color: Colors.white),
                         ),
                         subtitle: Text(
-                          'Seat: ${t['seat_number'] ?? '—'} · ${t['status'] ?? 'stored'}',
+                          'Seat: ${t.seatLabel} · ${t.status}',
                           style: const TextStyle(color: Colors.white54),
                         ),
                       ),
