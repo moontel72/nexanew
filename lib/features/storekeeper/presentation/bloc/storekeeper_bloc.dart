@@ -227,12 +227,7 @@ class StorekeeperDashboardBloc
     emit(state.copyWith(bundlesLoading: true));
     try {
       final res = await _repo(e.panel).getBundles();
-      emit(
-        state.copyWith(
-          bundles: (res['data'] as List?) ?? [],
-          bundlesLoading: false,
-        ),
-      );
+      emit(state.copyWith(bundles: res, bundlesLoading: false));
     } catch (_) {
       emit(state.copyWith(bundlesLoading: false));
     }

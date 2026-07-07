@@ -148,127 +148,187 @@ class FleetDetailRow extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: color ?? AppColors.textPrimary,
           ),
-        ],
-      ),
-    );
-  }
-
-  /// Stat card — compact metric display with label, value, and color accent.
-  class FleetStatCard extends StatelessWidget {
-    final String label, value;
-    final Color color;
-    final IconData? icon;
-    const FleetStatCard(this.label, this.value, this.color, {super.key, this.icon});
-    @override
-    Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: .04), blurRadius: 6),
-        ],
-      ),
-      child: Column(
-        children: [
-          if (icon != null) ...[Icon(icon, color: color, size: 20), const Gap(4)],
-          Text(value,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: color)),
-          const Gap(2),
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.gray500)),
-        ],
-      ),
-    );
-  }
-
-  /// Colored dot with label — used for legend indicators.
-  class FleetDot extends StatelessWidget {
-    final Color color;
-    final String label;
-    const FleetDot(this.color, this.label, {super.key});
-    @override
-    Widget build(BuildContext context) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(width: 10, height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const Gap(6),
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.gray600)),
-      ],
-    );
-  }
-
-  /// Seat grid — 4-per-row bus seat layout with driver/rear indicators.
-  class FleetSeatGrid extends StatelessWidget {
-    final List<Map<String, dynamic>> seats;
-    const FleetSeatGrid({super.key, required this.seats});
-
-    @override
-    Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: .04), blurRadius: 6),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity, height: 30,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: .1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Center(child: Text('🚌 DRIVER',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary))),
-          ),
-          const Gap(12),
-          ...List.generate((seats.length / 4).ceil(), (row) {
-            final start = row * 4;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(children: [
-                ...List.generate(2, (i) => start + i < seats.length
-                    ? _FleetSeat(seats[start + i]) : const SizedBox(width: 55)),
-                const SizedBox(width: 20),
-                ...List.generate(2, (i) => start + 2 + i < seats.length
-                    ? _FleetSeat(seats[start + 2 + i]) : const SizedBox(width: 55)),
-              ]),
-            );
-          }),
-          const Gap(12),
-          Container(
-            width: double.infinity, height: 24,
-            decoration: BoxDecoration(color: AppColors.gray100, borderRadius: BorderRadius.circular(6)),
-            child: const Center(child: Text('REAR',
-              style: TextStyle(fontSize: 9, color: AppColors.gray500))),
-          ),
-        ],
-      ),
-    );
-  }
-
-  class _FleetSeat extends StatelessWidget {
-    final Map<String, dynamic> seat;
-    const _FleetSeat(this.seat);
-    @override
-    Widget build(BuildContext context) {
-      final isBooked = seat['status']?.toString() == 'booked' || seat['booked'] == true;
-      final num = seat['number']?.toString() ?? seat['seat_no']?.toString() ?? '?';
-      final color = isBooked ? const Color(0xFF2563EB) : Colors.grey.shade300;
-      return Expanded(
-        child: Container(
-          height: 44, margin: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            color: isBooked ? color.withValues(alpha: .12) : Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color, width: 1.5),
-          ),
-          child: Center(child: Text(num,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color))),
         ),
-      );
-    }
+      ],
+    ),
+  );
+}
+
+/// Stat card — compact metric display with label, value, and color accent.
+class FleetStatCard extends StatelessWidget {
+  final String label, value;
+  final Color color;
+  final IconData? icon;
+  const FleetStatCard(
+    this.label,
+    this.value,
+    this.color, {
+    super.key,
+    this.icon,
+  });
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(color: Colors.black.withValues(alpha: .04), blurRadius: 6),
+      ],
+    ),
+    child: Column(
+      children: [
+        if (icon != null) ...[Icon(icon, color: color, size: 20), const Gap(4)],
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+        const Gap(2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Colored dot with label — used for legend indicators.
+class FleetDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const FleetDot(this.color, this.label, {super.key});
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+      const Gap(6),
+      Text(
+        label,
+        style: const TextStyle(fontSize: 12, color: AppColors.gray600),
+      ),
+    ],
+  );
+}
+
+/// Seat grid — 4-per-row bus seat layout with driver/rear indicators.
+class FleetSeatGrid extends StatelessWidget {
+  final List<Map<String, dynamic>> seats;
+  const FleetSeatGrid({super.key, required this.seats});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        BoxShadow(color: Colors.black.withValues(alpha: .04), blurRadius: 6),
+      ],
+    ),
+    child: Column(
+      children: [
+        Container(
+          width: double.infinity,
+          height: 30,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: .1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Center(
+            child: Text(
+              '🚌 DRIVER',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ),
+        const Gap(12),
+        ...List.generate((seats.length / 4).ceil(), (row) {
+          final start = row * 4;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                ...List.generate(
+                  2,
+                  (i) => start + i < seats.length
+                      ? _FleetSeat(seats[start + i])
+                      : const SizedBox(width: 55),
+                ),
+                const SizedBox(width: 20),
+                ...List.generate(
+                  2,
+                  (i) => start + 2 + i < seats.length
+                      ? _FleetSeat(seats[start + 2 + i])
+                      : const SizedBox(width: 55),
+                ),
+              ],
+            ),
+          );
+        }),
+        const Gap(12),
+        Container(
+          width: double.infinity,
+          height: 24,
+          decoration: BoxDecoration(
+            color: AppColors.gray100,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Center(
+            child: Text(
+              'REAR',
+              style: TextStyle(fontSize: 9, color: AppColors.gray500),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _FleetSeat extends StatelessWidget {
+  final Map<String, dynamic> seat;
+  const _FleetSeat(this.seat);
+  @override
+  Widget build(BuildContext context) {
+    final isBooked =
+        seat['status']?.toString() == 'booked' || seat['booked'] == true;
+    final num =
+        seat['number']?.toString() ?? seat['seat_no']?.toString() ?? '?';
+    final color = isBooked ? const Color(0xFF2563EB) : Colors.grey.shade300;
+    return Expanded(
+      child: Container(
+        height: 44,
+        margin: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: isBooked ? color.withValues(alpha: .12) : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color, width: 1.5),
+        ),
+        child: Center(
+          child: Text(
+            num,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ),
+      ),
+    );
   }
+}
