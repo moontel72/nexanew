@@ -88,14 +88,19 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final rightSeats = config.rightSeats;
     final rows = config.rowCount;
     const double aisleW = 40.0;
-    const rowH = 64.0;
-    const topMargin = 100.0;
-    const leftMargin = 28.0;
+    const double rowH = 64.0;
+    const double topMargin = 100.0;
+    const double leftMargin = 28.0;
+    const double seatSpan = 48.0;
 
     // Auto-size canvas to fit all rows
     final canvasH = topMargin + rows * rowH + 40;
     final canvasW =
-        leftMargin + leftSeats * 48 + aisleW + rightSeats * 48 + leftMargin;
+        leftMargin +
+        leftSeats * seatSpan +
+        aisleW +
+        rightSeats * seatSpan +
+        leftMargin;
     bloc.add(
       UpdateCanvasSize(
         width: canvasW > 200 ? canvasW : 280,
@@ -112,21 +117,43 @@ class _DesignerBodyState extends State<_DesignerBody> {
       ),
     );
 
-    // Generate seat rows
+    // Generate seat rows with airline-style numbering (A1, A2, B1, B2, ...)
+    const String letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     for (int row = 0; row < rows; row++) {
       final y = topMargin + row * rowH;
+      // Row letter (A=0, B=1, etc.) — front to back
+      final rowLetter =
+          letters[row < letters.length ? row : letters.length - 1];
 
       // Left-side seats
       for (int s = 0; s < leftSeats; s++) {
-        final x = leftMargin + s * 48;
-        bloc.add(AddComponent(type: ComponentType.seat, x: x, y: y));
+        final x = leftMargin + s * seatSpan;
+        final seatNum = s + 1;
+        bloc.add(
+          AddComponent(
+            type: ComponentType.seat,
+            x: x,
+            y: y,
+            seatId: '$rowLetter$seatNum',
+            seatNumber: seatNum,
+          ),
+        );
       }
 
       // Right-side seats
-      final rightStartX = leftMargin + leftSeats * 48 + aisleW;
+      final rightStartX = leftMargin + leftSeats * seatSpan + aisleW;
       for (int s = 0; s < rightSeats; s++) {
-        final x = rightStartX + s * 48;
-        bloc.add(AddComponent(type: ComponentType.seat, x: x, y: y));
+        final x = rightStartX + s * seatSpan;
+        final seatNum = leftSeats + s + 1;
+        bloc.add(
+          AddComponent(
+            type: ComponentType.seat,
+            x: x,
+            y: y,
+            seatId: '$rowLetter$seatNum',
+            seatNumber: seatNum,
+          ),
+        );
       }
     }
   }
@@ -471,7 +498,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
           width: 280,
           child: AbsoluteInspectorPanel(
             component: _state.selectedComponent!,
-            onApply: (u) => _bloc.add(UpdateComponent(u)),
+            onApply: (u) {
+              _bloc.add(UpdateComponent(u));
+              _bloc.add(const SelectComponent(null));
+            },
             onDelete: () =>
                 _bloc.add(DeleteComponent(_state.selectedComponent!.id)),
             onClose: () => _bloc.add(const SelectComponent(null)),

@@ -28,9 +28,19 @@ class ApplyPreset extends LayoutDesignerEvent {
 class AddComponent extends LayoutDesignerEvent {
   final ComponentType type;
   final double x, y;
-  const AddComponent({required this.type, required this.x, required this.y});
+  final String? seatId;
+  final int? seatNumber;
+  final String? berthLabel;
+  const AddComponent({
+    required this.type,
+    required this.x,
+    required this.y,
+    this.seatId,
+    this.seatNumber,
+    this.berthLabel,
+  });
   @override
-  List<Object?> get props => [type, x, y];
+  List<Object?> get props => [type, x, y, seatId, seatNumber, berthLabel];
 }
 
 class SelectComponent extends LayoutDesignerEvent {

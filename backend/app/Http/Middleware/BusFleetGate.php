@@ -37,8 +37,16 @@ class BusFleetGate
         }
 
         // The user IS a bus/truck company — carrier_company_id = own id
-        // Bus OWNERS do NOT get access here — they use /bus-owner/ app.
         if (in_array($user->account_type ?? null, ['bus_company', 'truck_company'], true)) {
+            $request->merge(['_carrier_company_id' => $user->id]);
+            return $next($request);
+        }
+
+        // Independent bus owners (not linked to a carrier) pass through
+        // for self-contained operations like layout creation.
+        // carrier_company_id is set to the user's own tenant id.
+        if (($user->account_type ?? null) === 'global_identity' ||
+            ($user->is_independent ?? false)) {
             $request->merge(['_carrier_company_id' => $user->id]);
             return $next($request);
         }

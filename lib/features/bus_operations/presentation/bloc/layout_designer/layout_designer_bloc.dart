@@ -69,14 +69,17 @@ class LayoutDesignerBloc
       y: e.y,
       width: e.type == ComponentType.driverCabin
           ? 48
-          : e.type.name.contains('seat')
+          : e.type.name.contains('seat') || e.type.name.contains('sleeper')
           ? 44
           : 80,
       height: e.type == ComponentType.driverCabin
           ? 48
-          : e.type.name.contains('seat')
+          : e.type.name.contains('seat') || e.type.name.contains('sleeper')
           ? 44
           : 100,
+      seatId: e.seatId,
+      seatNumber: e.seatNumber,
+      berthLabel: e.berthLabel,
     );
     final newComponents = [...state.layout.components, comp];
     emit(
