@@ -6,8 +6,8 @@ import 'package:gap/gap.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_state.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbox_section.dart';
@@ -494,90 +494,164 @@ class _SidebarWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 260,
-      color: const Color(0xFF162438),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1A3A5C),
+        border: Border(right: BorderSide(color: Color(0x20FFFFFF))),
+      ),
       child: Column(
         children: [
-          Container(
-            padding: EdgeInsets.all(20.w),
+          const Gap(16),
+          // Profile header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                const Icon(
-                  Icons.directions_bus,
-                  color: FleetColors.drivers,
-                  size: 28,
-                ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Text(
-                    state.ownerName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00B4D8), Color(0xFF0077B6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF00B4D8).withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.directions_bus,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.ownerName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Text(
+                        'BUS FLEET',
+                        style: TextStyle(
+                          color: Color(0xFFBDD8DB),
+                          fontSize: 9,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const Divider(color: Color(0xFF2A3A4A), height: 1),
+          const Gap(12),
+          const Divider(height: 1, color: Color(0x20FFFFFF)),
           Expanded(
             child: ListView(
-              padding: EdgeInsets.symmetric(vertical: 8.h),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               children: [
-                _nav('Dashboard', Icons.dashboard, 'dashboard'),
+                _sec('DASHBOARD'),
+                _pencil(
+                  'Dashboard',
+                  Icons.dashboard,
+                  'dashboard',
+                  const Color(0xFF7C3AED),
+                ),
                 _sec('FLEET MANAGEMENT'),
-                _nav(
+                _pencil(
                   'Drivers',
                   Icons.badge,
                   'drivers',
-                  color: FleetColors.drivers,
+                  const Color(0xFF00B4D8),
                 ),
-                _nav(
+                _pencil(
                   'Conductors',
                   Icons.group,
                   'conductors',
-                  color: FleetColors.conductors,
+                  const Color(0xFF7C3AED),
                 ),
-                _nav(
+                _pencil(
                   'Vehicles',
                   Icons.directions_bus,
                   'layouts',
-                  color: FleetColors.seats,
+                  const Color(0xFF2563EB),
                 ),
                 _sec('OPERATIONS'),
-                _nav('Route Scheduler', Icons.alt_route_rounded, 'routes'),
-                _nav(
+                _pencil(
+                  'Route Scheduler',
+                  Icons.alt_route_rounded,
+                  'routes',
+                  const Color(0xFF16A34A),
+                ),
+                _pencil(
                   'Ticket Management',
                   Icons.confirmation_num_rounded,
                   'tickets',
+                  const Color(0xFFDB2777),
                 ),
-                _nav('Vouchers / Promos', Icons.card_giftcard, 'vouchers'),
-                _nav('Staff Bonuses', Icons.emoji_events, 'bonuses'),
+                _pencil(
+                  'Vouchers',
+                  Icons.card_giftcard,
+                  'vouchers',
+                  const Color(0xFFD97706),
+                ),
+                _pencil(
+                  'Staff Bonuses',
+                  Icons.emoji_events,
+                  'bonuses',
+                  const Color(0xFF0891B2),
+                ),
                 _sec('CARRIER'),
-                _nav('Carrier Link', Icons.link_rounded, 'carrier'),
-                _nav('Inbox', Icons.message_rounded, 'inbox'),
+                _pencil(
+                  'Carrier Link',
+                  Icons.link_rounded,
+                  'carrier',
+                  const Color(0xFF4F46E5),
+                ),
+                _pencil(
+                  'Inbox',
+                  Icons.message_rounded,
+                  'inbox',
+                  const Color(0xFF059669),
+                ),
                 _sec('STOREKEEPER'),
-                _nav(
-                  'Terminal Storekeepers',
+                _pencil(
+                  'Storekeepers',
                   Icons.inventory_2_rounded,
                   'storekeepers',
+                  const Color(0xFFDC2626),
                 ),
-                _nav(
-                  'Bus Catering Inventory',
+                _pencil(
+                  'Catering',
                   Icons.restaurant_menu,
                   'catering',
+                  const Color(0xFFF97316),
                 ),
-                _nav(
+                _pencil(
                   'Activity Logs',
                   Icons.receipt_long_rounded,
                   'activity_log',
+                  const Color(0xFF6366F1),
                 ),
-                _nav(
+                _pencil(
                   'Settlement Reports',
                   Icons.account_balance_wallet,
                   'settlement',
+                  const Color(0xFF14B8A6),
                 ),
               ],
             ),
@@ -587,40 +661,25 @@ class _SidebarWidget extends StatelessWidget {
     );
   }
 
-  Widget _nav(String label, IconData icon, String page, {Color? color}) {
-    final active = state.currentPage == page;
-    return ListTile(
-      dense: true,
-      leading: Icon(
-        icon,
-        size: 20,
-        color: active
-            ? (color ?? FleetColors.drivers)
-            : const Color(0xFF667788),
-      ),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: active ? Colors.white : const Color(0xFF8899AA),
-          fontSize: 13,
-        ),
-      ),
-      selected: active,
-      selectedTileColor: FleetColors.drivers.withValues(alpha: .1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  Widget _pencil(String label, IconData icon, String page, Color color) {
+    return Missile3DButton(
+      label: label,
+      icon: icon,
+      color: color,
+      height: state.currentPage == page ? 64 : 56,
       onTap: () => bloc.add(NavigateToPage(page)),
     );
   }
 
   Widget _sec(String label) => Padding(
-    padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 4.h),
+    padding: EdgeInsets.fromLTRB(14, 12, 16, 4),
     child: Text(
       label,
-      style: const TextStyle(
-        color: Color(0xFF556677),
+      style: TextStyle(
+        color: Color(0xFFBDD8DB),
         fontSize: 10,
         fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
+        letterSpacing: 1.0,
       ),
     ),
   );

@@ -6,8 +6,8 @@ import 'package:gap/gap.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_state.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbox_section.dart'
     as chat;
@@ -505,46 +505,115 @@ class _Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 260,
-      color: const Color(0xFF162438),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1A3A5C),
+        border: Border(right: BorderSide(color: Color(0x20FFFFFF))),
+      ),
       child: Column(
         children: [
-          Container(
-            padding: EdgeInsets.all(20.w),
+          const Gap(16),
+          // Profile header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                const Icon(
-                  Icons.directions_bus,
-                  color: Color(0xFFDB2777),
-                  size: 28,
-                ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Text(
-                    state.ownerName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFDB2777), Color(0xFF9D174D)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFDB2777).withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.directions_bus,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.ownerName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Text(
+                        'BUS OWNER',
+                        style: TextStyle(
+                          color: Color(0xFFBDD8DB),
+                          fontSize: 9,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const Divider(color: Color(0xFF2A3A4A)),
+          const Gap(12),
+          const Divider(height: 1, color: Color(0x20FFFFFF)),
           Expanded(
             child: ListView(
-              padding: EdgeInsets.symmetric(vertical: 8.h),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               children: [
-                _nav('Dashboard', Icons.dashboard, 'dashboard'),
+                _sec('DASHBOARD'),
+                _pencil(
+                  'Dashboard',
+                  Icons.dashboard,
+                  'dashboard',
+                  const Color(0xFF7C3AED),
+                ),
                 _sec('FLEET'),
-                _nav('Drivers', Icons.badge, 'drivers'),
-                _nav('Conductors', Icons.group, 'conductors'),
-                _nav('Vehicles', Icons.directions_bus, 'layouts'),
+                _pencil(
+                  'Drivers',
+                  Icons.badge,
+                  'drivers',
+                  const Color(0xFF00B4D8),
+                ),
+                _pencil(
+                  'Conductors',
+                  Icons.group,
+                  'conductors',
+                  const Color(0xFF7C3AED),
+                ),
+                _pencil(
+                  'Vehicles',
+                  Icons.directions_bus,
+                  'layouts',
+                  const Color(0xFF2563EB),
+                ),
                 _sec('CARRIER'),
-                _nav('Carrier Link', Icons.link_rounded, 'carrier'),
-                _nav('Inbox', Icons.message_rounded, 'inbox'),
+                _pencil(
+                  'Carrier Link',
+                  Icons.link_rounded,
+                  'carrier',
+                  const Color(0xFF4F46E5),
+                ),
+                _pencil(
+                  'Inbox',
+                  Icons.message_rounded,
+                  'inbox',
+                  const Color(0xFF059669),
+                ),
               ],
             ),
           ),
@@ -553,34 +622,25 @@ class _Sidebar extends StatelessWidget {
     );
   }
 
-  Widget _nav(String l, IconData i, String p) => ListTile(
-    dense: true,
-    leading: Icon(
-      i,
-      size: 20,
-      color: state.currentPage == p ? Colors.white : const Color(0xFF667788),
-    ),
-    title: Text(
-      l,
-      style: TextStyle(
-        color: state.currentPage == p ? Colors.white : const Color(0xFF8899AA),
-        fontSize: 13,
-      ),
-    ),
-    selected: state.currentPage == p,
-    selectedTileColor: const Color(0xFFDB2777).withValues(alpha: .1),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    onTap: () => bloc.add(NavigateOwnerPage(p)),
-  );
-  Widget _sec(String l) => Padding(
-    padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 4.h),
+  Widget _pencil(String label, IconData icon, String page, Color color) {
+    return Missile3DButton(
+      label: label,
+      icon: icon,
+      color: color,
+      height: state.currentPage == page ? 64 : 56,
+      onTap: () => bloc.add(NavigateOwnerPage(page)),
+    );
+  }
+
+  Widget _sec(String label) => Padding(
+    padding: EdgeInsets.fromLTRB(14, 12, 16, 4),
     child: Text(
-      l,
-      style: const TextStyle(
-        color: Color(0xFF556677),
+      label,
+      style: TextStyle(
+        color: Color(0xFFBDD8DB),
         fontSize: 10,
         fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
+        letterSpacing: 1.0,
       ),
     ),
   );
