@@ -167,16 +167,68 @@ class _DesignerBodyState extends State<_DesignerBody> {
   }
 
   Widget _topBar() {
+    final cfg = widget.config;
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFF0A1628),
         border: Border(bottom: BorderSide(color: Color(0x20FFFFFF))),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Vehicle context header (shown when config is provided)
+          if (cfg != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              margin: const EdgeInsets.only(bottom: 4),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1F5E6B), Color(0xFF0A1628)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.directions_bus, color: Color(0xFFBDD8DB), size: 16),
+                  const Gap(8),
+                  Text(
+                    cfg.numberPlate.isNotEmpty ? cfg.numberPlate : 'New Vehicle',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (cfg.maker.isNotEmpty) ...[
+                    const Gap(12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        cfg.maker,
+                        style: const TextStyle(
+                          color: Color(0xFFBDD8DB),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          // Original toolbar
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
             IconButton(
               icon: const Icon(
                 Icons.arrow_back,
@@ -316,6 +368,8 @@ class _DesignerBodyState extends State<_DesignerBody> {
             ),
           ],
         ),
+      ),
+        ],
       ),
     );
   }

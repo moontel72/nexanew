@@ -42,19 +42,14 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   int _rowCount = 14;
 
   static const List<String> _busMakers = [
-    'HINO',
-    'VOLVO',
-    'DAEWOO',
-    'YUTONG',
-    'HIGER',
-    'MERCEDES-BENZ',
-    'SCANIA',
+    'Hino',
+    'Mercedes-Benz',
+    'Volvo',
+    'Scania',
     'MAN',
-    'ISUZU',
-    'TATA',
-    'ASHOK LEYLAND',
-    'EICHER',
-    'OTHER',
+    'Iveco',
+    'Yutong',
+    'Others',
   ];
 
   @override

@@ -10,6 +10,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_ad
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 
 class SubAdminDashboardScreen extends StatelessWidget {
   const SubAdminDashboardScreen({super.key});
@@ -859,105 +860,160 @@ class _Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 220,
+      width: 260,
       decoration: const BoxDecoration(
-        color: Color(0xFF091524),
+        color: Color(0xFF1A3A5C),
         border: Border(right: BorderSide(color: Color(0x20FFFFFF))),
       ),
       child: Column(
         children: [
-          const Gap(24),
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1F5E6B),
-              borderRadius: BorderRadius.circular(14),
+          const Gap(20),
+          // Profile header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1F5E6B), Color(0xFF0D3440)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1F5E6B).withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      state.subAdminName.isNotEmpty
+                          ? state.subAdminName[0].toUpperCase()
+                          : 'S',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.subAdminName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1F5E6B).withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'SUB-ADMIN',
+                          style: TextStyle(
+                            color: Color(0xFFBDD8DB),
+                            fontSize: 9,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            child: Text(
-              state.subAdminName.isNotEmpty
-                  ? state.subAdminName[0].toUpperCase()
-                  : 'S',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            alignment: Alignment.center,
           ),
+          const Gap(16),
+          const Divider(height: 1, color: Color(0x20FFFFFF)),
           const Gap(8),
-          Text(
-            state.subAdminName,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Gap(4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1F5E6B).withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Text(
-              'SUB-ADMIN',
+          // Section label
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 4, 16, 4),
+            child: Text(
+              'NAVIGATION',
               style: TextStyle(
                 color: Color(0xFFBDD8DB),
                 fontSize: 10,
-                letterSpacing: 0.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.0,
               ),
             ),
           ),
-          const Gap(24),
-          _navItem(Icons.dashboard, 'Dashboard', true),
-          _navItem(
-            Icons.refresh,
-            'Refresh Data',
-            false,
-            onTap: () => bloc.add(const BootstrapDashboard()),
-          ),
-          const Spacer(),
-          ListTile(
-            leading: const Icon(
-              Icons.logout,
-              color: Colors.redAccent,
-              size: 18,
+          // Pencil-shape navigation buttons
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              children: [
+                Missile3DButton(
+                  label: 'Dashboard',
+                  icon: Icons.dashboard,
+                  color: const Color(0xFF7C3AED),
+                  height: 64,
+                  onTap: () {},
+                ),
+                Missile3DButton(
+                  label: 'Bus Companies',
+                  icon: Icons.directions_bus,
+                  color: const Color(0xFF16A34A),
+                  height: 64,
+                  onTap: () {},
+                ),
+                Missile3DButton(
+                  label: 'Sub-Admins',
+                  icon: Icons.admin_panel_settings,
+                  color: const Color(0xFFD97706),
+                  height: 64,
+                  onTap: () {},
+                ),
+                Missile3DButton(
+                  label: 'Refresh Data',
+                  icon: Icons.refresh,
+                  color: const Color(0xFF2563EB),
+                  height: 56,
+                  onTap: () => bloc.add(const BootstrapDashboard()),
+                ),
+              ],
             ),
-            title: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.redAccent, fontSize: 12),
-            ),
-            onTap: () async {
-              bloc.add(const SubAdminLogout());
-              if (context.mounted) context.go('/sub-admin/login');
-            },
-            dense: true,
           ),
-          const Gap(12),
+          const Divider(height: 1, color: Color(0x20FFFFFF)),
+          // Logout
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Missile3DButton(
+              label: 'Logout',
+              icon: Icons.logout,
+              color: const Color(0xFFDC2626),
+              height: 48,
+              onTap: () async {
+                bloc.add(const SubAdminLogout());
+                if (context.mounted) context.go('/sub-admin/login');
+              },
+            ),
+          ),
+          const Gap(8),
         ],
       ),
     );
   }
-
-  Widget _navItem(
-    IconData icon,
-    String label,
-    bool active, {
-    VoidCallback? onTap,
-  }) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: active ? const Color(0xFF1F5E6B) : Colors.white54,
-        size: 18,
-      ),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: active ? Colors.white : Colors.white54,
+}
           fontSize: 12,
         ),
       ),

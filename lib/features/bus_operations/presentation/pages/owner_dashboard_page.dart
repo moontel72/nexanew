@@ -7,6 +7,7 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashbo
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_state.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbox_section.dart'
     as chat;
@@ -450,10 +451,12 @@ class _OwnerView extends StatelessWidget {
   }
 
   void _openDesigner(BuildContext ctx, OwnerDashboardState state) {
+    // First show BusConfigSetupScreen to capture vehicle details,
+    // then proceed to the canvas designer.
     Navigator.push(
       ctx,
       MaterialPageRoute(
-        builder: (_) => AbsoluteLayoutDesignerScreen(
+        builder: (_) => BusConfigSetupScreen(
           companyId: state.companyId,
           companyName: state.ownerName,
           apiPrefix: '/bus-owner',
