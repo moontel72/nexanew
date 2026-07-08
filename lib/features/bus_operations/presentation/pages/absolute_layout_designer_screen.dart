@@ -83,8 +83,52 @@ class _DesignerBodyState extends State<_DesignerBody> {
   AbsoluteLayoutState get _state => _bloc.state.layout;
 
   void _initFromConfig(BusConfig config) {
-    // Heavy seat generation — kept in widget for backward compat with config parameter.
-    // In future this should move to BLoC.
+    final bloc = _bloc;
+    final leftSeats = config.leftSeats;
+    final rightSeats = config.rightSeats;
+    final rows = config.rowCount;
+    const double aisleW = 40.0;
+    const rowH = 64.0;
+    const topMargin = 100.0;
+    const leftMargin = 28.0;
+
+    // Auto-size canvas to fit all rows
+    final canvasH = topMargin + rows * rowH + 40;
+    final canvasW =
+        leftMargin + leftSeats * 48 + aisleW + rightSeats * 48 + leftMargin;
+    bloc.add(
+      UpdateCanvasSize(
+        width: canvasW > 200 ? canvasW : 280,
+        height: canvasH > 200 ? canvasH : 896,
+      ),
+    );
+
+    // Place driver cabin at front center
+    bloc.add(
+      AddComponent(
+        type: ComponentType.driverCabin,
+        x: (canvasW - 80) / 2,
+        y: 16,
+      ),
+    );
+
+    // Generate seat rows
+    for (int row = 0; row < rows; row++) {
+      final y = topMargin + row * rowH;
+
+      // Left-side seats
+      for (int s = 0; s < leftSeats; s++) {
+        final x = leftMargin + s * 48;
+        bloc.add(AddComponent(type: ComponentType.seat, x: x, y: y));
+      }
+
+      // Right-side seats
+      final rightStartX = leftMargin + leftSeats * 48 + aisleW;
+      for (int s = 0; s < rightSeats; s++) {
+        final x = rightStartX + s * 48;
+        bloc.add(AddComponent(type: ComponentType.seat, x: x, y: y));
+      }
+    }
   }
 
   void _showUnsavedDialog() {
@@ -168,67 +212,19 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
   Widget _topBar() {
     final cfg = widget.config;
+    final title = cfg != null && cfg.numberPlate.isNotEmpty
+        ? '${cfg.numberPlate}${cfg.maker.isNotEmpty ? ' | ${cfg.maker}' : ''}'
+        : _state.displayName;
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFF0A1628),
         border: Border(bottom: BorderSide(color: Color(0x20FFFFFF))),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Vehicle context header (shown when config is provided)
-          if (cfg != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              margin: const EdgeInsets.only(bottom: 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1F5E6B), Color(0xFF0A1628)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.directions_bus, color: Color(0xFFBDD8DB), size: 16),
-                  const Gap(8),
-                  Text(
-                    cfg.numberPlate.isNotEmpty ? cfg.numberPlate : 'New Vehicle',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (cfg.maker.isNotEmpty) ...[
-                    const Gap(12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        cfg.maker,
-                        style: const TextStyle(
-                          color: Color(0xFFBDD8DB),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          // Original toolbar
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
             IconButton(
               icon: const Icon(
                 Icons.arrow_back,
@@ -248,9 +244,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
             ),
             Gap(4),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 140),
+              constraints: const BoxConstraints(maxWidth: 200),
               child: Text(
-                _state.displayName,
+                title,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -368,8 +364,6 @@ class _DesignerBodyState extends State<_DesignerBody> {
             ),
           ],
         ),
-      ),
-        ],
       ),
     );
   }
