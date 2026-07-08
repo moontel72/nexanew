@@ -21,6 +21,7 @@
 
 import 'dart:async';
 import 'package:bloc/bloc.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:trace_odd/core/network/network_exceptions.dart';
 import 'package:trace_odd/core/errors/app_exceptions.dart';
@@ -82,6 +83,38 @@ class PanelAuthBloc extends Bloc<PanelAuthEvent, PanelAuthState> {
           isDriverTypeMismatch: true,
         ),
       );
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      if (statusCode == 401) {
+        emit(
+          const PanelAuthError(
+            message: 'Invalid email or password. Please try again.',
+            isInvalidCredentials: true,
+          ),
+        );
+      } else if (statusCode == 403) {
+        final body = e.response?.data;
+        var msg = 'Access denied.';
+        if (body is Map) {
+          msg = body['message']?.toString() ?? msg;
+        }
+        emit(PanelAuthError(message: msg));
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        emit(
+          const PanelAuthError(
+            message: 'Network error. Please check your connection and try again.',
+            isNetworkError: true,
+          ),
+        );
+      } else {
+        emit(
+          PanelAuthError(
+            message: 'Login failed: ${e.message ?? 'Unknown error'}',
+          ),
+        );
+      }
     } on UnauthorizedException {
       emit(
         const PanelAuthError(

@@ -1,6 +1,7 @@
 // Truck Conductor App — Wave 2 BLoC Dashboard
 // Deployed at: /var/www/traceodd/truck-conductor/
 
+import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/conductor_dashboard_page.dart';
 import 'package:trace_odd/shared/app_scaffold.dart';
@@ -12,6 +13,9 @@ void main() => FleetApp.run(
   loginScreen: FleetBlocLoginScreen(
     panel: UserPanel.truckFleet,
     loginConfig: FleetLoginConfig.truckConductor(),
+    onAuthenticated: (context, response) {
+      GoRouter.of(context).go('/truck-conductor/dashboard');
+    },
   ),
   dashboardScreen: const ConductorDashboardPage(storagePrefix: 'truckFleet'),
   loginPath: '/truck-conductor/login',

@@ -2,6 +2,7 @@
 // Deployed at: /var/www/traceodd/bus-owner/
 // Auth via unified PanelAuthBloc, dashboard via OwnerDashboardBloc.
 
+import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/owner_dashboard_page.dart';
 import 'package:trace_odd/shared/app_scaffold.dart';
@@ -13,6 +14,9 @@ void main() => FleetApp.run(
   loginScreen: FleetBlocLoginScreen(
     panel: UserPanel.busFleet,
     loginConfig: FleetLoginConfig.busOwner(),
+    onAuthenticated: (context, response) {
+      GoRouter.of(context).go('/bus-owner/dashboard');
+    },
   ),
   dashboardScreen: const OwnerDashboardPage(),
   loginPath: '/bus-owner/login',
