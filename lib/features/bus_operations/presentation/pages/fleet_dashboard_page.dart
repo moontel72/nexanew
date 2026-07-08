@@ -195,6 +195,10 @@ class _FleetDashboardView extends StatelessWidget {
         return const StorekeeperActivityLogScreen();
       case 'settlement':
         return const StorekeeperSettlementReportScreen();
+      case 'dispatch_create':
+        return _dispatchPlaceholder('Create Assignment', Icons.assignment_add);
+      case 'dispatch_list':
+        return _dispatchPlaceholder('Active Assignments', Icons.list_alt);
       default:
         return _homeTab(ctx, bloc, state);
     }
@@ -615,6 +619,19 @@ class _SidebarWidget extends StatelessWidget {
                   'bonuses',
                   const Color(0xFF0891B2),
                 ),
+                _sec('LIVE DISPATCH & DUTY'),
+                _pencil(
+                  'Create Assignment',
+                  Icons.assignment_add,
+                  'dispatch_create',
+                  const Color(0xFF059669),
+                ),
+                _pencil(
+                  'Active Assignments',
+                  Icons.list_alt,
+                  'dispatch_list',
+                  const Color(0xFF0EA5E9),
+                ),
                 _sec('CARRIER'),
                 _pencil(
                   'Carrier Link',
@@ -656,6 +673,24 @@ class _SidebarWidget extends StatelessWidget {
               ],
             ),
           ),
+          const Divider(height: 1, color: Color(0x20FFFFFF)),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Missile3DButton(
+              label: 'Logout',
+              icon: Icons.logout,
+              color: const Color(0xFFDC2626),
+              height: 48,
+              onTap: () => bloc.add(
+                LogoutRequested(
+                  storagePrefix: state.ownerName.isNotEmpty
+                      ? state.ownerName
+                      : 'busFleet',
+                ),
+              ),
+            ),
+          ),
+          const Gap(8),
         ],
       ),
     );
@@ -672,15 +707,41 @@ class _SidebarWidget extends StatelessWidget {
   }
 
   Widget _sec(String label) => Padding(
-    padding: EdgeInsets.fromLTRB(14, 12, 16, 4),
+    padding: const EdgeInsets.fromLTRB(14, 12, 16, 4),
     child: Text(
       label,
-      style: TextStyle(
+      style: const TextStyle(
         color: Color(0xFFBDD8DB),
         fontSize: 10,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.0,
       ),
+    ),
+  );
+}
+
+// Dispatch placeholder — defined at top level for use in _pageContent
+Widget _dispatchPlaceholder(String title, IconData icon) {
+  return Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 64, color: Colors.white24),
+        const Gap(16),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const Gap(8),
+        const Text(
+          'Dispatch module initializing...',
+          style: TextStyle(color: Colors.white54, fontSize: 14),
+        ),
+      ],
     ),
   );
 }

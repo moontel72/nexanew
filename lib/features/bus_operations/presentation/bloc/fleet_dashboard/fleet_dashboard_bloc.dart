@@ -53,11 +53,15 @@ class FleetDashboardBloc
       );
       return;
     }
+    // Resolve owner name from multiple storage keys for robustness
+    final ownerName =
+        p.getString('${e.storagePrefix}_owner_name') ??
+        p.getString('${e.storagePrefix}_driver_name') ??
+        p.getString('sub_admin_name') ??
+        p.getString('display_name') ??
+        'Fleet';
     emit(
-      state.copyWith(
-        status: FleetDashboardStatus.loaded,
-        ownerName: p.getString('${e.storagePrefix}_owner_name') ?? 'Fleet',
-      ),
+      state.copyWith(status: FleetDashboardStatus.loaded, ownerName: ownerName),
     );
     add(FetchDashboardMetrics(panelPrefix: e.panelPrefix));
   }
