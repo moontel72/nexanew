@@ -1014,11 +1014,3 @@ class _Sidebar extends StatelessWidget {
     );
   }
 }
-          fontSize: 12,
-        ),
-      ),
-      onTap: onTap,
-      dense: true,
-    );
-  }
-}
