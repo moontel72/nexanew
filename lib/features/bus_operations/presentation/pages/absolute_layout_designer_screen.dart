@@ -433,126 +433,146 @@ class _DesignerBodyState extends State<_DesignerBody> {
         ),
       );
 
-  Widget _buildCanvas() => Stack(
-    clipBehavior: Clip.none,
-    children: [
-      AbsoluteCanvasGrid(
-        layoutState: _state,
-        transformController: _transformCtrl,
-        onComponentTap: (id, x, y) {
-          if (_tool == _CanvasTool.select) {
-            _bloc.add(SelectComponent(id));
-          } else if (_tool == _CanvasTool.placeComponent &&
-              _placingType != null) {
-            _bloc.add(AddComponent(type: _placingType!, x: x, y: y));
-            setState(() {
-              _tool = _CanvasTool.select;
-              _placingType = null;
-            });
-          }
-        },
-        onCanvasTap: (x, y) {
-          if (_tool == _CanvasTool.placeComponent && _placingType != null) {
-            _bloc.add(AddComponent(type: _placingType!, x: x, y: y));
-            setState(() {
-              _tool = _CanvasTool.select;
-              _placingType = null;
-            });
-          } else if (_tool == _CanvasTool.select) {
-            _bloc.add(const SelectComponent(null));
-          }
-        },
-        onOverlayResize: (w, h, x, y) {
-          final sel = _state.selectedComponent;
-          if (sel != null)
-            _bloc.add(
-              UpdateComponent(
-                sel.copyWith(
-                  x: x,
-                  y: y,
-                  width: w.toDouble(),
-                  height: h.toDouble(),
-                ),
-              ),
-            );
-        },
-        onOverlayMove: (x, y) {
-          final sel = _state.selectedComponent;
-          if (sel != null) _bloc.add(UpdateComponent(sel.copyWith(x: x, y: y)));
-        },
-        onOverlayRotate: (r) {
-          final sel = _state.selectedComponent;
-          if (sel != null)
-            _bloc.add(UpdateComponent(sel.copyWith(rotation: r)));
-        },
-        onOverlayDelete: () {
-          final sel = _state.selectedComponent;
-          if (sel != null) _bloc.add(DeleteComponent(sel.id));
-        },
-        onOverlayTap: () {},
-      ),
-      if (_state.selectedComponent != null)
-        Positioned(
-          top: 8,
-          right: 8,
-          width: 280,
-          child: AbsoluteInspectorPanel(
-            component: _state.selectedComponent!,
-            onApply: (u) {
-              _bloc.add(UpdateComponent(u));
+  Widget _buildCanvas() => GestureDetector(
+    // Global background-tap deselection: clicking the empty canvas
+    // area dispatches a clearance event to dismiss the transform overlay.
+    // The AbsoluteCanvasGrid's internal Listener handles hit-testing
+    // for component taps; this outer detector serves as a safety net
+    // for any background area missed by the Listener + InteractiveViewer.
+    behavior: HitTestBehavior.translucent,
+    onTap: () {
+      if (_tool == _CanvasTool.select) {
+        _bloc.add(const SelectComponent(null));
+      }
+    },
+    child: Stack(
+      clipBehavior: Clip.none,
+      children: [
+        AbsoluteCanvasGrid(
+          layoutState: _state,
+          transformController: _transformCtrl,
+          onComponentTap: (id, x, y) {
+            if (_tool == _CanvasTool.select) {
+              _bloc.add(SelectComponent(id));
+            } else if (_tool == _CanvasTool.placeComponent &&
+                _placingType != null) {
+              _bloc.add(AddComponent(type: _placingType!, x: x, y: y));
+              setState(() {
+                _tool = _CanvasTool.select;
+                _placingType = null;
+              });
+            }
+          },
+          onCanvasTap: (x, y) {
+            if (_tool == _CanvasTool.placeComponent && _placingType != null) {
+              _bloc.add(AddComponent(type: _placingType!, x: x, y: y));
+              setState(() {
+                _tool = _CanvasTool.select;
+                _placingType = null;
+              });
+            } else if (_tool == _CanvasTool.select) {
               _bloc.add(const SelectComponent(null));
-            },
-            onDelete: () =>
-                _bloc.add(DeleteComponent(_state.selectedComponent!.id)),
-            onClose: () => _bloc.add(const SelectComponent(null)),
-          ),
+            }
+          },
+          onOverlayResize: (w, h, x, y) {
+            final sel = _state.selectedComponent;
+            if (sel != null)
+              _bloc.add(
+                UpdateComponent(
+                  sel.copyWith(
+                    x: x,
+                    y: y,
+                    width: w.toDouble(),
+                    height: h.toDouble(),
+                  ),
+                ),
+              );
+          },
+          onOverlayMove: (x, y) {
+            final sel = _state.selectedComponent;
+            if (sel != null)
+              _bloc.add(UpdateComponent(sel.copyWith(x: x, y: y)));
+          },
+          onOverlayRotate: (r) {
+            final sel = _state.selectedComponent;
+            if (sel != null)
+              _bloc.add(UpdateComponent(sel.copyWith(rotation: r)));
+          },
+          onOverlayDelete: () {
+            final sel = _state.selectedComponent;
+            if (sel != null) _bloc.add(DeleteComponent(sel.id));
+          },
+          onOverlayTap: () {
+            // Tapping the selected component again dismisses the overlay.
+            _bloc.add(const SelectComponent(null));
+          },
         ),
-      if (_tool == _CanvasTool.placeComponent && _placingType != null)
-        Positioned(
-          top: 12,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF7C3AED).withOpacity(0.9),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'Tap canvas to place ${_placingType!.name}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+        if (_state.selectedComponent != null)
+          Positioned(
+            top: 8,
+            right: 8,
+            width: 280,
+            child: AbsoluteInspectorPanel(
+              component: _state.selectedComponent!,
+              onApply: (u) {
+                _bloc.add(UpdateComponent(u));
+                _bloc.add(const SelectComponent(null));
+              },
+              onDelete: () =>
+                  _bloc.add(DeleteComponent(_state.selectedComponent!.id)),
+              onClose: () => _bloc.add(const SelectComponent(null)),
+            ),
+          ),
+        if (_tool == _CanvasTool.placeComponent && _placingType != null)
+          Positioned(
+            top: 12,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7C3AED).withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Tap canvas to place ${_placingType!.name}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      if (_state.errorMessage != null)
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: MaterialBanner(
-            backgroundColor: const Color(0xFFDC2626),
-            content: Text(
-              _state.errorMessage!,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => _bloc.add(const ClearDesignerError()),
-                child: const Text(
-                  'DISMISS',
-                  style: TextStyle(color: Colors.white),
-                ),
+        if (_state.errorMessage != null)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: MaterialBanner(
+              backgroundColor: const Color(0xFFDC2626),
+              content: Text(
+                _state.errorMessage!,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
-            ],
+              actions: [
+                TextButton(
+                  onPressed: () => _bloc.add(const ClearDesignerError()),
+                  child: const Text(
+                    'DISMISS',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-    ],
+      ],
+    ),
   );
 
   Widget _presetsSidebar() => Container(

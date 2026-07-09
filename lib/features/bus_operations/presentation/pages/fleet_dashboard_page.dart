@@ -22,6 +22,9 @@ import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_
 import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_management_screen.dart';
 import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_activity_log_screen.dart';
 import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_settlement_report_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/dispatch/fleet_dispatch_bloc.dart';
+import 'package:trace_odd/features/bus_operations/presentation/widgets/fleet_dispatch_dialog.dart';
+import 'package:trace_odd/core/services/api_service.dart';
 
 abstract class FleetColors {
   static const bg = Color(0xFF0D1B2A);
@@ -196,9 +199,25 @@ class _FleetDashboardView extends StatelessWidget {
       case 'settlement':
         return const StorekeeperSettlementReportScreen();
       case 'dispatch_create':
-        return _dispatchPlaceholder('Create Assignment', Icons.assignment_add);
+        // Immediately show the FleetDispatchDialog modal.
+        // The dialog wraps its own FleetDispatchBloc provider.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          FleetDispatchDialog.show(
+            ctx,
+            apiPrefix: '/bus-fleet',
+            onSaved: () {
+              // Navigate to active assignments after saving
+              bloc.add(const NavigateToPage('dispatch_list'));
+            },
+          );
+        });
+        return _homeTab(ctx, bloc, state);
       case 'dispatch_list':
-        return _dispatchPlaceholder('Active Assignments', Icons.list_alt);
+        return BlocProvider(
+          create: (_) =>
+              FleetDispatchBloc()..add(InitDispatch(apiPrefix: '/bus-fleet')),
+          child: const _DispatchListPage(),
+        );
       default:
         return _homeTab(ctx, bloc, state);
     }
@@ -720,28 +739,239 @@ class _SidebarWidget extends StatelessWidget {
   );
 }
 
-// Dispatch placeholder — defined at top level for use in _pageContent
-Widget _dispatchPlaceholder(String title, IconData icon) {
-  return Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 64, color: Colors.white24),
-        const Gap(16),
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
+// ── Dispatch List Page ────────────────────────────────────
+
+class _DispatchListPage extends StatefulWidget {
+  const _DispatchListPage();
+  @override
+  State<_DispatchListPage> createState() => _DispatchListPageState();
+}
+
+class _DispatchListPageState extends State<_DispatchListPage> {
+  List<Map<String, dynamic>> _assignments = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final api = ApiService();
+      final r = await api.get('/bus-fleet/dispatch/assignments');
+      final d = r?['data'];
+      setState(() {
+        _assignments = d is List ? d.cast<Map<String, dynamic>>() : [];
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: FleetColors.bg,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0A1628),
+        title: const Text(
+          'Active Assignments',
+          style: TextStyle(color: Colors.white, fontSize: 16),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white70),
+          onPressed: () {
+            // Navigate back to the dispatch_create page to trigger the dialog
+            // when the user returns to Create Assignment.
+            context.read<FleetDashboardBloc>().add(
+              const NavigateToPage('dispatch_create'),
+            );
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add, color: Color(0xFF00B4D8)),
+            tooltip: 'Create Assignment',
+            onPressed: () {
+              FleetDispatchDialog.show(
+                context,
+                apiPrefix: '/bus-fleet',
+                onSaved: () => _load(),
+              );
+            },
           ),
-        ),
-        const Gap(8),
-        const Text(
-          'Dispatch module initializing...',
-          style: TextStyle(color: Colors.white54, fontSize: 14),
-        ),
-      ],
-    ),
-  );
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white54),
+            tooltip: 'Refresh',
+            onPressed: _load,
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Colors.redAccent,
+                  ),
+                  const Gap(12),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.redAccent),
+                    textAlign: TextAlign.center,
+                  ),
+                  const Gap(12),
+                  ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                ],
+              ),
+            )
+          : _assignments.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.assignment,
+                    size: 64,
+                    color: Colors.white.withOpacity(0.15),
+                  ),
+                  const Gap(16),
+                  const Text(
+                    'No Active Assignments',
+                    style: TextStyle(color: Colors.white54, fontSize: 16),
+                  ),
+                  const Gap(8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      FleetDispatchDialog.show(
+                        context,
+                        apiPrefix: '/bus-fleet',
+                        onSaved: () => _load(),
+                      );
+                    },
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Create First Assignment'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00B4D8),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _assignments.length,
+              itemBuilder: (_, i) {
+                final a = _assignments[i];
+                final vehicle = a['vehicle_plate']?.toString() ?? '—';
+                final route = a['route_name']?.toString() ?? '—';
+                final driver = a['driver_name']?.toString() ?? '—';
+                final conductor = a['conductor_name']?.toString();
+                final shift = a['shift']?.toString() ?? '—';
+                final status = a['status']?.toString() ?? 'active';
+
+                return Card(
+                  color: const Color(0xFF1A3A5C),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.directions_bus,
+                              color: Color(0xFF00B4D8),
+                              size: 20,
+                            ),
+                            const Gap(8),
+                            Expanded(
+                              child: Text(
+                                vehicle,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: status == 'active'
+                                    ? const Color(0xFF16A34A).withOpacity(0.2)
+                                    : const Color(0xFFF97316).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                status.toUpperCase(),
+                                style: TextStyle(
+                                  color: status == 'active'
+                                      ? const Color(0xFF16A34A)
+                                      : const Color(0xFFF97316),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Gap(6),
+                        _infoRow(Icons.route, 'Route', route),
+                        _infoRow(Icons.person, 'Driver', driver),
+                        if (conductor != null && conductor.isNotEmpty)
+                          _infoRow(Icons.group, 'Conductor', conductor),
+                        _infoRow(Icons.schedule, 'Shift', shift),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF8899AA)),
+          const Gap(6),
+          Text(
+            '$label: ',
+            style: const TextStyle(color: Color(0xFF8899AA), fontSize: 12),
+          ),
+          Text(
+            value,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
 }

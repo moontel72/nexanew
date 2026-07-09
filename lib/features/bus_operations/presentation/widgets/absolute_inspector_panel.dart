@@ -231,17 +231,41 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                     _sectionLabel('POSITION & SIZE'),
                     Row(
                       children: [
-                        Expanded(child: _numTextField('X', _xCtrl)),
+                        Expanded(
+                          child: _numTextField(
+                            'X',
+                            _xCtrl,
+                            onSubmitted: _apply,
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        Expanded(child: _numTextField('Y', _yCtrl)),
+                        Expanded(
+                          child: _numTextField(
+                            'Y',
+                            _yCtrl,
+                            onSubmitted: _apply,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Expanded(child: _numTextField('W', _wCtrl)),
+                        Expanded(
+                          child: _numTextField(
+                            'W',
+                            _wCtrl,
+                            onSubmitted: _apply,
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        Expanded(child: _numTextField('H', _hCtrl)),
+                        Expanded(
+                          child: _numTextField(
+                            'H',
+                            _hCtrl,
+                            onSubmitted: _apply,
+                          ),
+                        ),
                       ],
                     ),
                     Padding(
@@ -262,7 +286,11 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                       children: [
                         SizedBox(
                           width: 56,
-                          child: _numTextField('Deg', _rotCtrl),
+                          child: _numTextField(
+                            'Deg',
+                            _rotCtrl,
+                            onSubmitted: _apply,
+                          ),
                         ),
                         const SizedBox(width: 6),
                         _rotChip('0', 0),
@@ -336,6 +364,7 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                           vertical: 10,
                         ),
                       ),
+                      onSubmitted: (_) => _apply(),
                     ),
                     const SizedBox(height: 10),
 
@@ -378,6 +407,7 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                         ),
                       ),
                       onChanged: (_) => setState(() {}),
+                      onSubmitted: (_) => _apply(),
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -558,7 +588,11 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
     ),
   );
 
-  Widget _numTextField(String label, TextEditingController ctrl) => Column(
+  Widget _numTextField(
+    String label,
+    TextEditingController ctrl, {
+    VoidCallback? onSubmitted,
+  }) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -584,6 +618,8 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
             borderSide: BorderSide.none,
           ),
         ),
+        onSubmitted: (_) => onSubmitted?.call(),
+        onEditingComplete: onSubmitted,
       ),
     ],
   );

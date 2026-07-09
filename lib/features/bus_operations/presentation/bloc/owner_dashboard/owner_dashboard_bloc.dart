@@ -53,7 +53,10 @@ class OwnerDashboardBloc
     emit(
       state.copyWith(
         status: OwnerDashboardStatus.loaded,
-        ownerName: p.getString('${e.storagePrefix}_owner_name') ?? 'Owner',
+        ownerName:
+            p.getString('${e.storagePrefix}_company_name') ??
+            p.getString('${e.storagePrefix}_owner_name') ??
+            'Owner',
       ),
     );
     add(const FetchOwnerMetrics());

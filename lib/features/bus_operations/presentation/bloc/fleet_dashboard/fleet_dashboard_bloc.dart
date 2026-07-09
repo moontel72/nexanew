@@ -53,8 +53,11 @@ class FleetDashboardBloc
       );
       return;
     }
-    // Resolve owner name from multiple storage keys for robustness
+    // Resolve owner name from multiple storage keys for robustness.
+    // Prefer the registered company name (corporate identity) over
+    // the account/display name for dashboard branding.
     final ownerName =
+        p.getString('${e.storagePrefix}_company_name') ??
         p.getString('${e.storagePrefix}_owner_name') ??
         p.getString('${e.storagePrefix}_driver_name') ??
         p.getString('sub_admin_name') ??

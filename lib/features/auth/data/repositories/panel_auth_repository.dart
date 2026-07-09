@@ -140,7 +140,7 @@ class PanelAuthRepository {
     await _persistSession(panel, token, user);
 
     // ── Fleet metadata → SharedPreferences (dashboard routers read this) ──
-    await _persistFleetMetadata(panel, token, user, metadata);
+    await _persistFleetMetadata(panel, token, user, metadata, companyName: cName);
 
     final authResponse = PanelAuthResponse(
       panel: panel,
@@ -320,8 +320,9 @@ class PanelAuthRepository {
     UserPanel panel,
     String token,
     Map<String, dynamic> user,
-    Map<String, dynamic> metadata,
-  ) async {
+    Map<String, dynamic> metadata, {
+    String? companyName,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final scope = panel.name; // e.g. 'busFleet', 'truckFleet'
 
@@ -337,6 +338,12 @@ class PanelAuthRepository {
         metadata['fleet_role']?.toString() ?? user['fleet_role']?.toString();
     if (fleetRole != null && fleetRole.isNotEmpty) {
       await prefs.setString('${scope}_fleet_role', fleetRole);
+    }
+
+    // Persist the registered company name (e.g. "Radhnal Express")
+    // so the dashboard navbar can reflect the real corporate identity.
+    if (companyName != null && companyName.isNotEmpty) {
+      await prefs.setString('${scope}_company_name', companyName);
     }
 
     final accountName =

@@ -33,29 +33,48 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
     on<SendTruckMessage>(_onSendMsg);
   }
 
-  Future<void> _onBoot(BootstrapTruckOwner e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onBoot(
+    BootstrapTruckOwner e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(status: TruckOwnerStatus.loading));
     final p = await SharedPreferences.getInstance();
     final t = p.getString('${e.storagePrefix}_auth_token') ?? '';
     if (t.isEmpty) {
-      emit(state.copyWith(status: TruckOwnerStatus.initial, error: 'Not authenticated'));
+      emit(
+        state.copyWith(
+          status: TruckOwnerStatus.initial,
+          error: 'Not authenticated',
+        ),
+      );
       return;
     }
-    emit(state.copyWith(
-      status: TruckOwnerStatus.loaded,
-      ownerName: p.getString('${e.storagePrefix}_owner_name') ?? 'Truck Owner',
-    ));
+    emit(
+      state.copyWith(
+        status: TruckOwnerStatus.loaded,
+        ownerName:
+            p.getString('${e.storagePrefix}_company_name') ??
+            p.getString('${e.storagePrefix}_owner_name') ??
+            'Truck Owner',
+      ),
+    );
     add(const FetchTruckOwnerMetrics());
   }
 
-  Future<void> _onMetrics(FetchTruckOwnerMetrics e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onMetrics(
+    FetchTruckOwnerMetrics e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     add(const LoadTruckDrivers());
     add(const LoadTruckConductors());
     add(const LoadTruckVehicles());
     add(const LoadTruckFreightLoads());
   }
 
-  Future<void> _onDrivers(LoadTruckDrivers e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onDrivers(
+    LoadTruckDrivers e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(driversLoading: true));
     try {
       final r = await _api.get('$_prefix/drivers');
@@ -63,13 +82,22 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
       List<Map<String, dynamic>> list = d is Map && d['data'] is List
           ? (d['data'] as List).cast<Map<String, dynamic>>()
           : (d is List ? d.cast<Map<String, dynamic>>() : []);
-      emit(state.copyWith(drivers: list, driverCount: list.length, driversLoading: false));
+      emit(
+        state.copyWith(
+          drivers: list,
+          driverCount: list.length,
+          driversLoading: false,
+        ),
+      );
     } catch (_) {
       emit(state.copyWith(driversLoading: false));
     }
   }
 
-  Future<void> _onConductors(LoadTruckConductors e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onConductors(
+    LoadTruckConductors e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(conductorsLoading: true));
     try {
       final r = await _api.get('$_prefix/conductors');
@@ -77,41 +105,72 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
       List<Map<String, dynamic>> list = d is Map && d['data'] is List
           ? (d['data'] as List).cast<Map<String, dynamic>>()
           : (d is List ? d.cast<Map<String, dynamic>>() : []);
-      emit(state.copyWith(conductors: list, conductorCount: list.length, conductorsLoading: false));
+      emit(
+        state.copyWith(
+          conductors: list,
+          conductorCount: list.length,
+          conductorsLoading: false,
+        ),
+      );
     } catch (_) {
       emit(state.copyWith(conductorsLoading: false));
     }
   }
 
-  Future<void> _onVehicles(LoadTruckVehicles e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onVehicles(
+    LoadTruckVehicles e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(vehiclesLoading: true));
     try {
       final r = await _api.get('$_prefix/vehicles');
       final d = r?['data'];
       List<Map<String, dynamic>> list = d is List
           ? d.cast<Map<String, dynamic>>()
-          : (d is Map && d['data'] is List ? (d['data'] as List).cast<Map<String, dynamic>>() : []);
-      emit(state.copyWith(vehicles: list, vehicleCount: list.length, vehiclesLoading: false));
+          : (d is Map && d['data'] is List
+                ? (d['data'] as List).cast<Map<String, dynamic>>()
+                : []);
+      emit(
+        state.copyWith(
+          vehicles: list,
+          vehicleCount: list.length,
+          vehiclesLoading: false,
+        ),
+      );
     } catch (_) {
       emit(state.copyWith(vehiclesLoading: false));
     }
   }
 
-  Future<void> _onFreight(LoadTruckFreightLoads e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onFreight(
+    LoadTruckFreightLoads e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(freightLoading: true));
     try {
       final r = await _api.get('$_prefix/freight-loads');
       final d = r?['data'];
       List<Map<String, dynamic>> list = d is List
           ? d.cast<Map<String, dynamic>>()
-          : (d is Map && d['data'] is List ? (d['data'] as List).cast<Map<String, dynamic>>() : []);
-      emit(state.copyWith(freightLoads: list, freightLoadCount: list.length, freightLoading: false));
+          : (d is Map && d['data'] is List
+                ? (d['data'] as List).cast<Map<String, dynamic>>()
+                : []);
+      emit(
+        state.copyWith(
+          freightLoads: list,
+          freightLoadCount: list.length,
+          freightLoading: false,
+        ),
+      );
     } catch (_) {
       emit(state.copyWith(freightLoading: false));
     }
   }
 
-  Future<void> _onRegStaff(RegisterTruckStaff e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onRegStaff(
+    RegisterTruckStaff e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(isMutating: true));
     try {
       await _api.post('$_prefix/${e.role}s', data: e.data);
@@ -123,7 +182,10 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
     }
   }
 
-  Future<void> _onRemStaff(RemoveTruckStaff e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onRemStaff(
+    RemoveTruckStaff e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(isMutating: true));
     try {
       await _api.delete('$_prefix/${e.role}s/${e.staffId}');
@@ -135,7 +197,10 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
     }
   }
 
-  Future<void> _onAddVehicle(AddTruckVehicle e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onAddVehicle(
+    AddTruckVehicle e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(isMutating: true));
     try {
       await _api.post('$_prefix/vehicles', data: e.data);
@@ -147,7 +212,10 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
     }
   }
 
-  Future<void> _onRemVehicle(RemoveTruckVehicle e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onRemVehicle(
+    RemoveTruckVehicle e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(isMutating: true));
     try {
       await _api.delete('$_prefix/vehicles/${e.vehicleId}');
@@ -160,40 +228,59 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
   }
 
   // ── Carrier Link ──
-  Future<void> _onLinkStatus(LoadTruckLinkStatus e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onLinkStatus(
+    LoadTruckLinkStatus e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(linkLoading: true));
     try {
       final r = await _api.get('$_prefix/link-status');
-      emit(state.copyWith(
-        linkStatus: (r?['data'] as Map<String, dynamic>?) ?? {},
-        linkLoading: false,
-      ));
+      emit(
+        state.copyWith(
+          linkStatus: (r?['data'] as Map<String, dynamic>?) ?? {},
+          linkLoading: false,
+        ),
+      );
     } catch (_) {
       emit(state.copyWith(linkLoading: false));
     }
   }
 
-  Future<void> _onSearch(SearchTruckCompanies e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onSearch(
+    SearchTruckCompanies e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(companiesLoading: true));
     try {
-      final r = await _api.get('$_prefix/available-companies', queryParams: {'search': e.query});
+      final r = await _api.get(
+        '$_prefix/available-companies',
+        queryParams: {'search': e.query},
+      );
       final d = r?['data'];
-      emit(state.copyWith(
-        availableCompanies: d is List ? d.cast<Map<String, dynamic>>() : [],
-        companiesLoading: false,
-      ));
+      emit(
+        state.copyWith(
+          availableCompanies: d is List ? d.cast<Map<String, dynamic>>() : [],
+          companiesLoading: false,
+        ),
+      );
     } catch (_) {
       emit(state.copyWith(companiesLoading: false));
     }
   }
 
-  Future<void> _onSendLink(SendTruckLinkRequest e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onSendLink(
+    SendTruckLinkRequest e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(isMutating: true));
     try {
-      await _api.post('$_prefix/link-request', data: {
-        'company_id': e.companyId,
-        if (e.message != null) 'message': e.message,
-      });
+      await _api.post(
+        '$_prefix/link-request',
+        data: {
+          'company_id': e.companyId,
+          if (e.message != null) 'message': e.message,
+        },
+      );
       add(const LoadTruckLinkStatus());
       emit(state.copyWith(isMutating: false));
     } catch (ex) {
@@ -201,7 +288,10 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
     }
   }
 
-  Future<void> _onCancelLink(CancelTruckLinkRequest e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onCancelLink(
+    CancelTruckLinkRequest e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(isMutating: true));
     try {
       await _api.post('$_prefix/link-request/${e.assignmentId}/cancel');
@@ -212,7 +302,10 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
     }
   }
 
-  Future<void> _onLeave(LeaveTruckCarrier e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onLeave(
+    LeaveTruckCarrier e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(isMutating: true));
     try {
       await _api.post('$_prefix/link-request/${e.assignmentId}/leave');
@@ -232,35 +325,65 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
       final Map<String, Map<String, dynamic>> convMap = {};
       for (final m in list) {
         if (m is! Map) continue;
-        final aid = m['fleet_assignment_id']?.toString() ?? m['assignment_id']?.toString() ?? '';
+        final aid =
+            m['fleet_assignment_id']?.toString() ??
+            m['assignment_id']?.toString() ??
+            '';
         if (aid.isEmpty) continue;
-        convMap.putIfAbsent(aid, () => {'id': aid, 'owner_name': 'Owner', 'latest_body': '', 'latest_at': ''});
+        convMap.putIfAbsent(
+          aid,
+          () => {
+            'id': aid,
+            'owner_name': 'Owner',
+            'latest_body': '',
+            'latest_at': '',
+          },
+        );
         convMap[aid]!['latest_body'] = m['message_body']?.toString() ?? '';
         convMap[aid]!['latest_at'] = m['created_at']?.toString() ?? '';
       }
-      emit(state.copyWith(inboxConversations: convMap.values.toList(), inboxLoading: false));
+      emit(
+        state.copyWith(
+          inboxConversations: convMap.values.toList(),
+          inboxLoading: false,
+        ),
+      );
     } catch (ex) {
       emit(state.copyWith(inboxLoading: false, chatError: ex.toString()));
     }
   }
 
-  Future<void> _onConv(LoadTruckConversation e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onConv(
+    LoadTruckConversation e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     try {
       final r = await _api.get('$_prefix/link-messages/${e.assignmentId}');
       final list = (r?['data'] as List?) ?? [];
-      emit(state.copyWith(
-        activeChatMessages: list.whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList(),
-        expandedConversationId: e.assignmentId,
-      ));
+      emit(
+        state.copyWith(
+          activeChatMessages: list
+              .whereType<Map>()
+              .map((m) => Map<String, dynamic>.from(m))
+              .toList(),
+          expandedConversationId: e.assignmentId,
+        ),
+      );
     } catch (ex) {
       emit(state.copyWith(chatError: ex.toString()));
     }
   }
 
-  Future<void> _onSendMsg(SendTruckMessage e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onSendMsg(
+    SendTruckMessage e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     emit(state.copyWith(chatSending: true));
     try {
-      await _api.post('$_prefix/link-messages/${e.assignmentId}', data: {'message_body': e.message});
+      await _api.post(
+        '$_prefix/link-messages/${e.assignmentId}',
+        data: {'message_body': e.message},
+      );
       add(LoadTruckConversation(e.assignmentId));
       add(const LoadTruckInbox());
       emit(state.copyWith(chatSending: false));
@@ -273,7 +396,10 @@ class TruckOwnerDashboardBloc extends Bloc<TruckOwnerEvent, TruckOwnerState> {
       emit(state.copyWith(currentPage: e.page));
   void _onClear(ClearTruckOwnerError e, Emitter<TruckOwnerState> emit) =>
       emit(state.copyWith(actionError: null));
-  Future<void> _onLogout(TruckOwnerLogout e, Emitter<TruckOwnerState> emit) async {
+  Future<void> _onLogout(
+    TruckOwnerLogout e,
+    Emitter<TruckOwnerState> emit,
+  ) async {
     final p = await SharedPreferences.getInstance();
     await p.remove('${e.storagePrefix}_auth_token');
     await p.remove('auth_token');
