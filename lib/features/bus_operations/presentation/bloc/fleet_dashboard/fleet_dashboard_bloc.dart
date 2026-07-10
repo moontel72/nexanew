@@ -53,84 +53,69 @@ class FleetDashboardBloc
       );
       return;
     }
-    // Resolve owner name from multiple storage keys for robustness.
-    // Prefer the registered company name (corporate identity) over
-    // the account/display name for dashboard branding.
-    String ownerName =
+
+    // Fetch company name from backend profile — this is the authoritative
+    // source.  Login response carries personal identity (display_name), not
+    // company identity (account_name / company_name).
+    final profileName = await _fetchCompanyName(e.panelPrefix, e.storagePrefix);
+
+    // Fallback chain: profile API → SharedPreferences → generic default.
+    final ownerName =
+        profileName ??
         p.getString('${e.storagePrefix}_company_name') ??
         p.getString('${e.storagePrefix}_owner_name') ??
-        p.getString('${e.storagePrefix}_driver_name') ??
-        p.getString('sub_admin_name') ??
-        p.getString('display_name') ??
         'Fleet';
+
     emit(
       state.copyWith(status: FleetDashboardStatus.loaded, ownerName: ownerName),
     );
-
-    // ── Fetch real company name from backend profile ──
-    // The login response carries user identity, not company identity.
-    // We must fetch the corporate profile to get the registered name.
-    _fetchCompanyProfile(e.panelPrefix, e.storagePrefix, emit);
-
     add(FetchDashboardMetrics(panelPrefix: e.panelPrefix));
   }
 
-  Future<void> _fetchCompanyProfile(
+  /// Fetches the company name from the backend profile endpoint.
+  /// Returns null if the endpoint is unreachable or returns no usable name.
+  Future<String?> _fetchCompanyName(
     String panelPrefix,
     String storagePrefix,
-    Emitter<FleetDashboardState> emit,
   ) async {
+    // Try the main profile endpoint.
     try {
-      // Correct endpoint: /bus-fleet/profile (not /bus-fleet/owner/profile)
       final r = await _api.get('$panelPrefix/profile');
       final d = r?['data'];
       if (d is Map) {
-        // Bus-fleet profile wraps company in a nested object:
-        //   { data: { company: { name: "Radhnal Express" }, owner_name: "..." } }
-        // Bus-owner profile returns flat:
-        //   { data: { account_name: "Radhnal Express" } }
+        // Bus-fleet: { data: { company: { name: "..." }, owner_name: "..." } }
+        // Bus-owner: { data: { account_name: "..." } }
         final cn =
             (d['company'] is Map
                 ? (d['company'] as Map)['name']?.toString()
                 : null) ??
             d['account_name']?.toString() ??
             d['company_name']?.toString() ??
-            d['owner_name']?.toString() ??
-            '';
-        if (cn.isNotEmpty) {
+            d['owner_name']?.toString();
+        if (cn != null && cn.isNotEmpty) {
           final p = await SharedPreferences.getInstance();
           await p.setString('${storagePrefix}_company_name', cn);
-          await p.setString('${storagePrefix}_owner_name', cn);
-          emit(state.copyWith(ownerName: cn));
-          return;
+          return cn;
         }
       }
-    } catch (_) {
-      // Profile endpoint may not exist for this panel; fall through.
-    }
+    } catch (_) {}
 
-    // Fallback: try staff profile (for driver/conductor panels).
+    // Fallback: staff profile (driver/conductor panels).
     try {
       final r = await _api.get('$panelPrefix/staff/profile');
       final d = r?['data'];
       if (d is Map) {
-        final cn =
-            (d['company_name'] ??
-                    d['account_name'] ??
-                    d['owner_name'] ??
-                    d['display_name'])
-                ?.toString() ??
-            '';
-        if (cn.isNotEmpty) {
+        final cn = (d['company_name'] ?? d['account_name'] ?? d['owner_name'])
+            ?.toString();
+        if (cn != null && cn.isNotEmpty) {
           final p = await SharedPreferences.getInstance();
           await p.setString('${storagePrefix}_company_name', cn);
-          await p.setString('${storagePrefix}_owner_name', cn);
-          emit(state.copyWith(ownerName: cn));
+          return cn;
         }
       }
-    } catch (_) {
-      // No profile available — keep the SharedPreferences fallback.
-    }
+    } catch (_) {}
+
+    return null;
   }
 
   Future<void> _onFetchMetrics(

@@ -50,71 +50,62 @@ class OwnerDashboardBloc
       );
       return;
     }
-    emit(
-      state.copyWith(
-        status: OwnerDashboardStatus.loaded,
-        ownerName:
-            p.getString('${e.storagePrefix}_company_name') ??
-            p.getString('${e.storagePrefix}_owner_name') ??
-            'Owner',
-      ),
+
+    // Fetch company name from backend profile — authoritative source.
+    final profileName = await _fetchOwnerCompanyName(
+      e.panelPrefix,
+      e.storagePrefix,
     );
 
-    // ── Fetch real company name from backend profile ──
-    _fetchOwnerCompanyProfile(e.panelPrefix, e.storagePrefix, emit);
+    final ownerName =
+        profileName ??
+        p.getString('${e.storagePrefix}_company_name') ??
+        p.getString('${e.storagePrefix}_owner_name') ??
+        'Owner';
 
+    emit(
+      state.copyWith(status: OwnerDashboardStatus.loaded, ownerName: ownerName),
+    );
     add(const FetchOwnerMetrics());
   }
 
-  Future<void> _fetchOwnerCompanyProfile(
+  Future<String?> _fetchOwnerCompanyName(
     String panelPrefix,
     String storagePrefix,
-    Emitter<OwnerDashboardState> emit,
   ) async {
     try {
-      // Correct endpoint: /bus-owner/profile (not /bus-owner/owner/profile)
       final r = await _api.get('$panelPrefix/profile');
       final d = r?['data'];
       if (d is Map) {
-        // Bus-owner profile returns flat:
-        //   { data: { account_name: "...", email: "..." } }
         final cn =
             d['account_name']?.toString() ??
             d['company_name']?.toString() ??
-            d['owner_name']?.toString() ??
-            '';
-        if (cn.isNotEmpty) {
+            d['owner_name']?.toString();
+        if (cn != null && cn.isNotEmpty) {
           final p = await SharedPreferences.getInstance();
           await p.setString('${storagePrefix}_company_name', cn);
           await p.setString('${storagePrefix}_owner_name', cn);
-          emit(state.copyWith(ownerName: cn));
-          return;
+          return cn;
         }
       }
-    } catch (_) {
-      // Silently fall through to staff profile.
-    }
+    } catch (_) {}
+
     try {
       final r = await _api.get('$panelPrefix/staff/profile');
       final d = r?['data'];
       if (d is Map) {
-        final cn =
-            (d['company_name'] ??
-                    d['account_name'] ??
-                    d['owner_name'] ??
-                    d['display_name'])
-                ?.toString() ??
-            '';
-        if (cn.isNotEmpty) {
+        final cn = (d['company_name'] ?? d['account_name'] ?? d['owner_name'])
+            ?.toString();
+        if (cn != null && cn.isNotEmpty) {
           final p = await SharedPreferences.getInstance();
           await p.setString('${storagePrefix}_company_name', cn);
           await p.setString('${storagePrefix}_owner_name', cn);
-          emit(state.copyWith(ownerName: cn));
+          return cn;
         }
       }
-    } catch (_) {
-      // Keep SharedPreferences fallback.
-    }
+    } catch (_) {}
+
+    return null;
   }
 
   Future<void> _onMetrics(

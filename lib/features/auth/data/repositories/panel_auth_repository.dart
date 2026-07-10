@@ -142,13 +142,14 @@ class PanelAuthRepository {
         '';
     final cId =
         user['company_id']?.toString() ?? data['company_id']?.toString();
-    // Unified auth uses display_name; fleet profile uses company_name / account_name.
+    // Company name comes from company/account fields ONLY — NOT display_name
+    // (display_name is the person's name, e.g. "Mohabat Khan", not the company).
+    // The dashboard profile API (/bus-fleet/profile or /bus-owner/profile)
+    // is the authoritative source for corporate identity.
     final cName =
         user['company_name']?.toString() ??
         data['company_name']?.toString() ??
-        user['account_name']?.toString() ??
-        user['display_name']?.toString() ??
-        data['display_name']?.toString();
+        user['account_name']?.toString();
 
     // ── Debug: trace corporate identity data path ──
     if (kDebugMode) {
@@ -386,8 +387,7 @@ class PanelAuthRepository {
       await prefs.setString('${scope}_company_name', companyName);
     }
 
-    final accountName =
-        user['account_name']?.toString() ?? user['display_name']?.toString();
+    final accountName = user['account_name']?.toString();
     if (accountName != null && accountName.isNotEmpty) {
       await prefs.setString('${scope}_owner_name', accountName);
       await prefs.setString('${scope}_driver_name', accountName);
