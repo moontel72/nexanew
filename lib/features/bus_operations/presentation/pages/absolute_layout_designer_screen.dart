@@ -433,21 +433,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
         ),
       );
 
-  Widget _buildCanvas() => GestureDetector(
-    // Global background-tap deselection: clicking the empty canvas
-    // area dispatches a clearance event to dismiss the transform overlay.
-    // The AbsoluteCanvasGrid's internal Listener handles hit-testing
-    // for component taps; this outer detector serves as a safety net
-    // for any background area missed by the Listener + InteractiveViewer.
-    behavior: HitTestBehavior.translucent,
-    onTap: () {
-      if (_tool == _CanvasTool.select) {
-        _bloc.add(const SelectComponent(null));
-      }
-    },
-    child: Stack(
-      clipBehavior: Clip.none,
-      children: [
+  Widget _buildCanvas() => Stack(
+    clipBehavior: Clip.none,
+    children: [
         AbsoluteCanvasGrid(
           layoutState: _state,
           transformController: _transformCtrl,
@@ -571,9 +559,8 @@ class _DesignerBodyState extends State<_DesignerBody> {
               ],
             ),
           ),
-      ],
-    ),
-  );
+        ],
+    );
 
   Widget _presetsSidebar() => Container(
     width: 200,

@@ -136,11 +136,37 @@ class PanelAuthRepository {
     final cName =
         user['company_name']?.toString() ?? data['company_name']?.toString();
 
+    // ── Debug: trace corporate identity data path ──
+    if (kDebugMode) {
+      debugPrint('PANEL_AUTH: data keys = ${data.keys.toList()}');
+      debugPrint('PANEL_AUTH: user keys = ${user.keys.toList()}');
+      debugPrint(
+        'PANEL_AUTH: company_name (from user) = ${user['company_name']}',
+      );
+      debugPrint(
+        'PANEL_AUTH: company_name (from data) = ${data['company_name']}',
+      );
+      debugPrint(
+        'PANEL_AUTH: account_name (from user) = ${user['account_name']}',
+      );
+      debugPrint(
+        'PANEL_AUTH: display_name (from user) = ${user['display_name']}',
+      );
+      debugPrint('PANEL_AUTH: resolved companyName = $cName');
+      debugPrint('PANEL_AUTH: resolved companyId = $cId');
+    }
+
     // ── Persist tokens ──────────────────────────────────
     await _persistSession(panel, token, user);
 
     // ── Fleet metadata → SharedPreferences (dashboard routers read this) ──
-    await _persistFleetMetadata(panel, token, user, metadata, companyName: cName);
+    await _persistFleetMetadata(
+      panel,
+      token,
+      user,
+      metadata,
+      companyName: cName,
+    );
 
     final authResponse = PanelAuthResponse(
       panel: panel,
@@ -352,6 +378,19 @@ class PanelAuthRepository {
       await prefs.setString('${scope}_owner_name', accountName);
       await prefs.setString('${scope}_driver_name', accountName);
       await prefs.setString('${scope}_conductor_name', accountName);
+    }
+
+    // ── Debug: verify what was persisted ──
+    if (kDebugMode) {
+      debugPrint('PANEL_AUTH PERSIST: scope=$scope');
+      debugPrint('PANEL_AUTH PERSIST: companyName=$companyName');
+      debugPrint('PANEL_AUTH PERSIST: accountName=$accountName');
+      debugPrint(
+        'PANEL_AUTH PERSIST: stored ${scope}_company_name=${await prefs.getString('${scope}_company_name')}',
+      );
+      debugPrint(
+        'PANEL_AUTH PERSIST: stored ${scope}_owner_name=${await prefs.getString('${scope}_owner_name')}',
+      );
     }
   }
 }

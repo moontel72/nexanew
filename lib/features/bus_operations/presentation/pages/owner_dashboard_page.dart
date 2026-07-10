@@ -7,6 +7,7 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashbo
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_state.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbox_section.dart'
@@ -107,6 +108,7 @@ class _OwnerView extends StatelessWidget {
           isLoading: state.layoutsLoading,
           isMutating: state.isMutating,
           onAdd: () => _openDesigner(ctx, state),
+          onEdit: (id, n) => _openDesigner(ctx, state, layoutId: id),
           onPublish: (id, n) =>
               bloc.add(PublishOwnerLayout(layoutId: id, name: n)),
           onArchive: (id, n) => _confirm(
@@ -450,19 +452,38 @@ class _OwnerView extends StatelessWidget {
     if (ok == true) onOk();
   }
 
-  void _openDesigner(BuildContext ctx, OwnerDashboardState state) {
-    // First show BusConfigSetupScreen to capture vehicle details,
-    // then proceed to the canvas designer.
-    Navigator.push(
-      ctx,
-      MaterialPageRoute(
-        builder: (_) => BusConfigSetupScreen(
-          companyId: state.companyId,
-          companyName: state.ownerName,
-          apiPrefix: '/bus-owner',
+  void _openDesigner(
+    BuildContext ctx,
+    OwnerDashboardState state, {
+    String? layoutId,
+  }) {
+    if (layoutId != null) {
+      // Edit existing layout — open the canvas designer directly.
+      Navigator.push(
+        ctx,
+        MaterialPageRoute(
+          builder: (_) => AbsoluteLayoutDesignerScreen(
+            companyId: state.companyId,
+            companyName: state.ownerName,
+            apiPrefix: '/bus-owner',
+            layoutId: layoutId,
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      // First show BusConfigSetupScreen to capture vehicle details,
+      // then proceed to the canvas designer.
+      Navigator.push(
+        ctx,
+        MaterialPageRoute(
+          builder: (_) => BusConfigSetupScreen(
+            companyId: state.companyId,
+            companyName: state.ownerName,
+            apiPrefix: '/bus-owner',
+          ),
+        ),
+      );
+    }
   }
 
   Widget _btn(String l, IconData i, Color c, VoidCallback t) => GestureDetector(

@@ -77,10 +77,12 @@ class AbsoluteCanvasGrid extends StatefulWidget {
 }
 
 class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
-  // Manual tap detection — avoids gesture arena competition with
-  // InteractiveViewer's internal ScaleGestureRecognizer.
+  // Track tap-down position for the outer GestureDetector.
+  Offset? _tapDownPos;
+
+  // Legacy Listener-based tap detection (kept for native platforms).
   Offset? _pointerDownPos;
-  static const double _tapSlop = 12.0; // max movement to count as tap
+  static const double _tapSlop = 12.0;
 
   void _onPointerDown(PointerDownEvent event) {
     _pointerDownPos = event.localPosition;
@@ -92,12 +94,49 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
     _pointerDownPos = null;
 
     final up = event.localPosition;
-    // Ignore if the pointer moved more than the tap slop
     if ((up - down).distance > _tapSlop) return;
 
-    // Hit-test: use the midpoint of down/up for accuracy
     final tapX = (down.dx + up.dx) / 2;
     final tapY = (down.dy + up.dy) / 2;
+    final hit = widget.layoutState.componentAt(tapX, tapY);
+    if (hit != null) {
+      widget.onComponentTap?.call(hit.id, tapX, tapY);
+    } else {
+      widget.onCanvasTap?.call(tapX, tapY);
+    }
+  }
+
+  // ── Reliable tap detection (outer GestureDetector) ──
+  // Works on web where InteractiveViewer may consume raw pointer events
+  // from the inner Listener.  Uses the transformation matrix to convert
+  // viewport coordinates into canvas coordinates for hit-testing.
+  void _onViewportTapDown(TapDownDetails d) {
+    _tapDownPos = d.localPosition;
+  }
+
+  void _onViewportTapUp(TapUpDetails d) {
+    final down = _tapDownPos;
+    _tapDownPos = null;
+    if (down == null) return;
+
+    final up = d.localPosition;
+    if ((up - down).distance > _tapSlop) return;
+
+    // Convert viewport coords → canvas coords through the inverse
+    // of the InteractiveViewer's current transformation matrix.
+    final matrix = widget.transformController?.value ?? Matrix4.identity();
+    double tapX, tapY;
+    try {
+      final inv = Matrix4.inverted(matrix);
+      final canvasPoint = MatrixUtils.transformPoint(inv, up);
+      tapX = canvasPoint.dx;
+      tapY = canvasPoint.dy;
+    } catch (_) {
+      // Degenerate matrix — fall back to raw viewport coords.
+      tapX = up.dx;
+      tapY = up.dy;
+    }
+
     final hit = widget.layoutState.componentAt(tapX, tapY);
     if (hit != null) {
       widget.onComponentTap?.call(hit.id, tapX, tapY);
@@ -109,7 +148,15 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
   @override
   Widget build(BuildContext context) {
     final ls = widget.layoutState;
-    return InteractiveViewer(
+    // Outer GestureDetector provides cross-platform tap detection.
+    // It does NOT interfere with InteractiveViewer pan/zoom because
+    // onTapUp only fires for non-dragging taps — ScaleGestureRecognizer
+    // wins the arena for actual drags.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: _onViewportTapDown,
+      onTapUp: _onViewportTapUp,
+      child: InteractiveViewer(
       transformationController: widget.transformController,
       constrained: false,
       boundaryMargin: const EdgeInsets.all(400),
@@ -153,6 +200,7 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

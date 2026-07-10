@@ -12,6 +12,7 @@ class LayoutListSection extends StatelessWidget {
   final void Function(String id, String name) onPublish;
   final void Function(String id, String name) onArchive;
   final void Function(String id, String name) onDelete;
+  final void Function(String id, String name) onEdit;
   final VoidCallback onAdd;
   final VoidCallback? onPurgeAll;
 
@@ -24,6 +25,7 @@ class LayoutListSection extends StatelessWidget {
     required this.onPublish,
     required this.onArchive,
     required this.onDelete,
+    required this.onEdit,
     required this.onAdd,
     this.onPurgeAll,
   });
@@ -174,6 +176,15 @@ class LayoutListSection extends StatelessWidget {
                     Gap(10),
                     Row(
                       children: [
+                        Expanded(
+                          child: _btn(
+                            'Edit',
+                            Icons.edit,
+                            const Color(0xFF2563EB),
+                            isMutating ? null : () => onEdit(id, name),
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
                         if (!isPublished)
                           Expanded(
                             child: _btn(
