@@ -59,7 +59,58 @@ class OwnerDashboardBloc
             'Owner',
       ),
     );
+
+    // ── Fetch real company name from backend profile ──
+    _fetchOwnerCompanyProfile(e.panelPrefix, e.storagePrefix, emit);
+
     add(const FetchOwnerMetrics());
+  }
+
+  Future<void> _fetchOwnerCompanyProfile(
+    String panelPrefix,
+    String storagePrefix,
+    Emitter<OwnerDashboardState> emit,
+  ) async {
+    try {
+      final r = await _api.get('$panelPrefix/owner/profile');
+      final d = r?['data'];
+      if (d is Map) {
+        final cn =
+            (d['company_name'] ?? d['account_name'] ?? d['owner_name'])
+                ?.toString() ??
+            '';
+        if (cn.isNotEmpty) {
+          final p = await SharedPreferences.getInstance();
+          await p.setString('${storagePrefix}_company_name', cn);
+          await p.setString('${storagePrefix}_owner_name', cn);
+          emit(state.copyWith(ownerName: cn));
+          return;
+        }
+      }
+    } catch (_) {
+      // Silently fall through to staff profile.
+    }
+    try {
+      final r = await _api.get('$panelPrefix/staff/profile');
+      final d = r?['data'];
+      if (d is Map) {
+        final cn =
+            (d['company_name'] ??
+                    d['account_name'] ??
+                    d['owner_name'] ??
+                    d['display_name'])
+                ?.toString() ??
+            '';
+        if (cn.isNotEmpty) {
+          final p = await SharedPreferences.getInstance();
+          await p.setString('${storagePrefix}_company_name', cn);
+          await p.setString('${storagePrefix}_owner_name', cn);
+          emit(state.copyWith(ownerName: cn));
+        }
+      }
+    } catch (_) {
+      // Keep SharedPreferences fallback.
+    }
   }
 
   Future<void> _onMetrics(

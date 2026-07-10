@@ -56,7 +56,7 @@ class FleetDashboardBloc
     // Resolve owner name from multiple storage keys for robustness.
     // Prefer the registered company name (corporate identity) over
     // the account/display name for dashboard branding.
-    final ownerName =
+    String ownerName =
         p.getString('${e.storagePrefix}_company_name') ??
         p.getString('${e.storagePrefix}_owner_name') ??
         p.getString('${e.storagePrefix}_driver_name') ??
@@ -66,7 +66,64 @@ class FleetDashboardBloc
     emit(
       state.copyWith(status: FleetDashboardStatus.loaded, ownerName: ownerName),
     );
+
+    // ── Fetch real company name from backend profile ──
+    // The login response carries user identity, not company identity.
+    // We must fetch the corporate profile to get the registered name.
+    _fetchCompanyProfile(e.panelPrefix, e.storagePrefix, emit);
+
     add(FetchDashboardMetrics(panelPrefix: e.panelPrefix));
+  }
+
+  Future<void> _fetchCompanyProfile(
+    String panelPrefix,
+    String storagePrefix,
+    Emitter<FleetDashboardState> emit,
+  ) async {
+    try {
+      // Try the fleet owner profile endpoint first.
+      final r = await _api.get('$panelPrefix/owner/profile');
+      final d = r?['data'];
+      if (d is Map) {
+        final cn =
+            (d['company_name'] ?? d['account_name'] ?? d['owner_name'])
+                ?.toString() ??
+            '';
+        if (cn.isNotEmpty) {
+          // Persist to SharedPreferences so subsequent loads are instant.
+          final p = await SharedPreferences.getInstance();
+          await p.setString('${storagePrefix}_company_name', cn);
+          await p.setString('${storagePrefix}_owner_name', cn);
+          emit(state.copyWith(ownerName: cn));
+          return;
+        }
+      }
+    } catch (_) {
+      // Profile endpoint may not exist for this panel; fall through.
+    }
+
+    // Fallback: try staff profile (for driver/conductor panels).
+    try {
+      final r = await _api.get('$panelPrefix/staff/profile');
+      final d = r?['data'];
+      if (d is Map) {
+        final cn =
+            (d['company_name'] ??
+                    d['account_name'] ??
+                    d['owner_name'] ??
+                    d['display_name'])
+                ?.toString() ??
+            '';
+        if (cn.isNotEmpty) {
+          final p = await SharedPreferences.getInstance();
+          await p.setString('${storagePrefix}_company_name', cn);
+          await p.setString('${storagePrefix}_owner_name', cn);
+          emit(state.copyWith(ownerName: cn));
+        }
+      }
+    } catch (_) {
+      // No profile available — keep the SharedPreferences fallback.
+    }
   }
 
   Future<void> _onFetchMetrics(
