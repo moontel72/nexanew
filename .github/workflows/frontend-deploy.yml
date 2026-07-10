@@ -103,24 +103,26 @@ jobs:
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Bus Owner App (main_bus_owner.dart)
-        run: flutter build web --release --target=lib/main_bus_owner.dart --base-href "/bus-owner/"
+        run: flutter build web --release --target=lib/main_bus_owner.dart --base-href "/bus-owner/" --pwa-strategy none
 
       - name: Deploy Bus Owner App to /bus-owner/
-        continue-on-error: true
         run: |
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/bus-owner/
+          # Cache-bust: append deploy timestamp to force fresh loads
+          ssh root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" >> /var/www/traceodd/bus-owner/version.txt"
 
       # ──────────────────────────────────────────────────────────────
       # STEP E: Build & Deploy Bus Fleet Admin Panel (main_bus_fleet.dart)
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Bus Fleet Admin (main_bus_fleet.dart)
-        run: flutter build web --release --target=lib/main_bus_fleet.dart --base-href "/bus-fleet/"
+        run: flutter build web --release --target=lib/main_bus_fleet.dart --base-href "/bus-fleet/" --pwa-strategy none
 
       - name: Deploy Bus Fleet Admin to /bus-fleet/
-        continue-on-error: true
         run: |
           rsync -avz --delete --progress build/web/ root@135.181.46.27:/var/www/traceodd/bus-fleet/
+          # Cache-bust: append deploy timestamp to force fresh loads
+          ssh root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" >> /var/www/traceodd/bus-fleet/version.txt"
 
       # ──────────────────────────────────────────────────────────────
       # STEP F: Copy Nginx config & reload

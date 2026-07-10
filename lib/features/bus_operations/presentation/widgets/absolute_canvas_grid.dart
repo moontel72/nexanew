@@ -77,9 +77,6 @@ class AbsoluteCanvasGrid extends StatefulWidget {
 }
 
 class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
-  // Track tap-down position for the outer GestureDetector.
-  Offset? _tapDownPos;
-
   // Legacy Listener-based tap detection (kept for native platforms).
   Offset? _pointerDownPos;
   static const double _tapSlop = 12.0;
@@ -98,74 +95,38 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
 
     final tapX = (down.dx + up.dx) / 2;
     final tapY = (down.dy + up.dy) / 2;
-    final hit = widget.layoutState.componentAt(tapX, tapY);
-    if (hit != null) {
-      widget.onComponentTap?.call(hit.id, tapX, tapY);
-    } else {
-      widget.onCanvasTap?.call(tapX, tapY);
-    }
+    _handleTap(tapX, tapY);
   }
 
-  // ── Reliable tap detection (outer GestureDetector) ──
-  // Works on web where InteractiveViewer may consume raw pointer events
-  // from the inner Listener.  Uses the transformation matrix to convert
-  // viewport coordinates into canvas coordinates for hit-testing.
-  void _onViewportTapDown(TapDownDetails d) {
-    _tapDownPos = d.localPosition;
-  }
-
-  void _onViewportTapUp(TapUpDetails d) {
-    final down = _tapDownPos;
-    _tapDownPos = null;
-    if (down == null) return;
-
-    final up = d.localPosition;
-    if ((up - down).distance > _tapSlop) return;
-
-    // Convert viewport coords → canvas coords through the inverse
-    // of the InteractiveViewer's current transformation matrix.
-    final matrix = widget.transformController?.value ?? Matrix4.identity();
-    double tapX, tapY;
-    try {
-      final inv = Matrix4.inverted(matrix);
-      final canvasPoint = MatrixUtils.transformPoint(inv, up);
-      tapX = canvasPoint.dx;
-      tapY = canvasPoint.dy;
-    } catch (_) {
-      // Degenerate matrix — fall back to raw viewport coords.
-      tapX = up.dx;
-      tapY = up.dy;
-    }
-
-    final hit = widget.layoutState.componentAt(tapX, tapY);
+  // Shared tap handler — dispatches to component or canvas callbacks.
+  void _handleTap(double x, double y) {
+    final hit = widget.layoutState.componentAt(x, y);
     if (hit != null) {
-      widget.onComponentTap?.call(hit.id, tapX, tapY);
+      widget.onComponentTap?.call(hit.id, x, y);
     } else {
-      widget.onCanvasTap?.call(tapX, tapY);
+      widget.onCanvasTap?.call(x, y);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final ls = widget.layoutState;
-    // Outer GestureDetector provides cross-platform tap detection.
-    // It does NOT interfere with InteractiveViewer pan/zoom because
-    // onTapUp only fires for non-dragging taps — ScaleGestureRecognizer
-    // wins the arena for actual drags.
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTapDown: _onViewportTapDown,
-      onTapUp: _onViewportTapUp,
-      child: InteractiveViewer(
+    return InteractiveViewer(
       transformationController: widget.transformController,
       constrained: false,
       boundaryMargin: const EdgeInsets.all(400),
       minScale: 0.25,
       maxScale: 4.0,
-      child: Listener(
+      // GestureDetector INSIDE InteractiveViewer — receives events in the
+      // transformed canvas coordinate space.  Works reliably on web where
+      // the outer wrapping approach fails due to gesture arena competition.
+      child: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onPointerDown: _onPointerDown,
-        onPointerUp: _onPointerUp,
+        onTapUp: (d) => _handleTap(d.localPosition.dx, d.localPosition.dy),
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: _onPointerDown,
+          onPointerUp: _onPointerUp,
         child: SizedBox(
           width: ls.canvasWidth,
           height: ls.canvasHeight,
@@ -200,6 +161,7 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
             ),
           ),
         ),
+      ),
       ),
       ),
     );
