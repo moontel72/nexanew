@@ -117,9 +117,6 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
       boundaryMargin: const EdgeInsets.all(400),
       minScale: 0.25,
       maxScale: 4.0,
-      // GestureDetector INSIDE InteractiveViewer — receives events in the
-      // transformed canvas coordinate space.  Works reliably on web where
-      // the outer wrapping approach fails due to gesture arena competition.
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTapUp: (d) => _handleTap(d.localPosition.dx, d.localPosition.dy),
@@ -127,42 +124,41 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
           behavior: HitTestBehavior.translucent,
           onPointerDown: _onPointerDown,
           onPointerUp: _onPointerUp,
-        child: SizedBox(
-          width: ls.canvasWidth,
-          height: ls.canvasHeight,
-          child: CustomPaint(
-            painter: _CanvasBackgroundPainter(
-              canvasWidth: ls.canvasWidth,
-              canvasHeight: ls.canvasHeight,
-              components: ls.components,
-            ),
-            child: Stack(
-              children: [
-                for (final comp in ls.components)
-                  _AbsoluteComponentWidget(
-                    component: comp,
-                    isSelected: comp.id == ls.selectedComponentId,
-                  ),
-                // Transform overlay inside InteractiveViewer — scrolls with canvas
-                if (ls.selectedComponent != null)
-                  AbsoluteTransformOverlay(
-                    key: ValueKey("overlay_${ls.selectedComponent!.id}"),
-                    component: ls.selectedComponent!,
-                    onResize: (w, h, x, y) => widget.onOverlayResize?.call(w, h, x, y),
-                    onResizeEnd: () {},
-                    onMove: (x, y) => widget.onOverlayMove?.call(x, y),
-                    onMoveEnd: () {},
-                    onRotate: (r) => widget.onOverlayRotate?.call(r),
-                    onRotateEnd: () {},
-                    onDelete: () => widget.onOverlayDelete?.call(),
-                    onTap: () => widget.onOverlayTap?.call(),
-                  ),
-              ],
+          child: SizedBox(
+            width: ls.canvasWidth,
+            height: ls.canvasHeight,
+            child: CustomPaint(
+              painter: _CanvasBackgroundPainter(
+                canvasWidth: ls.canvasWidth,
+                canvasHeight: ls.canvasHeight,
+                components: ls.components,
+              ),
+              child: Stack(
+                children: [
+                  for (final comp in ls.components)
+                    _AbsoluteComponentWidget(
+                      component: comp,
+                      isSelected: comp.id == ls.selectedComponentId,
+                    ),
+                  if (ls.selectedComponent != null)
+                    AbsoluteTransformOverlay(
+                      key: ValueKey("overlay_${ls.selectedComponent!.id}"),
+                      component: ls.selectedComponent!,
+                      onResize: (w, h, x, y) =>
+                          widget.onOverlayResize?.call(w, h, x, y),
+                      onResizeEnd: () {},
+                      onMove: (x, y) => widget.onOverlayMove?.call(x, y),
+                      onMoveEnd: () {},
+                      onRotate: (r) => widget.onOverlayRotate?.call(r),
+                      onRotateEnd: () {},
+                      onDelete: () => widget.onOverlayDelete?.call(),
+                      onTap: () => widget.onOverlayTap?.call(),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      ),
       ),
     );
   }
