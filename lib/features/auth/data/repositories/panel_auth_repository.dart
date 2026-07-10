@@ -385,6 +385,12 @@ class PanelAuthRepository {
     // so the dashboard navbar can reflect the real corporate identity.
     if (companyName != null && companyName.isNotEmpty) {
       await prefs.setString('${scope}_company_name', companyName);
+    } else {
+      // No company name available — remove any stale data from a previous
+      // login (e.g. bus-owner "Mohabat Khan" contaminating bus-fleet panel)
+      // so the dashboard falls through to the profile API as intended.
+      await prefs.remove('${scope}_company_name');
+      await prefs.remove('${scope}_owner_name');
     }
 
     final accountName = user['account_name']?.toString();
