@@ -123,18 +123,32 @@ class PanelAuthRepository {
 
     // User object: new identity spine wraps it in data.user;
     // fleet endpoints place user fields directly inside data.
+    // Unified auth (GlobalAuthController) returns display_name,
+    // global_identity_id etc. directly in data — no user wrapper.
     final user = (data['user'] is Map)
         ? Map<String, dynamic>.from(data['user'] as Map)
-        : (data.containsKey('id') || data.containsKey('account_name'))
+        : (data.containsKey('id') ||
+              data.containsKey('account_name') ||
+              data.containsKey('display_name') ||
+              data.containsKey('global_identity_id'))
         ? Map<String, dynamic>.from(data)
         : <String, dynamic>{};
 
     final driverType = user['driver_type']?.toString().toLowerCase();
-    final userId = user['id']?.toString() ?? user['user_id']?.toString() ?? '';
+    final userId =
+        user['id']?.toString() ??
+        user['user_id']?.toString() ??
+        user['global_identity_id']?.toString() ??
+        '';
     final cId =
         user['company_id']?.toString() ?? data['company_id']?.toString();
+    // Unified auth uses display_name; fleet profile uses company_name / account_name.
     final cName =
-        user['company_name']?.toString() ?? data['company_name']?.toString();
+        user['company_name']?.toString() ??
+        data['company_name']?.toString() ??
+        user['account_name']?.toString() ??
+        user['display_name']?.toString() ??
+        data['display_name']?.toString();
 
     // ── Debug: trace corporate identity data path ──
     if (kDebugMode) {
