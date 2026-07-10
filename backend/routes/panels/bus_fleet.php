@@ -76,6 +76,42 @@ Route::prefix('api/v1/bus-fleet')
             ]]);
         });
 
+        // Alias: /owner/profile -> /profile (compatibility with frontend convention)
+        Route::get('owner/profile', function (\Illuminate\Http\Request $request) {
+            // Delegate to the profile closure above by forwarding the request.
+            // Since closures can't be shared easily, replicate the logic inline.
+            $user = $request->user();
+            $carrierId = $request->get('_carrier_company_id')
+                ?? \Illuminate\Support\Facades\DB::table('fleet_assignments')
+                    ->where('global_identity_id', $user->global_identity_id ?? null)
+                    ->where('role', 'owner')
+                    ->where('fleet_type', 'bus')
+                    ->whereIn('status', ['active', 'pending_acceptance'])
+                    ->value('carrier_company_id');
+
+            $isMasterAdmin = ($user->account_type ?? null) === 'master_admin';
+            if (!$carrierId && !$isMasterAdmin) {
+                return response()->json(['message' => 'No company found for this account'], 404);
+            }
+
+            $fleetSize = \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
+                ->where('layout_status', '!=', 'archived')
+                ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('absolute_bus_layouts', 'carrier_company_id'),
+                    fn($q) => $q->where('carrier_company_id', $carrierId))
+                ->count();
+
+            $companyName = 'NexaTrace Fleet';
+            if ($carrierId) {
+                $company = \Illuminate\Support\Facades\DB::table('tenant_accounts')->where('id', $carrierId)->first();
+                $companyName = $company->account_name ?? 'Bus Company';
+            }
+
+            return response()->json(['success' => true, 'data' => [
+                'company' => ['id' => $carrierId ?? 'admin', 'name' => $companyName],
+                'owner_name' => $companyName,
+            ]]);
+        });
+
         Route::get('dashboard', function (\Illuminate\Http\Request $request) {
             $user = $request->user();
             $carrierId = $request->get('_carrier_company_id')

@@ -72,12 +72,16 @@ class OwnerDashboardBloc
     Emitter<OwnerDashboardState> emit,
   ) async {
     try {
-      final r = await _api.get('$panelPrefix/owner/profile');
+      // Correct endpoint: /bus-owner/profile (not /bus-owner/owner/profile)
+      final r = await _api.get('$panelPrefix/profile');
       final d = r?['data'];
       if (d is Map) {
+        // Bus-owner profile returns flat:
+        //   { data: { account_name: "...", email: "..." } }
         final cn =
-            (d['company_name'] ?? d['account_name'] ?? d['owner_name'])
-                ?.toString() ??
+            d['account_name']?.toString() ??
+            d['company_name']?.toString() ??
+            d['owner_name']?.toString() ??
             '';
         if (cn.isNotEmpty) {
           final p = await SharedPreferences.getInstance();

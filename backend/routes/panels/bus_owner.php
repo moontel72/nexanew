@@ -74,6 +74,31 @@ Route::prefix('api/v1/bus-owner')
             ]);
         });
 
+        // Alias: /owner/profile -> /profile (compatibility with frontend convention)
+        Route::get('owner/profile', function (\Illuminate\Http\Request $request) {
+            $user = $request->user();
+            $identityId = $user->global_identity_id ?? null;
+
+            if (!$identityId) {
+                return response()->json(['message' => 'No identity found for this account'], 404);
+            }
+
+            $tenant = \Illuminate\Support\Facades\DB::table('tenant_accounts')
+                ->where('global_identity_id', $identityId)
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id'            => $tenant->id ?? $identityId,
+                    'account_name'  => $tenant->account_name ?? $user->account_name ?? 'Bus Owner',
+                    'email'         => $tenant->email ?? $user->email ?? '',
+                    'phone'         => $tenant->phone_number ?? '',
+                    'status'        => 'active',
+                ],
+            ]);
+        });
+
         // ─── Owner Dashboard Stats ──────────────────────────
         Route::get('dashboard', function (\Illuminate\Http\Request $request) {
             $user = $request->user();

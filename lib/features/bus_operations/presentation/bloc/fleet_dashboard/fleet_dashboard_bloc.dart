@@ -81,16 +81,23 @@ class FleetDashboardBloc
     Emitter<FleetDashboardState> emit,
   ) async {
     try {
-      // Try the fleet owner profile endpoint first.
-      final r = await _api.get('$panelPrefix/owner/profile');
+      // Correct endpoint: /bus-fleet/profile (not /bus-fleet/owner/profile)
+      final r = await _api.get('$panelPrefix/profile');
       final d = r?['data'];
       if (d is Map) {
+        // Bus-fleet profile wraps company in a nested object:
+        //   { data: { company: { name: "Radhnal Express" }, owner_name: "..." } }
+        // Bus-owner profile returns flat:
+        //   { data: { account_name: "Radhnal Express" } }
         final cn =
-            (d['company_name'] ?? d['account_name'] ?? d['owner_name'])
-                ?.toString() ??
+            (d['company'] is Map
+                ? (d['company'] as Map)['name']?.toString()
+                : null) ??
+            d['account_name']?.toString() ??
+            d['company_name']?.toString() ??
+            d['owner_name']?.toString() ??
             '';
         if (cn.isNotEmpty) {
-          // Persist to SharedPreferences so subsequent loads are instant.
           final p = await SharedPreferences.getInstance();
           await p.setString('${storagePrefix}_company_name', cn);
           await p.setString('${storagePrefix}_owner_name', cn);
