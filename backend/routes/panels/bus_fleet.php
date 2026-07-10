@@ -31,8 +31,17 @@ Route::prefix('api/v1/bus-fleet')
                     ->value('carrier_company_id');
 
             $isMasterAdmin = ($user->account_type ?? null) === 'master_admin';
-            if (!$carrierId && !$isMasterAdmin) {
-                return response()->json(['message' => 'No company found for this account'], 404);
+
+            // Resolve company name: fleet assignment carrier → own tenant account → fallback
+            $companyName = 'NexaTrace Fleet';
+            if ($carrierId) {
+                $company = \Illuminate\Support\Facades\DB::table('tenant_accounts')->where('id', $carrierId)->first();
+                $companyName = $company->account_name ?? 'Bus Company';
+            } elseif ($user->account_name) {
+                // No fleet assignment — use the authenticated user's own tenant name.
+                // This handles bus company admins who ARE the company.
+                $companyName = $user->account_name;
+                $carrierId = $user->id;
             }
 
             $fleetSize = \Illuminate\Support\Facades\DB::table('absolute_bus_layouts')
@@ -46,12 +55,6 @@ Route::prefix('api/v1/bus-fleet')
                 ->where('fleet_type', 'bus')
                 ->whereIn('status', ['active', 'pending_acceptance'])
                 ->count();
-
-            $companyName = 'NexaTrace Fleet';
-            if ($carrierId) {
-                $company = \Illuminate\Support\Facades\DB::table('tenant_accounts')->where('id', $carrierId)->first();
-                $companyName = $company->account_name ?? 'Bus Company';
-            }
 
             $activeRoutes = \Illuminate\Support\Facades\DB::table('transport_bus_routes')
                 ->when($carrierId && \Illuminate\Support\Facades\Schema::hasColumn('transport_bus_routes', 'carrier_company_id'),
