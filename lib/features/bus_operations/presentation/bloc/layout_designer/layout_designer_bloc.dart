@@ -66,11 +66,84 @@ class LayoutDesignerBloc
   }
 
   void _onPreset(ApplyPreset e, Emitter<LayoutDesignerState> emit) {
+    final preset = e.preset;
+    const double aisleW = 40.0;
+    const double rowH = 64.0;
+    const double topMargin = 100.0;
+    const double leftMargin = 28.0;
+    const double seatSpan = 48.0;
+    const String letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+    // Calculate row count from canvas height
+    final int rows = ((preset.canvasHeight - topMargin - 40) / rowH).round().clamp(1, 30);
+
+    final List<AbsoluteLayoutComponent> newComponents = [];
+
+    // Driver cabin at front center
+    final driverX = (preset.canvasWidth - 80) / 2;
+    newComponents.add(
+      AbsoluteLayoutComponent(
+        id: _uuid.v4(),
+        type: ComponentType.driverCabin,
+        x: driverX,
+        y: 16,
+        width: 80,
+        height: 48,
+        bookable: false,
+        bookingMode: BookingMode.none,
+      ),
+    );
+
+    // Generate seat rows
+    for (int row = 0; row < rows; row++) {
+      final y = topMargin + row * rowH;
+      final rowLetter = letters[row < letters.length ? row : letters.length - 1];
+
+      // Left-side seats
+      for (int s = 0; s < preset.leftSeats; s++) {
+        final x = leftMargin + s * seatSpan;
+        final seatNum = s + 1;
+        newComponents.add(
+          AbsoluteLayoutComponent(
+            id: _uuid.v4(),
+            type: ComponentType.seat,
+            x: x,
+            y: y,
+            width: 44,
+            height: 44,
+            seatId: '$rowLetter$seatNum',
+            seatNumber: seatNum,
+          ),
+        );
+      }
+
+      // Right-side seats
+      final rightStartX = leftMargin + preset.leftSeats * seatSpan + aisleW;
+      for (int s = 0; s < preset.rightSeats; s++) {
+        final x = rightStartX + s * seatSpan;
+        final seatNum = preset.leftSeats + s + 1;
+        newComponents.add(
+          AbsoluteLayoutComponent(
+            id: _uuid.v4(),
+            type: ComponentType.seat,
+            x: x,
+            y: y,
+            width: 44,
+            height: 44,
+            seatId: '$rowLetter$seatNum',
+            seatNumber: seatNum,
+          ),
+        );
+      }
+    }
+
     final layout = state.layout.copyWith(
-      canvasWidth: e.preset.canvasWidth,
-      canvasHeight: e.preset.canvasHeight,
-      components: [],
+      canvasWidth: preset.canvasWidth,
+      canvasHeight: preset.canvasHeight,
+      displayName: preset.label,
+      components: newComponents,
       isDirty: true,
+      selectedComponentId: null,
     );
     emit(state.copyWith(layout: layout));
   }

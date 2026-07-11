@@ -163,6 +163,38 @@ class _DesignerBodyState extends State<_DesignerBody> {
     }
   }
 
+  void _applyPresetWithConfirm(AbsoluteLayoutPreset p) async {
+    if (_state.components.isNotEmpty) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          backgroundColor: const Color(0xFF122442),
+          title: const Text('Overwrite Canvas Layout?',
+              style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'Are you sure you want to apply this preset template? '
+            'Any custom modifications will be completely replaced.',
+            style: TextStyle(color: Color(0xFF8899AA)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(c, true),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF97316)),
+              child: const Text('Apply Preset'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    _bloc.add(ApplyPreset(p));
+  }
+
   void _showUnsavedDialog() {
     showDialog(
       context: context,
@@ -693,7 +725,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
   Widget _presetCard(AbsoluteLayoutPreset p) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
     child: InkWell(
-      onTap: () => _bloc.add(ApplyPreset(p)),
+      onTap: () => _applyPresetWithConfirm(p),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.all(10),
