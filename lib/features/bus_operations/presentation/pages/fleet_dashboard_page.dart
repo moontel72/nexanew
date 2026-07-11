@@ -7,7 +7,6 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashbo
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_state.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart';
@@ -392,11 +391,12 @@ class _FleetDashboardView extends StatelessWidget {
     FleetDashboardState state,
     String layoutId,
   ) {
-    // Open the canvas designer directly for an existing vehicle layout.
+    // Open the Bus Configuration form FIRST, pre-populated with existing
+    // vehicle data, then proceed to the layout designer canvas.
     Navigator.push(
       ctx,
       MaterialPageRoute(
-        builder: (_) => AbsoluteLayoutDesignerScreen(
+        builder: (_) => BusConfigSetupScreen(
           companyId: state.companyId,
           companyName: state.ownerName,
           apiPrefix: '/bus-fleet',

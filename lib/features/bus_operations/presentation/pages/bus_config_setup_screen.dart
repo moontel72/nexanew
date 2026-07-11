@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 
 class BusConfigSetupScreen extends StatefulWidget {
@@ -57,6 +58,46 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     super.initState();
     _numberPlateCtrl = TextEditingController();
     _specsCtrl = TextEditingController();
+    // If editing an existing layout, pre-populate fields from the API.
+    if (widget.layoutId != null) {
+      _loadExistingLayout();
+    }
+  }
+
+  Future<void> _loadExistingLayout() async {
+    try {
+      final api = ApiService();
+      final r = await api.get(
+        '${widget.apiPrefix}/absolute-layouts/${widget.layoutId}',
+      );
+      final d = r?['data'];
+      if (d is Map) {
+        final displayName =
+            d['display_name']?.toString() ?? d['name']?.toString() ?? '';
+        // Parse plate + maker from display_name (e.g. "GUJ-78-98745 | Volvo")
+        if (displayName.contains(' | ')) {
+          final parts = displayName.split(' | ');
+          _numberPlateCtrl.text = parts[0];
+          _selectedMaker = _busMakers.contains(parts[1]) ? parts[1] : null;
+        } else {
+          _numberPlateCtrl.text = displayName;
+        }
+        _specsCtrl.text =
+            d['specifications']?.toString() ?? d['notes']?.toString() ?? '';
+
+        // Restore seat config from canvas data
+        final canvas = d['canvas'];
+        if (canvas is Map) {
+          setState(() {
+            _rowCount = (canvas['row_count'] as int?) ?? 14;
+            _leftSeats = (canvas['left_seats'] as int?) ?? 2;
+            _rightSeats = (canvas['right_seats'] as int?) ?? 2;
+          });
+        }
+      }
+    } catch (_) {
+      // Silently ignore — form starts empty.
+    }
   }
 
   @override

@@ -45,6 +45,7 @@ class AbsoluteTransformOverlay extends StatefulWidget {
   final OnRotateEnd onRotateEnd;
   final OnDelete? onDelete;
   final OnTapOverlay? onTap;
+  final VoidCallback? onClose;
 
   const AbsoluteTransformOverlay({
     super.key,
@@ -57,6 +58,7 @@ class AbsoluteTransformOverlay extends StatefulWidget {
     required this.onRotateEnd,
     this.onDelete,
     this.onTap,
+    this.onClose,
   });
 
   @override
@@ -151,6 +153,37 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
                 ),
               ),
             ),
+
+            // ── Close/Dismiss button (top-right corner) ──
+            if (widget.onClose != null)
+              Positioned(
+                right: -_deleteBtnSize / 3,
+                top: -_deleteBtnSize / 3,
+                child: GestureDetector(
+                  onTap: widget.onClose,
+                  child: Container(
+                    width: _deleteBtnSize,
+                    height: _deleteBtnSize,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6B7280),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black54,
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
 
             // ── Live resize dimension tooltip ──
             if (_isResizing)

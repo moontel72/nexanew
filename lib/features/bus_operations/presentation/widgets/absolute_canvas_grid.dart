@@ -57,6 +57,7 @@ class AbsoluteCanvasGrid extends StatefulWidget {
   final void Function(double r)? onOverlayRotate;
   final VoidCallback? onOverlayDelete;
   final VoidCallback? onOverlayTap;
+  final VoidCallback? onOverlayClose;
   final TransformationController? transformController;
 
   const AbsoluteCanvasGrid({
@@ -68,6 +69,7 @@ class AbsoluteCanvasGrid extends StatefulWidget {
     this.onOverlayRotate,
     this.onOverlayDelete,
     this.onOverlayTap,
+    this.onOverlayClose,
     this.onCanvasTap,
     this.transformController,
   });
@@ -153,6 +155,7 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
                       onRotateEnd: () {},
                       onDelete: () => widget.onOverlayDelete?.call(),
                       onTap: () => widget.onOverlayTap?.call(),
+                      onClose: () => widget.onOverlayClose?.call(),
                     ),
                 ],
               ),
