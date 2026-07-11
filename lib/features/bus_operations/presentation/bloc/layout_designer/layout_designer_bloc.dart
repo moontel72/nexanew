@@ -68,16 +68,18 @@ class LayoutDesignerBloc
   void _onPreset(ApplyPreset e, Emitter<LayoutDesignerState> emit) {
     final preset = e.preset;
     const double aisleW = 40.0;
-    const double rowH = 64.0;
+    const double rowH = 56.0;
     const double topMargin = 100.0;
     const double leftMargin = 28.0;
     const double seatSpan = 48.0;
-    const String letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
     // Calculate row count from canvas height
-    final int rows = ((preset.canvasHeight - topMargin - 40) / rowH).round().clamp(1, 30);
+    final int rows = ((preset.canvasHeight - topMargin - 40) / rowH)
+        .round()
+        .clamp(1, 30);
 
     final List<AbsoluteLayoutComponent> newComponents = [];
+    int seatCounter = 1;
 
     // Driver cabin at front center
     final driverX = (preset.canvasWidth - 80) / 2;
@@ -94,15 +96,14 @@ class LayoutDesignerBloc
       ),
     );
 
-    // Generate seat rows
+    // Generate seat rows — linear S-series numbering (S1, S2, S3...)
     for (int row = 0; row < rows; row++) {
       final y = topMargin + row * rowH;
-      final rowLetter = letters[row < letters.length ? row : letters.length - 1];
 
+      // Scan left-to-right: left seats, then right seats
       // Left-side seats
       for (int s = 0; s < preset.leftSeats; s++) {
         final x = leftMargin + s * seatSpan;
-        final seatNum = s + 1;
         newComponents.add(
           AbsoluteLayoutComponent(
             id: _uuid.v4(),
@@ -111,17 +112,17 @@ class LayoutDesignerBloc
             y: y,
             width: 44,
             height: 44,
-            seatId: '$rowLetter$seatNum',
-            seatNumber: seatNum,
+            seatId: 'S$seatCounter',
+            seatNumber: seatCounter,
           ),
         );
+        seatCounter++;
       }
 
       // Right-side seats
       final rightStartX = leftMargin + preset.leftSeats * seatSpan + aisleW;
       for (int s = 0; s < preset.rightSeats; s++) {
         final x = rightStartX + s * seatSpan;
-        final seatNum = preset.leftSeats + s + 1;
         newComponents.add(
           AbsoluteLayoutComponent(
             id: _uuid.v4(),
@@ -130,10 +131,11 @@ class LayoutDesignerBloc
             y: y,
             width: 44,
             height: 44,
-            seatId: '$rowLetter$seatNum',
-            seatNumber: seatNum,
+            seatId: 'S$seatCounter',
+            seatNumber: seatCounter,
           ),
         );
+        seatCounter++;
       }
     }
 

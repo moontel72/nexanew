@@ -93,7 +93,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final rightSeats = config.rightSeats;
     final rows = config.rowCount;
     const double aisleW = 40.0;
-    const double rowH = 64.0;
+    const double rowH = 56.0;
     const double topMargin = 100.0;
     const double leftMargin = 28.0;
     const double seatSpan = 48.0;
@@ -122,77 +122,42 @@ class _DesignerBodyState extends State<_DesignerBody> {
       ),
     );
 
-    // Generate seat rows with airline-style numbering (A1, A2, B1, B2, ...)
-    const String letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    // Generate seat rows — universal linear S-series (S1, S2, S3...)
+    int seatCounter = 1;
     for (int row = 0; row < rows; row++) {
       final y = topMargin + row * rowH;
-      // Row letter (A=0, B=1, etc.) — front to back
-      final rowLetter =
-          letters[row < letters.length ? row : letters.length - 1];
 
       // Left-side seats
       for (int s = 0; s < leftSeats; s++) {
         final x = leftMargin + s * seatSpan;
-        final seatNum = s + 1;
         bloc.add(
           AddComponent(
             type: ComponentType.seat,
             x: x,
             y: y,
-            seatId: '$rowLetter$seatNum',
-            seatNumber: seatNum,
+            seatId: 'S$seatCounter',
+            seatNumber: seatCounter,
           ),
         );
+        seatCounter++;
       }
 
       // Right-side seats
       final rightStartX = leftMargin + leftSeats * seatSpan + aisleW;
       for (int s = 0; s < rightSeats; s++) {
         final x = rightStartX + s * seatSpan;
-        final seatNum = leftSeats + s + 1;
         bloc.add(
           AddComponent(
             type: ComponentType.seat,
             x: x,
             y: y,
-            seatId: '$rowLetter$seatNum',
-            seatNumber: seatNum,
+            seatId: 'S$seatCounter',
+            seatNumber: seatCounter,
           ),
         );
+        seatCounter++;
       }
     }
-  }
-
-  void _applyPresetWithConfirm(AbsoluteLayoutPreset p) async {
-    if (_state.components.isNotEmpty) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (c) => AlertDialog(
-          backgroundColor: const Color(0xFF122442),
-          title: const Text('Overwrite Canvas Layout?',
-              style: TextStyle(color: Colors.white)),
-          content: const Text(
-            'Are you sure you want to apply this preset template? '
-            'Any custom modifications will be completely replaced.',
-            style: TextStyle(color: Color(0xFF8899AA)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(c, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(c, true),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF97316)),
-              child: const Text('Apply Preset'),
-            ),
-          ],
-        ),
-      );
-      if (ok != true) return;
-    }
-    _bloc.add(ApplyPreset(p));
   }
 
   void _showUnsavedDialog() {
@@ -725,7 +690,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
   Widget _presetCard(AbsoluteLayoutPreset p) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
     child: InkWell(
-      onTap: () => _applyPresetWithConfirm(p),
+      onTap: () => _bloc.add(ApplyPreset(p)),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.all(10),
