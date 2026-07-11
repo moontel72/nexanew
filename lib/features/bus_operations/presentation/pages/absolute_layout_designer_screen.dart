@@ -322,12 +322,6 @@ class _DesignerBodyState extends State<_DesignerBody> {
                 setState(() => _tool = _CanvasTool.placeComponent);
               },
             ),
-            _btn(
-              _sidebarOpen ? Icons.menu_open : Icons.menu,
-              'Presets',
-              _sidebarOpen,
-              () => setState(() => _sidebarOpen = !_sidebarOpen),
-            ),
             Gap(8),
             ElevatedButton.icon(
               onPressed: _state.isSaving
