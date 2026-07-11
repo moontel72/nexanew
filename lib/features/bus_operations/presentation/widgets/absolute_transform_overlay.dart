@@ -68,9 +68,9 @@ class AbsoluteTransformOverlay extends StatefulWidget {
 
 class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
   static const double _handleSize = 18.0;
-  static const double _rotationArmLength = 48.0;
-  static const double _rotationKnobSize = 40.0;
-  static const double _deleteBtnSize = 40.0;
+  static const double _rotationArmLength = 32.0;
+  static const double _rotationKnobSize = 24.0;
+  static const double _actionBtnSize = 20.0;
 
   // Live dimension tooltip during resize
   bool _isResizing = false;
@@ -124,31 +124,24 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
               ),
             ),
 
-            // ── Delete button (top-left corner, always visible) ──
+            // ── Delete button (bottom-right corner) ──
             Positioned(
-              left: -_deleteBtnSize / 3,
-              top: -_deleteBtnSize / 3,
+              right: -_actionBtnSize / 3,
+              bottom: -_actionBtnSize / 3,
               child: GestureDetector(
                 onTap: widget.onDelete ?? () {},
                 child: Container(
-                  width: _deleteBtnSize,
-                  height: _deleteBtnSize,
+                  width: _actionBtnSize,
+                  height: _actionBtnSize,
                   decoration: BoxDecoration(
                     color: const Color(0xFFDC2626),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black54,
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+                    border: Border.all(color: Colors.white, width: 2),
                   ),
                   child: const Icon(
                     Icons.delete,
                     color: Colors.white,
-                    size: 28,
+                    size: 14,
                   ),
                 ),
               ),
@@ -212,29 +205,22 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
             // ── Close/Dismiss button (top-right, renders ABOVE rotation handle) ──
             if (widget.onClose != null)
               Positioned(
-                right: -_deleteBtnSize / 3,
-                top: -_deleteBtnSize / 3,
+                right: -_actionBtnSize / 3,
+                top: -_actionBtnSize / 3,
                 child: GestureDetector(
                   onTap: widget.onClose,
                   child: Container(
-                    width: _deleteBtnSize,
-                    height: _deleteBtnSize,
+                    width: _actionBtnSize,
+                    height: _actionBtnSize,
                     decoration: BoxDecoration(
                       color: const Color(0xFF6B7280),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black54,
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: const Icon(
                       Icons.close,
                       color: Colors.white,
-                      size: 22,
+                      size: 12,
                     ),
                   ),
                 ),

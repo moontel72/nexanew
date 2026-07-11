@@ -36,8 +36,22 @@ class LayoutDesignerBloc
     try {
       final r = await _api.get('${e.apiPrefix}/absolute-layouts/${e.layoutId}');
       final d = r?['data'];
-      Map<String, dynamic> snap = {};
-      if (d is Map<String, dynamic>) snap = d;
+      // The layout data is stored in current_snapshot (JSON column).
+      // Top-level fields (display_name, canvas_width etc.) are separate columns.
+      final Map<String, dynamic> snap;
+      if (d is Map) {
+        final snapshot = d['current_snapshot'];
+        if (snapshot is Map) {
+          snap = Map<String, dynamic>.from(snapshot as Map);
+          // Merge top-level fields so fromSnapshot finds display_name etc.
+          snap['display_name'] ??= d['display_name']?.toString();
+          snap['layout_status'] ??= d['layout_status']?.toString();
+        } else {
+          snap = Map<String, dynamic>.from(d as Map);
+        }
+      } else {
+        snap = <String, dynamic>{};
+      }
       emit(
         state.copyWith(
           layout: AbsoluteLayoutState.fromSnapshot(snap, layoutId: e.layoutId),
