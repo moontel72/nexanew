@@ -47,6 +47,20 @@ class ResetDispatch extends DispatchEvent {
   const ResetDispatch();
 }
 
+class UpdateDispatch extends DispatchEvent {
+  final String assignmentId;
+  const UpdateDispatch(this.assignmentId);
+  @override
+  List<Object?> get props => [assignmentId];
+}
+
+class DeleteDispatch extends DispatchEvent {
+  final String assignmentId;
+  const DeleteDispatch(this.assignmentId);
+  @override
+  List<Object?> get props => [assignmentId];
+}
+
 // ── State ──
 class DispatchState extends Equatable {
   final List<Map<String, dynamic>> vehicles,
@@ -178,6 +192,8 @@ class FleetDispatchBloc extends Bloc<DispatchEvent, DispatchState> {
   FleetDispatchBloc() : super(const DispatchState()) {
     on<InitDispatch>(_onInit);
     on<SaveDispatch>(_onSave);
+    on<UpdateDispatch>(_onUpdate);
+    on<DeleteDispatch>(_onDelete);
     on<SetDispatchField>(_onSetField);
     on<SetDispatchSet>(_onSetSet);
     on<ResetDispatch>(_onReset);
@@ -245,6 +261,52 @@ class FleetDispatchBloc extends Bloc<DispatchEvent, DispatchState> {
       };
       await _api.post('${state.apiPrefix}/dispatch/assign', body: body);
       emit(state.copyWith(saving: false, success: 'Assignment saved'));
+    } catch (ex) {
+      emit(state.copyWith(saving: false, error: ex.toString()));
+    }
+  }
+
+  Future<void> _onUpdate(UpdateDispatch e, Emitter<DispatchState> emit) async {
+    if (state.selectedVehicle == null ||
+        state.selectedRoute == null ||
+        state.selectedDriver == null) {
+      emit(state.copyWith(error: 'Vehicle, Route, Driver required.'));
+      return;
+    }
+    emit(state.copyWith(saving: true));
+    try {
+      final body = <String, dynamic>{
+        'vehicle_id': state.selectedVehicle,
+        'route_id': state.selectedRoute,
+        'driver_id': state.selectedDriver,
+        'conductor_id': state.selectedConductor,
+        'shift': state.shift,
+        'return_type': state.selectedReturn,
+        if (state.selectedReliefDriver != null)
+          'relief_driver_id': state.selectedReliefDriver,
+        if (state.selectedReliefConductor != null)
+          'relief_conductor_id': state.selectedReliefConductor,
+        if (state.dateFrom != null)
+          'date_from': state.dateFrom!.toIso8601String(),
+        if (state.dateTo != null) 'date_to': state.dateTo!.toIso8601String(),
+      };
+      await _api.put(
+        '${state.apiPrefix}/dispatch/assignments/${e.assignmentId}',
+        body: body,
+      );
+      emit(state.copyWith(saving: false, success: 'Assignment updated'));
+    } catch (ex) {
+      emit(state.copyWith(saving: false, error: ex.toString()));
+    }
+  }
+
+  Future<void> _onDelete(DeleteDispatch e, Emitter<DispatchState> emit) async {
+    emit(state.copyWith(saving: true));
+    try {
+      await _api.delete(
+        '${state.apiPrefix}/dispatch/assignments/${e.assignmentId}',
+      );
+      emit(state.copyWith(saving: false, success: 'Assignment deleted'));
     } catch (ex) {
       emit(state.copyWith(saving: false, error: ex.toString()));
     }

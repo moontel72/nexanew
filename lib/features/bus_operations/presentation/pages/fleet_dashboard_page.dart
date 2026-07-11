@@ -967,6 +967,25 @@ class _DispatchListPageState extends State<_DispatchListPage> {
                         if (conductor != null && conductor.isNotEmpty)
                           _infoRow(Icons.group, 'Conductor', conductor),
                         _infoRow(Icons.schedule, 'Shift', shift),
+                        const Gap(6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            _actionBtn(
+                              Icons.edit,
+                              'Edit',
+                              const Color(0xFF2563EB),
+                              () => _editAssignment(a),
+                            ),
+                            const Gap(8),
+                            _actionBtn(
+                              Icons.delete_outline,
+                              'Delete',
+                              Colors.redAccent,
+                              () => _deleteAssignment(a),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -994,5 +1013,89 @@ class _DispatchListPageState extends State<_DispatchListPage> {
         ],
       ),
     );
+  }
+
+  Widget _actionBtn(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 13),
+      label: Text(label, style: const TextStyle(fontSize: 11)),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color.withOpacity(0.5)),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  void _editAssignment(Map<String, dynamic> a) {
+    FleetDispatchDialog.show(
+      context,
+      apiPrefix: '/bus-fleet',
+      assignmentId: a['id']?.toString(),
+      initialData: {
+        'vehicle_id': a['vehicle_id'],
+        'route_id': a['route_id'],
+        'driver_id': a['driver_id'],
+        'conductor_id': a['conductor_id'],
+        'relief_driver_id': a['relief_driver_id'],
+        'relief_conductor_id': a['relief_conductor_id'],
+        'shift': a['shift'],
+        'return_type': a['return_type'],
+        'date_from': a['date_from'],
+        'date_to': a['date_to'],
+      },
+      onSaved: () => _load(),
+    );
+  }
+
+  Future<void> _deleteAssignment(Map<String, dynamic> a) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: const Color(0xFF162438),
+        title: const Text(
+          'Delete Assignment',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Delete assignment for ${a['driver_name'] ?? '—'}?',
+          style: const TextStyle(color: Color(0xFF8899AA)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      try {
+        final api = ApiService();
+        await api.delete('/bus-fleet/dispatch/assignments/${a['id']}');
+        _load();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Delete failed: $e'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    }
   }
 }

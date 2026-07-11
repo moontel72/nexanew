@@ -9,12 +9,14 @@ const _shifts = ['morning', 'evening', 'night', 'special'];
 class FleetDispatchDialog extends StatelessWidget {
   final String apiPrefix;
   final String? busCompanyId;
+  final String? assignmentId;
   final VoidCallback? onSaved;
 
   const FleetDispatchDialog({
     super.key,
     required this.apiPrefix,
     this.busCompanyId,
+    this.assignmentId,
     this.onSaved,
   });
 
@@ -22,6 +24,8 @@ class FleetDispatchDialog extends StatelessWidget {
     BuildContext context, {
     required String apiPrefix,
     String? busCompanyId,
+    String? assignmentId,
+    Map<String, dynamic>? initialData,
     VoidCallback? onSaved,
   }) {
     return showModalBottomSheet(
@@ -29,15 +33,55 @@ class FleetDispatchDialog extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => BlocProvider(
-        create: (_) => FleetDispatchBloc()
-          ..add(InitDispatch(apiPrefix: apiPrefix, busCompanyId: busCompanyId)),
+        create: (_) {
+          final bloc = FleetDispatchBloc()
+            ..add(
+              InitDispatch(apiPrefix: apiPrefix, busCompanyId: busCompanyId),
+            );
+          // Pre-populate fields when editing
+          if (assignmentId != null && initialData != null) {
+            _prefillFromData(bloc, initialData);
+          }
+          return bloc;
+        },
         child: FleetDispatchDialog(
           apiPrefix: apiPrefix,
           busCompanyId: busCompanyId,
+          assignmentId: assignmentId,
           onSaved: onSaved,
         ),
       ),
     );
+  }
+
+  static void _prefillFromData(
+    FleetDispatchBloc bloc,
+    Map<String, dynamic> data,
+  ) {
+    if (data['vehicle_id'] != null)
+      bloc.add(SetDispatchField('vehicle', data['vehicle_id']));
+    if (data['route_id'] != null)
+      bloc.add(SetDispatchField('route', data['route_id']));
+    if (data['driver_id'] != null)
+      bloc.add(SetDispatchField('driver', data['driver_id']));
+    if (data['conductor_id'] != null)
+      bloc.add(SetDispatchField('conductor', data['conductor_id']));
+    if (data['relief_driver_id'] != null)
+      bloc.add(SetDispatchField('reliefDriver', data['relief_driver_id']));
+    if (data['relief_conductor_id'] != null)
+      bloc.add(
+        SetDispatchField('reliefConductor', data['relief_conductor_id']),
+      );
+    if (data['shift'] != null)
+      bloc.add(SetDispatchField('shift', data['shift']));
+    if (data['return_type'] != null)
+      bloc.add(SetDispatchField('return', data['return_type']));
+    if (data['date_from'] != null)
+      bloc.add(
+        SetDispatchField('dateFrom', DateTime.tryParse(data['date_from'])),
+      );
+    if (data['date_to'] != null)
+      bloc.add(SetDispatchField('dateTo', DateTime.tryParse(data['date_to'])));
   }
 
   @override
@@ -67,10 +111,12 @@ class FleetDispatchDialog extends StatelessWidget {
                   children: [
                     const Icon(Icons.assignment, color: Colors.white, size: 22),
                     const Gap(10),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Fleet Dispatch',
-                        style: TextStyle(
+                        assignmentId != null
+                            ? 'Edit Assignment'
+                            : 'Fleet Dispatch',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -296,7 +342,11 @@ class FleetDispatchDialog extends StatelessWidget {
                         onPressed: state.saving
                             ? null
                             : () {
-                                bloc.add(const SaveDispatch());
+                                if (assignmentId != null) {
+                                  bloc.add(UpdateDispatch(assignmentId!));
+                                } else {
+                                  bloc.add(const SaveDispatch());
+                                }
                                 if (onSaved != null) onSaved!();
                                 Navigator.pop(ctx, true);
                               },
@@ -312,9 +362,9 @@ class FleetDispatchDialog extends StatelessWidget {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text(
-                                'Assign',
-                                style: TextStyle(color: Colors.white),
+                            : Text(
+                                assignmentId != null ? 'Update' : 'Assign',
+                                style: const TextStyle(color: Colors.white),
                               ),
                       ),
                     ),
