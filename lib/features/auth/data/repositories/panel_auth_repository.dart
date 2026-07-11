@@ -123,65 +123,24 @@ class PanelAuthRepository {
 
     // User object: new identity spine wraps it in data.user;
     // fleet endpoints place user fields directly inside data.
-    // Unified auth (GlobalAuthController) returns display_name,
-    // global_identity_id etc. directly in data — no user wrapper.
     final user = (data['user'] is Map)
         ? Map<String, dynamic>.from(data['user'] as Map)
-        : (data.containsKey('id') ||
-              data.containsKey('account_name') ||
-              data.containsKey('display_name') ||
-              data.containsKey('global_identity_id'))
+        : (data.containsKey('id') || data.containsKey('account_name'))
         ? Map<String, dynamic>.from(data)
         : <String, dynamic>{};
 
     final driverType = user['driver_type']?.toString().toLowerCase();
-    final userId =
-        user['id']?.toString() ??
-        user['user_id']?.toString() ??
-        user['global_identity_id']?.toString() ??
-        '';
+    final userId = user['id']?.toString() ?? user['user_id']?.toString() ?? '';
     final cId =
         user['company_id']?.toString() ?? data['company_id']?.toString();
-    // Company name comes from company/account fields ONLY — NOT display_name
-    // (display_name is the person's name, e.g. "Mohabat Khan", not the company).
-    // The dashboard profile API (/bus-fleet/profile or /bus-owner/profile)
-    // is the authoritative source for corporate identity.
     final cName =
-        user['company_name']?.toString() ??
-        data['company_name']?.toString() ??
-        user['account_name']?.toString();
-
-    // ── Debug: trace corporate identity data path ──
-    if (kDebugMode) {
-      debugPrint('PANEL_AUTH: data keys = ${data.keys.toList()}');
-      debugPrint('PANEL_AUTH: user keys = ${user.keys.toList()}');
-      debugPrint(
-        'PANEL_AUTH: company_name (from user) = ${user['company_name']}',
-      );
-      debugPrint(
-        'PANEL_AUTH: company_name (from data) = ${data['company_name']}',
-      );
-      debugPrint(
-        'PANEL_AUTH: account_name (from user) = ${user['account_name']}',
-      );
-      debugPrint(
-        'PANEL_AUTH: display_name (from user) = ${user['display_name']}',
-      );
-      debugPrint('PANEL_AUTH: resolved companyName = $cName');
-      debugPrint('PANEL_AUTH: resolved companyId = $cId');
-    }
+        user['company_name']?.toString() ?? data['company_name']?.toString();
 
     // ── Persist tokens ──────────────────────────────────
     await _persistSession(panel, token, user);
 
     // ── Fleet metadata → SharedPreferences (dashboard routers read this) ──
-    await _persistFleetMetadata(
-      panel,
-      token,
-      user,
-      metadata,
-      companyName: cName,
-    );
+    await _persistFleetMetadata(panel, token, user, metadata);
 
     final authResponse = PanelAuthResponse(
       panel: panel,
@@ -361,9 +320,8 @@ class PanelAuthRepository {
     UserPanel panel,
     String token,
     Map<String, dynamic> user,
-    Map<String, dynamic> metadata, {
-    String? companyName,
-  }) async {
+    Map<String, dynamic> metadata,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final scope = panel.name; // e.g. 'busFleet', 'truckFleet'
 
@@ -381,36 +339,12 @@ class PanelAuthRepository {
       await prefs.setString('${scope}_fleet_role', fleetRole);
     }
 
-    // Persist the registered company name (e.g. "Radhnal Express")
-    // so the dashboard navbar can reflect the real corporate identity.
-    if (companyName != null && companyName.isNotEmpty) {
-      await prefs.setString('${scope}_company_name', companyName);
-    } else {
-      // No company name available — remove any stale data from a previous
-      // login (e.g. bus-owner "Mohabat Khan" contaminating bus-fleet panel)
-      // so the dashboard falls through to the profile API as intended.
-      await prefs.remove('${scope}_company_name');
-      await prefs.remove('${scope}_owner_name');
-    }
-
-    final accountName = user['account_name']?.toString();
+    final accountName =
+        user['account_name']?.toString() ?? user['display_name']?.toString();
     if (accountName != null && accountName.isNotEmpty) {
       await prefs.setString('${scope}_owner_name', accountName);
       await prefs.setString('${scope}_driver_name', accountName);
       await prefs.setString('${scope}_conductor_name', accountName);
-    }
-
-    // ── Debug: verify what was persisted ──
-    if (kDebugMode) {
-      debugPrint('PANEL_AUTH PERSIST: scope=$scope');
-      debugPrint('PANEL_AUTH PERSIST: companyName=$companyName');
-      debugPrint('PANEL_AUTH PERSIST: accountName=$accountName');
-      debugPrint(
-        'PANEL_AUTH PERSIST: stored ${scope}_company_name=${await prefs.getString('${scope}_company_name')}',
-      );
-      debugPrint(
-        'PANEL_AUTH PERSIST: stored ${scope}_owner_name=${await prefs.getString('${scope}_owner_name')}',
-      );
     }
   }
 }
