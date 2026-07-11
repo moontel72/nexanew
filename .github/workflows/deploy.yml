@@ -54,21 +54,21 @@ jobs:
 
       - name: Deploy backend via rsync
         run: |
-          rsync -avz --delete --exclude='.env' backend/ root@135.181.46.27:/var/www/traceodd/admin-panel/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --exclude='.env' backend/ root@135.181.46.27:/var/www/traceodd/admin-panel/
 
       - name: Deploy Rust directory to server
         run: |
-          rsync -avz --delete rust/ root@135.181.46.27:/var/www/traceodd/admin-panel/rust/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" rust/ root@135.181.46.27:/var/www/traceodd/admin-panel/rust/
 
       - name: Deploy Rust shared libraries
         continue-on-error: true
         run: |
-          rsync -avz --include='*.so' --include='*.rlib' --exclude='*' rust/target/release/ root@135.181.46.27:/var/www/traceodd/rust-lib/ 2>/dev/null || echo "No shared libs to deploy"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" --include='*.so' --include='*.rlib' --exclude='*' rust/target/release/ root@135.181.46.27:/var/www/traceodd/rust-lib/ 2>/dev/null || echo "No shared libs to deploy"
 
       - name: Deploy Nginx configuration
         run: |
-          rsync -avz .nginx/traceodd.conf root@135.181.46.27:/etc/nginx/sites-available/traceodd
-          ssh root@135.181.46.27 "
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/traceodd.conf root@135.181.46.27:/etc/nginx/sites-available/traceodd
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
             ln -sf /etc/nginx/sites-available/traceodd /etc/nginx/sites-enabled/traceodd
             rm -f /etc/nginx/sites-enabled/nexatrace 2>/dev/null || true
             nginx -t && systemctl reload nginx && echo 'Nginx OK'
@@ -76,17 +76,17 @@ jobs:
 
       - name: Deploy Reverb systemd unit
         run: |
-          rsync -avz .nginx/nexatrace-reverb.service root@135.181.46.27:/etc/systemd/system/nexatrace-reverb.service
-          ssh root@135.181.46.27 "systemctl daemon-reload && systemctl enable nexatrace-reverb"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/nexatrace-reverb.service root@135.181.46.27:/etc/systemd/system/nexatrace-reverb.service
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "systemctl daemon-reload && systemctl enable nexatrace-reverb"
 
       - name: Deploy Queue Worker systemd unit
         run: |
-          rsync -avz .nginx/nexatrace-queue.service root@135.181.46.27:/etc/systemd/system/nexatrace-queue.service
-          ssh root@135.181.46.27 "systemctl daemon-reload && systemctl enable nexatrace-queue"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/nexatrace-queue.service root@135.181.46.27:/etc/systemd/system/nexatrace-queue.service
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "systemctl daemon-reload && systemctl enable nexatrace-queue"
 
       - name: Server Post-Deployment Tasks
         run: |
-          ssh root@135.181.46.27 "
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
             set -e
             cd /var/www/traceodd/admin-panel
 
