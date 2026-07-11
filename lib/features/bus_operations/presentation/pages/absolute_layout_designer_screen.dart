@@ -69,7 +69,12 @@ class _DesignerBodyState extends State<_DesignerBody> {
   @override
   void initState() {
     super.initState();
-    if (widget.config != null) _initFromConfig(widget.config!);
+    // Only auto-generate seat layout for NEW vehicles (no layoutId).
+    // When editing an existing layout, the API-loaded data from
+    // InitDesigner is authoritative — do NOT overwrite it.
+    if (widget.config != null && widget.layoutId == null) {
+      _initFromConfig(widget.config!);
+    }
   }
 
   @override
