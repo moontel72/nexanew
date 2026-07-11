@@ -42,6 +42,12 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   int _rightSeats = 2;
   int _rowCount = 14;
 
+  // ── Layout Strategy ──
+  bool _usePreset = false;
+  List<Map<String, dynamic>> _presets = [];
+  Map<String, dynamic>? _selectedPreset;
+  bool _presetsLoading = false;
+
   static const List<String> _busMakers = [
     'Hino',
     'Mercedes-Benz',
@@ -58,9 +64,24 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     super.initState();
     _numberPlateCtrl = TextEditingController();
     _specsCtrl = TextEditingController();
-    // If editing an existing layout, pre-populate fields from the API.
     if (widget.layoutId != null) {
       _loadExistingLayout();
+    }
+    _fetchPresets();
+  }
+
+  Future<void> _fetchPresets() async {
+    setState(() => _presetsLoading = true);
+    try {
+      final api = ApiService();
+      final r = await api.get('${widget.apiPrefix}/absolute-layouts/presets');
+      final d = r?['data'];
+      setState(() {
+        _presets = d is List ? d.cast<Map<String, dynamic>>() : [];
+        _presetsLoading = false;
+      });
+    } catch (_) {
+      setState(() => _presetsLoading = false);
     }
   }
 
@@ -188,123 +209,106 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 const SizedBox(height: 24),
 
                 // ═══════════════════════════════════════════
-                // SECTION 2: DYNAMIC GRID CONFIGURATION
+                // SECTION 2: LAYOUT STRATEGY
                 // ═══════════════════════════════════════════
-                _sectionHeader(Icons.grid_view, 'DYNAMIC GRID CONFIGURATION'),
-                const SizedBox(height: 4),
-                Text(
-                  'Define how many seats per side and how many rows.',
-                  style: TextStyle(
-                    color: const Color(0x60FFFFFF),
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 14),
+                _sectionHeader(Icons.tune, 'LAYOUT STRATEGY'),
+                const SizedBox(height: 12),
 
-                // Seat counts per side
-                Row(
-                  children: [
-                    Expanded(
-                      child: _stepperField(
-                        label: 'Left Seats',
-                        value: _leftSeats,
-                        min: 1,
-                        max: 4,
-                        onChanged: (v) => setState(() => _leftSeats = v),
-                        icon: Icons.event_seat,
-                        color: const Color(0xFF7C3AED),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+                // Toggle: Preset vs Custom
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: true, label: Text('Saved Presets'), icon: Icon(Icons.bookmark, size: 16)),
+                    ButtonSegment(value: false, label: Text('Custom Grid'), icon: Icon(Icons.grid_view, size: 16)),
+                  ],
+                  selected: {_usePreset},
+                  onSelectionChanged: (v) => setState(() => _usePreset = v.first),
+                ),
+                const SizedBox(height: 16),
+
+                if (_usePreset) ...[
+                  // Preset selector
+                  if (_presetsLoading)
+                    const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                  else if (_presets.isEmpty)
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 18,
-                      ),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0x20FFFFFF)),
+                        color: const Color(0xFF122442),
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0x20FFFFFF)),
                       ),
-                      child: const Column(
+                      child: const Row(
                         children: [
-                          Icon(
-                            Icons.swap_horiz,
-                            color: Color(0x30FFFFFF),
-                            size: 20,
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'AISLE',
-                            style: TextStyle(
-                              color: Color(0x30FFFFFF),
-                              fontSize: 8,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
+                          Icon(Icons.info_outline, color: Color(0x60FFFFFF), size: 16),
+                          SizedBox(width: 8),
+                          Expanded(child: Text('No saved presets available. Create one from the Sub-Admin panel.', style: TextStyle(color: Color(0x60FFFFFF), fontSize: 12))),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _stepperField(
-                        label: 'Right Seats',
-                        value: _rightSeats,
-                        min: 1,
-                        max: 4,
-                        onChanged: (v) => setState(() => _rightSeats = v),
-                        icon: Icons.event_seat,
-                        color: const Color(0xFF3B82F6),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                // Row count
-                _stepperField(
-                  label: 'Total Rows',
-                  value: _rowCount,
-                  min: 4,
-                  max: 24,
-                  onChanged: (v) => setState(() => _rowCount = v),
-                  icon: Icons.table_rows,
-                  color: const Color(0xFF16A34A),
-                  wide: true,
-                ),
-                const SizedBox(height: 8),
-
-                // Preview summary
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF122442),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0x20FFFFFF)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: Color(0x60FFFFFF),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows'
-                          ' = ${(_leftSeats + _rightSeats) * _rowCount} total seats',
-                          style: const TextStyle(
-                            color: Color(0xCCFFFFFF),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _fieldLabel('Select a Saved Layout Preset'),
+                        const SizedBox(height: 4),
+                        ..._presets.map((p) => Card(
+                          color: _selectedPreset?['id'] == p['id'] ? const Color(0xFF1A3A5C) : const Color(0xFF122442),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(color: _selectedPreset?['id'] == p['id'] ? const Color(0xFF7C3AED) : const Color(0x20FFFFFF)),
                           ),
-                        ),
+                          child: ListTile(
+                            title: Text(p['display_name']?.toString() ?? 'Untitled', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                            subtitle: Text('${p['total_seats'] ?? p['seat_count'] ?? '?'} seats · ${p['deck_level'] ?? 'single'} deck', style: const TextStyle(color: Color(0xFF8899AA), fontSize: 11)),
+                            leading: const Icon(Icons.directions_bus, color: Color(0xFF7C3AED)),
+                            onTap: () => setState(() => _selectedPreset = p),
+                          ),
+                        )),
+                      ],
+                    ),
+                ]
+                else ...[
+                  // Custom grid configuration
+                  _sectionHeader(Icons.grid_view, 'DYNAMIC GRID CONFIGURATION'),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Define how many seats per side and how many rows.',
+                    style: TextStyle(color: const Color(0x60FFFFFF), fontSize: 11),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Seat counts per side
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _stepperField(label: 'Left Seats', value: _leftSeats, min: 1, max: 4, onChanged: (v) => setState(() => _leftSeats = v), icon: Icons.event_seat, color: const Color(0xFF7C3AED)),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+                        decoration: BoxDecoration(border: Border.all(color: const Color(0x20FFFFFF)), borderRadius: BorderRadius.circular(8)),
+                        child: const Column(children: [Icon(Icons.swap_horiz, color: Color(0x30FFFFFF), size: 20), SizedBox(height: 4), Text('AISLE', style: TextStyle(color: Color(0x30FFFFFF), fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 1.5))]),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _stepperField(label: 'Right Seats', value: _rightSeats, min: 1, max: 4, onChanged: (v) => setState(() => _rightSeats = v), icon: Icons.event_seat, color: const Color(0xFF3B82F6)),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  _stepperField(label: 'Total Rows', value: _rowCount, min: 4, max: 24, onChanged: (v) => setState(() => _rowCount = v), icon: Icons.table_rows, color: const Color(0xFF16A34A), wide: true),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: const Color(0xFF122442), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0x20FFFFFF))),
+                    child: Row(children: [
+                      const Icon(Icons.info_outline, color: Color(0x60FFFFFF), size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows = ${(_leftSeats + _rightSeats) * _rowCount} total seats', style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 12, fontWeight: FontWeight.w600))),
+                    ]),
+                  ),
+                ],
                 const SizedBox(height: 28),
 
                 // ═══════════════════════════════════════════

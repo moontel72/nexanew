@@ -64,7 +64,6 @@ class _DesignerBodyState extends State<_DesignerBody> {
   final TransformationController _transformCtrl = TransformationController();
   _CanvasTool _tool = _CanvasTool.select;
   ComponentType? _placingType;
-  bool _sidebarOpen = true;
 
   @override
   void initState() {
@@ -227,7 +226,6 @@ class _DesignerBodyState extends State<_DesignerBody> {
                       },
                     ),
                     Expanded(child: _buildCanvas()),
-                    if (_sidebarOpen) _presetsSidebar(),
                   ],
                 ),
               ),
@@ -562,162 +560,6 @@ class _DesignerBodyState extends State<_DesignerBody> {
           ),
         ),
     ],
-  );
-
-  Widget _presetsSidebar() => Container(
-    width: 200,
-    decoration: const BoxDecoration(
-      color: Color(0xFF0A1628),
-      border: Border(left: BorderSide(color: Color(0x20FFFFFF))),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0x20FFFFFF))),
-          ),
-          child: const Text(
-            'PRESETS',
-            style: TextStyle(
-              color: Color(0x80FFFFFF),
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(8),
-            children: [
-              for (final p in AbsoluteLayoutPreset.builtIn) _presetCard(p),
-              Gap(8),
-              const Divider(color: Color(0x20FFFFFF)),
-              Gap(8),
-              InkWell(
-                onTap: () {
-                  _bloc.add(ApplyPreset(AbsoluteLayoutPreset.builtIn[0]));
-                  _bloc.add(const UpdateCanvasSize(width: 280, height: 896));
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0x30FFFFFF)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.delete_outline,
-                        color: Colors.white54,
-                        size: 16,
-                      ),
-                      Gap(6),
-                      Text(
-                        'Clear Canvas',
-                        style: TextStyle(color: Colors.white54, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Gap(4),
-              const Text(
-                'CANVAS SIZE (ft/in)',
-                style: TextStyle(
-                  color: Color(0x60FFFFFF),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              Gap(2),
-              Text(
-                'W: ${pxToFtIn(_state.canvasWidth)} · H: ${pxToFtIn(_state.canvasHeight)}',
-                style: const TextStyle(color: Color(0x40FFFFFF), fontSize: 9),
-              ),
-              Gap(6),
-              Row(
-                children: [
-                  Expanded(
-                    child: _SizeField(
-                      label: 'Width (px)',
-                      initialValue: _state.canvasWidth.toInt().toString(),
-                      onChanged: (s) {
-                        final v = double.tryParse(s);
-                        if (v != null)
-                          _bloc.add(
-                            UpdateCanvasSize(
-                              width: v.clamp(100, 2000),
-                              height: _state.canvasHeight,
-                            ),
-                          );
-                      },
-                    ),
-                  ),
-                  Gap(8),
-                  Expanded(
-                    child: _SizeField(
-                      label: 'Height (px)',
-                      initialValue: _state.canvasHeight.toInt().toString(),
-                      onChanged: (s) {
-                        final v = double.tryParse(s);
-                        if (v != null)
-                          _bloc.add(
-                            UpdateCanvasSize(
-                              width: _state.canvasWidth,
-                              height: v.clamp(100, 3000),
-                            ),
-                          );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _presetCard(AbsoluteLayoutPreset p) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: InkWell(
-      onTap: () => _bloc.add(ApplyPreset(p)),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0x20FFFFFF)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              p.label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Gap(4),
-            Text(
-              '${pxToFtIn(p.canvasWidth)} × ${pxToFtIn(p.canvasHeight)} · ${p.leftSeats + p.rightSeats}-abreast',
-              style: const TextStyle(color: Color(0x60FFFFFF), fontSize: 10),
-            ),
-          ],
-        ),
-      ),
-    ),
   );
 
   Widget _statusBar() {
