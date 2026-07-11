@@ -109,7 +109,12 @@ class LayoutDesignerBloc
 
   void _onSelect(SelectComponent e, Emitter<LayoutDesignerState> emit) {
     emit(
-      state.copyWith(layout: state.layout.copyWith(selectedComponentId: e.id)),
+      state.copyWith(
+        layout: state.layout.copyWith(
+          selectedComponentId: e.id,
+          clearSelection: e.id == null,
+        ),
+      ),
     );
   }
 

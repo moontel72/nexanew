@@ -71,6 +71,7 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
   static const double _rotationArmLength = 32.0;
   static const double _rotationKnobSize = 24.0;
   static const double _actionBtnSize = 20.0;
+  static const double _deleteBtnSize = 24.0;
 
   // Live dimension tooltip during resize
   bool _isResizing = false;
@@ -183,14 +184,14 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
 
             // Delete button — bottom-right corner
             Positioned(
-              right: -_actionBtnSize / 3,
-              bottom: -_actionBtnSize / 3,
+              right: -_deleteBtnSize / 3,
+              bottom: -_deleteBtnSize / 3,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: widget.onDelete ?? () {},
                 child: Container(
-                  width: _actionBtnSize,
-                  height: _actionBtnSize,
+                  width: _deleteBtnSize,
+                  height: _deleteBtnSize,
                   decoration: BoxDecoration(
                     color: const Color(0xFFDC2626),
                     shape: BoxShape.circle,
@@ -199,7 +200,7 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
                   child: const Icon(
                     Icons.delete,
                     color: Colors.white,
-                    size: 14,
+                    size: 16,
                   ),
                 ),
               ),
