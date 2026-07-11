@@ -124,29 +124,6 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
               ),
             ),
 
-            // ── Delete button (bottom-right corner) ──
-            Positioned(
-              right: -_actionBtnSize / 3,
-              bottom: -_actionBtnSize / 3,
-              child: GestureDetector(
-                onTap: widget.onDelete ?? () {},
-                child: Container(
-                  width: _actionBtnSize,
-                  height: _actionBtnSize,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDC2626),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                    size: 14,
-                  ),
-                ),
-              ),
-            ),
-
             // ── Live resize dimension tooltip ──
             if (_isResizing)
               Positioned(
@@ -202,12 +179,39 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
             // ── Rotation handle ──
             _buildRotationHandle(c),
 
-            // ── Close/Dismiss button (top-right, renders ABOVE rotation handle) ──
+            // ── Action buttons (rendered LAST = highest z-index) ──
+
+            // Delete button — bottom-right corner
+            Positioned(
+              right: -_actionBtnSize / 3,
+              bottom: -_actionBtnSize / 3,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onDelete ?? () {},
+                child: Container(
+                  width: _actionBtnSize,
+                  height: _actionBtnSize,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDC2626),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
+              ),
+            ),
+
+            // Close/Dismiss button — top-right corner
             if (widget.onClose != null)
               Positioned(
                 right: -_actionBtnSize / 3,
                 top: -_actionBtnSize / 3,
                 child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: widget.onClose,
                   child: Container(
                     width: _actionBtnSize,
