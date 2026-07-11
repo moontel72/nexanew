@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api/v1/bus-owner')->group(function (): void {
     Route::get('absolute-layouts/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'listPublic']);
     Route::get('absolute-layouts/{id}/public', [\App\Http\Controllers\AbsoluteLayoutController::class, 'showPublic']);
+    // Public preset templates
+    Route::get('absolute-layouts/presets', [\App\Http\Controllers\AbsoluteLayoutController::class, 'listPresets']);
     // Public seat hold status (cross-panel parity)
     Route::get('bookings/held/{tripId}', [\App\Http\Controllers\BusTransitController::class, 'listHeldSeats']);
     // Public ticket PDF — no auth needed (ticket has SHA-256 hash)

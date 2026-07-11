@@ -252,6 +252,26 @@ class AbsoluteLayoutController extends Controller
         ]);
     }
 
+    /** List published layouts as presets for the config wizard (no auth). */
+    public function listPresets(): JsonResponse
+    {
+        $presets = \App\Models\Transport\AbsoluteBusLayout::where('layout_status', 'published')
+            ->where('is_active', true)
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get()
+            ->map(fn($l) => [
+                'id' => $l->id,
+                'display_name' => $l->display_name,
+                'deck_level' => $l->deck_level,
+                'canvas_width' => $l->canvas_width,
+                'canvas_height' => $l->canvas_height,
+                'total_seats' => $l->totalSeats(),
+                'total_components' => $l->totalComponents(),
+            ]);
+        return response()->json(['success' => true, 'data' => $presets]);
+    }
+
     // ═══════════════════════════════════════════════════════════
     // SHOW PUBLIC — GET /absolute-layouts/{id}/public
     // ═══════════════════════════════════════════════════════════
