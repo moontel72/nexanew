@@ -12,6 +12,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_ad
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_preset_setup_screen.dart';
+import 'package:trace_odd/core/services/api_client.dart';
 
 class SubAdminDashboardScreen extends StatelessWidget {
   const SubAdminDashboardScreen({super.key});
@@ -176,7 +177,11 @@ class _DashboardView extends StatelessWidget {
               () => _showAddBusCompanySheet(ctx, bloc),
             ),
             _actionBtn(Icons.list_alt, 'View Companies', () {}),
-            _actionBtn(Icons.people, 'Manage Staff', () {}),
+            _actionBtn(
+              Icons.airline_seat_recline_normal,
+              'View Layout Presets',
+              () => _openPresetsList(ctx),
+            ),
             _actionBtn(Icons.receipt_long, 'Reports', () {}),
           ],
         ),
@@ -848,6 +853,89 @@ class _DashboardView extends StatelessWidget {
         filled: true,
         fillColor: const Color(0x10FFFFFF),
       ),
+    );
+  }
+
+  void _openPresetsList(BuildContext ctx) {
+    Navigator.push(
+      ctx,
+      MaterialPageRoute(builder: (_) => const _SubAdminPresetsListPage()),
+    );
+  }
+}
+
+// ── Presets List Page ──
+class _SubAdminPresetsListPage extends StatefulWidget {
+  const _SubAdminPresetsListPage();
+  @override
+  State<_SubAdminPresetsListPage> createState() => _SubAdminPresetsListPageState();
+}
+
+class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
+  List<Map<String, dynamic>> _presets = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final r = await ApiClient().get('/super-admin/absolute-layouts');
+      final d = r['data'];
+      setState(() {
+        _presets = d is List ? d.cast<Map<String, dynamic>>() : [];
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _delete(String id) async {
+    try {
+      await ApiClient().delete('/super-admin/absolute-layouts/$id');
+      _load();
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1B2A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0A1628),
+        title: const Text('Layout Presets', style: TextStyle(color: Colors.white)),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+        actions: [IconButton(icon: const Icon(Icons.refresh, color: Colors.white54), onPressed: _load)],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _presets.isEmpty
+              ? const Center(child: Text('No presets yet', style: TextStyle(color: Colors.white54)))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _presets.length,
+                  itemBuilder: (_, i) {
+                    final p = _presets[i];
+                    return Card(
+                      color: const Color(0xFF1A2A3A),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      child: ListTile(
+                        leading: const Icon(Icons.airline_seat_recline_normal, color: Color(0xFF7C3AED)),
+                        title: Text(p['display_name']?.toString() ?? '—', style: const TextStyle(color: Colors.white)),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          onPressed: () => _delete(p['id']?.toString() ?? ''),
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }

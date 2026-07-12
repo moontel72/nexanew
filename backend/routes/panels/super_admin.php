@@ -6,6 +6,17 @@ Route::prefix('api/v1/super-admin')
     ->middleware(['auth:sanctum'])
     ->group(function (): void {
 
+        // ─── Absolute Layout Presets (Sub-Admin Template Management) ──
+        Route::prefix('absolute-layouts')->group(function (): void {
+            Route::get('/', [\App\Http\Controllers\AbsoluteLayoutController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\AbsoluteLayoutController::class, 'store']);
+            Route::get('/presets', [\App\Http\Controllers\AbsoluteLayoutController::class, 'listPresets']);
+            Route::get('/{id}', [\App\Http\Controllers\AbsoluteLayoutController::class, 'show']);
+            Route::put('/{id}', [\App\Http\Controllers\AbsoluteLayoutController::class, 'update']);
+            Route::post('/{id}/publish', [\App\Http\Controllers\AbsoluteLayoutController::class, 'publish']);
+            Route::delete('/{id}', [\App\Http\Controllers\AbsoluteLayoutController::class, 'destroy']);
+        });
+
         Route::prefix('financial')->group(function (): void {
             Route::get('vouchers/pending', [\App\Http\Controllers\SuperAdminFinancialController::class, 'pendingVouchers']);
             Route::post('vouchers/settle/{id}', [\App\Http\Controllers\SuperAdminFinancialController::class, 'settleVoucher']);
