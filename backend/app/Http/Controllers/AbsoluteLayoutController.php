@@ -252,14 +252,17 @@ class AbsoluteLayoutController extends Controller
         ]);
     }
 
-    /** List published layouts as presets for the config wizard (no auth). */
+    /** List published preset templates from sub-admins (no auth). */
     public function listPresets(): JsonResponse
     {
-        $presets = \App\Models\Transport\AbsoluteBusLayout::where('layout_status', 'published')
-            ->where('is_active', true)
-            ->orderBy('created_at', 'desc')
+        // Only return templates created by sub-admins — NOT real vehicle data.
+        $presets = \App\Models\Transport\AbsoluteBusLayout::where('absolute_bus_layouts.layout_status', 'published')
+            ->where('absolute_bus_layouts.is_active', true)
+            ->join('global_identities', 'absolute_bus_layouts.owner_identity_id', '=', 'global_identities.id')
+            ->where('global_identities.identity_type', 'sub_admin')
+            ->orderBy('absolute_bus_layouts.created_at', 'desc')
             ->limit(50)
-            ->get()
+            ->get(['absolute_bus_layouts.*'])
             ->map(fn($l) => [
                 'id' => $l->id,
                 'display_name' => $l->display_name,

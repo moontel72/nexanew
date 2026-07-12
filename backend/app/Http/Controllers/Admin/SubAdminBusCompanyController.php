@@ -75,26 +75,30 @@ class SubAdminBusCompanyController extends Controller
             'primary_locale' => 'en-PK',
         ]);
 
-        // 2. Create email claim
-        IdentityClaim::create([
-            'global_identity_id' => $identity->id,
-            'claim_type'         => 'email',
-            'claim_value'        => IdentityClaim::normalize('email', $validated['email']),
-            'is_primary'         => true,
-            'verified_via'       => 'sub_admin_provisioned',
-            'verified_at'        => now(),
-        ]);
-
-        // 3. Create phone claim if provided
-        if (!empty($validated['phone'])) {
-            IdentityClaim::create([
+        // 2. Create email claim (or reuse if already exists)
+        $normalizedEmail = IdentityClaim::normalize('email', $validated['email']);
+        IdentityClaim::firstOrCreate(
+            ['claim_type' => 'email', 'claim_value' => $normalizedEmail, 'is_revoked' => false],
+            [
                 'global_identity_id' => $identity->id,
-                'claim_type'         => 'phone',
-                'claim_value'        => IdentityClaim::normalize('phone', $validated['phone']),
-                'is_primary'         => false,
+                'is_primary'         => true,
                 'verified_via'       => 'sub_admin_provisioned',
                 'verified_at'        => now(),
-            ]);
+            ]
+        );
+
+        // 3. Create phone claim if provided (or reuse)
+        if (!empty($validated['phone'])) {
+            $normalizedPhone = IdentityClaim::normalize('phone', $validated['phone']);
+            IdentityClaim::firstOrCreate(
+                ['claim_type' => 'phone', 'claim_value' => $normalizedPhone, 'is_revoked' => false],
+                [
+                    'global_identity_id' => $identity->id,
+                    'is_primary'         => false,
+                    'verified_via'       => 'sub_admin_provisioned',
+                    'verified_at'        => now(),
+                ]
+            );
         }
 
         // 4. Create TenantAccount as bus_company, child of sub-admin

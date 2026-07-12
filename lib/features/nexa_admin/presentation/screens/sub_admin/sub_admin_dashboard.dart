@@ -11,6 +11,9 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_ad
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/layout_designer/layout_designer_bloc.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/layout_designer/layout_designer_event.dart';
 
 class SubAdminDashboardScreen extends StatelessWidget {
   const SubAdminDashboardScreen({super.key});
@@ -977,11 +980,22 @@ class _Sidebar extends StatelessWidget {
                   onTap: () {},
                 ),
                 Missile3DButton(
-                  label: 'Sub-Admins',
-                  icon: Icons.admin_panel_settings,
-                  color: const Color(0xFFD97706),
+                  label: 'Seat Templates & Presets',
+                  icon: Icons.airline_seat_recline_normal,
+                  color: const Color(0xFF00B4D8),
                   height: 64,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AbsoluteLayoutDesignerScreen(
+                          companyId: '',
+                          companyName: 'Template Preset',
+                          apiPrefix: '/super-admin',
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 Missile3DButton(
                   label: 'Refresh Data',

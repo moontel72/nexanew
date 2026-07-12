@@ -186,3 +186,11 @@ class SubAdminLogout extends SubAdminEvent {
 class ClearSubAdminError extends SubAdminEvent {
   const ClearSubAdminError();
 }
+
+// ── Navigation ──
+class NavigateSubAdminPage extends SubAdminEvent {
+  final String page;
+  const NavigateSubAdminPage(this.page);
+  @override
+  List<Object?> get props => [page];
+}
