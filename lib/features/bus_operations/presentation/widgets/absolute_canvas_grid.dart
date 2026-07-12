@@ -141,6 +141,7 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
                     _AbsoluteComponentWidget(
                       component: comp,
                       isSelected: comp.id == ls.selectedComponentId,
+                      onComponentTap: widget.onComponentTap,
                     ),
                   if (ls.selectedComponent != null)
                     AbsoluteTransformOverlay(
@@ -497,10 +498,12 @@ class _CanvasBackgroundPainter extends CustomPainter {
 class _AbsoluteComponentWidget extends StatelessWidget {
   final AbsoluteLayoutComponent component;
   final bool isSelected;
+  final void Function(String id, double x, double y)? onComponentTap;
 
   const _AbsoluteComponentWidget({
     required this.component,
     required this.isSelected,
+    this.onComponentTap,
   });
 
   /// Whether this component type should render as a seat (flat clean style).
@@ -560,39 +563,45 @@ class _AbsoluteComponentWidget extends StatelessWidget {
       top: component.y,
       width: component.width,
       height: component.height,
-      child: Transform.rotate(
-        angle: component.rotation * 3.1415926535 / 180.0,
-        child: Container(
-          // Structural aisles between seat blocks
-          margin: _isSeatType
-              ? const EdgeInsets.symmetric(vertical: 4, horizontal: 6)
-              : const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? Colors.white : light.withOpacity(0.35),
-              width: isSelected ? 2.5 : 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: dark.withOpacity(0.55),
-                blurRadius: 6,
-                offset: const Offset(2, 3),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          onComponentTap?.call(component.id, component.x, component.y);
+        },
+        child: Transform.rotate(
+          angle: component.rotation * 3.1415926535 / 180.0,
+          child: Container(
+            // Structural aisles between seat blocks
+            margin: _isSeatType
+                ? const EdgeInsets.symmetric(vertical: 4, horizontal: 6)
+                : const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? Colors.white : light.withOpacity(0.35),
+                width: isSelected ? 2.5 : 1.2,
               ),
-              BoxShadow(
-                color: light.withOpacity(0.25),
-                blurRadius: 3,
-                offset: const Offset(-1, -1),
-              ),
-              if (isSelected)
+              boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.6),
-                  blurRadius: 14,
-                  spreadRadius: 2,
+                  color: dark.withOpacity(0.55),
+                  blurRadius: 6,
+                  offset: const Offset(2, 3),
                 ),
-            ],
+                BoxShadow(
+                  color: light.withOpacity(0.25),
+                  blurRadius: 3,
+                  offset: const Offset(-1, -1),
+                ),
+                if (isSelected)
+                  BoxShadow(
+                    color: color.withOpacity(0.6),
+                    blurRadius: 14,
+                    spreadRadius: 2,
+                  ),
+              ],
+            ),
+            child: rotatedContent,
           ),
-          child: rotatedContent,
         ),
       ),
     );
