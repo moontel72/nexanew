@@ -11,9 +11,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_ad
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/bloc/layout_designer/layout_designer_bloc.dart';
-import 'package:trace_odd/features/bus_operations/presentation/bloc/layout_designer/layout_designer_event.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_preset_setup_screen.dart';
 
 class SubAdminDashboardScreen extends StatelessWidget {
   const SubAdminDashboardScreen({super.key});
@@ -988,11 +986,7 @@ class _Sidebar extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const AbsoluteLayoutDesignerScreen(
-                          companyId: '',
-                          companyName: 'Template Preset',
-                          apiPrefix: '/super-admin',
-                        ),
+                        builder: (_) => const SubAdminPresetSetupScreen(),
                       ),
                     );
                   },
