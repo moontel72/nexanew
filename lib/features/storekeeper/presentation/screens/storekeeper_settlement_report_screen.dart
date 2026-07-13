@@ -17,61 +17,65 @@ class StorekeeperSettlementReportScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<StorekeeperDashboardBloc, StorekeeperDashboardState>(
-      builder: (ctx, state) {
-        final list = state.settlementReport;
-        return Scaffold(
-          backgroundColor: const Color(0xFF0D1B2A),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF1B2838),
-            title: const Text(
-              'Settlement Report',
-              style: TextStyle(color: Colors.white),
+    return BlocProvider(
+      create: (_) =>
+          StorekeeperDashboardBloc()..add(const LoadSettlementReport()),
+      child: BlocBuilder<StorekeeperDashboardBloc, StorekeeperDashboardState>(
+        builder: (ctx, state) {
+          final list = state.settlementReport;
+          return Scaffold(
+            backgroundColor: const Color(0xFF0D1B2A),
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF1B2838),
+              title: const Text(
+                'Settlement Report',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
-          ),
-          body: state.settlementLoading
-              ? const Center(child: CircularProgressIndicator())
-              : list.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No settlements',
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: list.length,
-                  itemBuilder: (_, i) {
-                    final e = list[i] is Map
-                        ? list[i] as Map<String, dynamic>
-                        : <String, dynamic>{};
-                    return Card(
-                      color: const Color(0xFF1B2838),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.receipt_long,
-                          color: Color(0xFF059669),
-                        ),
-                        title: Text(
-                          e['trip_id']?.toString() ??
-                              e['bus_plate']?.toString() ??
-                              '—',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        subtitle: Text(
-                          'Collected: ${_fmtPaisa(e['total_collected'])}',
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 11,
+            body: state.settlementLoading
+                ? const Center(child: CircularProgressIndicator())
+                : list.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No settlements',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: list.length,
+                    itemBuilder: (_, i) {
+                      final e = list[i] is Map
+                          ? list[i] as Map<String, dynamic>
+                          : <String, dynamic>{};
+                      return Card(
+                        color: const Color(0xFF1B2838),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.receipt_long,
+                            color: Color(0xFF059669),
+                          ),
+                          title: Text(
+                            e['trip_id']?.toString() ??
+                                e['bus_plate']?.toString() ??
+                                '—',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          subtitle: Text(
+                            'Collected: ${_fmtPaisa(e['total_collected'])}',
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-        );
-      },
+                      );
+                    },
+                  ),
+          );
+        },
+      ),
     );
   }
 }
