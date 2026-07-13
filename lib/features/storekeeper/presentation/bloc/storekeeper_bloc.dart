@@ -50,6 +50,10 @@ class StorekeeperDashboardBloc
           outstandingValue: data.outstandingValueMain,
         ),
       );
+      // Preload catering categories and items so the Catering tab
+      // shows data immediately instead of "No categories" / "No items".
+      add(LoadCategories(panel: e.panel));
+      add(LoadItems(panel: e.panel));
     } catch (ex) {
       emit(
         state.copyWith(status: StorekeeperStatus.error, error: ex.toString()),
