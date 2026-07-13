@@ -120,8 +120,8 @@ class CateringManagementScreen extends StatelessWidget {
                                 : item.name.toString()) ??
                             'Item';
                         final stock = (item is Map)
-                            ? (item['stock'] ?? 0)
-                            : item.stock;
+                            ? (item['stock_on_hand'] ?? item['stock'] ?? 0)
+                            : item.stockOnHand;
                         return Card(
                           color: const Color(0xFF1B2838),
                           margin: const EdgeInsets.only(bottom: 8),
