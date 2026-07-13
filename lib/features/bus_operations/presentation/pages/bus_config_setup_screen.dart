@@ -7,7 +7,6 @@
 // 100% isolated from the legacy grid system.
 
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 
@@ -217,18 +216,32 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 // Toggle: Preset vs Custom
                 SegmentedButton<bool>(
                   segments: const [
-                    ButtonSegment(value: true, label: Text('Saved Presets'), icon: Icon(Icons.bookmark, size: 16)),
-                    ButtonSegment(value: false, label: Text('Custom Grid'), icon: Icon(Icons.grid_view, size: 16)),
+                    ButtonSegment(
+                      value: true,
+                      label: Text('Saved Presets'),
+                      icon: Icon(Icons.bookmark, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: false,
+                      label: Text('Custom Grid'),
+                      icon: Icon(Icons.grid_view, size: 16),
+                    ),
                   ],
                   selected: {_usePreset},
-                  onSelectionChanged: (v) => setState(() => _usePreset = v.first),
+                  onSelectionChanged: (v) =>
+                      setState(() => _usePreset = v.first),
                 ),
                 const SizedBox(height: 16),
 
                 if (_usePreset) ...[
                   // Preset selector
                   if (_presetsLoading)
-                    const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
                   else if (_presets.isEmpty)
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -239,9 +252,21 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.info_outline, color: Color(0x60FFFFFF), size: 16),
+                          Icon(
+                            Icons.info_outline,
+                            color: Color(0x60FFFFFF),
+                            size: 16,
+                          ),
                           SizedBox(width: 8),
-                          Expanded(child: Text('No saved presets available. Create one from the Sub-Admin panel.', style: TextStyle(color: Color(0x60FFFFFF), fontSize: 12))),
+                          Expanded(
+                            child: Text(
+                              'No saved presets available. Create one from the Sub-Admin panel.',
+                              style: TextStyle(
+                                color: Color(0x60FFFFFF),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     )
@@ -251,29 +276,54 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       children: [
                         _fieldLabel('Select a Saved Layout Preset'),
                         const SizedBox(height: 4),
-                        ..._presets.map((p) => Card(
-                          color: _selectedPreset?['id'] == p['id'] ? const Color(0xFF1A3A5C) : const Color(0xFF122442),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(color: _selectedPreset?['id'] == p['id'] ? const Color(0xFF7C3AED) : const Color(0x20FFFFFF)),
+                        ..._presets.map(
+                          (p) => Card(
+                            color: _selectedPreset?['id'] == p['id']
+                                ? const Color(0xFF1A3A5C)
+                                : const Color(0xFF122442),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(
+                                color: _selectedPreset?['id'] == p['id']
+                                    ? const Color(0xFF7C3AED)
+                                    : const Color(0x20FFFFFF),
+                              ),
+                            ),
+                            child: ListTile(
+                              title: Text(
+                                p['display_name']?.toString() ?? 'Untitled',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${p['total_seats'] ?? p['seat_count'] ?? '?'} seats · ${p['deck_level'] ?? 'single'} deck',
+                                style: const TextStyle(
+                                  color: Color(0xFF8899AA),
+                                  fontSize: 11,
+                                ),
+                              ),
+                              leading: const Icon(
+                                Icons.directions_bus,
+                                color: Color(0xFF7C3AED),
+                              ),
+                              onTap: () => setState(() => _selectedPreset = p),
+                            ),
                           ),
-                          child: ListTile(
-                            title: Text(p['display_name']?.toString() ?? 'Untitled', style: const TextStyle(color: Colors.white, fontSize: 13)),
-                            subtitle: Text('${p['total_seats'] ?? p['seat_count'] ?? '?'} seats · ${p['deck_level'] ?? 'single'} deck', style: const TextStyle(color: Color(0xFF8899AA), fontSize: 11)),
-                            leading: const Icon(Icons.directions_bus, color: Color(0xFF7C3AED)),
-                            onTap: () => setState(() => _selectedPreset = p),
-                          ),
-                        )),
+                        ),
                       ],
                     ),
-                ]
-                else ...[
+                ] else ...[
                   // Custom grid configuration
                   _sectionHeader(Icons.grid_view, 'DYNAMIC GRID CONFIGURATION'),
                   const SizedBox(height: 4),
                   Text(
                     'Define how many seats per side and how many rows.',
-                    style: TextStyle(color: const Color(0x60FFFFFF), fontSize: 11),
+                    style: TextStyle(
+                      color: const Color(0x60FFFFFF),
+                      fontSize: 11,
+                    ),
                   ),
                   const SizedBox(height: 14),
 
@@ -281,32 +331,100 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: _stepperField(label: 'Left Seats', value: _leftSeats, min: 1, max: 4, onChanged: (v) => setState(() => _leftSeats = v), icon: Icons.event_seat, color: const Color(0xFF7C3AED)),
+                        child: _stepperField(
+                          label: 'Left Seats',
+                          value: _leftSeats,
+                          min: 1,
+                          max: 4,
+                          onChanged: (v) => setState(() => _leftSeats = v),
+                          icon: Icons.event_seat,
+                          color: const Color(0xFF7C3AED),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-                        decoration: BoxDecoration(border: Border.all(color: const Color(0x20FFFFFF)), borderRadius: BorderRadius.circular(8)),
-                        child: const Column(children: [Icon(Icons.swap_horiz, color: Color(0x30FFFFFF), size: 20), SizedBox(height: 4), Text('AISLE', style: TextStyle(color: Color(0x30FFFFFF), fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 1.5))]),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 18,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0x20FFFFFF)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Column(
+                          children: [
+                            Icon(
+                              Icons.swap_horiz,
+                              color: Color(0x30FFFFFF),
+                              size: 20,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'AISLE',
+                              style: TextStyle(
+                                color: Color(0x30FFFFFF),
+                                fontSize: 8,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _stepperField(label: 'Right Seats', value: _rightSeats, min: 1, max: 4, onChanged: (v) => setState(() => _rightSeats = v), icon: Icons.event_seat, color: const Color(0xFF3B82F6)),
+                        child: _stepperField(
+                          label: 'Right Seats',
+                          value: _rightSeats,
+                          min: 1,
+                          max: 4,
+                          onChanged: (v) => setState(() => _rightSeats = v),
+                          icon: Icons.event_seat,
+                          color: const Color(0xFF3B82F6),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 14),
-                  _stepperField(label: 'Total Rows', value: _rowCount, min: 4, max: 24, onChanged: (v) => setState(() => _rowCount = v), icon: Icons.table_rows, color: const Color(0xFF16A34A), wide: true),
+                  _stepperField(
+                    label: 'Total Rows',
+                    value: _rowCount,
+                    min: 4,
+                    max: 24,
+                    onChanged: (v) => setState(() => _rowCount = v),
+                    icon: Icons.table_rows,
+                    color: const Color(0xFF16A34A),
+                    wide: true,
+                  ),
                   const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: const Color(0xFF122442), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0x20FFFFFF))),
-                    child: Row(children: [
-                      const Icon(Icons.info_outline, color: Color(0x60FFFFFF), size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text('${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows = ${(_leftSeats + _rightSeats) * _rowCount} total seats', style: const TextStyle(color: Color(0xCCFFFFFF), fontSize: 12, fontWeight: FontWeight.w600))),
-                    ]),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF122442),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0x20FFFFFF)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline,
+                          color: Color(0x60FFFFFF),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows = ${(_leftSeats + _rightSeats) * _rowCount} total seats',
+                            style: const TextStyle(
+                              color: Color(0xCCFFFFFF),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
                 const SizedBox(height: 28),
@@ -372,12 +490,20 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
       rowCount: _rowCount,
     );
 
+    // When a preset is selected, pass its ID so the designer fetches
+    // the preset's saved layout components instead of auto-generating
+    // a fresh grid from the seat counts.
+    final presetId = (_usePreset && _selectedPreset != null)
+        ? _selectedPreset!['id']?.toString()
+        : null;
+    final effectiveLayoutId = presetId ?? widget.layoutId;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => AbsoluteLayoutDesignerScreen(
           companyId: widget.companyId,
           companyName: widget.companyName,
-          layoutId: widget.layoutId,
+          layoutId: effectiveLayoutId,
           config: config,
           apiPrefix: widget.apiPrefix,
         ),
