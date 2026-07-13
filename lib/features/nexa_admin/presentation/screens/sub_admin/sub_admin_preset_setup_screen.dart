@@ -5,7 +5,7 @@ import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_
 
 class SubAdminPresetSetupScreen extends StatefulWidget {
   final String apiPrefix;
-  const SubAdminPresetSetupScreen({super.key, this.apiPrefix = '/super-admin'});
+  const SubAdminPresetSetupScreen({super.key, this.apiPrefix = '/admin'});
 
   @override
   State<SubAdminPresetSetupScreen> createState() =>

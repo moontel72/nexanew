@@ -100,6 +100,17 @@ $registerRoutes = function (): void {
                 Route::get("history/{globalIdentityId}", [\App\Http\Controllers\Tenant\AssignmentTransferController::class, "history"]);
             });
 
+            /// Absolute Layout Presets (Sub-Admin Template Management)
+            Route::prefix("absolute-layouts")->group(function (): void {
+                Route::get("/", [\App\Http\Controllers\AbsoluteLayoutController::class, "index"]);
+                Route::post("/", [\App\Http\Controllers\AbsoluteLayoutController::class, "store"]);
+                Route::get("/presets", [\App\Http\Controllers\AbsoluteLayoutController::class, "listPresets"]);
+                Route::get("/{id}", [\App\Http\Controllers\AbsoluteLayoutController::class, "show"]);
+                Route::put("/{id}", [\App\Http\Controllers\AbsoluteLayoutController::class, "update"]);
+                Route::post("/{id}/publish", [\App\Http\Controllers\AbsoluteLayoutController::class, "publish"]);
+                Route::delete("/{id}", [\App\Http\Controllers\AbsoluteLayoutController::class, "destroy"]);
+            });
+
             Route::prefix("dashboard")->group(function (): void {
                 Route::get("", [
                     \App\Http\Controllers\Admin\AdminDashboardController::class,

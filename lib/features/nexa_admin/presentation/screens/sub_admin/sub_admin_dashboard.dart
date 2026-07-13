@@ -887,7 +887,7 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
     setState(() => _loading = true);
     try {
       final api = ApiService();
-      final r = await api.get('/super-admin/absolute-layouts');
+      final r = await api.get('/admin/absolute-layouts');
       final d = r?['data'];
       // Response wraps: { data: { data: [...], pagination: {...} } }
       final list = d is Map ? d['data'] : d;
@@ -903,7 +903,7 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
   Future<void> _delete(String id) async {
     try {
       final api = ApiService();
-      await api.delete('/super-admin/absolute-layouts/$id');
+      await api.delete('/admin/absolute-layouts/$id');
       _load();
     } catch (_) {}
   }
@@ -917,7 +917,7 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
         builder: (_) => AbsoluteLayoutDesignerScreen(
           companyId: '',
           companyName: p['display_name']?.toString() ?? 'Preset',
-          apiPrefix: '/super-admin',
+          apiPrefix: '/admin',
           layoutId: id,
         ),
       ),
@@ -965,16 +965,14 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
       ),
     );
     if (newName == null || newName.isEmpty) return;
-    // Save the new name first via API
     try {
       final api = ApiService();
       await api.put(
-        '/super-admin/absolute-layouts/$id',
+        '/admin/absolute-layouts/$id',
         body: {'display_name': newName},
       );
       _load();
     } catch (_) {}
-    // Open canvas with updated name
     if (!mounted) return;
     Navigator.push(
       context,
@@ -982,7 +980,7 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
         builder: (_) => AbsoluteLayoutDesignerScreen(
           companyId: '',
           companyName: newName,
-          apiPrefix: '/super-admin',
+          apiPrefix: '/admin',
           layoutId: id,
         ),
       ),
