@@ -55,7 +55,13 @@ class LayoutDesignerBloc
       }
       emit(
         state.copyWith(
-          layout: AbsoluteLayoutState.fromSnapshot(snap, layoutId: e.layoutId),
+          // When cloning a template, discard the original layoutId so that
+          // Save creates a new record owned by the current user instead of
+          // attempting to update a preset that belongs to a different identity.
+          layout: AbsoluteLayoutState.fromSnapshot(
+            snap,
+            layoutId: e.cloneFromTemplate ? null : e.layoutId,
+          ),
           isLoading: false,
         ),
       );
@@ -305,14 +311,7 @@ class LayoutDesignerBloc
     emit(state.copyWith(error: null, clearError: true));
   }
 
-  void _onSetName(
-    SetLayoutDisplayName e,
-    Emitter<LayoutDesignerState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        layout: state.layout.copyWith(displayName: e.name),
-      ),
-    );
+  void _onSetName(SetLayoutDisplayName e, Emitter<LayoutDesignerState> emit) {
+    emit(state.copyWith(layout: state.layout.copyWith(displayName: e.name)));
   }
 }

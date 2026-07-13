@@ -498,6 +498,12 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         : null;
     final effectiveLayoutId = presetId ?? widget.layoutId;
 
+    // When adding a new vehicle from a preset template, clone the layout
+    // so Save creates a new record owned by the current user (not the
+    // sub-admin who created the original template).
+    final isNewVehicle = widget.layoutId == null;
+    final shouldClone = isNewVehicle && presetId != null;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => AbsoluteLayoutDesignerScreen(
@@ -506,6 +512,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
           layoutId: effectiveLayoutId,
           config: config,
           apiPrefix: widget.apiPrefix,
+          cloneFromTemplate: shouldClone,
         ),
       ),
     );

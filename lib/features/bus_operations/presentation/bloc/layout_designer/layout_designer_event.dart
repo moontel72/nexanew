@@ -13,9 +13,14 @@ abstract class LayoutDesignerEvent extends Equatable {
 class InitDesigner extends LayoutDesignerEvent {
   final String apiPrefix;
   final String? layoutId;
-  const InitDesigner({required this.apiPrefix, this.layoutId});
+  final bool cloneFromTemplate;
+  const InitDesigner({
+    required this.apiPrefix,
+    this.layoutId,
+    this.cloneFromTemplate = false,
+  });
   @override
-  List<Object?> get props => [apiPrefix, layoutId];
+  List<Object?> get props => [apiPrefix, layoutId, cloneFromTemplate];
 }
 
 class ApplyPreset extends LayoutDesignerEvent {

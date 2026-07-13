@@ -19,6 +19,7 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
   final String companyId, companyName, apiPrefix;
   final String? layoutId;
   final BusConfig? config;
+  final bool cloneFromTemplate;
 
   const AbsoluteLayoutDesignerScreen({
     super.key,
@@ -27,13 +28,19 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
     this.layoutId,
     this.config,
     this.apiPrefix = '/bus-owner',
+    this.cloneFromTemplate = false,
   });
 
   @override
   Widget build(BuildContext context) => BlocProvider(
-    create: (_) =>
-        LayoutDesignerBloc()
-          ..add(InitDesigner(apiPrefix: apiPrefix, layoutId: layoutId)),
+    create: (_) => LayoutDesignerBloc()
+      ..add(
+        InitDesigner(
+          apiPrefix: apiPrefix,
+          layoutId: layoutId,
+          cloneFromTemplate: cloneFromTemplate,
+        ),
+      ),
     child: _DesignerBody(
       companyId: companyId,
       companyName: companyName,
