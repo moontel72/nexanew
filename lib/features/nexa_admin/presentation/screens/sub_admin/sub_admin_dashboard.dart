@@ -924,6 +924,71 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
     );
   }
 
+  Future<void> _editPreset(Map<String, dynamic> p) async {
+    final id = p['id']?.toString();
+    if (id == null) return;
+    final ctrl = TextEditingController(
+      text: p['display_name']?.toString() ?? '',
+    );
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: const Color(0xFF162438),
+        title: const Text(
+          'Edit Preset Name',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: TextField(
+          controller: ctrl,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Enter preset name',
+            hintStyle: TextStyle(color: Color(0xFF556677)),
+            filled: true,
+            fillColor: Color(0xFF122442),
+            border: OutlineInputBorder(borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(c, ctrl.text.trim()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00B4D8),
+            ),
+            child: const Text('Save & Open Canvas'),
+          ),
+        ],
+      ),
+    );
+    if (newName == null || newName.isEmpty) return;
+    // Save the new name first via API
+    try {
+      final api = ApiService();
+      await api.put(
+        '/super-admin/absolute-layouts/$id',
+        body: {'display_name': newName},
+      );
+      _load();
+    } catch (_) {}
+    // Open canvas with updated name
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AbsoluteLayoutDesignerScreen(
+          companyId: '',
+          companyName: newName,
+          apiPrefix: '/super-admin',
+          layoutId: id,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -966,15 +1031,43 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: ListTile(
-                    leading: const Icon(Icons.airline_seat_recline_normal, color: Color(0xFF7C3AED)),
-                    title: Text(p['display_name']?.toString() ?? '—', style: const TextStyle(color: Colors.white)),
-                    subtitle: Text('${p['total_components'] ?? '?'} components', style: const TextStyle(color: Color(0xFF8899AA), fontSize: 11)),
+                    leading: const Icon(
+                      Icons.airline_seat_recline_normal,
+                      color: Color(0xFF7C3AED),
+                    ),
+                    title: Text(
+                      p['display_name']?.toString() ?? '—',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    subtitle: Text(
+                      '${p['total_components'] ?? '?'} components',
+                      style: const TextStyle(
+                        color: Color(0xFF8899AA),
+                        fontSize: 11,
+                      ),
+                    ),
                     onTap: () => _openPreset(p),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        IconButton(icon: const Icon(Icons.edit, color: Color(0xFF00B4D8), size: 20), onPressed: () => _openPreset(p), tooltip: 'Edit'),
-                        IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20), onPressed: () => _delete(p['id']?.toString() ?? ''), tooltip: 'Delete'),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.edit,
+                            color: Color(0xFF00B4D8),
+                            size: 20,
+                          ),
+                          onPressed: () => _editPreset(p),
+                          tooltip: 'Edit',
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.redAccent,
+                            size: 20,
+                          ),
+                          onPressed: () => _delete(p['id']?.toString() ?? ''),
+                          tooltip: 'Delete',
+                        ),
                       ],
                     ),
                   ),
