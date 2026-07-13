@@ -198,7 +198,6 @@ class _FleetDashboardView extends StatelessWidget {
       case 'bonuses':
         return BonusManagementScreen(panelPrefix: '/bus-fleet');
       case 'storekeepers':
-      case 'catering':
       case 'activity_log':
       case 'settlement':
         return BlocProvider(
@@ -210,11 +209,6 @@ class _FleetDashboardView extends StatelessWidget {
               switch (state.currentPage) {
                 case 'storekeepers':
                   return const StorekeeperManagementScreen();
-                case 'catering':
-                  return const StorekeeperDashboardScreen(
-                    isStorekeeperOnly: false,
-                    panel: 'bus-fleet',
-                  );
                 case 'activity_log':
                   return const StorekeeperActivityLogScreen();
                 case 'settlement':
@@ -224,6 +218,11 @@ class _FleetDashboardView extends StatelessWidget {
               }
             },
           ),
+        );
+      case 'catering':
+        return const StorekeeperDashboardScreen(
+          isStorekeeperOnly: false,
+          panel: 'bus-fleet',
         );
       case 'dispatch_create':
         // Immediately show the FleetDispatchDialog modal.
