@@ -72,6 +72,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
   _CanvasTool _tool = _CanvasTool.select;
   ComponentType? _placingType;
   bool _wasSaving = false;
+  bool _wasPublishing = false;
 
   @override
   void initState() {
@@ -222,19 +223,19 @@ class _DesignerBodyState extends State<_DesignerBody> {
   Widget build(BuildContext context) {
     return BlocListener<LayoutDesignerBloc, LayoutDesignerState>(
       listener: (ctx, state) {
-        // Show success when save completes (isSaving: true→false, no error)
+        // Show success when save/publish completes (isSaving: true→false, no error)
         if (_wasSaving &&
             !state.layout.isSaving &&
             state.layout.errorMessage == null &&
             state.layout.layoutId != null) {
+          final msg = _wasPublishing
+              ? '✓ Published successfully!'
+              : '✓ Saved successfully!';
           ScaffoldMessenger.of(ctx).showSnackBar(
-            const SnackBar(
-              content: Text(
-                '✓ Template saved successfully!',
-                style: TextStyle(color: Colors.white),
-              ),
-              backgroundColor: Color(0xFF16A34A),
-              duration: Duration(seconds: 2),
+            SnackBar(
+              content: Text(msg, style: const TextStyle(color: Colors.white)),
+              backgroundColor: const Color(0xFF16A34A),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -361,7 +362,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
             ElevatedButton.icon(
               onPressed: _state.isSaving
                   ? null
-                  : () => _bloc.add(SaveLayout(apiPrefix: widget.apiPrefix)),
+                  : () {
+                      _wasPublishing = false;
+                      _bloc.add(SaveLayout(apiPrefix: widget.apiPrefix));
+                    },
               icon: _state.isSaving
                   ? const SizedBox(
                       width: 12,
@@ -393,7 +397,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
             ElevatedButton.icon(
               onPressed: _state.isSaving || _state.layoutId == null
                   ? null
-                  : () => _bloc.add(PublishLayout(apiPrefix: widget.apiPrefix)),
+                  : () {
+                      _wasPublishing = true;
+                      _bloc.add(PublishLayout(apiPrefix: widget.apiPrefix));
+                    },
               icon: _state.isSaving
                   ? const SizedBox(
                       width: 12,

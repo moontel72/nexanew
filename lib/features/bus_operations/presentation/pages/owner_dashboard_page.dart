@@ -469,7 +469,9 @@ class _OwnerView extends StatelessWidget {
             layoutId: layoutId,
           ),
         ),
-      );
+      ).then((_) {
+        ctx.read<OwnerDashboardBloc>().add(const LoadOwnerLayouts());
+      });
     } else {
       // First show BusConfigSetupScreen to capture vehicle details,
       // then proceed to the canvas designer.
@@ -482,7 +484,9 @@ class _OwnerView extends StatelessWidget {
             apiPrefix: '/bus-owner',
           ),
         ),
-      );
+      ).then((_) {
+        ctx.read<OwnerDashboardBloc>().add(const LoadOwnerLayouts());
+      });
     }
   }
 

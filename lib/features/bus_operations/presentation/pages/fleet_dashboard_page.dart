@@ -390,7 +390,12 @@ class _FleetDashboardView extends StatelessWidget {
           apiPrefix: '/bus-fleet',
         ),
       ),
-    );
+    ).then((_) {
+      // Refresh layouts list when returning from designer.
+      ctx.read<FleetDashboardBloc>().add(
+        const LoadLayouts(panelPrefix: '/bus-fleet'),
+      );
+    });
   }
 
   void _openExistingLayoutDesigner(
@@ -410,7 +415,11 @@ class _FleetDashboardView extends StatelessWidget {
           layoutId: layoutId,
         ),
       ),
-    );
+    ).then((_) {
+      ctx.read<FleetDashboardBloc>().add(
+        const LoadLayouts(panelPrefix: '/bus-fleet'),
+      );
+    });
   }
 
   Future<void> _showPublishConfirm(
