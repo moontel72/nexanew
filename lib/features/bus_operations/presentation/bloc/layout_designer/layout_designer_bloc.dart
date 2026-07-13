@@ -25,6 +25,7 @@ class LayoutDesignerBloc
     on<PublishLayout>(_onPublish);
     on<UpdateCanvasSize>(_onCanvasSize);
     on<ClearDesignerError>(_onClear);
+    on<SetLayoutDisplayName>(_onSetName);
   }
 
   Future<void> _onInit(
@@ -302,5 +303,16 @@ class LayoutDesignerBloc
 
   void _onClear(ClearDesignerError e, Emitter<LayoutDesignerState> emit) {
     emit(state.copyWith(error: null, clearError: true));
+  }
+
+  void _onSetName(
+    SetLayoutDisplayName e,
+    Emitter<LayoutDesignerState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        layout: state.layout.copyWith(displayName: e.name),
+      ),
+    );
   }
 }

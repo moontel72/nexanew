@@ -13,6 +13,7 @@ import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_preset_setup_screen.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
 
 class SubAdminDashboardScreen extends StatelessWidget {
   const SubAdminDashboardScreen({super.key});
@@ -907,6 +908,22 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
     } catch (_) {}
   }
 
+  void _openPreset(Map<String, dynamic> p) {
+    final id = p['id']?.toString();
+    if (id == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AbsoluteLayoutDesignerScreen(
+          companyId: '',
+          companyName: p['display_name']?.toString() ?? 'Preset',
+          apiPrefix: '/super-admin',
+          layoutId: id,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -949,20 +966,16 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: ListTile(
-                    leading: const Icon(
-                      Icons.airline_seat_recline_normal,
-                      color: Color(0xFF7C3AED),
-                    ),
-                    title: Text(
-                      p['display_name']?.toString() ?? '—',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: Colors.redAccent,
-                      ),
-                      onPressed: () => _delete(p['id']?.toString() ?? ''),
+                    leading: const Icon(Icons.airline_seat_recline_normal, color: Color(0xFF7C3AED)),
+                    title: Text(p['display_name']?.toString() ?? '—', style: const TextStyle(color: Colors.white)),
+                    subtitle: Text('${p['total_components'] ?? '?'} components', style: const TextStyle(color: Color(0xFF8899AA), fontSize: 11)),
+                    onTap: () => _openPreset(p),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(icon: const Icon(Icons.edit, color: Color(0xFF00B4D8), size: 20), onPressed: () => _openPreset(p), tooltip: 'Edit'),
+                        IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20), onPressed: () => _delete(p['id']?.toString() ?? ''), tooltip: 'Delete'),
+                      ],
                     ),
                   ),
                 );

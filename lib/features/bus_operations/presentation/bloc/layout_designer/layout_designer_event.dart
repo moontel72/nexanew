@@ -88,3 +88,10 @@ class UpdateCanvasSize extends LayoutDesignerEvent {
 class ClearDesignerError extends LayoutDesignerEvent {
   const ClearDesignerError();
 }
+
+class SetLayoutDisplayName extends LayoutDesignerEvent {
+  final String name;
+  const SetLayoutDisplayName(this.name);
+  @override
+  List<Object?> get props => [name];
+}

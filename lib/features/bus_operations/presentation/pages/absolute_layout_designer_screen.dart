@@ -105,6 +105,12 @@ class _DesignerBodyState extends State<_DesignerBody> {
         aisleW +
         rightSeats * seatSpan +
         leftMargin;
+
+    // Set the template name from config numberPlate
+    if (config.numberPlate.isNotEmpty) {
+      bloc.add(SetLayoutDisplayName(config.numberPlate));
+    }
+
     bloc.add(
       UpdateCanvasSize(
         width: canvasW > 200 ? canvasW : 280,
