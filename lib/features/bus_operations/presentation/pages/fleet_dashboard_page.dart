@@ -57,13 +57,14 @@ class FleetDashboardPage extends StatelessWidget {
             loginRoute: loginRoute,
           ),
         ),
-      child: const _FleetDashboardView(),
+      child: _FleetDashboardView(loginRoute: loginRoute),
     );
   }
 }
 
 class _FleetDashboardView extends StatelessWidget {
-  const _FleetDashboardView();
+  final String loginRoute;
+  const _FleetDashboardView({required this.loginRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +99,12 @@ class _FleetDashboardView extends StatelessWidget {
           backgroundColor: FleetColors.bg,
           body: Row(
             children: [
-              if (wide) _SidebarWidget(bloc: bloc, state: state),
+              if (wide)
+                _SidebarWidget(
+                  bloc: bloc,
+                  state: state,
+                  loginRoute: loginRoute,
+                ),
               Expanded(child: _pageContent(ctx, bloc, state)),
             ],
           ),
@@ -532,7 +538,12 @@ class _FleetDashboardView extends StatelessWidget {
 class _SidebarWidget extends StatelessWidget {
   final FleetDashboardBloc bloc;
   final FleetDashboardState state;
-  const _SidebarWidget({required this.bloc, required this.state});
+  final String loginRoute;
+  const _SidebarWidget({
+    required this.bloc,
+    required this.state,
+    required this.loginRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -721,13 +732,18 @@ class _SidebarWidget extends StatelessWidget {
               icon: Icons.logout,
               color: const Color(0xFFDC2626),
               height: 48,
-              onTap: () => bloc.add(
-                LogoutRequested(
-                  storagePrefix: state.ownerName.isNotEmpty
-                      ? state.ownerName
-                      : 'busFleet',
-                ),
-              ),
+              onTap: () {
+                bloc.add(
+                  LogoutRequested(
+                    storagePrefix: state.ownerName.isNotEmpty
+                        ? state.ownerName
+                        : 'busFleet',
+                  ),
+                );
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil(loginRoute, (_) => false);
+              },
             ),
           ),
           const Gap(8),
