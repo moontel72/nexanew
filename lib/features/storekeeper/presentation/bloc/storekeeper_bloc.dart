@@ -52,8 +52,13 @@ class StorekeeperDashboardBloc
       );
       // Preload catering categories and items so the Catering tab
       // shows data immediately instead of "No categories" / "No items".
+      // Also preload storekeepers, activity log, and settlement data
+      // so those tabs are ready when navigated to.
       add(LoadCategories(panel: e.panel));
       add(LoadItems(panel: e.panel));
+      add(const LoadStorekeepers());
+      add(const LoadActivityLog());
+      add(const LoadSettlementReport());
     } catch (ex) {
       emit(
         state.copyWith(status: StorekeeperStatus.error, error: ex.toString()),

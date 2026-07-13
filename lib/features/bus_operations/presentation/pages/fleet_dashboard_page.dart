@@ -22,6 +22,8 @@ import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_
 import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_management_screen.dart';
 import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_activity_log_screen.dart';
 import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_settlement_report_screen.dart';
+import 'package:trace_odd/features/storekeeper/presentation/bloc/storekeeper_bloc.dart';
+import 'package:trace_odd/features/storekeeper/presentation/bloc/storekeeper_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/dispatch/fleet_dispatch_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/fleet_dispatch_dialog.dart';
 import 'package:trace_odd/core/services/api_service.dart';
@@ -196,16 +198,33 @@ class _FleetDashboardView extends StatelessWidget {
       case 'bonuses':
         return BonusManagementScreen(panelPrefix: '/bus-fleet');
       case 'storekeepers':
-        return const StorekeeperManagementScreen();
       case 'catering':
-        return const StorekeeperDashboardScreen(
-          isStorekeeperOnly: false,
-          panel: 'bus-fleet',
-        );
       case 'activity_log':
-        return const StorekeeperActivityLogScreen();
       case 'settlement':
-        return const StorekeeperSettlementReportScreen();
+        return BlocProvider(
+          create: (_) =>
+              StorekeeperDashboardBloc()
+                ..add(const LoadStorekeeperDashboard(panel: 'bus-fleet')),
+          child: Builder(
+            builder: (ctx) {
+              switch (state.currentPage) {
+                case 'storekeepers':
+                  return const StorekeeperManagementScreen();
+                case 'catering':
+                  return const StorekeeperDashboardScreen(
+                    isStorekeeperOnly: false,
+                    panel: 'bus-fleet',
+                  );
+                case 'activity_log':
+                  return const StorekeeperActivityLogScreen();
+                case 'settlement':
+                  return const StorekeeperSettlementReportScreen();
+                default:
+                  return const SizedBox.shrink();
+              }
+            },
+          ),
+        );
       case 'dispatch_create':
         // Immediately show the FleetDispatchDialog modal.
         // The dialog wraps its own FleetDispatchBloc provider.
