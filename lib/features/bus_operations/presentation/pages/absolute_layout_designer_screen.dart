@@ -64,6 +64,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
   final TransformationController _transformCtrl = TransformationController();
   _CanvasTool _tool = _CanvasTool.select;
   ComponentType? _placingType;
+  bool _wasSaving = false;
 
   @override
   void initState() {
@@ -212,7 +213,21 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LayoutDesignerBloc, LayoutDesignerState>(
+    return BlocListener<LayoutDesignerBloc, LayoutDesignerState>(
+      listener: (ctx, state) {
+        // Show success when save completes (isSaving: true→false, no error)
+        if (_wasSaving && !state.layout.isSaving && state.layout.errorMessage == null && state.layout.layoutId != null) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Template saved successfully!', style: TextStyle(color: Colors.white)),
+              backgroundColor: Color(0xFF16A34A),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        _wasSaving = state.layout.isSaving;
+      },
+      child: BlocBuilder<LayoutDesignerBloc, LayoutDesignerState>(
       builder: (ctx, state) => Scaffold(
         backgroundColor: const Color(0xFF0D1B2A),
         body: SafeArea(
@@ -389,11 +404,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
   Widget _btn(IconData icon, String label, bool active, VoidCallback onTap) =>
       Padding(
