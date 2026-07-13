@@ -25,6 +25,7 @@ import 'package:trace_odd/features/storekeeper/presentation/screens/storekeeper_
 import 'package:trace_odd/features/bus_operations/presentation/bloc/dispatch/fleet_dispatch_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/fleet_dispatch_dialog.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:go_router/go_router.dart';
 
 abstract class FleetColors {
   static const bg = Color(0xFF0D1B2A);
@@ -740,9 +741,7 @@ class _SidebarWidget extends StatelessWidget {
                         : 'busFleet',
                   ),
                 );
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil(loginRoute, (_) => false);
+                GoRouter.of(context).go(loginRoute);
               },
             ),
           ),
