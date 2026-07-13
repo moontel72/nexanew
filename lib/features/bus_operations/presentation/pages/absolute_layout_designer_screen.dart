@@ -216,10 +216,16 @@ class _DesignerBodyState extends State<_DesignerBody> {
     return BlocListener<LayoutDesignerBloc, LayoutDesignerState>(
       listener: (ctx, state) {
         // Show success when save completes (isSaving: true→false, no error)
-        if (_wasSaving && !state.layout.isSaving && state.layout.errorMessage == null && state.layout.layoutId != null) {
+        if (_wasSaving &&
+            !state.layout.isSaving &&
+            state.layout.errorMessage == null &&
+            state.layout.layoutId != null) {
           ScaffoldMessenger.of(ctx).showSnackBar(
             const SnackBar(
-              content: Text('✓ Template saved successfully!', style: TextStyle(color: Colors.white)),
+              content: Text(
+                '✓ Template saved successfully!',
+                style: TextStyle(color: Colors.white),
+              ),
               backgroundColor: Color(0xFF16A34A),
               duration: Duration(seconds: 2),
             ),
@@ -228,30 +234,31 @@ class _DesignerBodyState extends State<_DesignerBody> {
         _wasSaving = state.layout.isSaving;
       },
       child: BlocBuilder<LayoutDesignerBloc, LayoutDesignerState>(
-      builder: (ctx, state) => Scaffold(
-        backgroundColor: const Color(0xFF0D1B2A),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _topBar(),
-              Expanded(
-                child: Row(
-                  children: [
-                    AbsoluteComponentPalette(
-                      onItemSelected: (type, defW, defH, isReverse) {
-                        setState(() {
-                          _tool = _CanvasTool.placeComponent;
-                          _placingType = type;
-                        });
-                        _bloc.add(const SelectComponent(null));
-                      },
-                    ),
-                    Expanded(child: _buildCanvas()),
-                  ],
+        builder: (ctx, state) => Scaffold(
+          backgroundColor: const Color(0xFF0D1B2A),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _topBar(),
+                Expanded(
+                  child: Row(
+                    children: [
+                      AbsoluteComponentPalette(
+                        onItemSelected: (type, defW, defH, isReverse) {
+                          setState(() {
+                            _tool = _CanvasTool.placeComponent;
+                            _placingType = type;
+                          });
+                          _bloc.add(const SelectComponent(null));
+                        },
+                      ),
+                      Expanded(child: _buildCanvas()),
+                    ],
+                  ),
                 ),
-              ),
-              _statusBar(),
-            ],
+                _statusBar(),
+              ],
+            ),
           ),
         ),
       ),
@@ -404,10 +411,11 @@ class _DesignerBodyState extends State<_DesignerBody> {
                 ),
               ),
             ),
-          ),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
   Widget _btn(IconData icon, String label, bool active, VoidCallback onTap) =>
       Padding(

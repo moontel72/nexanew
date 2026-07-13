@@ -79,27 +79,6 @@ class AbsoluteCanvasGrid extends StatefulWidget {
 }
 
 class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
-  // Legacy Listener-based tap detection (kept for native platforms).
-  Offset? _pointerDownPos;
-  static const double _tapSlop = 12.0;
-
-  void _onPointerDown(PointerDownEvent event) {
-    _pointerDownPos = event.localPosition;
-  }
-
-  void _onPointerUp(PointerUpEvent event) {
-    if (_pointerDownPos == null) return;
-    final down = _pointerDownPos!;
-    _pointerDownPos = null;
-
-    final up = event.localPosition;
-    if ((up - down).distance > _tapSlop) return;
-
-    final tapX = (down.dx + up.dx) / 2;
-    final tapY = (down.dy + up.dy) / 2;
-    _handleTap(tapX, tapY);
-  }
-
   // Shared tap handler — dispatches to component or canvas callbacks.
   void _handleTap(double x, double y) {
     final hit = widget.layoutState.componentAt(x, y);
@@ -120,46 +99,41 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
       minScale: 0.25,
       maxScale: 4.0,
       child: GestureDetector(
-        behavior: HitTestBehavior.translucent,
+        behavior: HitTestBehavior.deferToChild,
         onTapUp: (d) => _handleTap(d.localPosition.dx, d.localPosition.dy),
-        child: Listener(
-          behavior: HitTestBehavior.translucent,
-          onPointerDown: _onPointerDown,
-          onPointerUp: _onPointerUp,
-          child: SizedBox(
-            width: ls.canvasWidth,
-            height: ls.canvasHeight,
-            child: CustomPaint(
-              painter: _CanvasBackgroundPainter(
-                canvasWidth: ls.canvasWidth,
-                canvasHeight: ls.canvasHeight,
-                components: ls.components,
-              ),
-              child: Stack(
-                children: [
-                  for (final comp in ls.components)
-                    _AbsoluteComponentWidget(
-                      component: comp,
-                      isSelected: comp.id == ls.selectedComponentId,
-                      onComponentTap: widget.onComponentTap,
-                    ),
-                  if (ls.selectedComponent != null)
-                    AbsoluteTransformOverlay(
-                      key: ValueKey("overlay_${ls.selectedComponent!.id}"),
-                      component: ls.selectedComponent!,
-                      onResize: (w, h, x, y) =>
-                          widget.onOverlayResize?.call(w, h, x, y),
-                      onResizeEnd: () {},
-                      onMove: (x, y) => widget.onOverlayMove?.call(x, y),
-                      onMoveEnd: () {},
-                      onRotate: (r) => widget.onOverlayRotate?.call(r),
-                      onRotateEnd: () {},
-                      onDelete: () => widget.onOverlayDelete?.call(),
-                      onTap: () => widget.onOverlayTap?.call(),
-                      onClose: () => widget.onOverlayClose?.call(),
-                    ),
-                ],
-              ),
+        child: SizedBox(
+          width: ls.canvasWidth,
+          height: ls.canvasHeight,
+          child: CustomPaint(
+            painter: _CanvasBackgroundPainter(
+              canvasWidth: ls.canvasWidth,
+              canvasHeight: ls.canvasHeight,
+              components: ls.components,
+            ),
+            child: Stack(
+              children: [
+                for (final comp in ls.components)
+                  _AbsoluteComponentWidget(
+                    component: comp,
+                    isSelected: comp.id == ls.selectedComponentId,
+                    onComponentTap: widget.onComponentTap,
+                  ),
+                if (ls.selectedComponent != null)
+                  AbsoluteTransformOverlay(
+                    key: ValueKey("overlay_${ls.selectedComponent!.id}"),
+                    component: ls.selectedComponent!,
+                    onResize: (w, h, x, y) =>
+                        widget.onOverlayResize?.call(w, h, x, y),
+                    onResizeEnd: () {},
+                    onMove: (x, y) => widget.onOverlayMove?.call(x, y),
+                    onMoveEnd: () {},
+                    onRotate: (r) => widget.onOverlayRotate?.call(r),
+                    onRotateEnd: () {},
+                    onDelete: () => widget.onOverlayDelete?.call(),
+                    onTap: () => widget.onOverlayTap?.call(),
+                    onClose: () => widget.onOverlayClose?.call(),
+                  ),
+              ],
             ),
           ),
         ),
@@ -607,6 +581,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     );
   }
 
+  /// Paints the dot-grid background
   // ═══════════════════════════════════════════════════════════
   // FLAT SEAT RENDERING (clean airline / bus booking style)
   // ═══════════════════════════════════════════════════════════

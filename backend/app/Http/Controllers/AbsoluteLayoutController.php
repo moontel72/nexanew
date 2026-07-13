@@ -108,8 +108,32 @@ class AbsoluteLayoutController extends Controller
             'canvas_width' => 'sometimes|integer|min:100|max:2000',
             'canvas_height' => 'sometimes|integer|min:100|max:5000',
             'current_snapshot' => 'sometimes|array',
+            'canvas' => 'sometimes|array',
+            'components' => 'sometimes|array',
+            'metadata' => 'sometimes|array',
             'layout_status' => 'sometimes|string|in:draft,published',
         ]);
+
+        // ── Accept flat frontend format: {canvas, components, metadata} ──
+        // The Dart toSnapshot() sends data at top level; we must
+        // construct current_snapshot from those fields so the
+        // JSON column stores the full component graph.
+        if (empty($validated['current_snapshot'])) {
+            $canvas = $validated['canvas'] ?? [];
+            $snapshot = [];
+            if (!empty($canvas)) $snapshot['canvas'] = $canvas;
+            if (!empty($validated['components'])) $snapshot['components'] = $validated['components'];
+            if (!empty($validated['metadata'])) $snapshot['metadata'] = $validated['metadata'];
+            if (!empty($snapshot)) $validated['current_snapshot'] = $snapshot;
+        }
+
+        // Extract canvas dimensions from canvas sub-object if provided
+        $canvas = $validated['canvas'] ?? [];
+        if (!empty($canvas)) {
+            $validated['deck_level'] ??= $canvas['deck_level'] ?? 'lower';
+            $validated['canvas_width'] ??= $canvas['canvas_width'] ?? 280;
+            $validated['canvas_height'] ??= $canvas['canvas_height'] ?? 896;
+        }
 
         // Fleet admin panel: attach carrier_company_id from middleware context
         $carrierCompanyId = $request->get('_carrier_company_id');
@@ -146,8 +170,28 @@ class AbsoluteLayoutController extends Controller
             'canvas_width' => 'sometimes|integer|min:100|max:2000',
             'canvas_height' => 'sometimes|integer|min:100|max:5000',
             'current_snapshot' => 'sometimes|array',
+            'canvas' => 'sometimes|array',
+            'components' => 'sometimes|array',
+            'metadata' => 'sometimes|array',
             'layout_status' => 'sometimes|string|in:draft,published',
         ]);
+
+        // ── Accept flat frontend format: {canvas, components, metadata} ──
+        if (empty($validated['current_snapshot'])) {
+            $canvas = $validated['canvas'] ?? [];
+            $snapshot = [];
+            if (!empty($canvas)) $snapshot['canvas'] = $canvas;
+            if (!empty($validated['components'])) $snapshot['components'] = $validated['components'];
+            if (!empty($validated['metadata'])) $snapshot['metadata'] = $validated['metadata'];
+            if (!empty($snapshot)) $validated['current_snapshot'] = $snapshot;
+        }
+
+        $canvas = $validated['canvas'] ?? [];
+        if (!empty($canvas)) {
+            $validated['deck_level'] ??= $canvas['deck_level'] ?? 'lower';
+            $validated['canvas_width'] ??= $canvas['canvas_width'] ?? 280;
+            $validated['canvas_height'] ??= $canvas['canvas_height'] ?? 896;
+        }
 
         $carrierCompanyId = $request->get('_carrier_company_id');
         $layout = $this->service->updateLayout($id, $identityId, $validated, $carrierCompanyId);

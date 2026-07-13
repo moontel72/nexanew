@@ -70,7 +70,7 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
   static const double _handleSize = 18.0;
   static const double _rotationArmLength = 32.0;
   static const double _rotationKnobSize = 24.0;
-  static const double _actionBtnSize = 20.0;
+  static const double _actionBtnSize = 24.0;
   static const double _deleteBtnSize = 24.0;
 
   // Live dimension tooltip during resize
@@ -225,7 +225,7 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
                     child: const Icon(
                       Icons.close,
                       color: Colors.white,
-                      size: 12,
+                      size: 16,
                     ),
                   ),
                 ),
