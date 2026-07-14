@@ -47,6 +47,7 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
       layoutId: layoutId,
       config: config,
       apiPrefix: apiPrefix,
+      cloneFromTemplate: cloneFromTemplate,
     ),
   );
 }
@@ -55,12 +56,14 @@ class _DesignerBody extends StatefulWidget {
   final String companyId, companyName, apiPrefix;
   final String? layoutId;
   final BusConfig? config;
+  final bool cloneFromTemplate;
   const _DesignerBody({
     required this.companyId,
     required this.companyName,
     this.layoutId,
     this.config,
     required this.apiPrefix,
+    this.cloneFromTemplate = false,
   });
 
   @override
@@ -77,10 +80,12 @@ class _DesignerBodyState extends State<_DesignerBody> {
   @override
   void initState() {
     super.initState();
-    // Only auto-generate seat layout for NEW vehicles (no layoutId).
-    // When editing an existing layout, the API-loaded data from
-    // InitDesigner is authoritative — do NOT overwrite it.
-    if (widget.config != null && widget.layoutId == null) {
+    // Auto-generate seat layout for NEW vehicles (no layoutId)
+    // OR when cloning a preset template — the config carries the
+    // vehicle identity (plate + maker) that must override the
+    // template's display_name.
+    if (widget.config != null &&
+        (widget.layoutId == null || widget.cloneFromTemplate)) {
       _initFromConfig(widget.config!);
     }
   }

@@ -45,7 +45,11 @@ class LayoutDesignerBloc
         if (snapshot is Map) {
           snap = Map<String, dynamic>.from(snapshot as Map);
           // Merge top-level fields so fromSnapshot finds display_name etc.
-          snap['display_name'] ??= d['display_name']?.toString();
+          // When cloning a template, skip the template's display_name so
+          // the vehicle config (plate + maker) takes precedence.
+          if (!e.cloneFromTemplate) {
+            snap['display_name'] ??= d['display_name']?.toString();
+          }
           snap['layout_status'] ??= d['layout_status']?.toString();
         } else {
           snap = Map<String, dynamic>.from(d as Map);
@@ -158,6 +162,29 @@ class LayoutDesignerBloc
   }
 
   void _onAdd(AddComponent e, Emitter<LayoutDesignerState> emit) {
+    // Auto-generate labels for sleeper berths based on existing count.
+    String? autoBerthLabel;
+    String? autoSeatId;
+    int? autoSeatNumber;
+    if (e.type == ComponentType.sleeperUpper) {
+      final count = state.layout.components
+          .where((c) => c.type == ComponentType.sleeperUpper)
+          .length;
+      autoBerthLabel = 'U${count + 1}';
+    } else if (e.type == ComponentType.sleeperLower) {
+      final count = state.layout.components
+          .where((c) => c.type == ComponentType.sleeperLower)
+          .length;
+      autoBerthLabel = 'L${count + 1}';
+    } else if (e.type == ComponentType.seat) {
+      // Auto-assign the next S-series number for standard seats.
+      final count = state.layout.components
+          .where((c) => c.type == ComponentType.seat)
+          .length;
+      autoSeatNumber = count + 1;
+      autoSeatId = 'S$autoSeatNumber';
+    }
+
     final comp = AbsoluteLayoutComponent(
       id: _uuid.v4(),
       type: e.type,
@@ -173,9 +200,9 @@ class LayoutDesignerBloc
           : e.type.name.contains('seat') || e.type.name.contains('sleeper')
           ? 44
           : 100,
-      seatId: e.seatId,
-      seatNumber: e.seatNumber,
-      berthLabel: e.berthLabel,
+      seatId: e.seatId ?? autoSeatId,
+      seatNumber: e.seatNumber ?? autoSeatNumber,
+      berthLabel: e.berthLabel ?? autoBerthLabel,
     );
     final newComponents = [...state.layout.components, comp];
     emit(
@@ -212,9 +239,23 @@ class LayoutDesignerBloc
   }
 
   void _onDelete(DeleteComponent e, Emitter<LayoutDesignerState> emit) {
-    final newComponents = state.layout.components
+    final filtered = state.layout.components
         .where((c) => c.id != e.id)
         .toList();
+
+    // Re-number remaining standard seats sequentially (S1, S2, S3...).
+    // Skip seats that have a customLabel (manually labelled).
+    int seatCounter = 1;
+    final newComponents = filtered.map((c) {
+      if (c.type == ComponentType.seat && c.customLabel == null) {
+        return c.copyWith(
+          seatId: 'S$seatCounter',
+          seatNumber: seatCounter++,
+        );
+      }
+      return c;
+    }).toList();
+
     emit(
       state.copyWith(
         layout: state.layout.copyWith(
