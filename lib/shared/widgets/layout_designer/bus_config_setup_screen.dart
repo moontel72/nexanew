@@ -7,8 +7,10 @@
 // 100% isolated from the legacy grid system.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designer_screen.dart';
+import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
 
 class BusConfigSetupScreen extends StatefulWidget {
   final String companyId;
@@ -506,14 +508,26 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => AbsoluteLayoutDesignerScreen(
-          companyId: widget.companyId,
-          companyName: widget.companyName,
-          layoutId: effectiveLayoutId,
-          config: config,
-          apiPrefix: widget.apiPrefix,
-          cloneFromTemplate: shouldClone,
-        ),
+        builder: (_) {
+          // Pull physics data from the validation BloC if available.
+          LayoutValidationBloc? validationBloc;
+          try {
+            validationBloc = BlocProvider.of<LayoutValidationBloc>(context);
+          } catch (_) {
+            validationBloc = null;
+          }
+          final vs = validationBloc?.state;
+          return AbsoluteLayoutDesignerScreen(
+            companyId: widget.companyId,
+            companyName: widget.companyName,
+            layoutId: effectiveLayoutId,
+            config: config,
+            apiPrefix: widget.apiPrefix,
+            cloneFromTemplate: shouldClone,
+            busDimensions: vs?.dimensions,
+            registry: vs?.registry,
+          );
+        },
       ),
     );
   }

@@ -8,6 +8,9 @@ import 'package:trace_odd/shared/models/transport/layout_component.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/absolute_canvas_grid.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/absolute_component_palette.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/absolute_inspector_panel.dart';
+import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
+import 'package:trace_odd/shared/models/transport/component_registry.dart';
+import 'package:trace_odd/shared/models/transport/feet_inches.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/bus_config_setup_screen.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_designer_bloc.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_designer_event.dart';
@@ -20,6 +23,8 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
   final String? layoutId;
   final BusConfig? config;
   final bool cloneFromTemplate;
+  final BusDimensions? busDimensions;
+  final ComponentRegistry? registry;
 
   const AbsoluteLayoutDesignerScreen({
     super.key,
@@ -29,6 +34,8 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
     this.config,
     this.apiPrefix = '/bus-owner',
     this.cloneFromTemplate = false,
+    this.busDimensions,
+    this.registry,
   });
 
   @override
@@ -48,6 +55,8 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
       config: config,
       apiPrefix: apiPrefix,
       cloneFromTemplate: cloneFromTemplate,
+      busDimensions: busDimensions,
+      registry: registry,
     ),
   );
 }
@@ -57,6 +66,8 @@ class _DesignerBody extends StatefulWidget {
   final String? layoutId;
   final BusConfig? config;
   final bool cloneFromTemplate;
+  final BusDimensions? busDimensions;
+  final ComponentRegistry? registry;
   const _DesignerBody({
     required this.companyId,
     required this.companyName,
@@ -64,6 +75,8 @@ class _DesignerBody extends StatefulWidget {
     this.config,
     required this.apiPrefix,
     this.cloneFromTemplate = false,
+    this.busDimensions,
+    this.registry,
   });
 
   @override
@@ -105,11 +118,16 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final leftSeats = config.leftSeats;
     final rightSeats = config.rightSeats;
     final rows = config.rowCount;
-    const double aisleW = 40.0;
-    const double rowH = 56.0;
+
+    // Use physics‑based dimensions when available, otherwise fall back
+    // to hardcoded defaults for backward compatibility.
+    final registry = widget.registry;
+    final seatSpec = registry?.parts[SeatPartType.standardSeat];
+    final double rowH = seatSpec?.pixelLength ?? 56.0;
+    final double seatSpan = seatSpec?.pixelWidth ?? 48.0;
+    final double aisleW = registry?.aisleWidth.toPixels ?? 40.0;
     const double topMargin = 100.0;
     const double leftMargin = 28.0;
-    const double seatSpan = 48.0;
 
     // Auto-size canvas to fit all rows
     final canvasH = topMargin + rows * rowH + 40;
