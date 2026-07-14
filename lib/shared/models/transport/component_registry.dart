@@ -7,83 +7,49 @@
 // 100 % pure Dart.
 
 import 'package:equatable/equatable.dart';
+import 'package:trace_odd/shared/models/transport/dimensional_constants.dart';
 import 'package:trace_odd/shared/models/transport/feet_inches.dart';
 import 'package:trace_odd/shared/models/transport/layout_component.dart';
 
 /// Physical part categories known to the layout validator.
-enum SeatPartType {
-  standardSeat,
-  businessSeat,
-  foldingSeat,
-  sleeperLower,
-  sleeperUpper,
-  driverCabin,
-  aisle,
-  exitDoor,
-}
+/// Structural types (driver cabin, aisle, exit door) are NOT
+/// user‑configurable and are excluded from this enum.
+enum SeatPartType { standardSeat, businessSeat, sleeper }
 
 /// Spatial footprint for a single part instance.
 class PartSpec extends Equatable {
   final SeatPartType type;
-  final FeetInches length; // along the bus (front-to-back)
-  final FeetInches width; // across the bus (left-to-right)
-  final FeetInches height;
+  final FeetInches length;
+  final FeetInches width;
 
   const PartSpec({
     required this.type,
     required this.length,
     required this.width,
-    this.height = FeetInches.zero,
   });
 
-  /// Returns sensible defaults for each part type.
+  double get pixelLength => length.toPixels;
+  double get pixelWidth => width.toPixels;
+
+  /// Returns sensible defaults from [dimensional_constants.dart].
   factory PartSpec.defaultFor(SeatPartType type) {
-    return switch (type) {
-      SeatPartType.standardSeat => PartSpec(
-        type: type,
-        length: const FeetInches(feet: 2, inches: 6),
-        width: const FeetInches(feet: 1, inches: 6),
-      ),
-      SeatPartType.businessSeat => PartSpec(
-        type: type,
-        length: const FeetInches(feet: 3, inches: 0),
-        width: const FeetInches(feet: 2, inches: 0),
-      ),
-      SeatPartType.foldingSeat => PartSpec(
-        type: type,
-        length: const FeetInches(feet: 1, inches: 6),
-        width: const FeetInches(feet: 1, inches: 0),
-      ),
-      SeatPartType.sleeperLower => PartSpec(
-        type: type,
-        length: const FeetInches(feet: 6, inches: 0),
-        width: const FeetInches(feet: 2, inches: 0),
-      ),
-      SeatPartType.sleeperUpper => PartSpec(
-        type: type,
-        length: const FeetInches(feet: 6, inches: 0),
-        width: const FeetInches(feet: 2, inches: 0),
-      ),
-      SeatPartType.driverCabin => PartSpec(
-        type: type,
-        length: const FeetInches(feet: 3, inches: 0),
-        width: const FeetInches(feet: 4, inches: 0),
-      ),
-      SeatPartType.aisle => PartSpec(
-        type: type,
-        length: const FeetInches(feet: 1, inches: 0),
-        width: const FeetInches(feet: 1, inches: 6),
-      ),
-      SeatPartType.exitDoor => PartSpec(
-        type: type,
-        length: const FeetInches(feet: 2, inches: 0),
-        width: const FeetInches(feet: 2, inches: 6),
-      ),
-    };
+    return PartSpec(
+      type: type,
+      length: switch (type) {
+        SeatPartType.standardSeat => kDefaultSeatLength,
+        SeatPartType.businessSeat => kDefaultBusinessSeatLength,
+        SeatPartType.sleeper => kDefaultSleeperLength,
+      },
+      width: switch (type) {
+        SeatPartType.standardSeat => kDefaultSeatWidth,
+        SeatPartType.businessSeat => kDefaultBusinessSeatWidth,
+        SeatPartType.sleeper => kDefaultSleeperWidth,
+      },
+    );
   }
 
   @override
-  List<Object?> get props => [type, length, width, height];
+  List<Object?> get props => [type, length, width];
 }
 
 /// Central registry of parts configured for the current layout.
@@ -94,21 +60,33 @@ class ComponentRegistry extends Equatable {
 
   const ComponentRegistry({
     this.parts = const {},
-    this.aisleWidth = const FeetInches(feet: 1, inches: 6),
-    this.interSeatGap = const FeetInches(feet: 1, inches: 0),
+    this.aisleWidth = kDefaultAisleWidth,
+    this.interSeatGap = kDefaultInterSeatGap,
   });
 
-  /// Returns the largest length among all registered parts (conservative
-  /// fail‑safe for length validation).
+  /// Returns the largest length among all registered parts.
   FeetInches get maxPartLength {
-    if (parts.isEmpty) return const FeetInches(feet: 2, inches: 6);
+    if (parts.isEmpty) return kDefaultSeatLength;
     return parts.values.map((p) => p.length).reduce((a, b) => a > b ? a : b);
   }
 
   /// Returns the largest width among all registered seat parts.
   FeetInches get maxPartWidth {
-    if (parts.isEmpty) return const FeetInches(feet: 1, inches: 6);
+    if (parts.isEmpty) return kDefaultSeatWidth;
     return parts.values.map((p) => p.width).reduce((a, b) => a > b ? a : b);
+  }
+
+  /// Pixel fallback for structural / non‑configurable component types.
+  double pixelFallbackFor(ComponentType type) {
+    return switch (type) {
+      ComponentType.driverCabin => 80.0,
+      ComponentType.exitDoor => 64.0,
+      ComponentType.aisle => 48.0,
+      ComponentType.emergency => 64.0,
+      ComponentType.lavatory => 96.0,
+      ComponentType.restaurantTable => 96.0,
+      _ => 44.0,
+    };
   }
 
   ComponentRegistry copyWith({
@@ -126,17 +104,13 @@ class ComponentRegistry extends Equatable {
 }
 
 /// Maps a UI canvas [ComponentType] to its physical [SeatPartType].
-/// Returns null for structural / non‑seat types not in the registry.
+/// Returns null for structural types not in the user registry.
 SeatPartType? fromComponentType(ComponentType type) {
   return switch (type) {
     ComponentType.seat => SeatPartType.standardSeat,
     ComponentType.businessClassSeat => SeatPartType.businessSeat,
-    ComponentType.foldingSeat => SeatPartType.foldingSeat,
-    ComponentType.sleeperLower => SeatPartType.sleeperLower,
-    ComponentType.sleeperUpper => SeatPartType.sleeperUpper,
-    ComponentType.driverCabin => SeatPartType.driverCabin,
-    ComponentType.aisle => SeatPartType.aisle,
-    ComponentType.exitDoor => SeatPartType.exitDoor,
+    ComponentType.sleeperLower ||
+    ComponentType.sleeperUpper => SeatPartType.sleeper,
     _ => null,
   };
 }

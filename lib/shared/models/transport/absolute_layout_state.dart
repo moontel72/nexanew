@@ -10,11 +10,16 @@ import 'absolute_layout_component.dart';
 // ═══════════════════════════════════════════════════════════
 // UNIT CONVERSION
 // ═══════════════════════════════════════════════════════════
+// Backward-compatible re‑export: kPixelsPerInch now lives in
+// dimensional_constants.dart as the single source of truth.
+export 'dimensional_constants.dart' show kPixelsPerInch;
+
 /// Scale ratio: 1 inch = 4 logical pixels
 /// This means 48 px = 1 foot (12 inches × 4 px/inch)
 /// Chosen to give realistic bus dimensions:
 ///   280 px wide ≈ 5'10" (standard coach width)
 ///   896 px long ≈ 18'8" (standard coach length)
+/// @Deprecated('Use kPixelsPerInch from dimensional_constants.dart')
 const double kPixelsPerInch = 4.0;
 
 /// Convert logical pixels to a human-readable feet+inches string.

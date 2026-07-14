@@ -8,6 +8,7 @@
 
 import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
 import 'package:trace_odd/shared/models/transport/component_registry.dart';
+import 'package:trace_odd/shared/models/transport/dimensional_constants.dart';
 import 'package:trace_odd/shared/models/transport/feet_inches.dart';
 import 'package:trace_odd/shared/models/transport/layout_validation_result.dart';
 
@@ -101,12 +102,12 @@ class LayoutValidator {
     }
 
     // ── Aisle width minimum ──
-    if (aisle < const FeetInches(feet: 1, inches: 0)) {
+    if (aisle < kMinAisleWidth) {
       return ValidationFailure(
         violation: ValidationViolation.aisleTooNarrow,
         available: aisle,
-        required: const FeetInches(feet: 1, inches: 0),
-        shortage: const FeetInches(feet: 1, inches: 0) - aisle,
+        required: kMinAisleWidth,
+        shortage: kMinAisleWidth - aisle,
         userMessage:
             'Aisle width (${aisle.displayString}) is below the '
             'minimum 1′0″ required for emergency egress.',

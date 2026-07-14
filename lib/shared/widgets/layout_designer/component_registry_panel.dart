@@ -63,14 +63,21 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
 
   void _confirmAdd() {
     if (_addingType == null) return;
-    final length = FeetInches.normalize(
-      int.tryParse(_lenFtCtrl.text) ?? 0,
-      int.tryParse(_lenInCtrl.text) ?? 0,
-    );
-    final width = FeetInches.normalize(
-      int.tryParse(_widFtCtrl.text) ?? 0,
-      int.tryParse(_widInCtrl.text) ?? 0,
-    );
+    final int ft = int.tryParse(_lenFtCtrl.text) ?? 0;
+    final int inc = int.tryParse(_lenInCtrl.text) ?? 0;
+
+    // Auto‑normalize and push corrected values back to UI text fields
+    // so the displayed numbers always match the stored state.
+    final length = FeetInches.normalize(ft, inc);
+    _lenFtCtrl.text = length.feet.toString();
+    _lenInCtrl.text = length.inches.toString();
+
+    final int wFt = int.tryParse(_widFtCtrl.text) ?? 0;
+    final int wInc = int.tryParse(_widInCtrl.text) ?? 0;
+    final width = FeetInches.normalize(wFt, wInc);
+    _widFtCtrl.text = width.feet.toString();
+    _widInCtrl.text = width.inches.toString();
+
     final spec = PartSpec(type: _addingType!, length: length, width: width);
     final newParts = Map<SeatPartType, PartSpec>.from(widget.registry.parts)
       ..[_addingType!] = spec;

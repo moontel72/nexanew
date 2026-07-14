@@ -6,13 +6,20 @@
 // 100 % pure Dart — zero Flutter dependencies.
 
 import 'package:equatable/equatable.dart';
-import 'package:trace_odd/shared/models/transport/absolute_layout_state.dart';
+import 'package:trace_odd/shared/models/transport/dimensional_constants.dart';
 
 class FeetInches extends Equatable {
   final int feet;
   final int inches;
 
-  const FeetInches({required this.feet, required this.inches});
+  /// Primary constructor. Requires normalized inches ([inches] < 12).
+  /// For runtime calculations / user inputs, always use
+  /// [FeetInches.normalize] or [FeetInches.fromTotalInches].
+  const FeetInches({required this.feet, required this.inches})
+    : assert(
+        inches >= 0 && inches < 12,
+        'Inches must be normalized between 0 and 11.',
+      );
 
   /// Auto-normalizes inches >= 12 on construction.
   factory FeetInches.normalize(int feet, int inches) {
