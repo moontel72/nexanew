@@ -205,6 +205,7 @@ class AbsoluteLayoutState {
     'display_name': displayName,
     'components': components.map((c) => c.toJson()).toList(),
     'metadata': {...metadata, 'total_bookable_seats': totalSeats},
+    if (registry != null) 'registry': registry!.toJson(),
   };
 
   /// Parse from a backend snapshot.
@@ -258,6 +259,23 @@ class AbsoluteLayoutState {
       }
     }
 
+    // ── Safe registry extraction ──
+    ComponentRegistry? registry;
+    final registryJson = snap['registry'];
+    if (registryJson is Map) {
+      try {
+        registry = ComponentRegistry.fromJson(
+          registryJson is Map<String, dynamic>
+              ? registryJson
+              : (registryJson as Map).cast<String, dynamic>(),
+        );
+      } catch (_) {
+        registry = null;
+      }
+    } else {
+      registry = null;
+    }
+
     return AbsoluteLayoutState(
       layoutId: layoutId,
       deckLevel: canvas?['deck_level'] as String? ?? 'lower',
@@ -266,6 +284,7 @@ class AbsoluteLayoutState {
       displayName: snap['display_name'] as String? ?? 'Untitled Layout',
       components: components,
       metadata: metadata,
+      registry: registry,
     );
   }
 

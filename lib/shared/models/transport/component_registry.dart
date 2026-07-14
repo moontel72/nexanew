@@ -50,6 +50,28 @@ class PartSpec extends Equatable {
 
   @override
   List<Object?> get props => [type, length, width];
+
+  Map<String, dynamic> toJson() => {
+    'type': type.name,
+    'length_ft': length.feet,
+    'length_in': length.inches,
+    'width_ft': width.feet,
+    'width_in': width.inches,
+  };
+
+  factory PartSpec.fromJson(Map<String, dynamic> json) {
+    return PartSpec(
+      type: SeatPartType.values.firstWhere((e) => e.name == json['type']),
+      length: FeetInches.normalize(
+        (json['length_ft'] as num?)?.toInt() ?? 0,
+        (json['length_in'] as num?)?.toInt() ?? 0,
+      ),
+      width: FeetInches.normalize(
+        (json['width_ft'] as num?)?.toInt() ?? 0,
+        (json['width_in'] as num?)?.toInt() ?? 0,
+      ),
+    );
+  }
 }
 
 /// Central registry of parts configured for the current layout.
@@ -101,6 +123,39 @@ class ComponentRegistry extends Equatable {
 
   @override
   List<Object?> get props => [parts, aisleWidth, interSeatGap];
+
+  Map<String, dynamic> toJson() => {
+    'parts': parts.map((k, v) => MapEntry(k.name, v.toJson())),
+    'aisle_width_ft': aisleWidth.feet,
+    'aisle_width_in': aisleWidth.inches,
+    'inter_seat_gap_ft': interSeatGap.feet,
+    'inter_seat_gap_in': interSeatGap.inches,
+  };
+
+  factory ComponentRegistry.fromJson(Map<String, dynamic> json) {
+    final partsJson = (json['parts'] as Map<String, dynamic>?) ?? {};
+    final parts = <SeatPartType, PartSpec>{};
+    for (final e in partsJson.entries) {
+      final type = SeatPartType.values.firstWhere(
+        (t) => t.name == e.key,
+        orElse: () => SeatPartType.standardSeat,
+      );
+      if (e.value is Map) {
+        parts[type] = PartSpec.fromJson(Map<String, dynamic>.from(e.value));
+      }
+    }
+    return ComponentRegistry(
+      parts: parts,
+      aisleWidth: FeetInches.normalize(
+        (json['aisle_width_ft'] as num?)?.toInt() ?? 1,
+        (json['aisle_width_in'] as num?)?.toInt() ?? 6,
+      ),
+      interSeatGap: FeetInches.normalize(
+        (json['inter_seat_gap_ft'] as num?)?.toInt() ?? 1,
+        (json['inter_seat_gap_in'] as num?)?.toInt() ?? 0,
+      ),
+    );
+  }
 }
 
 /// Maps a UI canvas [ComponentType] to its physical [SeatPartType].
