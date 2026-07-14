@@ -10,7 +10,7 @@ import 'package:trace_odd/shared/widgets/layout_designer/absolute_component_pale
 import 'package:trace_odd/shared/widgets/layout_designer/absolute_inspector_panel.dart';
 import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
 import 'package:trace_odd/shared/models/transport/component_registry.dart';
-import 'package:trace_odd/shared/models/transport/feet_inches.dart';
+import 'package:trace_odd/shared/models/transport/dimensional_constants.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/bus_config_setup_screen.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_designer_bloc.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_designer_event.dart';
@@ -119,24 +119,32 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final rightSeats = config.rightSeats;
     final rows = config.rowCount;
 
-    // Use physics‑based dimensions when available, otherwise fall back
-    // to hardcoded defaults for backward compatibility.
+    // Use physics‑based dimensions when available.
     final registry = widget.registry;
+    // Dispatch registry to BloC so _onAdd / _onPreset read it later.
+    if (registry != null) {
+      bloc.add(SetLayoutRegistry(registry));
+    }
+    final defaultSpec = PartSpec.defaultFor(SeatPartType.standardSeat);
     final seatSpec = registry?.parts[SeatPartType.standardSeat];
-    final double rowH = seatSpec?.pixelLength ?? 56.0;
-    final double seatSpan = seatSpec?.pixelWidth ?? 48.0;
-    final double aisleW = registry?.aisleWidth.toPixels ?? 40.0;
+    final double rowH = seatSpec?.pixelLength ?? defaultSpec.pixelLength;
+    final double seatSpan = seatSpec?.pixelWidth ?? defaultSpec.pixelWidth;
+    final double aisleW =
+        registry?.aisleWidth.toPixels ?? kDefaultAisleWidth.toPixels;
     const double topMargin = 100.0;
     const double leftMargin = 28.0;
 
-    // Auto-size canvas to fit all rows
-    final canvasH = topMargin + rows * rowH + 40;
+    // Canvas sized from BusDimensions when available;
+    // falls back to seat-arithmetic for backward compatibility.
+    final canvasH =
+        widget.busDimensions?.lengthPx ?? (topMargin + rows * rowH + 40);
     final canvasW =
-        leftMargin +
-        leftSeats * seatSpan +
-        aisleW +
-        rightSeats * seatSpan +
-        leftMargin;
+        widget.busDimensions?.widthPx ??
+        (leftMargin +
+            leftSeats * seatSpan +
+            aisleW +
+            rightSeats * seatSpan +
+            leftMargin);
 
     // Set the template name from config — use plate + maker format
     // to match the header display (e.g., "RA-44118 | Hino").

@@ -27,6 +27,7 @@ class LayoutDesignerBloc
     on<UpdateCanvasSize>(_onCanvasSize);
     on<ClearDesignerError>(_onClear);
     on<SetLayoutDisplayName>(_onSetName);
+    on<SetLayoutRegistry>(_onSetRegistry);
   }
 
   Future<void> _onInit(
@@ -107,7 +108,7 @@ class LayoutDesignerBloc
         type: ComponentType.driverCabin,
         x: driverX,
         y: 16,
-        width: 80,
+        width: registry?.pixelFallbackFor(ComponentType.driverCabin) ?? 80,
         height: 48,
         bookable: false,
         bookingMode: BookingMode.none,
@@ -128,8 +129,8 @@ class LayoutDesignerBloc
             type: ComponentType.seat,
             x: x,
             y: y,
-            width: 44,
-            height: 44,
+            width: seatSpan,
+            height: rowH,
             seatId: 'S$seatCounter',
             seatNumber: seatCounter,
           ),
@@ -147,8 +148,8 @@ class LayoutDesignerBloc
             type: ComponentType.seat,
             x: x,
             y: y,
-            width: 44,
-            height: 44,
+            width: seatSpan,
+            height: rowH,
             seatId: 'S$seatCounter',
             seatNumber: seatCounter,
           ),
@@ -372,5 +373,9 @@ class LayoutDesignerBloc
 
   void _onSetName(SetLayoutDisplayName e, Emitter<LayoutDesignerState> emit) {
     emit(state.copyWith(layout: state.layout.copyWith(displayName: e.name)));
+  }
+
+  void _onSetRegistry(SetLayoutRegistry e, Emitter<LayoutDesignerState> emit) {
+    emit(state.copyWith(layout: state.layout.copyWith(registry: e.registry)));
   }
 }

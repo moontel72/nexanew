@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_component.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_state.dart';
 import 'package:trace_odd/shared/models/transport/layout_component.dart';
+import 'package:trace_odd/shared/models/transport/component_registry.dart';
 
 abstract class LayoutDesignerEvent extends Equatable {
   const LayoutDesignerEvent();
@@ -99,4 +100,11 @@ class SetLayoutDisplayName extends LayoutDesignerEvent {
   const SetLayoutDisplayName(this.name);
   @override
   List<Object?> get props => [name];
+}
+
+class SetLayoutRegistry extends LayoutDesignerEvent {
+  final ComponentRegistry registry;
+  const SetLayoutRegistry(this.registry);
+  @override
+  List<Object?> get props => [registry];
 }
