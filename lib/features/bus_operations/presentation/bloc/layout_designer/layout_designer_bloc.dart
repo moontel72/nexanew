@@ -45,10 +45,13 @@ class LayoutDesignerBloc
         if (snapshot is Map) {
           snap = Map<String, dynamic>.from(snapshot as Map);
           // Merge top-level fields so fromSnapshot finds display_name etc.
-          // When cloning a template, skip the template's display_name so
-          // the vehicle config (plate + maker) takes precedence.
           if (!e.cloneFromTemplate) {
             snap['display_name'] ??= d['display_name']?.toString();
+          } else {
+            // When cloning, discard the template's display_name and
+            // preserve the vehicle identity (plate) already set by
+            // _initFromConfig via SetLayoutDisplayName.
+            snap['display_name'] = state.layout.displayName;
           }
           snap['layout_status'] ??= d['layout_status']?.toString();
         } else {
@@ -248,10 +251,7 @@ class LayoutDesignerBloc
     int seatCounter = 1;
     final newComponents = filtered.map((c) {
       if (c.type == ComponentType.seat && c.customLabel == null) {
-        return c.copyWith(
-          seatId: 'S$seatCounter',
-          seatNumber: seatCounter++,
-        );
+        return c.copyWith(seatId: 'S$seatCounter', seatNumber: seatCounter++);
       }
       return c;
     }).toList();

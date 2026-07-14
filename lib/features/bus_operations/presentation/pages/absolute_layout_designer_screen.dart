@@ -120,9 +120,13 @@ class _DesignerBodyState extends State<_DesignerBody> {
         rightSeats * seatSpan +
         leftMargin;
 
-    // Set the template name from config numberPlate
-    if (config.numberPlate.isNotEmpty) {
-      bloc.add(SetLayoutDisplayName(config.numberPlate));
+    // Set the template name from config — use plate + maker format
+    // to match the header display (e.g., "RA-44118 | Hino").
+    final vehicleName = config.maker.isNotEmpty
+        ? '${config.numberPlate} | ${config.maker}'
+        : config.numberPlate;
+    if (vehicleName.isNotEmpty) {
+      bloc.add(SetLayoutDisplayName(vehicleName));
     }
 
     bloc.add(
