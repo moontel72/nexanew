@@ -6,6 +6,7 @@
 // 100% isolated from the legacy grid-based LayoutCanvasState.
 
 import 'absolute_layout_component.dart';
+import 'component_registry.dart';
 
 // ═══════════════════════════════════════════════════════════
 // UNIT CONVERSION
@@ -131,6 +132,7 @@ class AbsoluteLayoutState {
   final bool isSaving;
   final String? errorMessage;
   final String? selectedComponentId;
+  final ComponentRegistry? registry;
 
   const AbsoluteLayoutState({
     this.layoutId,
@@ -144,6 +146,7 @@ class AbsoluteLayoutState {
     this.isSaving = false,
     this.errorMessage,
     this.selectedComponentId,
+    this.registry,
   });
 
   /// Total number of ticketable seats.
@@ -280,6 +283,7 @@ class AbsoluteLayoutState {
     bool? isSaving,
     String? errorMessage,
     String? selectedComponentId,
+    ComponentRegistry? registry,
     bool clearError = false,
     bool clearSelection = false,
   }) {
@@ -297,6 +301,7 @@ class AbsoluteLayoutState {
       selectedComponentId: clearSelection
           ? null
           : (selectedComponentId ?? this.selectedComponentId),
+      registry: registry ?? this.registry,
     );
   }
 }

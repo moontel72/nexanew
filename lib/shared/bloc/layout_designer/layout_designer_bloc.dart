@@ -5,6 +5,7 @@ import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_component.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_state.dart';
 import 'package:trace_odd/shared/models/transport/layout_component.dart';
+import 'package:trace_odd/shared/models/transport/component_registry.dart';
 import 'layout_designer_event.dart';
 import 'layout_designer_state.dart';
 
@@ -81,11 +82,14 @@ class LayoutDesignerBloc
 
   void _onPreset(ApplyPreset e, Emitter<LayoutDesignerState> emit) {
     final preset = e.preset;
-    const double aisleW = 40.0;
-    const double rowH = 56.0;
+    // Use physics‑based dimensions when registry is available.
+    final registry = state.layout.registry;
+    final seatSpec = registry?.parts[SeatPartType.standardSeat];
+    final double aisleW = registry?.aisleWidth.toPixels ?? 40.0;
+    final double rowH = seatSpec?.pixelLength ?? 56.0;
+    final double seatSpan = seatSpec?.pixelWidth ?? 48.0;
     const double topMargin = 100.0;
     const double leftMargin = 28.0;
-    const double seatSpan = 48.0;
 
     // Calculate row count from canvas height
     final int rows = ((preset.canvasHeight - topMargin - 40) / rowH)
@@ -165,6 +169,28 @@ class LayoutDesignerBloc
   }
 
   void _onAdd(AddComponent e, Emitter<LayoutDesignerState> emit) {
+    // Use physics‑based dimensions from the registry when available;
+    // fall back to hardcoded pixel values for backward compatibility.
+    final registry = state.layout.registry;
+    final partType = fromComponentType(e.type);
+    final spec = partType != null ? registry?.parts[partType] : null;
+    final double w =
+        spec?.pixelWidth ??
+        registry?.pixelFallbackFor(e.type) ??
+        (e.type == ComponentType.driverCabin
+            ? 48
+            : e.type.name.contains('seat') || e.type.name.contains('sleeper')
+            ? 44
+            : 80);
+    final double h =
+        spec?.pixelLength ??
+        registry?.pixelFallbackFor(e.type) ??
+        (e.type == ComponentType.driverCabin
+            ? 48
+            : e.type.name.contains('seat') || e.type.name.contains('sleeper')
+            ? 44
+            : 100);
+
     // Auto-generate labels for sleeper berths based on existing count.
     String? autoBerthLabel;
     String? autoSeatId;
@@ -193,16 +219,8 @@ class LayoutDesignerBloc
       type: e.type,
       x: e.x,
       y: e.y,
-      width: e.type == ComponentType.driverCabin
-          ? 48
-          : e.type.name.contains('seat') || e.type.name.contains('sleeper')
-          ? 44
-          : 80,
-      height: e.type == ComponentType.driverCabin
-          ? 48
-          : e.type.name.contains('seat') || e.type.name.contains('sleeper')
-          ? 44
-          : 100,
+      width: w,
+      height: h,
       seatId: e.seatId ?? autoSeatId,
       seatNumber: e.seatNumber ?? autoSeatNumber,
       berthLabel: e.berthLabel ?? autoBerthLabel,
