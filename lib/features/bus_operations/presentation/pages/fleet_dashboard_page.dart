@@ -401,19 +401,19 @@ class _FleetDashboardView extends StatelessWidget {
   // ── Layout actions ─────────────────────────────────
 
   void _openLayoutDesigner(BuildContext ctx, FleetDashboardState state) {
-    // First show BusConfigSetupScreen to capture vehicle details,
-    // then proceed to the canvas designer.
     Navigator.push(
       ctx,
       MaterialPageRoute(
-        builder: (_) => BusConfigSetupScreen(
-          companyId: state.companyId,
-          companyName: state.ownerName,
-          apiPrefix: '/bus-fleet',
+        builder: (_) => BlocProvider<LayoutValidationBloc>(
+          create: (_) => LayoutValidationBloc(),
+          child: BusConfigSetupScreen(
+            companyId: state.companyId,
+            companyName: state.ownerName,
+            apiPrefix: '/bus-fleet',
+          ),
         ),
       ),
     ).then((_) {
-      // Refresh layouts list when returning from designer.
       ctx.read<FleetDashboardBloc>().add(
         const LoadLayouts(panelPrefix: '/bus-fleet'),
       );
@@ -425,16 +425,17 @@ class _FleetDashboardView extends StatelessWidget {
     FleetDashboardState state,
     String layoutId,
   ) {
-    // Open the Bus Configuration form FIRST, pre-populated with existing
-    // vehicle data, then proceed to the layout designer canvas.
     Navigator.push(
       ctx,
       MaterialPageRoute(
-        builder: (_) => BusConfigSetupScreen(
-          companyId: state.companyId,
-          companyName: state.ownerName,
-          apiPrefix: '/bus-fleet',
-          layoutId: layoutId,
+        builder: (_) => BlocProvider<LayoutValidationBloc>(
+          create: (_) => LayoutValidationBloc(),
+          child: BusConfigSetupScreen(
+            companyId: state.companyId,
+            companyName: state.ownerName,
+            apiPrefix: '/bus-fleet',
+            layoutId: layoutId,
+          ),
         ),
       ),
     ).then((_) {

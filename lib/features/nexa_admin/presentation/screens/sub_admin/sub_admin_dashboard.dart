@@ -11,7 +11,6 @@ import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_ad
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_state.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
-import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_preset_setup_screen.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
@@ -1207,24 +1206,6 @@ class _Sidebar extends StatelessWidget {
                   onTap: () {},
                 ),
                 Missile3DButton(
-                  label: 'Template Builder (Physics)',
-                  icon: Icons.straighten,
-                  color: const Color(0xFFF59E0B),
-                  height: 56,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const BusConfigSetupScreen(
-                          companyId: '',
-                          companyName: 'Template',
-                          apiPrefix: '/admin',
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                Missile3DButton(
                   label: 'Seat Templates & Presets',
                   icon: Icons.airline_seat_recline_normal,
                   color: const Color(0xFF00B4D8),
@@ -1233,7 +1214,14 @@ class _Sidebar extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const SubAdminPresetSetupScreen(),
+                        builder: (_) => BlocProvider<LayoutValidationBloc>(
+                          create: (_) => LayoutValidationBloc(),
+                          child: const BusConfigSetupScreen(
+                            companyId: '',
+                            companyName: 'Template',
+                            apiPrefix: '/admin',
+                          ),
+                        ),
                       ),
                     );
                   },

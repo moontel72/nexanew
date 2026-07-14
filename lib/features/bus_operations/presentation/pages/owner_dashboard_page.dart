@@ -477,15 +477,16 @@ class _OwnerView extends StatelessWidget {
         ctx.read<OwnerDashboardBloc>().add(const LoadOwnerLayouts());
       });
     } else {
-      // First show BusConfigSetupScreen to capture vehicle details,
-      // then proceed to the canvas designer.
       Navigator.push(
         ctx,
         MaterialPageRoute(
-          builder: (_) => BusConfigSetupScreen(
-            companyId: state.companyId,
-            companyName: state.ownerName,
-            apiPrefix: '/bus-owner',
+          builder: (_) => BlocProvider<LayoutValidationBloc>(
+            create: (_) => LayoutValidationBloc(),
+            child: BusConfigSetupScreen(
+              companyId: state.companyId,
+              companyName: state.ownerName,
+              apiPrefix: '/bus-owner',
+            ),
           ),
         ),
       ).then((_) {
