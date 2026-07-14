@@ -63,6 +63,16 @@ class BusDimensions extends Equatable {
   double get widthPx => width.toPixels;
   double get heightPx => height.toPixels;
 
+  BusDimensions copyWith({
+    FeetInches? length,
+    FeetInches? width,
+    FeetInches? height,
+  }) => BusDimensions(
+    length: length ?? this.length,
+    width: width ?? this.width,
+    height: height ?? this.height,
+  );
+
   @override
   List<Object?> get props => [length, width, height];
 }

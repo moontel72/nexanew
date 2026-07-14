@@ -6,8 +6,8 @@ import 'package:gap/gap.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_state.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/bus_config_setup_screen.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbox_section.dart'
@@ -15,6 +15,7 @@ import 'package:trace_odd/features/bus_operations/presentation/widgets/chat_inbo
 import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/layout_list_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/staff_list_section.dart';
+import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
 
 class OwnerDashboardPage extends StatelessWidget {
   final String panelPrefix;
@@ -23,15 +24,18 @@ class OwnerDashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => OwnerDashboardBloc()
-        ..add(
-          const BootstrapOwner(
-            storagePrefix: 'busFleet',
-            panelPrefix: '/bus-owner',
-            loginRoute: '/bus-owner/login',
+      create: (_) => LayoutValidationBloc(),
+      child: BlocProvider(
+        create: (_) => OwnerDashboardBloc()
+          ..add(
+            const BootstrapOwner(
+              storagePrefix: 'busFleet',
+              panelPrefix: '/bus-owner',
+              loginRoute: '/bus-owner/login',
+            ),
           ),
-        ),
-      child: const _OwnerView(),
+        child: const _OwnerView(),
+      ),
     );
   }
 }

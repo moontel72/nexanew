@@ -6,7 +6,7 @@ import 'package:gap/gap.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_state.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/bus_config_setup_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart';
@@ -28,6 +28,7 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/dispatch/fle
 import 'package:trace_odd/features/bus_operations/presentation/widgets/fleet_dispatch_dialog.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
 
 abstract class FleetColors {
   static const bg = Color(0xFF0D1B2A);
@@ -52,15 +53,18 @@ class FleetDashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => FleetDashboardBloc()
-        ..add(
-          BootstrapDashboard(
-            storagePrefix: storagePrefix,
-            panelPrefix: panelPrefix,
-            loginRoute: loginRoute,
+      create: (_) => LayoutValidationBloc(),
+      child: BlocProvider(
+        create: (_) => FleetDashboardBloc()
+          ..add(
+            BootstrapDashboard(
+              storagePrefix: storagePrefix,
+              panelPrefix: panelPrefix,
+              loginRoute: loginRoute,
+            ),
           ),
-        ),
-      child: _FleetDashboardView(loginRoute: loginRoute),
+        child: _FleetDashboardView(loginRoute: loginRoute),
+      ),
     );
   }
 }

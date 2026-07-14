@@ -11,6 +11,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
+import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_event.dart';
+import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_state.dart';
+import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
+import 'package:trace_odd/shared/models/transport/layout_validation_result.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/dimension_input_group.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/component_registry_panel.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/inter_seat_distance_input.dart';
 
 class BusConfigSetupScreen extends StatefulWidget {
   final String companyId;
@@ -210,6 +217,82 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 const SizedBox(height: 24),
 
                 // ═══════════════════════════════════════════
+                // PHYSICAL DIMENSIONS
+                // ═══════════════════════════════════════════
+                _sectionHeader(Icons.straighten, 'PHYSICAL DIMENSIONS'),
+                const SizedBox(height: 4),
+                const Text(
+                  'Define the interior boundaries of the bus.',
+                  style: TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
+                ),
+                const SizedBox(height: 12),
+                // Quick‑select preset dropdown
+                DropdownButtonFormField<String>(
+                  value: null,
+                  hint: const Text(
+                    'Quick‑select vehicle preset…',
+                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                  dropdownColor: const Color(0xFF122442),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: _inputDecoration(
+                    hint: '',
+                    prefixIcon: Icons.directions_bus,
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'standard',
+                      child: Text('Standard Coach — 30′ × 7′6″'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'large',
+                      child: Text('Large Coach — 35′ × 8′0″'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'coaster',
+                      child: Text('Coaster — 20′ × 6′6″'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'hiace',
+                      child: Text('HiAce — 12′ × 5′6″'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'sleeper',
+                      child: Text('Sleeper — 30′ × 8′0″'),
+                    ),
+                  ],
+                  onChanged: (preset) {
+                    if (preset == null) return;
+                    final dims = switch (preset) {
+                      'large' => BusDimensions.largeCoach(),
+                      'coaster' => BusDimensions.coaster(),
+                      'hiace' => BusDimensions.hiace(),
+                      'sleeper' => BusDimensions.sleeper(),
+                      _ => BusDimensions.standardCoach(),
+                    };
+                    try {
+                      context.read<LayoutValidationBloc>().add(
+                        DimensionsChanged(dims),
+                      );
+                    } catch (_) {}
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 12),
+                _buildDimensionsInputs(),
+                const SizedBox(height: 16),
+                // Component Registry
+                _sectionHeader(Icons.category, 'COMPONENT REGISTRY'),
+                const SizedBox(height: 12),
+                _buildRegistryPanel(),
+                const SizedBox(height: 16),
+                // Aisle & Gap
+                _sectionHeader(Icons.space_bar, 'AISLE & GAP'),
+                const SizedBox(height: 12),
+                _buildAisleGapInputs(),
+                const SizedBox(height: 24),
+
+                // ═══════════════════════════════════════════
                 // SECTION 2: LAYOUT STRATEGY
                 // ═══════════════════════════════════════════
                 _sectionHeader(Icons.tune, 'LAYOUT STRATEGY'),
@@ -338,7 +421,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                           value: _leftSeats,
                           min: 1,
                           max: 4,
-                          onChanged: (v) => setState(() => _leftSeats = v),
+                          onChanged: (v) {
+                            setState(() => _leftSeats = v);
+                            _dispatchSeatMatrix();
+                          },
                           icon: Icons.event_seat,
                           color: const Color(0xFF7C3AED),
                         ),
@@ -380,7 +466,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                           value: _rightSeats,
                           min: 1,
                           max: 4,
-                          onChanged: (v) => setState(() => _rightSeats = v),
+                          onChanged: (v) {
+                            setState(() => _rightSeats = v);
+                            _dispatchSeatMatrix();
+                          },
                           icon: Icons.event_seat,
                           color: const Color(0xFF3B82F6),
                         ),
@@ -393,7 +482,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                     value: _rowCount,
                     min: 4,
                     max: 24,
-                    onChanged: (v) => setState(() => _rowCount = v),
+                    onChanged: (v) {
+                      setState(() => _rowCount = v);
+                      _dispatchSeatMatrix();
+                    },
                     icon: Icons.table_rows,
                     color: const Color(0xFF16A34A),
                     wide: true,
@@ -432,46 +524,151 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 const SizedBox(height: 28),
 
                 // ═══════════════════════════════════════════
-                // ACTION BUTTONS
+                // VALIDATION GATE + ACTION BUTTONS
                 // ═══════════════════════════════════════════
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close, size: 18),
-                        label: const Text('Cancel'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white54,
-                          side: const BorderSide(color: Color(0x30FFFFFF)),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
+                  builder: (context, state) {
+                    final result = state.lastResult;
+                    final canProceed =
+                        result is ValidationSuccess || result == null;
+                    return Column(
+                      children: [
+                        // Live footprint preview
+                        if (!state.predictedLength.isZero)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF122442),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: canProceed
+                                    ? const Color(0xFF16A34A).withAlpha(80)
+                                    : const Color(0xFFDC2626).withAlpha(80),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  canProceed
+                                      ? Icons.check_circle_outline
+                                      : Icons.warning_amber_rounded,
+                                  color: canProceed
+                                      ? const Color(0xFF16A34A)
+                                      : const Color(0xFFDC2626),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    canProceed
+                                        ? 'Est. footprint: ${state.predictedLength.displayString} × ${state.predictedWidth.displayString}'
+                                        : 'Exceeds capacity: ${state.predictedLength.displayString} × ${state.predictedWidth.displayString}',
+                                    style: TextStyle(
+                                      color: canProceed
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFFDC2626),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        onPressed: _startDesigning,
-                        icon: const Icon(Icons.design_services, size: 18),
-                        label: const Text(
-                          'Start Designing',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7C3AED),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                        const SizedBox(height: 10),
+                        // Validation failure banner
+                        if (result is ValidationFailure)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDC2626).withAlpha(30),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFFDC2626).withAlpha(120),
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: Color(0xFFDC2626),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    result.userMessage,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                        // Action buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(Icons.close, size: 18),
+                                label: const Text('Cancel'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white54,
+                                  side: const BorderSide(
+                                    color: Color(0x30FFFFFF),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 2,
+                              child: ElevatedButton.icon(
+                                onPressed: canProceed ? _startDesigning : null,
+                                icon: const Icon(
+                                  Icons.design_services,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  canProceed
+                                      ? 'Start Designing'
+                                      : 'LAYOUT EXCEEDS CAPACITY',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: canProceed
+                                      ? const Color(0xFF7C3AED)
+                                      : Colors.grey[800],
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 20),
               ],
@@ -479,6 +676,103 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  // ── Physics helpers ──────────────────────────────────
+
+  void _dispatchSeatMatrix() {
+    try {
+      context.read<LayoutValidationBloc>().add(
+        SeatMatrixChanged(
+          rows: _rowCount,
+          leftSeats: _leftSeats,
+          rightSeats: _rightSeats,
+        ),
+      );
+    } catch (_) {}
+  }
+
+  Widget _buildDimensionsInputs() {
+    return BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
+      builder: (context, state) {
+        final dims = state.dimensions;
+        return Column(
+          children: [
+            DimensionInputGroup(
+              label: 'Bus Inside Length (front to back)',
+              initialValue: dims.length,
+              minFeet: 8,
+              maxFeet: 50,
+              onChanged: (v) {
+                try {
+                  context.read<LayoutValidationBloc>().add(
+                    DimensionsChanged(dims.copyWith(length: v)),
+                  );
+                } catch (_) {}
+              },
+            ),
+            const SizedBox(height: 12),
+            DimensionInputGroup(
+              label: 'Bus Inside Width (left to right)',
+              initialValue: dims.width,
+              minFeet: 4,
+              maxFeet: 10,
+              onChanged: (v) {
+                try {
+                  context.read<LayoutValidationBloc>().add(
+                    DimensionsChanged(dims.copyWith(width: v)),
+                  );
+                } catch (_) {}
+              },
+            ),
+            const SizedBox(height: 12),
+            DimensionInputGroup(
+              label: 'Bus Inside Height',
+              initialValue: dims.height,
+              minFeet: 4,
+              maxFeet: 8,
+              onChanged: (v) {
+                try {
+                  context.read<LayoutValidationBloc>().add(
+                    DimensionsChanged(dims.copyWith(height: v)),
+                  );
+                } catch (_) {}
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRegistryPanel() {
+    return BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
+      builder: (context, state) {
+        return ComponentRegistryPanel(
+          registry: state.registry,
+          onChanged: (r) {
+            try {
+              context.read<LayoutValidationBloc>().add(RegistryChanged(r));
+            } catch (_) {}
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAisleGapInputs() {
+    return BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
+      builder: (context, state) {
+        return InterSeatDistanceInput(
+          registry: state.registry,
+          onChanged: (r) {
+            try {
+              context.read<LayoutValidationBloc>().add(RegistryChanged(r));
+            } catch (_) {}
+          },
+        );
+      },
     );
   }
 
@@ -506,28 +800,27 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     final isNewVehicle = widget.layoutId == null;
     final shouldClone = isNewVehicle && presetId != null;
 
+    // Pull physics data from the validation BloC if available.
+    LayoutValidationBloc? validationBloc;
+    try {
+      validationBloc = BlocProvider.of<LayoutValidationBloc>(context);
+    } catch (_) {
+      validationBloc = null;
+    }
+    final vs = validationBloc?.state;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) {
-          // Pull physics data from the validation BloC if available.
-          LayoutValidationBloc? validationBloc;
-          try {
-            validationBloc = BlocProvider.of<LayoutValidationBloc>(context);
-          } catch (_) {
-            validationBloc = null;
-          }
-          final vs = validationBloc?.state;
-          return AbsoluteLayoutDesignerScreen(
-            companyId: widget.companyId,
-            companyName: widget.companyName,
-            layoutId: effectiveLayoutId,
-            config: config,
-            apiPrefix: widget.apiPrefix,
-            cloneFromTemplate: shouldClone,
-            busDimensions: vs?.dimensions,
-            registry: vs?.registry,
-          );
-        },
+        builder: (_) => AbsoluteLayoutDesignerScreen(
+          companyId: widget.companyId,
+          companyName: widget.companyName,
+          layoutId: effectiveLayoutId,
+          config: config,
+          apiPrefix: widget.apiPrefix,
+          cloneFromTemplate: shouldClone,
+          busDimensions: vs?.dimensions,
+          registry: vs?.registry,
+        ),
       ),
     );
   }
