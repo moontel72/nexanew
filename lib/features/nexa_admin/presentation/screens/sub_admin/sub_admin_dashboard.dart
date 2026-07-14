@@ -13,7 +13,9 @@ import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_preset_setup_screen.dart';
 import 'package:trace_odd/core/services/api_service.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designer_screen.dart';
+import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/bus_config_setup_screen.dart';
 
 class SubAdminDashboardScreen extends StatelessWidget {
   const SubAdminDashboardScreen({super.key});
@@ -21,8 +23,11 @@ class SubAdminDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => SubAdminBloc()..add(const BootstrapDashboard()),
-      child: const _DashboardView(),
+      create: (_) => LayoutValidationBloc(),
+      child: BlocProvider(
+        create: (_) => SubAdminBloc()..add(const BootstrapDashboard()),
+        child: const _DashboardView(),
+      ),
     );
   }
 }
@@ -1200,6 +1205,24 @@ class _Sidebar extends StatelessWidget {
                   color: const Color(0xFF16A34A),
                   height: 64,
                   onTap: () {},
+                ),
+                Missile3DButton(
+                  label: 'Template Builder (Physics)',
+                  icon: Icons.straighten,
+                  color: const Color(0xFFF59E0B),
+                  height: 56,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BusConfigSetupScreen(
+                          companyId: '',
+                          companyName: 'Template',
+                          apiPrefix: '/admin',
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 Missile3DButton(
                   label: 'Seat Templates & Presets',

@@ -1,7 +1,7 @@
 // Sub-Admin Preset Template Setup Screen
 import 'package:flutter/material.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/absolute_layout_designer_screen.dart';
-import 'package:trace_odd/features/bus_operations/presentation/pages/bus_config_setup_screen.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designer_screen.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/bus_config_setup_screen.dart';
 
 class SubAdminPresetSetupScreen extends StatefulWidget {
   final String apiPrefix;
