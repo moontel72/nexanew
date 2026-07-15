@@ -101,6 +101,24 @@ class _DesignerBodyState extends State<_DesignerBody> {
         (widget.layoutId == null || widget.cloneFromTemplate)) {
       _initFromConfig(widget.config!);
     }
+    // Post-frame: verify the canvas size matches BusDimensions.
+    if (widget.busDimensions != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final actualH = _state.canvasHeight;
+        final expectedH = widget.busDimensions!.lengthPx;
+        if ((actualH - expectedH).abs() > 1.0) {
+          debugPrint('MISMATCH: canvasHeight=$actualH expected=$expectedH '
+              '(${pxToFtIn(actualH)} vs ${pxToFtIn(expectedH)}) — fixing!');
+          _bloc.add(UpdateCanvasSize(
+            width: widget.busDimensions!.widthPx,
+            height: expectedH,
+          ));
+        } else {
+          debugPrint('CANVAS_OK: ${pxToFtIn(actualH)} matches BusDimensions');
+        }
+      });
+    }
   }
 
   @override
@@ -134,17 +152,22 @@ class _DesignerBodyState extends State<_DesignerBody> {
     const double topMargin = 100.0;
     const double leftMargin = 28.0;
 
-    // Canvas sized from BusDimensions when available;
-    // falls back to seat-arithmetic for backward compatibility.
-    final canvasH =
-        widget.busDimensions?.lengthPx ?? (topMargin + rows * rowH + 40);
-    final canvasW =
-        widget.busDimensions?.widthPx ??
-        (leftMargin +
-            leftSeats * seatSpan +
-            aisleW +
-            rightSeats * seatSpan +
-            leftMargin);
+    // Canvas sizing: ALWAYS prefer BusDimensions when available.
+    // Log what we're using so we can trace mismatches at runtime.
+    final double canvasH;
+    final double canvasW;
+    final bd = widget.busDimensions;
+    if (bd != null) {
+      canvasH = bd.lengthPx;
+      canvasW = bd.widthPx;
+      debugPrint('INIT_CANVAS: BusDimensions ${bd.length.displayString} x ${bd.width.displayString} -> ${canvasW.toStringAsFixed(0)}x${canvasH.toStringAsFixed(0)} px');
+    } else {
+      final fbH = topMargin + rows * rowH + 40;
+      final fbW = leftMargin + leftSeats * seatSpan + aisleW + rightSeats * seatSpan + leftMargin;
+      canvasH = fbH;
+      canvasW = fbW;
+      debugPrint('INIT_CANVAS: busDimensions=NULL! Fallback ${pxToFtIn(fbW)} x ${pxToFtIn(fbH)} (rowH=$rowH seatSpan=$seatSpan)');
+    }
 
     // Set the template name from config — use plate + maker format
     // to match the header display (e.g., "RA-44118 | Hino").

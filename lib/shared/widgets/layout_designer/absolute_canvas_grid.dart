@@ -205,7 +205,7 @@ class _CanvasBackgroundPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    totalLabel.paint(canvas, const Offset(4, 4));
+    totalLabel.paint(canvas, const Offset(2, 2));
 
     // ═══════════════════════════════════════════════
     // BUS BODY OUTLINE (windshield, windows, door)

@@ -824,7 +824,12 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     LayoutValidationBloc? validationBloc;
     try {
       validationBloc = BlocProvider.of<LayoutValidationBloc>(context);
-    } catch (_) {
+      final vs = validationBloc.state;
+      debugPrint('START_DESIGN: dims=${vs.dimensions.length.displayString} x ${vs.dimensions.width.displayString} '
+          'rows=${vs.rows} L/R=${vs.leftSeats}/${vs.rightSeats} '
+          'registryParts=${vs.registry.parts.keys.map((k) => k.name).toList()}');
+    } catch (e) {
+      debugPrint('START_DESIGN: BlocProvider.of FAILED: $e');
       validationBloc = null;
     }
     final vs = validationBloc?.state;
