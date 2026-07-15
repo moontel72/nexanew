@@ -87,7 +87,9 @@ class LayoutDesignerBloc
     final registry = state.layout.registry;
     final seatSpec = registry?.parts[SeatPartType.standardSeat];
     final double aisleW = registry?.aisleWidth.toPixels ?? 40.0;
-    final double rowH = seatSpec?.pixelLength ?? 56.0;
+    final double seatLen = seatSpec?.pixelLength ?? 56.0;
+    final double gapPx = registry?.interSeatGap.toPixels ?? 48.0;
+    final double rowH = seatLen + gapPx;
     final double seatSpan = seatSpec?.pixelWidth ?? 48.0;
     const double topMargin = 100.0;
     const double leftMargin = 28.0;

@@ -145,7 +145,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
     }
     final defaultSpec = PartSpec.defaultFor(SeatPartType.standardSeat);
     final seatSpec = registry?.parts[SeatPartType.standardSeat];
-    final double rowH = seatSpec?.pixelLength ?? defaultSpec.pixelLength;
+    final double seatLen = seatSpec?.pixelLength ?? defaultSpec.pixelLength;
+    final double gapPx =
+        registry?.interSeatGap.toPixels ?? kDefaultInterSeatGap.toPixels;
+    final double rowH = seatLen + gapPx; // include gap so rows spread across bus
     final double seatSpan = seatSpec?.pixelWidth ?? defaultSpec.pixelWidth;
     final double aisleW =
         registry?.aisleWidth.toPixels ?? kDefaultAisleWidth.toPixels;
