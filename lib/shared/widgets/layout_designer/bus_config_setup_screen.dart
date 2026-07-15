@@ -43,6 +43,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   // ── Bus Profile ──
   late TextEditingController _numberPlateCtrl;
   late TextEditingController _specsCtrl;
+  late TextEditingController _otherMakerCtrl;
   String? _selectedMaker;
 
   // ── Dynamic Grid ──
@@ -72,6 +73,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     super.initState();
     _numberPlateCtrl = TextEditingController();
     _specsCtrl = TextEditingController();
+    _otherMakerCtrl = TextEditingController();
     if (widget.layoutId != null) {
       _loadExistingLayout();
     }
@@ -133,6 +135,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   void dispose() {
     _numberPlateCtrl.dispose();
     _specsCtrl.dispose();
+    _otherMakerCtrl.dispose();
     super.dispose();
   }
 
@@ -199,6 +202,19 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       .toList(),
                   onChanged: (v) => setState(() => _selectedMaker = v),
                 ),
+                if (_selectedMaker == 'Others') ...[
+                  const SizedBox(height: 12),
+                  _fieldLabel('Specify Manufacturer Name'),
+                  const SizedBox(height: 4),
+                  TextFormField(
+                    controller: _otherMakerCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: _inputDecoration(
+                      hint: 'e.g. Custom Coach Co.',
+                      prefixIcon: Icons.edit,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
 
                 // Additional Specs
@@ -777,9 +793,13 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   }
 
   void _startDesigning() {
+    // When "Others" is selected, use the custom typed name.
+    final effectiveMaker = _selectedMaker == 'Others'
+        ? _otherMakerCtrl.text.trim()
+        : (_selectedMaker ?? '');
     final config = BusConfig(
       numberPlate: _numberPlateCtrl.text.trim(),
-      maker: _selectedMaker ?? '',
+      maker: effectiveMaker,
       specifications: _specsCtrl.text.trim(),
       leftSeats: _leftSeats,
       rightSeats: _rightSeats,

@@ -109,7 +109,7 @@ class LayoutDesignerBloc
         x: driverX,
         y: 16,
         width: registry?.pixelFallbackFor(ComponentType.driverCabin) ?? 80,
-        height: 48,
+        height: registry?.pixelFallbackFor(ComponentType.driverCabin) ?? 48,
         bookable: false,
         bookingMode: BookingMode.none,
       ),

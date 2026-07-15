@@ -37,3 +37,19 @@ const FeetInches kDefaultBusinessSeatWidth = FeetInches(feet: 2, inches: 0);
 /// Folding / jump seat.
 const FeetInches kDefaultFoldSeatLength = FeetInches(feet: 1, inches: 6);
 const FeetInches kDefaultFoldSeatWidth = FeetInches(feet: 1, inches: 0);
+
+/// Lower sleeper berth footprint — 6′0″ × 2′0″.
+const FeetInches kDefaultSleeperLowerLength = FeetInches(feet: 6, inches: 0);
+const FeetInches kDefaultSleeperLowerWidth = FeetInches(feet: 2, inches: 0);
+
+/// Upper sleeper berth footprint — 6′0″ × 2′0″.
+const FeetInches kDefaultSleeperUpperLength = FeetInches(feet: 6, inches: 0);
+const FeetInches kDefaultSleeperUpperWidth = FeetInches(feet: 2, inches: 0);
+
+/// Reverse-facing seat footprint — 1′6″ × 1′6″ (same as standard).
+const FeetInches kDefaultReverseSeatLength = FeetInches(feet: 1, inches: 6);
+const FeetInches kDefaultReverseSeatWidth = FeetInches(feet: 1, inches: 6);
+
+/// Restaurant-style table module — 2′0″ × 3′0″.
+const FeetInches kDefaultTableLength = FeetInches(feet: 2, inches: 0);
+const FeetInches kDefaultTableWidth = FeetInches(feet: 3, inches: 0);

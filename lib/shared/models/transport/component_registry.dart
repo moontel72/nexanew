@@ -14,7 +14,15 @@ import 'package:trace_odd/shared/models/transport/layout_component.dart';
 /// Physical part categories known to the layout validator.
 /// Structural types (driver cabin, aisle, exit door) are NOT
 /// user‑configurable and are excluded from this enum.
-enum SeatPartType { standardSeat, businessSeat, sleeper }
+enum SeatPartType {
+  standardSeat,
+  businessSeat,
+  sleeperLower,
+  sleeperUpper,
+  reverseSeat,
+  foldingSeat,
+  table,
+}
 
 /// Spatial footprint for a single part instance.
 class PartSpec extends Equatable {
@@ -38,12 +46,20 @@ class PartSpec extends Equatable {
       length: switch (type) {
         SeatPartType.standardSeat => kDefaultSeatLength,
         SeatPartType.businessSeat => kDefaultBusinessSeatLength,
-        SeatPartType.sleeper => kDefaultSleeperLength,
+        SeatPartType.sleeperLower => kDefaultSleeperLowerLength,
+        SeatPartType.sleeperUpper => kDefaultSleeperUpperLength,
+        SeatPartType.reverseSeat => kDefaultReverseSeatLength,
+        SeatPartType.foldingSeat => kDefaultFoldSeatLength,
+        SeatPartType.table => kDefaultTableLength,
       },
       width: switch (type) {
         SeatPartType.standardSeat => kDefaultSeatWidth,
         SeatPartType.businessSeat => kDefaultBusinessSeatWidth,
-        SeatPartType.sleeper => kDefaultSleeperWidth,
+        SeatPartType.sleeperLower => kDefaultSleeperLowerWidth,
+        SeatPartType.sleeperUpper => kDefaultSleeperUpperWidth,
+        SeatPartType.reverseSeat => kDefaultReverseSeatWidth,
+        SeatPartType.foldingSeat => kDefaultFoldSeatWidth,
+        SeatPartType.table => kDefaultTableWidth,
       },
     );
   }
@@ -160,12 +176,20 @@ class ComponentRegistry extends Equatable {
 
 /// Maps a UI canvas [ComponentType] to its physical [SeatPartType].
 /// Returns null for structural types not in the user registry.
+///
+/// Note: [SeatPartType.reverseSeat] has no direct [ComponentType] mapping
+/// because reversed seats use [ComponentType.seat] with an `isReverseFacing`
+/// flag. Palette-dragged reversed seats currently resolve to [standardSeat]
+/// dimensions. Use the registry panel to configure reverseSeat separately
+/// if custom dimensions are needed.
 SeatPartType? fromComponentType(ComponentType type) {
   return switch (type) {
     ComponentType.seat => SeatPartType.standardSeat,
     ComponentType.businessClassSeat => SeatPartType.businessSeat,
-    ComponentType.sleeperLower ||
-    ComponentType.sleeperUpper => SeatPartType.sleeper,
+    ComponentType.sleeperLower => SeatPartType.sleeperLower,
+    ComponentType.sleeperUpper => SeatPartType.sleeperUpper,
+    ComponentType.foldingSeat => SeatPartType.foldingSeat,
+    ComponentType.restaurantTable => SeatPartType.table,
     _ => null,
   };
 }

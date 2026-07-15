@@ -214,9 +214,10 @@ class _CanvasBackgroundPainter extends CustomPainter {
   }
 
   /// Draws an architectural ruler along the top (horizontal) or left (vertical).
+  /// Tick spacing is exactly [_inchPx] pixels per inch. Foot marks every 12″.
   void _drawRuler(Canvas canvas, bool isTop) {
     final length = isTop ? canvasWidth : canvasHeight;
-    final totalInches = (length / _inchPx).round();
+    final totalInches = (length / _inchPx).floor();
 
     // Ruler background strip
     final rulerBg = Paint()..color = const Color(0xFF07101E);
@@ -232,7 +233,15 @@ class _CanvasBackgroundPainter extends CustomPainter {
     final footTickPaint = Paint()
       ..color = const Color(0xCCFFFFFF)
       ..strokeWidth = 1.5;
-    final labelStyle = TextStyle(color: const Color(0x99FFFFFF), fontSize: 8);
+    final footLabelStyle = TextStyle(
+      color: const Color(0xCCFFFFFF),
+      fontSize: 8,
+      fontWeight: FontWeight.w600,
+    );
+    final inchLabelStyle = TextStyle(
+      color: const Color(0x50FFFFFF),
+      fontSize: 7,
+    );
 
     for (int inch = 0; inch <= totalInches; inch++) {
       final pos = inch * _inchPx;
@@ -240,49 +249,66 @@ class _CanvasBackgroundPainter extends CustomPainter {
       final tickLen = isFoot ? 12.0 : 6.0; // longer tick at foot marks
 
       if (isTop) {
-        // Top ruler: ticks go down from the top
+        // Top ruler: ticks go down from the top edge
         canvas.drawLine(
           Offset(pos, _rulerThickness - tickLen),
           Offset(pos, _rulerThickness),
           isFoot ? footTickPaint : tickPaint,
         );
         // Label at foot marks
-        if (isFoot && pos + 16 < canvasWidth) {
-          final feet = inch ~/ 12;
-          // Draw `feet` number only (not feet.inches) for cleaner look
+        if (isFoot && pos + 18 < canvasWidth) {
           final tp = TextPainter(
-            text: TextSpan(text: '$feet', style: labelStyle),
+            text: TextSpan(
+              text: "${inch ~/ 12}'",
+              style: footLabelStyle,
+            ),
             textDirection: TextDirection.ltr,
           )..layout();
-          tp.paint(canvas, Offset(pos + 2, _rulerThickness - tickLen - 10));
+          tp.paint(canvas, Offset(pos + 2, _rulerThickness - tickLen - 11));
         }
-        // Small inch labels every 3 inches between foot marks
+        // Small inch labels at 3″, 6″, 9″ between foot marks
         if (!isFoot && inch % 3 == 0 && pos + 16 < canvasWidth) {
           final tp = TextPainter(
             text: TextSpan(
-              text: '${inch % 12}',
-              style: TextStyle(color: const Color(0x50FFFFFF), fontSize: 7),
+              text: '${inch % 12}"',
+              style: inchLabelStyle,
             ),
             textDirection: TextDirection.ltr,
           )..layout();
           tp.paint(canvas, Offset(pos + 1, _rulerThickness - tickLen - 9));
         }
       } else {
-        // Left ruler: ticks go right from the left
+        // Left ruler: ticks go right from the left edge
         canvas.drawLine(
           Offset(_rulerThickness - tickLen, pos),
           Offset(_rulerThickness, pos),
           isFoot ? footTickPaint : tickPaint,
         );
-        // Label at foot marks
+        // Label at foot marks (rotated 90°)
         if (isFoot && pos + 10 < canvasHeight) {
-          final feet = inch ~/ 12;
-          // Rotate text 90° for vertical ruler
           canvas.save();
-          canvas.translate(4, pos + 8);
+          canvas.translate(5, pos + 9);
           canvas.rotate(-3.1415926535 / 2);
           final tp = TextPainter(
-            text: TextSpan(text: '$feet', style: labelStyle),
+            text: TextSpan(
+              text: "${inch ~/ 12}'",
+              style: footLabelStyle,
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(canvas, Offset.zero);
+          canvas.restore();
+        }
+        // Inch labels at 3″, 6″, 9″ on the vertical ruler
+        if (!isFoot && inch % 3 == 0 && pos + 12 < canvasHeight) {
+          canvas.save();
+          canvas.translate(3, pos + 9);
+          canvas.rotate(-3.1415926535 / 2);
+          final tp = TextPainter(
+            text: TextSpan(
+              text: '${inch % 12}"',
+              style: inchLabelStyle,
+            ),
             textDirection: TextDirection.ltr,
           )..layout();
           tp.paint(canvas, Offset.zero);
