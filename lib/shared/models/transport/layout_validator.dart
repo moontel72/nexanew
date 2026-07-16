@@ -33,15 +33,15 @@ class LayoutValidator {
   /// Calculates the total width required by the seat arrangement.
   ///
   /// Formula:
-  ///   Total = (max(Left, Right) × PartWidth × 2) + AisleWidth
+  ///   Total = (LeftSeats + RightSeats) x PartWidth + AisleWidth
   static FeetInches calculateRequiredWidth({
     required int leftSeats,
     required int rightSeats,
     required FeetInches partWidth,
     required FeetInches aisleWidth,
   }) {
-    final maxSide = leftSeats > rightSeats ? leftSeats : rightSeats;
-    final seatWidth = partWidth * maxSide * 2;
+    final totalSeats = leftSeats + rightSeats;
+    final seatWidth = partWidth * totalSeats;
     return seatWidth + aisleWidth;
   }
 

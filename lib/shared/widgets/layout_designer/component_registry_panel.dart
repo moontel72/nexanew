@@ -66,7 +66,7 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     final int ft = int.tryParse(_lenFtCtrl.text) ?? 0;
     final int inc = int.tryParse(_lenInCtrl.text) ?? 0;
 
-    // Auto‑normalize and push corrected values back to UI text fields
+    // Auto-normalize and push corrected values back to UI text fields
     // so the displayed numbers always match the stored state.
     final length = FeetInches.normalize(ft, inc);
     _lenFtCtrl.text = length.feet.toString();
@@ -90,6 +90,34 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
       ..remove(type);
     widget.onChanged(widget.registry.copyWith(parts: newParts));
   }
+
+  // Small label above a dimension group.
+  Widget _dimLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Text(
+      text,
+      style: const TextStyle(
+        color: Color(0x99FFFFFF),
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
+
+  // Feet + inches row for one dimension.
+  Widget _dimRow(
+    TextEditingController ftCtrl,
+    TextEditingController inCtrl,
+    String ftHint,
+    String inHint,
+  ) =>
+      Row(
+        children: [
+          Expanded(child: _smallField(ftHint, ftCtrl)),
+          const SizedBox(width: 6),
+          Expanded(child: _smallField(inHint, inCtrl)),
+        ],
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -164,26 +192,22 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
                 if (v != null) _addPart(v);
               },
             ),
-          // ── Add‑form ──
+          // ── Add-form with explicit labels ──
           if (_addingType != null) ...[
             const SizedBox(height: 10),
             Text(
               'Configuring: ${_addingType!.name}',
               style: const TextStyle(color: Color(0xFF7C3AED), fontSize: 11),
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Expanded(child: _smallField('Length ft', _lenFtCtrl)),
-                const SizedBox(width: 6),
-                Expanded(child: _smallField('in', _lenInCtrl)),
-                const SizedBox(width: 12),
-                Expanded(child: _smallField('Width ft', _widFtCtrl)),
-                const SizedBox(width: 6),
-                Expanded(child: _smallField('in', _widInCtrl)),
-              ],
-            ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
+            // Width row with label
+            _dimLabel('Width (Left \u2192 Right)'),
+            _dimRow(_widFtCtrl, _widInCtrl, 'ft', 'in'),
+            const SizedBox(height: 10),
+            // Length row with label
+            _dimLabel('Length (Front \u2192 Back)'),
+            _dimRow(_lenFtCtrl, _lenInCtrl, 'ft', 'in'),
+            const SizedBox(height: 8),
             Row(
               children: [
                 TextButton(
