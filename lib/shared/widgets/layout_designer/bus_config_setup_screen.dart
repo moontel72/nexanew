@@ -549,49 +549,59 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                         result is ValidationSuccess || result == null;
                     return Column(
                       children: [
-                        // Live footprint preview
-                        if (!state.predictedLength.isZero)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF122442),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: canProceed
-                                    ? const Color(0xFF16A34A).withAlpha(80)
-                                    : const Color(0xFFDC2626).withAlpha(80),
+                        // --- Bus interior vs Layout requirements ---
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF122442),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0x20FFFFFF)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.directions_bus, color: Color(0xFF7C3AED), size: 14),
+                                  const SizedBox(width: 6),
+                                  const Text('Bus interior:', style: TextStyle(color: Color(0x80FFFFFF), fontSize: 11)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${state.dimensions.length.displayString} x ${state.dimensions.width.displayString}',
+                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                                  ),
+                                ],
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  canProceed
-                                      ? Icons.check_circle_outline
-                                      : Icons.warning_amber_rounded,
-                                  color: canProceed
-                                      ? const Color(0xFF16A34A)
-                                      : const Color(0xFFDC2626),
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    canProceed
-                                        ? 'Est. footprint: ${state.predictedLength.displayString} × ${state.predictedWidth.displayString}'
-                                        : 'Exceeds capacity: ${state.predictedLength.displayString} × ${state.predictedWidth.displayString}',
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    canProceed ? Icons.check_circle : Icons.warning_amber_rounded,
+                                    color: canProceed ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    canProceed ? 'Layout fits:   ' : 'Layout needs:  ',
                                     style: TextStyle(
-                                      color: canProceed
-                                          ? const Color(0xFF16A34A)
-                                          : const Color(0xFFDC2626),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                      color: canProceed ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                      fontSize: 11,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                  Text(
+                                    state.predictedLength.isZero ? '---' : '${state.predictedLength.displayString} x ${state.predictedWidth.displayString}',
+                                    style: TextStyle(
+                                      color: canProceed ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
+                        ),
                         const SizedBox(height: 10),
                         // Validation failure banner
                         if (result is ValidationFailure)
