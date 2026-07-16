@@ -91,16 +91,29 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     widget.onChanged(widget.registry.copyWith(parts: newParts));
   }
 
-  // Small label above a dimension group.
+  // Label above a dimension input group — gold text with purple accent bar.
   Widget _dimLabel(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 4),
-    child: Text(
-      text,
-      style: const TextStyle(
-        color: Color(0x99FFFFFF),
-        fontSize: 10,
-        fontWeight: FontWeight.w600,
-      ),
+    padding: const EdgeInsets.only(bottom: 5),
+    child: Row(
+      children: [
+        Container(
+          width: 3,
+          height: 12,
+          decoration: BoxDecoration(
+            color: const Color(0xFF7C3AED),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(
+            color: Color(0xFFFFD700),
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     ),
   );
 
@@ -110,14 +123,13 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     TextEditingController inCtrl,
     String ftHint,
     String inHint,
-  ) =>
-      Row(
-        children: [
-          Expanded(child: _smallField(ftHint, ftCtrl)),
-          const SizedBox(width: 6),
-          Expanded(child: _smallField(inHint, inCtrl)),
-        ],
-      );
+  ) => Row(
+    children: [
+      Expanded(child: _smallField(ftHint, ftCtrl)),
+      const SizedBox(width: 6),
+      Expanded(child: _smallField(inHint, inCtrl)),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
