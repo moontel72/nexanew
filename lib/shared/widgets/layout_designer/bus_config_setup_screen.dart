@@ -13,9 +13,9 @@ import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designe
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_event.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_state.dart';
-import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
 import 'package:trace_odd/shared/models/transport/layout_validation_result.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/dimension_input_group.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/component_registry_panel.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/inter_seat_distance_input.dart';
 
 class BusConfigSetupScreen extends StatefulWidget {
@@ -241,61 +241,12 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   style: TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
                 ),
                 const SizedBox(height: 12),
-                // Quick‑select preset dropdown
-                DropdownButtonFormField<String>(
-                  value: null,
-                  hint: const Text(
-                    'Quick‑select vehicle preset…',
-                    style: TextStyle(color: Colors.white54, fontSize: 13),
-                  ),
-                  dropdownColor: const Color(0xFF122442),
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                  decoration: _inputDecoration(
-                    hint: '',
-                    prefixIcon: Icons.directions_bus,
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'standard',
-                      child: Text('Standard Coach — 30′ × 7′6″'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'large',
-                      child: Text('Large Coach — 35′ × 8′0″'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'coaster',
-                      child: Text('Coaster — 20′ × 6′6″'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'hiace',
-                      child: Text('HiAce — 12′ × 5′6″'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'sleeper',
-                      child: Text('Sleeper — 30′ × 8′0″'),
-                    ),
-                  ],
-                  onChanged: (preset) {
-                    if (preset == null) return;
-                    final dims = switch (preset) {
-                      'large' => BusDimensions.largeCoach(),
-                      'coaster' => BusDimensions.coaster(),
-                      'hiace' => BusDimensions.hiace(),
-                      'sleeper' => BusDimensions.sleeper(),
-                      _ => BusDimensions.standardCoach(),
-                    };
-                    try {
-                      context.read<LayoutValidationBloc>().add(
-                        DimensionsChanged(dims),
-                      );
-                    } catch (_) {}
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 12),
                 _buildDimensionsInputs(),
                 const SizedBox(height: 16),
+                // Component Registry
+                _sectionHeader(Icons.category, 'COMPONENT REGISTRY'),
+                const SizedBox(height: 12),
+                _buildRegistryPanel(),
                 const SizedBox(height: 16),
                 // Aisle & Gap
                 _sectionHeader(Icons.space_bar, 'AISLE & GAP'),
@@ -767,6 +718,20 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     );
   }
 
+  Widget _buildRegistryPanel() {
+    return BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
+      builder: (context, state) {
+        return ComponentRegistryPanel(
+          registry: state.registry,
+          onChanged: (r) {
+            try {
+              context.read<LayoutValidationBloc>().add(RegistryChanged(r));
+            } catch (_) {}
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildAisleGapInputs() {
     return BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
