@@ -16,7 +16,6 @@ import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_state.da
 import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
 import 'package:trace_odd/shared/models/transport/layout_validation_result.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/dimension_input_group.dart';
-import 'package:trace_odd/shared/widgets/layout_designer/component_registry_panel.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/inter_seat_distance_input.dart';
 
 class BusConfigSetupScreen extends StatefulWidget {
@@ -297,10 +296,6 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 const SizedBox(height: 12),
                 _buildDimensionsInputs(),
                 const SizedBox(height: 16),
-                // Component Registry
-                _sectionHeader(Icons.category, 'COMPONENT REGISTRY'),
-                const SizedBox(height: 12),
-                _buildRegistryPanel(),
                 const SizedBox(height: 16),
                 // Aisle & Gap
                 _sectionHeader(Icons.space_bar, 'AISLE & GAP'),
@@ -772,20 +767,6 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     );
   }
 
-  Widget _buildRegistryPanel() {
-    return BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
-      builder: (context, state) {
-        return ComponentRegistryPanel(
-          registry: state.registry,
-          onChanged: (r) {
-            try {
-              context.read<LayoutValidationBloc>().add(RegistryChanged(r));
-            } catch (_) {}
-          },
-        );
-      },
-    );
-  }
 
   Widget _buildAisleGapInputs() {
     return BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
