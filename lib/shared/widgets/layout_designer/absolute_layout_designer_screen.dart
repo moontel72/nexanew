@@ -222,14 +222,14 @@ class _DesignerBodyState extends State<_DesignerBody> {
         final x = leftMargin + s * seatSpan;
         if (hasBothBerths) {
           bloc.add(AddComponent(
-            type: ComponentType.sleeperLower,
+            type: ComponentType.sleeperUpper,
             x: x, y: y, width: halfWidth, height: seatLen,
-            berthLabel: 'L$counter',
+            berthLabel: 'U$counter',
           ));
           bloc.add(AddComponent(
-            type: ComponentType.sleeperUpper,
+            type: ComponentType.sleeperLower,
             x: x + halfWidth, y: y, width: halfWidth, height: seatLen,
-            berthLabel: 'U$counter',
+            berthLabel: 'L$counter',
           ));
         } else if (activeType == ComponentType.sleeperLower ||
                    activeType == ComponentType.sleeperUpper) {
@@ -254,14 +254,14 @@ class _DesignerBodyState extends State<_DesignerBody> {
         final x = rightStartX + s * seatSpan;
         if (hasBothBerths) {
           bloc.add(AddComponent(
-            type: ComponentType.sleeperLower,
+            type: ComponentType.sleeperUpper,
             x: x, y: y, width: halfWidth, height: seatLen,
-            berthLabel: 'L$counter',
+            berthLabel: 'U$counter',
           ));
           bloc.add(AddComponent(
-            type: ComponentType.sleeperUpper,
+            type: ComponentType.sleeperLower,
             x: x + halfWidth, y: y, width: halfWidth, height: seatLen,
-            berthLabel: 'U$counter',
+            berthLabel: 'L$counter',
           ));
         } else if (activeType == ComponentType.sleeperLower ||
                    activeType == ComponentType.sleeperUpper) {
