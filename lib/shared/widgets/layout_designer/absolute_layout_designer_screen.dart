@@ -175,7 +175,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final double aisleW =
         registry?.aisleWidth.toPixels ?? kDefaultAisleWidth.toPixels;
     const double topMargin = 100.0;
-    const double leftMargin = 28.0;
+    // Auto-calculate side margins so layout fills bus width evenly.
+    // Cap at 7" (28px) max to avoid excessive gaps on large buses.
+    double leftMargin;
 
     final double canvasH;
     final double canvasW;
@@ -183,7 +185,12 @@ class _DesignerBodyState extends State<_DesignerBody> {
     if (bd != null) {
       canvasH = bd.lengthPx;
       canvasW = bd.widthPx;
+      // Dynamic margins: split remaining width evenly
+      final totalUsedW = leftSeats * seatSpan + aisleW + rightSeats * seatSpan;
+      final remainingW = canvasW - totalUsedW;
+      leftMargin = (remainingW / 2).clamp(0.0, 28.0);
     } else {
+      leftMargin = 8.0;
       canvasH = topMargin + rows * rowH + 40;
       canvasW = leftMargin + leftSeats * seatSpan + aisleW +
           rightSeats * seatSpan + leftMargin;
