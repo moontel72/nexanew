@@ -768,6 +768,10 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     final bool isTable = component.type == ComponentType.restaurantTable;
     final bool isStructural =
         component.type == ComponentType.exitDoor ||
+        component.type == ComponentType.sideDoor ||
+        component.type == ComponentType.slidingDoor ||
+        component.type == ComponentType.frontDoor ||
+        component.type == ComponentType.rearDoor ||
         component.type == ComponentType.driverCabin ||
         component.type == ComponentType.emergency ||
         component.type == ComponentType.lavatory;

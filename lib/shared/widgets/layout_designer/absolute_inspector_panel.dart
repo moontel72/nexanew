@@ -653,6 +653,10 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
         _selectedType = type;
         // Auto-set booking mode for structural types
         if (type == ComponentType.exitDoor ||
+            type == ComponentType.sideDoor ||
+            type == ComponentType.slidingDoor ||
+            type == ComponentType.frontDoor ||
+            type == ComponentType.rearDoor ||
             type == ComponentType.driverCabin ||
             type == ComponentType.emergency ||
             type == ComponentType.lavatory ||
@@ -699,6 +703,10 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
     ComponentType.sleeperUpper => const Color(0xFFF97316),
     ComponentType.foldingSeat => const Color(0xFF06B6D4),
     ComponentType.exitDoor => const Color(0xFFEF4444),
+    ComponentType.sideDoor => const Color(0xFF8B4513),
+    ComponentType.slidingDoor => const Color(0xFF4682B4),
+    ComponentType.frontDoor => const Color(0xFFCD853F),
+    ComponentType.rearDoor => const Color(0xFF708090),
     ComponentType.driverCabin => const Color(0xFF1E293B),
     ComponentType.emergency => const Color(0xFFDC2626),
     ComponentType.lavatory => const Color(0xFF6366F1),
