@@ -37,11 +37,15 @@ class AddComponent extends LayoutDesignerEvent {
   final String? seatId;
   final int? seatNumber;
   final String? berthLabel;
+  final double? width;
+  final double? height;
   const AddComponent({
     required this.type,
     required this.x,
     required this.y,
     this.seatId,
+    this.width,
+    this.height,
     this.seatNumber,
     this.berthLabel,
   });

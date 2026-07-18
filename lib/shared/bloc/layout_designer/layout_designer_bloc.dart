@@ -177,7 +177,10 @@ class LayoutDesignerBloc
     final registry = state.layout.registry;
     final partType = fromComponentType(e.type);
     final spec = partType != null ? registry?.parts[partType] : null;
+    // Use explicit dimensions if provided (e.g. half-width berth stacking),
+    // otherwise look up from registry.
     final double w =
+        e.width ??
         spec?.pixelWidth ??
         registry?.pixelFallbackFor(e.type) ??
         (e.type == ComponentType.driverCabin
@@ -186,6 +189,7 @@ class LayoutDesignerBloc
             ? 44
             : 80);
     final double h =
+        e.height ??
         spec?.pixelLength ??
         registry?.pixelFallbackFor(e.type) ??
         (e.type == ComponentType.driverCabin

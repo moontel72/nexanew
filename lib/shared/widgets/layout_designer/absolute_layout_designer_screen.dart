@@ -143,37 +143,52 @@ class _DesignerBodyState extends State<_DesignerBody> {
     if (registry != null) {
       bloc.add(SetLayoutRegistry(registry));
     }
-    final defaultSpec = PartSpec.defaultFor(SeatPartType.standardSeat);
-    final seatSpec = registry?.parts[SeatPartType.standardSeat];
-    final double seatLen = seatSpec?.pixelLength ?? defaultSpec.pixelLength;
+    // Determine component type from registry (first registered part wins).
+    ComponentType activeType = ComponentType.seat;
+    SeatPartType? activePartType = SeatPartType.standardSeat;
+    if (registry != null && registry.parts.isNotEmpty) {
+      activePartType = registry.parts.keys.first;
+      activeType = switch (activePartType) {
+        SeatPartType.sleeperLower => ComponentType.sleeperLower,
+        SeatPartType.sleeperUpper => ComponentType.sleeperUpper,
+        SeatPartType.businessSeat => ComponentType.businessClassSeat,
+        SeatPartType.foldingSeat => ComponentType.foldingSeat,
+        SeatPartType.table => ComponentType.restaurantTable,
+        _ => ComponentType.seat,
+      };
+    }
+    // Pakistan coach berth stacking: lower + upper share same position,
+    // each taking 50% width (lower = aisle side, upper = window side).
+    final bool hasBothBerths = registry != null &&
+        registry.parts.containsKey(SeatPartType.sleeperLower) &&
+        registry.parts.containsKey(SeatPartType.sleeperUpper);
+
+    final defaultSpec = PartSpec.defaultFor(activePartType!);
+    final activeSpec = registry?.parts[activePartType];
+    final double seatLen = activeSpec?.pixelLength ?? defaultSpec.pixelLength;
+    final double fullWidth = activeSpec?.pixelWidth ?? defaultSpec.pixelWidth;
     final double gapPx =
         registry?.interSeatGap.toPixels ?? kDefaultInterSeatGap.toPixels;
-    final double rowH = seatLen + gapPx; // include gap so rows spread across bus
-    final double seatSpan = seatSpec?.pixelWidth ?? defaultSpec.pixelWidth;
+    final double rowH = seatLen + gapPx;
+    final double seatSpan = fullWidth;
+    final double halfWidth = hasBothBerths ? fullWidth / 2 : fullWidth;
     final double aisleW =
         registry?.aisleWidth.toPixels ?? kDefaultAisleWidth.toPixels;
     const double topMargin = 100.0;
     const double leftMargin = 28.0;
 
-    // Canvas sizing: ALWAYS prefer BusDimensions when available.
-    // Log what we're using so we can trace mismatches at runtime.
     final double canvasH;
     final double canvasW;
     final bd = widget.busDimensions;
     if (bd != null) {
       canvasH = bd.lengthPx;
       canvasW = bd.widthPx;
-      debugPrint('INIT_CANVAS: BusDimensions ${bd.length.displayString} x ${bd.width.displayString} -> ${canvasW.toStringAsFixed(0)}x${canvasH.toStringAsFixed(0)} px');
     } else {
-      final fbH = topMargin + rows * rowH + 40;
-      final fbW = leftMargin + leftSeats * seatSpan + aisleW + rightSeats * seatSpan + leftMargin;
-      canvasH = fbH;
-      canvasW = fbW;
-      debugPrint('INIT_CANVAS: busDimensions=NULL! Fallback ${pxToFtIn(fbW)} x ${pxToFtIn(fbH)} (rowH=$rowH seatSpan=$seatSpan)');
+      canvasH = topMargin + rows * rowH + 40;
+      canvasW = leftMargin + leftSeats * seatSpan + aisleW +
+          rightSeats * seatSpan + leftMargin;
     }
 
-    // Set the template name from config — use plate + maker format
-    // to match the header display (e.g., "RA-44118 | Hino").
     final vehicleName = config.maker.isNotEmpty
         ? '${config.numberPlate} | ${config.maker}'
         : config.numberPlate;
@@ -181,56 +196,82 @@ class _DesignerBodyState extends State<_DesignerBody> {
       bloc.add(SetLayoutDisplayName(vehicleName));
     }
 
-    bloc.add(
-      UpdateCanvasSize(
-        width: canvasW > 200 ? canvasW : 280,
-        height: canvasH > 200 ? canvasH : 896,
-      ),
-    );
+    bloc.add(UpdateCanvasSize(
+      width: canvasW > 200 ? canvasW : 280,
+      height: canvasH > 200 ? canvasH : 896,
+    ));
 
-    // Place driver cabin at front center
-    bloc.add(
-      AddComponent(
-        type: ComponentType.driverCabin,
-        x: (canvasW - 80) / 2,
-        y: 16,
-      ),
-    );
+    bloc.add(AddComponent(
+      type: ComponentType.driverCabin,
+      x: (canvasW - 80) / 2,
+      y: 16,
+    ));
 
-    // Generate seat rows — universal linear S-series (S1, S2, S3...)
-    int seatCounter = 1;
+    int counter = 1;
     for (int row = 0; row < rows; row++) {
       final y = topMargin + row * rowH;
 
-      // Left-side seats
       for (int s = 0; s < leftSeats; s++) {
         final x = leftMargin + s * seatSpan;
-        bloc.add(
-          AddComponent(
-            type: ComponentType.seat,
-            x: x,
-            y: y,
-            seatId: 'S$seatCounter',
-            seatNumber: seatCounter,
-          ),
-        );
-        seatCounter++;
+        if (hasBothBerths) {
+          bloc.add(AddComponent(
+            type: ComponentType.sleeperLower,
+            x: x, y: y, width: halfWidth, height: seatLen,
+            berthLabel: 'L$counter',
+          ));
+          bloc.add(AddComponent(
+            type: ComponentType.sleeperUpper,
+            x: x + halfWidth, y: y, width: halfWidth, height: seatLen,
+            berthLabel: 'U$counter',
+          ));
+        } else if (activeType == ComponentType.sleeperLower ||
+                   activeType == ComponentType.sleeperUpper) {
+          bloc.add(AddComponent(
+            type: activeType,
+            x: x, y: y, width: seatSpan, height: seatLen,
+            berthLabel: activeType == ComponentType.sleeperLower
+                ? 'L$counter' : 'U$counter',
+          ));
+        } else {
+          bloc.add(AddComponent(
+            type: activeType,
+            x: x, y: y,
+            seatId: 'S$counter', seatNumber: counter,
+          ));
+        }
+        counter++;
       }
 
-      // Right-side seats
       final rightStartX = leftMargin + leftSeats * seatSpan + aisleW;
       for (int s = 0; s < rightSeats; s++) {
         final x = rightStartX + s * seatSpan;
-        bloc.add(
-          AddComponent(
-            type: ComponentType.seat,
-            x: x,
-            y: y,
-            seatId: 'S$seatCounter',
-            seatNumber: seatCounter,
-          ),
-        );
-        seatCounter++;
+        if (hasBothBerths) {
+          bloc.add(AddComponent(
+            type: ComponentType.sleeperLower,
+            x: x, y: y, width: halfWidth, height: seatLen,
+            berthLabel: 'L$counter',
+          ));
+          bloc.add(AddComponent(
+            type: ComponentType.sleeperUpper,
+            x: x + halfWidth, y: y, width: halfWidth, height: seatLen,
+            berthLabel: 'U$counter',
+          ));
+        } else if (activeType == ComponentType.sleeperLower ||
+                   activeType == ComponentType.sleeperUpper) {
+          bloc.add(AddComponent(
+            type: activeType,
+            x: x, y: y, width: seatSpan, height: seatLen,
+            berthLabel: activeType == ComponentType.sleeperLower
+                ? 'L$counter' : 'U$counter',
+          ));
+        } else {
+          bloc.add(AddComponent(
+            type: activeType,
+            x: x, y: y,
+            seatId: 'S$counter', seatNumber: counter,
+          ));
+        }
+        counter++;
       }
     }
   }
