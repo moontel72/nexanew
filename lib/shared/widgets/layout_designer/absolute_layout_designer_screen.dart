@@ -157,8 +157,8 @@ class _DesignerBodyState extends State<_DesignerBody> {
         _ => ComponentType.seat,
       };
     }
-    // Pakistan coach berth stacking: lower + upper share same position,
-    // each taking 50% width (lower = aisle side, upper = window side).
+    // Berth stacking: lower (aisle half) + upper (window half) share
+    // same floor column, each at 50% of registered width.
     final bool hasBothBerths = registry != null &&
         registry.parts.containsKey(SeatPartType.sleeperLower) &&
         registry.parts.containsKey(SeatPartType.sleeperUpper);
