@@ -219,6 +219,18 @@ class LayoutDesignerBloc
           .length;
       autoSeatNumber = count + 1;
       autoSeatId = 'S$autoSeatNumber';
+    } else if (e.type == ComponentType.businessClassSeat) {
+      final count = state.layout.components
+          .where((c) => c.type == ComponentType.businessClassSeat)
+          .length;
+      autoSeatNumber = count + 1;
+      autoSeatId = 'B$autoSeatNumber';
+    } else if (e.type == ComponentType.foldingSeat) {
+      final count = state.layout.components
+          .where((c) => c.type == ComponentType.foldingSeat)
+          .length;
+      autoSeatNumber = count + 1;
+      autoSeatId = 'F$autoSeatNumber';
     }
 
     final comp = AbsoluteLayoutComponent(
@@ -271,12 +283,18 @@ class LayoutDesignerBloc
         .where((c) => c.id != e.id)
         .toList();
 
-    // Re-number remaining standard seats sequentially (S1, S2, S3...).
+    // Re-number remaining seats sequentially (S/B/F series).
     // Skip seats that have a customLabel (manually labelled).
-    int seatCounter = 1;
+    int sN = 1, bN = 1, fN = 1;
     final newComponents = filtered.map((c) {
       if (c.type == ComponentType.seat && c.customLabel == null) {
-        return c.copyWith(seatId: 'S$seatCounter', seatNumber: seatCounter++);
+        return c.copyWith(seatId: 'S$sN', seatNumber: sN++);
+      }
+      if (c.type == ComponentType.businessClassSeat && c.customLabel == null) {
+        return c.copyWith(seatId: 'B$bN', seatNumber: bN++);
+      }
+      if (c.type == ComponentType.foldingSeat && c.customLabel == null) {
+        return c.copyWith(seatId: 'F$fN', seatNumber: fN++);
       }
       return c;
     }).toList();
