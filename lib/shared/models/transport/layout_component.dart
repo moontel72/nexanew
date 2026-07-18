@@ -18,6 +18,10 @@ enum ComponentType {
   foldingSeat, // Folding aisle seat — Coaster 2-in-1 rule (1×1)
   aisle, // Empty aisle space — walkway strip (1×1)
   exitDoor, // Exit / front door (1×1)
+  sideDoor, // Regular proportional passenger door
+  slidingDoor, // HiAce side rolling/sliding door
+  frontDoor, // HiAce front door opens outward
+  rearDoor, // HiAce back diggi/trunk door
   driverCabin, // Driver cockpit (2×1)
   emergency, // Emergency exit (1×1)
   lavatory, // Washroom block (2×2)
@@ -75,6 +79,10 @@ class LayoutComponent {
   bool get isStructural => switch (type) {
     ComponentType.aisle ||
     ComponentType.exitDoor ||
+    ComponentType.sideDoor ||
+    ComponentType.slidingDoor ||
+    ComponentType.frontDoor ||
+    ComponentType.rearDoor ||
     ComponentType.driverCabin ||
     ComponentType.emergency ||
     ComponentType.lavatory ||
@@ -93,6 +101,10 @@ class LayoutComponent {
   bool get isEditable => switch (type) {
     ComponentType.aisle ||
     ComponentType.exitDoor ||
+    ComponentType.sideDoor ||
+    ComponentType.slidingDoor ||
+    ComponentType.frontDoor ||
+    ComponentType.rearDoor ||
     ComponentType.driverCabin ||
     ComponentType.restaurantTable => false,
     _ => true,

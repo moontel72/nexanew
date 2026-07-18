@@ -119,6 +119,10 @@ class ComponentRegistry extends Equatable {
     return switch (type) {
       ComponentType.driverCabin => 80.0,
       ComponentType.exitDoor => 64.0,
+      ComponentType.sideDoor => 64.0,
+      ComponentType.slidingDoor => 80.0,
+      ComponentType.frontDoor => 64.0,
+      ComponentType.rearDoor => 64.0,
       ComponentType.aisle => 48.0,
       ComponentType.emergency => 64.0,
       ComponentType.lavatory => 96.0,
