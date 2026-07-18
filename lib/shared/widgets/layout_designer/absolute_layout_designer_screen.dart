@@ -185,10 +185,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
     if (bd != null) {
       canvasH = bd.lengthPx;
       canvasW = bd.widthPx;
-      // Dynamic margins: split remaining width evenly
+      // Dynamic margins: perfectly center the layout
       final totalUsedW = leftSeats * seatSpan + aisleW + rightSeats * seatSpan;
       final remainingW = canvasW - totalUsedW;
-      leftMargin = (remainingW / 2).clamp(0.0, 28.0);
+      leftMargin = (remainingW / 2).floorToDouble().clamp(0.0, 28.0);
     } else {
       leftMargin = 8.0;
       canvasH = topMargin + rows * rowH + 40;
