@@ -798,3 +798,4 @@ class _SizeFieldState extends State<_SizeField> {
     onChanged: widget.onChanged,
   );
 }
+
