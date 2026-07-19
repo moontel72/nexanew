@@ -273,31 +273,33 @@ class LayoutListSection extends StatelessWidget {
       ),
     );
   }
-  /// Parse current_snapshot components and count by readable type.
+  /// Parse components from snapshot, deduplicate by position, count by type.
   static Map<String, int> _countByType(Map<String, dynamic> layout) {
     final result = <String, int>{};
-    // current_snapshot may be a Map or a JSON string from DB
     dynamic snap = layout['current_snapshot'];
     if (snap is String) {
       try { snap = jsonDecode(snap); } catch (_) { snap = null; }
     }
     final comps = (snap is Map ? snap['components'] : null) ?? layout['components'];
-    // debugPrint('COUNT: found ${comps is List ? comps.length : 0} components');
     if (comps is! List) return result;
-    // Structural types that should never be counted as seats
     const structural = {
       'driverCabin', 'exitDoor', 'sideDoor', 'slidingDoor',
       'frontDoor', 'rearDoor', 'aisle', 'emergency',
       'lavatory', 'restaurantTable', 'empty',
     };
+    // Track seen positions to skip duplicates (same type + same x,y)
+    final seen = <String>{};
     for (final c in comps) {
       if (c is! Map) continue;
       final type = c['type']?.toString() ?? '';
       if (structural.contains(type)) continue;
-      // Skip non-bookable components
       final bookable = c['bookable'];
       if (bookable == false || bookable == 'false') continue;
-      // Custom-labelled seats (e.g. VIP) get their own category
+      final x = (c['x'] as num?)?.toDouble() ?? 0;
+      final y = (c['y'] as num?)?.toDouble() ?? 0;
+      final posKey = '$type|${x.round()}|${y.round()}';
+      if (seen.contains(posKey)) continue;
+      seen.add(posKey);
       final customLabel = c['custom_label']?.toString();
       if (customLabel != null && customLabel.isNotEmpty) {
         result[customLabel] = (result[customLabel] ?? 0) + 1;
@@ -316,31 +318,37 @@ class LayoutListSection extends StatelessWidget {
     return result;
   }
 
-  /// Count unique rows and seats-per-side from component positions.
+  /// Count unique rows (rounded Y) and columns from component positions.
   static String _rowColInfo(Map<String, dynamic> layout) {
-    final snap = layout['current_snapshot'];
+    dynamic snap = layout['current_snapshot'];
     var comps = (snap is Map ? snap['components'] : null) ?? layout['components'];
     if (snap is String) {
       try { final s = jsonDecode(snap); comps = s is Map ? s['components'] : null; } catch (_) {}
     }
     if (comps is! List || comps.isEmpty) return '';
-    // Collect seat positions (skip structural)
-    final rows = <double>{};
-    final structural = {'driverCabin', 'exitDoor', 'sideDoor', 'slidingDoor', 'frontDoor', 'rearDoor', 'aisle', 'emergency', 'lavatory', 'restaurantTable', 'empty'};
-    double minX = double.infinity, maxX = 0;
+    const structural = {'driverCabin', 'exitDoor', 'sideDoor', 'slidingDoor',
+      'frontDoor', 'rearDoor', 'aisle', 'emergency', 'lavatory', 'restaurantTable', 'empty'};
+    // Group Y positions with 5px tolerance to count rows
+    final ySet = <int>{};
+    final xSet = <int>{};
+    final seen = <String>{};
     for (final c in comps) {
       if (c is! Map) continue;
       final t = c['type']?.toString() ?? '';
       if (structural.contains(t)) continue;
-      final y = (c['y'] as num?)?.toDouble();
       final x = (c['x'] as num?)?.toDouble();
-      if (y != null) rows.add(y);
-      if (x != null) { if (x < minX) minX = x; if (x > maxX) maxX = x; }
+      final y = (c['y'] as num?)?.toDouble();
+      if (x == null || y == null) continue;
+      final posKey = '$t|${x.round()}|${y.round()}';
+      if (seen.contains(posKey)) continue;
+      seen.add(posKey);
+      ySet.add((y / 5).round()); // 5px tolerance groups same row
+      xSet.add(x.round());
     }
-    if (rows.isEmpty) return '';
-    // Estimate cols from X spread (rough)
-    final colEstimate = maxX > minX ? ((maxX - minX) / 50).round().clamp(1, 6) : 1;
-    return '${rows.length}R x ~${colEstimate}C';
+    if (ySet.isEmpty) return '';
+    final rows = ySet.length;
+    final cols = xSet.length.clamp(1, 6);
+    return '${rows}R x ${cols}C';
   }
 
   static IconData _iconForType(String label) => switch (label) {
