@@ -312,7 +312,10 @@ class LayoutListSection extends StatelessWidget {
       };
       if (label != null) result[label] = (result[label] ?? 0) + 1;
     }
-n  /// Count unique rows and seats-per-side from component positions.
+    return result;
+  }
+
+  /// Count unique rows and seats-per-side from component positions.
   static String _rowColInfo(Map<String, dynamic> layout) {
     final snap = layout['current_snapshot'];
     var comps = (snap is Map ? snap['components'] : null) ?? layout['components'];
@@ -337,8 +340,6 @@ n  /// Count unique rows and seats-per-side from component positions.
     // Estimate cols from X spread (rough)
     final colEstimate = maxX > minX ? ((maxX - minX) / 50).round().clamp(1, 6) : 1;
     return '${rows.length}R x ~${colEstimate}C';
-  }
-    return result;
   }
 
   static IconData _iconForType(String label) => switch (label) {
