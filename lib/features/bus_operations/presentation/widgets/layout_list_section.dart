@@ -271,9 +271,25 @@ class LayoutListSection extends StatelessWidget {
     final snap = layout['current_snapshot'];
     final comps = (snap is Map ? snap['components'] : null) ?? layout['components'];
     if (comps is! List) return result;
+    // Structural types that should never be counted as seats
+    const structural = {
+      'driverCabin', 'exitDoor', 'sideDoor', 'slidingDoor',
+      'frontDoor', 'rearDoor', 'aisle', 'emergency',
+      'lavatory', 'restaurantTable', 'empty',
+    };
     for (final c in comps) {
       if (c is! Map) continue;
       final type = c['type']?.toString() ?? '';
+      if (structural.contains(type)) continue;
+      // Skip non-bookable components
+      final bookable = c['bookable'];
+      if (bookable == false || bookable == 'false') continue;
+      // Custom-labelled seats (e.g. VIP) get their own category
+      final customLabel = c['custom_label']?.toString();
+      if (customLabel != null && customLabel.isNotEmpty) {
+        result[customLabel] = (result[customLabel] ?? 0) + 1;
+        continue;
+      }
       final label = switch (type) {
         'seat' => 'Seats',
         'sleeperLower' => 'Low.Berth',
@@ -292,6 +308,6 @@ class LayoutListSection extends StatelessWidget {
     'Low.Berth' || 'Upp.Berth' => Icons.airline_seat_flat,
     'Business' => Icons.airline_seat_flat_angled,
     'Folding' => Icons.chair_alt,
-    _ => Icons.event_seat,
+    _ => Icons.label_important,
   };
 }
