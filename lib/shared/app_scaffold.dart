@@ -1,6 +1,5 @@
 // NEXATRACE — SHARED APP SCAFFOLD
 // =================================
-import 'dart:html' as html;
 // Single factory for all fleet panel Flutter apps (Bus/Truck × Owner/Driver/Conductor).
 // Eliminates 8 near-identical main_*.dart entry points.
 //
@@ -90,24 +89,8 @@ class _FleetMaterialApp extends StatelessWidget {
   });
 
   @override
+  Widget build(BuildContext context) {
     final router = GoRouter(
-      redirect: (context, state) {
-        final loc = state.uri.toString();
-        if (loc.contains(loginPath)) return null;
-        // Check localStorage for auth token (web-only sync check)
-        try {
-          final token = html.window.localStorage['busFleet_fleet_token'] ??
-                        html.window.localStorage['busOwner_fleet_token'] ??
-                        html.window.localStorage['auth_token'];
-          if (token == null || token.isEmpty) return loginPath;
-        } catch (_) {}
-        return null;
-      },
-      routes: [
-        // Otherwise let the dashboard BLoC handle auth rejection.
-        return null;
-      },
-      routes: [
       routes: [
         GoRoute(path: loginPath, builder: (_, __) => loginScreen),
         GoRoute(
