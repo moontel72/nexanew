@@ -167,16 +167,17 @@ class LayoutListSection extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        if (seatBreakdown.isNotEmpty)
+                        if (seatBreakdown.isNotEmpty) ...[
                           ...seatBreakdown.entries.map((e) => Padding(
                             padding: EdgeInsets.only(right: 12.w),
                             child: _chip(_iconForType(e.key), '${e.value} ${e.key}'),
-                        if (rowColInfo.isNotEmpty)
-                          Padding(
-                            padding: EdgeInsets.only(right: 12.w),
-                            child: _chip(Icons.table_rows, rowColInfo),
-                          ),
                           )),
+                          if (rowColInfo.isNotEmpty)
+                            Padding(
+                              padding: EdgeInsets.only(right: 12.w),
+                              child: _chip(Icons.table_rows, rowColInfo),
+                            ),
+                        ],
                         if (seatBreakdown.isEmpty)
                           _chip(Icons.event_seat, '$seats seats'),
                       ],
