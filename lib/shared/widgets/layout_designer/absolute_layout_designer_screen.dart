@@ -194,6 +194,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
       canvasH = topMargin + rows * rowH + 40;
       canvasW = leftMargin + leftSeats * seatSpan + aisleW +
           rightSeats * seatSpan + leftMargin;
+n    // GUARANTEE: canvas must fit all rows, even if busDimensions is smaller
+    final minRequiredH = topMargin + rows * rowH + 40;
+    final actualH = canvasH < minRequiredH ? minRequiredH : canvasH;
+    final actualW = canvasW;
     }
 
     final vehicleName = config.maker.isNotEmpty
@@ -204,8 +208,8 @@ class _DesignerBodyState extends State<_DesignerBody> {
     }
 
     bloc.add(UpdateCanvasSize(
-      width: canvasW > 200 ? canvasW : 280,
-      height: canvasH > 200 ? canvasH : 896,
+      width: actualW > 200 ? actualW : 280,
+      height: actualH > 200 ? actualH : 896,
     ));
 
     bloc.add(AddComponent(

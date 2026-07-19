@@ -86,6 +86,7 @@ class LayoutListSection extends StatelessWidget {
                 l['total_seats']?.toString() ??
                 l['seat_count']?.toString() ??
                 '—';
+            final rowColInfo = _rowColInfo(l);
             // Per-type seat breakdown from snapshot components
             final seatBreakdown = _countByType(l);
             final updated =
@@ -170,6 +171,11 @@ class LayoutListSection extends StatelessWidget {
                           ...seatBreakdown.entries.map((e) => Padding(
                             padding: EdgeInsets.only(right: 12.w),
                             child: _chip(_iconForType(e.key), '${e.value} ${e.key}'),
+                        if (rowColInfo.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(right: 12.w),
+                            child: _chip(Icons.table_rows, rowColInfo),
+                          ),
                           )),
                         if (seatBreakdown.isEmpty)
                           _chip(Icons.event_seat, '$seats seats'),
@@ -306,6 +312,32 @@ class LayoutListSection extends StatelessWidget {
       };
       if (label != null) result[label] = (result[label] ?? 0) + 1;
     }
+n  /// Count unique rows and seats-per-side from component positions.
+  static String _rowColInfo(Map<String, dynamic> layout) {
+    final snap = layout['current_snapshot'];
+    var comps = (snap is Map ? snap['components'] : null) ?? layout['components'];
+    if (snap is String) {
+      try { final s = jsonDecode(snap); comps = s is Map ? s['components'] : null; } catch (_) {}
+    }
+    if (comps is! List || comps.isEmpty) return '';
+    // Collect seat positions (skip structural)
+    final rows = <double>{};
+    final structural = {'driverCabin', 'exitDoor', 'sideDoor', 'slidingDoor', 'frontDoor', 'rearDoor', 'aisle', 'emergency', 'lavatory', 'restaurantTable', 'empty'};
+    double minX = double.infinity, maxX = 0;
+    for (final c in comps) {
+      if (c is! Map) continue;
+      final t = c['type']?.toString() ?? '';
+      if (structural.contains(t)) continue;
+      final y = (c['y'] as num?)?.toDouble();
+      final x = (c['x'] as num?)?.toDouble();
+      if (y != null) rows.add(y);
+      if (x != null) { if (x < minX) minX = x; if (x > maxX) maxX = x; }
+    }
+    if (rows.isEmpty) return '';
+    // Estimate cols from X spread (rough)
+    final colEstimate = maxX > minX ? ((maxX - minX) / 50).round().clamp(1, 6) : 1;
+    return '${rows.length}R x ~${colEstimate}C';
+  }
     return result;
   }
 
