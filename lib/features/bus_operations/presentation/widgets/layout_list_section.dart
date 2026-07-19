@@ -1,6 +1,7 @@
 // Layout List Section — shared vehicle/layout list widget
 // Used by both Fleet and Owner dashboards.
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
 
@@ -267,9 +268,13 @@ class LayoutListSection extends StatelessWidget {
   }
   /// Parse current_snapshot components and count by readable type.
   static Map<String, int> _countByType(Map<String, dynamic> layout) {
-    final result = <String, int>{};
-    final snap = layout['current_snapshot'];
+    // current_snapshot may be a Map or a JSON string from DB
+    dynamic snap = layout['current_snapshot'];
+    if (snap is String) {
+      try { snap = jsonDecode(snap); } catch (_) { snap = null; }
+    }
     final comps = (snap is Map ? snap['components'] : null) ?? layout['components'];
+    // debugPrint('COUNT: found ${comps is List ? comps.length : 0} components');
     if (comps is! List) return result;
     // Structural types that should never be counted as seats
     const structural = {
