@@ -85,6 +85,8 @@ class LayoutListSection extends StatelessWidget {
                 l['total_seats']?.toString() ??
                 l['seat_count']?.toString() ??
                 '—';
+            // Per-type seat breakdown from snapshot components
+            final seatBreakdown = _countByType(l);
             final updated =
                 l['updated_at']?.toString() ??
                 l['created_at']?.toString() ??
@@ -161,16 +163,15 @@ class LayoutListSection extends StatelessWidget {
                         ),
                       ],
                     ),
-                    Gap(10),
                     Row(
                       children: [
-                        _chip(Icons.event_seat, '$seats seats'),
-                        SizedBox(width: 16.w),
-                        if (l['bus_plate'] != null)
-                          _chip(
-                            Icons.confirmation_num,
-                            l['bus_plate'].toString(),
-                          ),
+                        if (seatBreakdown.isNotEmpty)
+                          ...seatBreakdown.entries.map((e) => Padding(
+                            padding: EdgeInsets.only(right: 12.w),
+                            child: _chip(_iconForType(e.key), '${e.value} ${e.key}'),
+                          )),
+                        if (seatBreakdown.isEmpty)
+                          _chip(Icons.event_seat, '$seats seats'),
                       ],
                     ),
                     Gap(10),
@@ -264,4 +265,33 @@ class LayoutListSection extends StatelessWidget {
       ),
     );
   }
+n  /// Parse current_snapshot components and count by readable type.
+  static Map<String, int> _countByType(Map<String, dynamic> layout) {
+    final result = <String, int>{};
+    final snap = layout['current_snapshot'];
+    final comps = (snap is Map ? snap['components'] : null) ?? layout['components'];
+    if (comps is! List) return result;
+    for (final c in comps) {
+      if (c is! Map) continue;
+      final type = c['type']?.toString() ?? '';
+      final label = switch (type) {
+        'seat' => 'Seats',
+        'sleeperLower' => 'Low.Berth',
+        'sleeperUpper' => 'Upp.Berth',
+        'businessClassSeat' => 'Business',
+        'foldingSeat' => 'Folding',
+        _ => null,
+      };
+      if (label != null) result[label] = (result[label] ?? 0) + 1;
+    }
+    return result;
+  }
+
+  static IconData _iconForType(String label) => switch (label) {
+    'Seats' => Icons.event_seat,
+    'Low.Berth' || 'Upp.Berth' => Icons.airline_seat_flat,
+    'Business' => Icons.airline_seat_flat_angled,
+    'Folding' => Icons.chair_alt,
+    _ => Icons.event_seat,
+  };
 }
