@@ -265,7 +265,7 @@ class LayoutListSection extends StatelessWidget {
       ),
     );
   }
-n  /// Parse current_snapshot components and count by readable type.
+  /// Parse current_snapshot components and count by readable type.
   static Map<String, int> _countByType(Map<String, dynamic> layout) {
     final result = <String, int>{};
     final snap = layout['current_snapshot'];
