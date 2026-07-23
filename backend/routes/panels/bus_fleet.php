@@ -289,9 +289,11 @@ Route::prefix('api/v1/bus-fleet')
                         $nextStop = $waypoints[$currentIdx]['station'] ?? "Stop {$currentIdx}";
                     }
 
-                    $totalSeats = \Illuminate\Support\Facades\DB::table('transport_seat_bookings')
-                        ->where('trip_id', $activeTrip->id)
-                        ->count();
+                    // Total seats from the bus layout snapshot (NOT booking count).
+                    $busLayout = $busId
+                        ? \App\Models\Transport\AbsoluteBusLayout::find($busId)
+                        : null;
+                    $totalSeats = $busLayout?->totalSeats() ?? 0;
 
                     $bookedSeats = \Illuminate\Support\Facades\DB::table('transport_seat_bookings')
                         ->where('trip_id', $activeTrip->id)

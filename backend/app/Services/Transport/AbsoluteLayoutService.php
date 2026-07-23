@@ -288,11 +288,8 @@ class AbsoluteLayoutService
                 $result['booked_seat_numbers'] = $bookedSeats;
             }
 
-            // Count total seats from the snapshot components
-            $snapshot = $layout->current_snapshot;
-            $components = is_string($snapshot) ? json_decode($snapshot, true) : ($snapshot ?? []);
-            $seats = $components['seats'] ?? $components['components'] ?? $components ?? [];
-            $totalSeats = is_array($seats) ? count($seats) : 0;
+            // Count total seats from the snapshot metadata (bound-aware count).
+            $totalSeats = $layout->totalSeats();
 
             $bookedCount = 0;
             if (!empty($result['booked_seats']) && is_array($result['booked_seats'])) {
@@ -307,7 +304,7 @@ class AbsoluteLayoutService
 
             // Embed canvas dimensions inside current_snapshot so the Flutter
             // BLoC can read them via result.snapshot['canvas'].
-            $snapshotDecoded = is_string($snapshot) ? json_decode($snapshot, true) : ($snapshot ?? []);
+            $snapshotDecoded = is_string($layout->current_snapshot) ? json_decode($layout->current_snapshot, true) : ($layout->current_snapshot ?? []);
             if (is_array($snapshotDecoded)) {
                 $snapshotDecoded['canvas'] = [
                     'width' => (int) ($layout->canvas_width ?? 280),

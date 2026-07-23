@@ -77,21 +77,8 @@ class ReleaseExpiredSeatHolds extends Command
                     ->map(fn($v) => (int) $v)
                     ->toArray();
 
-                $totalSeats = DB::table('absolute_bus_layouts')
-                    ->where('id', $layoutId)
-                    ->value('current_snapshot');
-
-                $totalCount = 0;
-                if ($totalSeats) {
-                    $snapshot = is_string($totalSeats) ? json_decode($totalSeats, true) : $totalSeats;
-                    $components = $snapshot['components'] ?? [];
-                    foreach ($components as $c) {
-                        $t = $c['type'] ?? '';
-                        if (in_array($t, ['seat', 'businessClassSeat', 'foldingSeat', 'sleeperLower', 'sleeperUpper'])) {
-                            $totalCount++;
-                        }
-                    }
-                }
+                $layout = \App\Models\Transport\AbsoluteBusLayout::find($layoutId);
+                $totalCount = $layout?->totalSeats() ?? 0;
 
                 $available = $totalCount - count($heldSeats) - count($bookedSeats);
 

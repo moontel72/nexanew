@@ -1049,17 +1049,8 @@ class BusOwnerController extends Controller
             ->whereIn('status', ['booked', 'confirmed', 'boarded'])
             ->pluck('seat_number')->map(fn($v) => (int) $v)->toArray();
 
-        $snapshot = is_string($layout->current_snapshot ?? null)
-            ? json_decode($layout->current_snapshot, true)
-            : ($layout->current_snapshot ?? []);
-        $components = $snapshot['components'] ?? [];
-        $totalSeats = 0;
-        foreach ($components as $c) {
-            $type = $c['type'] ?? '';
-            if (in_array($type, ['seat', 'businessClassSeat', 'foldingSeat', 'sleeperLower', 'sleeperUpper'])) {
-                $totalSeats++;
-            }
-        }
+        // Count total seats from snapshot metadata (bound-aware, excludes structural).
+        $totalSeats = $layout->totalSeats();
 
         $available = $totalSeats - count($heldSeats) - count($bookedSeats);
 

@@ -17,11 +17,14 @@ class LayoutValidationState extends Equatable {
   final FeetInches predictedLength;
   final FeetInches predictedWidth;
 
+  /// Defaults to a 20′ Coaster — the mid-range South Asian vehicle.
+  /// Users MUST adjust dimensions to match their actual bus interior
+  /// via the "Physical Dimensions" section on the config screen.
   const LayoutValidationState({
     this.dimensions = const BusDimensions(
-      length: FeetInches(feet: 30, inches: 0),
-      width: FeetInches(feet: 7, inches: 6),
-      height: FeetInches(feet: 6, inches: 6),
+      length: FeetInches(feet: 20, inches: 0),
+      width: FeetInches(feet: 6, inches: 6),
+      height: FeetInches(feet: 5, inches: 6),
     ),
     this.registry = const ComponentRegistry(),
     this.rows = 14,

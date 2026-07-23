@@ -53,16 +53,15 @@ class ConsumerSuperAppService
                     ->where('booking_status', 'confirmed')
                     ->pluck('seat_number')->toArray();
 
-                $layout = DB::table('absolute_bus_layouts')
-                    ->where('bus_id', $trip->bus_id)->first();
+                $layout = \App\Models\Transport\AbsoluteBusLayout::find($trip->bus_id);
 
                 $results[] = [
                     'trip_id' => $trip->id,
                     'origin' => $trip->origin,
                     'destination' => $trip->destination,
                     'booked_seats' => $bookedSeats,
-                    'total_seats' => $layout ? ($layout->total_rows * ($layout->left_columns + $layout->right_columns) + $layout->driver_seats) : 0,
-                    'seat_grid' => $layout->raw_grid_json ?? [],
+                    'total_seats' => $layout?->totalSeats() ?? 0,
+                    'seat_grid' => $layout?->current_snapshot['components'] ?? [],
                 ];
             }
 

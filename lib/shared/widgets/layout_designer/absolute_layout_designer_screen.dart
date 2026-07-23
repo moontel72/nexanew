@@ -108,12 +108,16 @@ class _DesignerBodyState extends State<_DesignerBody> {
         final actualH = _state.canvasHeight;
         final expectedH = widget.busDimensions!.lengthPx;
         if ((actualH - expectedH).abs() > 1.0) {
-          debugPrint('MISMATCH: canvasHeight=$actualH expected=$expectedH '
-              '(${pxToFtIn(actualH)} vs ${pxToFtIn(expectedH)}) — fixing!');
-          _bloc.add(UpdateCanvasSize(
-            width: widget.busDimensions!.widthPx,
-            height: expectedH,
-          ));
+          debugPrint(
+            'MISMATCH: canvasHeight=$actualH expected=$expectedH '
+            '(${pxToFtIn(actualH)} vs ${pxToFtIn(expectedH)}) — fixing!',
+          );
+          _bloc.add(
+            UpdateCanvasSize(
+              width: widget.busDimensions!.widthPx,
+              height: expectedH,
+            ),
+          );
         } else {
           debugPrint('CANVAS_OK: ${pxToFtIn(actualH)} matches BusDimensions');
         }
@@ -159,7 +163,8 @@ class _DesignerBodyState extends State<_DesignerBody> {
     }
     // Berth stacking: lower (aisle half) + upper (window half) share
     // same floor column, each at 50% of registered width.
-    final bool hasBothBerths = registry != null &&
+    final bool hasBothBerths =
+        registry != null &&
         registry.parts.containsKey(SeatPartType.sleeperLower) &&
         registry.parts.containsKey(SeatPartType.sleeperUpper);
 
@@ -192,8 +197,12 @@ class _DesignerBodyState extends State<_DesignerBody> {
     } else {
       leftMargin = 8.0;
       canvasH = topMargin + rows * rowH + 40;
-      canvasW = leftMargin + leftSeats * seatSpan + aisleW +
-          rightSeats * seatSpan + leftMargin;
+      canvasW =
+          leftMargin +
+          leftSeats * seatSpan +
+          aisleW +
+          rightSeats * seatSpan +
+          leftMargin;
     }
 
     final vehicleName = config.maker.isNotEmpty
@@ -203,51 +212,74 @@ class _DesignerBodyState extends State<_DesignerBody> {
       bloc.add(SetLayoutDisplayName(vehicleName));
     }
 
-    bloc.add(UpdateCanvasSize(
-      width: canvasW > 200 ? canvasW : 280,
-      height: canvasH > 200 ? canvasH : 896,
-    ));
+    bloc.add(
+      UpdateCanvasSize(
+        width: canvasW > 200 ? canvasW : 280,
+        height: canvasH > 200 ? canvasH : 896,
+      ),
+    );
 
-    bloc.add(AddComponent(
-      type: ComponentType.driverCabin,
-      x: (canvasW - 80) / 2,
-      y: 16,
-    ));
+    bloc.add(
+      AddComponent(
+        type: ComponentType.driverCabin,
+        x: (canvasW - 80) / 2,
+        y: 16,
+      ),
+    );
 
     int counter = 1;
-      final busLenPx = widget.busDimensions?.lengthPx ?? double.infinity;
+    final busLenPx = widget.busDimensions?.lengthPx ?? double.infinity;
     for (int row = 0; row < rows; row++) {
       final y = topMargin + row * rowH;
 
-      final busLenPx = widget.busDimensions?.lengthPx ?? double.infinity;
-        if (y + seatLen > busLenPx) break; // stop at bus boundary
+      if (y + seatLen > busLenPx) break; // stop at bus boundary
       for (int s = 0; s < leftSeats; s++) {
         final x = leftMargin + s * seatSpan;
         if (hasBothBerths) {
-          bloc.add(AddComponent(
-            type: ComponentType.sleeperUpper,
-            x: x, y: y, width: halfWidth, height: seatLen,
-            berthLabel: 'U$counter',
-          ));
-          bloc.add(AddComponent(
-            type: ComponentType.sleeperLower,
-            x: x + halfWidth, y: y, width: halfWidth, height: seatLen,
-            berthLabel: 'L$counter',
-          ));
+          bloc.add(
+            AddComponent(
+              type: ComponentType.sleeperUpper,
+              x: x,
+              y: y,
+              width: halfWidth,
+              height: seatLen,
+              berthLabel: 'U$counter',
+            ),
+          );
+          bloc.add(
+            AddComponent(
+              type: ComponentType.sleeperLower,
+              x: x + halfWidth,
+              y: y,
+              width: halfWidth,
+              height: seatLen,
+              berthLabel: 'L$counter',
+            ),
+          );
         } else if (activeType == ComponentType.sleeperLower ||
-                   activeType == ComponentType.sleeperUpper) {
-          bloc.add(AddComponent(
-            type: activeType,
-            x: x, y: y, width: seatSpan, height: seatLen,
-            berthLabel: activeType == ComponentType.sleeperLower
-                ? 'L$counter' : 'U$counter',
-          ));
+            activeType == ComponentType.sleeperUpper) {
+          bloc.add(
+            AddComponent(
+              type: activeType,
+              x: x,
+              y: y,
+              width: seatSpan,
+              height: seatLen,
+              berthLabel: activeType == ComponentType.sleeperLower
+                  ? 'L$counter'
+                  : 'U$counter',
+            ),
+          );
         } else {
-          bloc.add(AddComponent(
-            type: activeType,
-            x: x, y: y,
-            seatId: 'S$counter', seatNumber: counter,
-          ));
+          bloc.add(
+            AddComponent(
+              type: activeType,
+              x: x,
+              y: y,
+              seatId: 'S$counter',
+              seatNumber: counter,
+            ),
+          );
         }
         counter++;
       }
@@ -256,30 +288,50 @@ class _DesignerBodyState extends State<_DesignerBody> {
       for (int s = 0; s < rightSeats; s++) {
         final x = rightStartX + s * seatSpan;
         if (hasBothBerths) {
-          bloc.add(AddComponent(
-            type: ComponentType.sleeperLower,
-            x: x, y: y, width: halfWidth, height: seatLen,
-            berthLabel: 'L$counter',
-          ));
-          bloc.add(AddComponent(
-            type: ComponentType.sleeperUpper,
-            x: x + halfWidth, y: y, width: halfWidth, height: seatLen,
-            berthLabel: 'U$counter',
-          ));
+          bloc.add(
+            AddComponent(
+              type: ComponentType.sleeperLower,
+              x: x,
+              y: y,
+              width: halfWidth,
+              height: seatLen,
+              berthLabel: 'L$counter',
+            ),
+          );
+          bloc.add(
+            AddComponent(
+              type: ComponentType.sleeperUpper,
+              x: x + halfWidth,
+              y: y,
+              width: halfWidth,
+              height: seatLen,
+              berthLabel: 'U$counter',
+            ),
+          );
         } else if (activeType == ComponentType.sleeperLower ||
-                   activeType == ComponentType.sleeperUpper) {
-          bloc.add(AddComponent(
-            type: activeType,
-            x: x, y: y, width: seatSpan, height: seatLen,
-            berthLabel: activeType == ComponentType.sleeperLower
-                ? 'L$counter' : 'U$counter',
-          ));
+            activeType == ComponentType.sleeperUpper) {
+          bloc.add(
+            AddComponent(
+              type: activeType,
+              x: x,
+              y: y,
+              width: seatSpan,
+              height: seatLen,
+              berthLabel: activeType == ComponentType.sleeperLower
+                  ? 'L$counter'
+                  : 'U$counter',
+            ),
+          );
         } else {
-          bloc.add(AddComponent(
-            type: activeType,
-            x: x, y: y,
-            seatId: 'S$counter', seatNumber: counter,
-          ));
+          bloc.add(
+            AddComponent(
+              type: activeType,
+              x: x,
+              y: y,
+              seatId: 'S$counter',
+              seatNumber: counter,
+            ),
+          );
         }
         counter++;
       }
@@ -798,5 +850,3 @@ class _SizeFieldState extends State<_SizeField> {
     onChanged: widget.onChanged,
   );
 }
-
-

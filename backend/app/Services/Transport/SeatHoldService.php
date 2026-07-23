@@ -366,10 +366,7 @@ class SeatHoldService
             ->toArray();
 
         $layout = AbsoluteBusLayout::where('id', $layoutId)->first();
-        $totalSeats = 0;
-        if ($layout && ! empty($layout->current_snapshot['components'])) {
-            $totalSeats = count($this->flattenSeatNumbers($layout->current_snapshot['components']));
-        }
+        $totalSeats = $layout?->totalSeats() ?? 0;
 
         $availableSeats = $totalSeats - count($heldSeats) - count($bookedSeats);
 
