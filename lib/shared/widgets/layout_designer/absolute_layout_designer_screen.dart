@@ -186,11 +186,20 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
     final double canvasH;
     final double canvasW;
+    // Use config's authoritative dimensions first (always set from config screen),
+    // then fall back to widget.busDimensions, then old expand-to-fit behaviour.
     final bd = widget.busDimensions;
-    if (bd != null) {
+    final double authoritativeLenPx = config.busLengthPx;
+    final double authoritativeWidPx = config.busWidthPx;
+    if (authoritativeLenPx > 0 && authoritativeWidPx > 0) {
+      canvasH = authoritativeLenPx;
+      canvasW = authoritativeWidPx;
+      final totalUsedW = leftSeats * seatSpan + aisleW + rightSeats * seatSpan;
+      final remainingW = canvasW - totalUsedW;
+      leftMargin = (remainingW / 2).floorToDouble().clamp(0.0, 28.0);
+    } else if (bd != null) {
       canvasH = bd.lengthPx;
       canvasW = bd.widthPx;
-      // Dynamic margins: perfectly center the layout
       final totalUsedW = leftSeats * seatSpan + aisleW + rightSeats * seatSpan;
       final remainingW = canvasW - totalUsedW;
       leftMargin = (remainingW / 2).floorToDouble().clamp(0.0, 28.0);
@@ -228,7 +237,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
     );
 
     int counter = 1;
-    final busLenPx = widget.busDimensions?.lengthPx ?? double.infinity;
+    // Authoritative boundary from config (always set), falling back to widget.
+    final busLenPx = config.busLengthPx > 0
+        ? config.busLengthPx
+        : (widget.busDimensions?.lengthPx ?? double.infinity);
     for (int row = 0; row < rows; row++) {
       final y = topMargin + row * rowH;
 

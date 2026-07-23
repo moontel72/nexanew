@@ -17,6 +17,8 @@ import 'package:trace_odd/shared/models/transport/layout_validation_result.dart'
 import 'package:trace_odd/shared/widgets/layout_designer/dimension_input_group.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/component_registry_panel.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/inter_seat_distance_input.dart';
+import 'package:trace_odd/shared/models/transport/feet_inches.dart';
+import 'package:trace_odd/shared/models/transport/component_registry.dart';
 
 class BusConfigSetupScreen extends StatefulWidget {
   final String companyId;
@@ -439,18 +441,38 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  _stepperField(
-                    label: 'Total Rows',
-                    value: _rowCount,
-                    min: 4,
-                    max: 24,
-                    onChanged: (v) {
-                      setState(() => _rowCount = v);
-                      _dispatchSeatMatrix();
+                  BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
+                    builder: (context, state) {
+                      // Compute max rows that physically fit in the bus.
+                      final partLen = state.registry.maxPartLength;
+                      final gap = state.registry.interSeatGap;
+                      final rowHPx = (partLen + gap).toPixels;
+                      final busLenPx = state.dimensions.length.toPixels;
+                      const topMargin = 100.0;
+                      final maxFit = rowHPx > 0
+                          ? ((busLenPx - topMargin) / rowHPx).floor()
+                          : 24;
+                      final dynamicMax = maxFit.clamp(4, 30);
+                      // Clamp current value if it exceeds new max.
+                      if (_rowCount > dynamicMax) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) setState(() => _rowCount = dynamicMax);
+                        });
+                      }
+                      return _stepperField(
+                        label: 'Total Rows',
+                        value: _rowCount,
+                        min: 4,
+                        max: dynamicMax,
+                        onChanged: (v) {
+                          setState(() => _rowCount = v);
+                          _dispatchSeatMatrix();
+                        },
+                        icon: Icons.table_rows,
+                        color: const Color(0xFF16A34A),
+                        wide: true,
+                      );
                     },
-                    icon: Icons.table_rows,
-                    color: const Color(0xFF16A34A),
-                    wide: true,
                   ),
                   const SizedBox(height: 8),
                   BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
@@ -794,6 +816,31 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     final effectiveMaker = _selectedMaker == 'Others'
         ? _otherMakerCtrl.text.trim()
         : (_selectedMaker ?? '');
+
+    // Pull physics data from the validation BloC if available.
+    LayoutValidationBloc? validationBloc;
+    FeetInches busLength = const FeetInches(feet: 20, inches: 0);
+    FeetInches busWidth = const FeetInches(feet: 6, inches: 6);
+    ComponentRegistry? registry;
+    try {
+      validationBloc = BlocProvider.of<LayoutValidationBloc>(context);
+      final vs = validationBloc.state;
+      busLength = vs.dimensions.length;
+      busWidth = vs.dimensions.width;
+      registry = vs.registry;
+      debugPrint(
+        'START_DESIGN: dims=${busLength.displayString} x ${busWidth.displayString} '
+        'rows=${vs.rows} L/R=${vs.leftSeats}/${vs.rightSeats} '
+        'registryParts=${vs.registry.parts.keys.map((k) => k.name).toList()}',
+      );
+    } catch (e) {
+      debugPrint('START_DESIGN: BlocProvider.of FAILED: $e — using defaults');
+      validationBloc = null;
+      registry = null;
+    }
+
+    // Embed authoritative dimensions into config so the designer
+    // never relies on a potentially-null Bloc lookup for boundary math.
     final config = BusConfig(
       numberPlate: _numberPlateCtrl.text.trim(),
       maker: effectiveMaker,
@@ -801,6 +848,8 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
       leftSeats: _leftSeats,
       rightSeats: _rightSeats,
       rowCount: _rowCount,
+      busLengthPx: busLength.toPixels,
+      busWidthPx: busWidth.toPixels,
     );
 
     // When a preset is selected, pass its ID so the designer fetches
@@ -817,22 +866,6 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     final isNewVehicle = widget.layoutId == null;
     final shouldClone = isNewVehicle && presetId != null;
 
-    // Pull physics data from the validation BloC if available.
-    LayoutValidationBloc? validationBloc;
-    try {
-      validationBloc = BlocProvider.of<LayoutValidationBloc>(context);
-      final vs = validationBloc.state;
-      debugPrint(
-        'START_DESIGN: dims=${vs.dimensions.length.displayString} x ${vs.dimensions.width.displayString} '
-        'rows=${vs.rows} L/R=${vs.leftSeats}/${vs.rightSeats} '
-        'registryParts=${vs.registry.parts.keys.map((k) => k.name).toList()}',
-      );
-    } catch (e) {
-      debugPrint('START_DESIGN: BlocProvider.of FAILED: $e');
-      validationBloc = null;
-    }
-    final vs = validationBloc?.state;
-
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => AbsoluteLayoutDesignerScreen(
@@ -842,8 +875,8 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
           config: config,
           apiPrefix: widget.apiPrefix,
           cloneFromTemplate: shouldClone,
-          busDimensions: vs?.dimensions,
-          registry: vs?.registry,
+          busDimensions: validationBloc?.state.dimensions,
+          registry: registry ?? validationBloc?.state.registry,
         ),
       ),
     );
@@ -995,6 +1028,8 @@ class BusConfig {
   final int leftSeats;
   final int rightSeats;
   final int rowCount;
+  final double busLengthPx; // authoritative interior length in pixels
+  final double busWidthPx; // authoritative interior width in pixels
 
   const BusConfig({
     this.numberPlate = '',
@@ -1003,6 +1038,8 @@ class BusConfig {
     this.leftSeats = 2,
     this.rightSeats = 2,
     this.rowCount = 14,
+    this.busLengthPx = 896.0,
+    this.busWidthPx = 280.0,
   });
 
   Map<String, dynamic> toJson() => {
