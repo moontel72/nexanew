@@ -195,9 +195,6 @@ class _DesignerBodyState extends State<_DesignerBody> {
       canvasW = leftMargin + leftSeats * seatSpan + aisleW +
           rightSeats * seatSpan + leftMargin;
     }
-    // GUARANTEE: canvas always fits all rows, even if busDimensions smaller
-    final minRequiredH = topMargin + rows * rowH + 40;
-    final canvasHfinal = canvasH < minRequiredH ? minRequiredH : canvasH;
 
     final vehicleName = config.maker.isNotEmpty
         ? '${config.numberPlate} | ${config.maker}'
@@ -208,7 +205,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
     bloc.add(UpdateCanvasSize(
       width: canvasW > 200 ? canvasW : 280,
-      height: canvasHfinal > 200 ? canvasHfinal : 896,
+      height: canvasH > 200 ? canvasH : 896,
     ));
 
     bloc.add(AddComponent(
@@ -218,9 +215,12 @@ class _DesignerBodyState extends State<_DesignerBody> {
     ));
 
     int counter = 1;
+      final busLenPx = widget.busDimensions?.lengthPx ?? double.infinity;
     for (int row = 0; row < rows; row++) {
       final y = topMargin + row * rowH;
 
+      final busLenPx = widget.busDimensions?.lengthPx ?? double.infinity;
+        if (y + seatLen > busLenPx) break; // stop at bus boundary
       for (int s = 0; s < leftSeats; s++) {
         final x = leftMargin + s * seatSpan;
         if (hasBothBerths) {

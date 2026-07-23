@@ -39,20 +39,14 @@ class LayoutDesignerBloc
     try {
       final r = await _api.get('${e.apiPrefix}/absolute-layouts/${e.layoutId}');
       final d = r?['data'];
-      // The layout data is stored in current_snapshot (JSON column).
-      // Top-level fields (display_name, canvas_width etc.) are separate columns.
       final Map<String, dynamic> snap;
       if (d is Map) {
         final snapshot = d['current_snapshot'];
         if (snapshot is Map) {
           snap = Map<String, dynamic>.from(snapshot as Map);
-          // Merge top-level fields so fromSnapshot finds display_name etc.
           if (!e.cloneFromTemplate) {
             snap['display_name'] ??= d['display_name']?.toString();
           } else {
-            // When cloning, discard the template's display_name and
-            // preserve the vehicle identity (plate) already set by
-            // _initFromConfig via SetLayoutDisplayName.
             snap['display_name'] = state.layout.displayName;
           }
           snap['layout_status'] ??= d['layout_status']?.toString();
@@ -64,9 +58,6 @@ class LayoutDesignerBloc
       }
       emit(
         state.copyWith(
-          // When cloning a template, discard the original layoutId so that
-          // Save creates a new record owned by the current user instead of
-          // attempting to update a preset that belongs to a different identity.
           layout: AbsoluteLayoutState.fromSnapshot(
             snap,
             layoutId: e.cloneFromTemplate ? null : e.layoutId,
@@ -83,7 +74,6 @@ class LayoutDesignerBloc
 
   void _onPreset(ApplyPreset e, Emitter<LayoutDesignerState> emit) {
     final preset = e.preset;
-    // Use physics‑based dimensions when registry is available.
     final registry = state.layout.registry;
     final seatSpec = registry?.parts[SeatPartType.standardSeat];
     final double aisleW = registry?.aisleWidth.toPixels ?? 40.0;
@@ -94,7 +84,6 @@ class LayoutDesignerBloc
     const double topMargin = 100.0;
     const double leftMargin = 28.0;
 
-    // Calculate row count from canvas height
     final int rows = ((preset.canvasHeight - topMargin - 40) / rowH)
         .round()
         .clamp(1, 30);
@@ -102,7 +91,6 @@ class LayoutDesignerBloc
     final List<AbsoluteLayoutComponent> newComponents = [];
     int seatCounter = 1;
 
-    // Driver cabin at front center
     final driverX = (preset.canvasWidth - 80) / 2;
     newComponents.add(
       AbsoluteLayoutComponent(
@@ -117,12 +105,8 @@ class LayoutDesignerBloc
       ),
     );
 
-    // Generate seat rows — linear S-series numbering (S1, S2, S3...)
     for (int row = 0; row < rows; row++) {
       final y = topMargin + row * rowH;
-
-      // Scan left-to-right: left seats, then right seats
-      // Left-side seats
       for (int s = 0; s < preset.leftSeats; s++) {
         final x = leftMargin + s * seatSpan;
         newComponents.add(
@@ -139,8 +123,6 @@ class LayoutDesignerBloc
         );
         seatCounter++;
       }
-
-      // Right-side seats
       final rightStartX = leftMargin + preset.leftSeats * seatSpan + aisleW;
       for (int s = 0; s < preset.rightSeats; s++) {
         final x = rightStartX + s * seatSpan;
@@ -172,13 +154,9 @@ class LayoutDesignerBloc
   }
 
   void _onAdd(AddComponent e, Emitter<LayoutDesignerState> emit) {
-    // Use physics‑based dimensions from the registry when available;
-    // fall back to hardcoded pixel values for backward compatibility.
     final registry = state.layout.registry;
     final partType = fromComponentType(e.type);
     final spec = partType != null ? registry?.parts[partType] : null;
-    // Use explicit dimensions if provided (e.g. half-width berth stacking),
-    // otherwise look up from registry.
     final double w =
         e.width ??
         spec?.pixelWidth ??
@@ -198,39 +176,37 @@ class LayoutDesignerBloc
             ? 44
             : 100);
 
-    // Auto-generate labels for sleeper berths based on existing count.
+    // Helper: count components within canvas bounds only (ignores overflow)
+    int inBounds(ComponentType t) => state.layout.components
+        .where(
+          (c) =>
+              c.type == t &&
+              c.isWithinBounds(
+                state.layout.canvasWidth,
+                state.layout.canvasHeight,
+              ),
+        )
+        .length;
+
     String? autoBerthLabel;
     String? autoSeatId;
     int? autoSeatNumber;
     if (e.type == ComponentType.sleeperUpper) {
-      final count = state.layout.components
-          .where((c) => c.type == ComponentType.sleeperUpper)
-          .length;
-      autoBerthLabel = 'U${count + 1}';
+      autoBerthLabel = 'U${inBounds(ComponentType.sleeperUpper) + 1}';
     } else if (e.type == ComponentType.sleeperLower) {
-      final count = state.layout.components
-          .where((c) => c.type == ComponentType.sleeperLower)
-          .length;
-      autoBerthLabel = 'L${count + 1}';
+      autoBerthLabel = 'L${inBounds(ComponentType.sleeperLower) + 1}';
     } else if (e.type == ComponentType.seat) {
-      // Auto-assign the next S-series number for standard seats.
-      final count = state.layout.components
-          .where((c) => c.type == ComponentType.seat)
-          .length;
-      autoSeatNumber = count + 1;
-      autoSeatId = 'S$autoSeatNumber';
+      final n = inBounds(ComponentType.seat) + 1;
+      autoSeatNumber = n;
+      autoSeatId = 'S$n';
     } else if (e.type == ComponentType.businessClassSeat) {
-      final count = state.layout.components
-          .where((c) => c.type == ComponentType.businessClassSeat)
-          .length;
-      autoSeatNumber = count + 1;
-      autoSeatId = 'B$autoSeatNumber';
+      final n = inBounds(ComponentType.businessClassSeat) + 1;
+      autoSeatNumber = n;
+      autoSeatId = 'B$n';
     } else if (e.type == ComponentType.foldingSeat) {
-      final count = state.layout.components
-          .where((c) => c.type == ComponentType.foldingSeat)
-          .length;
-      autoSeatNumber = count + 1;
-      autoSeatId = 'F$autoSeatNumber';
+      final n = inBounds(ComponentType.foldingSeat) + 1;
+      autoSeatNumber = n;
+      autoSeatId = 'F$n';
     }
 
     final comp = AbsoluteLayoutComponent(
@@ -283,8 +259,6 @@ class LayoutDesignerBloc
         .where((c) => c.id != e.id)
         .toList();
 
-    // Re-number remaining seats sequentially (S/B/F series).
-    // Skip seats that have a customLabel (manually labelled).
     int sN = 1, bN = 1, fN = 1;
     final newComponents = filtered.map((c) {
       if (c.type == ComponentType.seat && c.customLabel == null) {

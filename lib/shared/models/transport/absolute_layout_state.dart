@@ -148,9 +148,10 @@ class AbsoluteLayoutState {
     this.registry,
   });
 
-  /// Total number of ticketable seats.
-  int get totalSeats =>
-      components.where((c) => c.bookable && !c.isStructural).length;
+  /// Total ticketable seats within canvas bounds.
+  int get totalSeats => components
+      .where((c) => c.bookable && !c.isStructural && c.isWithinBounds(canvasWidth, canvasHeight))
+      .length;
 
   /// Find a component by ID.
   AbsoluteLayoutComponent? componentById(String id) {

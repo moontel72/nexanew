@@ -88,6 +88,10 @@ class AbsoluteLayoutComponent {
   /// and driver cabins are still interactive for selection/delete.
   bool get isEditable => true;
 
+  /// Whether this component lies within the canvas bounds.
+  bool isWithinBounds(double canvasW, double canvasH) =>
+      x >= 0 && y >= 0 && x + width <= canvasW && y + height <= canvasH;
+
   /// Default icon for this component type.
   IconData get defaultIcon => switch (type) {
     ComponentType.seat => Icons.event_seat,
