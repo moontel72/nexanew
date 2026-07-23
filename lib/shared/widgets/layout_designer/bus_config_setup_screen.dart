@@ -491,60 +491,15 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                     builder: (context, state) {
                       final dims = state.dimensions;
                       final reg = state.registry;
-                      final partW = reg.maxPartWidth;
                       final partL = reg.maxPartLength;
-                      final aisle = reg.aisleWidth;
                       final gap = reg.interSeatGap;
 
-                      // ── Compute dynamic column limits from bus WIDTH ──
-                      // Total seats possible per row (asymmetric OK: 2L+1R, 3L+0R, etc.)
-                      // Validation gate below will catch if chosen combo exceeds width.
-                      final totalWidthPx = dims.widthPx;
-                      final aislePx = aisle.toPixels;
-                      final seatWidthPx = partW.toPixels;
-                      final marginPx = 16.0; // small side margin
-                      final usableWidth = totalWidthPx - aislePx - marginPx;
-                      final totalSeatsPossible = seatWidthPx > 0
-                          ? (usableWidth / seatWidthPx).floor()
-                          : 6;
-                      final colMax = totalSeatsPossible.clamp(1, 8);
+                      // No hard limits — user can click freely.
+                      // RED/GREEN validation below tells them what fits.
+                      const colMax = 8;
+                      const rowMax = 50;
 
-                      // ── Compute dynamic row limits from bus LENGTH ──
-                      // Row n fits if: topMargin + frontPx + n*rowH + seatLen <= totalLen
-                      // n_max = (totalLen - frontPx - topMargin - seatLen) / rowH
-                      // maxRows = floor(n_max) + 1
-                      final totalLenPx = dims.lengthPx;
-                      final frontReservedPx = _hasFrontPartition
-                          ? ((_frontPartitionFt * 12 + _frontPartitionIn) * 4.0)
-                          : 0.0;
-                      final seatLenPx = partL.toPixels;
-                      final rowHPx = (partL + gap).toPixels;
-                      final effectiveTop = 100.0 + frontReservedPx;
-                      final rowMax = rowHPx > 0
-                          ? ((totalLenPx - effectiveTop - seatLenPx) / rowHPx)
-                                    .floor() +
-                                1
-                          : 30;
-                      final dynamicRowMax = rowMax.clamp(1, 50);
-
-                      // Clamp if current exceeds new max
-                      if (_rowCount > dynamicRowMax) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted)
-                            setState(() => _rowCount = dynamicRowMax);
-                        });
-                      }
-                      if (_leftSeats > colMax) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted) setState(() => _leftSeats = colMax);
-                        });
-                      }
-                      if (_rightSeats > colMax) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted) setState(() => _rightSeats = colMax);
-                        });
-                      }
-
+                      // ── Build required length for validation display ──
                       // ── Build total required length from actual row count ──
                       final requiredLen =
                           LayoutValidator.calculateRequiredLength(
@@ -635,7 +590,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                             label: 'Total Rows',
                             value: _rowCount,
                             min: 1,
-                            max: dynamicRowMax,
+                            max: rowMax,
                             onChanged: (v) {
                               setState(() => _rowCount = v);
                               _dispatchSeatMatrix();
