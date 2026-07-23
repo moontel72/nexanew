@@ -19,6 +19,7 @@ import 'package:trace_odd/shared/widgets/layout_designer/component_registry_pane
 import 'package:trace_odd/shared/widgets/layout_designer/inter_seat_distance_input.dart';
 import 'package:trace_odd/shared/models/transport/feet_inches.dart';
 import 'package:trace_odd/shared/models/transport/component_registry.dart';
+import 'package:trace_odd/shared/models/transport/layout_validator.dart';
 
 class BusConfigSetupScreen extends StatefulWidget {
   final String companyId;
@@ -477,164 +478,221 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       ],
                     ),
                 ] else ...[
-                  // Custom grid configuration
+                  // Custom grid configuration — ALL limits computed from physics
                   _sectionHeader(Icons.grid_view, 'DYNAMIC GRID CONFIGURATION'),
                   const SizedBox(height: 4),
-                  Text(
-                    'Define how many seats per side and how many rows.',
-                    style: TextStyle(
-                      color: const Color(0x60FFFFFF),
-                      fontSize: 11,
-                    ),
+                  const Text(
+                    'All limits are computed from bus dimensions + seat specs.',
+                    style: TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
                   ),
                   const SizedBox(height: 14),
 
-                  // Seat counts per side
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _stepperField(
-                          label: 'Left Seats',
-                          value: _leftSeats,
-                          min: 1,
-                          max: 4,
-                          onChanged: (v) {
-                            setState(() => _leftSeats = v);
-                            _dispatchSeatMatrix();
-                          },
-                          icon: Icons.event_seat,
-                          color: const Color(0xFF7C3AED),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 18,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0x20FFFFFF)),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Column(
-                          children: [
-                            Icon(
-                              Icons.swap_horiz,
-                              color: Color(0x30FFFFFF),
-                              size: 20,
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'AISLE',
-                              style: TextStyle(
-                                color: Color(0x30FFFFFF),
-                                fontSize: 8,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _stepperField(
-                          label: 'Right Seats',
-                          value: _rightSeats,
-                          min: 1,
-                          max: 4,
-                          onChanged: (v) {
-                            setState(() => _rightSeats = v);
-                            _dispatchSeatMatrix();
-                          },
-                          icon: Icons.event_seat,
-                          color: const Color(0xFF3B82F6),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
                   BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
                     builder: (context, state) {
-                      // Compute max rows that physically fit in remaining space.
-                      final partLen = state.registry.maxPartLength;
-                      final gap = state.registry.interSeatGap;
-                      final rowHPx = (partLen + gap).toPixels;
-                      final totalBusLenPx = state.dimensions.length.toPixels;
+                      final dims = state.dimensions;
+                      final reg = state.registry;
+                      final partW = reg.maxPartWidth;
+                      final partL = reg.maxPartLength;
+                      final aisle = reg.aisleWidth;
+                      final gap = reg.interSeatGap;
+
+                      // ── Compute dynamic column limits from bus WIDTH ──
+                      final totalWidthPx = dims.widthPx;
+                      final aislePx = aisle.toPixels;
+                      final seatWidthPx = partW.toPixels;
+                      final marginPx = 16.0; // small side margin
+                      final usableWidth = totalWidthPx - aislePx - marginPx;
+                      final maxSeatsPerSide = seatWidthPx > 0
+                          ? (usableWidth / seatWidthPx / 2).floor()
+                          : 6;
+                      final colMax = maxSeatsPerSide.clamp(1, 8);
+
+                      // ── Compute dynamic row limits from bus LENGTH ──
+                      final totalLenPx = dims.lengthPx;
                       final frontReservedPx = _hasFrontPartition
-                          ? ((_frontPartitionFt * 12 + _frontPartitionIn) *
-                                4.0) // 4 px/inch
+                          ? ((_frontPartitionFt * 12 + _frontPartitionIn) * 4.0)
                           : 0.0;
                       const topMargin = 100.0;
+                      final rowHPx = (partL + gap).toPixels;
                       final availableLenPx =
-                          totalBusLenPx - frontReservedPx - topMargin;
-                      final maxFit = rowHPx > 0
+                          totalLenPx - frontReservedPx - topMargin;
+                      final rowMax = rowHPx > 0
                           ? (availableLenPx / rowHPx).floor()
-                          : 24;
-                      final dynamicMax = maxFit.clamp(1, 30);
-                      // Clamp current value if it exceeds new max.
-                      if (_rowCount > dynamicMax) {
+                          : 30;
+                      final dynamicRowMax = rowMax.clamp(1, 50);
+
+                      // Clamp if current exceeds new max
+                      if (_rowCount > dynamicRowMax) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted) setState(() => _rowCount = dynamicMax);
+                          if (mounted)
+                            setState(() => _rowCount = dynamicRowMax);
                         });
                       }
-                      return _stepperField(
-                        label: 'Total Rows',
-                        value: _rowCount,
-                        min: 4,
-                        max: dynamicMax,
-                        onChanged: (v) {
-                          setState(() => _rowCount = v);
-                          _dispatchSeatMatrix();
-                        },
-                        icon: Icons.table_rows,
-                        color: const Color(0xFF16A34A),
-                        wide: true,
+                      if (_leftSeats > colMax) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) setState(() => _leftSeats = colMax);
+                        });
+                      }
+                      if (_rightSeats > colMax) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) setState(() => _rightSeats = colMax);
+                        });
+                      }
+
+                      // ── Build total required length from actual row count ──
+                      final requiredLen =
+                          LayoutValidator.calculateRequiredLength(
+                            rows: _rowCount,
+                            partLength: partL,
+                            interSeatGap: gap,
+                          );
+                      final availableLen = FeetInches.fromPixels(
+                        availableLenPx,
                       );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
-                    builder: (context, state) {
-                      final predicted = state.predictedLength;
-                      final busLen = state.dimensions.length;
-                      final fits = !predicted.isZero && predicted <= busLen;
-                      return Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF122442),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0x20FFFFFF)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              fits ? Icons.check_circle : Icons.info_outline,
-                              color: fits
-                                  ? const Color(0xFF16A34A)
-                                  : const Color(0xFFF59E0B),
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                predicted.isZero
-                                    ? '${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows requested'
-                                    : fits
-                                    ? '${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows — fits within ${busLen.displayString}'
-                                    : '${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows — exceeds ${busLen.displayString} (needs ${predicted.displayString})',
-                                style: TextStyle(
-                                  color: fits
-                                      ? const Color(0xFF16A34A)
-                                      : const Color(0xFFF59E0B),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                      final lengthOk =
+                          requiredLen <= availableLen || requiredLen.isZero;
+
+                      return Column(
+                        children: [
+                          // Seat counts per side
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _stepperField(
+                                  label: 'Left Seats',
+                                  value: _leftSeats,
+                                  min: 0,
+                                  max: colMax,
+                                  onChanged: (v) {
+                                    setState(() => _leftSeats = v);
+                                    _dispatchSeatMatrix();
+                                  },
+                                  icon: Icons.event_seat,
+                                  color: const Color(0xFF7C3AED),
                                 ),
                               ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 18,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: const Color(0x20FFFFFF),
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Column(
+                                  children: [
+                                    Icon(
+                                      Icons.swap_horiz,
+                                      color: Color(0x30FFFFFF),
+                                      size: 20,
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'AISLE',
+                                      style: TextStyle(
+                                        color: Color(0x30FFFFFF),
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _stepperField(
+                                  label: 'Right Seats',
+                                  value: _rightSeats,
+                                  min: 0,
+                                  max: colMax,
+                                  onChanged: (v) {
+                                    setState(() => _rightSeats = v);
+                                    _dispatchSeatMatrix();
+                                  },
+                                  icon: Icons.event_seat,
+                                  color: const Color(0xFF3B82F6),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          _stepperField(
+                            label: 'Total Rows',
+                            value: _rowCount,
+                            min: 1,
+                            max: dynamicRowMax,
+                            onChanged: (v) {
+                              setState(() => _rowCount = v);
+                              _dispatchSeatMatrix();
+                            },
+                            icon: Icons.table_rows,
+                            color: const Color(0xFF16A34A),
+                            wide: true,
+                          ),
+                          const SizedBox(height: 8),
+                          // ── Real-time dimension comparison ──
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF122442),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: lengthOk
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFFDC2626),
+                              ),
                             ),
-                          ],
-                        ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      lengthOk
+                                          ? Icons.check_circle
+                                          : Icons.warning_amber_rounded,
+                                      color: lengthOk
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFFDC2626),
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        lengthOk
+                                            ? 'Fits within ${availableLen.displayString} remaining space'
+                                            : 'NEEDS ${requiredLen.displayString} — exceeds available ${availableLen.displayString}',
+                                        style: TextStyle(
+                                          color: lengthOk
+                                              ? const Color(0xFF16A34A)
+                                              : const Color(0xFFDC2626),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '${_leftSeats}L + ${_rightSeats}R × $_rowCount rows'
+                                  '  |  part: ${partL.displayString}  |  gap: ${gap.displayString}'
+                                  '  |  required: ${requiredLen.displayString}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF667788),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       );
                     },
                   ),
