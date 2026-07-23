@@ -453,34 +453,49 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                     wide: true,
                   ),
                   const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF122442),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0x20FFFFFF)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.info_outline,
-                          color: Color(0x60FFFFFF),
-                          size: 16,
+                  BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
+                    builder: (context, state) {
+                      final predicted = state.predictedLength;
+                      final busLen = state.dimensions.length;
+                      final fits = !predicted.isZero && predicted <= busLen;
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF122442),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0x20FFFFFF)),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows = ${(_leftSeats + _rightSeats) * _rowCount} total seats',
-                            style: const TextStyle(
-                              color: Color(0xCCFFFFFF),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                        child: Row(
+                          children: [
+                            Icon(
+                              fits ? Icons.check_circle : Icons.info_outline,
+                              color: fits
+                                  ? const Color(0xFF16A34A)
+                                  : const Color(0xFFF59E0B),
+                              size: 16,
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                predicted.isZero
+                                    ? '${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows requested'
+                                    : fits
+                                    ? '${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows — fits within ${busLen.displayString}'
+                                    : '${_leftSeats}L + ${_rightSeats}R abreast × $_rowCount rows — exceeds ${busLen.displayString} (needs ${predicted.displayString})',
+                                style: TextStyle(
+                                  color: fits
+                                      ? const Color(0xFF16A34A)
+                                      : const Color(0xFFF59E0B),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ],
                 const SizedBox(height: 28),
@@ -509,13 +524,27 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.directions_bus, color: Color(0xFF7C3AED), size: 14),
+                                  const Icon(
+                                    Icons.directions_bus,
+                                    color: Color(0xFF7C3AED),
+                                    size: 14,
+                                  ),
                                   const SizedBox(width: 6),
-                                  const Text('Bus interior:', style: TextStyle(color: Color(0x80FFFFFF), fontSize: 11)),
+                                  const Text(
+                                    'Bus interior:',
+                                    style: TextStyle(
+                                      color: Color(0x80FFFFFF),
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     '${state.dimensions.length.displayString} x ${state.dimensions.width.displayString}',
-                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -523,22 +552,34 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                               Row(
                                 children: [
                                   Icon(
-                                    canProceed ? Icons.check_circle : Icons.warning_amber_rounded,
-                                    color: canProceed ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                    canProceed
+                                        ? Icons.check_circle
+                                        : Icons.warning_amber_rounded,
+                                    color: canProceed
+                                        ? const Color(0xFF16A34A)
+                                        : const Color(0xFFDC2626),
                                     size: 14,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    canProceed ? 'Layout fits:   ' : 'Layout needs:  ',
+                                    canProceed
+                                        ? 'Layout fits:   '
+                                        : 'Layout needs:  ',
                                     style: TextStyle(
-                                      color: canProceed ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                      color: canProceed
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFFDC2626),
                                       fontSize: 11,
                                     ),
                                   ),
                                   Text(
-                                    state.predictedLength.isZero ? '---' : '${state.predictedLength.displayString} x ${state.predictedWidth.displayString}',
+                                    state.predictedLength.isZero
+                                        ? '---'
+                                        : '${state.predictedLength.displayString} x ${state.predictedWidth.displayString}',
                                     style: TextStyle(
-                                      color: canProceed ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                      color: canProceed
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFFDC2626),
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -781,9 +822,11 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     try {
       validationBloc = BlocProvider.of<LayoutValidationBloc>(context);
       final vs = validationBloc.state;
-      debugPrint('START_DESIGN: dims=${vs.dimensions.length.displayString} x ${vs.dimensions.width.displayString} '
-          'rows=${vs.rows} L/R=${vs.leftSeats}/${vs.rightSeats} '
-          'registryParts=${vs.registry.parts.keys.map((k) => k.name).toList()}');
+      debugPrint(
+        'START_DESIGN: dims=${vs.dimensions.length.displayString} x ${vs.dimensions.width.displayString} '
+        'rows=${vs.rows} L/R=${vs.leftSeats}/${vs.rightSeats} '
+        'registryParts=${vs.registry.parts.keys.map((k) => k.name).toList()}',
+      );
     } catch (e) {
       debugPrint('START_DESIGN: BlocProvider.of FAILED: $e');
       validationBloc = null;

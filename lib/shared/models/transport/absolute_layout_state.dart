@@ -150,7 +150,12 @@ class AbsoluteLayoutState {
 
   /// Total ticketable seats within canvas bounds.
   int get totalSeats => components
-      .where((c) => c.bookable && !c.isStructural && c.isWithinBounds(canvasWidth, canvasHeight))
+      .where(
+        (c) =>
+            c.bookable &&
+            !c.isStructural &&
+            c.isWithinBounds(canvasWidth, canvasHeight),
+      )
       .length;
 
   /// Find a component by ID.
@@ -197,6 +202,8 @@ class AbsoluteLayoutState {
   }
 
   /// Serialize to a publishable snapshot.
+  /// Only components within canvas bounds are persisted — overflow
+  /// components are silently dropped to prevent phantom seat counts.
   Map<String, dynamic> toSnapshot() => {
     'canvas': {
       'canvas_width': canvasWidth,
@@ -204,7 +211,10 @@ class AbsoluteLayoutState {
       'deck_level': deckLevel,
     },
     'display_name': displayName,
-    'components': components.map((c) => c.toJson()).toList(),
+    'components': components
+        .where((c) => c.isWithinBounds(canvasWidth, canvasHeight))
+        .map((c) => c.toJson())
+        .toList(),
     'metadata': {...metadata, 'total_bookable_seats': totalSeats},
     if (registry != null) 'registry': registry!.toJson(),
   };
