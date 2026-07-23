@@ -58,6 +58,11 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   Map<String, dynamic>? _selectedPreset;
   bool _presetsLoading = false;
 
+  // ── Front Reserved Partition ──
+  bool _hasFrontPartition = false;
+  int _frontPartitionFt = 2;
+  int _frontPartitionIn = 0;
+
   static const List<String> _busMakers = [
     'Hino',
     'Mercedes-Benz',
@@ -244,6 +249,114 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 ),
                 const SizedBox(height: 12),
                 _buildDimensionsInputs(),
+                const SizedBox(height: 16),
+                // ═══════════════════════════════════════════
+                // FRONT RESERVED SPACE (Driver / VIP Partition)
+                // ═══════════════════════════════════════════
+                _sectionHeader(
+                  Icons.space_dashboard_rounded,
+                  'FRONT RESERVED SPACE',
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Reserve front space for driver cabin, VIP seats, or other uses.',
+                  style: TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
+                ),
+                const SizedBox(height: 10),
+                SwitchListTile(
+                  title: const Text(
+                    'Enable Front Reserved Space',
+                    style: TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  subtitle: Text(
+                    _hasFrontPartition
+                        ? '${_frontPartitionFt}\' ${_frontPartitionIn}" reserved at front'
+                        : 'No front reservation — all space available for seats',
+                    style: const TextStyle(
+                      color: Color(0xFF667788),
+                      fontSize: 11,
+                    ),
+                  ),
+                  value: _hasFrontPartition,
+                  activeColor: const Color(0xFF7C3AED),
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (v) {
+                    setState(() => _hasFrontPartition = v);
+                    _dispatchSeatMatrix();
+                  },
+                ),
+                if (_hasFrontPartition) ...[
+                  const SizedBox(height: 8),
+                  // Feet + Inches inputs for front reserved length
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _dimensionField(
+                          label: 'Feet',
+                          value: _frontPartitionFt,
+                          min: 0,
+                          max: 10,
+                          onChanged: (v) {
+                            setState(() => _frontPartitionFt = v);
+                            _dispatchSeatMatrix();
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _dimensionField(
+                          label: 'Inches',
+                          value: _frontPartitionIn,
+                          min: 0,
+                          max: 11,
+                          onChanged: (v) {
+                            setState(() => _frontPartitionIn = v);
+                            _dispatchSeatMatrix();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Remaining space display
+                  BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
+                    builder: (context, state) {
+                      final totalIn = state.dimensions.length.totalInches;
+                      final frontIn =
+                          (_frontPartitionFt * 12.0) + _frontPartitionIn;
+                      final remainingIn = (totalIn - frontIn).clamp(0, totalIn);
+                      final remFt = remainingIn ~/ 12;
+                      final remIn = (remainingIn % 12).round();
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF122442),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0x20FFFFFF)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.straighten,
+                              color: Color(0xFF16A34A),
+                              size: 14,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Remaining for seats: ${remFt}\' ${remIn}"',
+                              style: const TextStyle(
+                                color: Color(0xFF16A34A),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
                 const SizedBox(height: 16),
                 // Component Registry
                 _sectionHeader(Icons.category, 'COMPONENT REGISTRY'),
@@ -443,16 +556,22 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   const SizedBox(height: 14),
                   BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
                     builder: (context, state) {
-                      // Compute max rows that physically fit in the bus.
+                      // Compute max rows that physically fit in remaining space.
                       final partLen = state.registry.maxPartLength;
                       final gap = state.registry.interSeatGap;
                       final rowHPx = (partLen + gap).toPixels;
-                      final busLenPx = state.dimensions.length.toPixels;
+                      final totalBusLenPx = state.dimensions.length.toPixels;
+                      final frontReservedPx = _hasFrontPartition
+                          ? ((_frontPartitionFt * 12 + _frontPartitionIn) *
+                                4.0) // 4 px/inch
+                          : 0.0;
                       const topMargin = 100.0;
+                      final availableLenPx =
+                          totalBusLenPx - frontReservedPx - topMargin;
                       final maxFit = rowHPx > 0
-                          ? ((busLenPx - topMargin) / rowHPx).floor()
+                          ? (availableLenPx / rowHPx).floor()
                           : 24;
-                      final dynamicMax = maxFit.clamp(4, 30);
+                      final dynamicMax = maxFit.clamp(1, 30);
                       // Clamp current value if it exceeds new max.
                       if (_rowCount > dynamicMax) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -841,6 +960,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
 
     // Embed authoritative dimensions into config so the designer
     // never relies on a potentially-null Bloc lookup for boundary math.
+    final double frontPx = _hasFrontPartition
+        ? ((_frontPartitionFt * 12 + _frontPartitionIn) * 4.0)
+        : 0.0;
     final config = BusConfig(
       numberPlate: _numberPlateCtrl.text.trim(),
       maker: effectiveMaker,
@@ -850,6 +972,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
       rowCount: _rowCount,
       busLengthPx: busLength.toPixels,
       busWidthPx: busWidth.toPixels,
+      frontPartitionPx: frontPx,
     );
 
     // When a preset is selected, pass its ID so the designer fetches
@@ -1018,6 +1141,70 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
       ),
     );
   }
+
+  Widget _dimensionField({
+    required String label,
+    required int value,
+    required int min,
+    required int max,
+    required ValueChanged<int> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF122442),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0x20FFFFFF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0x80FFFFFF),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.remove, size: 18),
+                color: value > min
+                    ? const Color(0xFF7C3AED)
+                    : const Color(0xFF334455),
+                onPressed: value > min ? () => onChanged(value - 1) : null,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$value',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.add, size: 18),
+                color: value < max
+                    ? const Color(0xFF7C3AED)
+                    : const Color(0xFF334455),
+                onPressed: value < max ? () => onChanged(value + 1) : null,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Holds the bus configuration data collected before entering the canvas.
@@ -1030,6 +1217,7 @@ class BusConfig {
   final int rowCount;
   final double busLengthPx; // authoritative interior length in pixels
   final double busWidthPx; // authoritative interior width in pixels
+  final double frontPartitionPx; // reserved front space (driver/VIP) in pixels
 
   const BusConfig({
     this.numberPlate = '',
@@ -1040,6 +1228,7 @@ class BusConfig {
     this.rowCount = 14,
     this.busLengthPx = 896.0,
     this.busWidthPx = 280.0,
+    this.frontPartitionPx = 0.0,
   });
 
   Map<String, dynamic> toJson() => {

@@ -238,11 +238,14 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
     int counter = 1;
     // Authoritative boundary from config (always set), falling back to widget.
+    // Subtract front partition so rows are placed in the remaining rear space.
+    final frontPx = config.frontPartitionPx;
     final busLenPx = config.busLengthPx > 0
         ? config.busLengthPx
         : (widget.busDimensions?.lengthPx ?? double.infinity);
+    final effectiveTop = topMargin + frontPx; // shift rows down past partition
     for (int row = 0; row < rows; row++) {
-      final y = topMargin + row * rowH;
+      final y = effectiveTop + row * rowH;
 
       if (y + seatLen > busLenPx) break; // stop at bus boundary
       for (int s = 0; s < leftSeats; s++) {
