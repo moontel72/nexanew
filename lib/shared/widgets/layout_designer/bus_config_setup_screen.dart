@@ -508,16 +508,20 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       final colMax = maxSeatsPerSide.clamp(1, 8);
 
                       // ── Compute dynamic row limits from bus LENGTH ──
+                      // Row n fits if: topMargin + frontPx + n*rowH + seatLen <= totalLen
+                      // n_max = (totalLen - frontPx - topMargin - seatLen) / rowH
+                      // maxRows = floor(n_max) + 1
                       final totalLenPx = dims.lengthPx;
                       final frontReservedPx = _hasFrontPartition
                           ? ((_frontPartitionFt * 12 + _frontPartitionIn) * 4.0)
                           : 0.0;
-                      const topMargin = 100.0;
+                      final seatLenPx = partL.toPixels;
                       final rowHPx = (partL + gap).toPixels;
-                      final availableLenPx =
-                          totalLenPx - frontReservedPx - topMargin;
+                      final effectiveTop = 100.0 + frontReservedPx;
                       final rowMax = rowHPx > 0
-                          ? (availableLenPx / rowHPx).floor()
+                          ? ((totalLenPx - effectiveTop - seatLenPx) / rowHPx)
+                                    .floor() +
+                                1
                           : 30;
                       final dynamicRowMax = rowMax.clamp(1, 50);
 
@@ -546,9 +550,13 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                             partLength: partL,
                             interSeatGap: gap,
                           );
-                      final availableLen = FeetInches.fromPixels(
-                        availableLenPx,
-                      );
+                      final frontReservedFtIn = _hasFrontPartition
+                          ? FeetInches.normalize(
+                              _frontPartitionFt,
+                              _frontPartitionIn,
+                            )
+                          : FeetInches.zero;
+                      final availableLen = dims.length - frontReservedFtIn;
                       final lengthOk =
                           requiredLen <= availableLen || requiredLen.isZero;
 
