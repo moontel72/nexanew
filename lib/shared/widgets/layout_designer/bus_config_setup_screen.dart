@@ -497,15 +497,17 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       final gap = reg.interSeatGap;
 
                       // ── Compute dynamic column limits from bus WIDTH ──
+                      // Total seats possible per row (asymmetric OK: 2L+1R, 3L+0R, etc.)
+                      // Validation gate below will catch if chosen combo exceeds width.
                       final totalWidthPx = dims.widthPx;
                       final aislePx = aisle.toPixels;
                       final seatWidthPx = partW.toPixels;
                       final marginPx = 16.0; // small side margin
                       final usableWidth = totalWidthPx - aislePx - marginPx;
-                      final maxSeatsPerSide = seatWidthPx > 0
-                          ? (usableWidth / seatWidthPx / 2).floor()
+                      final totalSeatsPossible = seatWidthPx > 0
+                          ? (usableWidth / seatWidthPx).floor()
                           : 6;
-                      final colMax = maxSeatsPerSide.clamp(1, 8);
+                      final colMax = totalSeatsPossible.clamp(1, 8);
 
                       // ── Compute dynamic row limits from bus LENGTH ──
                       // Row n fits if: topMargin + frontPx + n*rowH + seatLen <= totalLen
