@@ -27,6 +27,8 @@ class BusConfigSetupScreen extends StatefulWidget {
   final String companyName;
   final String? layoutId;
   final String apiPrefix;
+  final BusDimensions? initialDimensions; // pre-loaded for edit
+  final ComponentRegistry? initialRegistry;
 
   const BusConfigSetupScreen({
     super.key,
@@ -34,6 +36,8 @@ class BusConfigSetupScreen extends StatefulWidget {
     required this.companyName,
     this.layoutId,
     this.apiPrefix = '/bus-owner',
+    this.initialDimensions,
+    this.initialRegistry,
   });
 
   @override
@@ -82,6 +86,19 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     _numberPlateCtrl = TextEditingController();
     _specsCtrl = TextEditingController();
     _otherMakerCtrl = TextEditingController();
+    // Apply pre-loaded dimensions/registry immediately (for edit flow).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        final vBloc = context.read<LayoutValidationBloc>();
+        if (widget.initialDimensions != null) {
+          vBloc.add(DimensionsChanged(widget.initialDimensions!));
+        }
+        if (widget.initialRegistry != null) {
+          vBloc.add(RegistryChanged(widget.initialRegistry!));
+        }
+      } catch (_) {}
+    });
     if (widget.layoutId != null) {
       _loadExistingLayout();
     }
@@ -125,39 +142,48 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
             d['specifications']?.toString() ?? d['notes']?.toString() ?? '';
 
         // ── Restore saved dimensions into validation Bloc ──
-        final canvasW = (d['canvas_width'] as num?)?.toDouble() ?? 280.0;
-        final canvasH = (d['canvas_height'] as num?)?.toDouble() ?? 896.0;
-        try {
-          final vBloc = context.read<LayoutValidationBloc>();
-          vBloc.add(DimensionsChanged(BusDimensions(
-            length: FeetInches.fromPixels(canvasH),
-            width: FeetInches.fromPixels(canvasW),
-            height: const FeetInches(feet: 5, inches: 6),
-          )));
-        } catch (_) {}
-
-        // ── Restore registry (aisle, gap, seat specs) ──
-        final snap = d['current_snapshot'];
-        Map<String, dynamic>? registryJson;
-        if (snap is Map) {
-          registryJson = snap['registry'] is Map
-              ? Map<String, dynamic>.from(snap['registry'])
-              : null;
+        // Skip if caller already provided them via initialDimensions (edit flow).
+        if (widget.initialDimensions == null) {
+          final canvasW = (d['canvas_width'] as num?)?.toDouble() ?? 280.0;
+          final canvasH = (d['canvas_height'] as num?)?.toDouble() ?? 896.0;
+          // ── Restore registry (aisle, gap, seat specs) ──
+          final snap = d['current_snapshot'];
+          Map<String, dynamic>? registryJson;
+          if (snap is Map) {
+            registryJson = snap['registry'] is Map
+                ? Map<String, dynamic>.from(snap['registry'])
+                : null;
+          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            try {
+              final vBloc = context.read<LayoutValidationBloc>();
+              vBloc.add(
+                DimensionsChanged(
+                  BusDimensions(
+                    length: FeetInches.fromPixels(canvasH),
+                    width: FeetInches.fromPixels(canvasW),
+                    height: const FeetInches(feet: 5, inches: 6),
+                  ),
+                ),
+              );
+              if (registryJson != null) {
+                final reg = ComponentRegistry.fromJson(registryJson);
+                vBloc.add(RegistryChanged(reg));
+              }
+            } catch (_) {}
+          });
         }
-        if (registryJson != null) {
-          try {
-            final reg = ComponentRegistry.fromJson(registryJson);
-            context.read<LayoutValidationBloc>().add(RegistryChanged(reg));
-          } catch (_) {}
-        }
 
-        // ── Restore seat config from snapshot canvas ──
-        final canvas = snap is Map ? snap['canvas'] : null;
-        if (canvas is Map) {
+        // ── Restore seat config from snapshot components ──
+        // Count actual rows/cols from components if canvas metadata missing.
+        final rawSnap = d['current_snapshot'];
+        final snapCanvas = rawSnap is Map ? rawSnap['canvas'] : null;
+        if (snapCanvas is Map) {
           setState(() {
-            _rowCount = (canvas['row_count'] as int?) ?? 14;
-            _leftSeats = (canvas['left_seats'] as int?) ?? 2;
-            _rightSeats = (canvas['right_seats'] as int?) ?? 2;
+            _rowCount = (snapCanvas['row_count'] as int?) ?? _rowCount;
+            _leftSeats = (snapCanvas['left_seats'] as int?) ?? _leftSeats;
+            _rightSeats = (snapCanvas['right_seats'] as int?) ?? _rightSeats;
           });
         }
       }

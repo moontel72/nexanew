@@ -29,6 +29,9 @@ import 'package:trace_odd/features/bus_operations/presentation/widgets/fleet_dis
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
+import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
+import 'package:trace_odd/shared/models/transport/feet_inches.dart';
+import 'package:trace_odd/shared/models/transport/component_registry.dart';
 
 abstract class FleetColors {
   static const bg = Color(0xFF0D1B2A);
@@ -424,7 +427,39 @@ class _FleetDashboardView extends StatelessWidget {
     BuildContext ctx,
     FleetDashboardState state,
     String layoutId,
-  ) {
+  ) async {
+    // Pre-fetch layout data so dimensions are available at Bloc creation.
+    BusDimensions? dims;
+    ComponentRegistry? reg;
+    try {
+      final api = ApiService();
+      final r = await api.get('/bus-fleet/absolute-layouts/$layoutId');
+      final d = r?['data'];
+      if (d is Map) {
+        final w = (d['canvas_width'] as num?)?.toDouble() ?? 280.0;
+        final h = (d['canvas_height'] as num?)?.toDouble() ?? 896.0;
+        dims = BusDimensions(
+          length: FeetInches.fromPixels(h),
+          width: FeetInches.fromPixels(w),
+          height: const FeetInches(feet: 5, inches: 6),
+        );
+        final snap = d['current_snapshot'];
+        if (snap is Map && snap['registry'] is Map) {
+          try {
+            reg = ComponentRegistry.fromJson(
+              Map<String, dynamic>.from(snap['registry']),
+            );
+          } catch (_) {
+            reg = null;
+          }
+        }
+      }
+    } catch (_) {
+      dims = null;
+      reg = null;
+    }
+
+    if (!ctx.mounted) return;
     Navigator.push(
       ctx,
       MaterialPageRoute(
@@ -435,6 +470,8 @@ class _FleetDashboardView extends StatelessWidget {
             companyName: state.ownerName,
             apiPrefix: '/bus-fleet',
             layoutId: layoutId,
+            initialDimensions: dims,
+            initialRegistry: reg,
           ),
         ),
       ),
