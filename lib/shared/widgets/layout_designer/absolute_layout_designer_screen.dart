@@ -238,12 +238,15 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
     int counter = 1;
     // Authoritative boundary from config (always set), falling back to widget.
-    // Subtract front partition so rows are placed in the remaining rear space.
     final frontPx = config.frontPartitionPx;
     final busLenPx = config.busLengthPx > 0
         ? config.busLengthPx
         : (widget.busDimensions?.lengthPx ?? double.infinity);
-    final effectiveTop = topMargin + frontPx; // shift rows down past partition
+    // When partition is enabled, it REPLACES the default top margin
+    // (not adds to it). Keep 40px minimum for the ruler strip.
+    final effectiveTop = frontPx > 0
+        ? (frontPx < 40 ? 40.0 : frontPx)
+        : topMargin;
     for (int row = 0; row < rows; row++) {
       final y = effectiveTop + row * rowH;
 
