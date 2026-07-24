@@ -20,6 +20,7 @@ import 'package:trace_odd/shared/widgets/layout_designer/inter_seat_distance_inp
 import 'package:trace_odd/shared/models/transport/feet_inches.dart';
 import 'package:trace_odd/shared/models/transport/component_registry.dart';
 import 'package:trace_odd/shared/models/transport/layout_validator.dart';
+import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
 
 class BusConfigSetupScreen extends StatefulWidget {
   final String companyId;
@@ -123,8 +124,35 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         _specsCtrl.text =
             d['specifications']?.toString() ?? d['notes']?.toString() ?? '';
 
-        // Restore seat config from canvas data
-        final canvas = d['canvas'];
+        // ── Restore saved dimensions into validation Bloc ──
+        final canvasW = (d['canvas_width'] as num?)?.toDouble() ?? 280.0;
+        final canvasH = (d['canvas_height'] as num?)?.toDouble() ?? 896.0;
+        try {
+          final vBloc = context.read<LayoutValidationBloc>();
+          vBloc.add(DimensionsChanged(BusDimensions(
+            length: FeetInches.fromPixels(canvasH),
+            width: FeetInches.fromPixels(canvasW),
+            height: const FeetInches(feet: 5, inches: 6),
+          )));
+        } catch (_) {}
+
+        // ── Restore registry (aisle, gap, seat specs) ──
+        final snap = d['current_snapshot'];
+        Map<String, dynamic>? registryJson;
+        if (snap is Map) {
+          registryJson = snap['registry'] is Map
+              ? Map<String, dynamic>.from(snap['registry'])
+              : null;
+        }
+        if (registryJson != null) {
+          try {
+            final reg = ComponentRegistry.fromJson(registryJson);
+            context.read<LayoutValidationBloc>().add(RegistryChanged(reg));
+          } catch (_) {}
+        }
+
+        // ── Restore seat config from snapshot canvas ──
+        final canvas = snap is Map ? snap['canvas'] : null;
         if (canvas is Map) {
           setState(() {
             _rowCount = (canvas['row_count'] as int?) ?? 14;
