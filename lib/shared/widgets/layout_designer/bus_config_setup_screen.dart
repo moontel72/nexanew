@@ -27,8 +27,14 @@ class BusConfigSetupScreen extends StatefulWidget {
   final String companyName;
   final String? layoutId;
   final String apiPrefix;
-  final BusDimensions? initialDimensions; // pre-loaded for edit
+  final BusDimensions? initialDimensions;
   final ComponentRegistry? initialRegistry;
+  final String? initialPlate;
+  final String? initialMaker;
+  final String? initialSpecs;
+  final int initialLeftSeats;
+  final int initialRightSeats;
+  final int initialRowCount;
 
   const BusConfigSetupScreen({
     super.key,
@@ -38,6 +44,12 @@ class BusConfigSetupScreen extends StatefulWidget {
     this.apiPrefix = '/bus-owner',
     this.initialDimensions,
     this.initialRegistry,
+    this.initialPlate,
+    this.initialMaker,
+    this.initialSpecs,
+    this.initialLeftSeats = 2,
+    this.initialRightSeats = 2,
+    this.initialRowCount = 14,
   });
 
   @override
@@ -86,7 +98,8 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     _numberPlateCtrl = TextEditingController();
     _specsCtrl = TextEditingController();
     _otherMakerCtrl = TextEditingController();
-    // Apply pre-loaded dimensions/registry immediately (for edit flow).
+
+    // Apply pre-loaded data immediately (edit flow).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       try {
@@ -99,7 +112,17 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         }
       } catch (_) {}
     });
-    if (widget.layoutId != null) {
+
+    // Use pre-loaded values directly (no API call needed).
+    if (widget.initialPlate != null) {
+      _numberPlateCtrl.text = widget.initialPlate!;
+      _selectedMaker = widget.initialMaker;
+      _specsCtrl.text = widget.initialSpecs ?? '';
+      _leftSeats = widget.initialLeftSeats;
+      _rightSeats = widget.initialRightSeats;
+      _rowCount = widget.initialRowCount;
+    } else if (widget.layoutId != null) {
+      // Fallback: load from API (only if caller didn't provide data).
       _loadExistingLayout();
     }
     _fetchPresets();
@@ -875,7 +898,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                                 ),
                                 label: Text(
                                   canProceed
-                                      ? 'Start Designing'
+                                      ? (widget.layoutId != null
+                                            ? 'Update Layout'
+                                            : 'Start Designing')
                                       : 'LAYOUT EXCEEDS CAPACITY',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,

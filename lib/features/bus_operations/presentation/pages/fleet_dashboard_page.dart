@@ -428,36 +428,56 @@ class _FleetDashboardView extends StatelessWidget {
     FleetDashboardState state,
     String layoutId,
   ) async {
-    // Pre-fetch layout data so dimensions are available at Bloc creation.
+    // Pre-fetch ALL layout data in one API call — no redundant requests.
     BusDimensions? dims;
     ComponentRegistry? reg;
+    String? plate;
+    String? maker;
+    String? specs;
+    int leftS = 2, rightS = 2, rows = 14;
     try {
       final api = ApiService();
       final r = await api.get('/bus-fleet/absolute-layouts/$layoutId');
       final d = r?['data'];
       if (d is Map) {
-        final w = (d['canvas_width'] as num?)?.toDouble() ?? 280.0;
-        final h = (d['canvas_height'] as num?)?.toDouble() ?? 896.0;
-        dims = BusDimensions(
-          length: FeetInches.fromPixels(h),
-          width: FeetInches.fromPixels(w),
-          height: const FeetInches(feet: 5, inches: 6),
-        );
+        // ── Dimensions ──
+        final w = (d['canvas_width'] as num?)?.toDouble();
+        final h = (d['canvas_height'] as num?)?.toDouble();
+        if (w != null && h != null && w > 0 && h > 0) {
+          dims = BusDimensions(
+            length: FeetInches.fromPixels(h),
+            width: FeetInches.fromPixels(w),
+            height: const FeetInches(feet: 5, inches: 6),
+          );
+        }
+        // ── Registry ──
         final snap = d['current_snapshot'];
         if (snap is Map && snap['registry'] is Map) {
           try {
             reg = ComponentRegistry.fromJson(
               Map<String, dynamic>.from(snap['registry']),
             );
-          } catch (_) {
-            reg = null;
-          }
+          } catch (_) {}
+        }
+        // ── Plate + Maker ──
+        final name = d['display_name']?.toString() ?? '';
+        if (name.contains(' | ')) {
+          final parts = name.split(' | ');
+          plate = parts[0];
+          maker = parts[1];
+        } else {
+          plate = name;
+        }
+        specs = d['specifications']?.toString();
+        // ── Seat config from snapshot canvas ──
+        final c = snap is Map ? snap['canvas'] : null;
+        if (c is Map) {
+          leftS = (c['left_seats'] as int?) ?? leftS;
+          rightS = (c['right_seats'] as int?) ?? rightS;
+          rows = (c['row_count'] as int?) ?? rows;
         }
       }
-    } catch (_) {
-      dims = null;
-      reg = null;
-    }
+    } catch (_) {}
 
     if (!ctx.mounted) return;
     Navigator.push(
@@ -472,6 +492,12 @@ class _FleetDashboardView extends StatelessWidget {
             layoutId: layoutId,
             initialDimensions: dims,
             initialRegistry: reg,
+            initialPlate: plate,
+            initialMaker: maker,
+            initialSpecs: specs,
+            initialLeftSeats: leftS,
+            initialRightSeats: rightS,
+            initialRowCount: rows,
           ),
         ),
       ),
