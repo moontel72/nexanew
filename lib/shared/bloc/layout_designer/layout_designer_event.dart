@@ -39,6 +39,7 @@ class AddComponent extends LayoutDesignerEvent {
   final String? berthLabel;
   final double? width;
   final double? height;
+  final bool isReverseFacing;
   const AddComponent({
     required this.type,
     required this.x,
@@ -48,9 +49,10 @@ class AddComponent extends LayoutDesignerEvent {
     this.height,
     this.seatNumber,
     this.berthLabel,
+    this.isReverseFacing = false,
   });
   @override
-  List<Object?> get props => [type, x, y, seatId, seatNumber, berthLabel];
+  List<Object?> get props => [type, x, y, seatId, seatNumber, berthLabel, isReverseFacing];
 }
 
 class SelectComponent extends LayoutDesignerEvent {

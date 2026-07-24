@@ -87,6 +87,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
   final TransformationController _transformCtrl = TransformationController();
   _CanvasTool _tool = _CanvasTool.select;
   ComponentType? _placingType;
+  bool _placingIsReverse = false;
+  double _placingWidth = 56.0;
+  double _placingHeight = 56.0;
   bool _wasSaving = false;
   bool _wasPublishing = false;
 
@@ -438,6 +441,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
                           setState(() {
                             _tool = _CanvasTool.placeComponent;
                             _placingType = type;
+                            _placingIsReverse = isReverse;
+                            _placingWidth = defW;
+                            _placingHeight = defH;
                           });
                           _bloc.add(const SelectComponent(null));
                         },
@@ -662,19 +668,35 @@ class _DesignerBodyState extends State<_DesignerBody> {
             _bloc.add(SelectComponent(id));
           } else if (_tool == _CanvasTool.placeComponent &&
               _placingType != null) {
-            _bloc.add(AddComponent(type: _placingType!, x: x, y: y));
+            _bloc.add(AddComponent(
+              type: _placingType!,
+              x: x,
+              y: y,
+              isReverseFacing: _placingIsReverse,
+              width: _placingWidth,
+              height: _placingHeight,
+            ));
             setState(() {
               _tool = _CanvasTool.select;
               _placingType = null;
+              _placingIsReverse = false;
             });
           }
         },
         onCanvasTap: (x, y) {
           if (_tool == _CanvasTool.placeComponent && _placingType != null) {
-            _bloc.add(AddComponent(type: _placingType!, x: x, y: y));
+            _bloc.add(AddComponent(
+              type: _placingType!,
+              x: x,
+              y: y,
+              isReverseFacing: _placingIsReverse,
+              width: _placingWidth,
+              height: _placingHeight,
+            ));
             setState(() {
               _tool = _CanvasTool.select;
               _placingType = null;
+              _placingIsReverse = false;
             });
           } else if (_tool == _CanvasTool.select) {
             _bloc.add(const SelectComponent(null));

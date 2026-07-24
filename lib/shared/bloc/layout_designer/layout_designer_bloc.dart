@@ -219,12 +219,29 @@ class LayoutDesignerBloc
       seatId: e.seatId ?? autoSeatId,
       seatNumber: e.seatNumber ?? autoSeatNumber,
       berthLabel: e.berthLabel ?? autoBerthLabel,
+      isReverseFacing: e.isReverseFacing,
     );
     final newComponents = [...state.layout.components, comp];
+
+    // Re-index all seats sequentially so new insertion doesn't leave gaps.
+    int sN = 1, bN = 1, fN = 1;
+    final reindexed = newComponents.map((c) {
+      if (c.type == ComponentType.seat && c.customLabel == null) {
+        return c.copyWith(seatId: 'S$sN', seatNumber: sN++);
+      }
+      if (c.type == ComponentType.businessClassSeat && c.customLabel == null) {
+        return c.copyWith(seatId: 'B$bN', seatNumber: bN++);
+      }
+      if (c.type == ComponentType.foldingSeat && c.customLabel == null) {
+        return c.copyWith(seatId: 'F$fN', seatNumber: fN++);
+      }
+      return c;
+    }).toList();
+
     emit(
       state.copyWith(
         layout: state.layout.copyWith(
-          components: newComponents,
+          components: reindexed,
           isDirty: true,
           selectedComponentId: comp.id,
         ),
