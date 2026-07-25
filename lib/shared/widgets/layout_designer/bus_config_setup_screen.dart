@@ -907,7 +907,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                             Expanded(
                               flex: 2,
                               child: ElevatedButton.icon(
-                                onPressed: canProceed ? _startDesigning : null,
+                                onPressed: (canProceed || widget.layoutId != null) ? _startDesigning : null,
                                 icon: const Icon(
                                   Icons.design_services,
                                   size: 18,
@@ -915,7 +915,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                                 label: Text(
                                   canProceed
                                       ? (widget.layoutId != null
-                                            ? 'Update Layout'
+                                            ? 'Save & Open Designer'
                                             : 'Start Designing')
                                       : 'LAYOUT EXCEEDS CAPACITY',
                                   style: const TextStyle(

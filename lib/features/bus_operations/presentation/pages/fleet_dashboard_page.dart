@@ -440,41 +440,54 @@ class _FleetDashboardView extends StatelessWidget {
       final r = await api.get('/bus-fleet/absolute-layouts/$layoutId');
       final d = r?['data'];
       if (d is Map) {
-        // ── Dimensions ──
-        final w = (d['canvas_width'] as num?)?.toDouble();
-        final h = (d['canvas_height'] as num?)?.toDouble();
-        if (w != null && h != null && w > 0 && h > 0) {
-          dims = BusDimensions(
-            length: FeetInches.fromPixels(h),
-            width: FeetInches.fromPixels(w),
-            height: const FeetInches(feet: 5, inches: 6),
-          );
+        // ── Dimensions from snapshot.canvas ──
+        final snap = d['current_snapshot'];
+        Map<String, dynamic>? snapMap;
+        if (snap is Map) { snapMap = Map<String, dynamic>.from(snap); }
+        final snapCanvas = snapMap?['canvas'];
+        if (snapCanvas is Map) {
+          final w = (snapCanvas['canvas_width'] as num?)?.toDouble();
+          final h = (snapCanvas['canvas_height'] as num?)?.toDouble();
+          if (w != null && h != null && w > 0 && h > 0) {
+            dims = BusDimensions(
+              length: FeetInches.fromPixels(h),
+              width: FeetInches.fromPixels(w),
+              height: const FeetInches(feet: 5, inches: 6),
+            );
+          }
         }
         // ── Registry ──
-        final snap = d['current_snapshot'];
-        if (snap is Map && snap['registry'] is Map) {
+        final regJson = snapMap?['registry'];
+        if (regJson is Map) {
           try {
-            reg = ComponentRegistry.fromJson(
-              Map<String, dynamic>.from(snap['registry']),
-            );
+            reg = ComponentRegistry.fromJson(Map<String, dynamic>.from(regJson));
           } catch (_) {}
         }
-        // ── Plate + Maker ──
-        final name = d['display_name']?.toString() ?? '';
-        if (name.contains(' | ')) {
-          final parts = name.split(' | ');
-          plate = parts[0];
-          maker = parts[1];
-        } else {
-          plate = name;
-        }
-        specs = d['specifications']?.toString();
-        // ── Seat config from snapshot canvas ──
-        final c = snap is Map ? snap['canvas'] : null;
-        if (c is Map) {
-          leftS = (c['left_seats'] as int?) ?? leftS;
-          rightS = (c['right_seats'] as int?) ?? rightS;
-          rows = (c['row_count'] as int?) ?? rows;
+        // ── Derive seat matrix from components ──
+        final comps = snapMap?['components'];
+        if (comps is List && comps.isNotEmpty) {
+          final structural = {'driverCabin','exitDoor','sideDoor','slidingDoor',
+            'frontDoor','rearDoor','aisle','emergency','lavatory','restaurantTable','empty'};
+          final ySet = <int>{};
+          int lC = 0, rC = 0;
+          double? firstY;
+          final midX = (w ?? 280) / 2;
+          for (final c in comps) {
+            if (c is! Map) continue;
+            final t = c['type']?.toString() ?? '';
+            if (structural.contains(t)) continue;
+            final y = (c['y'] as num?)?.toDouble();
+            final x = (c['x'] as num?)?.toDouble();
+            if (y == null || x == null) continue;
+            ySet.add((y / 5).round());
+            if (firstY == null) firstY = y;
+            if ((y - firstY!).abs() < 5) {
+              if (x < midX) lC++; else rC++;
+            }
+          }
+          leftS = lC.clamp(1, 4);
+          rightS = rC.clamp(1, 4);
+          rows = ySet.length.clamp(1, 30);
         }
       }
     } catch (_) {}
