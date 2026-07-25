@@ -35,6 +35,9 @@ class BusConfigSetupScreen extends StatefulWidget {
   final int initialLeftSeats;
   final int initialRightSeats;
   final int initialRowCount;
+  final bool initialHasFrontPartition;
+  final int initialFrontPartitionFt;
+  final int initialFrontPartitionIn;
 
   const BusConfigSetupScreen({
     super.key,
@@ -50,6 +53,9 @@ class BusConfigSetupScreen extends StatefulWidget {
     this.initialLeftSeats = 2,
     this.initialRightSeats = 2,
     this.initialRowCount = 14,
+    this.initialHasFrontPartition = false,
+    this.initialFrontPartitionFt = 2,
+    this.initialFrontPartitionIn = 0,
   });
 
   @override
@@ -100,7 +106,6 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     _otherMakerCtrl = TextEditingController();
 
     // Apply pre-loaded data immediately (edit flow).
-    // Apply pre-loaded data immediately (no deferred callback).
     if (widget.initialDimensions != null || widget.initialRegistry != null) {
       try {
         final vBloc = context.read<LayoutValidationBloc>();
@@ -114,13 +119,17 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     }
 
     // Use pre-loaded values directly (no API call needed).
-    if (widget.initialPlate != null) {
+    if (widget.initialPlate != null && widget.initialPlate!.isNotEmpty) {
       _numberPlateCtrl.text = widget.initialPlate!;
       _selectedMaker = widget.initialMaker;
       _specsCtrl.text = widget.initialSpecs ?? '';
       _leftSeats = widget.initialLeftSeats;
       _rightSeats = widget.initialRightSeats;
       _rowCount = widget.initialRowCount;
+      _hasFrontPartition = widget.initialHasFrontPartition;
+      _frontPartitionFt = widget.initialFrontPartitionFt;
+      _frontPartitionIn = widget.initialFrontPartitionIn;
+      _dispatchSeatMatrix();
     } else if (widget.layoutId != null) {
       // Fallback: load from API (only if caller didn't provide data).
       _loadExistingLayout();
@@ -164,65 +173,106 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         _specsCtrl.text =
             d['specifications']?.toString() ?? d['notes']?.toString() ?? '';
 
-        // ── Restore saved dimensions from snapshot ──
-        if (widget.initialDimensions == null) {
-          final snap = d['current_snapshot'];
-          if (snap is Map) {
-            // Canvas dimensions from snapshot.canvas (not top-level)
-            final snapCanvas = snap['canvas'];
-            double canvasW = 280.0, canvasH = 896.0;
-            if (snapCanvas is Map) {
-              canvasW = (snapCanvas['canvas_width'] as num?)?.toDouble() ?? canvasW;
-              canvasH = (snapCanvas['canvas_height'] as num?)?.toDouble() ?? canvasH;
-            }
-            // Registry from snapshot
-            final regJson = snap['registry'];
-            ComponentRegistry? reg;
-            if (regJson is Map) {
-              try {
-                reg = ComponentRegistry.fromJson(Map<String, dynamic>.from(regJson));
-              } catch (_) {}
-            }
-            // Dispatch to Bloc
+        final snap = d['current_snapshot'];
+        if (snap is Map) {
+          // Canvas dimensions from snapshot.canvas (not top-level)
+          final snapCanvas = snap['canvas'];
+          double canvasW = 280.0, canvasH = 896.0;
+          if (snapCanvas is Map) {
+            canvasW =
+                (snapCanvas['canvas_width'] as num?)?.toDouble() ?? canvasW;
+            canvasH =
+                (snapCanvas['canvas_height'] as num?)?.toDouble() ?? canvasH;
+          }
+          // Registry from snapshot
+          final regJson = snap['registry'];
+          ComponentRegistry? reg;
+          if (regJson is Map) {
             try {
-              final vBloc = context.read<LayoutValidationBloc>();
-              vBloc.add(DimensionsChanged(BusDimensions(
-                length: FeetInches.fromPixels(canvasH),
-                width: FeetInches.fromPixels(canvasW),
-                height: const FeetInches(feet: 5, inches: 6),
-              )));
-              if (reg != null) vBloc.add(RegistryChanged(reg));
+              reg = ComponentRegistry.fromJson(
+                Map<String, dynamic>.from(regJson),
+              );
             } catch (_) {}
-
-            // ── Derive seat matrix from component positions ──
-            final comps = snap['components'];
-            if (comps is List && comps.isNotEmpty) {
-              final structural = {'driverCabin','exitDoor','sideDoor','slidingDoor',
-                'frontDoor','rearDoor','aisle','emergency','lavatory','restaurantTable','empty'};
-              final ySet = <int>{};
-              int leftC = 0, rightC = 0;
-              double? firstY;
-              final midX = canvasW / 2;
-              for (final c in comps) {
-                if (c is! Map) continue;
-                final t = c['type']?.toString() ?? '';
-                if (structural.contains(t)) continue;
-                final y = (c['y'] as num?)?.toDouble();
-                final x = (c['x'] as num?)?.toDouble();
-                if (y == null || x == null) continue;
-                ySet.add((y / 5).round());
-                if (firstY == null) firstY = y;
-                if ((y - firstY!).abs() < 5) {
-                  if (x < midX) leftC++; else rightC++;
-                }
-              }
-              setState(() {
-                _rowCount = ySet.length.clamp(1, 30);
-                _leftSeats = leftC.clamp(1, 4);
-                _rightSeats = rightC.clamp(1, 4);
-              });
-              _dispatchSeatMatrix();
+          }
+          // Dispatch to Bloc (skip dims if already provided by caller)
+          try {
+            final vBloc = context.read<LayoutValidationBloc>();
+            if (widget.initialDimensions == null) {
+              vBloc.add(
+                DimensionsChanged(
+                  BusDimensions(
+                    length: FeetInches.fromPixels(canvasH),
+                    width: FeetInches.fromPixels(canvasW),
+                    height: const FeetInches(feet: 5, inches: 6),
+                  ),
+                ),
+              );
             }
+            if (reg != null) vBloc.add(RegistryChanged(reg));
+          } catch (_) {}
+
+          // ── Derive seat matrix from component positions ──
+          // ALWAYS run this — not gated behind initialDimensions == null.
+          final comps = snap['components'];
+          if (comps is List && comps.isNotEmpty) {
+            const structural = {
+              'driverCabin',
+              'exitDoor',
+              'sideDoor',
+              'slidingDoor',
+              'frontDoor',
+              'rearDoor',
+              'aisle',
+              'emergency',
+              'lavatory',
+              'restaurantTable',
+              'empty',
+            };
+            final ySet = <int>{};
+            int leftC = 0, rightC = 0;
+            double? firstY;
+            double minSeatY = double.infinity;
+            final midX = canvasW / 2;
+            for (final c in comps) {
+              if (c is! Map) continue;
+              final t = c['type']?.toString() ?? '';
+              if (structural.contains(t)) continue;
+              final y = (c['y'] as num?)?.toDouble();
+              final x = (c['x'] as num?)?.toDouble();
+              if (y == null || x == null) continue;
+              ySet.add(y.round());
+              if (y < minSeatY) minSeatY = y;
+              if (firstY == null) firstY = y;
+              if ((y - firstY!).abs() < 5) {
+                if (x < midX)
+                  leftC++;
+                else
+                  rightC++;
+              }
+            }
+            // ── Detect front reserved space (default topMargin = 100px) ──
+            const defaultTopMargin = 100.0;
+            bool hasFront = false;
+            int ftVal = 2, inVal = 0;
+            if (minSeatY > defaultTopMargin + 10 &&
+                minSeatY < double.infinity) {
+              final reservedPx = minSeatY - defaultTopMargin;
+              final reservedInches = (reservedPx / 4.0).round();
+              if (reservedInches > 0) {
+                hasFront = true;
+                ftVal = reservedInches ~/ 12;
+                inVal = reservedInches % 12;
+              }
+            }
+            setState(() {
+              _rowCount = ySet.length.clamp(1, 50);
+              _leftSeats = leftC.clamp(0, 8);
+              _rightSeats = rightC.clamp(0, 8);
+              _hasFrontPartition = hasFront;
+              _frontPartitionFt = ftVal;
+              _frontPartitionIn = inVal;
+            });
+            _dispatchSeatMatrix();
           }
         }
       }
@@ -907,7 +957,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                             Expanded(
                               flex: 2,
                               child: ElevatedButton.icon(
-                                onPressed: (canProceed || widget.layoutId != null) ? _startDesigning : null,
+                                onPressed:
+                                    (canProceed || widget.layoutId != null)
+                                    ? _startDesigning
+                                    : null,
                                 icon: const Icon(
                                   Icons.design_services,
                                   size: 18,
@@ -1361,4 +1414,3 @@ class BusConfig {
     'row_count': rowCount,
   };
 }
-

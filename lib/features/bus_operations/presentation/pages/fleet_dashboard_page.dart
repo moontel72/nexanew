@@ -436,15 +436,31 @@ class _FleetDashboardView extends StatelessWidget {
     String? maker;
     String? specs;
     int leftS = 2, rightS = 2, rows = 14;
+    bool hasFrontPartition = false;
+    int frontPartitionFt = 2, frontPartitionIn = 0;
     try {
       final api = ApiService();
       final r = await api.get('/bus-fleet/absolute-layouts/$layoutId');
       final d = r?['data'];
       if (d is Map) {
+        // ── Plate + Maker + Specs from display_name ──
+        final displayName =
+            d['display_name']?.toString() ?? d['name']?.toString() ?? '';
+        if (displayName.contains(' | ')) {
+          final parts = displayName.split(' | ');
+          plate = parts[0];
+          maker = parts.length > 1 ? parts[1] : null;
+        } else {
+          plate = displayName;
+        }
+        specs = d['specifications']?.toString() ?? d['notes']?.toString() ?? '';
+
         // ── Dimensions from snapshot.canvas ──
         final snap = d['current_snapshot'];
         Map<String, dynamic>? snapMap;
-        if (snap is Map) { snapMap = Map<String, dynamic>.from(snap); }
+        if (snap is Map) {
+          snapMap = Map<String, dynamic>.from(snap);
+        }
         final snapCanvas = snapMap?['canvas'];
         if (snapCanvas is Map) {
           final w = (snapCanvas['canvas_width'] as num?)?.toDouble();
@@ -461,18 +477,35 @@ class _FleetDashboardView extends StatelessWidget {
         final regJson = snapMap?['registry'];
         if (regJson is Map) {
           try {
-            reg = ComponentRegistry.fromJson(Map<String, dynamic>.from(regJson));
+            reg = ComponentRegistry.fromJson(
+              Map<String, dynamic>.from(regJson),
+            );
           } catch (_) {}
         }
         // ── Derive seat matrix from components ──
         final comps = snapMap?['components'];
         if (comps is List && comps.isNotEmpty) {
-          final structural = {'driverCabin','exitDoor','sideDoor','slidingDoor',
-            'frontDoor','rearDoor','aisle','emergency','lavatory','restaurantTable','empty'};
+          const structural = {
+            'driverCabin',
+            'exitDoor',
+            'sideDoor',
+            'slidingDoor',
+            'frontDoor',
+            'rearDoor',
+            'aisle',
+            'emergency',
+            'lavatory',
+            'restaurantTable',
+            'empty',
+          };
           final ySet = <int>{};
           int lC = 0, rC = 0;
           double? firstY;
-          final midX = (snapCanvas is Map ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280.0) : 280.0) / 2;
+          double minSeatY = double.infinity;
+          final canvasW = (snapCanvas is Map
+              ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280.0)
+              : 280.0);
+          final midX = canvasW / 2;
           for (final c in comps) {
             if (c is! Map) continue;
             final t = c['type']?.toString() ?? '';
@@ -480,15 +513,30 @@ class _FleetDashboardView extends StatelessWidget {
             final y = (c['y'] as num?)?.toDouble();
             final x = (c['x'] as num?)?.toDouble();
             if (y == null || x == null) continue;
-            ySet.add((y / 5).round());
+            ySet.add(y.round());
+            if (y < minSeatY) minSeatY = y;
             if (firstY == null) firstY = y;
             if ((y - firstY!).abs() < 5) {
-              if (x < midX) lC++; else rC++;
+              if (x < midX)
+                lC++;
+              else
+                rC++;
             }
           }
-          leftS = lC.clamp(1, 4);
-          rightS = rC.clamp(1, 4);
-          rows = ySet.length.clamp(1, 30);
+          leftS = lC.clamp(0, 8);
+          rightS = rC.clamp(0, 8);
+          rows = ySet.length.clamp(1, 50);
+          // ── Detect front reserved space (default topMargin = 100px) ──
+          const defaultTopMargin = 100.0;
+          if (minSeatY > defaultTopMargin + 10 && minSeatY < double.infinity) {
+            final reservedPx = minSeatY - defaultTopMargin;
+            final reservedInches = (reservedPx / 4.0).round();
+            if (reservedInches > 0) {
+              hasFrontPartition = true;
+              frontPartitionFt = reservedInches ~/ 12;
+              frontPartitionIn = reservedInches % 12;
+            }
+          }
         }
       }
     } catch (_) {}
@@ -502,6 +550,14 @@ class _FleetDashboardView extends StatelessWidget {
             final b = LayoutValidationBloc();
             if (dims != null) b.add(DimensionsChanged(dims));
             if (reg != null) b.add(RegistryChanged(reg));
+            // Pre-load seat matrix into Bloc so validation uses correct values.
+            b.add(
+              SeatMatrixChanged(
+                rows: rows,
+                leftSeats: leftS,
+                rightSeats: rightS,
+              ),
+            );
             return b;
           },
           child: BusConfigSetupScreen(
@@ -517,6 +573,9 @@ class _FleetDashboardView extends StatelessWidget {
             initialLeftSeats: leftS,
             initialRightSeats: rightS,
             initialRowCount: rows,
+            initialHasFrontPartition: hasFrontPartition,
+            initialFrontPartitionFt: frontPartitionFt,
+            initialFrontPartitionIn: frontPartitionIn,
           ),
         ),
       ),
