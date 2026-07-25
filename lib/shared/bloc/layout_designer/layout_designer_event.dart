@@ -1,4 +1,6 @@
-// Layout Designer Events
+// NEXATRACE — LAYOUT DESIGNER EVENTS
+// ====================================
+
 import 'package:equatable/equatable.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_component.dart';
 import 'package:trace_odd/shared/models/transport/absolute_layout_state.dart';
@@ -45,14 +47,24 @@ class AddComponent extends LayoutDesignerEvent {
     required this.x,
     required this.y,
     this.seatId,
-    this.width,
-    this.height,
     this.seatNumber,
     this.berthLabel,
+    this.width,
+    this.height,
     this.isReverseFacing = false,
   });
   @override
-  List<Object?> get props => [type, x, y, seatId, seatNumber, berthLabel, isReverseFacing];
+  List<Object?> get props => [
+    type,
+    x,
+    y,
+    seatId,
+    seatNumber,
+    berthLabel,
+    width,
+    height,
+    isReverseFacing,
+  ];
 }
 
 class SelectComponent extends LayoutDesignerEvent {
@@ -113,4 +125,12 @@ class SetLayoutRegistry extends LayoutDesignerEvent {
   const SetLayoutRegistry(this.registry);
   @override
   List<Object?> get props => [registry];
+}
+
+class SetLayoutMetadata extends LayoutDesignerEvent {
+  final String key;
+  final dynamic value;
+  const SetLayoutMetadata(this.key, this.value);
+  @override
+  List<Object?> get props => [key, value];
 }

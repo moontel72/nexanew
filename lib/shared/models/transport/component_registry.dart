@@ -76,15 +76,22 @@ class PartSpec extends Equatable {
   };
 
   factory PartSpec.fromJson(Map<String, dynamic> json) {
+    int p(dynamic v, int fb) {
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? fb;
+      return fb;
+    }
+
     return PartSpec(
       type: SeatPartType.values.firstWhere((e) => e.name == json['type']),
       length: FeetInches.normalize(
-        (json['length_ft'] as num?)?.toInt() ?? 0,
-        (json['length_in'] as num?)?.toInt() ?? 0,
+        p(json['length_ft'], 0),
+        p(json['length_in'], 0),
       ),
       width: FeetInches.normalize(
-        (json['width_ft'] as num?)?.toInt() ?? 0,
-        (json['width_in'] as num?)?.toInt() ?? 0,
+        p(json['width_ft'], 0),
+        p(json['width_in'], 0),
       ),
     );
   }
@@ -153,6 +160,14 @@ class ComponentRegistry extends Equatable {
   };
 
   factory ComponentRegistry.fromJson(Map<String, dynamic> json) {
+    // Helper: parse a numeric value that may arrive as int, double, or String.
+    int _parseInt(dynamic v, int fallback) {
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? fallback;
+      return fallback;
+    }
+
     final partsJson = (json['parts'] as Map<String, dynamic>?) ?? {};
     final parts = <SeatPartType, PartSpec>{};
     for (final e in partsJson.entries) {
@@ -167,12 +182,12 @@ class ComponentRegistry extends Equatable {
     return ComponentRegistry(
       parts: parts,
       aisleWidth: FeetInches.normalize(
-        (json['aisle_width_ft'] as num?)?.toInt() ?? 1,
-        (json['aisle_width_in'] as num?)?.toInt() ?? 6,
+        _parseInt(json['aisle_width_ft'], 1),
+        _parseInt(json['aisle_width_in'], 6),
       ),
       interSeatGap: FeetInches.normalize(
-        (json['inter_seat_gap_ft'] as num?)?.toInt() ?? 1,
-        (json['inter_seat_gap_in'] as num?)?.toInt() ?? 0,
+        _parseInt(json['inter_seat_gap_ft'], 1),
+        _parseInt(json['inter_seat_gap_in'], 0),
       ),
     );
   }

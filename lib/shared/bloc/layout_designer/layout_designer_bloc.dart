@@ -28,6 +28,7 @@ class LayoutDesignerBloc
     on<ClearDesignerError>(_onClear);
     on<SetLayoutDisplayName>(_onSetName);
     on<SetLayoutRegistry>(_onSetRegistry);
+    on<SetLayoutMetadata>(_onSetMetadata);
   }
 
   Future<void> _onInit(
@@ -392,5 +393,11 @@ class LayoutDesignerBloc
 
   void _onSetRegistry(SetLayoutRegistry e, Emitter<LayoutDesignerState> emit) {
     emit(state.copyWith(layout: state.layout.copyWith(registry: e.registry)));
+  }
+
+  void _onSetMetadata(SetLayoutMetadata e, Emitter<LayoutDesignerState> emit) {
+    final newMeta = Map<String, dynamic>.from(state.layout.metadata);
+    newMeta[e.key] = e.value;
+    emit(state.copyWith(layout: state.layout.copyWith(metadata: newMeta)));
   }
 }

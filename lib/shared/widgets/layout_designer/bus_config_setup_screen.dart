@@ -259,15 +259,21 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   rightC++;
               }
             }
-            // ── Detect front reserved space ──
-            // Default effectiveTop w/o partition = 100 px.  Any significant
-            // deviation indicates a user-set front reservation whose value
-            // IS minSeatY (not minSeatY minus the default).
-            const defaultTop = 100.0;
+            // ── Restore front reserved space from snapshot metadata ──
+            // Explicit metadata (from designer save) is authoritative.
+            final frontPxMeta = snap['front_partition_px'];
             bool hasFront = false;
             int ftVal = 2, inVal = 0;
-            if ((minSeatY - defaultTop).abs() > 20 &&
+            if (frontPxMeta is num && (frontPxMeta).toDouble() > 0) {
+              final reservedInches = ((frontPxMeta).toDouble() / 4.0).round();
+              if (reservedInches > 0) {
+                hasFront = true;
+                ftVal = reservedInches ~/ 12;
+                inVal = reservedInches % 12;
+              }
+            } else if ((minSeatY - 100.0).abs() > 20 &&
                 minSeatY < double.infinity) {
+              // Fallback: infer from seat positions.
               final reservedInches = (minSeatY / 4.0).round();
               if (reservedInches > 0) {
                 hasFront = true;

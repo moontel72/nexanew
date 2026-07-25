@@ -217,6 +217,8 @@ class AbsoluteLayoutState {
         .toList(),
     'metadata': {...metadata, 'total_bookable_seats': totalSeats},
     if (registry != null) 'registry': registry!.toJson(),
+    if (metadata.containsKey('front_partition_px'))
+      'front_partition_px': metadata['front_partition_px'],
   };
 
   /// Parse from a backend snapshot.

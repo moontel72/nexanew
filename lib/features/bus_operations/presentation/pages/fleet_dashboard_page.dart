@@ -535,10 +535,20 @@ class _FleetDashboardView extends StatelessWidget {
           leftS = lC.clamp(0, 8);
           rightS = rC.clamp(0, 8);
           rows = ySet.length.clamp(1, 50);
-          // ── Detect front reserved space (default topMargin = 100px) ──
-          const defaultTop = 100.0;
-          if ((minSeatY - defaultTop).abs() > 20 &&
+          // ── Restore front reserved space from snapshot metadata ──
+          // Explicit metadata (from designer save) is authoritative.
+          final frontPxMeta = snapMap?['front_partition_px'];
+          if (frontPxMeta is num && (frontPxMeta).toDouble() > 0) {
+            final px = (frontPxMeta).toDouble();
+            final reservedInches = (px / 4.0).round();
+            if (reservedInches > 0) {
+              hasFrontPartition = true;
+              frontPartitionFt = reservedInches ~/ 12;
+              frontPartitionIn = reservedInches % 12;
+            }
+          } else if ((minSeatY - 100.0).abs() > 20 &&
               minSeatY < double.infinity) {
+            // Fallback: infer from seat positions.
             final reservedInches = (minSeatY / 4.0).round();
             if (reservedInches > 0) {
               hasFrontPartition = true;

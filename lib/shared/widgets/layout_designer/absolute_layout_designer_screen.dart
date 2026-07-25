@@ -231,6 +231,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
       ),
     );
 
+    // Persist front partition for reliable round-trip detection.
+    bloc.add(SetLayoutMetadata('front_partition_px', config.frontPartitionPx));
+
     bloc.add(
       AddComponent(
         type: ComponentType.driverCabin,
@@ -668,14 +671,16 @@ class _DesignerBodyState extends State<_DesignerBody> {
             _bloc.add(SelectComponent(id));
           } else if (_tool == _CanvasTool.placeComponent &&
               _placingType != null) {
-            _bloc.add(AddComponent(
-              type: _placingType!,
-              x: x,
-              y: y,
-              isReverseFacing: _placingIsReverse,
-              width: _placingWidth,
-              height: _placingHeight,
-            ));
+            _bloc.add(
+              AddComponent(
+                type: _placingType!,
+                x: x,
+                y: y,
+                isReverseFacing: _placingIsReverse,
+                width: _placingWidth,
+                height: _placingHeight,
+              ),
+            );
             setState(() {
               _tool = _CanvasTool.select;
               _placingType = null;
@@ -685,14 +690,16 @@ class _DesignerBodyState extends State<_DesignerBody> {
         },
         onCanvasTap: (x, y) {
           if (_tool == _CanvasTool.placeComponent && _placingType != null) {
-            _bloc.add(AddComponent(
-              type: _placingType!,
-              x: x,
-              y: y,
-              isReverseFacing: _placingIsReverse,
-              width: _placingWidth,
-              height: _placingHeight,
-            ));
+            _bloc.add(
+              AddComponent(
+                type: _placingType!,
+                x: x,
+                y: y,
+                isReverseFacing: _placingIsReverse,
+                width: _placingWidth,
+                height: _placingHeight,
+              ),
+            );
             setState(() {
               _tool = _CanvasTool.select;
               _placingType = null;
