@@ -53,11 +53,11 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
       .toList();
 
   void _addPart(SeatPartType type) {
-    final spec = PartSpec.defaultFor(type);
-    _lenFtCtrl.text = spec.length.feet.toString();
-    _lenInCtrl.text = spec.length.inches.toString();
-    _widFtCtrl.text = spec.width.feet.toString();
-    _widInCtrl.text = spec.width.inches.toString();
+    // Start at 0 — no hardcoded defaults. User must enter dimensions.
+    _lenFtCtrl.text = '0';
+    _lenInCtrl.text = '0';
+    _widFtCtrl.text = '0';
+    _widInCtrl.text = '0';
     setState(() => _addingType = type);
   }
 
@@ -153,15 +153,23 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
             ),
           ),
           const SizedBox(height: 10),
-          // ── Active chips ──
+          // ── Active chips with dimensions ──
           if (widget.registry.parts.isNotEmpty) ...[
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: widget.registry.parts.entries.map((e) {
+                final spec = e.value;
+                final dimLabel =
+                    '${spec.length.displayString} × ${spec.width.displayString}';
                 return Chip(
+                  avatar: const Icon(
+                    Icons.straighten,
+                    size: 13,
+                    color: Color(0xFF7C3AED),
+                  ),
                   label: Text(
-                    e.key.name,
+                    '${e.key.name}  $dimLabel',
                     style: const TextStyle(color: Colors.white, fontSize: 11),
                   ),
                   deleteIcon: const Icon(
