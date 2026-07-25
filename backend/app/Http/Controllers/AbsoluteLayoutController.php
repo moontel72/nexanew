@@ -111,6 +111,7 @@ class AbsoluteLayoutController extends Controller
             'canvas' => 'sometimes|array',
             'components' => 'sometimes|array',
             'metadata' => 'sometimes|array',
+            'registry' => 'sometimes|array',
             'layout_status' => 'sometimes|string|in:draft,published',
         ]);
 
@@ -124,6 +125,7 @@ class AbsoluteLayoutController extends Controller
             if (!empty($canvas)) $snapshot['canvas'] = $canvas;
             if (!empty($validated['components'])) $snapshot['components'] = $validated['components'];
             if (!empty($validated['metadata'])) $snapshot['metadata'] = $validated['metadata'];
+            if (!empty($validated['registry'])) $snapshot['registry'] = $validated['registry'];
             if (!empty($snapshot)) $validated['current_snapshot'] = $snapshot;
         }
 
@@ -173,6 +175,7 @@ class AbsoluteLayoutController extends Controller
             'canvas' => 'sometimes|array',
             'components' => 'sometimes|array',
             'metadata' => 'sometimes|array',
+            'registry' => 'sometimes|array',
             'layout_status' => 'sometimes|string|in:draft,published',
         ]);
 
@@ -183,6 +186,7 @@ class AbsoluteLayoutController extends Controller
             if (!empty($canvas)) $snapshot['canvas'] = $canvas;
             if (!empty($validated['components'])) $snapshot['components'] = $validated['components'];
             if (!empty($validated['metadata'])) $snapshot['metadata'] = $validated['metadata'];
+            if (!empty($validated['registry'])) $snapshot['registry'] = $validated['registry'];
             if (!empty($snapshot)) $validated['current_snapshot'] = $snapshot;
         }
 

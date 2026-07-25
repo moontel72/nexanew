@@ -261,7 +261,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
             }
             // ── Restore front reserved space from snapshot metadata ──
             // Explicit metadata (from designer save) is authoritative.
-            final frontPxMeta = snap['front_partition_px'];
+            final frontPxMeta =
+                snap['metadata']?['front_partition_px'] ??
+                snap['front_partition_px'];
             bool hasFront = false;
             int ftVal = 2, inVal = 0;
             if (frontPxMeta is num && (frontPxMeta).toDouble() > 0) {

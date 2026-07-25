@@ -537,7 +537,9 @@ class _FleetDashboardView extends StatelessWidget {
           rows = ySet.length.clamp(1, 50);
           // ── Restore front reserved space from snapshot metadata ──
           // Explicit metadata (from designer save) is authoritative.
-          final frontPxMeta = snapMap?['front_partition_px'];
+          final frontPxMeta =
+              snapMap?['metadata']?['front_partition_px'] ??
+              snapMap?['front_partition_px'];
           if (frontPxMeta is num && (frontPxMeta).toDouble() > 0) {
             final px = (frontPxMeta).toDouble();
             final reservedInches = (px / 4.0).round();
