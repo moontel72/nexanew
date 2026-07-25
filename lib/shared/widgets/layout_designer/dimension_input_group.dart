@@ -44,6 +44,17 @@ class _DimensionInputGroupState extends State<DimensionInputGroup> {
   }
 
   @override
+  void didUpdateWidget(DimensionInputGroup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialValue.feet != oldWidget.initialValue.feet) {
+      _feetCtrl.text = widget.initialValue.feet.toString();
+    }
+    if (widget.initialValue.inches != oldWidget.initialValue.inches) {
+      _inchesCtrl.text = widget.initialValue.inches.toString();
+    }
+  }
+
+  @override
   void dispose() {
     _feetCtrl.dispose();
     _inchesCtrl.dispose();

@@ -956,6 +956,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         return Column(
           children: [
             DimensionInputGroup(
+              key: ValueKey('length_${dims.length.feet}_${dims.length.inches}'),
               label: 'Bus Inside Length (front to back)',
               initialValue: dims.length,
               minFeet: 8,
@@ -970,6 +971,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
             ),
             const SizedBox(height: 12),
             DimensionInputGroup(
+              key: ValueKey('width_${dims.width.feet}_${dims.width.inches}'),
               label: 'Bus Inside Width (left to right)',
               initialValue: dims.width,
               minFeet: 4,
@@ -984,6 +986,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
             ),
             const SizedBox(height: 12),
             DimensionInputGroup(
+              key: ValueKey('height_${dims.height.feet}_${dims.height.inches}'),
               label: 'Bus Inside Height',
               initialValue: dims.height,
               minFeet: 4,
