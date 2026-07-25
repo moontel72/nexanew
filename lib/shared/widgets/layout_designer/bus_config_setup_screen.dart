@@ -164,45 +164,66 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         _specsCtrl.text =
             d['specifications']?.toString() ?? d['notes']?.toString() ?? '';
 
-        // ── Restore saved dimensions into validation Bloc ──
-        // Skip if caller already provided them via initialDimensions (edit flow).
+        // ── Restore saved dimensions from snapshot ──
         if (widget.initialDimensions == null) {
-          final canvasW = (d['canvas_width'] as num?)?.toDouble() ?? 280.0;
-          final canvasH = (d['canvas_height'] as num?)?.toDouble() ?? 896.0;
-          // ── Restore registry (aisle, gap, seat specs) ──
           final snap = d['current_snapshot'];
-          Map<String, dynamic>? registryJson;
           if (snap is Map) {
-            registryJson = snap['registry'] is Map
-                ? Map<String, dynamic>.from(snap['registry'])
-                : null;
-          }
-          // Dispatch dimensions and registry to Bloc IMMEDIATELY (not deferred)
-          BusDimensions restoredDims = BusDimensions(
-            length: FeetInches.fromPixels(canvasH),
-            width: FeetInches.fromPixels(canvasW),
-            height: const FeetInches(feet: 5, inches: 6),
-          );
-          try {
-            context.read<LayoutValidationBloc>()
-              ..add(DimensionsChanged(restoredDims));
-            if (registryJson != null) {
-              context.read<LayoutValidationBloc>()
-                  .add(RegistryChanged(ComponentRegistry.fromJson(registryJson)));
+            // Canvas dimensions from snapshot.canvas (not top-level)
+            final snapCanvas = snap['canvas'];
+            double canvasW = 280.0, canvasH = 896.0;
+            if (snapCanvas is Map) {
+              canvasW = (snapCanvas['canvas_width'] as num?)?.toDouble() ?? canvasW;
+              canvasH = (snapCanvas['canvas_height'] as num?)?.toDouble() ?? canvasH;
             }
-          } catch (_) {}
-        }
+            // Registry from snapshot
+            final regJson = snap['registry'];
+            ComponentRegistry? reg;
+            if (regJson is Map) {
+              try {
+                reg = ComponentRegistry.fromJson(Map<String, dynamic>.from(regJson));
+              } catch (_) {}
+            }
+            // Dispatch to Bloc
+            try {
+              final vBloc = context.read<LayoutValidationBloc>();
+              vBloc.add(DimensionsChanged(BusDimensions(
+                length: FeetInches.fromPixels(canvasH),
+                width: FeetInches.fromPixels(canvasW),
+                height: const FeetInches(feet: 5, inches: 6),
+              )));
+              if (reg != null) vBloc.add(RegistryChanged(reg));
+            } catch (_) {}
 
-        // ── Restore seat config from snapshot components ──
-        // Count actual rows/cols from components if canvas metadata missing.
-        final rawSnap = d['current_snapshot'];
-        final snapCanvas = rawSnap is Map ? rawSnap['canvas'] : null;
-        if (snapCanvas is Map) {
-          setState(() {
-            _rowCount = (snapCanvas['row_count'] as int?) ?? _rowCount;
-            _leftSeats = (snapCanvas['left_seats'] as int?) ?? _leftSeats;
-            _rightSeats = (snapCanvas['right_seats'] as int?) ?? _rightSeats;
-          });
+            // ── Derive seat matrix from component positions ──
+            final comps = snap['components'];
+            if (comps is List && comps.isNotEmpty) {
+              final structural = {'driverCabin','exitDoor','sideDoor','slidingDoor',
+                'frontDoor','rearDoor','aisle','emergency','lavatory','restaurantTable','empty'};
+              final ySet = <int>{};
+              int leftC = 0, rightC = 0;
+              double? firstY;
+              final midX = canvasW / 2;
+              for (final c in comps) {
+                if (c is! Map) continue;
+                final t = c['type']?.toString() ?? '';
+                if (structural.contains(t)) continue;
+                final y = (c['y'] as num?)?.toDouble();
+                final x = (c['x'] as num?)?.toDouble();
+                if (y == null || x == null) continue;
+                ySet.add((y / 5).round());
+                if (firstY == null) firstY = y;
+                if ((y - firstY!).abs() < 5) {
+                  if (x < midX) leftC++; else rightC++;
+                }
+              }
+              setState(() {
+                _rowCount = ySet.length.clamp(1, 30);
+                _leftSeats = leftC.clamp(1, 4);
+                _rightSeats = rightC.clamp(1, 4);
+              });
+              _dispatchSeatMatrix();
+            }
+          }
         }
       }
     } catch (_) {
