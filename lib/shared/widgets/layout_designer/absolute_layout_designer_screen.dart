@@ -104,6 +104,17 @@ class _DesignerBodyState extends State<_DesignerBody> {
         (widget.layoutId == null || widget.cloneFromTemplate)) {
       _initFromConfig(widget.config!);
     }
+    // ── Apply registry from config screen ──
+    // For EDIT mode, the Bloc loads the old registry from the server.
+    // The registry passed from BusConfigSetupScreen may have been
+    // modified by the user (different parts / dimensions).  We must
+    // overwrite the server-loaded data with the user's latest values.
+    // InitDesigner was already queued; because the Bloc processes
+    // events sequentially, this SetLayoutRegistry runs AFTER the
+    // server data has loaded, guaranteeing the latest registry wins.
+    if (widget.registry != null) {
+      _bloc.add(SetLayoutRegistry(widget.registry!));
+    }
     // Post-frame: verify the canvas size matches BusDimensions.
     if (widget.busDimensions != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
