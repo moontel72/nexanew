@@ -29,6 +29,7 @@ import 'package:trace_odd/features/bus_operations/presentation/widgets/fleet_dis
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
+import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_event.dart';
 import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
 import 'package:trace_odd/shared/models/transport/feet_inches.dart';
 import 'package:trace_odd/shared/models/transport/component_registry.dart';
@@ -497,7 +498,12 @@ class _FleetDashboardView extends StatelessWidget {
       ctx,
       MaterialPageRoute(
         builder: (_) => BlocProvider<LayoutValidationBloc>(
-          create: (_) => LayoutValidationBloc(),
+          create: (_) {
+            final b = LayoutValidationBloc();
+            if (dims != null) b.add(DimensionsChanged(dims));
+            if (reg != null) b.add(RegistryChanged(reg));
+            return b;
+          },
           child: BusConfigSetupScreen(
             companyId: state.companyId,
             companyName: state.ownerName,
