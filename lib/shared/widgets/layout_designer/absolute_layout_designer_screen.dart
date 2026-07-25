@@ -175,13 +175,15 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final activeSpec = registry?.parts[activePartType];
     final double seatLen = activeSpec?.pixelLength ?? defaultSpec.pixelLength;
     final double fullWidth = activeSpec?.pixelWidth ?? defaultSpec.pixelWidth;
-    final double gapPx =
-        registry?.interSeatGap.toPixels ?? kDefaultInterSeatGap.toPixels;
+    final double gapPx = (registry?.interSeatGap.toPixels ?? 0) > 0
+        ? registry!.interSeatGap.toPixels
+        : kDefaultInterSeatGap.toPixels;
     final double rowH = seatLen + gapPx;
     final double seatSpan = fullWidth;
     final double halfWidth = hasBothBerths ? fullWidth / 2 : fullWidth;
-    final double aisleW =
-        registry?.aisleWidth.toPixels ?? kDefaultAisleWidth.toPixels;
+    final double aisleW = (registry?.aisleWidth.toPixels ?? 0) > 0
+        ? registry!.aisleWidth.toPixels
+        : kDefaultAisleWidth.toPixels;
     const double topMargin = 100.0;
     // Auto-calculate side margins so layout fills bus width evenly.
     // Cap at 7" (28px) max to avoid excessive gaps on large buses.

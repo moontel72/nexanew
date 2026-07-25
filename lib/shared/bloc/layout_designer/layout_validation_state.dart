@@ -26,7 +26,10 @@ class LayoutValidationState extends Equatable {
       width: FeetInches(feet: 6, inches: 6),
       height: FeetInches(feet: 5, inches: 6),
     ),
-    this.registry = const ComponentRegistry(),
+    this.registry = const ComponentRegistry(
+      aisleWidth: FeetInches.zero,
+      interSeatGap: FeetInches.zero,
+    ),
     this.rows = 14,
     this.leftSeats = 2,
     this.rightSeats = 2,
