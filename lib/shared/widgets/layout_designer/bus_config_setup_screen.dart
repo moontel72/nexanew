@@ -1361,3 +1361,4 @@ class BusConfig {
     'row_count': rowCount,
   };
 }
+
