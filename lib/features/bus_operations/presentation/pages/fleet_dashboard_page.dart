@@ -471,7 +471,7 @@ class _FleetDashboardView extends StatelessWidget {
           final ySet = <int>{};
           int lC = 0, rC = 0;
           double? firstY;
-          final midX = (w ?? 280) / 2;
+          final midX = (snapCanvas is Map ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280.0) : 280.0) / 2;
           for (final c in comps) {
             if (c is! Map) continue;
             final t = c['type']?.toString() ?? '';
