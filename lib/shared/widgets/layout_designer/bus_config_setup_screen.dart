@@ -100,8 +100,8 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     _otherMakerCtrl = TextEditingController();
 
     // Apply pre-loaded data immediately (edit flow).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    // Apply pre-loaded data immediately (no deferred callback).
+    if (widget.initialDimensions != null || widget.initialRegistry != null) {
       try {
         final vBloc = context.read<LayoutValidationBloc>();
         if (widget.initialDimensions != null) {
@@ -111,7 +111,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
           vBloc.add(RegistryChanged(widget.initialRegistry!));
         }
       } catch (_) {}
-    });
+    }
 
     // Use pre-loaded values directly (no API call needed).
     if (widget.initialPlate != null) {
@@ -177,25 +177,20 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 ? Map<String, dynamic>.from(snap['registry'])
                 : null;
           }
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            try {
-              final vBloc = context.read<LayoutValidationBloc>();
-              vBloc.add(
-                DimensionsChanged(
-                  BusDimensions(
-                    length: FeetInches.fromPixels(canvasH),
-                    width: FeetInches.fromPixels(canvasW),
-                    height: const FeetInches(feet: 5, inches: 6),
-                  ),
-                ),
-              );
-              if (registryJson != null) {
-                final reg = ComponentRegistry.fromJson(registryJson);
-                vBloc.add(RegistryChanged(reg));
-              }
-            } catch (_) {}
-          });
+          // Dispatch dimensions and registry to Bloc IMMEDIATELY (not deferred)
+          BusDimensions restoredDims = BusDimensions(
+            length: FeetInches.fromPixels(canvasH),
+            width: FeetInches.fromPixels(canvasW),
+            height: const FeetInches(feet: 5, inches: 6),
+          );
+          try {
+            context.read<LayoutValidationBloc>()
+              ..add(DimensionsChanged(restoredDims));
+            if (registryJson != null) {
+              context.read<LayoutValidationBloc>()
+                  .add(RegistryChanged(ComponentRegistry.fromJson(registryJson)));
+            }
+          } catch (_) {}
         }
 
         // ── Restore seat config from snapshot components ──
@@ -1043,8 +1038,8 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
 
     // Pull physics data from the validation BloC if available.
     LayoutValidationBloc? validationBloc;
-    FeetInches busLength = const FeetInches(feet: 20, inches: 0);
-    FeetInches busWidth = const FeetInches(feet: 6, inches: 6);
+    FeetInches busLength = const FeetInches(feet: 0, inches: 0);
+    FeetInches busWidth = const FeetInches(feet: 0, inches: 0);
     ComponentRegistry? registry;
     try {
       validationBloc = BlocProvider.of<LayoutValidationBloc>(context);
