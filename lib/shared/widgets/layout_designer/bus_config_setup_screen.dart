@@ -6,6 +6,8 @@
 //
 // 100% isolated from the legacy grid system.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/core/services/api_service.dart';
@@ -184,8 +186,15 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
             canvasH =
                 (snapCanvas['canvas_height'] as num?)?.toDouble() ?? canvasH;
           }
-          // Registry from snapshot
-          final regJson = snap['registry'];
+          // Registry from snapshot (may be a JSON string or native Map)
+          dynamic regJson = snap['registry'];
+          if (regJson is String) {
+            try {
+              regJson = jsonDecode(regJson);
+            } catch (_) {
+              regJson = null;
+            }
+          }
           ComponentRegistry? reg;
           if (regJson is Map) {
             try {
@@ -250,14 +259,16 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   rightC++;
               }
             }
-            // ── Detect front reserved space (default topMargin = 100px) ──
-            const defaultTopMargin = 100.0;
+            // ── Detect front reserved space ──
+            // Default effectiveTop w/o partition = 100 px.  Any significant
+            // deviation indicates a user-set front reservation whose value
+            // IS minSeatY (not minSeatY minus the default).
+            const defaultTop = 100.0;
             bool hasFront = false;
             int ftVal = 2, inVal = 0;
-            if (minSeatY > defaultTopMargin + 10 &&
+            if ((minSeatY - defaultTop).abs() > 20 &&
                 minSeatY < double.infinity) {
-              final reservedPx = minSeatY - defaultTopMargin;
-              final reservedInches = (reservedPx / 4.0).round();
+              final reservedInches = (minSeatY / 4.0).round();
               if (reservedInches > 0) {
                 hasFront = true;
                 ftVal = reservedInches ~/ 12;
