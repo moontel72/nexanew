@@ -52,12 +52,25 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
       .where((t) => !widget.registry.parts.containsKey(t))
       .toList();
 
+  bool get _isEditing =>
+      _addingType != null && widget.registry.parts.containsKey(_addingType);
+
   void _addPart(SeatPartType type) {
     // Start at 0 — no hardcoded defaults. User must enter dimensions.
     _lenFtCtrl.text = '0';
     _lenInCtrl.text = '0';
     _widFtCtrl.text = '0';
     _widInCtrl.text = '0';
+    setState(() => _addingType = type);
+  }
+
+  void _editPart(SeatPartType type) {
+    final existing = widget.registry.parts[type];
+    if (existing == null) return;
+    _lenFtCtrl.text = existing.length.feet.toString();
+    _lenInCtrl.text = existing.length.inches.toString();
+    _widFtCtrl.text = existing.width.feet.toString();
+    _widInCtrl.text = existing.width.inches.toString();
     setState(() => _addingType = type);
   }
 
@@ -153,7 +166,7 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
             ),
           ),
           const SizedBox(height: 10),
-          // ── Active chips with dimensions ──
+          // ── Active chips with dimensions (tap to edit) ──
           if (widget.registry.parts.isNotEmpty) ...[
             Wrap(
               spacing: 6,
@@ -162,24 +175,27 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
                 final spec = e.value;
                 final dimLabel =
                     '${spec.length.displayString} × ${spec.width.displayString}';
-                return Chip(
-                  avatar: const Icon(
-                    Icons.straighten,
-                    size: 13,
-                    color: Color(0xFF7C3AED),
+                return GestureDetector(
+                  onTap: () => _editPart(e.key),
+                  child: Chip(
+                    avatar: const Icon(
+                      Icons.straighten,
+                      size: 13,
+                      color: Color(0xFF7C3AED),
+                    ),
+                    label: Text(
+                      '${e.key.name}  $dimLabel',
+                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                    ),
+                    deleteIcon: const Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Colors.white54,
+                    ),
+                    onDeleted: () => _removePart(e.key),
+                    backgroundColor: const Color(0xFF1A2A3A),
+                    side: BorderSide.none,
                   ),
-                  label: Text(
-                    '${e.key.name}  $dimLabel',
-                    style: const TextStyle(color: Colors.white, fontSize: 11),
-                  ),
-                  deleteIcon: const Icon(
-                    Icons.close,
-                    size: 14,
-                    color: Colors.white54,
-                  ),
-                  onDeleted: () => _removePart(e.key),
-                  backgroundColor: const Color(0xFF1A2A3A),
-                  side: BorderSide.none,
                 );
               }).toList(),
             ),
@@ -240,7 +256,7 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7C3AED),
                   ),
-                  child: const Text('Add'),
+                  child: Text(_isEditing ? 'Update' : 'Add'),
                 ),
               ],
             ),
