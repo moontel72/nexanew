@@ -61,17 +61,18 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
         }
         return bloc;
       },
-    child: _DesignerBody(
-      companyId: companyId,
-      companyName: companyName,
-      layoutId: layoutId,
-      config: config,
-      apiPrefix: apiPrefix,
-      cloneFromTemplate: cloneFromTemplate,
-      busDimensions: busDimensions,
-      registry: registry,
-    ),
-  );
+      child: _DesignerBody(
+        companyId: companyId,
+        companyName: companyName,
+        layoutId: layoutId,
+        config: config,
+        apiPrefix: apiPrefix,
+        cloneFromTemplate: cloneFromTemplate,
+        busDimensions: busDimensions,
+        registry: registry,
+      ),
+    );
+  }
 }
 
 class _DesignerBody extends StatefulWidget {
