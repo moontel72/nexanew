@@ -156,8 +156,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
   LayoutDesignerBloc get _bloc => context.read<LayoutDesignerBloc>();
   AbsoluteLayoutState get _state => _bloc.state.layout;
 
-  /// Apply vehicle name + registry from the config screen AFTER
-  /// InitDesigner has loaded the saved snapshot from the server.
+  /// Apply vehicle name + registry + dimensions + front partition
+  /// from the config screen AFTER InitDesigner has loaded the saved
+  /// snapshot from the server.
   void _applyConfigData() {
     final cfg = widget.config;
     if (cfg != null) {
@@ -167,9 +168,20 @@ class _DesignerBodyState extends State<_DesignerBody> {
       if (name.isNotEmpty) {
         _bloc.add(SetLayoutDisplayName(name));
       }
+      // Front partition
+      _bloc.add(SetLayoutMetadata('front_partition_px', cfg.frontPartitionPx));
     }
     if (widget.registry != null) {
       _bloc.add(SetLayoutRegistry(widget.registry!));
+    }
+    // Canvas dimensions (bus inside length/width)
+    if (widget.busDimensions != null) {
+      _bloc.add(
+        UpdateCanvasSize(
+          width: widget.busDimensions!.widthPx,
+          height: widget.busDimensions!.lengthPx,
+        ),
+      );
     }
   }
 
