@@ -39,15 +39,28 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => BlocProvider(
-    create: (_) => LayoutDesignerBloc()
-      ..add(
-        InitDesigner(
-          apiPrefix: apiPrefix,
-          layoutId: layoutId,
-          cloneFromTemplate: cloneFromTemplate,
-        ),
-      ),
+  Widget build(BuildContext context) {
+    final vehicleName = config != null && config!.maker.isNotEmpty
+        ? '${config!.numberPlate} | ${config!.maker}'
+        : (config?.numberPlate ?? '');
+    return BlocProvider(
+      create: (_) {
+        final bloc = LayoutDesignerBloc()
+          ..add(
+            InitDesigner(
+              apiPrefix: apiPrefix,
+              layoutId: layoutId,
+              cloneFromTemplate: cloneFromTemplate,
+            ),
+          );
+        if (vehicleName.isNotEmpty) {
+          bloc.add(SetLayoutDisplayName(vehicleName));
+        }
+        if (registry != null) {
+          bloc.add(SetLayoutRegistry(registry!));
+        }
+        return bloc;
+      },
     child: _DesignerBody(
       companyId: companyId,
       companyName: companyName,
@@ -103,17 +116,6 @@ class _DesignerBodyState extends State<_DesignerBody> {
     if (widget.config != null &&
         (widget.layoutId == null || widget.cloneFromTemplate)) {
       _initFromConfig(widget.config!);
-    }
-    // ── Apply registry from config screen ──
-    // For EDIT mode, the Bloc loads the old registry from the server.
-    // The registry passed from BusConfigSetupScreen may have been
-    // modified by the user (different parts / dimensions).  We must
-    // overwrite the server-loaded data with the user's latest values.
-    // InitDesigner was already queued; because the Bloc processes
-    // events sequentially, this SetLayoutRegistry runs AFTER the
-    // server data has loaded, guaranteeing the latest registry wins.
-    if (widget.registry != null) {
-      _bloc.add(SetLayoutRegistry(widget.registry!));
     }
     // Post-frame: verify the canvas size matches BusDimensions.
     if (widget.busDimensions != null) {
