@@ -113,6 +113,10 @@ class ClearDesignerError extends LayoutDesignerEvent {
   const ClearDesignerError();
 }
 
+class ClearComponents extends LayoutDesignerEvent {
+  const ClearComponents();
+}
+
 class SetLayoutDisplayName extends LayoutDesignerEvent {
   final String name;
   const SetLayoutDisplayName(this.name);

@@ -29,6 +29,7 @@ class LayoutDesignerBloc
     on<SetLayoutDisplayName>(_onSetName);
     on<SetLayoutRegistry>(_onSetRegistry);
     on<SetLayoutMetadata>(_onSetMetadata);
+    on<ClearComponents>(_onClearComponents);
   }
 
   Future<void> _onInit(
@@ -399,5 +400,16 @@ class LayoutDesignerBloc
     final newMeta = Map<String, dynamic>.from(state.layout.metadata);
     newMeta[e.key] = e.value;
     emit(state.copyWith(layout: state.layout.copyWith(metadata: newMeta)));
+  }
+
+  void _onClearComponents(
+    ClearComponents e,
+    Emitter<LayoutDesignerState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        layout: state.layout.copyWith(components: const [], isDirty: true),
+      ),
+    );
   }
 }
