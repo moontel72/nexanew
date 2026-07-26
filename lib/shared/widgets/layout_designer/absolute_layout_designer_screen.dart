@@ -1,5 +1,7 @@
 // NEXATRACE — ABSOLUTE LAYOUT DESIGNER SCREEN (BLoC-driven)
 // Canvas math preserved — state management migrated to LayoutDesignerBloc.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
@@ -39,40 +41,26 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final vehicleName = config != null && config!.maker.isNotEmpty
-        ? '${config!.numberPlate} | ${config!.maker}'
-        : (config?.numberPlate ?? '');
-    return BlocProvider(
-      create: (_) {
-        final bloc = LayoutDesignerBloc()
-          ..add(
-            InitDesigner(
-              apiPrefix: apiPrefix,
-              layoutId: layoutId,
-              cloneFromTemplate: cloneFromTemplate,
-            ),
-          );
-        if (vehicleName.isNotEmpty) {
-          bloc.add(SetLayoutDisplayName(vehicleName));
-        }
-        if (registry != null) {
-          bloc.add(SetLayoutRegistry(registry!));
-        }
-        return bloc;
-      },
-      child: _DesignerBody(
-        companyId: companyId,
-        companyName: companyName,
-        layoutId: layoutId,
-        config: config,
-        apiPrefix: apiPrefix,
-        cloneFromTemplate: cloneFromTemplate,
-        busDimensions: busDimensions,
-        registry: registry,
+  Widget build(BuildContext context) => BlocProvider(
+    create: (_) => LayoutDesignerBloc()
+      ..add(
+        InitDesigner(
+          apiPrefix: apiPrefix,
+          layoutId: layoutId,
+          cloneFromTemplate: cloneFromTemplate,
+        ),
       ),
-    );
-  }
+    child: _DesignerBody(
+      companyId: companyId,
+      companyName: companyName,
+      layoutId: layoutId,
+      config: config,
+      apiPrefix: apiPrefix,
+      cloneFromTemplate: cloneFromTemplate,
+      busDimensions: busDimensions,
+      registry: registry,
+    ),
+  );
 }
 
 class _DesignerBody extends StatefulWidget {
@@ -106,6 +94,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
   double _placingHeight = 56.0;
   bool _wasSaving = false;
   bool _wasPublishing = false;
+  StreamSubscription? _loadSub;
 
   @override
   void initState() {
@@ -117,6 +106,20 @@ class _DesignerBodyState extends State<_DesignerBody> {
     if (widget.config != null &&
         (widget.layoutId == null || widget.cloneFromTemplate)) {
       _initFromConfig(widget.config!);
+    }
+    // ── Apply config name + registry AFTER server load completes ──
+    // InitDesigner loads the old snapshot asynchronously.  We must
+    // overwrite with the user's latest values from the setup screen
+    // only AFTER that load finishes (isLoading → false).
+    if (widget.config != null || widget.registry != null) {
+      bool loadStarted = false;
+      _loadSub = _bloc.stream.listen((s) {
+        if (s.isLoading) loadStarted = true;
+        if (!s.isLoading && loadStarted && mounted) {
+          _loadSub?.cancel();
+          _applyConfigData();
+        }
+      });
     }
     // Post-frame: verify the canvas size matches BusDimensions.
     if (widget.busDimensions != null) {
@@ -144,6 +147,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
   @override
   void dispose() {
+    _loadSub?.cancel();
     _transformCtrl.dispose();
     super.dispose();
   }
@@ -151,6 +155,23 @@ class _DesignerBodyState extends State<_DesignerBody> {
   // ── Helpers to read from BLoC ──
   LayoutDesignerBloc get _bloc => context.read<LayoutDesignerBloc>();
   AbsoluteLayoutState get _state => _bloc.state.layout;
+
+  /// Apply vehicle name + registry from the config screen AFTER
+  /// InitDesigner has loaded the saved snapshot from the server.
+  void _applyConfigData() {
+    final cfg = widget.config;
+    if (cfg != null) {
+      final name = cfg.maker.isNotEmpty
+          ? '${cfg.numberPlate} | ${cfg.maker}'
+          : cfg.numberPlate;
+      if (name.isNotEmpty) {
+        _bloc.add(SetLayoutDisplayName(name));
+      }
+    }
+    if (widget.registry != null) {
+      _bloc.add(SetLayoutRegistry(widget.registry!));
+    }
+  }
 
   void _initFromConfig(BusConfig config) {
     final bloc = _bloc;
