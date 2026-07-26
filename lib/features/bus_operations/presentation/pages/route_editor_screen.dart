@@ -2,7 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_state_widget.dart';
+import 'package:trace_odd/shared/widgets/fleet/fleet_shared_widgets.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/routes/route_editor_bloc.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/routes/route_editor_event.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/routes/route_editor_state.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/route_map_editor_painter.dart';
 
 class RouteEditorScreen extends StatelessWidget {
@@ -36,16 +41,17 @@ class _EditorView extends StatelessWidget {
         final bloc = ctx.read<RouteEditorBloc>();
         if (state.loading)
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            backgroundColor: AppColors.fleetBackground,
+            body: LoadingState(),
           );
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0D1B2A),
+          backgroundColor: AppColors.fleetBackground,
           appBar: AppBar(
-            backgroundColor: const Color(0xFF1B2838),
+            backgroundColor: AppColors.fleetCard,
             title: Text(
               state.routeId.isNotEmpty ? 'Edit Route' : 'New Route',
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.textInverse),
             ),
             actions: [
               TextButton(
@@ -56,13 +62,13 @@ class _EditorView extends StatelessWidget {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: AppColors.textInverse,
                         ),
                       )
                     : const Text(
                         'Save',
                         style: TextStyle(
-                          color: Color(0xFF00B4D8),
+                          color: AppColors.fleetAccent,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -112,7 +118,7 @@ class _EditorView extends StatelessWidget {
                 const Text(
                   'Waypoints (tap to add)',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textInverse,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -120,9 +126,9 @@ class _EditorView extends StatelessWidget {
                 Container(
                   height: 300,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1B2838),
+                    color: AppColors.fleetCard,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0x20FFFFFF)),
+                    border: Border.all(color: AppColors.shadowColor),
                   ),
                   child: GestureDetector(
                     onTapUp: (d) {
@@ -161,14 +167,14 @@ class _EditorView extends StatelessWidget {
                                 width: 20,
                                 height: 20,
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFF00B4D8),
+                                  color: AppColors.fleetAccent,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Center(
                                   child: Text(
                                     '×',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppColors.textInverse,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -190,15 +196,15 @@ class _EditorView extends StatelessWidget {
                           label: Text(
                             w.stationName,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.textInverse,
                               fontSize: 11,
                             ),
                           ),
-                          backgroundColor: const Color(0xFF1B2838),
+                          backgroundColor: AppColors.fleetCard,
                           deleteIcon: const Icon(
                             Icons.close,
                             size: 14,
-                            color: Colors.redAccent,
+                            color: AppColors.error,
                           ),
                           onDeleted: () => bloc.add(RemoveWaypoint(w.id)),
                         ),
@@ -212,7 +218,7 @@ class _EditorView extends StatelessWidget {
                   const Text(
                     'Vouchers',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textInverse,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -228,13 +234,15 @@ class _EditorView extends StatelessWidget {
                               v['code']?.toString() ??
                               'Voucher',
                           style: TextStyle(
-                            color: selected ? Colors.white : Colors.white70,
+                            color: selected
+                                ? AppColors.textInverse
+                                : AppColors.textSecondary,
                             fontSize: 11,
                           ),
                         ),
                         selected: selected,
-                        selectedColor: const Color(0xFF3B82F6),
-                        backgroundColor: const Color(0xFF1B2838),
+                        selectedColor: AppColors.fleetInfo,
+                        backgroundColor: AppColors.fleetCard,
                         onSelected: (_) => bloc.add(ToggleVoucher(id)),
                       );
                     }).toList(),
@@ -247,7 +255,7 @@ class _EditorView extends StatelessWidget {
                   const Text(
                     'Staff Bonuses',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textInverse,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -263,13 +271,15 @@ class _EditorView extends StatelessWidget {
                               b['name']?.toString() ??
                               'Bonus',
                           style: TextStyle(
-                            color: selected ? Colors.white : Colors.white70,
+                            color: selected
+                                ? AppColors.textInverse
+                                : AppColors.textSecondary,
                             fontSize: 11,
                           ),
                         ),
                         selected: selected,
-                        selectedColor: const Color(0xFFF59E0B),
-                        backgroundColor: const Color(0xFF1B2838),
+                        selectedColor: AppColors.fleetWarning,
+                        backgroundColor: AppColors.fleetCard,
                         onSelected: (_) => bloc.add(ToggleBonus(id)),
                       );
                     }).toList(),
@@ -279,9 +289,16 @@ class _EditorView extends StatelessWidget {
                 if (state.error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
-                    child: Text(
-                      state.error!,
-                      style: const TextStyle(color: Colors.redAccent),
+                    child: FleetErrorView(
+                      error: state.error!,
+                      onRetry: () => bloc.add(
+                        InitRouteEditor(
+                          routeId: state.routeId.isNotEmpty
+                              ? state.routeId
+                              : null,
+                          carrierCompanyId: state.carrierCompanyId,
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -317,18 +334,18 @@ class _EditorView extends StatelessWidget {
     final ctrl = TextEditingController(text: value);
     return TextField(
       controller: ctrl,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: AppColors.textInverse),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white54),
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
         enabledBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Color(0x30FFFFFF)),
+          borderSide: BorderSide(color: AppColors.borderLight),
         ),
         focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF00B4D8)),
+          borderSide: BorderSide(color: AppColors.fleetAccent),
         ),
         filled: true,
-        fillColor: const Color(0xFF1B2838),
+        fillColor: AppColors.fleetCard,
       ),
       onChanged: onChanged,
     );

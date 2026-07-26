@@ -2,7 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_state_widget.dart';
+import 'package:trace_odd/shared/widgets/fleet/fleet_shared_widgets.dart';
+
 import 'package:trace_odd/features/bus_operations/presentation/bloc/dispatch/fleet_dispatch_bloc.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/dispatch/fleet_dispatch_event.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/dispatch/fleet_dispatch_state.dart';
 
 const _shifts = ['morning', 'evening', 'night', 'special'];
 
@@ -92,7 +98,7 @@ class FleetDispatchDialog extends StatelessWidget {
         return Container(
           height: MediaQuery.of(ctx).size.height * 0.9,
           decoration: const BoxDecoration(
-            color: Color(0xFF0F172A),
+            color: AppColors.fleetSurface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
           ),
           child: Column(
@@ -104,12 +110,16 @@ class FleetDispatchDialog extends StatelessWidget {
                   vertical: 14,
                 ),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF1E293B),
+                  color: AppColors.fleetSurfaceLight,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.assignment, color: Colors.white, size: 22),
+                    const Icon(
+                      Icons.assignment,
+                      color: AppColors.textInverse,
+                      size: 22,
+                    ),
                     const Gap(10),
                     Expanded(
                       child: Text(
@@ -117,7 +127,7 @@ class FleetDispatchDialog extends StatelessWidget {
                             ? 'Edit Assignment'
                             : 'Fleet Dispatch',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textInverse,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
@@ -126,7 +136,7 @@ class FleetDispatchDialog extends StatelessWidget {
                     IconButton(
                       icon: const Icon(
                         Icons.close,
-                        color: Colors.white70,
+                        color: AppColors.textSecondary,
                         size: 20,
                       ),
                       onPressed: () => Navigator.pop(ctx),
@@ -138,7 +148,7 @@ class FleetDispatchDialog extends StatelessWidget {
               // Body
               Expanded(
                 child: state.loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const LoadingState()
                     : ListView(
                         padding: const EdgeInsets.all(20),
                         children: [
@@ -147,7 +157,7 @@ class FleetDispatchDialog extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: AppColors.textInverse,
                             ),
                           ),
                           const Gap(8),
@@ -182,7 +192,7 @@ class FleetDispatchDialog extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: AppColors.textInverse,
                             ),
                           ),
                           const Gap(8),
@@ -278,17 +288,19 @@ class FleetDispatchDialog extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: AppColors.textInverse,
                             ),
                           ),
                           DropdownButtonFormField<String>(
                             value: state.selectedReturn,
-                            dropdownColor: const Color(0xFF1E293B),
-                            style: const TextStyle(color: Colors.white),
+                            dropdownColor: AppColors.fleetSurfaceLight,
+                            style: const TextStyle(
+                              color: AppColors.textInverse,
+                            ),
                             decoration: const InputDecoration(
                               border: OutlineInputBorder(),
                               filled: true,
-                              fillColor: Color(0xFF1E293B),
+                              fillColor: AppColors.fleetSurfaceLight,
                             ),
                             items: const [
                               DropdownMenuItem(
@@ -308,17 +320,47 @@ class FleetDispatchDialog extends StatelessWidget {
                           if (state.error != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 12),
-                              child: Text(
-                                state.error!,
-                                style: const TextStyle(color: Colors.redAccent),
+                              child: FleetErrorView(
+                                error: state.error!,
+                                onRetry: () => bloc.add(
+                                  InitDispatch(
+                                    apiPrefix: state.apiPrefix,
+                                    busCompanyId: busCompanyId,
+                                    routeId: state.selectedRoute,
+                                  ),
+                                ),
                               ),
                             ),
                           if (state.success != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 12),
-                              child: Text(
-                                state.success!,
-                                style: const TextStyle(color: Colors.green),
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.fleetSuccess.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.check_circle,
+                                      color: AppColors.fleetSuccess,
+                                      size: 18,
+                                    ),
+                                    const Gap(8),
+                                    Expanded(
+                                      child: Text(
+                                        state.success!,
+                                        style: const TextStyle(
+                                          color: AppColors.fleetSuccess,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                         ],
@@ -351,7 +393,7 @@ class FleetDispatchDialog extends StatelessWidget {
                                 Navigator.pop(ctx, true);
                               },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00B4D8),
+                          backgroundColor: AppColors.fleetAccent,
                         ),
                         child: state.saving
                             ? const SizedBox(
@@ -359,12 +401,14 @@ class FleetDispatchDialog extends StatelessWidget {
                                 height: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Colors.white,
+                                  color: AppColors.textInverse,
                                 ),
                               )
                             : Text(
                                 assignmentId != null ? 'Update' : 'Assign',
-                                style: const TextStyle(color: Colors.white),
+                                style: const TextStyle(
+                                  color: AppColors.textInverse,
+                                ),
                               ),
                       ),
                     ),
@@ -393,23 +437,23 @@ class FleetDispatchDialog extends StatelessWidget {
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: AppColors.textInverse,
           ),
         ),
         const Gap(4),
         DropdownButtonFormField<String>(
           value: value,
-          dropdownColor: const Color(0xFF1E293B),
-          style: const TextStyle(color: Colors.white),
+          dropdownColor: AppColors.fleetSurfaceLight,
+          style: const TextStyle(color: AppColors.textInverse),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: const Color(0xFF00B4D8), size: 20),
+            prefixIcon: Icon(icon, color: AppColors.fleetAccent, size: 20),
             border: const OutlineInputBorder(),
             filled: true,
-            fillColor: const Color(0xFF1E293B),
+            fillColor: AppColors.fleetSurfaceLight,
           ),
           hint: Text(
             'Select $label',
-            style: const TextStyle(color: Colors.white38),
+            style: const TextStyle(color: AppColors.textTertiary),
           ),
           items: items
               .map(
@@ -420,7 +464,7 @@ class FleetDispatchDialog extends StatelessWidget {
                         item['plate_number']?.toString() ??
                         item['id']?.toString() ??
                         '—',
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: AppColors.textInverse),
                   ),
                 ),
               )
@@ -449,7 +493,7 @@ class FleetDispatchDialog extends StatelessWidget {
       },
       child: Text(
         value != null ? '${value.day}/${value.month}/${value.year}' : label,
-        style: const TextStyle(color: Colors.white70),
+        style: const TextStyle(color: AppColors.textSecondary),
       ),
     );
   }

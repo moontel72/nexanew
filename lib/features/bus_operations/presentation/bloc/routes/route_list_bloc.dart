@@ -1,77 +1,18 @@
 // Route List Bloc — route registry state machine
 import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
 import 'package:trace_odd/core/services/api_service.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/routes/route_list_event.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/routes/route_list_state.dart';
 
-// ── Events ──
-abstract class RouteListEvent extends Equatable {
-  const RouteListEvent();
-  @override
-  List<Object?> get props => [];
-}
-
-class LoadRoutes extends RouteListEvent {
-  const LoadRoutes();
-}
-
-class LoadRouteDetail extends RouteListEvent {
-  final String routeId;
-  const LoadRouteDetail(this.routeId);
-  @override
-  List<Object?> get props => [routeId];
-}
-
-class DeleteRoute extends RouteListEvent {
-  final String routeId;
-  const DeleteRoute(this.routeId);
-  @override
-  List<Object?> get props => [routeId];
-}
-
-// ── State ──
-class RouteListState extends Equatable {
-  final List<Map<String, dynamic>> routes;
-  final Map<String, dynamic>? selectedRoute;
-  final bool loading, detailLoading;
-  final String? error;
-  const RouteListState({
-    this.routes = const [],
-    this.selectedRoute,
-    this.loading = true,
-    this.detailLoading = false,
-    this.error,
-  });
-  RouteListState copyWith({
-    List<Map<String, dynamic>>? routes,
-    Map<String, dynamic>? selectedRoute,
-    bool? loading,
-    bool? detailLoading,
-    String? error,
-  }) => RouteListState(
-    routes: routes ?? this.routes,
-    selectedRoute: selectedRoute ?? this.selectedRoute,
-    loading: loading ?? this.loading,
-    detailLoading: detailLoading ?? this.detailLoading,
-    error: error,
-  );
-  @override
-  List<Object?> get props => [
-    routes,
-    selectedRoute,
-    loading,
-    detailLoading,
-    error,
-  ];
-}
-
-// ── Bloc ──
 class RouteListBloc extends Bloc<RouteListEvent, RouteListState> {
   final _api = ApiService();
+
   RouteListBloc() : super(const RouteListState()) {
     on<LoadRoutes>(_onLoad);
     on<LoadRouteDetail>(_onDetail);
     on<DeleteRoute>(_onDelete);
   }
+
   Future<void> _onLoad(LoadRoutes e, Emitter<RouteListState> emit) async {
     emit(state.copyWith(loading: true));
     try {

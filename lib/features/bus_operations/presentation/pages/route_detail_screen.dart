@@ -2,6 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/routes/route_list_bloc.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/routes/route_list_event.dart';
+import 'package:trace_odd/features/bus_operations/presentation/bloc/routes/route_list_state.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
+import 'package:trace_odd/shared/widgets/fleet/fleet_shared_widgets.dart';
+import 'package:trace_odd/shared/widgets/loading/loading_state_widget.dart';
 
 class RouteDetailScreen extends StatelessWidget {
   final String routeId;
@@ -15,57 +21,58 @@ class RouteDetailScreen extends StatelessWidget {
         builder: (ctx, state) {
           final r = state.selectedRoute;
           return Scaffold(
-            backgroundColor: const Color(0xFF0D1B2A),
+            backgroundColor: AppColors.fleetBackground,
             appBar: AppBar(
-              backgroundColor: const Color(0xFF1B2838),
+              backgroundColor: AppColors.fleetCard,
               title: Text(
                 r?['name']?.toString() ?? 'Route Detail',
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.textInverse),
               ),
             ),
             body: state.detailLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const LoadingState()
                 : r == null
-                ? const Center(
-                    child: Text(
-                      'Route not found',
-                      style: TextStyle(color: Colors.white54),
-                    ),
+                ? ErrorState.notFound(
+                    customTitle: 'Route Not Found',
+                    customMessage: 'This route could not be loaded.',
                   )
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      _row('Code', r['route_code']?.toString()),
-                      _row('Origin', r['origin']?.toString()),
-                      _row('Destination', r['destination']?.toString()),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Waypoints',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      FleetSectionCard(
+                        title: 'Route Details',
+                        icon: Icons.route,
+                        color: AppColors.fleetAccent,
+                        children: [
+                          FleetDetailRow(
+                            'Code',
+                            r['route_code']?.toString() ?? '—',
+                          ),
+                          FleetDetailRow(
+                            'Origin',
+                            r['origin']?.toString() ?? '—',
+                          ),
+                          FleetDetailRow(
+                            'Destination',
+                            r['destination']?.toString() ?? '—',
+                          ),
+                        ],
                       ),
-                      ...((r['waypoints'] as List?) ?? []).map((w) {
-                        final m = w is Map
-                            ? Map<String, dynamic>.from(w)
-                            : <String, dynamic>{};
-                        return ListTile(
-                          leading: const Icon(
-                            Icons.location_on,
-                            color: Color(0xFF00B4D8),
-                          ),
-                          title: Text(
+                      const SizedBox(height: 16),
+                      FleetSectionCard(
+                        title: 'Waypoints',
+                        icon: Icons.map,
+                        color: AppColors.fleetAccent,
+                        children: ((r['waypoints'] as List?) ?? []).map((w) {
+                          final m = w is Map
+                              ? Map<String, dynamic>.from(w)
+                              : <String, dynamic>{};
+                          return FleetDetailRow(
                             m['label']?.toString() ?? 'Stop',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          subtitle: Text(
                             '${m['lat']}, ${m['lng']}',
-                            style: const TextStyle(color: Colors.white54),
-                          ),
-                        );
-                      }),
+                          );
+                        }).toList(),
+                      ),
                     ],
                   ),
           );
@@ -73,25 +80,4 @@ class RouteDetailScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _row(String label, String? value) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(label, style: const TextStyle(color: Colors.white54)),
-        ),
-        Expanded(
-          child: Text(
-            value ?? '—',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
 }

@@ -116,6 +116,16 @@ class AppColors {
   static const Color medicalProduct = Color(0xFF1F5E6B);
   static const Color otherProduct = Color(0xFF8B5CF6);
 
+  // ── Fleet Dark Theme ──────────────────────────────────
+  static const Color fleetBackground = Color(0xFF0D1B2A);
+  static const Color fleetCard = Color(0xFF1B2838);
+  static const Color fleetAccent = Color(0xFF00B4D8);
+  static const Color fleetSurface = Color(0xFF0F172A);
+  static const Color fleetSurfaceLight = Color(0xFF1E293B);
+  static const Color fleetSuccess = Color(0xFF059669);
+  static const Color fleetWarning = Color(0xFFF59E0B);
+  static const Color fleetInfo = Color(0xFF2563EB);
+
   // Get color by code status
   static Color getCodeStatusColor(String status) {
     switch (status.toLowerCase()) {
