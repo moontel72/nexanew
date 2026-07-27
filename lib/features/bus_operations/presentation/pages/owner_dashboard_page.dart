@@ -113,6 +113,7 @@ class _OwnerView extends StatelessWidget {
           isMutating: state.isMutating,
           onAdd: () => _openDesigner(ctx, state),
           onEdit: (id, n) => _openDesigner(ctx, state, layoutId: id),
+          onOpenDesigner: (id, n) => _openDesigner(ctx, state, layoutId: id),
           onPublish: (id, n) =>
               bloc.add(PublishOwnerLayout(layoutId: id, name: n)),
           onArchive: (id, n) => _confirm(

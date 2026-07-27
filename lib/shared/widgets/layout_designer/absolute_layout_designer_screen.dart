@@ -122,24 +122,21 @@ class _DesignerBodyState extends State<_DesignerBody> {
       });
     }
     // Post-frame: verify the canvas size matches BusDimensions.
-    if (widget.busDimensions != null) {
+    // Skip when _applyConfigData already handles the canvas via
+    // _initFromConfig (which may auto-expand width for wider seats).
+    final overrideCanvas = !(widget.config != null && widget.layoutId != null);
+    if (widget.busDimensions != null && overrideCanvas) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final actualH = _state.canvasHeight;
         final expectedH = widget.busDimensions!.lengthPx;
         if ((actualH - expectedH).abs() > 1.0) {
-          debugPrint(
-            'MISMATCH: canvasHeight=$actualH expected=$expectedH '
-            '(${pxToFtIn(actualH)} vs ${pxToFtIn(expectedH)}) — fixing!',
-          );
           _bloc.add(
             UpdateCanvasSize(
               width: widget.busDimensions!.widthPx,
               height: expectedH,
             ),
           );
-        } else {
-          debugPrint('CANVAS_OK: ${pxToFtIn(actualH)} matches BusDimensions');
         }
       });
     }

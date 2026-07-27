@@ -14,6 +14,7 @@ class LayoutListSection extends StatelessWidget {
   final void Function(String id, String name) onArchive;
   final void Function(String id, String name) onDelete;
   final void Function(String id, String name) onEdit;
+  final void Function(String id, String name) onOpenDesigner;
   final VoidCallback onAdd;
   final VoidCallback? onPurgeAll;
 
@@ -27,6 +28,7 @@ class LayoutListSection extends StatelessWidget {
     required this.onArchive,
     required this.onDelete,
     required this.onEdit,
+    required this.onOpenDesigner,
     required this.onAdd,
     this.onPurgeAll,
   });
@@ -127,7 +129,7 @@ class LayoutListSection extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               GestureDetector(
-                                onTap: () => onEdit(id, name),
+                                onTap: () => onOpenDesigner(id, name),
                                 child: Text(
                                   name,
                                   style: const TextStyle(

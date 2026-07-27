@@ -8,6 +8,7 @@ import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashbo
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/fleet_dashboard/fleet_dashboard_state.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/bus_config_setup_screen.dart';
+import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/add_staff_dialog.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard_kpi_section.dart';
@@ -164,6 +165,7 @@ class _FleetDashboardView extends StatelessWidget {
           onArchive: (id, name) => _showArchiveConfirm(ctx, bloc, id, name),
           onDelete: (id, name) => _showDeleteConfirm(ctx, bloc, id, name),
           onEdit: (id, name) => _openExistingLayoutDesigner(ctx, state, id),
+          onOpenDesigner: (id, name) => _openDesignerDirect(ctx, state, id),
           onAdd: () => _openLayoutDesigner(ctx, state),
           onPurgeAll: () => _showPurgeConfirm(ctx, bloc, state.layouts.length),
         );
@@ -417,6 +419,28 @@ class _FleetDashboardView extends StatelessWidget {
             companyName: state.ownerName,
             apiPrefix: '/bus-fleet',
           ),
+        ),
+      ),
+    ).then((_) {
+      ctx.read<FleetDashboardBloc>().add(
+        const LoadLayouts(panelPrefix: '/bus-fleet'),
+      );
+    });
+  }
+
+  void _openDesignerDirect(
+    BuildContext ctx,
+    FleetDashboardState state,
+    String layoutId,
+  ) {
+    Navigator.push(
+      ctx,
+      MaterialPageRoute(
+        builder: (_) => AbsoluteLayoutDesignerScreen(
+          companyId: state.companyId,
+          companyName: state.ownerName,
+          apiPrefix: '/bus-fleet',
+          layoutId: layoutId,
         ),
       ),
     ).then((_) {
