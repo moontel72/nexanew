@@ -154,6 +154,13 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     }
   }
 
+  /// Read bus height in pixels from snapshot metadata.
+  double? _readHeightPx(Map<String, dynamic> snap) {
+    final v = snap['bus_height_px'] ?? snap['metadata']?['bus_height_px'];
+    if (v is num) return v.toDouble();
+    return null;
+  }
+
   Future<void> _loadExistingLayout() async {
     try {
       final api = ApiService();
@@ -212,7 +219,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   BusDimensions(
                     length: FeetInches.fromPixels(canvasH),
                     width: FeetInches.fromPixels(canvasW),
-                    height: const FeetInches(feet: 5, inches: 6),
+                    height: FeetInches.fromPixels(
+                      (_readHeightPx(snap) ?? 66.0),
+                    ),
                   ),
                 ),
               );

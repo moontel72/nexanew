@@ -219,6 +219,8 @@ class AbsoluteLayoutState {
     if (registry != null) 'registry': registry!.toJson(),
     if (metadata.containsKey('front_partition_px'))
       'front_partition_px': metadata['front_partition_px'],
+    if (metadata.containsKey('bus_height_px'))
+      'bus_height_px': metadata['bus_height_px'],
   };
 
   /// Parse from a backend snapshot.

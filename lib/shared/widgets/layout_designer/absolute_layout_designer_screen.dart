@@ -180,13 +180,17 @@ class _DesignerBodyState extends State<_DesignerBody> {
     if (widget.registry != null) {
       _bloc.add(SetLayoutRegistry(widget.registry!));
     }
-    // Canvas dimensions (bus inside length/width)
+    // Canvas dimensions (bus inside length/width/height)
     if (widget.busDimensions != null) {
       _bloc.add(
         UpdateCanvasSize(
           width: widget.busDimensions!.widthPx,
           height: widget.busDimensions!.lengthPx,
         ),
+      );
+      // Persist bus interior height separately so it survives saves.
+      _bloc.add(
+        SetLayoutMetadata('bus_height_px', widget.busDimensions!.heightPx),
       );
     }
   }
@@ -251,8 +255,12 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final double authoritativeWidPx = config.busWidthPx;
     if (authoritativeLenPx > 0 && authoritativeWidPx > 0) {
       canvasH = authoritativeLenPx;
-      canvasW = authoritativeWidPx;
       final totalUsedW = leftSeats * seatSpan + aisleW + rightSeats * seatSpan;
+      // Auto-expand canvas width if the seat configuration requires
+      // more space than the user-specified bus interior width.
+      canvasW = authoritativeWidPx > totalUsedW
+          ? authoritativeWidPx
+          : totalUsedW + 16; // 4 px margin each side
       final remainingW = canvasW - totalUsedW;
       leftMargin = (remainingW / 2).floorToDouble().clamp(0.0, 28.0);
     } else if (bd != null) {
@@ -288,6 +296,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
     // Persist front partition for reliable round-trip detection.
     bloc.add(SetLayoutMetadata('front_partition_px', config.frontPartitionPx));
+    // Persist bus interior height.
+    if (widget.busDimensions != null) {
+      bloc.add(SetLayoutMetadata('bus_height_px', widget.busDimensions!.heightPx));
+    }
 
     bloc.add(
       AddComponent(
