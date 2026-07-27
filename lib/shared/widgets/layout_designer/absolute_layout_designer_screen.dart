@@ -270,7 +270,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
       // more space than the user-specified bus interior width.
       canvasW = authoritativeWidPx > totalUsedW
           ? authoritativeWidPx
-          : totalUsedW + 16; // 4 px margin each side
+          : totalUsedW;
       final remainingW = canvasW - totalUsedW;
       leftMargin = (remainingW / 2).floorToDouble().clamp(0.0, 28.0);
     } else if (bd != null) {

@@ -89,8 +89,14 @@ class AbsoluteLayoutComponent {
   bool get isEditable => true;
 
   /// Whether this component lies within the canvas bounds.
+  /// Uses a 2 px tolerance so seats flush with the canvas edge
+  /// are not clipped due to floating-point rounding.
+  static const double _eps = 2.0;
   bool isWithinBounds(double canvasW, double canvasH) =>
-      x >= 0 && y >= 0 && x + width <= canvasW && y + height <= canvasH;
+      x >= -_eps &&
+      y >= -_eps &&
+      x + width <= canvasW + _eps &&
+      y + height <= canvasH + _eps;
 
   /// Default icon for this component type.
   IconData get defaultIcon => switch (type) {
