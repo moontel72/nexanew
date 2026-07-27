@@ -133,7 +133,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
         if ((actualH - expectedH).abs() > 1.0) {
           _bloc.add(
             UpdateCanvasSize(
-              width: widget.busDimensions!.widthPx,
+              // Keep the wider of auto-expanded canvas vs form bus width
+              width: _state.canvasWidth > widget.busDimensions!.widthPx
+                  ? _state.canvasWidth
+                  : widget.busDimensions!.widthPx,
               height: expectedH,
             ),
           );
@@ -638,9 +641,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
                       ),
                     )
                   : const Icon(Icons.save, size: 14),
-              label: Text(
-                _state.layoutId == null ? 'Save & Publish' : 'Save',
-                style: const TextStyle(
+              label: const Text(
+                'Save',
+                style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                 ),
