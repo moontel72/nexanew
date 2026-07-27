@@ -143,6 +143,11 @@ class _DesignerBodyState extends State<_DesignerBody> {
         }
       });
     }
+    // Force a rebuild after the first frame so all components from
+    // _initFromConfig are guaranteed rendered (handles async event gap).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -643,10 +648,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
                   : const Icon(Icons.save, size: 14),
               label: const Text(
                 'Save',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF16A34A),
