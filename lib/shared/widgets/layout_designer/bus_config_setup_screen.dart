@@ -52,9 +52,9 @@ class BusConfigSetupScreen extends StatefulWidget {
     this.initialPlate,
     this.initialMaker,
     this.initialSpecs,
-    this.initialLeftSeats = 2,
-    this.initialRightSeats = 2,
-    this.initialRowCount = 14,
+    this.initialLeftSeats = 0,
+    this.initialRightSeats = 0,
+    this.initialRowCount = 0,
     this.initialHasFrontPartition = false,
     this.initialFrontPartitionFt = 2,
     this.initialFrontPartitionIn = 0,
@@ -74,9 +74,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   String? _selectedMaker;
 
   // ── Dynamic Grid ──
-  int _leftSeats = 2;
-  int _rightSeats = 2;
-  int _rowCount = 14;
+  int _leftSeats = 0;
+  int _rightSeats = 0;
+  int _rowCount = 0;
 
   // ── Layout Strategy ──
   bool _usePreset = false;
@@ -221,9 +221,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   BusDimensions(
                     length: FeetInches.fromPixels(canvasH),
                     width: FeetInches.fromPixels(canvasW),
-                    height: FeetInches.fromPixels(
-                      (_readHeightPx(snap) ?? 66.0),
-                    ),
+                    height: FeetInches.fromPixels((_readHeightPx(snap) ?? 0.0)),
                   ),
                 ),
               );
@@ -1427,11 +1425,11 @@ class BusConfig {
     this.numberPlate = '',
     this.maker = '',
     this.specifications = '',
-    this.leftSeats = 2,
-    this.rightSeats = 2,
-    this.rowCount = 14,
-    this.busLengthPx = 896.0,
-    this.busWidthPx = 280.0,
+    this.leftSeats = 0,
+    this.rightSeats = 0,
+    this.rowCount = 0,
+    this.busLengthPx = 0.0,
+    this.busWidthPx = 0.0,
     this.frontPartitionPx = 0.0,
   });
 

@@ -22,17 +22,17 @@ class LayoutValidationState extends Equatable {
   /// via the "Physical Dimensions" section on the config screen.
   const LayoutValidationState({
     this.dimensions = const BusDimensions(
-      length: FeetInches(feet: 20, inches: 0),
-      width: FeetInches(feet: 6, inches: 6),
-      height: FeetInches(feet: 5, inches: 6),
+      length: FeetInches.zero,
+      width: FeetInches.zero,
+      height: FeetInches.zero,
     ),
     this.registry = const ComponentRegistry(
       aisleWidth: FeetInches.zero,
       interSeatGap: FeetInches.zero,
     ),
-    this.rows = 14,
-    this.leftSeats = 2,
-    this.rightSeats = 2,
+    this.rows = 0,
+    this.leftSeats = 0,
+    this.rightSeats = 0,
     this.lastResult,
     this.predictedLength = FeetInches.zero,
     this.predictedWidth = FeetInches.zero,

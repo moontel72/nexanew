@@ -437,7 +437,7 @@ class _FleetDashboardView extends StatelessWidget {
     String? plate;
     String? maker;
     String? specs;
-    int leftS = 2, rightS = 2, rows = 14;
+    int leftS = 0, rightS = 0, rows = 0;
     bool hasFrontPartition = false;
     int frontPartitionFt = 2, frontPartitionIn = 0;
     try {
@@ -469,7 +469,7 @@ class _FleetDashboardView extends StatelessWidget {
           final h = (snapCanvas['canvas_height'] as num?)?.toDouble();
           if (w != null && h != null && w > 0 && h > 0) {
             // Read bus height from snapshot metadata (stored by designer save).
-            FeetInches busHeight = const FeetInches(feet: 5, inches: 6);
+            FeetInches busHeight = FeetInches.zero;
             final meta = snapMap?['metadata'];
             final hPx =
                 snapMap?['bus_height_px'] ??
