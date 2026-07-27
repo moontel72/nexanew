@@ -180,14 +180,19 @@ class _DesignerBodyState extends State<_DesignerBody> {
     if (widget.registry != null) {
       _bloc.add(SetLayoutRegistry(widget.registry!));
     }
-    // Canvas dimensions (bus inside length/width/height)
+    // Canvas dimensions (bus inside length/width/height).
+    // Skip UpdateCanvasSize when _initFromConfig ran — it already
+    // set the correct (possibly auto-expanded) canvas dimensions.
     if (widget.busDimensions != null) {
-      _bloc.add(
-        UpdateCanvasSize(
-          width: widget.busDimensions!.widthPx,
-          height: widget.busDimensions!.lengthPx,
-        ),
-      );
+      final didRegenerate = widget.config != null && widget.layoutId != null;
+      if (!didRegenerate) {
+        _bloc.add(
+          UpdateCanvasSize(
+            width: widget.busDimensions!.widthPx,
+            height: widget.busDimensions!.lengthPx,
+          ),
+        );
+      }
       // Persist bus interior height separately so it survives saves.
       _bloc.add(
         SetLayoutMetadata('bus_height_px', widget.busDimensions!.heightPx),
@@ -298,7 +303,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
     bloc.add(SetLayoutMetadata('front_partition_px', config.frontPartitionPx));
     // Persist bus interior height.
     if (widget.busDimensions != null) {
-      bloc.add(SetLayoutMetadata('bus_height_px', widget.busDimensions!.heightPx));
+      bloc.add(
+        SetLayoutMetadata('bus_height_px', widget.busDimensions!.heightPx),
+      );
     }
 
     bloc.add(
