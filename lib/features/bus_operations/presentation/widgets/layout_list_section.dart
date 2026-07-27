@@ -126,12 +126,16 @@ class LayoutListSection extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
+                              GestureDetector(
+                                onTap: () => onEdit(id, name),
+                                child: Text(
+                                  name,
+                                  style: const TextStyle(
+                                    color: Color(0xFF3B82F6),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    decoration: TextDecoration.underline,
+                                  ),
                                 ),
                               ),
                               SizedBox(height: 2.h),
@@ -168,10 +172,15 @@ class LayoutListSection extends StatelessWidget {
                     Row(
                       children: [
                         if (seatBreakdown.isNotEmpty) ...[
-                          ...seatBreakdown.entries.map((e) => Padding(
-                            padding: EdgeInsets.only(right: 12.w),
-                            child: _chip(_iconForType(e.key), '${e.value} ${e.key}'),
-                          )),
+                          ...seatBreakdown.entries.map(
+                            (e) => Padding(
+                              padding: EdgeInsets.only(right: 12.w),
+                              child: _chip(
+                                _iconForType(e.key),
+                                '${e.value} ${e.key}',
+                              ),
+                            ),
+                          ),
                           if (rowColInfo.isNotEmpty)
                             Padding(
                               padding: EdgeInsets.only(right: 12.w),
@@ -273,19 +282,33 @@ class LayoutListSection extends StatelessWidget {
       ),
     );
   }
+
   /// Parse components from snapshot, deduplicate by position, count by type.
   static Map<String, int> _countByType(Map<String, dynamic> layout) {
     final result = <String, int>{};
     dynamic snap = layout['current_snapshot'];
     if (snap is String) {
-      try { snap = jsonDecode(snap); } catch (_) { snap = null; }
+      try {
+        snap = jsonDecode(snap);
+      } catch (_) {
+        snap = null;
+      }
     }
-    final comps = (snap is Map ? snap['components'] : null) ?? layout['components'];
+    final comps =
+        (snap is Map ? snap['components'] : null) ?? layout['components'];
     if (comps is! List) return result;
     const structural = {
-      'driverCabin', 'exitDoor', 'sideDoor', 'slidingDoor',
-      'frontDoor', 'rearDoor', 'aisle', 'emergency',
-      'lavatory', 'restaurantTable', 'empty',
+      'driverCabin',
+      'exitDoor',
+      'sideDoor',
+      'slidingDoor',
+      'frontDoor',
+      'rearDoor',
+      'aisle',
+      'emergency',
+      'lavatory',
+      'restaurantTable',
+      'empty',
     };
     // Track seen positions to skip duplicates (same type + same x,y)
     final seen = <String>{};
@@ -321,13 +344,28 @@ class LayoutListSection extends StatelessWidget {
   /// Count unique rows (rounded Y) and columns from component positions.
   static String _rowColInfo(Map<String, dynamic> layout) {
     dynamic snap = layout['current_snapshot'];
-    var comps = (snap is Map ? snap['components'] : null) ?? layout['components'];
+    var comps =
+        (snap is Map ? snap['components'] : null) ?? layout['components'];
     if (snap is String) {
-      try { final s = jsonDecode(snap); comps = s is Map ? s['components'] : null; } catch (_) {}
+      try {
+        final s = jsonDecode(snap);
+        comps = s is Map ? s['components'] : null;
+      } catch (_) {}
     }
     if (comps is! List || comps.isEmpty) return '';
-    const structural = {'driverCabin', 'exitDoor', 'sideDoor', 'slidingDoor',
-      'frontDoor', 'rearDoor', 'aisle', 'emergency', 'lavatory', 'restaurantTable', 'empty'};
+    const structural = {
+      'driverCabin',
+      'exitDoor',
+      'sideDoor',
+      'slidingDoor',
+      'frontDoor',
+      'rearDoor',
+      'aisle',
+      'emergency',
+      'lavatory',
+      'restaurantTable',
+      'empty',
+    };
     // Group Y positions with 5px tolerance to count rows
     final ySet = <int>{};
     final xSet = <int>{};
