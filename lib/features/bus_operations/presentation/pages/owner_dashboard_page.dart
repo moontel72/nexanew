@@ -1,4 +1,6 @@
 // Owner Dashboard Page — thin BLoC-driven root for bus-owner panel
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -16,6 +18,11 @@ import 'package:trace_odd/features/bus_operations/presentation/widgets/dashboard
 import 'package:trace_odd/features/bus_operations/presentation/widgets/layout_list_section.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/staff_list_section.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
+import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_event.dart';
+import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
+import 'package:trace_odd/shared/models/transport/component_registry.dart';
+import 'package:trace_odd/shared/models/transport/feet_inches.dart';
+import 'package:trace_odd/core/services/api_service.dart';
 
 class OwnerDashboardPage extends StatelessWidget {
   final String panelPrefix;
@@ -112,7 +119,7 @@ class _OwnerView extends StatelessWidget {
           isLoading: state.layoutsLoading,
           isMutating: state.isMutating,
           onAdd: () => _openDesigner(ctx, state),
-          onEdit: (id, n) => _openDesigner(ctx, state, layoutId: id),
+          onEdit: (id, n) => _openEditForm(ctx, state, id),
           onOpenDesigner: (id, n) => _openDesigner(ctx, state, layoutId: id),
           onPublish: (id, n) =>
               bloc.add(PublishOwnerLayout(layoutId: id, name: n)),
@@ -496,6 +503,199 @@ class _OwnerView extends StatelessWidget {
     }
   }
 
+  void _openEditForm(
+    BuildContext ctx,
+    OwnerDashboardState state,
+    String layoutId,
+  ) async {
+    BusDimensions? dims;
+    ComponentRegistry? reg;
+    String? plate;
+    String? maker;
+    String? specs;
+    int leftS = 0, rightS = 0, rows = 0;
+    bool hasFront = false;
+    int frontFt = 0, frontIn = 0;
+    try {
+      final api = ApiService();
+      final r = await api.get('/bus-owner/absolute-layouts/$layoutId');
+      final d = r?['data'];
+      if (d is Map) {
+        // Plate + Maker
+        final displayName =
+            d['display_name']?.toString() ?? d['name']?.toString() ?? '';
+        if (displayName.contains(' | ')) {
+          final parts = displayName.split(' | ');
+          plate = parts[0];
+          maker = parts.length > 1 ? parts[1] : null;
+        } else {
+          plate = displayName;
+        }
+        specs = d['specifications']?.toString() ?? d['notes']?.toString() ?? '';
+        final snap = d['current_snapshot'];
+        Map<String, dynamic>? snapMap;
+        if (snap is Map) snapMap = Map<String, dynamic>.from(snap);
+        final snapCanvas = snapMap?['canvas'];
+        if (snapCanvas is Map) {
+          final w = (snapCanvas['canvas_width'] as num?)?.toDouble();
+          final h = (snapCanvas['canvas_height'] as num?)?.toDouble();
+          if (w != null && h != null && w > 0 && h > 0) {
+            final meta = snapMap?['metadata'];
+            final hPx =
+                snapMap?['bus_height_px'] ??
+                (meta is Map ? meta['bus_height_px'] : null);
+            FeetInches busH = hPx is num
+                ? FeetInches.fromPixels(hPx.toDouble())
+                : FeetInches.zero;
+            dims = BusDimensions(
+              length: FeetInches.fromPixels(h),
+              width: FeetInches.fromPixels(w),
+              height: busH,
+            );
+          }
+        }
+        // Registry
+        dynamic regJson = snapMap?['registry'];
+        if (regJson is String) {
+          try {
+            regJson = jsonDecode(regJson);
+          } catch (_) {
+            regJson = null;
+          }
+        }
+        if (regJson is Map) {
+          try {
+            reg = ComponentRegistry.fromJson(
+              Map<String, dynamic>.from(regJson),
+            );
+          } catch (_) {}
+        }
+        // Seat matrix from components
+        final comps = snapMap?['components'];
+        if (comps is List && comps.isNotEmpty) {
+          const structural = {
+            'driverCabin',
+            'exitDoor',
+            'sideDoor',
+            'slidingDoor',
+            'frontDoor',
+            'rearDoor',
+            'aisle',
+            'emergency',
+            'lavatory',
+            'restaurantTable',
+            'empty',
+          };
+          final ySet = <int>{};
+          final firstRowXs = <double>[];
+          double? firstY;
+          double minSeatY = double.infinity;
+          for (final c in comps) {
+            if (c is! Map) continue;
+            if (structural.contains(c['type']?.toString() ?? '')) continue;
+            final y = (c['y'] as num?)?.toDouble();
+            final x = (c['x'] as num?)?.toDouble();
+            if (y == null || x == null) continue;
+            ySet.add(y.round());
+            if (y < minSeatY) minSeatY = y;
+            if (firstY == null) firstY = y;
+            if ((y - firstY!).abs() < 5) firstRowXs.add(x);
+          }
+          int lC = 0, rC = 0;
+          if (firstRowXs.isNotEmpty) {
+            firstRowXs.sort();
+            double maxGap = 0;
+            int gapIdx = 0;
+            for (int i = 1; i < firstRowXs.length; i++) {
+              final gap = firstRowXs[i] - firstRowXs[i - 1];
+              if (gap > maxGap) {
+                maxGap = gap;
+                gapIdx = i;
+              }
+            }
+            if (maxGap > 30) {
+              lC = gapIdx;
+              rC = firstRowXs.length - gapIdx;
+            } else {
+              final cw = (snapCanvas is Map
+                  ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280)
+                  : 280);
+              for (final x in firstRowXs) {
+                if (x < cw / 2)
+                  lC++;
+                else
+                  rC++;
+              }
+            }
+          }
+          leftS = lC.clamp(0, 8);
+          rightS = rC.clamp(0, 8);
+          rows = ySet.length.clamp(1, 50);
+          // Front partition
+          final fpx =
+              snapMap?['metadata']?['front_partition_px'] ??
+              snapMap?['front_partition_px'];
+          if (fpx is num && fpx.toDouble() > 0) {
+            final ri = (fpx.toDouble() / 4.0).round();
+            if (ri > 0) {
+              hasFront = true;
+              frontFt = ri ~/ 12;
+              frontIn = ri % 12;
+            }
+          } else if ((minSeatY - 100).abs() > 20 &&
+              minSeatY < double.infinity) {
+            final ri = (minSeatY / 4.0).round();
+            if (ri > 0) {
+              hasFront = true;
+              frontFt = ri ~/ 12;
+              frontIn = ri % 12;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    if (!ctx.mounted) return;
+    Navigator.push(
+      ctx,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider<LayoutValidationBloc>(
+          create: (_) {
+            final b = LayoutValidationBloc();
+            if (dims != null) b.add(DimensionsChanged(dims));
+            if (reg != null) b.add(RegistryChanged(reg));
+            b.add(
+              SeatMatrixChanged(
+                rows: rows,
+                leftSeats: leftS,
+                rightSeats: rightS,
+              ),
+            );
+            return b;
+          },
+          child: BusConfigSetupScreen(
+            companyId: state.companyId,
+            companyName: state.ownerName,
+            apiPrefix: '/bus-owner',
+            layoutId: layoutId,
+            initialDimensions: dims,
+            initialRegistry: reg,
+            initialPlate: plate,
+            initialMaker: maker,
+            initialSpecs: specs,
+            initialLeftSeats: leftS,
+            initialRightSeats: rightS,
+            initialRowCount: rows,
+            initialHasFrontPartition: hasFront,
+            initialFrontPartitionFt: frontFt,
+            initialFrontPartitionIn: frontIn,
+          ),
+        ),
+      ),
+    ).then((_) {
+      ctx.read<OwnerDashboardBloc>().add(const LoadOwnerLayouts());
+    });
+  }
+
   Widget _btn(String l, IconData i, Color c, VoidCallback t) => GestureDetector(
     onTap: t,
     child: Container(
@@ -644,6 +844,17 @@ class _Sidebar extends StatelessWidget {
                   Icons.message_rounded,
                   'inbox',
                   const Color(0xFF059669),
+                ),
+                const Divider(height: 1, color: Color(0x20FFFFFF)),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Missile3DButton(
+                    label: 'Logout',
+                    icon: Icons.logout,
+                    color: const Color(0xFFDC2626),
+                    height: 48,
+                    onTap: () => bloc.add(const OwnerLogout('busFleet')),
+                  ),
                 ),
               ],
             ),
