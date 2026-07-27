@@ -155,8 +155,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   }
 
   /// Read bus height in pixels from snapshot metadata.
-  double? _readHeightPx(Map<String, dynamic> snap) {
-    final v = snap['bus_height_px'] ?? snap['metadata']?['bus_height_px'];
+  double? _readHeightPx(Map snap) {
+    final meta = snap['metadata'];
+    final v =
+        snap['bus_height_px'] ?? (meta is Map ? meta['bus_height_px'] : null);
     if (v is num) return v.toDouble();
     return null;
   }

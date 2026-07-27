@@ -470,8 +470,10 @@ class _FleetDashboardView extends StatelessWidget {
           if (w != null && h != null && w > 0 && h > 0) {
             // Read bus height from snapshot metadata (stored by designer save).
             FeetInches busHeight = const FeetInches(feet: 5, inches: 6);
-            final hPx = snapMap?['bus_height_px'] ??
-                snapMap?['metadata']?['bus_height_px'];
+            final meta = snapMap?['metadata'];
+            final hPx =
+                snapMap?['bus_height_px'] ??
+                (meta is Map ? meta['bus_height_px'] : null);
             if (hPx is num) {
               busHeight = FeetInches.fromPixels(hPx.toDouble());
             }
