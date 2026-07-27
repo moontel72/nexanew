@@ -439,7 +439,7 @@ class _FleetDashboardView extends StatelessWidget {
     String? specs;
     int leftS = 0, rightS = 0, rows = 0;
     bool hasFrontPartition = false;
-    int frontPartitionFt = 2, frontPartitionIn = 0;
+    int frontPartitionFt = 0, frontPartitionIn = 0;
     try {
       final api = ApiService();
       final r = await api.get('/bus-fleet/absolute-layouts/$layoutId');
@@ -518,13 +518,9 @@ class _FleetDashboardView extends StatelessWidget {
             'empty',
           };
           final ySet = <int>{};
-          int lC = 0, rC = 0;
+          final firstRowXs = <double>[];
           double? firstY;
           double minSeatY = double.infinity;
-          final canvasW = (snapCanvas is Map
-              ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280.0)
-              : 280.0);
-          final midX = canvasW / 2;
           for (final c in comps) {
             if (c is! Map) continue;
             final t = c['type']?.toString() ?? '';
@@ -536,10 +532,38 @@ class _FleetDashboardView extends StatelessWidget {
             if (y < minSeatY) minSeatY = y;
             if (firstY == null) firstY = y;
             if ((y - firstY!).abs() < 5) {
-              if (x < midX)
-                lC++;
-              else
-                rC++;
+              firstRowXs.add(x);
+            }
+          }
+          // Detect left vs right by finding the aisle gap in X positions.
+          int lC = 0, rC = 0;
+          if (firstRowXs.isNotEmpty) {
+            firstRowXs.sort();
+            double maxGap = 0;
+            int gapIdx = 0;
+            for (int i = 1; i < firstRowXs.length; i++) {
+              final gap = firstRowXs[i] - firstRowXs[i - 1];
+              if (gap > maxGap) {
+                maxGap = gap;
+                gapIdx = i;
+              }
+            }
+            // If there's a clear gap (> 30 px), split left/right there.
+            if (maxGap > 30) {
+              lC = gapIdx;
+              rC = firstRowXs.length - gapIdx;
+            } else {
+              // No clear aisle gap — fall back to mid-canvas split.
+              final canvasW = (snapCanvas is Map
+                  ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280.0)
+                  : 280.0);
+              final midX = canvasW / 2;
+              for (final x in firstRowXs) {
+                if (x < midX)
+                  lC++;
+                else
+                  rC++;
+              }
             }
           }
           leftS = lC.clamp(0, 8);

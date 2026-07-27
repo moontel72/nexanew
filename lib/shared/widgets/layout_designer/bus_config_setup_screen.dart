@@ -56,7 +56,7 @@ class BusConfigSetupScreen extends StatefulWidget {
     this.initialRightSeats = 0,
     this.initialRowCount = 0,
     this.initialHasFrontPartition = false,
-    this.initialFrontPartitionFt = 2,
+    this.initialFrontPartitionFt = 0,
     this.initialFrontPartitionIn = 0,
   });
 
@@ -86,7 +86,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
 
   // ── Front Reserved Partition ──
   bool _hasFrontPartition = false;
-  int _frontPartitionFt = 2;
+  int _frontPartitionFt = 0;
   int _frontPartitionIn = 0;
 
   static const List<String> _busMakers = [
@@ -247,10 +247,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               'empty',
             };
             final ySet = <int>{};
-            int leftC = 0, rightC = 0;
+            final firstRowXs = <double>[];
             double? firstY;
             double minSeatY = double.infinity;
-            final midX = canvasW / 2;
             for (final c in comps) {
               if (c is! Map) continue;
               final t = c['type']?.toString() ?? '';
@@ -262,19 +261,41 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               if (y < minSeatY) minSeatY = y;
               if (firstY == null) firstY = y;
               if ((y - firstY!).abs() < 5) {
-                if (x < midX)
-                  leftC++;
-                else
-                  rightC++;
+                firstRowXs.add(x);
+              }
+            }
+            // Detect left vs right by finding the aisle gap in X positions.
+            int leftC = 0, rightC = 0;
+            if (firstRowXs.isNotEmpty) {
+              firstRowXs.sort();
+              double maxGap = 0;
+              int gapIdx = 0;
+              for (int i = 1; i < firstRowXs.length; i++) {
+                final gap = firstRowXs[i] - firstRowXs[i - 1];
+                if (gap > maxGap) {
+                  maxGap = gap;
+                  gapIdx = i;
+                }
+              }
+              if (maxGap > 30) {
+                leftC = gapIdx;
+                rightC = firstRowXs.length - gapIdx;
+              } else {
+                final midX = canvasW / 2;
+                for (final x in firstRowXs) {
+                  if (x < midX)
+                    leftC++;
+                  else
+                    rightC++;
+                }
               }
             }
             // ── Restore front reserved space from snapshot metadata ──
-            // Explicit metadata (from designer save) is authoritative.
             final frontPxMeta =
                 snap['metadata']?['front_partition_px'] ??
                 snap['front_partition_px'];
             bool hasFront = false;
-            int ftVal = 2, inVal = 0;
+            int ftVal = 0, inVal = 0;
             if (frontPxMeta is num && (frontPxMeta).toDouble() > 0) {
               final reservedInches = ((frontPxMeta).toDouble() / 4.0).round();
               if (reservedInches > 0) {
