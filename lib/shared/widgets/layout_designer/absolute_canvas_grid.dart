@@ -266,10 +266,7 @@ class _CanvasBackgroundPainter extends CustomPainter {
         // Label at foot marks
         if (isFoot && pos + 18 < canvasWidth) {
           final tp = TextPainter(
-            text: TextSpan(
-              text: "${inch ~/ 12}'",
-              style: footLabelStyle,
-            ),
+            text: TextSpan(text: "${inch ~/ 12}'", style: footLabelStyle),
             textDirection: TextDirection.ltr,
           )..layout();
           tp.paint(canvas, Offset(pos + 2, _rulerThickness - tickLen - 11));
@@ -277,10 +274,7 @@ class _CanvasBackgroundPainter extends CustomPainter {
         // Small inch labels at 3″, 6″, 9″ between foot marks
         if (!isFoot && inch % 3 == 0 && pos + 16 < canvasWidth) {
           final tp = TextPainter(
-            text: TextSpan(
-              text: '${inch % 12}"',
-              style: inchLabelStyle,
-            ),
+            text: TextSpan(text: '${inch % 12}"', style: inchLabelStyle),
             textDirection: TextDirection.ltr,
           )..layout();
           tp.paint(canvas, Offset(pos + 1, _rulerThickness - tickLen - 9));
@@ -298,10 +292,7 @@ class _CanvasBackgroundPainter extends CustomPainter {
           canvas.translate(5, pos + 9);
           canvas.rotate(-3.1415926535 / 2);
           final tp = TextPainter(
-            text: TextSpan(
-              text: "${inch ~/ 12}'",
-              style: footLabelStyle,
-            ),
+            text: TextSpan(text: "${inch ~/ 12}'", style: footLabelStyle),
             textDirection: TextDirection.ltr,
           )..layout();
           tp.paint(canvas, Offset.zero);
@@ -313,10 +304,7 @@ class _CanvasBackgroundPainter extends CustomPainter {
           canvas.translate(3, pos + 9);
           canvas.rotate(-3.1415926535 / 2);
           final tp = TextPainter(
-            text: TextSpan(
-              text: '${inch % 12}"',
-              style: inchLabelStyle,
-            ),
+            text: TextSpan(text: '${inch % 12}"', style: inchLabelStyle),
             textDirection: TextDirection.ltr,
           )..layout();
           tp.paint(canvas, Offset.zero);
@@ -533,6 +521,10 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     if (component.type == ComponentType.seat && component.isReverseFacing) {
       color = const Color(0xFF3B82F6);
       icon = Icons.event_seat;
+    } else if (component.type == ComponentType.businessClassSeat &&
+        component.isReverseFacing) {
+      color = const Color(0xFF059669);
+      icon = Icons.airline_seat_flat_angled;
     } else if (component.type == ComponentType.businessClassSeat) {
       color = const Color(0xFFD97706);
       icon = Icons.airline_seat_flat_angled;
@@ -714,40 +706,74 @@ class _AbsoluteComponentWidget extends StatelessWidget {
             ),
 
           // ── Seat label ──
+          // For business-class seats, render the label near the top so
+          // it doesn't collide with the centered icon.
           if (showLabel)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: component.isReverseFacing
-                    ? Transform.rotate(
-                        angle: 3.1415926535,
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3,
+            isBiz
+                ? Positioned(
+                    top: 1,
+                    left: 0,
+                    right: 0,
+                    child: component.isReverseFacing
+                        ? Transform.rotate(
+                            angle: 3.1415926535,
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: fontSize,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : Text(
+                            label,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: fontSize,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                        ),
-                      )
-                    : Text(
-                        label,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                      ),
-              ),
-            ),
+                  )
+                : Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: component.isReverseFacing
+                          ? Transform.rotate(
+                              angle: 3.1415926535,
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: fontSize,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : Text(
+                              label,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: fontSize,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                    ),
+                  ),
         ],
       ),
     );
