@@ -233,6 +233,13 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
           // ALWAYS run this — not gated behind initialDimensions == null.
           final comps = snap['components'];
           if (comps is List && comps.isNotEmpty) {
+            // Front-reserved boundary — exclude VIP/driver-area seats.
+            final frontPxRaw =
+                snap['metadata']?['front_partition_px'] ??
+                snap['front_partition_px'];
+            final double frontBoundary = frontPxRaw is num
+                ? (frontPxRaw).toDouble().clamp(40.0, double.infinity)
+                : 100.0;
             const structural = {
               'driverCabin',
               'exitDoor',
@@ -257,6 +264,8 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               final y = (c['y'] as num?)?.toDouble();
               final x = (c['x'] as num?)?.toDouble();
               if (y == null || x == null) continue;
+              // Skip seats inside the front reserved area (VIP, etc.).
+              if (y < frontBoundary) continue;
               ySet.add(y.round());
               if (y < minSeatY) minSeatY = y;
               if (firstY == null) firstY = y;
