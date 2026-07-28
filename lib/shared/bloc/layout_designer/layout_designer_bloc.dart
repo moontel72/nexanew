@@ -15,6 +15,61 @@ class LayoutDesignerBloc
     extends Bloc<LayoutDesignerEvent, LayoutDesignerState> {
   final ApiService _api = ApiService();
 
+  /// Row tolerance in pixels — seats within this Y distance belong
+  /// to the same row for numbering purposes.
+  static const double _rowTolerance = 10.0;
+
+  /// Re-index seat/business/folding components based on their
+  /// spatial position: top-to-bottom (Y), then left-to-right (X).
+  /// Non-seat components (driverCabin, doors, etc.) are preserved
+  /// at their original positions in the list.
+  List<AbsoluteLayoutComponent> _reindexByPosition(
+    List<AbsoluteLayoutComponent> comps,
+  ) {
+    // Split into seat-like components and structural components
+    final seats = <AbsoluteLayoutComponent>[];
+    final others = <AbsoluteLayoutComponent>[];
+    for (final c in comps) {
+      final isSeatLike = c.type == ComponentType.seat ||
+          c.type == ComponentType.businessClassSeat ||
+          c.type == ComponentType.foldingSeat ||
+          c.type == ComponentType.sleeperLower ||
+          c.type == ComponentType.sleeperUpper;
+      if (isSeatLike && c.customLabel == null) {
+        seats.add(c);
+      } else {
+        others.add(c);
+      }
+    }
+    // Sort seats: Y first (row), then X (column)
+    seats.sort((a, b) {
+      final rowA = (a.y / _rowTolerance).round();
+      final rowB = (b.y / _rowTolerance).round();
+      if (rowA != rowB) return rowA.compareTo(rowB);
+      return a.x.compareTo(b.x);
+    });
+    // Re-assign sequential numbers by category
+    int sN = 1, bN = 1, fN = 1, lN = 1, uN = 1;
+    final reindexed = seats.map((c) {
+      switch (c.type) {
+        case ComponentType.seat:
+          return c.copyWith(seatId: 'S$sN', seatNumber: sN++);
+        case ComponentType.businessClassSeat:
+          return c.copyWith(seatId: 'B$bN', seatNumber: bN++);
+        case ComponentType.foldingSeat:
+          return c.copyWith(seatId: 'F$fN', seatNumber: fN++);
+        case ComponentType.sleeperLower:
+          return c.copyWith(berthLabel: 'L$lN');
+        case ComponentType.sleeperUpper:
+          return c.copyWith(berthLabel: 'U$uN');
+        default:
+          return c;
+      }
+    }).toList();
+    // Merge: structural first, then reindexed seats
+    return [...others, ...reindexed];
+  }
+
   LayoutDesignerBloc() : super(const LayoutDesignerState()) {
     on<InitDesigner>(_onInit);
     on<ApplyPreset>(_onPreset);
@@ -224,21 +279,7 @@ class LayoutDesignerBloc
       isReverseFacing: e.isReverseFacing,
     );
     final newComponents = [...state.layout.components, comp];
-
-    // Re-index all seats sequentially so new insertion doesn't leave gaps.
-    int sN = 1, bN = 1, fN = 1;
-    final reindexed = newComponents.map((c) {
-      if (c.type == ComponentType.seat && c.customLabel == null) {
-        return c.copyWith(seatId: 'S$sN', seatNumber: sN++);
-      }
-      if (c.type == ComponentType.businessClassSeat && c.customLabel == null) {
-        return c.copyWith(seatId: 'B$bN', seatNumber: bN++);
-      }
-      if (c.type == ComponentType.foldingSeat && c.customLabel == null) {
-        return c.copyWith(seatId: 'F$fN', seatNumber: fN++);
-      }
-      return c;
-    }).toList();
+    final reindexed = _reindexByPosition(newComponents);
 
     emit(
       state.copyWith(
@@ -266,9 +307,10 @@ class LayoutDesignerBloc
     final newComponents = state.layout.components
         .map((c) => c.id == e.updated.id ? e.updated : c)
         .toList();
+    final reindexed = _reindexByPosition(newComponents);
     emit(
       state.copyWith(
-        layout: state.layout.copyWith(components: newComponents, isDirty: true),
+        layout: state.layout.copyWith(components: reindexed, isDirty: true),
       ),
     );
   }
@@ -277,20 +319,7 @@ class LayoutDesignerBloc
     final filtered = state.layout.components
         .where((c) => c.id != e.id)
         .toList();
-
-    int sN = 1, bN = 1, fN = 1;
-    final newComponents = filtered.map((c) {
-      if (c.type == ComponentType.seat && c.customLabel == null) {
-        return c.copyWith(seatId: 'S$sN', seatNumber: sN++);
-      }
-      if (c.type == ComponentType.businessClassSeat && c.customLabel == null) {
-        return c.copyWith(seatId: 'B$bN', seatNumber: bN++);
-      }
-      if (c.type == ComponentType.foldingSeat && c.customLabel == null) {
-        return c.copyWith(seatId: 'F$fN', seatNumber: fN++);
-      }
-      return c;
-    }).toList();
+    final newComponents = _reindexByPosition(filtered);
 
     emit(
       state.copyWith(

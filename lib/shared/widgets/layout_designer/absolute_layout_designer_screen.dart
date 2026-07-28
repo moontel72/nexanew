@@ -122,10 +122,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
       });
     }
     // Post-frame: verify the canvas size matches BusDimensions.
-    // Skip when _applyConfigData already handles the canvas via
-    // _initFromConfig (which may auto-expand width for wider seats).
-    final overrideCanvas = !(widget.config != null && widget.layoutId != null);
-    if (widget.busDimensions != null && overrideCanvas) {
+    if (widget.busDimensions != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final actualH = _state.canvasHeight;
@@ -175,12 +172,6 @@ class _DesignerBodyState extends State<_DesignerBody> {
       }
       // Front partition
       _bloc.add(SetLayoutMetadata('front_partition_px', cfg.frontPartitionPx));
-      // For edit mode: clear old components and regenerate the seat
-      // grid from the config screen's updated row/seat distribution.
-      if (widget.layoutId != null) {
-        _bloc.add(const ClearComponents());
-        _initFromConfig(cfg);
-      }
     }
     if (widget.registry != null) {
       _bloc.add(SetLayoutRegistry(widget.registry!));
