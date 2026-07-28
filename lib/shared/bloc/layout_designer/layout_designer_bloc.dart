@@ -17,7 +17,7 @@ class LayoutDesignerBloc
 
   /// Row tolerance in pixels — seats within this Y distance belong
   /// to the same row for numbering purposes.
-  static const double _rowTolerance = 10.0;
+  static const double _rowTolerance = 30.0;
 
   /// Re-index seat/business/folding components based on their
   /// spatial position: top-to-bottom (Y), then left-to-right (X).
@@ -30,7 +30,8 @@ class LayoutDesignerBloc
     final seats = <AbsoluteLayoutComponent>[];
     final others = <AbsoluteLayoutComponent>[];
     for (final c in comps) {
-      final isSeatLike = c.type == ComponentType.seat ||
+      final isSeatLike =
+          c.type == ComponentType.seat ||
           c.type == ComponentType.businessClassSeat ||
           c.type == ComponentType.foldingSeat ||
           c.type == ComponentType.sleeperLower ||
@@ -43,8 +44,8 @@ class LayoutDesignerBloc
     }
     // Sort seats: Y first (row), then X (column)
     seats.sort((a, b) {
-      final rowA = (a.y / _rowTolerance).round();
-      final rowB = (b.y / _rowTolerance).round();
+      final rowA = (a.y / _rowTolerance).floor();
+      final rowB = (b.y / _rowTolerance).floor();
       if (rowA != rowB) return rowA.compareTo(rowB);
       return a.x.compareTo(b.x);
     });
