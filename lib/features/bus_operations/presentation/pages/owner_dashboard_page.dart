@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_bloc.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_event.dart';
 import 'package:trace_odd/features/bus_operations/presentation/bloc/owner_dashboard/owner_dashboard_state.dart';
@@ -26,7 +27,12 @@ import 'package:trace_odd/core/services/api_service.dart';
 
 class OwnerDashboardPage extends StatelessWidget {
   final String panelPrefix;
-  const OwnerDashboardPage({super.key, this.panelPrefix = '/bus-owner'});
+  final String loginRoute;
+  const OwnerDashboardPage({
+    super.key,
+    this.panelPrefix = '/bus-owner',
+    this.loginRoute = '/bus-owner/login',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -41,14 +47,15 @@ class OwnerDashboardPage extends StatelessWidget {
               loginRoute: '/bus-owner/login',
             ),
           ),
-        child: const _OwnerView(),
+        child: _OwnerView(loginRoute: loginRoute),
       ),
     );
   }
 }
 
 class _OwnerView extends StatelessWidget {
-  const _OwnerView();
+  final String loginRoute;
+  const _OwnerView({required this.loginRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +84,8 @@ class _OwnerView extends StatelessWidget {
           backgroundColor: const Color(0xFF0D1B2A),
           body: Row(
             children: [
-              if (wide) _Sidebar(bloc: bloc, state: state),
+              if (wide)
+                _Sidebar(bloc: bloc, state: state, loginRoute: loginRoute),
               Expanded(child: _content(ctx, bloc, state)),
             ],
           ),
@@ -730,7 +738,12 @@ class _OwnerView extends StatelessWidget {
 class _Sidebar extends StatelessWidget {
   final OwnerDashboardBloc bloc;
   final OwnerDashboardState state;
-  const _Sidebar({required this.bloc, required this.state});
+  final String loginRoute;
+  const _Sidebar({
+    required this.bloc,
+    required this.state,
+    required this.loginRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -853,7 +866,10 @@ class _Sidebar extends StatelessWidget {
                     icon: Icons.logout,
                     color: const Color(0xFFDC2626),
                     height: 48,
-                    onTap: () => bloc.add(const OwnerLogout('busFleet')),
+                    onTap: () {
+                      bloc.add(const OwnerLogout('busFleet'));
+                      GoRouter.of(context).go(loginRoute);
+                    },
                   ),
                 ),
               ],
