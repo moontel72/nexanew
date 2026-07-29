@@ -586,7 +586,10 @@ class _FleetDashboardView extends StatelessWidget {
             int gapIdx = 0;
             for (int i = 1; i < merged.length; i++) {
               final gap = merged[i] - merged[i - 1];
-              if (gap > maxGap) { maxGap = gap; gapIdx = i; }
+              if (gap > maxGap) {
+                maxGap = gap;
+                gapIdx = i;
+              }
             }
             if (maxGap > 30) {
               lC = gapIdx;
@@ -597,10 +600,11 @@ class _FleetDashboardView extends StatelessWidget {
                   : 280.0);
               final midX = canvasW / 2;
               for (final x in merged) {
-                if (x < midX) lC++; else rC++;
+                if (x < midX)
+                  lC++;
+                else
+                  rC++;
               }
-            }
-          }
             }
           }
           leftS = lC.clamp(0, 8);
