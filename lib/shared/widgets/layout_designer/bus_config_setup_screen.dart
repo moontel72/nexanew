@@ -274,13 +274,20 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               }
             }
             // Detect left vs right by finding the aisle gap in X positions.
+            // Merge berth pairs first so lower+upper count as one column.
             int leftC = 0, rightC = 0;
             if (firstRowXs.isNotEmpty) {
               firstRowXs.sort();
+              final merged = <double>[firstRowXs.first];
+              for (int i = 1; i < firstRowXs.length; i++) {
+                if (firstRowXs[i] - merged.last > 30) {
+                  merged.add(firstRowXs[i]);
+                }
+              }
               double maxGap = 0;
               int gapIdx = 0;
-              for (int i = 1; i < firstRowXs.length; i++) {
-                final gap = firstRowXs[i] - firstRowXs[i - 1];
+              for (int i = 1; i < merged.length; i++) {
+                final gap = merged[i] - merged[i - 1];
                 if (gap > maxGap) {
                   maxGap = gap;
                   gapIdx = i;
@@ -288,10 +295,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               }
               if (maxGap > 30) {
                 leftC = gapIdx;
-                rightC = firstRowXs.length - gapIdx;
+                rightC = merged.length - gapIdx;
               } else {
                 final midX = canvasW / 2;
-                for (final x in firstRowXs) {
+                for (final x in merged) {
                   if (x < midX)
                     leftC++;
                   else

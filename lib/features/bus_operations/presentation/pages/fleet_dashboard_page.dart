@@ -570,34 +570,37 @@ class _FleetDashboardView extends StatelessWidget {
             }
           }
           // Detect left vs right by finding the aisle gap in X positions.
+          // First, merge berth pairs (lower+upper at same floor column)
+          // into a single X so they count as one column, not two.
           int lC = 0, rC = 0;
           if (firstRowXs.isNotEmpty) {
             firstRowXs.sort();
+            final merged = <double>[firstRowXs.first];
+            for (int i = 1; i < firstRowXs.length; i++) {
+              if (firstRowXs[i] - merged.last > 30) {
+                merged.add(firstRowXs[i]);
+              }
+              // else: berth pair — same floor column, skip
+            }
             double maxGap = 0;
             int gapIdx = 0;
-            for (int i = 1; i < firstRowXs.length; i++) {
-              final gap = firstRowXs[i] - firstRowXs[i - 1];
-              if (gap > maxGap) {
-                maxGap = gap;
-                gapIdx = i;
-              }
+            for (int i = 1; i < merged.length; i++) {
+              final gap = merged[i] - merged[i - 1];
+              if (gap > maxGap) { maxGap = gap; gapIdx = i; }
             }
-            // If there's a clear gap (> 30 px), split left/right there.
             if (maxGap > 30) {
               lC = gapIdx;
-              rC = firstRowXs.length - gapIdx;
+              rC = merged.length - gapIdx;
             } else {
-              // No clear aisle gap — fall back to mid-canvas split.
               final canvasW = (snapCanvas is Map
                   ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280.0)
                   : 280.0);
               final midX = canvasW / 2;
-              for (final x in firstRowXs) {
-                if (x < midX)
-                  lC++;
-                else
-                  rC++;
+              for (final x in merged) {
+                if (x < midX) lC++; else rC++;
               }
+            }
+          }
             }
           }
           leftS = lC.clamp(0, 8);

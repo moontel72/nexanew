@@ -619,10 +619,17 @@ class _OwnerView extends StatelessWidget {
           int lC = 0, rC = 0;
           if (firstRowXs.isNotEmpty) {
             firstRowXs.sort();
+            // Merge berth pairs (lower+upper at same floor column).
+            final merged = <double>[firstRowXs.first];
+            for (int i = 1; i < firstRowXs.length; i++) {
+              if (firstRowXs[i] - merged.last > 30) {
+                merged.add(firstRowXs[i]);
+              }
+            }
             double maxGap = 0;
             int gapIdx = 0;
-            for (int i = 1; i < firstRowXs.length; i++) {
-              final gap = firstRowXs[i] - firstRowXs[i - 1];
+            for (int i = 1; i < merged.length; i++) {
+              final gap = merged[i] - merged[i - 1];
               if (gap > maxGap) {
                 maxGap = gap;
                 gapIdx = i;
@@ -630,12 +637,12 @@ class _OwnerView extends StatelessWidget {
             }
             if (maxGap > 30) {
               lC = gapIdx;
-              rC = firstRowXs.length - gapIdx;
+              rC = merged.length - gapIdx;
             } else {
               final cw = (snapCanvas is Map
                   ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280)
                   : 280);
-              for (final x in firstRowXs) {
+              for (final x in merged) {
                 if (x < cw / 2)
                   lC++;
                 else
