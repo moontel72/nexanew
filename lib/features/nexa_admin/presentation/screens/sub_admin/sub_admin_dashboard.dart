@@ -1220,6 +1220,7 @@ class _Sidebar extends StatelessWidget {
                             companyId: '',
                             companyName: 'Template',
                             apiPrefix: '/admin',
+                            isPreset: true,
                           ),
                         ),
                       ),

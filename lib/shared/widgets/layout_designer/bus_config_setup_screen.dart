@@ -40,6 +40,7 @@ class BusConfigSetupScreen extends StatefulWidget {
   final bool initialHasFrontPartition;
   final int initialFrontPartitionFt;
   final int initialFrontPartitionIn;
+  final bool isPreset;
 
   const BusConfigSetupScreen({
     super.key,
@@ -58,6 +59,7 @@ class BusConfigSetupScreen extends StatefulWidget {
     this.initialHasFrontPartition = false,
     this.initialFrontPartitionFt = 0,
     this.initialFrontPartitionIn = 0,
+    this.isPreset = false,
   });
 
   @override
@@ -69,6 +71,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
 
   // ── Bus Profile ──
   late TextEditingController _numberPlateCtrl;
+  late TextEditingController _presetNameCtrl;
   late TextEditingController _specsCtrl;
   late TextEditingController _otherMakerCtrl;
   String? _selectedMaker;
@@ -104,6 +107,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   void initState() {
     super.initState();
     _numberPlateCtrl = TextEditingController();
+    _presetNameCtrl = TextEditingController();
     _specsCtrl = TextEditingController();
     _otherMakerCtrl = TextEditingController();
 
@@ -349,6 +353,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   @override
   void dispose() {
     _numberPlateCtrl.dispose();
+    _presetNameCtrl.dispose();
     _specsCtrl.dispose();
     _otherMakerCtrl.dispose();
     super.dispose();
@@ -385,50 +390,62 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 // ═══════════════════════════════════════════
                 // SECTION 1: BUS PROFILE
                 // ═══════════════════════════════════════════
-                _sectionHeader(Icons.directions_bus, 'BUS PROFILE'),
-                const SizedBox(height: 12),
-
-                // Number Plate
-                _fieldLabel('Bus Number Plate'),
-                const SizedBox(height: 4),
-                TextFormField(
-                  controller: _numberPlateCtrl,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: _inputDecoration(
-                    hint: 'e.g. DHAKA-METRO-JA-11-9999',
-                    prefixIcon: Icons.confirmation_number,
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Bus Maker Dropdown
-                _fieldLabel('Bus Maker / Company'),
-                const SizedBox(height: 4),
-                DropdownButtonFormField<String>(
-                  value: _selectedMaker,
-                  dropdownColor: const Color(0xFF122442),
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: _inputDecoration(
-                    hint: 'Select manufacturer',
-                    prefixIcon: Icons.factory,
-                  ),
-                  items: _busMakers
-                      .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedMaker = v),
-                ),
-                if (_selectedMaker == 'Others') ...[
+                if (widget.isPreset) ...[
+                  _sectionHeader(Icons.bookmark, 'PRESET TEMPLATE'),
                   const SizedBox(height: 12),
-                  _fieldLabel('Specify Manufacturer Name'),
+                  _fieldLabel('Preset / Template Name'),
                   const SizedBox(height: 4),
                   TextFormField(
-                    controller: _otherMakerCtrl,
+                    controller: _presetNameCtrl,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: _inputDecoration(
-                      hint: 'e.g. Custom Coach Co.',
-                      prefixIcon: Icons.edit,
+                      hint: 'e.g. Standard 5x4 Sleeper Layout',
+                      prefixIcon: Icons.label,
                     ),
                   ),
+                  const SizedBox(height: 14),
+                ] else ...[
+                  _sectionHeader(Icons.directions_bus, 'BUS PROFILE'),
+                  const SizedBox(height: 12),
+                  _fieldLabel('Bus Number Plate'),
+                  const SizedBox(height: 4),
+                  TextFormField(
+                    controller: _numberPlateCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: _inputDecoration(
+                      hint: 'e.g. DHAKA-METRO-JA-11-9999',
+                      prefixIcon: Icons.confirmation_number,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _fieldLabel('Bus Maker / Company'),
+                  const SizedBox(height: 4),
+                  DropdownButtonFormField<String>(
+                    value: _selectedMaker,
+                    dropdownColor: const Color(0xFF122442),
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: _inputDecoration(
+                      hint: 'Select manufacturer',
+                      prefixIcon: Icons.factory,
+                    ),
+                    items: _busMakers
+                        .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedMaker = v),
+                  ),
+                  if (_selectedMaker == 'Others') ...[
+                    const SizedBox(height: 12),
+                    _fieldLabel('Specify Manufacturer Name'),
+                    const SizedBox(height: 4),
+                    TextFormField(
+                      controller: _otherMakerCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: _inputDecoration(
+                        hint: 'e.g. Custom Coach Co.',
+                        prefixIcon: Icons.edit,
+                      ),
+                    ),
+                  ],
                 ],
                 const SizedBox(height: 14),
 
@@ -1170,10 +1187,17 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   }
 
   void _startDesigning() {
-    // When "Others" is selected, use the custom typed name.
-    final effectiveMaker = _selectedMaker == 'Others'
-        ? _otherMakerCtrl.text.trim()
-        : (_selectedMaker ?? '');
+    final String numberPlate;
+    final String maker;
+    if (widget.isPreset) {
+      numberPlate = _presetNameCtrl.text.trim();
+      maker = '';
+    } else {
+      numberPlate = _numberPlateCtrl.text.trim();
+      maker = _selectedMaker == 'Others'
+          ? _otherMakerCtrl.text.trim()
+          : (_selectedMaker ?? '');
+    }
 
     // Pull physics data from the validation BloC if available.
     LayoutValidationBloc? validationBloc;
@@ -1203,8 +1227,8 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         ? ((_frontPartitionFt * 12 + _frontPartitionIn) * 4.0)
         : 0.0;
     final config = BusConfig(
-      numberPlate: _numberPlateCtrl.text.trim(),
-      maker: effectiveMaker,
+      numberPlate: numberPlate,
+      maker: maker,
       specifications: _specsCtrl.text.trim(),
       leftSeats: _leftSeats,
       rightSeats: _rightSeats,
