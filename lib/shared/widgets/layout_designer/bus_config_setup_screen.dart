@@ -153,9 +153,101 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         _presets = d is List ? d.cast<Map<String, dynamic>>() : [];
         _presetsLoading = false;
       });
+      // If editing an existing layout, try to auto-select the matching preset.
+      if (widget.layoutId != null && _presets.isNotEmpty) {
+        _matchPresetForEdit();
+      }
     } catch (_) {
       setState(() => _presetsLoading = false);
     }
+  }
+
+  /// If the current layout matches a preset, auto-select it.
+  void _matchPresetForEdit() {
+    // Only match if not already in preset mode.
+    if (_usePreset && _selectedPreset != null) return;
+    // If the layout was configured as custom grid, don't override.
+    // Heuristic: if the user previously had a custom seat matrix with
+    // non-zero rows, assume custom grid mode.
+    if (_rowCount > 0 && !_usePreset) return;
+    // Try to match by display name or component count.
+    for (final p in _presets) {
+      final snap = p['current_snapshot'];
+      if (snap is! Map) continue;
+      final comps = snap['components'];
+      if (comps is! List) continue;
+      // Simple heuristic: match by component count.
+      if (comps.length > 0 && comps.length == (_rowCount * (_leftSeats + _rightSeats))) {
+        // Rough match — auto-select this preset.
+        _selectedPreset = p;
+        _usePreset = true;
+        _hydratePresetData(p);
+        break;
+      }
+    }
+  }
+
+  /// Build a human-readable subtitle from preset snapshot components.
+  String _presetSubtitle(Map<String, dynamic> p) {
+    final snap = p['current_snapshot'];
+    if (snap is! Map) {
+      final seats = p['total_seats'] ?? p['seat_count'] ?? '?';
+      return '$seats seats · ${p['deck_level'] ?? 'single'} deck';
+    }
+    final comps = snap['components'];
+    if (comps is! List || comps.isEmpty) {
+      final seats = p['total_seats'] ?? p['seat_count'] ?? '?';
+      return '$seats seats · ${p['deck_level'] ?? 'single'} deck';
+    }
+    final counts = <String, int>{};
+    for (final c in comps) {
+      if (c is! Map) continue;
+      final t = c['type']?.toString() ?? '';
+      if (t == 'sleeperLower') counts['Low.Berth'] = (counts['Low.Berth'] ?? 0) + 1;
+      else if (t == 'sleeperUpper') counts['Upp.Berth'] = (counts['Upp.Berth'] ?? 0) + 1;
+      else if (t == 'seat') counts['Seats'] = (counts['Seats'] ?? 0) + 1;
+      else if (t == 'businessClassSeat') counts['Business'] = (counts['Business'] ?? 0) + 1;
+      else if (t == 'foldingSeat') counts['Folding'] = (counts['Folding'] ?? 0) + 1;
+    }
+    if (counts.isEmpty) {
+      final seats = p['total_seats'] ?? p['seat_count'] ?? '?';
+      return '$seats seats · ${p['deck_level'] ?? 'single'} deck';
+    }
+    return counts.entries.map((e) => '${e.value} ${e.key}').join(' + ');
+  }
+
+  /// Hydrate form fields from a selected preset's data.
+  void _hydratePresetData(Map<String, dynamic> preset) {
+    final snap = preset['current_snapshot'];
+    if (snap is! Map) return;
+    try {
+      final vBloc = context.read<LayoutValidationBloc>();
+      // Canvas dimensions
+      final snapCanvas = snap['canvas'];
+      if (snapCanvas is Map) {
+        final w = (snapCanvas['canvas_width'] as num?)?.toDouble();
+        final h = (snapCanvas['canvas_height'] as num?)?.toDouble();
+        if (w != null && h != null && w > 0 && h > 0) {
+          final hPx = _readHeightPx(snap) ?? 0.0;
+          vBloc.add(DimensionsChanged(BusDimensions(
+            length: FeetInches.fromPixels(h),
+            width: FeetInches.fromPixels(w),
+            height: FeetInches.fromPixels(hPx),
+          )));
+        }
+      }
+      // Registry
+      dynamic regJson = snap['registry'];
+      if (regJson is String) {
+        try { regJson = jsonDecode(regJson); } catch (_) { regJson = null; }
+      }
+      if (regJson is Map) {
+        try {
+          final reg = ComponentRegistry.fromJson(Map<String, dynamic>.from(regJson));
+          vBloc.add(RegistryChanged(reg));
+        } catch (_) {}
+      }
+    } catch (_) {}
   }
 
   /// Read bus height in pixels from snapshot metadata.
@@ -686,7 +778,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                                 ),
                               ),
                               subtitle: Text(
-                                '${p['total_seats'] ?? p['seat_count'] ?? '?'} seats · ${p['deck_level'] ?? 'single'} deck',
+                                _presetSubtitle(p),
                                 style: const TextStyle(
                                   color: Color(0xFF8899AA),
                                   fontSize: 11,
@@ -696,7 +788,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                                 Icons.directions_bus,
                                 color: Color(0xFF7C3AED),
                               ),
-                              onTap: () => setState(() => _selectedPreset = p),
+                              onTap: () {
+                                setState(() => _selectedPreset = p);
+                                _hydratePresetData(p);
+                              },
                             ),
                           ),
                         ),
