@@ -60,9 +60,9 @@ class LayoutDesignerBloc
         case ComponentType.foldingSeat:
           return c.copyWith(seatId: 'F$fN', seatNumber: fN++);
         case ComponentType.sleeperLower:
-          return c.copyWith(berthLabel: 'L$lN');
+          return c.copyWith(berthLabel: 'L${lN++}');
         case ComponentType.sleeperUpper:
-          return c.copyWith(berthLabel: 'U$uN');
+          return c.copyWith(berthLabel: 'U${uN++}');
         default:
           return c;
       }
