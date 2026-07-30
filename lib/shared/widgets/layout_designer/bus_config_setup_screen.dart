@@ -1376,6 +1376,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
           config: config,
           apiPrefix: widget.apiPrefix,
           cloneFromTemplate: shouldClone,
+          isPreset: widget.isPreset,
           busDimensions: validationBloc?.state.dimensions,
           registry: registry ?? validationBloc?.state.registry,
         ),

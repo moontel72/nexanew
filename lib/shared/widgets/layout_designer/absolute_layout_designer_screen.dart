@@ -25,6 +25,7 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
   final String? layoutId;
   final BusConfig? config;
   final bool cloneFromTemplate;
+  final bool isPreset;
   final BusDimensions? busDimensions;
   final ComponentRegistry? registry;
 
@@ -36,6 +37,7 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
     this.config,
     this.apiPrefix = '/bus-owner',
     this.cloneFromTemplate = false,
+    this.isPreset = false,
     this.busDimensions,
     this.registry,
   });
@@ -57,6 +59,7 @@ class AbsoluteLayoutDesignerScreen extends StatelessWidget {
       config: config,
       apiPrefix: apiPrefix,
       cloneFromTemplate: cloneFromTemplate,
+      isPreset: isPreset,
       busDimensions: busDimensions,
       registry: registry,
     ),
@@ -68,15 +71,17 @@ class _DesignerBody extends StatefulWidget {
   final String? layoutId;
   final BusConfig? config;
   final bool cloneFromTemplate;
+  final bool isPreset;
   final BusDimensions? busDimensions;
   final ComponentRegistry? registry;
   const _DesignerBody({
     required this.companyId,
     required this.companyName,
+    required this.apiPrefix,
     this.layoutId,
     this.config,
-    required this.apiPrefix,
     this.cloneFromTemplate = false,
+    this.isPreset = false,
     this.busDimensions,
     this.registry,
   });
@@ -172,6 +177,11 @@ class _DesignerBodyState extends State<_DesignerBody> {
       }
       // Front partition
       _bloc.add(SetLayoutMetadata('front_partition_px', cfg.frontPartitionPx));
+      // For presets: regenerate the seat grid from the updated config.
+      if (widget.isPreset && widget.layoutId != null) {
+        _bloc.add(const ClearComponents());
+        _initFromConfig(cfg);
+      }
     }
     if (widget.registry != null) {
       _bloc.add(SetLayoutRegistry(widget.registry!));
