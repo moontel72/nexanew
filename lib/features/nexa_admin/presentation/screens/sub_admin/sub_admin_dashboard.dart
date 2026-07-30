@@ -2,6 +2,8 @@
 //
 // Post-login workspace for a vertical sub-admin.
 // Shows KPIs, bus company management, and profile info.
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
@@ -14,6 +16,10 @@ import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3
 import 'package:trace_odd/core/services/api_service.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/absolute_layout_designer_screen.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_bloc.dart';
+import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_event.dart';
+import 'package:trace_odd/shared/models/transport/bus_dimensions.dart';
+import 'package:trace_odd/shared/models/transport/component_registry.dart';
+import 'package:trace_odd/shared/models/transport/feet_inches.dart';
 import 'package:trace_odd/shared/widgets/layout_designer/bus_config_setup_screen.dart';
 
 class SubAdminDashboardScreen extends StatelessWidget {
@@ -931,64 +937,154 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
   Future<void> _editPreset(Map<String, dynamic> p) async {
     final id = p['id']?.toString();
     if (id == null) return;
-    final ctrl = TextEditingController(
-      text: p['display_name']?.toString() ?? '',
-    );
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF162438),
-        title: const Text(
-          'Edit Preset Name',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: TextField(
-          controller: ctrl,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: 'Enter preset name',
-            hintStyle: TextStyle(color: Color(0xFF556677)),
-            filled: true,
-            fillColor: Color(0xFF122442),
-            border: OutlineInputBorder(borderSide: BorderSide.none),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(c, ctrl.text.trim()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00B4D8),
-            ),
-            child: const Text('Save & Open Canvas'),
-          ),
-        ],
-      ),
-    );
-    if (newName == null || newName.isEmpty) return;
+
+    // Pre-fetch the full preset data so the edit form is fully populated.
+    BusDimensions? dims;
+    ComponentRegistry? reg;
+    String? name;
+    int leftS = 0, rightS = 0, rows = 0;
+    bool hasFront = false;
+    int frontFt = 0, frontIn = 0;
     try {
       final api = ApiService();
-      await api.put(
-        '/admin/absolute-layouts/$id',
-        body: {'display_name': newName},
-      );
-      _load();
+      final r = await api.get('/admin/absolute-layouts/$id');
+      final d = r?['data'];
+      if (d is Map) {
+        name = d['display_name']?.toString() ?? d['name']?.toString() ?? '';
+        final snap = d['current_snapshot'];
+        Map<String, dynamic>? snapMap;
+        if (snap is Map) snapMap = Map<String, dynamic>.from(snap);
+        final snapCanvas = snapMap?['canvas'];
+        if (snapCanvas is Map) {
+          final w = (snapCanvas['canvas_width'] as num?)?.toDouble();
+          final h = (snapCanvas['canvas_height'] as num?)?.toDouble();
+          if (w != null && h != null && w > 0 && h > 0) {
+            final meta = snapMap?['metadata'];
+            final hPx = snapMap?['bus_height_px'] ??
+                (meta is Map ? meta['bus_height_px'] : null);
+            FeetInches busH = hPx is num
+                ? FeetInches.fromPixels(hPx.toDouble())
+                : FeetInches.zero;
+            dims = BusDimensions(
+              length: FeetInches.fromPixels(h),
+              width: FeetInches.fromPixels(w),
+              height: busH,
+            );
+          }
+        }
+        // Registry
+        dynamic regJson = snapMap?['registry'];
+        if (regJson is String) {
+          try { regJson = jsonDecode(regJson); } catch (_) { regJson = null; }
+        }
+        if (regJson is Map) {
+          try {
+            reg = ComponentRegistry.fromJson(Map<String, dynamic>.from(regJson));
+          } catch (_) {}
+        }
+        // Derive seat matrix from components
+        final comps = snapMap?['components'];
+        if (comps is List && comps.isNotEmpty) {
+          final frontPxRaw =
+              snapMap?['metadata']?['front_partition_px'] ??
+              snapMap?['front_partition_px'];
+          final double frontBoundary = frontPxRaw is num
+              ? (frontPxRaw).toDouble().clamp(40.0, double.infinity)
+              : 100.0;
+          const structural = {
+            'driverCabin','exitDoor','sideDoor','slidingDoor',
+            'frontDoor','rearDoor','aisle','emergency',
+            'lavatory','restaurantTable','empty',
+          };
+          final ySet = <int>{};
+          final firstRowXs = <double>[];
+          double? firstY;
+          double minSeatY = double.infinity;
+          for (final c in comps) {
+            if (c is! Map) continue;
+            if (structural.contains(c['type']?.toString() ?? '')) continue;
+            final y = (c['y'] as num?)?.toDouble();
+            final x = (c['x'] as num?)?.toDouble();
+            if (y == null || x == null) continue;
+            if (y < frontBoundary) continue;
+            ySet.add(y.round());
+            if (y < minSeatY) minSeatY = y;
+            if (firstY == null) firstY = y;
+            if ((y - firstY!).abs() < 5) firstRowXs.add(x);
+          }
+          int lC = 0, rC = 0;
+          if (firstRowXs.isNotEmpty) {
+            firstRowXs.sort();
+            final merged = <double>[firstRowXs.first];
+            for (int i = 1; i < firstRowXs.length; i++) {
+              if (firstRowXs[i] - merged.last > 30) merged.add(firstRowXs[i]);
+            }
+            double maxGap = 0;
+            int gapIdx = 0;
+            for (int i = 1; i < merged.length; i++) {
+              final gap = merged[i] - merged[i - 1];
+              if (gap > maxGap) { maxGap = gap; gapIdx = i; }
+            }
+            if (maxGap > 30) {
+              lC = gapIdx;
+              rC = merged.length - gapIdx;
+            } else {
+              final cw = (snapCanvas is Map
+                  ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280)
+                  : 280);
+              for (final x in merged) {
+                if (x < cw / 2) lC++; else rC++;
+              }
+            }
+          }
+          leftS = lC.clamp(0, 8);
+          rightS = rC.clamp(0, 8);
+          rows = ySet.length.clamp(1, 50);
+          // Front partition
+          final fpx = snapMap?['metadata']?['front_partition_px'] ??
+              snapMap?['front_partition_px'];
+          if (fpx is num && fpx.toDouble() > 0) {
+            final ri = (fpx.toDouble() / 4.0).round();
+            if (ri > 0) { hasFront = true; frontFt = ri ~/ 12; frontIn = ri % 12; }
+          } else if ((minSeatY - 100).abs() > 20 && minSeatY < double.infinity) {
+            final ri = (minSeatY / 4.0).round();
+            if (ri > 0) { hasFront = true; frontFt = ri ~/ 12; frontIn = ri % 12; }
+          }
+        }
+      }
     } catch (_) {}
+
     if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AbsoluteLayoutDesignerScreen(
-          companyId: '',
-          companyName: newName,
-          apiPrefix: '/admin',
-          layoutId: id,
+        builder: (_) => BlocProvider<LayoutValidationBloc>(
+          create: (_) {
+            final b = LayoutValidationBloc();
+            if (dims != null) b.add(DimensionsChanged(dims));
+            if (reg != null) b.add(RegistryChanged(reg));
+            b.add(SeatMatrixChanged(rows: rows, leftSeats: leftS, rightSeats: rightS));
+            return b;
+          },
+          child: BusConfigSetupScreen(
+            companyId: '',
+            companyName: 'Template',
+            apiPrefix: '/admin',
+            isPreset: true,
+            layoutId: id,
+            initialDimensions: dims,
+            initialRegistry: reg,
+            initialPlate: name,
+            initialLeftSeats: leftS,
+            initialRightSeats: rightS,
+            initialRowCount: rows,
+            initialHasFrontPartition: hasFront,
+            initialFrontPartitionFt: frontFt,
+            initialFrontPartitionIn: frontIn,
+          ),
         ),
       ),
-    );
+    ).then((_) => _load());
   }
 
   @override
