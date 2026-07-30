@@ -646,7 +646,9 @@ class _FleetDashboardView extends StatelessWidget {
           create: (_) {
             final b = LayoutValidationBloc();
             if (dims != null) b.add(DimensionsChanged(dims));
-            if (reg != null) b.add(RegistryChanged(reg));
+            // For legacy layouts without saved registry, provide
+            // sensible defaults so the form doesn't show all zeros.
+            b.add(RegistryChanged(reg ?? const ComponentRegistry()));
             // Pre-load seat matrix into Bloc so validation uses correct values.
             b.add(
               SeatMatrixChanged(

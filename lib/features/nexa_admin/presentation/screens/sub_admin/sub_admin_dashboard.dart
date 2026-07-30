@@ -1093,7 +1093,7 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
           create: (_) {
             final b = LayoutValidationBloc();
             if (dims != null) b.add(DimensionsChanged(dims));
-            if (reg != null) b.add(RegistryChanged(reg));
+            b.add(RegistryChanged(reg ?? const ComponentRegistry()));
             b.add(
               SeatMatrixChanged(
                 rows: rows,
