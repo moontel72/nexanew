@@ -126,8 +126,12 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
 
     // Use pre-loaded values directly (no API call needed).
     if (widget.initialPlate != null && widget.initialPlate!.isNotEmpty) {
-      _numberPlateCtrl.text = widget.initialPlate!;
-      _selectedMaker = widget.initialMaker;
+      if (widget.isPreset) {
+        _presetNameCtrl.text = widget.initialPlate!;
+      } else {
+        _numberPlateCtrl.text = widget.initialPlate!;
+        _selectedMaker = widget.initialMaker;
+      }
       _specsCtrl.text = widget.initialSpecs ?? '';
       _leftSeats = widget.initialLeftSeats;
       _rightSeats = widget.initialRightSeats;
@@ -177,7 +181,8 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
       final comps = snap['components'];
       if (comps is! List) continue;
       // Simple heuristic: match by component count.
-      if (comps.length > 0 && comps.length == (_rowCount * (_leftSeats + _rightSeats))) {
+      if (comps.length > 0 &&
+          comps.length == (_rowCount * (_leftSeats + _rightSeats))) {
         // Rough match — auto-select this preset.
         _selectedPreset = p;
         _usePreset = true;
@@ -203,11 +208,16 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     for (final c in comps) {
       if (c is! Map) continue;
       final t = c['type']?.toString() ?? '';
-      if (t == 'sleeperLower') counts['Low.Berth'] = (counts['Low.Berth'] ?? 0) + 1;
-      else if (t == 'sleeperUpper') counts['Upp.Berth'] = (counts['Upp.Berth'] ?? 0) + 1;
-      else if (t == 'seat') counts['Seats'] = (counts['Seats'] ?? 0) + 1;
-      else if (t == 'businessClassSeat') counts['Business'] = (counts['Business'] ?? 0) + 1;
-      else if (t == 'foldingSeat') counts['Folding'] = (counts['Folding'] ?? 0) + 1;
+      if (t == 'sleeperLower')
+        counts['Low.Berth'] = (counts['Low.Berth'] ?? 0) + 1;
+      else if (t == 'sleeperUpper')
+        counts['Upp.Berth'] = (counts['Upp.Berth'] ?? 0) + 1;
+      else if (t == 'seat')
+        counts['Seats'] = (counts['Seats'] ?? 0) + 1;
+      else if (t == 'businessClassSeat')
+        counts['Business'] = (counts['Business'] ?? 0) + 1;
+      else if (t == 'foldingSeat')
+        counts['Folding'] = (counts['Folding'] ?? 0) + 1;
     }
     if (counts.isEmpty) {
       final seats = p['total_seats'] ?? p['seat_count'] ?? '?';
@@ -229,21 +239,31 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         final h = (snapCanvas['canvas_height'] as num?)?.toDouble();
         if (w != null && h != null && w > 0 && h > 0) {
           final hPx = _readHeightPx(snap) ?? 0.0;
-          vBloc.add(DimensionsChanged(BusDimensions(
-            length: FeetInches.fromPixels(h),
-            width: FeetInches.fromPixels(w),
-            height: FeetInches.fromPixels(hPx),
-          )));
+          vBloc.add(
+            DimensionsChanged(
+              BusDimensions(
+                length: FeetInches.fromPixels(h),
+                width: FeetInches.fromPixels(w),
+                height: FeetInches.fromPixels(hPx),
+              ),
+            ),
+          );
         }
       }
       // Registry
       dynamic regJson = snap['registry'];
       if (regJson is String) {
-        try { regJson = jsonDecode(regJson); } catch (_) { regJson = null; }
+        try {
+          regJson = jsonDecode(regJson);
+        } catch (_) {
+          regJson = null;
+        }
       }
       if (regJson is Map) {
         try {
-          final reg = ComponentRegistry.fromJson(Map<String, dynamic>.from(regJson));
+          final reg = ComponentRegistry.fromJson(
+            Map<String, dynamic>.from(regJson),
+          );
           vBloc.add(RegistryChanged(reg));
         } catch (_) {}
       }
