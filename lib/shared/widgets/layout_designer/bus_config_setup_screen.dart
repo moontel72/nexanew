@@ -183,10 +183,11 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
       // Simple heuristic: match by component count.
       if (comps.length > 0 &&
           comps.length == (_rowCount * (_leftSeats + _rightSeats))) {
-        // Rough match — auto-select this preset.
+        // Rough match — auto-select this preset for display only.
+        // Data comes from pre-loaded Bloc/_loadExistingLayout, not
+        // from the presets list (which may be a summary).
         _selectedPreset = p;
         _usePreset = true;
-        _hydratePresetData(p);
         break;
       }
     }
