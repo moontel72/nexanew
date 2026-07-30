@@ -622,7 +622,7 @@ class _OwnerView extends StatelessWidget {
             // Merge berth pairs (lower+upper at same floor column).
             final merged = <double>[firstRowXs.first];
             for (int i = 1; i < firstRowXs.length; i++) {
-              if (firstRowXs[i] - merged.last > 30) {
+              if (firstRowXs[i] - merged.last > 80) {
                 merged.add(firstRowXs[i]);
               }
             }

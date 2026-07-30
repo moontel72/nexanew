@@ -960,7 +960,8 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
           final h = (snapCanvas['canvas_height'] as num?)?.toDouble();
           if (w != null && h != null && w > 0 && h > 0) {
             final meta = snapMap?['metadata'];
-            final hPx = snapMap?['bus_height_px'] ??
+            final hPx =
+                snapMap?['bus_height_px'] ??
                 (meta is Map ? meta['bus_height_px'] : null);
             FeetInches busH = hPx is num
                 ? FeetInches.fromPixels(hPx.toDouble())
@@ -975,11 +976,17 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
         // Registry
         dynamic regJson = snapMap?['registry'];
         if (regJson is String) {
-          try { regJson = jsonDecode(regJson); } catch (_) { regJson = null; }
+          try {
+            regJson = jsonDecode(regJson);
+          } catch (_) {
+            regJson = null;
+          }
         }
         if (regJson is Map) {
           try {
-            reg = ComponentRegistry.fromJson(Map<String, dynamic>.from(regJson));
+            reg = ComponentRegistry.fromJson(
+              Map<String, dynamic>.from(regJson),
+            );
           } catch (_) {}
         }
         // Derive seat matrix from components
@@ -992,9 +999,17 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
               ? (frontPxRaw).toDouble().clamp(40.0, double.infinity)
               : 100.0;
           const structural = {
-            'driverCabin','exitDoor','sideDoor','slidingDoor',
-            'frontDoor','rearDoor','aisle','emergency',
-            'lavatory','restaurantTable','empty',
+            'driverCabin',
+            'exitDoor',
+            'sideDoor',
+            'slidingDoor',
+            'frontDoor',
+            'rearDoor',
+            'aisle',
+            'emergency',
+            'lavatory',
+            'restaurantTable',
+            'empty',
           };
           final ySet = <int>{};
           final firstRowXs = <double>[];
@@ -1017,13 +1032,16 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
             firstRowXs.sort();
             final merged = <double>[firstRowXs.first];
             for (int i = 1; i < firstRowXs.length; i++) {
-              if (firstRowXs[i] - merged.last > 30) merged.add(firstRowXs[i]);
+              if (firstRowXs[i] - merged.last > 80) merged.add(firstRowXs[i]);
             }
             double maxGap = 0;
             int gapIdx = 0;
             for (int i = 1; i < merged.length; i++) {
               final gap = merged[i] - merged[i - 1];
-              if (gap > maxGap) { maxGap = gap; gapIdx = i; }
+              if (gap > maxGap) {
+                maxGap = gap;
+                gapIdx = i;
+              }
             }
             if (maxGap > 30) {
               lC = gapIdx;
@@ -1033,7 +1051,10 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
                   ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280)
                   : 280);
               for (final x in merged) {
-                if (x < cw / 2) lC++; else rC++;
+                if (x < cw / 2)
+                  lC++;
+                else
+                  rC++;
               }
             }
           }
@@ -1041,14 +1062,24 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
           rightS = rC.clamp(0, 8);
           rows = ySet.length.clamp(1, 50);
           // Front partition
-          final fpx = snapMap?['metadata']?['front_partition_px'] ??
+          final fpx =
+              snapMap?['metadata']?['front_partition_px'] ??
               snapMap?['front_partition_px'];
           if (fpx is num && fpx.toDouble() > 0) {
             final ri = (fpx.toDouble() / 4.0).round();
-            if (ri > 0) { hasFront = true; frontFt = ri ~/ 12; frontIn = ri % 12; }
-          } else if ((minSeatY - 100).abs() > 20 && minSeatY < double.infinity) {
+            if (ri > 0) {
+              hasFront = true;
+              frontFt = ri ~/ 12;
+              frontIn = ri % 12;
+            }
+          } else if ((minSeatY - 100).abs() > 20 &&
+              minSeatY < double.infinity) {
             final ri = (minSeatY / 4.0).round();
-            if (ri > 0) { hasFront = true; frontFt = ri ~/ 12; frontIn = ri % 12; }
+            if (ri > 0) {
+              hasFront = true;
+              frontFt = ri ~/ 12;
+              frontIn = ri % 12;
+            }
           }
         }
       }
@@ -1063,7 +1094,13 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
             final b = LayoutValidationBloc();
             if (dims != null) b.add(DimensionsChanged(dims));
             if (reg != null) b.add(RegistryChanged(reg));
-            b.add(SeatMatrixChanged(rows: rows, leftSeats: leftS, rightSeats: rightS));
+            b.add(
+              SeatMatrixChanged(
+                rows: rows,
+                leftSeats: leftS,
+                rightSeats: rightS,
+              ),
+            );
             return b;
           },
           child: BusConfigSetupScreen(
