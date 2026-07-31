@@ -230,7 +230,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   /// Hydrate form fields from a selected preset's data.
   /// Fetches the full preset from the API if the list summary
   /// doesn't include the complete snapshot.
-  void _hydratePresetData(Map<String, dynamic> preset) async {
+  Future<void> _hydratePresetData(Map<String, dynamic> preset) async {
     var snap = preset['current_snapshot'];
     // If the presets list didn't include a full snapshot, fetch it.
     if (snap is! Map || snap['registry'] == null) {
@@ -822,9 +822,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                                 Icons.directions_bus,
                                 color: Color(0xFF7C3AED),
                               ),
-                              onTap: () {
+                              onTap: () async {
                                 setState(() => _selectedPreset = p);
-                                _hydratePresetData(p);
+                                await _hydratePresetData(p);
                               },
                             ),
                           ),
