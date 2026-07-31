@@ -744,7 +744,139 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                         ),
                       ],
                     ),
-                ] else ...[
+                ],
+                if (!_usePreset) ...[
+                  // ═══════════════════════════════════════════
+                  _sectionHeader(Icons.straighten, 'PHYSICAL DIMENSIONS'),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Define the interior boundaries of the bus.',
+                    style: TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDimensionsInputs(),
+                  const SizedBox(height: 16),
+                  // ═══════════════════════════════════════════
+                  // FRONT RESERVED SPACE (Driver / VIP Partition)
+                  // ═══════════════════════════════════════════
+                  _sectionHeader(
+                    Icons.space_dashboard_rounded,
+                    'FRONT RESERVED SPACE',
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Reserve front space for driver cabin, VIP seats, or other uses.',
+                    style: TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
+                  ),
+                  const SizedBox(height: 10),
+                  SwitchListTile(
+                    title: const Text(
+                      'Enable Front Reserved Space',
+                      style: TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                    subtitle: Text(
+                      _hasFrontPartition
+                          ? '${_frontPartitionFt}\' ${_frontPartitionIn}" reserved at front'
+                          : 'No front reservation — all space available for seats',
+                      style: const TextStyle(
+                        color: Color(0xFF667788),
+                        fontSize: 11,
+                      ),
+                    ),
+                    value: _hasFrontPartition,
+                    activeColor: const Color(0xFF7C3AED),
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (v) {
+                      setState(() => _hasFrontPartition = v);
+                      _dispatchSeatMatrix();
+                    },
+                  ),
+                  if (_hasFrontPartition) ...[
+                    const SizedBox(height: 8),
+                    // Feet + Inches inputs for front reserved length
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _dimensionField(
+                            label: 'Feet',
+                            value: _frontPartitionFt,
+                            min: 0,
+                            max: 10,
+                            onChanged: (v) {
+                              setState(() => _frontPartitionFt = v);
+                              _dispatchSeatMatrix();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _dimensionField(
+                            label: 'Inches',
+                            value: _frontPartitionIn,
+                            min: 0,
+                            max: 11,
+                            onChanged: (v) {
+                              setState(() => _frontPartitionIn = v);
+                              _dispatchSeatMatrix();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Remaining space display
+                    BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
+                      builder: (context, state) {
+                        final totalIn = state.dimensions.length.totalInches;
+                        final frontIn =
+                            (_frontPartitionFt * 12.0) + _frontPartitionIn;
+                        final remainingIn = (totalIn - frontIn).clamp(
+                          0,
+                          totalIn,
+                        );
+                        final remFt = remainingIn ~/ 12;
+                        final remIn = (remainingIn % 12).round();
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF122442),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0x20FFFFFF)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.straighten,
+                                color: Color(0xFF16A34A),
+                                size: 14,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Remaining for seats: ${remFt}\' ${remIn}"',
+                                style: const TextStyle(
+                                  color: Color(0xFF16A34A),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  // Component Registry
+                  _sectionHeader(Icons.category, 'COMPONENT REGISTRY'),
+                  const SizedBox(height: 12),
+                  _buildRegistryPanel(),
+                  const SizedBox(height: 16),
+                  // Aisle & Gap
+                  _sectionHeader(Icons.space_bar, 'AISLE & GAP'),
+                  const SizedBox(height: 12),
+                  _buildAisleGapInputs(),
+                  const SizedBox(height: 24),
                   // Custom grid configuration — ALL limits computed from physics
                   _sectionHeader(Icons.grid_view, 'DYNAMIC GRID CONFIGURATION'),
                   const SizedBox(height: 4),
@@ -928,139 +1060,6 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       );
                     },
                   ),
-                ],
-                if (!_usePreset) ...[
-                  // ═══════════════════════════════════════════
-                  _sectionHeader(Icons.straighten, 'PHYSICAL DIMENSIONS'),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Define the interior boundaries of the bus.',
-                    style: TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildDimensionsInputs(),
-                  const SizedBox(height: 16),
-                  // ═══════════════════════════════════════════
-                  // FRONT RESERVED SPACE (Driver / VIP Partition)
-                  // ═══════════════════════════════════════════
-                  _sectionHeader(
-                    Icons.space_dashboard_rounded,
-                    'FRONT RESERVED SPACE',
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Reserve front space for driver cabin, VIP seats, or other uses.',
-                    style: TextStyle(color: Color(0x60FFFFFF), fontSize: 11),
-                  ),
-                  const SizedBox(height: 10),
-                  SwitchListTile(
-                    title: const Text(
-                      'Enable Front Reserved Space',
-                      style: TextStyle(color: Colors.white, fontSize: 13),
-                    ),
-                    subtitle: Text(
-                      _hasFrontPartition
-                          ? '${_frontPartitionFt}\' ${_frontPartitionIn}" reserved at front'
-                          : 'No front reservation — all space available for seats',
-                      style: const TextStyle(
-                        color: Color(0xFF667788),
-                        fontSize: 11,
-                      ),
-                    ),
-                    value: _hasFrontPartition,
-                    activeColor: const Color(0xFF7C3AED),
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (v) {
-                      setState(() => _hasFrontPartition = v);
-                      _dispatchSeatMatrix();
-                    },
-                  ),
-                  if (_hasFrontPartition) ...[
-                    const SizedBox(height: 8),
-                    // Feet + Inches inputs for front reserved length
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _dimensionField(
-                            label: 'Feet',
-                            value: _frontPartitionFt,
-                            min: 0,
-                            max: 10,
-                            onChanged: (v) {
-                              setState(() => _frontPartitionFt = v);
-                              _dispatchSeatMatrix();
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _dimensionField(
-                            label: 'Inches',
-                            value: _frontPartitionIn,
-                            min: 0,
-                            max: 11,
-                            onChanged: (v) {
-                              setState(() => _frontPartitionIn = v);
-                              _dispatchSeatMatrix();
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    // Remaining space display
-                    BlocBuilder<LayoutValidationBloc, LayoutValidationState>(
-                      builder: (context, state) {
-                        final totalIn = state.dimensions.length.totalInches;
-                        final frontIn =
-                            (_frontPartitionFt * 12.0) + _frontPartitionIn;
-                        final remainingIn = (totalIn - frontIn).clamp(
-                          0,
-                          totalIn,
-                        );
-                        final remFt = remainingIn ~/ 12;
-                        final remIn = (remainingIn % 12).round();
-                        return Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF122442),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0x20FFFFFF)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.straighten,
-                                color: Color(0xFF16A34A),
-                                size: 14,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Remaining for seats: ${remFt}\' ${remIn}"',
-                                style: const TextStyle(
-                                  color: Color(0xFF16A34A),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  // Component Registry
-                  _sectionHeader(Icons.category, 'COMPONENT REGISTRY'),
-                  const SizedBox(height: 12),
-                  _buildRegistryPanel(),
-                  const SizedBox(height: 16),
-                  // Aisle & Gap
-                  _sectionHeader(Icons.space_bar, 'AISLE & GAP'),
-                  const SizedBox(height: 12),
-                  _buildAisleGapInputs(),
-                  const SizedBox(height: 24),
                 ],
 
                 // ═══════════════════════════════════════════
