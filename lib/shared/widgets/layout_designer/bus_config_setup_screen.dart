@@ -627,9 +627,19 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                     ),
                   ],
                   selected: {_usePreset},
-                  style: const ButtonStyle(
-                    backgroundColor: WidgetStatePropertyAll(Color(0xFF122442)),
-                    foregroundColor: WidgetStatePropertyAll(Color(0xFF8899AA)),
+                  style: ButtonStyle(
+                    backgroundColor: const WidgetStatePropertyAll(
+                      Color(0xFF122442),
+                    ),
+                    foregroundColor: const WidgetStatePropertyAll(
+                      Colors.white70,
+                    ),
+                    side: const WidgetStatePropertyAll(
+                      BorderSide(color: Color(0x30FFFFFF)),
+                    ),
+                    overlayColor: const WidgetStatePropertyAll(
+                      Color(0x20FFFFFF),
+                    ),
                   ),
                   onSelectionChanged: (v) =>
                       setState(() => _usePreset = v.first),
