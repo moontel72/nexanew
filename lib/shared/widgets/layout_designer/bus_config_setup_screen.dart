@@ -255,7 +255,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
         final w = (snapCanvas['canvas_width'] as num?)?.toDouble();
         final h = (snapCanvas['canvas_height'] as num?)?.toDouble();
         if (w != null && h != null && w > 0 && h > 0) {
-          final hPx = _readHeightPx(snap) ?? 0.0;
+          final hPx = _readHeightPx(snap);
           vBloc.add(
             DimensionsChanged(
               BusDimensions(
@@ -284,12 +284,13 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   }
 
   /// Read bus height in pixels from snapshot metadata.
-  double? _readHeightPx(Map snap) {
+  /// Returns 5'6" (66 px) as fallback for legacy layouts.
+  double _readHeightPx(Map snap) {
     final meta = snap['metadata'];
     final v =
         snap['bus_height_px'] ?? (meta is Map ? meta['bus_height_px'] : null);
     if (v is num) return v.toDouble();
-    return null;
+    return 66.0; // 5'6" default
   }
 
   Future<void> _loadExistingLayout() async {
@@ -350,7 +351,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   BusDimensions(
                     length: FeetInches.fromPixels(canvasH),
                     width: FeetInches.fromPixels(canvasW),
-                    height: FeetInches.fromPixels((_readHeightPx(snap) ?? 0.0)),
+                    height: FeetInches.fromPixels(_readHeightPx(snap)),
                   ),
                 ),
               );
