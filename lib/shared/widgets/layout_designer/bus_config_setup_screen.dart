@@ -1474,7 +1474,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   }) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFF445566), fontSize: 13),
+      hintStyle: const TextStyle(color: Color(0xFF8899AA), fontSize: 13),
       filled: true,
       fillColor: const Color(0xFF122442),
       prefixIcon: Icon(prefixIcon, color: const Color(0x60FFFFFF), size: 18),
