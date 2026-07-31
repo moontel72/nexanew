@@ -408,13 +408,27 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               }
             }
             // Detect left vs right by finding the aisle gap in X positions.
-            // Merge berth pairs first so lower+upper count as one column.
+            // Only merge berth pairs (lower+upper at same floor column);
+            // standard seats must never be merged so every column is counted.
+            bool hasBerths = false;
+            for (final c in comps) {
+              if (c is! Map) continue;
+              final t = c['type']?.toString() ?? '';
+              final y = (c['y'] as num?)?.toDouble();
+              if (y != null && firstY != null && (y - firstY!).abs() < 5) {
+                if (t == 'sleeperLower' || t == 'sleeperUpper') {
+                  hasBerths = true;
+                  break;
+                }
+              }
+            }
             int leftC = 0, rightC = 0;
             if (firstRowXs.isNotEmpty) {
               firstRowXs.sort();
+              final mergeGap = hasBerths ? 80.0 : 20.0;
               final merged = <double>[firstRowXs.first];
               for (int i = 1; i < firstRowXs.length; i++) {
-                if (firstRowXs[i] - merged.last > 80) {
+                if (firstRowXs[i] - merged.last > mergeGap) {
                   merged.add(firstRowXs[i]);
                 }
               }
