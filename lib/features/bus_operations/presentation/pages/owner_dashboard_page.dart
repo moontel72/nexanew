@@ -582,6 +582,7 @@ class _OwnerView extends StatelessWidget {
           final compsForReg = snapMap?['components'];
           if (compsForReg is List && compsForReg.isNotEmpty) {
             final parts = <SeatPartType, PartSpec>{};
+            final yVals = <double>[];
             for (final c in compsForReg) {
               if (c is! Map) continue;
               final t = c['type']?.toString() ?? '';
@@ -596,9 +597,29 @@ class _OwnerView extends StatelessWidget {
               if (pt != null && !parts.containsKey(pt)) {
                 parts[pt] = PartSpec.defaultFor(pt);
               }
+              final y = (c['y'] as num?)?.toDouble();
+              if (y != null) yVals.add(y);
+            }
+            FeetInches derivedGap = FeetInches.zero;
+            if (yVals.length >= 2) {
+              yVals.sort();
+              final uniqueY = <double>[yVals.first];
+              for (int i = 1; i < yVals.length; i++) {
+                if (yVals[i] - uniqueY.last > 20) uniqueY.add(yVals[i]);
+              }
+              if (uniqueY.length >= 2) {
+                final rowSpacing = uniqueY[1] - uniqueY[0];
+                final partLen = parts.isNotEmpty
+                    ? parts.values.first.length.toPixels
+                    : 56.0;
+                final gapPx = (rowSpacing - partLen)
+                    .clamp(0, rowSpacing)
+                    .toDouble();
+                derivedGap = FeetInches.fromPixels(gapPx);
+              }
             }
             if (parts.isNotEmpty) {
-              reg = ComponentRegistry(parts: parts);
+              reg = ComponentRegistry(parts: parts, interSeatGap: derivedGap);
             }
           }
         }
