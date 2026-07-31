@@ -1269,8 +1269,6 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               key: ValueKey('height_${dims.height.feet}_${dims.height.inches}'),
               label: 'Bus Inside Height',
               initialValue: dims.height,
-              minFeet: 4,
-              maxFeet: 8,
               onChanged: (v) {
                 try {
                   context.read<LayoutValidationBloc>().add(

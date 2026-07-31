@@ -578,6 +578,30 @@ class _OwnerView extends StatelessWidget {
             );
           } catch (_) {}
         }
+        if (reg == null) {
+          final compsForReg = snapMap?['components'];
+          if (compsForReg is List && compsForReg.isNotEmpty) {
+            final parts = <SeatPartType, PartSpec>{};
+            for (final c in compsForReg) {
+              if (c is! Map) continue;
+              final t = c['type']?.toString() ?? '';
+              final pt = switch (t) {
+                'seat' => SeatPartType.standardSeat,
+                'businessClassSeat' => SeatPartType.businessSeat,
+                'sleeperLower' => SeatPartType.sleeperLower,
+                'sleeperUpper' => SeatPartType.sleeperUpper,
+                'foldingSeat' => SeatPartType.foldingSeat,
+                _ => null,
+              };
+              if (pt != null && !parts.containsKey(pt)) {
+                parts[pt] = PartSpec.defaultFor(pt);
+              }
+            }
+            if (parts.isNotEmpty) {
+              reg = ComponentRegistry(parts: parts);
+            }
+          }
+        }
         // Seat matrix from components
         final comps = snapMap?['components'];
         if (comps is List && comps.isNotEmpty) {
