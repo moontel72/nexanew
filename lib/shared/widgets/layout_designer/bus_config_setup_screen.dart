@@ -228,8 +228,24 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
   }
 
   /// Hydrate form fields from a selected preset's data.
-  void _hydratePresetData(Map<String, dynamic> preset) {
-    final snap = preset['current_snapshot'];
+  /// Fetches the full preset from the API if the list summary
+  /// doesn't include the complete snapshot.
+  void _hydratePresetData(Map<String, dynamic> preset) async {
+    var snap = preset['current_snapshot'];
+    // If the presets list didn't include a full snapshot, fetch it.
+    if (snap is! Map || snap['registry'] == null) {
+      final id = preset['id']?.toString();
+      if (id != null) {
+        try {
+          final api = ApiService();
+          final r = await api.get('${widget.apiPrefix}/absolute-layouts/$id');
+          final d = r?['data'];
+          if (d is Map && d['current_snapshot'] is Map) {
+            snap = d['current_snapshot'];
+          }
+        } catch (_) {}
+      }
+    }
     if (snap is! Map) return;
     try {
       final vBloc = context.read<LayoutValidationBloc>();
@@ -254,11 +270,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
       // Registry
       dynamic regJson = snap['registry'];
       if (regJson is String) {
-        try {
-          regJson = jsonDecode(regJson);
-        } catch (_) {
-          regJson = null;
-        }
+        try { regJson = jsonDecode(regJson); } catch (_) { regJson = null; }
       }
       if (regJson is Map) {
         try {
