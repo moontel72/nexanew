@@ -229,6 +229,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
         SeatPartType.businessSeat => ComponentType.businessClassSeat,
         SeatPartType.foldingSeat => ComponentType.foldingSeat,
         SeatPartType.table => ComponentType.restaurantTable,
+        SeatPartType.driverSeat => ComponentType.driverCabin,
         _ => ComponentType.seat,
       };
     }
@@ -314,17 +315,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
       );
     }
 
-    // Driver cabin Y: 16px default + initial gap when no front partition.
-    final driverCabinY = config.frontPartitionPx > 0
-        ? 16.0
-        : 16.0 + config.initialGapPx;
-    bloc.add(
-      AddComponent(
-        type: ComponentType.driverCabin,
-        x: (canvasW - 80) / 2,
-        y: driverCabinY,
-      ),
-    );
+    // Driver cabin is now a user-placed component from the palette —
+    // no longer auto‑generated. User configures driver seat dims
+    // via Component Registry, then drags it onto the canvas.
 
     int counter = 1;
     // Authoritative boundary from config (always set), falling back to widget.
@@ -530,8 +523,17 @@ class _DesignerBodyState extends State<_DesignerBody> {
                             _tool = _CanvasTool.placeComponent;
                             _placingType = type;
                             _placingIsReverse = isReverse;
-                            _placingWidth = defW;
-                            _placingHeight = defH;
+                            // Use registry dimensions for driver cabin if configured.
+                            if (type == ComponentType.driverCabin) {
+                              final drv = widget
+                                  .registry
+                                  ?.parts[SeatPartType.driverSeat];
+                              _placingWidth = drv?.pixelWidth ?? defW;
+                              _placingHeight = drv?.pixelLength ?? defH;
+                            } else {
+                              _placingWidth = defW;
+                              _placingHeight = defH;
+                            }
                           });
                           _bloc.add(const SelectComponent(null));
                         },

@@ -149,19 +149,7 @@ class LayoutDesignerBloc
     final List<AbsoluteLayoutComponent> newComponents = [];
     int seatCounter = 1;
 
-    final driverX = (preset.canvasWidth - 80) / 2;
-    newComponents.add(
-      AbsoluteLayoutComponent(
-        id: _uuid.v4(),
-        type: ComponentType.driverCabin,
-        x: driverX,
-        y: 16,
-        width: registry?.pixelFallbackFor(ComponentType.driverCabin) ?? 80,
-        height: registry?.pixelFallbackFor(ComponentType.driverCabin) ?? 48,
-        bookable: false,
-        bookingMode: BookingMode.none,
-      ),
-    );
+    // Driver cabin is now user‑placed via the palette — no auto‑generation.
 
     for (int row = 0; row < rows; row++) {
       final y = topMargin + row * rowH;

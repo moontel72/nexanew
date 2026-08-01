@@ -22,6 +22,7 @@ enum SeatPartType {
   reverseSeat,
   foldingSeat,
   table,
+  driverSeat,
 }
 
 /// Spatial footprint for a single part instance.
@@ -51,6 +52,7 @@ class PartSpec extends Equatable {
         SeatPartType.reverseSeat => kDefaultReverseSeatLength,
         SeatPartType.foldingSeat => kDefaultFoldSeatLength,
         SeatPartType.table => kDefaultTableLength,
+        SeatPartType.driverSeat => kDefaultSeatLength,
       },
       width: switch (type) {
         SeatPartType.standardSeat => kDefaultSeatWidth,
@@ -60,6 +62,7 @@ class PartSpec extends Equatable {
         SeatPartType.reverseSeat => kDefaultReverseSeatWidth,
         SeatPartType.foldingSeat => kDefaultFoldSeatWidth,
         SeatPartType.table => kDefaultTableWidth,
+        SeatPartType.driverSeat => kDefaultSeatWidth,
       },
     );
   }
