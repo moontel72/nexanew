@@ -485,7 +485,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               }
             }
             setState(() {
-              _rowCount = ySet.length.clamp(1, 50);
+              // +1 row for driver when no front partition (driver row is structural, not in ySet).
+              _rowCount = hasFront
+                  ? ySet.length.clamp(1, 50)
+                  : (ySet.length + 1).clamp(1, 50);
               _leftSeats = leftC.clamp(0, 8);
               _rightSeats = rightC.clamp(0, 8);
               _hasFrontPartition = hasFront;

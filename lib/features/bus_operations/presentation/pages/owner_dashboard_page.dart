@@ -714,7 +714,6 @@ class _OwnerView extends StatelessWidget {
           }
           leftS = lC.clamp(0, 8);
           rightS = rC.clamp(0, 8);
-          rows = ySet.length.clamp(1, 50);
           // Front partition
           final fpx =
               snapMap?['metadata']?['front_partition_px'] ??
@@ -735,6 +734,10 @@ class _OwnerView extends StatelessWidget {
               frontIn = ri % 12;
             }
           }
+          // Row count: +1 for driver row when no front partition.
+          rows = hasFront
+              ? ySet.length.clamp(1, 50)
+              : (ySet.length + 1).clamp(1, 50);
         }
       }
     } catch (_) {}

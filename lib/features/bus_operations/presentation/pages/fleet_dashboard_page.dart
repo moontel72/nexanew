@@ -674,7 +674,6 @@ class _FleetDashboardView extends StatelessWidget {
           }
           leftS = lC.clamp(0, 8);
           rightS = rC.clamp(0, 8);
-          rows = ySet.length.clamp(1, 50);
           // ── Restore front reserved space from snapshot metadata ──
           // Explicit metadata (from designer save) is authoritative.
           final frontPxMeta =
@@ -698,6 +697,10 @@ class _FleetDashboardView extends StatelessWidget {
               frontPartitionIn = reservedInches % 12;
             }
           }
+          // Row count: +1 for driver row when no front partition.
+          rows = hasFrontPartition
+              ? ySet.length.clamp(1, 50)
+              : (ySet.length + 1).clamp(1, 50);
         }
       }
     } catch (_) {}

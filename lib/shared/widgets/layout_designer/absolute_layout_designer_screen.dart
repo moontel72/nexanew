@@ -357,7 +357,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final effectiveTop = frontPx > 0
         ? (frontPx < 40 ? 40.0 : frontPx)
         : topMargin + config.initialGapPx;
-    for (int row = 0; row < rows; row++) {
+    // Row 0 is the driver row (user‑places driver seat manually).
+    // Passenger rows start from row index 1 when no front partition.
+    final int firstPassengerRow = frontPx > 0 ? 0 : 1;
+    for (int row = firstPassengerRow; row < rows; row++) {
       final y = effectiveTop + row * rowH;
 
       if (y + seatLen > busLenPx) break; // stop at bus boundary
