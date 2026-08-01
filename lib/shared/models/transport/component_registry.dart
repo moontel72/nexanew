@@ -102,11 +102,13 @@ class ComponentRegistry extends Equatable {
   final Map<SeatPartType, PartSpec> parts;
   final FeetInches aisleWidth;
   final FeetInches interSeatGap;
+  final FeetInches initialGap;
 
   const ComponentRegistry({
     this.parts = const {},
     this.aisleWidth = kDefaultAisleWidth,
     this.interSeatGap = kDefaultInterSeatGap,
+    this.initialGap = FeetInches.zero,
   });
 
   /// Returns the largest length among all registered parts.
@@ -142,14 +144,16 @@ class ComponentRegistry extends Equatable {
     Map<SeatPartType, PartSpec>? parts,
     FeetInches? aisleWidth,
     FeetInches? interSeatGap,
+    FeetInches? initialGap,
   }) => ComponentRegistry(
     parts: parts ?? this.parts,
     aisleWidth: aisleWidth ?? this.aisleWidth,
     interSeatGap: interSeatGap ?? this.interSeatGap,
+    initialGap: initialGap ?? this.initialGap,
   );
 
   @override
-  List<Object?> get props => [parts, aisleWidth, interSeatGap];
+  List<Object?> get props => [parts, aisleWidth, interSeatGap, initialGap];
 
   Map<String, dynamic> toJson() => {
     'parts': parts.map((k, v) => MapEntry(k.name, v.toJson())),
@@ -157,6 +161,8 @@ class ComponentRegistry extends Equatable {
     'aisle_width_in': aisleWidth.inches,
     'inter_seat_gap_ft': interSeatGap.feet,
     'inter_seat_gap_in': interSeatGap.inches,
+    'initial_gap_ft': initialGap.feet,
+    'initial_gap_in': initialGap.inches,
   };
 
   factory ComponentRegistry.fromJson(Map<String, dynamic> json) {
@@ -188,6 +194,10 @@ class ComponentRegistry extends Equatable {
       interSeatGap: FeetInches.normalize(
         _parseInt(json['inter_seat_gap_ft'], 1),
         _parseInt(json['inter_seat_gap_in'], 0),
+      ),
+      initialGap: FeetInches.normalize(
+        _parseInt(json['initial_gap_ft'], 0),
+        _parseInt(json['initial_gap_in'], 0),
       ),
     );
   }
