@@ -1397,8 +1397,6 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
     final double frontPx = _hasFrontPartition
         ? ((_frontPartitionFt * 12 + _frontPartitionIn) * 4.0)
         : 0.0;
-    // Initial gap: spacing before the first row (driver knee room etc.)
-    final double initialGapPx = (registry?.initialGap.toPixels ?? 0);
     final config = BusConfig(
       numberPlate: numberPlate,
       maker: maker,
@@ -1409,7 +1407,6 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
       busLengthPx: busLength.toPixels,
       busWidthPx: busWidth.toPixels,
       frontPartitionPx: frontPx,
-      initialGapPx: initialGapPx,
     );
 
     // When a preset is selected, pass its ID so the designer fetches
@@ -1656,7 +1653,6 @@ class BusConfig {
   final double busLengthPx; // authoritative interior length in pixels
   final double busWidthPx; // authoritative interior width in pixels
   final double frontPartitionPx; // reserved front space (driver/VIP) in pixels
-  final double initialGapPx; // gap before first row in pixels
 
   const BusConfig({
     this.numberPlate = '',
@@ -1668,7 +1664,6 @@ class BusConfig {
     this.busLengthPx = 0.0,
     this.busWidthPx = 0.0,
     this.frontPartitionPx = 0.0,
-    this.initialGapPx = 0.0,
   });
 
   Map<String, dynamic> toJson() => {
