@@ -307,6 +307,8 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
     // Persist front partition for reliable round-trip detection.
     bloc.add(SetLayoutMetadata('front_partition_px', config.frontPartitionPx));
+    // Persist initial gap so edit form can restore it.
+    bloc.add(SetLayoutMetadata('initial_gap_px', config.initialGapPx));
     // Persist bus interior height.
     if (widget.busDimensions != null) {
       bloc.add(
@@ -325,14 +327,16 @@ class _DesignerBodyState extends State<_DesignerBody> {
     int counter = 1;
     // Authoritative boundary from config (always set), falling back to widget.
     final frontPx = config.frontPartitionPx;
+    final initialGapPx = config.initialGapPx;
     final busLenPx = config.busLengthPx > 0
         ? config.busLengthPx
         : (widget.busDimensions?.lengthPx ?? double.infinity);
     // When partition is enabled, it REPLACES the default top margin
     // (not adds to it). Keep 40px minimum for the ruler strip.
+    // Initial gap adds extra space before the first row when no partition.
     final effectiveTop = frontPx > 0
         ? (frontPx < 40 ? 40.0 : frontPx)
-        : topMargin;
+        : topMargin + initialGapPx;
     for (int row = 0; row < rows; row++) {
       final y = effectiveTop + row * rowH;
 
