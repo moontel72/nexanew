@@ -653,7 +653,10 @@ class _FleetDashboardView extends StatelessWidget {
                 gapIdx = i;
               }
             }
-            if (maxGap > 30) {
+            final avgGap = merged.length > 1
+                ? (merged.last - merged.first) / (merged.length - 1)
+                : 0.0;
+            if (maxGap > 30 && merged.length > 1 && maxGap >= avgGap * 1.5) {
               lC = gapIdx;
               rC = merged.length - gapIdx;
             } else {

@@ -694,7 +694,10 @@ class _OwnerView extends StatelessWidget {
                 gapIdx = i;
               }
             }
-            if (maxGap > 30) {
+            if (maxGap > 30 &&
+                merged.length > 1 &&
+                maxGap >=
+                    (merged.last - merged.first) / (merged.length - 1) * 1.5) {
               lC = gapIdx;
               rC = merged.length - gapIdx;
             } else {

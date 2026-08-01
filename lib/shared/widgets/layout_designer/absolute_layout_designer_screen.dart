@@ -314,11 +314,15 @@ class _DesignerBodyState extends State<_DesignerBody> {
       );
     }
 
+    // Driver cabin Y: 16px default + initial gap when no front partition.
+    final driverCabinY = config.frontPartitionPx > 0
+        ? 16.0
+        : 16.0 + config.initialGapPx;
     bloc.add(
       AddComponent(
         type: ComponentType.driverCabin,
         x: (canvasW - 80) / 2,
-        y: 16,
+        y: driverCabinY,
       ),
     );
 
@@ -330,9 +334,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
         : (widget.busDimensions?.lengthPx ?? double.infinity);
     // When partition is enabled, it REPLACES the default top margin
     // (not adds to it). Keep 40px minimum for the ruler strip.
+    // When partition is OFF, initial gap pushes first row + driver down.
     final effectiveTop = frontPx > 0
         ? (frontPx < 40 ? 40.0 : frontPx)
-        : topMargin;
+        : topMargin + config.initialGapPx;
     for (int row = 0; row < rows; row++) {
       final y = effectiveTop + row * rowH;
 

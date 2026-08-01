@@ -441,7 +441,14 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   gapIdx = i;
                 }
               }
-              if (maxGap > 30) {
+              // Compute average column spacing for aisle validation.
+              final avgGap = merged.length > 1
+                  ? (merged.last - merged.first) / (merged.length - 1)
+                  : 0.0;
+              // Only treat as aisle if the gap is clearly wider than
+              // inter‑column spacing (≥ 1.5× average). Prevents
+              // all‑right or all‑left layouts from being split in two.
+              if (maxGap > 30 && merged.length > 1 && maxGap >= avgGap * 1.5) {
                 leftC = gapIdx;
                 rightC = merged.length - gapIdx;
               } else {
