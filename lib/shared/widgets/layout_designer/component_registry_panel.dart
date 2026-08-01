@@ -24,6 +24,7 @@ class ComponentRegistryPanel extends StatefulWidget {
 
 class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
   SeatPartType? _addingType;
+  DriverPosition _driverPosition = DriverPosition.right;
   late final TextEditingController _lenFtCtrl;
   late final TextEditingController _lenInCtrl;
   late final TextEditingController _widFtCtrl;
@@ -61,6 +62,7 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     _lenInCtrl.text = '0';
     _widFtCtrl.text = '0';
     _widInCtrl.text = '0';
+    _driverPosition = DriverPosition.right;
     setState(() => _addingType = type);
   }
 
@@ -71,6 +73,7 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     _lenInCtrl.text = existing.length.inches.toString();
     _widFtCtrl.text = existing.width.feet.toString();
     _widInCtrl.text = existing.width.inches.toString();
+    _driverPosition = existing.driverPosition;
     setState(() => _addingType = type);
   }
 
@@ -91,7 +94,12 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     _widFtCtrl.text = width.feet.toString();
     _widInCtrl.text = width.inches.toString();
 
-    final spec = PartSpec(type: _addingType!, length: length, width: width);
+    final spec = PartSpec(
+      type: _addingType!,
+      length: length,
+      width: width,
+      driverPosition: _driverPosition,
+    );
     final newParts = Map<SeatPartType, PartSpec>.from(widget.registry.parts)
       ..[_addingType!] = spec;
     widget.onChanged(widget.registry.copyWith(parts: newParts));
@@ -241,8 +249,40 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
             _dimRow(_widFtCtrl, _widInCtrl, 'ft', 'in'),
             const SizedBox(height: 10),
             // Length row with label
-            _dimLabel('Length (Front \u2192 Back)'),
+            _dimLabel('Length (Front → Back)'),
             _dimRow(_lenFtCtrl, _lenInCtrl, 'ft', 'in'),
+            // Driver position selector (only for driverSeat)
+            if (_addingType == SeatPartType.driverSeat) ...[
+              const SizedBox(height: 10),
+              _dimLabel('Driving Position'),
+              const SizedBox(height: 4),
+              DropdownButtonFormField<DriverPosition>(
+                value: _driverPosition,
+                dropdownColor: const Color(0xFF122442),
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  filled: true,
+                  fillColor: Color(0xFF1A2A3A),
+                  border: OutlineInputBorder(borderSide: BorderSide.none),
+                ),
+                items: DriverPosition.values.map((p) {
+                  final label = switch (p) {
+                    DriverPosition.left => 'Left side (window / door)',
+                    DriverPosition.center => 'Center',
+                    DriverPosition.right => 'Right side (window / door)',
+                  };
+                  return DropdownMenuItem(value: p, child: Text(label));
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _driverPosition = v);
+                },
+              ),
+            ],
             const SizedBox(height: 8),
             Row(
               children: [

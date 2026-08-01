@@ -97,6 +97,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
   bool _placingIsReverse = false;
   double _placingWidth = 56.0;
   double _placingHeight = 56.0;
+  DriverPosition? _placingDriverPosition;
   bool _wasSaving = false;
   bool _wasPublishing = false;
   StreamSubscription? _loadSub;
@@ -204,6 +205,31 @@ class _DesignerBodyState extends State<_DesignerBody> {
         SetLayoutMetadata('bus_height_px', widget.busDimensions!.heightPx),
       );
     }
+  }
+
+  /// Compute X position based on driver position preference.
+  /// For non‑driver components, returns [x] unchanged.
+  double _computePlacementX(double x) {
+    if (_placingType != ComponentType.driverCabin ||
+        _placingDriverPosition == null) {
+      return x;
+    }
+    final canvasW = _state.canvasWidth > 0 ? _state.canvasWidth : 280.0;
+    final margin = 28.0; // consistent with leftMargin in grid generation
+    return switch (_placingDriverPosition!) {
+      DriverPosition.left => margin,
+      DriverPosition.center => (canvasW - _placingWidth) / 2,
+      DriverPosition.right => canvasW - _placingWidth - margin,
+    };
+  }
+
+  /// Build meta map for the component being placed.
+  Map<String, dynamic>? _buildPlacementMeta() {
+    if (_placingType == ComponentType.driverCabin &&
+        _placingDriverPosition != null) {
+      return {'driver_position': _placingDriverPosition!.name};
+    }
+    return null;
   }
 
   void _initFromConfig(BusConfig config) {
@@ -523,6 +549,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
                             _tool = _CanvasTool.placeComponent;
                             _placingType = type;
                             _placingIsReverse = isReverse;
+                            _placingDriverPosition = null;
                             // Use registry dimensions for driver cabin if configured.
                             if (type == ComponentType.driverCabin) {
                               final drv = widget
@@ -530,6 +557,8 @@ class _DesignerBodyState extends State<_DesignerBody> {
                                   ?.parts[SeatPartType.driverSeat];
                               _placingWidth = drv?.pixelWidth ?? defW;
                               _placingHeight = drv?.pixelLength ?? defH;
+                              _placingDriverPosition =
+                                  drv?.driverPosition ?? DriverPosition.right;
                             } else {
                               _placingWidth = defW;
                               _placingHeight = defH;
@@ -755,39 +784,45 @@ class _DesignerBodyState extends State<_DesignerBody> {
             _bloc.add(SelectComponent(id));
           } else if (_tool == _CanvasTool.placeComponent &&
               _placingType != null) {
+            final placeX = _computePlacementX(x);
             _bloc.add(
               AddComponent(
                 type: _placingType!,
-                x: x,
+                x: placeX,
                 y: y,
                 isReverseFacing: _placingIsReverse,
                 width: _placingWidth,
                 height: _placingHeight,
+                meta: _buildPlacementMeta(),
               ),
             );
             setState(() {
               _tool = _CanvasTool.select;
               _placingType = null;
               _placingIsReverse = false;
+              _placingDriverPosition = null;
             });
           }
         },
         onCanvasTap: (x, y) {
           if (_tool == _CanvasTool.placeComponent && _placingType != null) {
+            final placeX = _computePlacementX(x);
             _bloc.add(
               AddComponent(
                 type: _placingType!,
-                x: x,
+                x: placeX,
                 y: y,
                 isReverseFacing: _placingIsReverse,
                 width: _placingWidth,
                 height: _placingHeight,
+                meta: _buildPlacementMeta(),
               ),
             );
             setState(() {
               _tool = _CanvasTool.select;
               _placingType = null;
               _placingIsReverse = false;
+              _placingDriverPosition = null;
             });
           } else if (_tool == _CanvasTool.select) {
             _bloc.add(const SelectComponent(null));

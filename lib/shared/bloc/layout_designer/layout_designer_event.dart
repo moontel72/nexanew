@@ -42,6 +42,7 @@ class AddComponent extends LayoutDesignerEvent {
   final double? width;
   final double? height;
   final bool isReverseFacing;
+  final Map<String, dynamic>? meta;
   const AddComponent({
     required this.type,
     required this.x,
@@ -52,6 +53,7 @@ class AddComponent extends LayoutDesignerEvent {
     this.width,
     this.height,
     this.isReverseFacing = false,
+    this.meta,
   });
   @override
   List<Object?> get props => [
@@ -64,6 +66,7 @@ class AddComponent extends LayoutDesignerEvent {
     width,
     height,
     isReverseFacing,
+    meta,
   ];
 }
 

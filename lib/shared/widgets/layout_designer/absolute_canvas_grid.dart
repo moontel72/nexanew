@@ -531,6 +531,25 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     } else if (component.type == ComponentType.foldingSeat) {
       color = const Color(0xFF06B6D4);
       icon = Icons.chair_alt;
+    } else if (component.type == ComponentType.driverCabin) {
+      // Position‑based driver seat styling.
+      final pos = component.meta['driver_position'] as String?;
+      if (pos == 'left') {
+        color = const Color(0xFFDC2626); // red — left‑hand drive
+        icon = Icons.settings; // steering wheel
+      } else if (pos == 'center') {
+        color = const Color(0xFFF59E0B); // amber — center drive
+        icon = Icons.settings;
+      } else if (pos == 'right') {
+        color = const Color(0xFF16A34A); // green — right‑hand drive
+        icon = Icons.settings;
+      } else {
+        color =
+            kAbsoluteComponentColors[component.type] ?? const Color(0xFF1E293B);
+        icon =
+            kAbsoluteComponentIcons[component.type] ??
+            Icons.settings_accessibility;
+      }
     } else {
       color =
           kAbsoluteComponentColors[component.type] ?? const Color(0xFF334155);

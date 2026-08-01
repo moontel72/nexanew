@@ -25,16 +25,21 @@ enum SeatPartType {
   driverSeat,
 }
 
+/// Driver seat position — which side of the bus the steering wheel is on.
+enum DriverPosition { left, center, right }
+
 /// Spatial footprint for a single part instance.
 class PartSpec extends Equatable {
   final SeatPartType type;
   final FeetInches length;
   final FeetInches width;
+  final DriverPosition driverPosition;
 
   const PartSpec({
     required this.type,
     required this.length,
     required this.width,
+    this.driverPosition = DriverPosition.right,
   });
 
   double get pixelLength => length.toPixels;
@@ -68,7 +73,7 @@ class PartSpec extends Equatable {
   }
 
   @override
-  List<Object?> get props => [type, length, width];
+  List<Object?> get props => [type, length, width, driverPosition];
 
   Map<String, dynamic> toJson() => {
     'type': type.name,
@@ -76,6 +81,7 @@ class PartSpec extends Equatable {
     'length_in': length.inches,
     'width_ft': width.feet,
     'width_in': width.inches,
+    'driver_position': driverPosition.name,
   };
 
   factory PartSpec.fromJson(Map<String, dynamic> json) {
@@ -95,6 +101,10 @@ class PartSpec extends Equatable {
       width: FeetInches.normalize(
         p(json['width_ft'], 0),
         p(json['width_in'], 0),
+      ),
+      driverPosition: DriverPosition.values.firstWhere(
+        (e) => e.name == json['driver_position'],
+        orElse: () => DriverPosition.right,
       ),
     );
   }

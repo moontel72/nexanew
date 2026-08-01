@@ -266,6 +266,7 @@ class LayoutDesignerBloc
       seatNumber: e.seatNumber ?? autoSeatNumber,
       berthLabel: e.berthLabel ?? autoBerthLabel,
       isReverseFacing: e.isReverseFacing,
+      meta: e.meta,
     );
     final newComponents = [...state.layout.components, comp];
     final reindexed = _reindexByPosition(newComponents);
