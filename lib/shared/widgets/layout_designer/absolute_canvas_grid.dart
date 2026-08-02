@@ -558,11 +558,11 @@ class _AbsoluteComponentWidget extends StatelessWidget {
         color = const Color(0xFF16A34A); // green — right‑hand drive
         icon = Icons.settings;
       } else {
-        color =
-            kAbsoluteComponentColors[component.type] ?? const Color(0xFF1E293B);
-        icon =
-            kAbsoluteComponentIcons[component.type] ??
-            Icons.settings_accessibility;
+        // Default to right-hand drive (most common configuration).
+        // The old fallback Color(0xFF1E293B) was nearly invisible
+        // against the dark canvas background Color(0xFF0D1B2A).
+        color = const Color(0xFF16A34A); // green — right‑hand drive
+        icon = Icons.settings;
       }
     } else {
       color =

@@ -700,10 +700,8 @@ class _FleetDashboardView extends StatelessWidget {
               frontPartitionIn = reservedInches % 12;
             }
           }
-          // Row count: +1 for driver row when no front partition.
-          rows = hasFrontPartition
-              ? ySet.length.clamp(1, 50)
-              : (ySet.length + 1).clamp(1, 50);
+          // Row count: no extra row for driver — driver shares Row 0.
+          rows = ySet.length.clamp(1, 50);
         }
       }
     } catch (_) {}

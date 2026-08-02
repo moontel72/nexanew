@@ -495,10 +495,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               }
             }
             setState(() {
-              // +1 row for driver when no front partition (driver row is structural, not in ySet).
-              _rowCount = hasFront
-                  ? ySet.length.clamp(1, 50)
-                  : (ySet.length + 1).clamp(1, 50);
+              // Driver row is no longer skipped — it shares Row 0 with
+              // auto-generated passenger seats. No +1 adjustment needed.
+              _rowCount = ySet.length.clamp(1, 50);
               _leftSeats = leftC.clamp(0, 8);
               _rightSeats = rightC.clamp(0, 8);
               _hasFrontPartition = hasFront;
@@ -850,7 +849,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                         final totalIn = state.dimensions.length.totalInches;
                         final frontIn =
                             (_frontPartitionFt * 12.0) + _frontPartitionIn;
-                        final remainingIn = (totalIn - frontIn).clamp(
+                        // Deduct initial gap as well (gap before first row).
+                        final gapIn = state.registry.initialGap.totalInches;
+                        final remainingIn = (totalIn - frontIn - gapIn).clamp(
                           0,
                           totalIn,
                         );

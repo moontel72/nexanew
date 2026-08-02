@@ -366,9 +366,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
         : (config.initialGapPx > 0
               ? (config.initialGapPx < 40 ? 40.0 : config.initialGapPx)
               : 40.0);
-    // Row 0 is the driver row (user‑places driver seat manually).
-    // Passenger rows start from row index 1 when no front partition.
-    final int firstPassengerRow = frontPx > 0 ? 0 : 1;
+    // Row 0 is the first passenger row when no front partition.
+    // No row is skipped — the driver seat is manually placed by
+    // the user and shares Row 0 with auto-generated passenger seats.
+    final int firstPassengerRow = 0;
     for (int row = firstPassengerRow; row < rows; row++) {
       final y = effectiveTop + row * rowH;
 
