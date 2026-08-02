@@ -347,29 +347,50 @@ class _DesignerBodyState extends State<_DesignerBody> {
       );
     }
 
-    // Driver cabin is now a user-placed component from the palette —
-    // no longer auto‑generated. User configures driver seat dims
-    // via Component Registry, then drags it onto the canvas.
-
     int counter = 1;
     // Authoritative boundary from config (always set), falling back to widget.
     final frontPx = config.frontPartitionPx;
     final busLenPx = config.busLengthPx > 0
         ? config.busLengthPx
         : (widget.busDimensions?.lengthPx ?? double.infinity);
-    // When partition is enabled, it REPLACES the default top margin
-    // (not adds to it). Keep 40px minimum for the ruler strip.
-    // When partition is OFF, the initial gap directly controls the
-    // front-most distance before Row 1 — no hidden padding added.
+    // When partition is enabled, it defines the Part A / Part B boundary.
+    // When partition is OFF, the initial gap directly sets the front-most
+    // distance before Row 0 — no hidden padding, no hardcoded minimum.
+    // (22px = ruler strip; values below that may overlap the ruler.)
     final effectiveTop = frontPx > 0
         ? (frontPx < 40 ? 40.0 : frontPx)
-        : (config.initialGapPx > 0
-              ? (config.initialGapPx < 40 ? 40.0 : config.initialGapPx)
-              : 40.0);
-    // Row 0 is the first passenger row when no front partition.
-    // No row is skipped — the driver seat is manually placed by
-    // the user and shares Row 0 with auto-generated passenger seats.
+        : config.initialGapPx;
+    // Row 0 is the first row — no row is skipped.
+    // Driver seat is auto-placed (below) and shares Row 0.
     final int firstPassengerRow = 0;
+
+    // ── Auto-place driver seat when configured in registry ──
+    // Positioned at the top of Row 0 when partition is OFF, or
+    // centered vertically in Part A when partition is ON.
+    final driverSpec = registry?.parts[SeatPartType.driverSeat];
+    if (driverSpec != null) {
+      final double driverW = driverSpec.pixelWidth;
+      final double driverH = driverSpec.pixelLength;
+      final double driverX = switch (driverSpec.driverPosition) {
+        DriverPosition.left => leftMargin,
+        DriverPosition.center => (canvasW - driverW) / 2,
+        DriverPosition.right => canvasW - driverW - leftMargin,
+      };
+      final double driverY = frontPx > 0
+          ? (frontPx - driverH) /
+                2 // center vertically in Part A
+          : effectiveTop; // top of Row 0
+      bloc.add(
+        AddComponent(
+          type: ComponentType.driverCabin,
+          x: driverX,
+          y: driverY,
+          width: driverW,
+          height: driverH,
+          meta: {'driver_position': driverSpec.driverPosition.name},
+        ),
+      );
+    }
     for (int row = firstPassengerRow; row < rows; row++) {
       final y = effectiveTop + row * rowH;
 
