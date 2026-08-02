@@ -360,9 +360,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final effectiveTop = frontPx > 0
         ? (frontPx < 40 ? 40.0 : frontPx)
         : config.initialGapPx;
-    // Row 0 is the first row — no row is skipped.
-    // Driver seat is auto-placed (below) and shares Row 0.
-    final int firstPassengerRow = 0;
+    // Partition ON  → all rows are Part B passenger rows (driver is in Part A).
+    // Partition OFF → Row 0 is driver-only (auto-placed), Row 1+ = passenger rows.
+    final int firstPassengerRow = frontPx > 0 ? 0 : 1;
 
     // ── Auto-place driver seat when configured in registry ──
     // Positioned at the top of Row 0 when partition is OFF, or

@@ -495,9 +495,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               }
             }
             setState(() {
-              // Driver row is no longer skipped — it shares Row 0 with
-              // auto-generated passenger seats. No +1 adjustment needed.
-              _rowCount = ySet.length.clamp(1, 50);
+              // Row 0 is driver-only when partition is OFF.
+              _rowCount = hasFront
+                  ? ySet.length.clamp(1, 50)
+                  : (ySet.length + 1).clamp(1, 50);
               _leftSeats = leftC.clamp(0, 8);
               _rightSeats = rightC.clamp(0, 8);
               _hasFrontPartition = hasFront;
