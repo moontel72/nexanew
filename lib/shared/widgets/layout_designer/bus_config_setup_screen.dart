@@ -371,9 +371,13 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
             final frontPxRaw =
                 snap['metadata']?['front_partition_px'] ??
                 snap['front_partition_px'];
+            // Preserve 0 when partition is OFF (no forced boundary).
+            // Only clamp when partition is actually enabled.
             final double frontBoundary = frontPxRaw is num
-                ? (frontPxRaw).toDouble().clamp(40.0, double.infinity)
-                : 100.0;
+                ? (frontPxRaw).toDouble() > 0
+                      ? (frontPxRaw).toDouble()
+                      : 0.0
+                : 0.0; // Legacy layouts with no metadata — no forced gap.
             const structural = {
               'driverCabin',
               'exitDoor',
@@ -867,17 +871,19 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       },
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  // Component Registry
-                  _sectionHeader(Icons.category, 'COMPONENT REGISTRY'),
-                  const SizedBox(height: 12),
-                  _buildRegistryPanel(),
-                  const SizedBox(height: 16),
-                  // Aisle & Gap
-                  _sectionHeader(Icons.space_bar, 'AISLE & GAP'),
-                  const SizedBox(height: 12),
-                  _buildAisleGapInputs(),
-                  const SizedBox(height: 24),
+                ],
+                // Component Registry — always visible, even for presets
+                const SizedBox(height: 16),
+                _sectionHeader(Icons.category, 'COMPONENT REGISTRY'),
+                const SizedBox(height: 12),
+                _buildRegistryPanel(),
+                const SizedBox(height: 16),
+                // Aisle & Gap — always visible, including Initial Gap
+                _sectionHeader(Icons.space_bar, 'AISLE & GAP'),
+                const SizedBox(height: 12),
+                _buildAisleGapInputs(),
+                const SizedBox(height: 24),
+                if (!_usePreset) ...[
                   // Custom grid configuration — ALL limits computed from physics
                   _sectionHeader(Icons.grid_view, 'DYNAMIC GRID CONFIGURATION'),
                   const SizedBox(height: 4),

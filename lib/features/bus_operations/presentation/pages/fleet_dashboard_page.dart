@@ -582,8 +582,10 @@ class _FleetDashboardView extends StatelessWidget {
               snapMap?['metadata']?['front_partition_px'] ??
               snapMap?['front_partition_px'];
           final double frontBoundary = frontPxRaw is num
-              ? (frontPxRaw).toDouble().clamp(40.0, double.infinity)
-              : 100.0; // default effectiveTop from _initFromConfig
+              ? (frontPxRaw).toDouble() > 0
+                    ? (frontPxRaw).toDouble()
+                    : 0.0
+              : 0.0; // No forced gap for legacy layouts
           const structural = {
             'driverCabin',
             'exitDoor',

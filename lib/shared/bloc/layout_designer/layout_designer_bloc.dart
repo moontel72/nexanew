@@ -23,6 +23,11 @@ class LayoutDesignerBloc
   /// spatial position: top-to-bottom (Y), then left-to-right (X).
   /// Non-seat components (driverCabin, doors, etc.) are preserved
   /// at their original positions in the list.
+  ///
+  /// Driver cabin components are NEVER assigned seat numbers — they
+  /// are purely visual/spatial indicators.  They are routed to the
+  /// `others` bucket regardless of any custom dimensions registered
+  /// for the driver seat in the Component Registry.
   List<AbsoluteLayoutComponent> _reindexByPosition(
     List<AbsoluteLayoutComponent> comps,
   ) {
@@ -30,12 +35,15 @@ class LayoutDesignerBloc
     final seats = <AbsoluteLayoutComponent>[];
     final others = <AbsoluteLayoutComponent>[];
     for (final c in comps) {
+      // Driver cabin is explicitly excluded from seat numbering —
+      // it is a structural indicator, not a ticketable seat.
       final isSeatLike =
-          c.type == ComponentType.seat ||
-          c.type == ComponentType.businessClassSeat ||
-          c.type == ComponentType.foldingSeat ||
-          c.type == ComponentType.sleeperLower ||
-          c.type == ComponentType.sleeperUpper;
+          c.type != ComponentType.driverCabin &&
+          (c.type == ComponentType.seat ||
+              c.type == ComponentType.businessClassSeat ||
+              c.type == ComponentType.foldingSeat ||
+              c.type == ComponentType.sleeperLower ||
+              c.type == ComponentType.sleeperUpper);
       if (isSeatLike && c.customLabel == null) {
         seats.add(c);
       } else {
@@ -237,22 +245,27 @@ class LayoutDesignerBloc
     String? autoBerthLabel;
     String? autoSeatId;
     int? autoSeatNumber;
-    if (e.type == ComponentType.sleeperUpper) {
-      autoBerthLabel = 'U${inBounds(ComponentType.sleeperUpper) + 1}';
-    } else if (e.type == ComponentType.sleeperLower) {
-      autoBerthLabel = 'L${inBounds(ComponentType.sleeperLower) + 1}';
-    } else if (e.type == ComponentType.seat) {
-      final n = inBounds(ComponentType.seat) + 1;
-      autoSeatNumber = n;
-      autoSeatId = 'S$n';
-    } else if (e.type == ComponentType.businessClassSeat) {
-      final n = inBounds(ComponentType.businessClassSeat) + 1;
-      autoSeatNumber = n;
-      autoSeatId = 'B$n';
-    } else if (e.type == ComponentType.foldingSeat) {
-      final n = inBounds(ComponentType.foldingSeat) + 1;
-      autoSeatNumber = n;
-      autoSeatId = 'F$n';
+    // ── Driver cabin NEVER receives a seat number or ID ──
+    // It is a purely visual/spatial indicator for the layout canvas.
+    // Seat indexing algorithms must completely bypass the driver seat.
+    if (e.type != ComponentType.driverCabin) {
+      if (e.type == ComponentType.sleeperUpper) {
+        autoBerthLabel = 'U${inBounds(ComponentType.sleeperUpper) + 1}';
+      } else if (e.type == ComponentType.sleeperLower) {
+        autoBerthLabel = 'L${inBounds(ComponentType.sleeperLower) + 1}';
+      } else if (e.type == ComponentType.seat) {
+        final n = inBounds(ComponentType.seat) + 1;
+        autoSeatNumber = n;
+        autoSeatId = 'S$n';
+      } else if (e.type == ComponentType.businessClassSeat) {
+        final n = inBounds(ComponentType.businessClassSeat) + 1;
+        autoSeatNumber = n;
+        autoSeatId = 'B$n';
+      } else if (e.type == ComponentType.foldingSeat) {
+        final n = inBounds(ComponentType.foldingSeat) + 1;
+        autoSeatNumber = n;
+        autoSeatId = 'F$n';
+      }
     }
 
     final comp = AbsoluteLayoutComponent(

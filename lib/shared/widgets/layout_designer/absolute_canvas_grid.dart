@@ -117,6 +117,7 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
               canvasWidth: ls.canvasWidth,
               canvasHeight: ls.canvasHeight,
               components: ls.components,
+              hasFrontPartition: ls.hasFrontPartition,
             ),
             child: Stack(
               children: [
@@ -152,15 +153,22 @@ class _AbsoluteCanvasGridState extends State<AbsoluteCanvasGrid> {
 
 /// Paints the dot-grid background, architectural ruler, and bus body
 /// outline (windshield, side windows, passenger door) on the canvas.
+///
+/// Bus body decorations (windshield, windows, door) are only drawn
+/// when [hasFrontPartition] is true — they represent the engine-cover
+/// partition area.  When the partition toggle is OFF (HiAce / vans),
+/// only the dot grid and ruler are rendered.
 class _CanvasBackgroundPainter extends CustomPainter {
   final double canvasWidth;
   final double canvasHeight;
   final List<AbsoluteLayoutComponent> components;
+  final bool hasFrontPartition;
 
   _CanvasBackgroundPainter({
     required this.canvasWidth,
     required this.canvasHeight,
     this.components = const [],
+    this.hasFrontPartition = false,
   });
 
   static const double _rulerThickness = 22.0;
@@ -217,8 +225,12 @@ class _CanvasBackgroundPainter extends CustomPainter {
 
     // ═══════════════════════════════════════════════
     // BUS BODY OUTLINE (windshield, windows, door)
+    // Only drawn when front partition is enabled —
+    // for HiAce/vans without "Tapa", skip the decoration.
     // ═══════════════════════════════════════════════
-    _drawBusBody(canvas);
+    if (hasFrontPartition) {
+      _drawBusBody(canvas);
+    }
   }
 
   /// Draws an architectural ruler along the top (horizontal) or left (vertical).
@@ -316,7 +328,9 @@ class _CanvasBackgroundPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CanvasBackgroundPainter old) =>
-      canvasWidth != old.canvasWidth || canvasHeight != old.canvasHeight;
+      canvasWidth != old.canvasWidth ||
+      canvasHeight != old.canvasHeight ||
+      hasFrontPartition != old.hasFrontPartition;
 
   // ═══════════════════════════════════════════════
   // BUS BODY GRAPHICS

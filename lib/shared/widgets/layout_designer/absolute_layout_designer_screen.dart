@@ -244,11 +244,17 @@ class _DesignerBodyState extends State<_DesignerBody> {
     if (registry != null) {
       bloc.add(SetLayoutRegistry(registry));
     }
-    // Determine component type from registry (first registered part wins).
+    // Determine component type from registry.
+    // Driver seat and table are structural markers, never used as the
+    // auto-generation active type — skip them when selecting the first
+    // ticketable part.
     ComponentType activeType = ComponentType.seat;
     SeatPartType? activePartType = SeatPartType.standardSeat;
     if (registry != null && registry.parts.isNotEmpty) {
-      activePartType = registry.parts.keys.first;
+      activePartType = registry.parts.keys.firstWhere(
+        (k) => k != SeatPartType.driverSeat && k != SeatPartType.table,
+        orElse: () => SeatPartType.standardSeat,
+      );
       activeType = switch (activePartType) {
         SeatPartType.sleeperLower => ComponentType.sleeperLower,
         SeatPartType.sleeperUpper => ComponentType.sleeperUpper,
@@ -353,10 +359,12 @@ class _DesignerBodyState extends State<_DesignerBody> {
         : (widget.busDimensions?.lengthPx ?? double.infinity);
     // When partition is enabled, it REPLACES the default top margin
     // (not adds to it). Keep 40px minimum for the ruler strip.
-    // When partition is OFF, initial gap pushes first row + driver down.
+    // When partition is OFF, the initial gap controls the front-most
+    // distance before Row 1.  Falls back to a 40px minimum (ruler strip)
+    // when no initial gap is configured.
     final effectiveTop = frontPx > 0
         ? (frontPx < 40 ? 40.0 : frontPx)
-        : topMargin + config.initialGapPx;
+        : (config.initialGapPx > 0 ? topMargin + config.initialGapPx : 40.0);
     // Row 0 is the driver row (user‑places driver seat manually).
     // Passenger rows start from row index 1 when no front partition.
     final int firstPassengerRow = frontPx > 0 ? 0 : 1;

@@ -232,6 +232,7 @@ SeatPartType? fromComponentType(ComponentType type) {
     ComponentType.sleeperUpper => SeatPartType.sleeperUpper,
     ComponentType.foldingSeat => SeatPartType.foldingSeat,
     ComponentType.restaurantTable => SeatPartType.table,
+    ComponentType.driverCabin => SeatPartType.driverSeat,
     _ => null,
   };
 }

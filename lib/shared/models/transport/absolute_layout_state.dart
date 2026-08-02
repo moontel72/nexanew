@@ -167,6 +167,21 @@ class AbsoluteLayoutState {
     }
   }
 
+  /// Whether the layout has an active front partition (reserved engine/driver space).
+  /// Derived from saved metadata — 0 or missing means no partition.
+  bool get hasFrontPartition {
+    final v = metadata['front_partition_px'];
+    if (v is num) return v.toDouble() > 0;
+    return false;
+  }
+
+  /// The front partition height in pixels, or 0 if disabled.
+  double get frontPartitionPx {
+    final v = metadata['front_partition_px'];
+    if (v is num) return v.toDouble();
+    return 0.0;
+  }
+
   /// Get the currently selected component.
   AbsoluteLayoutComponent? get selectedComponent =>
       selectedComponentId != null ? componentById(selectedComponentId!) : null;

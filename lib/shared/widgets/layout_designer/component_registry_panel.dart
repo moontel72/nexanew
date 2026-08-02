@@ -29,6 +29,8 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
   late final TextEditingController _lenInCtrl;
   late final TextEditingController _widFtCtrl;
   late final TextEditingController _widInCtrl;
+  late final TextEditingController _initialGapFtCtrl;
+  late final TextEditingController _initialGapInCtrl;
 
   @override
   void initState() {
@@ -37,6 +39,12 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     _lenInCtrl = TextEditingController();
     _widFtCtrl = TextEditingController();
     _widInCtrl = TextEditingController();
+    _initialGapFtCtrl = TextEditingController(
+      text: '${widget.registry.initialGap.feet}',
+    );
+    _initialGapInCtrl = TextEditingController(
+      text: '${widget.registry.initialGap.inches}',
+    );
   }
 
   @override
@@ -45,6 +53,8 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     _lenInCtrl.dispose();
     _widFtCtrl.dispose();
     _widInCtrl.dispose();
+    _initialGapFtCtrl.dispose();
+    _initialGapInCtrl.dispose();
     super.dispose();
   }
 
@@ -110,6 +120,15 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     final newParts = Map<SeatPartType, PartSpec>.from(widget.registry.parts)
       ..remove(type);
     widget.onChanged(widget.registry.copyWith(parts: newParts));
+  }
+
+  void _updateInitialGap() {
+    final int ft = int.tryParse(_initialGapFtCtrl.text) ?? 0;
+    final int inc = int.tryParse(_initialGapInCtrl.text) ?? 0;
+    final gap = FeetInches.normalize(ft, inc);
+    _initialGapFtCtrl.text = gap.feet.toString();
+    _initialGapInCtrl.text = gap.inches.toString();
+    widget.onChanged(widget.registry.copyWith(initialGap: gap));
   }
 
   // Label above a dimension input group — gold text with purple accent bar.
@@ -209,6 +228,21 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
             ),
             const SizedBox(height: 10),
           ],
+          // ── Initial Gap input (distance before Row 1) ──
+          _dimLabel('Initial Gap (front of first row)'),
+          const SizedBox(height: 4),
+          _dimRow(_initialGapFtCtrl, _initialGapInCtrl, 'ft', 'in'),
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: _updateInitialGap,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Apply', style: TextStyle(fontSize: 11)),
+          ),
+          const SizedBox(height: 10),
           // ── Add dropdown ──
           if (_available.isNotEmpty)
             DropdownButtonFormField<SeatPartType>(
