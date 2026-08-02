@@ -1030,20 +1030,28 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
           int lC = 0, rC = 0;
           if (firstRowXs.isNotEmpty) {
             firstRowXs.sort();
+            bool hasBerths = false;
+            for (final c in comps) {
+              if (c is! Map) continue;
+              final t = c['type']?.toString() ?? '';
+              final y = (c['y'] as num?)?.toDouble();
+              if (y != null && firstY != null && (y - firstY!).abs() < 5) {
+                if (t == 'sleeperLower' || t == 'sleeperUpper') { hasBerths = true; break; }
+              }
+            }
+            final mergeGap = hasBerths ? 80.0 : 20.0;
             final merged = <double>[firstRowXs.first];
             for (int i = 1; i < firstRowXs.length; i++) {
-              if (firstRowXs[i] - merged.last > 80) merged.add(firstRowXs[i]);
+              if (firstRowXs[i] - merged.last > mergeGap) merged.add(firstRowXs[i]);
             }
             double maxGap = 0;
             int gapIdx = 0;
             for (int i = 1; i < merged.length; i++) {
               final gap = merged[i] - merged[i - 1];
-              if (gap > maxGap) {
-                maxGap = gap;
-                gapIdx = i;
-              }
+              if (gap > maxGap) { maxGap = gap; gapIdx = i; }
             }
-            if (maxGap > 30) {
+            final avgGap = merged.length > 1 ? (merged.last - merged.first) / (merged.length - 1) : 0.0;
+            if (maxGap > 30 && merged.length > 1 && maxGap >= avgGap * 1.5) {
               lC = gapIdx;
               rC = merged.length - gapIdx;
             } else {
@@ -1051,16 +1059,12 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
                   ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280)
                   : 280);
               for (final x in merged) {
-                if (x < cw / 2)
-                  lC++;
-                else
-                  rC++;
+                if (x < cw / 2) lC++; else rC++;
               }
             }
           }
           leftS = lC.clamp(0, 8);
           rightS = rC.clamp(0, 8);
-          rows = ySet.length.clamp(1, 50);
           // Front partition
           final fpx =
               snapMap?['metadata']?['front_partition_px'] ??
@@ -1073,6 +1077,9 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
               frontIn = ri % 12;
             }
           }
+          rows = hasFront
+              ? ySet.length.clamp(1, 50)
+              : (ySet.length + 1).clamp(1, 50);
         }
       }
     } catch (_) {}
