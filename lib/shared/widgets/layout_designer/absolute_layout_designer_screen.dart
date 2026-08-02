@@ -178,6 +178,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
       }
       // Front partition
       _bloc.add(SetLayoutMetadata('front_partition_px', cfg.frontPartitionPx));
+      // Persist seat matrix for reliable edit-form round-tripping.
+      _bloc.add(SetLayoutMetadata('left_seats', cfg.leftSeats));
+      _bloc.add(SetLayoutMetadata('right_seats', cfg.rightSeats));
+      _bloc.add(SetLayoutMetadata('row_count', cfg.rowCount));
       // For presets: regenerate the seat grid from the updated config.
       if (widget.isPreset && widget.layoutId != null) {
         _bloc.add(const ClearComponents());
@@ -346,6 +350,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
         SetLayoutMetadata('bus_height_px', widget.busDimensions!.heightPx),
       );
     }
+    // Persist seat matrix so edit form always loads the correct layout config.
+    bloc.add(SetLayoutMetadata('left_seats', config.leftSeats));
+    bloc.add(SetLayoutMetadata('right_seats', config.rightSeats));
+    bloc.add(SetLayoutMetadata('row_count', config.rowCount));
 
     int counter = 1;
     // Authoritative boundary from config (always set), falling back to widget.

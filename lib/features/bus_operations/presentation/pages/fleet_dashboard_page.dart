@@ -684,10 +684,7 @@ class _FleetDashboardView extends StatelessWidget {
               }
             }
           }
-          leftS = lC.clamp(0, 8);
-          rightS = rC.clamp(0, 8);
-          // ── Restore front reserved space from snapshot metadata ──
-          // Explicit metadata (from designer save) is authoritative.
+          // Restore front reserved space from snapshot metadata
           final frontPxMeta =
               snapMap?['metadata']?['front_partition_px'] ??
               snapMap?['front_partition_px'];
@@ -700,10 +697,24 @@ class _FleetDashboardView extends StatelessWidget {
               frontPartitionIn = reservedInches % 12;
             }
           }
-          // Row count: +1 for driver row when no front partition.
-          rows = hasFrontPartition
-              ? ySet.length.clamp(1, 50)
-              : (ySet.length + 1).clamp(1, 50);
+          // ── Seat matrix from metadata (authoritative saved values) ──
+          final savedLeft =
+              snapMap?['metadata']?['left_seats'] ?? snapMap?['left_seats'];
+          final savedRight =
+              snapMap?['metadata']?['right_seats'] ?? snapMap?['right_seats'];
+          final savedRows =
+              snapMap?['metadata']?['row_count'] ?? snapMap?['row_count'];
+          if (savedLeft is int && savedRight is int && savedRows is int) {
+            leftS = savedLeft.clamp(0, 8);
+            rightS = savedRight.clamp(0, 8);
+            rows = savedRows.clamp(1, 50);
+          } else {
+            leftS = lC.clamp(0, 8);
+            rightS = rC.clamp(0, 8);
+            rows = hasFrontPartition
+                ? ySet.length.clamp(1, 50)
+                : (ySet.length + 1).clamp(1, 50);
+          }
         }
       }
     } catch (_) {}

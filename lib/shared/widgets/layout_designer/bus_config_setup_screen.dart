@@ -494,13 +494,27 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 inVal = reservedInches % 12;
               }
             }
+            // ── Seat matrix from metadata (authoritative, saved by designer) ──
+            final savedLeft =
+                snap['metadata']?['left_seats'] ?? snap['left_seats'];
+            final savedRight =
+                snap['metadata']?['right_seats'] ?? snap['right_seats'];
+            final savedRows =
+                snap['metadata']?['row_count'] ?? snap['row_count'];
             setState(() {
-              // Row 0 is driver-only when partition is OFF.
-              _rowCount = hasFront
-                  ? ySet.length.clamp(1, 50)
-                  : (ySet.length + 1).clamp(1, 50);
-              _leftSeats = leftC.clamp(0, 8);
-              _rightSeats = rightC.clamp(0, 8);
+              // Use saved metadata when available (reliable round-trip).
+              // Fall back to position-derived values for legacy layouts.
+              if (savedLeft is int && savedRight is int && savedRows is int) {
+                _rowCount = savedRows.clamp(1, 50);
+                _leftSeats = savedLeft.clamp(0, 8);
+                _rightSeats = savedRight.clamp(0, 8);
+              } else {
+                _rowCount = hasFront
+                    ? ySet.length.clamp(1, 50)
+                    : (ySet.length + 1).clamp(1, 50);
+                _leftSeats = leftC.clamp(0, 8);
+                _rightSeats = rightC.clamp(0, 8);
+              }
               _hasFrontPartition = hasFront;
               _frontPartitionFt = ftVal;
               _frontPartitionIn = inVal;
