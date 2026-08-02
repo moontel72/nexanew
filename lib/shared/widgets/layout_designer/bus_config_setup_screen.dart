@@ -456,12 +456,28 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 leftC = gapIdx;
                 rightC = merged.length - gapIdx;
               } else {
-                final midX = canvasW / 2;
-                for (final x in merged) {
-                  if (x < midX)
-                    leftC++;
-                  else
-                    rightC++;
+                // No clear aisle gap detected between columns.
+                // Check if there's a large gap from the canvas left edge
+                // to the first seat — this indicates the aisle is on the left
+                // and all seats are on the right (common for HiAce / vans).
+                final leftMargin = merged.first;
+                final rightMargin = canvasW - merged.last;
+                // If the left-side margin is clearly larger (≥ 2×),
+                // treat all seats as right-side seats.
+                if (leftMargin > rightMargin * 2 && leftMargin > 40) {
+                  leftC = 0;
+                  rightC = merged.length;
+                } else if (rightMargin > leftMargin * 2 && rightMargin > 40) {
+                  leftC = merged.length;
+                  rightC = 0;
+                } else {
+                  final midX = canvasW / 2;
+                  for (final x in merged) {
+                    if (x < midX)
+                      leftC++;
+                    else
+                      rightC++;
+                  }
                 }
               }
             }

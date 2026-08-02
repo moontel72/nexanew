@@ -359,12 +359,13 @@ class _DesignerBodyState extends State<_DesignerBody> {
         : (widget.busDimensions?.lengthPx ?? double.infinity);
     // When partition is enabled, it REPLACES the default top margin
     // (not adds to it). Keep 40px minimum for the ruler strip.
-    // When partition is OFF, the initial gap controls the front-most
-    // distance before Row 1.  Falls back to a 40px minimum (ruler strip)
-    // when no initial gap is configured.
+    // When partition is OFF, the initial gap directly controls the
+    // front-most distance before Row 1 — no hidden padding added.
     final effectiveTop = frontPx > 0
         ? (frontPx < 40 ? 40.0 : frontPx)
-        : (config.initialGapPx > 0 ? topMargin + config.initialGapPx : 40.0);
+        : (config.initialGapPx > 0
+              ? (config.initialGapPx < 40 ? 40.0 : config.initialGapPx)
+              : 40.0);
     // Row 0 is the driver row (user‑places driver seat manually).
     // Passenger rows start from row index 1 when no front partition.
     final int firstPassengerRow = frontPx > 0 ? 0 : 1;
@@ -561,18 +562,22 @@ class _DesignerBodyState extends State<_DesignerBody> {
                             _placingType = type;
                             _placingIsReverse = isReverse;
                             _placingDriverPosition = null;
-                            // Use registry dimensions for driver cabin if configured.
+                            // Use registry dimensions when configured —
+                            // palette defaults are fallbacks only.
+                            final partType = fromComponentType(type);
+                            final spec = partType != null
+                                ? widget.registry?.parts[partType]
+                                : null;
+                            _placingWidth = spec?.pixelWidth ?? defW;
+                            _placingHeight = spec?.pixelLength ?? defH;
                             if (type == ComponentType.driverCabin) {
-                              final drv = widget
-                                  .registry
-                                  ?.parts[SeatPartType.driverSeat];
-                              _placingWidth = drv?.pixelWidth ?? defW;
-                              _placingHeight = drv?.pixelLength ?? defH;
                               _placingDriverPosition =
-                                  drv?.driverPosition ?? DriverPosition.right;
-                            } else {
-                              _placingWidth = defW;
-                              _placingHeight = defH;
+                                  spec?.driverPosition ??
+                                  widget
+                                      .registry
+                                      ?.parts[SeatPartType.driverSeat]
+                                      ?.driverPosition ??
+                                  DriverPosition.right;
                             }
                           });
                           _bloc.add(const SelectComponent(null));
