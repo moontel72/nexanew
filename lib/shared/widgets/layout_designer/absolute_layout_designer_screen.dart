@@ -385,8 +385,8 @@ class _DesignerBodyState extends State<_DesignerBody> {
         DriverPosition.right => canvasW - driverW - leftMargin,
       };
       final double driverY = frontPx > 0
-          ? (frontPx - driverH) /
-                2 // center vertically in Part A
+          ? config
+                .initialGapPx // initial gap from top inside Part A
           : effectiveTop; // top of Row 0
       bloc.add(
         AddComponent(

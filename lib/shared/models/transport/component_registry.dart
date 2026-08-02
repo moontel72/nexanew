@@ -125,15 +125,26 @@ class ComponentRegistry extends Equatable {
   });
 
   /// Returns the largest length among all registered parts.
+  /// Excludes driver seat — it occupies a separate row and must not
+  /// inflate passenger row length/width calculations.
   FeetInches get maxPartLength {
-    if (parts.isEmpty) return kDefaultSeatLength;
-    return parts.values.map((p) => p.length).reduce((a, b) => a > b ? a : b);
+    final seatParts = parts.entries
+        .where((e) => e.key != SeatPartType.driverSeat)
+        .map((e) => e.value.length)
+        .toList();
+    if (seatParts.isEmpty) return kDefaultSeatLength;
+    return seatParts.reduce((a, b) => a > b ? a : b);
   }
 
   /// Returns the largest width among all registered seat parts.
+  /// Excludes driver seat — its width is irrelevant for row width.
   FeetInches get maxPartWidth {
-    if (parts.isEmpty) return kDefaultSeatWidth;
-    return parts.values.map((p) => p.width).reduce((a, b) => a > b ? a : b);
+    final seatParts = parts.entries
+        .where((e) => e.key != SeatPartType.driverSeat)
+        .map((e) => e.value.width)
+        .toList();
+    if (seatParts.isEmpty) return kDefaultSeatWidth;
+    return seatParts.reduce((a, b) => a > b ? a : b);
   }
 
   /// Pixel fallback for structural / non‑configurable component types.
