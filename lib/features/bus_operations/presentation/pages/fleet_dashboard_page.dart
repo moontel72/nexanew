@@ -665,13 +665,12 @@ class _FleetDashboardView extends StatelessWidget {
               final canvasW = (snapCanvas is Map
                   ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280.0)
                   : 280.0);
-              // No clear aisle gap — check if seats are clustered on one side.
-              final leftMargin = merged.first;
-              final rightMargin = canvasW - merged.last;
-              if (leftMargin > rightMargin * 2 && leftMargin > 40) {
+              final allRight = merged.every((x) => x > canvasW * 0.20);
+              final allLeft = merged.every((x) => x < canvasW * 0.80);
+              if (allRight && !allLeft) {
                 lC = 0;
                 rC = merged.length;
-              } else if (rightMargin > leftMargin * 2 && rightMargin > 40) {
+              } else if (allLeft && !allRight) {
                 lC = merged.length;
                 rC = 0;
               } else {
