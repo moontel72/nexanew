@@ -725,14 +725,6 @@ class _OwnerView extends StatelessWidget {
               frontFt = ri ~/ 12;
               frontIn = ri % 12;
             }
-          } else if ((minSeatY - 100).abs() > 20 &&
-              minSeatY < double.infinity) {
-            final ri = (minSeatY / 4.0).round();
-            if (ri > 0) {
-              hasFront = true;
-              frontFt = ri ~/ 12;
-              frontIn = ri % 12;
-            }
           }
           // Row count: +1 for driver row when no front partition.
           rows = hasFront

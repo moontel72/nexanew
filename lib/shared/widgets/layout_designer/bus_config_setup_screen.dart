@@ -474,15 +474,6 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                 ftVal = reservedInches ~/ 12;
                 inVal = reservedInches % 12;
               }
-            } else if ((minSeatY - 100.0).abs() > 20 &&
-                minSeatY < double.infinity) {
-              // Fallback: infer from seat positions.
-              final reservedInches = (minSeatY / 4.0).round();
-              if (reservedInches > 0) {
-                hasFront = true;
-                ftVal = reservedInches ~/ 12;
-                inVal = reservedInches % 12;
-              }
             }
             setState(() {
               // +1 row for driver when no front partition (driver row is structural, not in ySet).

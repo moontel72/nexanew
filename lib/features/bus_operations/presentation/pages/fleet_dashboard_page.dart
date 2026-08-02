@@ -687,15 +687,6 @@ class _FleetDashboardView extends StatelessWidget {
               frontPartitionFt = reservedInches ~/ 12;
               frontPartitionIn = reservedInches % 12;
             }
-          } else if ((minSeatY - 100.0).abs() > 20 &&
-              minSeatY < double.infinity) {
-            // Fallback: infer from seat positions.
-            final reservedInches = (minSeatY / 4.0).round();
-            if (reservedInches > 0) {
-              hasFrontPartition = true;
-              frontPartitionFt = reservedInches ~/ 12;
-              frontPartitionIn = reservedInches % 12;
-            }
           }
           // Row count: +1 for driver row when no front partition.
           rows = hasFrontPartition
