@@ -874,7 +874,10 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Remaining for seats: ${remFt}\' ${remIn}"',
+                                'Remaining for seats: ${remFt}\' ${remIn}"'
+                                '  (${state.dimensions.length.displayString} total'
+                                ' − ${(_frontPartitionFt > 0 || _frontPartitionIn > 0) ? '${_frontPartitionFt}\' ${_frontPartitionIn}" partition' : ''}'
+                                '${gapIn > 0 ? ' − ${state.registry.initialGap.displayString} gap' : ''})',
                                 style: const TextStyle(
                                   color: Color(0xFF16A34A),
                                   fontSize: 12,
@@ -935,7 +938,9 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                               _frontPartitionIn,
                             )
                           : FeetInches.zero;
-                      final availableLen = dims.length - frontReservedFtIn;
+                      // Deduct both partition and initial gap from total.
+                      final availableLen =
+                          dims.length - frontReservedFtIn - reg.initialGap;
                       final lengthOk =
                           requiredLen <= availableLen || requiredLen.isZero;
 
@@ -1070,6 +1075,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                                 Text(
                                   '${_leftSeats}L + ${_rightSeats}R × $_rowCount rows'
                                   '  |  part: ${partL.displayString}  |  gap: ${gap.displayString}'
+                                  '  |  init gap: ${reg.initialGap.displayString}'
                                   '  |  required: ${requiredLen.displayString}',
                                   style: const TextStyle(
                                     color: Color(0xFF667788),
