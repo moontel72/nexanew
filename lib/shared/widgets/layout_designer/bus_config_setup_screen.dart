@@ -864,8 +864,11 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                         final totalIn = state.dimensions.length.totalInches;
                         final frontIn =
                             (_frontPartitionFt * 12.0) + _frontPartitionIn;
-                        // Deduct initial gap as well (gap before first row).
-                        final gapIn = state.registry.initialGap.totalInches;
+                        // Initial gap is inside Part A when partition is ON —
+                        // only deduct it from total when partition is OFF.
+                        final gapIn = _hasFrontPartition
+                            ? 0.0
+                            : state.registry.initialGap.totalInches;
                         final remainingIn = (totalIn - frontIn - gapIn).clamp(
                           0,
                           totalIn,
@@ -953,9 +956,12 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                               _frontPartitionIn,
                             )
                           : FeetInches.zero;
-                      // Deduct both partition and initial gap from total.
+                      // Initial gap is inside Part A — only deduct when OFF.
+                      final initGapDeduction = _hasFrontPartition
+                          ? FeetInches.zero
+                          : reg.initialGap;
                       final availableLen =
-                          dims.length - frontReservedFtIn - reg.initialGap;
+                          dims.length - frontReservedFtIn - initGapDeduction;
                       final lengthOk =
                           requiredLen <= availableLen || requiredLen.isZero;
 
