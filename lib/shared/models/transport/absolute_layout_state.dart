@@ -217,8 +217,9 @@ class AbsoluteLayoutState {
   }
 
   /// Serialize to a publishable snapshot.
-  /// Only components within canvas bounds are persisted — overflow
-  /// components are silently dropped to prevent phantom seat counts.
+  /// Ticketable seat components outside canvas bounds are dropped.
+  /// Structural components (doors, driver cabin, etc.) are ALWAYS
+  /// saved so they survive edit round-trips even if near the edge.
   Map<String, dynamic> toSnapshot() => {
     'canvas': {
       'canvas_width': canvasWidth,
@@ -227,7 +228,9 @@ class AbsoluteLayoutState {
     },
     'display_name': displayName,
     'components': components
-        .where((c) => c.isWithinBounds(canvasWidth, canvasHeight))
+        .where(
+          (c) => c.isStructural || c.isWithinBounds(canvasWidth, canvasHeight),
+        )
         .map((c) => c.toJson())
         .toList(),
     'metadata': {...metadata, 'total_bookable_seats': totalSeats},
@@ -283,8 +286,11 @@ class AbsoluteLayoutState {
               j is Map<String, dynamic> ? j : j.cast<String, dynamic>(),
             ),
           );
-        } catch (_) {
-          // Skip one malformed component — don't lose the whole layout
+        } catch (e) {
+          // Log the error so we can diagnose silent component drops.
+          print(
+            'ABSOLUTE_LAYOUT: failed to parse component: $e — raw=${j['type'] ?? 'unknown'}',
+          );
         }
       }
     }
