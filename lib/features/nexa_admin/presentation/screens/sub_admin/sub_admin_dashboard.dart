@@ -996,8 +996,10 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
               snapMap?['metadata']?['front_partition_px'] ??
               snapMap?['front_partition_px'];
           final double frontBoundary = frontPxRaw is num
-              ? (frontPxRaw).toDouble().clamp(40.0, double.infinity)
-              : 100.0;
+              ? (frontPxRaw).toDouble() > 0
+                  ? (frontPxRaw).toDouble()
+                  : 0.0
+              : 0.0;
           const structural = {
             'driverCabin',
             'exitDoor',
@@ -1058,14 +1060,40 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
               final cw = (snapCanvas is Map
                   ? ((snapCanvas['canvas_width'] as num?)?.toDouble() ?? 280)
                   : 280);
-              for (final x in merged) {
-                if (x < cw / 2) lC++; else rC++;
+              final allRight = merged.every((x) => x > cw * 0.20);
+              final allLeft = merged.every((x) => x < cw * 0.80);
+              if (allRight && !allLeft) {
+                lC = 0;
+                rC = merged.length;
+              } else if (allLeft && !allRight) {
+                lC = merged.length;
+                rC = 0;
+              } else {
+                for (final x in merged) {
+                  if (x < cw / 2) lC++; else rC++;
+                }
               }
             }
           }
-          leftS = lC.clamp(0, 8);
-          rightS = rC.clamp(0, 8);
-          // Front partition
+          // ── Seat matrix from metadata (authoritative saved values) ──
+          final savedLeft =
+              snapMap?['metadata']?['left_seats'] ?? snapMap?['left_seats'];
+          final savedRight =
+              snapMap?['metadata']?['right_seats'] ?? snapMap?['right_seats'];
+          final savedRows =
+              snapMap?['metadata']?['row_count'] ?? snapMap?['row_count'];
+          if (savedLeft is int && savedRight is int && savedRows is int) {
+            leftS = savedLeft.clamp(0, 8);
+            rightS = savedRight.clamp(0, 8);
+            rows = savedRows.clamp(1, 50);
+          } else {
+            leftS = lC.clamp(0, 8);
+            rightS = rC.clamp(0, 8);
+            rows = hasFront
+                ? ySet.length.clamp(1, 50)
+                : (ySet.length + 1).clamp(1, 50);
+          }
+          // Front partition detection
           final fpx =
               snapMap?['metadata']?['front_partition_px'] ??
               snapMap?['front_partition_px'];
@@ -1077,9 +1105,6 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
               frontIn = ri % 12;
             }
           }
-          rows = hasFront
-              ? ySet.length.clamp(1, 50)
-              : (ySet.length + 1).clamp(1, 50);
         }
       }
     } catch (_) {}
