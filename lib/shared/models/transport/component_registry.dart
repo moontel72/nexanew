@@ -64,6 +64,7 @@ class PartSpec extends Equatable {
       width: switch (type) {
         SeatPartType.standardSeat => kDefaultSeatWidth,
         SeatPartType.businessSeat => kDefaultBusinessSeatWidth,
+        SeatPartType.businessReverseSeat => kDefaultBusinessSeatWidth,
         SeatPartType.sleeperLower => kDefaultSleeperLowerWidth,
         SeatPartType.sleeperUpper => kDefaultSleeperUpperWidth,
         SeatPartType.reverseSeat => kDefaultReverseSeatWidth,
@@ -234,7 +235,10 @@ class ComponentRegistry extends Equatable {
 ///
 /// When [isReverseFacing] is true, reverse seat types are returned
 /// so the registry can store distinct dimensions for reverse-facing seats.
-SeatPartType? fromComponentType(ComponentType type, {bool isReverseFacing = false}) {
+SeatPartType? fromComponentType(
+  ComponentType type, {
+  bool isReverseFacing = false,
+}) {
   if (isReverseFacing) {
     return switch (type) {
       ComponentType.seat => SeatPartType.reverseSeat,
