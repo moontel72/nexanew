@@ -167,54 +167,57 @@ class AbsoluteComponentPalette extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 72,
-      decoration: BoxDecoration(
-        color: const Color(0xFF0A1628),
-        border: Border(right: BorderSide(color: const Color(0x20FFFFFF))),
-      ),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: const Color(0x20FFFFFF)),
+      child: Container(
+        width: 72,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0A1628),
+          border: Border(right: BorderSide(color: const Color(0x20FFFFFF))),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: const Color(0x20FFFFFF)),
+                ),
+              ),
+              child: Text(
+                'PARTS',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0x80FFFFFF),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                ),
               ),
             ),
-            child: Text(
-              'PARTS',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: const Color(0x80FFFFFF),
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
+            // Palette items
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: _paletteItems.length,
+                itemBuilder: (context, index) {
+                  final item = _paletteItems[index];
+                  return _PaletteTile(
+                    item: item,
+                    onTap: () => onItemSelected(
+                      item.type,
+                      item.defaultWidth,
+                      item.defaultHeight,
+                      item.isReverseFacing,
+                    ),
+                  );
+                },
               ),
             ),
-          ),
-          // Palette items
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              itemCount: _paletteItems.length,
-              itemBuilder: (context, index) {
-                final item = _paletteItems[index];
-                return _PaletteTile(
-                  item: item,
-                  onTap: () => onItemSelected(
-                    item.type,
-                    item.defaultWidth,
-                    item.defaultHeight,
-                    item.isReverseFacing,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -248,6 +251,7 @@ class _PaletteTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   item.label,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: const Color(0xCCFFFFFF),
                     fontSize: 9,
