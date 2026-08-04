@@ -168,9 +168,9 @@ class AbsoluteComponentPalette extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 72,
+      width: 140,
       child: Container(
-        width: 72,
+        width: 140,
         decoration: BoxDecoration(
           color: const Color(0xFF0A1628),
           border: Border(right: BorderSide(color: const Color(0x20FFFFFF))),

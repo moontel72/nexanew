@@ -466,11 +466,14 @@ class _DesignerBodyState extends State<_DesignerBody> {
           placeSeat(rightStartX + s * seatSpan, y, isReverse);
         }
 
-        // ── Place table after each reverse row (between the face-to-face pair) ──
+        // ── Place table between the face-to-face pair ──
+        // tableW = left‑to‑right span ("width" in PartSpec)
+        // tableH = front‑to‑back depth ("length" in PartSpec)
         if (isReverse && gapPx > 0) {
+          // Table sits in the gap between the forward and reverse rows.
           final double tableY = y - gapPx + (gapPx - tableH) / 2;
-          final double tableX =
-              leftMargin + (leftSeats * seatSpan) + (aisleW / 2) - (tableW / 2);
+          // Center horizontally across the full canvas width.
+          final double tableX = (canvasW - tableW) / 2;
           bloc.add(
             AddComponent(
               type: ComponentType.restaurantTable,
