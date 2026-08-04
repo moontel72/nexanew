@@ -126,7 +126,7 @@ class ComponentRegistry extends Equatable {
     this.aisleWidth = kDefaultAisleWidth,
     this.interSeatGap = kDefaultInterSeatGap,
     this.initialGap = FeetInches.zero,
-    this.faceToFaceGap = kDefaultInterSeatGap,
+    this.faceToFaceGap = FeetInches.zero,
   });
 
   /// Returns the largest length among all registered parts.
@@ -239,7 +239,7 @@ class ComponentRegistry extends Equatable {
         _parseInt(json['initial_gap_in'], 0),
       ),
       faceToFaceGap: FeetInches.normalize(
-        _parseInt(json['face_to_face_gap_ft'], 1),
+        _parseInt(json['face_to_face_gap_ft'], 0),
         _parseInt(json['face_to_face_gap_in'], 0),
       ),
     );

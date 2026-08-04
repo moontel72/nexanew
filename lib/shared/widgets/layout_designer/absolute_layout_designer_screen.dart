@@ -439,14 +439,14 @@ class _DesignerBodyState extends State<_DesignerBody> {
           : ComponentType.seat;
 
       for (int row = firstPassengerRow; row < rows; row++) {
-        // Row spacing: face‑to‑face gap only between facing pairs (0‑1, 2‑3, …).
-        // Back‑to‑back pairs (1‑2, 3‑4, …) have zero gap.
-        final int pairIndex = row ~/ 2;
-        final double y = effectiveTop + row * seatLen + pairIndex * f2fGapPx;
-        if (y + seatLen > busLenPx) break;
-
-        // Even rows → forward, odd rows → reverse
+        // Even rows (fwd): gap count = row/2
+        // Odd rows (rev): gap count = (row+1)/2
+        // This gives face‑to‑face gap between each (fwd,rev) pair
+        // and zero gap between (rev,fwd) back‑to‑back.
         final bool isReverse = (row % 2) != 0;
+        final int gaps = isReverse ? ((row + 1) ~/ 2) : (row ~/ 2);
+        final double y = effectiveTop + row * seatLen + gaps * f2fGapPx;
+        if (y + seatLen > busLenPx) break;
         final double seatWidth = seatSpan;
 
         // ── Place seats on this row ──
