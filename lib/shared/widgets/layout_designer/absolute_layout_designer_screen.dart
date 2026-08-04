@@ -421,9 +421,14 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
     if (faceToFace) {
       final tableSpec = registry!.parts[SeatPartType.table]!;
-      final double tableW = tableSpec.pixelWidth;
-      final double tableH = tableSpec.pixelLength;
-      // Use face‑to‑face gap for spacing between facing rows.
+      // tableDepth = the dimension between facing rows (smaller of width/length)
+      // tableSpan = the dimension across seats (larger of width/length)
+      final double tableDepth = tableSpec.pixelWidth < tableSpec.pixelLength
+          ? tableSpec.pixelWidth
+          : tableSpec.pixelLength;
+      final double tableSpan = tableSpec.pixelWidth > tableSpec.pixelLength
+          ? tableSpec.pixelWidth
+          : tableSpec.pixelLength;
       final double f2fGapPx = registry.faceToFaceGap.toPixels;
       final double f2fRowH = seatLen + f2fGapPx;
       // Forward type (use business if both are registered, else standard).
@@ -471,16 +476,16 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
         // ── Place table between the face-to-face pair ──
         if (isReverse && f2fGapPx > 0) {
-          // Table sits in the face‑to‑face gap between the forward and reverse rows.
-          final double tableY = y - f2fGapPx + (f2fGapPx - tableH) / 2;
-          final double tableX = (canvasW - tableW) / 2;
+          // tableDepth sits in the gap, tableSpan goes across seats.
+          final double tableY = y - f2fGapPx + (f2fGapPx - tableDepth) / 2;
+          final double tableX = (canvasW - tableSpan) / 2;
           bloc.add(
             AddComponent(
               type: ComponentType.restaurantTable,
               x: tableX,
               y: tableY,
-              width: tableW,
-              height: tableH,
+              width: tableSpan,
+              height: tableDepth,
             ),
           );
         }
