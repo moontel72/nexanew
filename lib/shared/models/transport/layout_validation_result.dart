@@ -9,7 +9,12 @@ import 'package:equatable/equatable.dart';
 import 'package:trace_odd/shared/models/transport/feet_inches.dart';
 
 /// Category of validation violation.
-enum ValidationViolation { lengthExceeded, widthExceeded, aisleTooNarrow }
+enum ValidationViolation {
+  lengthExceeded,
+  widthExceeded,
+  aisleTooNarrow,
+  tableGapTooNarrow,
+}
 
 /// Immutable result of layout validation.
 sealed class ValidationResult extends Equatable {

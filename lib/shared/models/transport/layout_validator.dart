@@ -114,6 +114,31 @@ class LayoutValidator {
       );
     }
 
+    // ── Table gap check (face-to-face seating) ──
+    final tableSpec = registry.parts[SeatPartType.table];
+    final hasReverseSeats =
+        registry.parts.containsKey(SeatPartType.reverseSeat) ||
+        registry.parts.containsKey(SeatPartType.businessReverseSeat);
+    if (tableSpec != null && hasReverseSeats) {
+      // Table sits between face-to-face seats — gap must be at least
+      // table length + 10″ clearance on each side (= +20″ total).
+      final minGapForTable =
+          tableSpec.length + const FeetInches(feet: 0, inches: 10);
+      if (gap < minGapForTable) {
+        return ValidationFailure(
+          violation: ValidationViolation.tableGapTooNarrow,
+          available: gap,
+          required: minGapForTable,
+          shortage: minGapForTable - gap,
+          userMessage:
+              'Inter‑seat gap (${gap.displayString}) is too narrow '
+              'for a table (${tableSpec.length.displayString}) between '
+              'face‑to‑face seats. Minimum required: ${minGapForTable.displayString} '
+              '(table + 10″ clearance). Increase the gap or remove the table.',
+        );
+      }
+    }
+
     return const ValidationSuccess();
   }
 

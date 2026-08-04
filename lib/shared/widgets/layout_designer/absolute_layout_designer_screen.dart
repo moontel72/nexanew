@@ -401,6 +401,93 @@ class _DesignerBodyState extends State<_DesignerBody> {
         ),
       );
     }
+    // ═══════════════════════════════════════════════════════════
+    // FACE‑TO‑FACE LAYOUT (Business coach / VIP configuration)
+    // Activated when BOTH forward and reverse seat parts are
+    // registered alongside a table.
+    // ═══════════════════════════════════════════════════════════
+    final bool hasTable =
+        registry?.parts.containsKey(SeatPartType.table) ?? false;
+    final bool hasForward =
+        registry?.parts.containsKey(SeatPartType.standardSeat) ??
+        false ||
+            (registry?.parts.containsKey(SeatPartType.businessSeat) ?? false);
+    final bool hasReverse =
+        registry?.parts.containsKey(SeatPartType.reverseSeat) ??
+        false ||
+            (registry?.parts.containsKey(SeatPartType.businessReverseSeat) ??
+                false);
+    final bool faceToFace = hasTable && hasForward && hasReverse;
+
+    if (faceToFace) {
+      final tableSpec = registry!.parts[SeatPartType.table]!;
+      final double tableW = tableSpec.pixelWidth;
+      final double tableH = tableSpec.pixelLength;
+      // Forward type (use business if both are registered, else standard).
+      final bool useBusiness =
+          registry.parts.containsKey(SeatPartType.businessSeat) ||
+          registry.parts.containsKey(SeatPartType.businessReverseSeat);
+      final ComponentType fwdType = useBusiness
+          ? ComponentType.businessClassSeat
+          : ComponentType.seat;
+      final ComponentType revType =
+          fwdType; // same component type, reverse flag
+
+      for (int row = firstPassengerRow; row < rows; row++) {
+        final y = effectiveTop + row * rowH;
+        if (y + seatLen > busLenPx) break;
+
+        // Even rows → forward, odd rows → reverse
+        final bool isReverse = (row % 2) != 0;
+        final double seatWidth = seatSpan;
+
+        // ── Place seats on this row ──
+        void placeSeat(double x, double yPos, bool rev) {
+          bloc.add(
+            AddComponent(
+              type: fwdType,
+              x: x,
+              y: yPos,
+              width: seatWidth,
+              height: seatLen,
+              seatId: rev ? null : 'S$counter',
+              seatNumber: rev ? null : counter,
+              isReverseFacing: rev,
+            ),
+          );
+          if (!rev) counter++;
+        }
+
+        for (int s = 0; s < leftSeats; s++) {
+          placeSeat(leftMargin + s * seatSpan, y, isReverse);
+        }
+        final rightStartX = leftMargin + leftSeats * seatSpan + aisleW;
+        for (int s = 0; s < rightSeats; s++) {
+          placeSeat(rightStartX + s * seatSpan, y, isReverse);
+        }
+
+        // ── Place table after each reverse row (between the face-to-face pair) ──
+        if (isReverse && gapPx > 0) {
+          final double tableY = y - gapPx + (gapPx - tableH) / 2;
+          final double tableX =
+              leftMargin + (leftSeats * seatSpan) + (aisleW / 2) - (tableW / 2);
+          bloc.add(
+            AddComponent(
+              type: ComponentType.restaurantTable,
+              x: tableX,
+              y: tableY,
+              width: tableW,
+              height: tableH,
+            ),
+          );
+        }
+      }
+      return; // Face-to-face generation complete — skip standard loop
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // STANDARD LAYOUT (all forward-facing)
+    // ═══════════════════════════════════════════════════════════
     for (int row = firstPassengerRow; row < rows; row++) {
       final y = effectiveTop + row * rowH;
 
@@ -596,7 +683,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
                             _placingDriverPosition = null;
                             // Use registry dimensions when configured —
                             // palette defaults are fallbacks only.
-                            final partType = fromComponentType(type, isReverseFacing: isReverse);
+                            final partType = fromComponentType(
+                              type,
+                              isReverseFacing: isReverse,
+                            );
                             final spec = partType != null
                                 ? widget.registry?.parts[partType]
                                 : null;
