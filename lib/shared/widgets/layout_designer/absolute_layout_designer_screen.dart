@@ -430,6 +430,15 @@ class _DesignerBodyState extends State<_DesignerBody> {
           ? tableSpec.pixelWidth
           : tableSpec.pixelLength;
       final double f2fGapPx = registry.faceToFaceGap.toPixels;
+      // ── Auto‑expand gap to fill remaining Part B space ──
+      final int pairCount = (rows - firstPassengerRow + 1) ~/ 2;
+      final double usedBySeats = (rows - firstPassengerRow) * seatLen;
+      final double usedByGaps = pairCount * f2fGapPx;
+      final double availableSpace = busLenPx - effectiveTop;
+      final double extraSpace = availableSpace - usedBySeats - usedByGaps;
+      final double adjustedF2fGap = extraSpace > 0 && pairCount > 0
+          ? f2fGapPx + (extraSpace / pairCount)
+          : f2fGapPx;
       // Forward type (use business if both are registered, else standard).
       final bool useBusiness =
           registry.parts.containsKey(SeatPartType.businessSeat) ||
@@ -445,7 +454,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
         // and zero gap between (rev,fwd) back‑to‑back.
         final bool isReverse = (row % 2) != 0;
         final int gaps = isReverse ? ((row + 1) ~/ 2) : (row ~/ 2);
-        final double y = effectiveTop + row * seatLen + gaps * f2fGapPx;
+        final double y = effectiveTop + row * seatLen + gaps * adjustedF2fGap;
         if (y + seatLen > busLenPx) break;
         final double seatWidth = seatSpan;
 
@@ -476,8 +485,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
         // ── Place tables between the face-to-face pair ──
         // One table per side (left of aisle, right of aisle).
-        if (isReverse && f2fGapPx > 0) {
-          final double tableY = y - f2fGapPx + (f2fGapPx - tableDepth) / 2;
+        if (isReverse && adjustedF2fGap > 0) {
+          final double tableY =
+              y - adjustedF2fGap + (adjustedF2fGap - tableDepth) / 2;
           // Right‑side table (centered over right seats)
           if (rightSeats > 0) {
             final double rightTableX =
