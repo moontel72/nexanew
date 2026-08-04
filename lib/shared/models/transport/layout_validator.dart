@@ -120,21 +120,21 @@ class LayoutValidator {
         registry.parts.containsKey(SeatPartType.reverseSeat) ||
         registry.parts.containsKey(SeatPartType.businessReverseSeat);
     if (tableSpec != null && hasReverseSeats) {
-      // Table sits between face-to-face seats — gap must be at least
-      // table length + 10″ clearance on each side (= +20″ total).
+      // Table sits between face-to-face seats — use faceToFaceGap.
+      final tableGap = registry.faceToFaceGap;
       final minGapForTable =
           tableSpec.length + const FeetInches(feet: 0, inches: 10);
-      if (gap < minGapForTable) {
+      if (tableGap < minGapForTable) {
         return ValidationFailure(
           violation: ValidationViolation.tableGapTooNarrow,
-          available: gap,
+          available: tableGap,
           required: minGapForTable,
-          shortage: minGapForTable - gap,
+          shortage: minGapForTable - tableGap,
           userMessage:
-              'Inter‑seat gap (${gap.displayString}) is too narrow '
+              'Face‑to‑face gap (${tableGap.displayString}) is too narrow '
               'for a table (${tableSpec.length.displayString}) between '
-              'face‑to‑face seats. Minimum required: ${minGapForTable.displayString} '
-              '(table + 10″ clearance). Increase the gap or remove the table.',
+              'facing seats. Minimum required: ${minGapForTable.displayString} '
+              '(table depth + 10″ clearance). Increase the Face‑to‑Face Gap.',
         );
       }
     }

@@ -423,6 +423,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
       final tableSpec = registry!.parts[SeatPartType.table]!;
       final double tableW = tableSpec.pixelWidth;
       final double tableH = tableSpec.pixelLength;
+      // Use face‑to‑face gap for spacing between facing rows.
+      final double f2fGapPx = registry.faceToFaceGap.toPixels;
+      final double f2fRowH = seatLen + f2fGapPx;
       // Forward type (use business if both are registered, else standard).
       final bool useBusiness =
           registry.parts.containsKey(SeatPartType.businessSeat) ||
@@ -434,7 +437,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
           fwdType; // same component type, reverse flag
 
       for (int row = firstPassengerRow; row < rows; row++) {
-        final y = effectiveTop + row * rowH;
+        final y = effectiveTop + row * f2fRowH;
         if (y + seatLen > busLenPx) break;
 
         // Even rows → forward, odd rows → reverse
@@ -467,12 +470,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
         }
 
         // ── Place table between the face-to-face pair ──
-        // tableW = left‑to‑right span ("width" in PartSpec)
-        // tableH = front‑to‑back depth ("length" in PartSpec)
-        if (isReverse && gapPx > 0) {
-          // Table sits in the gap between the forward and reverse rows.
-          final double tableY = y - gapPx + (gapPx - tableH) / 2;
-          // Center horizontally across the full canvas width.
+        if (isReverse && f2fGapPx > 0) {
+          // Table sits in the face‑to‑face gap between the forward and reverse rows.
+          final double tableY = y - f2fGapPx + (f2fGapPx - tableH) / 2;
           final double tableX = (canvasW - tableW) / 2;
           bloc.add(
             AddComponent(
@@ -485,7 +485,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
           );
         }
       }
-      return; // Face-to-face generation complete — skip standard loop
+      return;
     }
 
     // ═══════════════════════════════════════════════════════════

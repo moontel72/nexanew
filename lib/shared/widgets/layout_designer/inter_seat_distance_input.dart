@@ -63,6 +63,14 @@ class InterSeatDistanceInput extends StatelessWidget {
             maxFeet: 10,
             onChanged: (v) => onChanged(registry.copyWith(initialGap: v)),
           ),
+          const SizedBox(height: 14),
+          DimensionInputGroup(
+            label: 'Face‑to‑Face Gap (between facing rows)',
+            initialValue: registry.faceToFaceGap,
+            minFeet: 0,
+            maxFeet: 10,
+            onChanged: (v) => onChanged(registry.copyWith(faceToFaceGap: v)),
+          ),
           const SizedBox(height: 8),
           if (registry.aisleWidth < kMinAisleWidth)
             const Text(
