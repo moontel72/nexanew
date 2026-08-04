@@ -596,7 +596,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
                             _placingDriverPosition = null;
                             // Use registry dimensions when configured —
                             // palette defaults are fallbacks only.
-                            final partType = fromComponentType(type);
+                            final partType = fromComponentType(type, isReverseFacing: isReverse);
                             final spec = partType != null
                                 ? widget.registry?.parts[partType]
                                 : null;

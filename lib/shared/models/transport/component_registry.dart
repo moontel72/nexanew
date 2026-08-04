@@ -17,6 +17,7 @@ import 'package:trace_odd/shared/models/transport/layout_component.dart';
 enum SeatPartType {
   standardSeat,
   businessSeat,
+  businessReverseSeat,
   sleeperLower,
   sleeperUpper,
   reverseSeat,
@@ -52,6 +53,7 @@ class PartSpec extends Equatable {
       length: switch (type) {
         SeatPartType.standardSeat => kDefaultSeatLength,
         SeatPartType.businessSeat => kDefaultBusinessSeatLength,
+        SeatPartType.businessReverseSeat => kDefaultBusinessSeatLength,
         SeatPartType.sleeperLower => kDefaultSleeperLowerLength,
         SeatPartType.sleeperUpper => kDefaultSleeperUpperLength,
         SeatPartType.reverseSeat => kDefaultReverseSeatLength,
@@ -230,12 +232,16 @@ class ComponentRegistry extends Equatable {
 /// Maps a UI canvas [ComponentType] to its physical [SeatPartType].
 /// Returns null for structural types not in the user registry.
 ///
-/// Note: [SeatPartType.reverseSeat] has no direct [ComponentType] mapping
-/// because reversed seats use [ComponentType.seat] with an `isReverseFacing`
-/// flag. Palette-dragged reversed seats currently resolve to [standardSeat]
-/// dimensions. Use the registry panel to configure reverseSeat separately
-/// if custom dimensions are needed.
-SeatPartType? fromComponentType(ComponentType type) {
+/// When [isReverseFacing] is true, reverse seat types are returned
+/// so the registry can store distinct dimensions for reverse-facing seats.
+SeatPartType? fromComponentType(ComponentType type, {bool isReverseFacing = false}) {
+  if (isReverseFacing) {
+    return switch (type) {
+      ComponentType.seat => SeatPartType.reverseSeat,
+      ComponentType.businessClassSeat => SeatPartType.businessReverseSeat,
+      _ => null,
+    };
+  }
   return switch (type) {
     ComponentType.seat => SeatPartType.standardSeat,
     ComponentType.businessClassSeat => SeatPartType.businessSeat,

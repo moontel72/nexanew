@@ -209,7 +209,7 @@ class LayoutDesignerBloc
 
   void _onAdd(AddComponent e, Emitter<LayoutDesignerState> emit) {
     final registry = state.layout.registry;
-    final partType = fromComponentType(e.type);
+    final partType = fromComponentType(e.type, isReverseFacing: e.isReverseFacing);
     final spec = partType != null ? registry?.parts[partType] : null;
     final double w =
         e.width ??
