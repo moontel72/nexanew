@@ -430,7 +430,6 @@ class _DesignerBodyState extends State<_DesignerBody> {
           ? tableSpec.pixelWidth
           : tableSpec.pixelLength;
       final double f2fGapPx = registry.faceToFaceGap.toPixels;
-      final double f2fRowH = seatLen + f2fGapPx;
       // Forward type (use business if both are registered, else standard).
       final bool useBusiness =
           registry.parts.containsKey(SeatPartType.businessSeat) ||
@@ -438,11 +437,12 @@ class _DesignerBodyState extends State<_DesignerBody> {
       final ComponentType fwdType = useBusiness
           ? ComponentType.businessClassSeat
           : ComponentType.seat;
-      final ComponentType revType =
-          fwdType; // same component type, reverse flag
 
       for (int row = firstPassengerRow; row < rows; row++) {
-        final y = effectiveTop + row * f2fRowH;
+        // Row spacing: face‑to‑face gap only between facing pairs (0‑1, 2‑3, …).
+        // Back‑to‑back pairs (1‑2, 3‑4, …) have zero gap.
+        final int pairIndex = row ~/ 2;
+        final double y = effectiveTop + row * seatLen + pairIndex * f2fGapPx;
         if (y + seatLen > busLenPx) break;
 
         // Even rows → forward, odd rows → reverse
@@ -474,20 +474,41 @@ class _DesignerBodyState extends State<_DesignerBody> {
           placeSeat(rightStartX + s * seatSpan, y, isReverse);
         }
 
-        // ── Place table between the face-to-face pair ──
+        // ── Place tables between the face-to-face pair ──
+        // One table per side (left of aisle, right of aisle).
         if (isReverse && f2fGapPx > 0) {
-          // tableDepth sits in the gap, tableSpan goes across seats.
           final double tableY = y - f2fGapPx + (f2fGapPx - tableDepth) / 2;
-          final double tableX = (canvasW - tableSpan) / 2;
-          bloc.add(
-            AddComponent(
-              type: ComponentType.restaurantTable,
-              x: tableX,
-              y: tableY,
-              width: tableSpan,
-              height: tableDepth,
-            ),
-          );
+          // Right‑side table (centered over right seats)
+          if (rightSeats > 0) {
+            final double rightTableX =
+                leftMargin +
+                leftSeats * seatSpan +
+                aisleW +
+                (rightSeats * seatSpan - tableSpan) / 2;
+            bloc.add(
+              AddComponent(
+                type: ComponentType.restaurantTable,
+                x: rightTableX,
+                y: tableY,
+                width: tableSpan,
+                height: tableDepth,
+              ),
+            );
+          }
+          // Left‑side table (centered over left seats)
+          if (leftSeats > 0) {
+            final double leftTableX =
+                leftMargin + (leftSeats * seatSpan - tableSpan) / 2;
+            bloc.add(
+              AddComponent(
+                type: ComponentType.restaurantTable,
+                x: leftTableX,
+                y: tableY,
+                width: tableSpan,
+                height: tableDepth,
+              ),
+            );
+          }
         }
       }
       return;
