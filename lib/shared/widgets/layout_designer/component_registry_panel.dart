@@ -57,12 +57,13 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
       _addingType != null && widget.registry.parts.containsKey(_addingType);
 
   void _addPart(SeatPartType type) {
-    // Start at 0 — no hardcoded defaults. User must enter dimensions.
-    _lenFtCtrl.text = '0';
-    _lenInCtrl.text = '0';
-    _widFtCtrl.text = '0';
-    _widInCtrl.text = '0';
-    _driverPosition = DriverPosition.right;
+    // Pre-fill with sensible defaults so the user sees real dimensions.
+    final def = PartSpec.defaultFor(type);
+    _lenFtCtrl.text = def.length.feet.toString();
+    _lenInCtrl.text = def.length.inches.toString();
+    _widFtCtrl.text = def.width.feet.toString();
+    _widInCtrl.text = def.width.inches.toString();
+    _driverPosition = def.driverPosition;
     setState(() => _addingType = type);
   }
 
