@@ -942,7 +942,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       const colMax = 8;
                       const rowMax = 50;
 
-                      // ── Build required length for validation display ──
+                      // ── Build required length for validation display (v2) ──
                       final bool isFaceToFace =
                           reg.parts.containsKey(SeatPartType.table) &&
                           (reg.parts.containsKey(SeatPartType.reverseSeat) ||
