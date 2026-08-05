@@ -477,8 +477,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
         // ── Place tables between the face-to-face pair ──
         // One table per side (left of aisle, right of aisle).
         if (isReverse && f2fGapPx > 0) {
-          final double tableY =
-              y - f2fGapPx + (f2fGapPx - tableDepth) / 2;
+          final double tableY = y - f2fGapPx + (f2fGapPx - tableDepth) / 2;
           // Right‑side table (centered over right seats)
           if (rightSeats > 0) {
             final double rightTableX =
@@ -722,6 +721,17 @@ class _DesignerBodyState extends State<_DesignerBody> {
                                 : null;
                             _placingWidth = spec?.pixelWidth ?? defW;
                             _placingHeight = spec?.pixelLength ?? defH;
+                            // Table: larger dimension = horizontal span, smaller = depth.
+                            if (type == ComponentType.restaurantTable &&
+                                spec != null) {
+                              _placingWidth = spec.pixelWidth > spec.pixelLength
+                                  ? spec.pixelWidth
+                                  : spec.pixelLength;
+                              _placingHeight =
+                                  spec.pixelWidth < spec.pixelLength
+                                  ? spec.pixelWidth
+                                  : spec.pixelLength;
+                            }
                             if (type == ComponentType.driverCabin) {
                               _placingDriverPosition =
                                   spec?.driverPosition ??
