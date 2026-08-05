@@ -1108,7 +1108,8 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                                 const SizedBox(height: 6),
                                 Text(
                                   '${_leftSeats}L + ${_rightSeats}R × $_rowCount rows'
-                                  '  |  part: ${partL.displayString}  |  gap: ${gap.displayString}'
+                                  '  |  part: ${partL.displayString}'
+                                  '  |  ${isFaceToFace ? 'f2f gap: ${reg.faceToFaceGap.displayString}' : 'gap: ${gap.displayString}'}'
                                   '  |  init gap: ${reg.initialGap.displayString}'
                                   '  |  required: ${requiredLen.displayString}',
                                   style: const TextStyle(
