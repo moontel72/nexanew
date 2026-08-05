@@ -943,13 +943,26 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       const rowMax = 50;
 
                       // ── Build required length for validation display ──
-                      // ── Build total required length from actual row count ──
-                      final requiredLen =
-                          LayoutValidator.calculateRequiredLength(
-                            rows: _rowCount,
-                            partLength: partL,
-                            interSeatGap: gap,
-                          );
+                      final bool isFaceToFace =
+                          reg.parts.containsKey(SeatPartType.table) &&
+                          (reg.parts.containsKey(SeatPartType.reverseSeat) ||
+                              reg.parts.containsKey(
+                                SeatPartType.businessReverseSeat,
+                              ));
+                      final requiredLen;
+                      if (isFaceToFace) {
+                        final int pairCount = _rowCount > 0
+                            ? (_rowCount + 1) ~/ 2
+                            : 0;
+                        requiredLen =
+                            partL * _rowCount + reg.faceToFaceGap * pairCount;
+                      } else {
+                        requiredLen = LayoutValidator.calculateRequiredLength(
+                          rows: _rowCount,
+                          partLength: partL,
+                          interSeatGap: gap,
+                        );
+                      }
                       final frontReservedFtIn = _hasFrontPartition
                           ? FeetInches.normalize(
                               _frontPartitionFt,

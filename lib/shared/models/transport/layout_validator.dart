@@ -58,12 +58,26 @@ class LayoutValidator {
     final aisle = registry.aisleWidth;
     final gap = registry.interSeatGap;
 
+    // Detect face‑to‑face mode: both forward + reverse seats + table
+    final bool isFaceToFace =
+        registry.parts.containsKey(SeatPartType.table) &&
+        (registry.parts.containsKey(SeatPartType.reverseSeat) ||
+            registry.parts.containsKey(SeatPartType.businessReverseSeat));
+
     // ── Length check ──
-    final requiredLength = calculateRequiredLength(
-      rows: rows,
-      partLength: partLength,
-      interSeatGap: gap,
-    );
+    final requiredLength;
+    if (isFaceToFace) {
+      // Face‑to‑face: gap is shared between pairs, not every row.
+      // Total = rows × seatLen + (rows/2) × faceToFaceGap
+      final int pairCount = rows > 0 ? (rows + 1) ~/ 2 : 0;
+      requiredLength = partLength * rows + registry.faceToFaceGap * pairCount;
+    } else {
+      requiredLength = calculateRequiredLength(
+        rows: rows,
+        partLength: partLength,
+        interSeatGap: gap,
+      );
+    }
     if (requiredLength > dimensions.length) {
       return ValidationFailure(
         violation: ValidationViolation.lengthExceeded,
