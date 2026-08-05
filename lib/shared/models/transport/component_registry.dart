@@ -129,23 +129,28 @@ class ComponentRegistry extends Equatable {
     this.faceToFaceGap = FeetInches.zero,
   });
 
-  /// Returns the largest length among all registered parts.
-  /// Excludes driver seat — it occupies a separate row and must not
-  /// inflate passenger row length/width calculations.
+  /// Returns the largest length among registered **seat** parts.
+  /// Tables and driver cabins are structural — excluded from row sizing.
   FeetInches get maxPartLength {
     final seatParts = parts.entries
-        .where((e) => e.key != SeatPartType.driverSeat)
+        .where(
+          (e) =>
+              e.key != SeatPartType.driverSeat && e.key != SeatPartType.table,
+        )
         .map((e) => e.value.length)
         .toList();
     if (seatParts.isEmpty) return kDefaultSeatLength;
     return seatParts.reduce((a, b) => a > b ? a : b);
   }
 
-  /// Returns the largest width among all registered seat parts.
-  /// Excludes driver seat — its width is irrelevant for row width.
+  /// Returns the largest width among registered **seat** parts.
+  /// Tables and driver cabins are structural — excluded from row sizing.
   FeetInches get maxPartWidth {
     final seatParts = parts.entries
-        .where((e) => e.key != SeatPartType.driverSeat)
+        .where(
+          (e) =>
+              e.key != SeatPartType.driverSeat && e.key != SeatPartType.table,
+        )
         .map((e) => e.value.width)
         .toList();
     if (seatParts.isEmpty) return kDefaultSeatWidth;
