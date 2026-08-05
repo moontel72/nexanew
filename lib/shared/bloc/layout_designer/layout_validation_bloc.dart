@@ -48,7 +48,7 @@ class LayoutValidationBloc
 
     final FeetInches predictedLength;
     if (isFaceToFace && state.rows > 0) {
-      final pairCount = (state.rows + 1) ~/ 2;
+      final pairCount = state.rows ~/ 2;
       predictedLength =
           state.registry.maxPartLength * state.rows +
           state.registry.faceToFaceGap * pairCount;

@@ -68,8 +68,9 @@ class LayoutValidator {
     final requiredLength;
     if (isFaceToFace) {
       // Face‑to‑face: gap is shared between pairs, not every row.
-      // Total = rows × seatLen + (rows/2) × faceToFaceGap
-      final int pairCount = rows > 0 ? (rows + 1) ~/ 2 : 0;
+      // Each pair (2 rows) uses 1 face‑to‑face gap.
+      // Formula: rows × seatLen + (rows ~/ 2) × faceToFaceGap
+      final int pairCount = rows ~/ 2;
       requiredLength = partLength * rows + registry.faceToFaceGap * pairCount;
     } else {
       requiredLength = calculateRequiredLength(

@@ -951,9 +951,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                               ));
                       final requiredLen;
                       if (isFaceToFace) {
-                        final int pairCount = _rowCount > 0
-                            ? (_rowCount + 1) ~/ 2
-                            : 0;
+                        final int pairCount = _rowCount ~/ 2;
                         requiredLen =
                             partL * _rowCount + reg.faceToFaceGap * pairCount;
                       } else {
