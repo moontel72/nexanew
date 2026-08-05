@@ -942,25 +942,11 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       const colMax = 8;
                       const rowMax = 50;
 
-                      // ── Build required length for validation display (v2) ──
-                      final bool isFaceToFace =
-                          reg.parts.containsKey(SeatPartType.table) &&
-                          (reg.parts.containsKey(SeatPartType.reverseSeat) ||
-                              reg.parts.containsKey(
-                                SeatPartType.businessReverseSeat,
-                              ));
-                      final requiredLen;
-                      if (isFaceToFace) {
-                        final int pairCount = _rowCount ~/ 2;
-                        requiredLen =
-                            partL * _rowCount + reg.faceToFaceGap * pairCount;
-                      } else {
-                        requiredLen = LayoutValidator.calculateRequiredLength(
-                          rows: _rowCount,
-                          partLength: partL,
-                          interSeatGap: gap,
-                        );
-                      }
+                      // ── Build required length (single source of truth) ──
+                      final requiredLen = LayoutValidator.getRequiredLength(
+                        rows: _rowCount,
+                        registry: reg,
+                      );
                       final frontReservedFtIn = _hasFrontPartition
                           ? FeetInches.normalize(
                               _frontPartitionFt,
@@ -1107,7 +1093,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                                 Text(
                                   '${_leftSeats}L + ${_rightSeats}R × $_rowCount rows'
                                   '  |  part: ${partL.displayString}'
-                                  '  |  ${isFaceToFace ? 'f2f gap: ${reg.faceToFaceGap.displayString}' : 'gap: ${gap.displayString}'}'
+                                  '  |  ${reg.parts.containsKey(SeatPartType.table) && (reg.parts.containsKey(SeatPartType.reverseSeat) || reg.parts.containsKey(SeatPartType.businessReverseSeat)) ? 'f2f gap: ${reg.faceToFaceGap.displayString}' : 'gap: ${gap.displayString}'}'
                                   '  |  init gap: ${reg.initialGap.displayString}'
                                   '  |  required: ${requiredLen.displayString}',
                                   style: const TextStyle(

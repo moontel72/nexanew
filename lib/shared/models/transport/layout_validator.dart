@@ -15,19 +15,24 @@ import 'package:trace_odd/shared/models/transport/layout_validation_result.dart'
 class LayoutValidator {
   const LayoutValidator._();
 
-  /// Calculates the total length required by the current seat matrix.
-  ///
-  /// Formula:
-  ///   Total = (Rows × PartLength) + ((Rows − 1) × InterSeatGap)
-  static FeetInches calculateRequiredLength({
+  /// Single source of truth: computes required length for any layout mode.
+  /// Uses face‑to‑face formula when table + reverse seats are registered,
+  /// otherwise the standard inter‑seat gap formula.
+  static FeetInches getRequiredLength({
     required int rows,
-    required FeetInches partLength,
-    required FeetInches interSeatGap,
+    required ComponentRegistry registry,
   }) {
     if (rows <= 0) return FeetInches.zero;
-    final partTotal = partLength * rows;
-    final gapTotal = interSeatGap * (rows - 1);
-    return partTotal + gapTotal;
+    final partLength = registry.maxPartLength;
+    final bool faceToFace =
+        registry.parts.containsKey(SeatPartType.table) &&
+        (registry.parts.containsKey(SeatPartType.reverseSeat) ||
+            registry.parts.containsKey(SeatPartType.businessReverseSeat));
+    if (faceToFace) {
+      final int pairCount = rows ~/ 2;
+      return partLength * rows + registry.faceToFaceGap * pairCount;
+    }
+    return partLength * rows + registry.interSeatGap * (rows - 1);
   }
 
   /// Calculates the total width required by the seat arrangement.
@@ -53,32 +58,11 @@ class LayoutValidator {
     required int leftSeats,
     required int rightSeats,
   }) {
-    final partLength = registry.maxPartLength;
     final partWidth = registry.maxPartWidth;
     final aisle = registry.aisleWidth;
-    final gap = registry.interSeatGap;
-
-    // Detect face‑to‑face mode: both forward + reverse seats + table
-    final bool isFaceToFace =
-        registry.parts.containsKey(SeatPartType.table) &&
-        (registry.parts.containsKey(SeatPartType.reverseSeat) ||
-            registry.parts.containsKey(SeatPartType.businessReverseSeat));
 
     // ── Length check ──
-    final requiredLength;
-    if (isFaceToFace) {
-      // Face‑to‑face: gap is shared between pairs, not every row.
-      // Each pair (2 rows) uses 1 face‑to‑face gap.
-      // Formula: rows × seatLen + (rows ~/ 2) × faceToFaceGap
-      final int pairCount = rows ~/ 2;
-      requiredLength = partLength * rows + registry.faceToFaceGap * pairCount;
-    } else {
-      requiredLength = calculateRequiredLength(
-        rows: rows,
-        partLength: partLength,
-        interSeatGap: gap,
-      );
-    }
+    final requiredLength = getRequiredLength(rows: rows, registry: registry);
     if (requiredLength > dimensions.length) {
       return ValidationFailure(
         violation: ValidationViolation.lengthExceeded,
@@ -158,32 +142,6 @@ class LayoutValidator {
       }
     }
 
-    return const ValidationSuccess();
-  }
-
-  /// Quick length‑only check for UI previews.
-  static ValidationResult validateLength({
-    required BusDimensions dimensions,
-    required FeetInches partLength,
-    required FeetInches interSeatGap,
-    required int rows,
-  }) {
-    final required = calculateRequiredLength(
-      rows: rows,
-      partLength: partLength,
-      interSeatGap: interSeatGap,
-    );
-    if (required > dimensions.length) {
-      return ValidationFailure(
-        violation: ValidationViolation.lengthExceeded,
-        available: dimensions.length,
-        required: required,
-        shortage: required - dimensions.length,
-        userMessage:
-            'Layout length (${required.displayString}) exceeds '
-            'bus length (${dimensions.length.displayString}).',
-      );
-    }
     return const ValidationSuccess();
   }
 }

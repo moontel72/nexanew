@@ -7,8 +7,6 @@ import 'package:bloc/bloc.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_event.dart';
 import 'package:trace_odd/shared/bloc/layout_designer/layout_validation_state.dart';
 import 'package:trace_odd/shared/models/transport/layout_validator.dart';
-import 'package:trace_odd/shared/models/transport/component_registry.dart';
-import 'package:trace_odd/shared/models/transport/feet_inches.dart';
 
 class LayoutValidationBloc
     extends Bloc<LayoutValidationEvent, LayoutValidationState> {
@@ -41,24 +39,10 @@ class LayoutValidationBloc
 
   /// Merge parameters and run the full validation pipeline.
   void _validate(Emitter<LayoutValidationState> emit) {
-    final bool isFaceToFace =
-        state.registry.parts.containsKey(SeatPartType.table) &&
-        (state.registry.parts.containsKey(SeatPartType.reverseSeat) ||
-            state.registry.parts.containsKey(SeatPartType.businessReverseSeat));
-
-    final FeetInches predictedLength;
-    if (isFaceToFace && state.rows > 0) {
-      final pairCount = state.rows ~/ 2;
-      predictedLength =
-          state.registry.maxPartLength * state.rows +
-          state.registry.faceToFaceGap * pairCount;
-    } else {
-      predictedLength = LayoutValidator.calculateRequiredLength(
-        rows: state.rows,
-        partLength: state.registry.maxPartLength,
-        interSeatGap: state.registry.interSeatGap,
-      );
-    }
+    final predictedLength = LayoutValidator.getRequiredLength(
+      rows: state.rows,
+      registry: state.registry,
+    );
     final predictedWidth = LayoutValidator.calculateRequiredWidth(
       leftSeats: state.leftSeats,
       rightSeats: state.rightSeats,
