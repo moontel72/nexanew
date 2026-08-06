@@ -645,14 +645,16 @@ class _AbsoluteComponentWidget extends StatelessWidget {
   // FLAT SEAT RENDERING (clean airline / bus booking style)
   // ═══════════════════════════════════════════════════════════
 
-  /// Renders a clean, modern flat seat with a headrest indicator line.
+  /// Renders a clean, modern flat seat with a directional arrow and
+  /// backrest section so front/back orientation is instantly visible.
   ///
-  /// ── Orientation ──
-  /// - Forward seats:  headrest indicator at the **bottom** edge (facing up).
-  /// - Reverse seats:  indicator at the **top** edge (facing down).
-  ///   (The 180° rotation is applied by [build] via [_isReversed].)
+  /// -- Orientation --
+  /// - Forward seats: arrow at **top** edge, backrest bar at **bottom**.
+  /// - Reverse seats: the 180deg Transform.rotate in [build] flips the
+  ///   entire widget so the arrow appears at the bottom pointing down and
+  ///   the backrest moves to the top.
   ///
-  /// ── Color ──
+  /// -- Color --
   /// - Standard forward: purple  (#7C3AED)
   /// - Standard reverse:  blue    (#3B82F6)
   /// - Business Class:    amber   (#D97706), wider with premium styling
@@ -661,16 +663,17 @@ class _AbsoluteComponentWidget extends StatelessWidget {
     final double w = component.width - 12; // account for horizontal margin
     final bool isBiz = component.type == ComponentType.businessClassSeat;
 
-    // Seat body colour — use the passed-in [color] directly
+    // Seat body colour -- use the passed-in [color] directly
     final Color seatBody = color;
     final Color borderClr = Color.lerp(color, Colors.black, 0.18)!;
-
-    // Headrest indicator colour (white with slight opacity)
-    const Color indicatorClr = Color(0xCCFFFFFF);
+    final Color backrestClr = Color.lerp(color, Colors.black, 0.22)!;
 
     // Label styling
     final double fontSize = _fontSize();
     final bool showLabel = label.isNotEmpty && component.width >= 34;
+
+    // -- Arrow size: scale with seat width, clamped --
+    final double arrowSize = (w * 0.20).clamp(6.0, 14.0);
 
     return Container(
       decoration: BoxDecoration(
@@ -687,29 +690,48 @@ class _AbsoluteComponentWidget extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // ── Headrest indicator line ──
-          // Rendered at the BOTTOM edge for forward seats.
-          // The 180° Transform.rotate in build() will flip it
-          // to the TOP edge for reverse seats.
+          // -- Backrest section (bottom ~32% -- darker bar) --
+          // This is the "back" of the seat. For forward seats it sits
+          // at the bottom; the 180deg rotation for reverse seats moves
+          // it to the top.
           Positioned(
-            left: w * 0.18,
-            right: w * 0.18,
-            bottom: isBiz ? 5 : 3,
-            height: isBiz ? 4 : 3,
+            left: 2,
+            right: 2,
+            bottom: 0,
+            height: component.height * 0.32,
             child: Container(
               decoration: BoxDecoration(
-                color: indicatorClr,
-                borderRadius: BorderRadius.circular(2),
+                color: backrestClr,
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(isBiz ? 9 : 7),
+                ),
               ),
             ),
           ),
 
-          // ── Business Class: top-edge accent stripe ──
+          // -- Directional arrow at front edge --
+          // Forward seats: arrow at top (passenger faces up -> front of bus).
+          // Reverse seats: 180deg rotation flips it to arrow at bottom.
+          Positioned(
+            top: -1,
+            left: 0,
+            right: 0,
+            height: arrowSize + 2,
+            child: Center(
+              child: Icon(
+                Icons.arrow_drop_up,
+                color: Colors.white.withOpacity(0.80),
+                size: arrowSize,
+              ),
+            ),
+          ),
+
+          // -- Business Class: top-edge accent stripe --
           if (isBiz)
             Positioned(
               left: w * 0.22,
               right: w * 0.22,
-              top: 4,
+              top: arrowSize + 1,
               height: 2.5,
               child: Container(
                 decoration: BoxDecoration(
@@ -719,7 +741,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
               ),
             ),
 
-          // ── Seat icon (small, centered) ──
+          // -- Seat icon (small, centered) --
           if (!showLabel || isBiz)
             Center(
               child: component.isReverseFacing
@@ -738,13 +760,13 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                     ),
             ),
 
-          // ── Seat label ──
+          // -- Seat label --
           // For business-class seats, render the label near the top so
-          // it doesn't collide with the centered icon.
+          // it does not collide with the centered icon.
           if (showLabel)
             isBiz
                 ? Positioned(
-                    top: 1,
+                    top: arrowSize + 2,
                     left: 0,
                     right: 0,
                     child: component.isReverseFacing

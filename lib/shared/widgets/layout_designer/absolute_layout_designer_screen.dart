@@ -197,7 +197,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
     // Skip UpdateCanvasSize when _initFromConfig ran — it already
     // set the correct (possibly auto-expanded) canvas dimensions.
     if (widget.busDimensions != null) {
-      final didRegenerate = widget.config != null && widget.layoutId != null;
+      final didRegenerate = widget.config != null && (widget.layoutId == null || widget.cloneFromTemplate);
       if (!didRegenerate) {
         _bloc.add(
           UpdateCanvasSize(
