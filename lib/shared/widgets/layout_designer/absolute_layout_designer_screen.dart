@@ -407,16 +407,13 @@ class _DesignerBodyState extends State<_DesignerBody> {
     // registered alongside a table.
     // ═══════════════════════════════════════════════════════════
     final bool hasTable =
-        registry?.parts.containsKey(SeatPartType.table) ?? false;
+        (registry?.parts.containsKey(SeatPartType.table) ?? false);
     final bool hasForward =
-        registry?.parts.containsKey(SeatPartType.standardSeat) ??
-        false ||
-            (registry?.parts.containsKey(SeatPartType.businessSeat) ?? false);
+        (registry?.parts.containsKey(SeatPartType.standardSeat) ?? false) ||
+        (registry?.parts.containsKey(SeatPartType.businessSeat) ?? false);
     final bool hasReverse =
-        registry?.parts.containsKey(SeatPartType.reverseSeat) ??
-        false ||
-            (registry?.parts.containsKey(SeatPartType.businessReverseSeat) ??
-                false);
+        (registry?.parts.containsKey(SeatPartType.reverseSeat) ?? false) ||
+        (registry?.parts.containsKey(SeatPartType.businessReverseSeat) ?? false);
     final bool faceToFace = hasTable && hasForward && hasReverse;
 
     if (faceToFace) {

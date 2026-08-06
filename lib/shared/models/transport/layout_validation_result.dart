@@ -14,6 +14,7 @@ enum ValidationViolation {
   widthExceeded,
   aisleTooNarrow,
   tableGapTooNarrow,
+  lastRowMustBeForward,
 }
 
 /// Immutable result of layout validation.

@@ -144,6 +144,27 @@ class LayoutValidator {
       }
     }
 
+    // -- Face-to-face: last row must be forward-facing --
+    // Rows alternate (fwd, rev, fwd, rev...) so an even row count
+    // would place a reverse seat in the last row, which is unsafe.
+    final bool f2f = registry.parts.containsKey(SeatPartType.table) &&
+        (registry.parts.containsKey(SeatPartType.standardSeat) ||
+            registry.parts.containsKey(SeatPartType.businessSeat)) &&
+        (registry.parts.containsKey(SeatPartType.reverseSeat) ||
+            registry.parts.containsKey(SeatPartType.businessReverseSeat));
+    if (f2f && rows > 1 && rows % 2 == 0) {
+      return ValidationFailure(
+        violation: ValidationViolation.lastRowMustBeForward,
+        available: FeetInches.zero,
+        required: FeetInches.zero,
+        shortage: FeetInches.zero,
+        userMessage:
+            'Face-to-face layout requires an odd number of rows '
+            'so the last row is forward-facing. '
+            'Add or remove 1 row (currently $rows).',
+      );
+    }
+
     return const ValidationSuccess();
   }
 }
