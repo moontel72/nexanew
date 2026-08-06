@@ -26,6 +26,8 @@ class LayoutValidator {
     final partLength = registry.maxPartLength;
     final bool faceToFace =
         registry.parts.containsKey(SeatPartType.table) &&
+        (registry.parts.containsKey(SeatPartType.standardSeat) ||
+            registry.parts.containsKey(SeatPartType.businessSeat)) &&
         (registry.parts.containsKey(SeatPartType.reverseSeat) ||
             registry.parts.containsKey(SeatPartType.businessReverseSeat));
     if (faceToFace) {

@@ -443,8 +443,11 @@ class _DesignerBodyState extends State<_DesignerBody> {
         // Odd rows (rev): gap count = (row+1)/2
         // This gives face‑to‑face gap between each (fwd,rev) pair
         // and zero gap between (rev,fwd) back‑to‑back.
-        final bool isReverse = (row % 2) != 0;
-        final int gaps = isReverse ? ((row + 1) ~/ 2) : (row ~/ 2);
+        // Use zero-based passenger row index so the first passenger
+        // row is always forward regardless of firstPassengerRow offset.
+        final int pRow = row - firstPassengerRow;
+        final bool isReverse = (pRow % 2) != 0;
+        final int gaps = isReverse ? ((pRow + 1) ~/ 2) : (pRow ~/ 2);
         final double y = effectiveTop + row * seatLen + gaps * f2fGapPx;
         if (y + seatLen > busLenPx) break;
         final double seatWidth = seatSpan;
