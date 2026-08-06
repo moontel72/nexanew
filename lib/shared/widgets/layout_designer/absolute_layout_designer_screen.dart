@@ -436,15 +436,14 @@ class _DesignerBodyState extends State<_DesignerBody> {
           : ComponentType.seat;
 
       for (int row = firstPassengerRow; row < rows; row++) {
-        // Even rows (fwd): gap count = row/2
-        // Odd rows (rev): gap count = (row+1)/2
-        // This gives face‑to‑face gap between each (fwd,rev) pair
-        // and zero gap between (rev,fwd) back‑to‑back.
         // Use zero-based passenger row index so the first passenger
         // row is always forward regardless of firstPassengerRow offset.
         final int pRow = row - firstPassengerRow;
         final bool isReverse = (pRow % 2) != 0;
-        final int gaps = isReverse ? ((pRow + 1) ~/ 2) : (pRow ~/ 2);
+        // Row 1 is solo forward; pairs start at row 2 (reverse).
+        // Gap only between face-to-face rows (rev row N + fwd row N+1).
+        // Back-to-back rows (row1-row2, row3-row4) have zero gap.
+        final int gaps = pRow ~/ 2;
         final double y = effectiveTop + row * seatLen + gaps * f2fGapPx;
         if (y + seatLen > busLenPx) break;
         final double seatWidth = seatSpan;
@@ -476,7 +475,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
         // ── Place tables between the face-to-face pair ──
         // One table per side (left of aisle, right of aisle).
-        if (isReverse && f2fGapPx > 0) {
+        // Table sits between facing pair (reverse row + next forward row).
+        // Forward rows at pRow >= 2 are part of a pair facing the previous reverse row.
+        if (!isReverse && pRow >= 2 && f2fGapPx > 0) {
           final double tableY = y - f2fGapPx + (f2fGapPx - tableDepth) / 2;
           // Right‑side table (centered over right seats)
           if (rightSeats > 0) {

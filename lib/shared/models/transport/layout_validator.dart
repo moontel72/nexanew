@@ -31,7 +31,8 @@ class LayoutValidator {
         (registry.parts.containsKey(SeatPartType.reverseSeat) ||
             registry.parts.containsKey(SeatPartType.businessReverseSeat));
     if (faceToFace) {
-      final int pairCount = rows ~/ 2;
+      // Row 1 is solo forward; pairs start at row 2.
+      final int pairCount = (rows - 1) ~/ 2;
       return partLength * rows + registry.faceToFaceGap * pairCount;
     }
     return partLength * rows + registry.interSeatGap * (rows - 1);
