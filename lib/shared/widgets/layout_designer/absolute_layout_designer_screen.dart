@@ -482,7 +482,8 @@ class _DesignerBodyState extends State<_DesignerBody> {
           // Right‑side table (centered over right seats)
           if (rightSeats > 0) {
             final double rightSeatSpan = rightSeats * seatSpan + (rightSeats > 1 ? (rightSeats - 1) * sideGapPx : 0);
-            final double rightTableW = tableSpan < rightSeatSpan ? tableSpan : rightSeatSpan;
+            final double rightManualW = registry.rightTableWidth?.toPixels ?? 0;
+            final double rightTableW = rightManualW > 0 ? rightManualW : (tableSpan < rightSeatSpan ? tableSpan : rightSeatSpan);
             final double rightTableX =
                 leftMargin +
                 leftSeats * (seatSpan + sideGapPx) - (leftSeats > 1 ? sideGapPx : 0) +
@@ -501,7 +502,8 @@ class _DesignerBodyState extends State<_DesignerBody> {
           // Left‑side table (centered over left seats)
           if (leftSeats > 0) {
             final double leftSeatSpan = leftSeats * seatSpan + (leftSeats > 1 ? (leftSeats - 1) * sideGapPx : 0);
-            final double leftTableW = tableSpan < leftSeatSpan ? tableSpan : leftSeatSpan;
+            final double leftManualW = registry.leftTableWidth?.toPixels ?? 0;
+            final double leftTableW = leftManualW > 0 ? leftManualW : (tableSpan < leftSeatSpan ? tableSpan : leftSeatSpan);
             final double leftTableX =
                 leftMargin + (leftSeatSpan - leftTableW) / 2;
             bloc.add(

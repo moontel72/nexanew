@@ -1,6 +1,6 @@
-// NEXATRACE — INTER‑SEAT DISTANCE INPUT
+// NEXATRACE -- INTER-SEAT DISTANCE INPUT
 // ======================================
-// Compact control for aisle width and inter‑seat gap using
+// Compact control for aisle width and inter-seat gap using
 // the shared DimensionInputGroup.
 
 import 'package:flutter/material.dart';
@@ -49,7 +49,7 @@ class InterSeatDistanceInput extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           DimensionInputGroup(
-            label: 'Inter‑Seat Gap (knee room)',
+            label: 'Inter-Seat Gap (knee room)',
             initialValue: registry.interSeatGap,
             minFeet: 0,
             maxFeet: 10,
@@ -65,7 +65,15 @@ class InterSeatDistanceInput extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           DimensionInputGroup(
-            label: 'Face‑to‑Face Gap (between facing rows)',
+            label: 'Side Seat Gap (between adjacent seats)',
+            initialValue: registry.sideSeatGap,
+            minFeet: 0,
+            maxFeet: 5,
+            onChanged: (v) => onChanged(registry.copyWith(sideSeatGap: v)),
+          ),
+          const SizedBox(height: 14),
+          DimensionInputGroup(
+            label: 'Face-to-Face Gap (between facing rows)',
             initialValue: registry.faceToFaceGap,
             minFeet: 0,
             maxFeet: 10,
@@ -74,7 +82,7 @@ class InterSeatDistanceInput extends StatelessWidget {
           const SizedBox(height: 8),
           if (registry.aisleWidth < kMinAisleWidth)
             const Text(
-              '⚠ Aisle below 1′0″ minimum for emergency egress',
+              'Warning: Aisle below 1 ft 0 in minimum for emergency egress',
               style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11),
             ),
         ],

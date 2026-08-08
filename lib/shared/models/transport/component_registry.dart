@@ -121,6 +121,8 @@ class ComponentRegistry extends Equatable {
   final FeetInches initialGap;
   final FeetInches faceToFaceGap;
   final FeetInches sideSeatGap;
+  final FeetInches? leftTableWidth;
+  final FeetInches? rightTableWidth;
 
   const ComponentRegistry({
     this.parts = const {},
@@ -129,6 +131,8 @@ class ComponentRegistry extends Equatable {
     this.initialGap = FeetInches.zero,
     this.faceToFaceGap = FeetInches.zero,
     this.sideSeatGap = FeetInches.zero,
+    this.leftTableWidth,
+    this.rightTableWidth,
   });
 
   /// Returns the largest length among registered **seat** parts.
@@ -183,6 +187,8 @@ class ComponentRegistry extends Equatable {
     FeetInches? initialGap,
     FeetInches? faceToFaceGap,
     FeetInches? sideSeatGap,
+    FeetInches? leftTableWidth,
+    FeetInches? rightTableWidth,
   }) => ComponentRegistry(
     parts: parts ?? this.parts,
     aisleWidth: aisleWidth ?? this.aisleWidth,
@@ -190,6 +196,8 @@ class ComponentRegistry extends Equatable {
     initialGap: initialGap ?? this.initialGap,
     faceToFaceGap: faceToFaceGap ?? this.faceToFaceGap,
     sideSeatGap: sideSeatGap ?? this.sideSeatGap,
+    leftTableWidth: leftTableWidth ?? this.leftTableWidth,
+    rightTableWidth: rightTableWidth ?? this.rightTableWidth,
   );
 
   @override
@@ -200,6 +208,8 @@ class ComponentRegistry extends Equatable {
     initialGap,
     faceToFaceGap,
     sideSeatGap,
+    leftTableWidth,
+    rightTableWidth,
   ];
 
   Map<String, dynamic> toJson() => {
@@ -214,6 +224,10 @@ class ComponentRegistry extends Equatable {
     'face_to_face_gap_in': faceToFaceGap.inches,
     'side_seat_gap_ft': sideSeatGap.feet,
     'side_seat_gap_in': sideSeatGap.inches,
+    'left_table_width_ft': leftTableWidth?.feet,
+    'left_table_width_in': leftTableWidth?.inches,
+    'right_table_width_ft': rightTableWidth?.feet,
+    'right_table_width_in': rightTableWidth?.inches,
   };
 
   factory ComponentRegistry.fromJson(Map<String, dynamic> json) {

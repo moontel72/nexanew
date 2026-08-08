@@ -29,6 +29,10 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
   late final TextEditingController _lenInCtrl;
   late final TextEditingController _widFtCtrl;
   late final TextEditingController _widInCtrl;
+  late final TextEditingController _leftTableFtCtrl;
+  late final TextEditingController _leftTableInCtrl;
+  late final TextEditingController _rightTableFtCtrl;
+  late final TextEditingController _rightTableInCtrl;
 
   @override
   void initState() {
@@ -37,6 +41,10 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     _lenInCtrl = TextEditingController();
     _widFtCtrl = TextEditingController();
     _widInCtrl = TextEditingController();
+    _leftTableFtCtrl = TextEditingController();
+    _leftTableInCtrl = TextEditingController();
+    _rightTableFtCtrl = TextEditingController();
+    _rightTableInCtrl = TextEditingController();
   }
 
   @override
@@ -45,6 +53,10 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     _lenInCtrl.dispose();
     _widFtCtrl.dispose();
     _widInCtrl.dispose();
+    _leftTableFtCtrl.dispose();
+    _leftTableInCtrl.dispose();
+    _rightTableFtCtrl.dispose();
+    _rightTableInCtrl.dispose();
     super.dispose();
   }
 
@@ -211,6 +223,38 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
             const SizedBox(height: 10),
           ],
           // ── Add dropdown ──
+          // -- Table width overrides (per side) --
+          if (widget.registry.parts.containsKey(SeatPartType.table)) ...[
+            _dimLabel('Left Table Width (0 = auto-size to seats)'),
+            _dimRow(_leftTableFtCtrl, _leftTableInCtrl, 'ft', 'in'),
+            const SizedBox(height: 6),
+            _dimLabel('Right Table Width (0 = auto-size to seats)'),
+            _dimRow(_rightTableFtCtrl, _rightTableInCtrl, 'ft', 'in'),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: () {
+                    final lFt = int.tryParse(_leftTableFtCtrl.text) ?? 0;
+                    final lIn = int.tryParse(_leftTableInCtrl.text) ?? 0;
+                    final rFt = int.tryParse(_rightTableFtCtrl.text) ?? 0;
+                    final rIn = int.tryParse(_rightTableInCtrl.text) ?? 0;
+                    final lw = FeetInches.normalize(lFt, lIn);
+                    final rw = FeetInches.normalize(rFt, rIn);
+                    widget.onChanged(widget.registry.copyWith(
+                        leftTableWidth: lw.isZero ? null : lw,
+                        rightTableWidth: rw.isZero ? null : rw));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7C3AED),
+                  ),
+                  child: const Text('Apply Table Widths'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
           if (_available.isNotEmpty)
             DropdownButtonFormField<SeatPartType>(
               value: null,
