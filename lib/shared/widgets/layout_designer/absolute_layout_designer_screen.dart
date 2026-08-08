@@ -478,12 +478,14 @@ class _DesignerBodyState extends State<_DesignerBody> {
         // Table sits between facing pair (reverse row + next forward row).
         // Forward rows at pRow >= 2 are part of a pair facing the previous reverse row.
         if (!isReverse && pRow >= 2 && f2fGapPx > 0) {
-          final double tableY = y - f2fGapPx + (f2fGapPx - tableDepth) / 2;
-          // Right‑side table (centered over right seats)
+          // Right-side table (per-side dims)
           if (rightSeats > 0) {
             final double rightSeatSpan = rightSeats * seatSpan + (rightSeats > 1 ? (rightSeats - 1) * sideGapPx : 0);
             final double rightManualW = registry.rightTableWidth?.toPixels ?? 0;
             final double rightTableW = rightManualW > 0 ? rightManualW : (tableSpan < rightSeatSpan ? tableSpan : rightSeatSpan);
+            final double rightManualD = registry.rightTableLength?.toPixels ?? 0;
+            final double rightTableH = rightManualD > 0 ? rightManualD : tableDepth;
+            final double rightTableY = y - f2fGapPx + (f2fGapPx - rightTableH) / 2;
             final double rightTableX =
                 leftMargin +
                 leftSeats * (seatSpan + sideGapPx) - (leftSeats > 1 ? sideGapPx : 0) +
@@ -493,9 +495,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
               AddComponent(
                 type: ComponentType.restaurantTable,
                 x: rightTableX,
-                y: tableY,
+                y: rightTableY,
                 width: rightTableW,
-                height: tableDepth,
+                height: rightTableH,
               ),
             );
           }
@@ -504,15 +506,18 @@ class _DesignerBodyState extends State<_DesignerBody> {
             final double leftSeatSpan = leftSeats * seatSpan + (leftSeats > 1 ? (leftSeats - 1) * sideGapPx : 0);
             final double leftManualW = registry.leftTableWidth?.toPixels ?? 0;
             final double leftTableW = leftManualW > 0 ? leftManualW : (tableSpan < leftSeatSpan ? tableSpan : leftSeatSpan);
+            final double leftManualD = registry.leftTableLength?.toPixels ?? 0;
+            final double leftTableH = leftManualD > 0 ? leftManualD : tableDepth;
+            final double leftTableY = y - f2fGapPx + (f2fGapPx - leftTableH) / 2;
             final double leftTableX =
                 leftMargin + (leftSeatSpan - leftTableW) / 2;
             bloc.add(
               AddComponent(
                 type: ComponentType.restaurantTable,
                 x: leftTableX,
-                y: tableY,
+                y: leftTableY,
                 width: leftTableW,
-                height: tableDepth,
+                height: leftTableH,
               ),
             );
           }

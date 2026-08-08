@@ -122,6 +122,8 @@ class ComponentRegistry extends Equatable {
   final FeetInches faceToFaceGap;
   final FeetInches sideSeatGap;
   final FeetInches? leftTableWidth;
+  final FeetInches? leftTableLength;
+  final FeetInches? rightTableLength;
   final FeetInches? rightTableWidth;
 
   const ComponentRegistry({
@@ -132,6 +134,8 @@ class ComponentRegistry extends Equatable {
     this.faceToFaceGap = FeetInches.zero,
     this.sideSeatGap = FeetInches.zero,
     this.leftTableWidth,
+    this.leftTableLength,
+    this.rightTableLength,
     this.rightTableWidth,
   });
 
@@ -188,6 +192,8 @@ class ComponentRegistry extends Equatable {
     FeetInches? faceToFaceGap,
     FeetInches? sideSeatGap,
     FeetInches? leftTableWidth,
+    FeetInches? leftTableLength,
+    FeetInches? rightTableLength,
     FeetInches? rightTableWidth,
   }) => ComponentRegistry(
     parts: parts ?? this.parts,
@@ -197,6 +203,8 @@ class ComponentRegistry extends Equatable {
     faceToFaceGap: faceToFaceGap ?? this.faceToFaceGap,
     sideSeatGap: sideSeatGap ?? this.sideSeatGap,
     leftTableWidth: leftTableWidth ?? this.leftTableWidth,
+    leftTableLength: leftTableLength ?? this.leftTableLength,
+    rightTableLength: rightTableLength ?? this.rightTableLength,
     rightTableWidth: rightTableWidth ?? this.rightTableWidth,
   );
 
@@ -209,6 +217,8 @@ class ComponentRegistry extends Equatable {
     faceToFaceGap,
     sideSeatGap,
     leftTableWidth,
+    leftTableLength,
+    rightTableLength,
     rightTableWidth,
   ];
 
@@ -228,6 +238,10 @@ class ComponentRegistry extends Equatable {
     'left_table_width_in': leftTableWidth?.inches,
     'right_table_width_ft': rightTableWidth?.feet,
     'right_table_width_in': rightTableWidth?.inches,
+    'left_table_length_ft': leftTableLength?.feet,
+    'left_table_length_in': leftTableLength?.inches,
+    'right_table_length_ft': rightTableLength?.feet,
+    'right_table_length_in': rightTableLength?.inches,
   };
 
   factory ComponentRegistry.fromJson(Map<String, dynamic> json) {

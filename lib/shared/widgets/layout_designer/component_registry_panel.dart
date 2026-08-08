@@ -33,6 +33,10 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
   late final TextEditingController _leftTableInCtrl;
   late final TextEditingController _rightTableFtCtrl;
   late final TextEditingController _rightTableInCtrl;
+  late final TextEditingController _leftTableLenFtCtrl;
+  late final TextEditingController _leftTableLenInCtrl;
+  late final TextEditingController _rightTableLenFtCtrl;
+  late final TextEditingController _rightTableLenInCtrl;
 
   @override
   void initState() {
@@ -45,6 +49,10 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     _leftTableInCtrl = TextEditingController();
     _rightTableFtCtrl = TextEditingController();
     _rightTableInCtrl = TextEditingController();
+    _leftTableLenFtCtrl = TextEditingController();
+    _leftTableLenInCtrl = TextEditingController();
+    _rightTableLenFtCtrl = TextEditingController();
+    _rightTableLenInCtrl = TextEditingController();
   }
 
   @override
@@ -57,6 +65,10 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
     _leftTableInCtrl.dispose();
     _rightTableFtCtrl.dispose();
     _rightTableInCtrl.dispose();
+    _leftTableLenFtCtrl.dispose();
+    _leftTableLenInCtrl.dispose();
+    _rightTableLenFtCtrl.dispose();
+    _rightTableLenInCtrl.dispose();
     super.dispose();
   }
 
@@ -223,33 +235,47 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
             const SizedBox(height: 10),
           ],
           // ── Add dropdown ──
-          // -- Table width overrides (per side) --
+          // -- Table dimension overrides (per side) --
           if (widget.registry.parts.containsKey(SeatPartType.table)) ...[
-            _dimLabel('Left Table Width (0 = auto-size to seats)'),
+            _dimLabel('Left Table W (span across seats, 0=auto)'),
             _dimRow(_leftTableFtCtrl, _leftTableInCtrl, 'ft', 'in'),
-            const SizedBox(height: 6),
-            _dimLabel('Right Table Width (0 = auto-size to seats)'),
+            const SizedBox(height: 4),
+            _dimLabel('Left Table L (depth between rows, 0=auto)'),
+            _dimRow(_leftTableLenFtCtrl, _leftTableLenInCtrl, 'ft', 'in'),
+            const SizedBox(height: 8),
+            _dimLabel('Right Table W (span across seats, 0=auto)'),
             _dimRow(_rightTableFtCtrl, _rightTableInCtrl, 'ft', 'in'),
+            const SizedBox(height: 4),
+            _dimLabel('Right Table L (depth between rows, 0=auto)'),
+            _dimRow(_rightTableLenFtCtrl, _rightTableLenInCtrl, 'ft', 'in'),
             const SizedBox(height: 6),
             Row(
               children: [
                 const Spacer(),
                 ElevatedButton(
                   onPressed: () {
-                    final lFt = int.tryParse(_leftTableFtCtrl.text) ?? 0;
-                    final lIn = int.tryParse(_leftTableInCtrl.text) ?? 0;
-                    final rFt = int.tryParse(_rightTableFtCtrl.text) ?? 0;
-                    final rIn = int.tryParse(_rightTableInCtrl.text) ?? 0;
-                    final lw = FeetInches.normalize(lFt, lIn);
-                    final rw = FeetInches.normalize(rFt, rIn);
+                    final lwFt = int.tryParse(_leftTableFtCtrl.text) ?? 0;
+                    final lwIn = int.tryParse(_leftTableInCtrl.text) ?? 0;
+                    final llFt = int.tryParse(_leftTableLenFtCtrl.text) ?? 0;
+                    final llIn = int.tryParse(_leftTableLenInCtrl.text) ?? 0;
+                    final rwFt = int.tryParse(_rightTableFtCtrl.text) ?? 0;
+                    final rwIn = int.tryParse(_rightTableInCtrl.text) ?? 0;
+                    final rlFt = int.tryParse(_rightTableLenFtCtrl.text) ?? 0;
+                    final rlIn = int.tryParse(_rightTableLenInCtrl.text) ?? 0;
+                    final lw = FeetInches.normalize(lwFt, lwIn);
+                    final ll = FeetInches.normalize(llFt, llIn);
+                    final rw = FeetInches.normalize(rwFt, rwIn);
+                    final rl = FeetInches.normalize(rlFt, rlIn);
                     widget.onChanged(widget.registry.copyWith(
                         leftTableWidth: lw.isZero ? null : lw,
-                        rightTableWidth: rw.isZero ? null : rw));
+                        leftTableLength: ll.isZero ? null : ll,
+                        rightTableWidth: rw.isZero ? null : rw,
+                        rightTableLength: rl.isZero ? null : rl));
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7C3AED),
                   ),
-                  child: const Text('Apply Table Widths'),
+                  child: const Text('Apply Table Dims'),
                 ),
               ],
             ),
