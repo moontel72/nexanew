@@ -182,10 +182,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
       _bloc.add(SetLayoutMetadata('left_seats', cfg.leftSeats));
       _bloc.add(SetLayoutMetadata('right_seats', cfg.rightSeats));
       _bloc.add(SetLayoutMetadata('row_count', cfg.rowCount));
-      // For cloning a preset template: regenerate the seat grid from config.
-      // Do NOT clear when editing an existing layout — preserves manually
-      // placed Part A seats.
-      if (widget.cloneFromTemplate) {
+      // Regenerate the seat grid from config when cloning or editing
+      // an existing layout where dimensions may have changed.
+      if (widget.cloneFromTemplate || widget.layoutId != null) {
         _bloc.add(const ClearComponents());
         _initFromConfig(cfg);
       }
