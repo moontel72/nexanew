@@ -236,7 +236,7 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
           ],
           // ── Add dropdown ──
           // -- Table dimension overrides (per side) --
-          if (widget.registry.parts.containsKey(SeatPartType.table)) ...[
+          if (widget.registry.parts.containsKey(SeatPartType.table) && _addingType != SeatPartType.table) ...[
             const SizedBox(height: 4),
             const Text(
               'TABLE DIMENSIONS (per side)',
