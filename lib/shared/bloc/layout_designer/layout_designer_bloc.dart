@@ -425,7 +425,26 @@ class LayoutDesignerBloc
   }
 
   void _onSetRegistry(SetLayoutRegistry e, Emitter<LayoutDesignerState> emit) {
-    emit(state.copyWith(layout: state.layout.copyWith(registry: e.registry)));
+    final newReg = e.registry;
+    final tableSpec = newReg.parts[SeatPartType.table];
+    var comps = state.layout.components;
+    if (tableSpec != null) {
+      final tDepth = tableSpec.pixelWidth < tableSpec.pixelLength
+          ? tableSpec.pixelWidth
+          : tableSpec.pixelLength;
+      final tSpan = tableSpec.pixelWidth > tableSpec.pixelLength
+          ? tableSpec.pixelWidth
+          : tableSpec.pixelLength;
+      comps = comps.map((c) {
+        if (c.type == ComponentType.restaurantTable) {
+          return c.copyWith(width: tSpan, height: tDepth);
+        }
+        return c;
+      }).toList();
+    }
+    emit(state.copyWith(
+        layout: state.layout.copyWith(
+            registry: newReg, components: comps, isDirty: true)));
   }
 
   void _onSetMetadata(SetLayoutMetadata e, Emitter<LayoutDesignerState> emit) {
