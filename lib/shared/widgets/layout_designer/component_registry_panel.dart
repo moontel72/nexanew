@@ -82,15 +82,6 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
       _addingType != null && widget.registry.parts.containsKey(_addingType);
 
   void _addPart(SeatPartType type) {
-    // Tables auto-add with defaults -- per-side controls appear below.
-    // Other parts open the dimension form for manual entry.
-    if (type == SeatPartType.table) {
-      final def = PartSpec.defaultFor(type);
-      final newParts = Map<SeatPartType, PartSpec>.from(widget.registry.parts)
-        ..[type] = def;
-      widget.onChanged(widget.registry.copyWith(parts: newParts));
-      return;
-    }
     final def = PartSpec.defaultFor(type);
     _lenFtCtrl.text = def.length.feet.toString();
     _lenInCtrl.text = def.length.inches.toString();
