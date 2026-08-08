@@ -371,17 +371,20 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
             const SizedBox(height: 8),
             Row(
               children: [
-                TextButton(
-                  onPressed: () => setState(() => _addingType = null),
-                  child: const Text('Cancel'),
-                ),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: _confirmAdd,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7C3AED),
+                Expanded(
+                  child: SizedBox(
+                    height: 38,
+                    child: ElevatedButton(
+                      onPressed: _confirmAdd,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: Text(_isEditing ? 'UPDATE' : 'ADD',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    ),
                   ),
-                  child: Text(_isEditing ? 'Update' : 'Add'),
                 ),
               ],
             ),
