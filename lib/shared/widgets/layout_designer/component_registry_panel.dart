@@ -82,6 +82,16 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
       _addingType != null && widget.registry.parts.containsKey(_addingType);
 
   void _addPart(SeatPartType type) {
+    if (type == SeatPartType.table) {
+      final def = PartSpec.defaultFor(type);
+      final newParts = Map<SeatPartType, PartSpec>.from(widget.registry.parts)..[type] = def;
+      widget.onChanged(widget.registry.copyWith(parts: newParts));
+      _leftTableFtCtrl.text = '0'; _leftTableInCtrl.text = '0';
+      _leftTableLenFtCtrl.text = '0'; _leftTableLenInCtrl.text = '0';
+      _rightTableFtCtrl.text = '0'; _rightTableInCtrl.text = '0';
+      _rightTableLenFtCtrl.text = '0'; _rightTableLenInCtrl.text = '0';
+      return;
+    }
     final def = PartSpec.defaultFor(type);
     _lenFtCtrl.text = def.length.feet.toString();
     _lenInCtrl.text = def.length.inches.toString();
@@ -259,39 +269,41 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
             _dimLabel('Right Table L (depth between rows, 0=auto)'),
             _dimRow(_rightTableLenFtCtrl, _rightTableLenInCtrl, 'ft', 'in'),
             const SizedBox(height: 6),
-            Row(
-              children: [
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: () {
-                    final lwFt = int.tryParse(_leftTableFtCtrl.text) ?? 0;
-                    final lwIn = int.tryParse(_leftTableInCtrl.text) ?? 0;
-                    final llFt = int.tryParse(_leftTableLenFtCtrl.text) ?? 0;
-                    final llIn = int.tryParse(_leftTableLenInCtrl.text) ?? 0;
-                    final rwFt = int.tryParse(_rightTableFtCtrl.text) ?? 0;
-                    final rwIn = int.tryParse(_rightTableInCtrl.text) ?? 0;
-                    final rlFt = int.tryParse(_rightTableLenFtCtrl.text) ?? 0;
-                    final rlIn = int.tryParse(_rightTableLenInCtrl.text) ?? 0;
-                    final lw = FeetInches.normalize(lwFt, lwIn);
-                    final ll = FeetInches.normalize(llFt, llIn);
-                    final rw = FeetInches.normalize(rwFt, rwIn);
-                    final rl = FeetInches.normalize(rlFt, rlIn);
-                    widget.onChanged(widget.registry.copyWith(
-                        leftTableWidth: lw.isZero ? null : lw,
-                        leftTableLength: ll.isZero ? null : ll,
-                        rightTableWidth: rw.isZero ? null : rw,
-                        rightTableLength: rl.isZero ? null : rl));
-                    setState(() => _tableApplied = true);
-                    Future.delayed(const Duration(seconds: 2), () {
-                      if (mounted) setState(() => _tableApplied = false);
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7C3AED),
-                  ),
-                  child: Text(_tableApplied ? 'Saved!' : 'Apply Table Dims'),
+            SizedBox(
+              width: double.infinity,
+              height: 38,
+              child: ElevatedButton(
+                onPressed: () {
+                  final lwFt = int.tryParse(_leftTableFtCtrl.text) ?? 0;
+                  final lwIn = int.tryParse(_leftTableInCtrl.text) ?? 0;
+                  final llFt = int.tryParse(_leftTableLenFtCtrl.text) ?? 0;
+                  final llIn = int.tryParse(_leftTableLenInCtrl.text) ?? 0;
+                  final rwFt = int.tryParse(_rightTableFtCtrl.text) ?? 0;
+                  final rwIn = int.tryParse(_rightTableInCtrl.text) ?? 0;
+                  final rlFt = int.tryParse(_rightTableLenFtCtrl.text) ?? 0;
+                  final rlIn = int.tryParse(_rightTableLenInCtrl.text) ?? 0;
+                  final lw = FeetInches.normalize(lwFt, lwIn);
+                  final ll = FeetInches.normalize(llFt, llIn);
+                  final rw = FeetInches.normalize(rwFt, rwIn);
+                  final rl = FeetInches.normalize(rlFt, rlIn);
+                  widget.onChanged(widget.registry.copyWith(
+                      leftTableWidth: lw.isZero ? null : lw,
+                      leftTableLength: ll.isZero ? null : ll,
+                      rightTableWidth: rw.isZero ? null : rw,
+                      rightTableLength: rl.isZero ? null : rl));
+                  setState(() => _tableApplied = true);
+                  Future.delayed(const Duration(seconds: 2), () {
+                    if (mounted) setState(() => _tableApplied = false);
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF16A34A),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                 ),
-              ],
+                child: Text(_tableApplied ? 'SAVED!' : 'ADD / SAVE',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+              ),
             ),
             const SizedBox(height: 10),
           ],
