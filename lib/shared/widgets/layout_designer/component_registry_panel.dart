@@ -24,6 +24,7 @@ class ComponentRegistryPanel extends StatefulWidget {
 
 class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
   SeatPartType? _addingType;
+  bool _tableApplied = false;
   DriverPosition _driverPosition = DriverPosition.right;
   late final TextEditingController _lenFtCtrl;
   late final TextEditingController _lenInCtrl;
@@ -289,11 +290,15 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
                         leftTableLength: ll.isZero ? null : ll,
                         rightTableWidth: rw.isZero ? null : rw,
                         rightTableLength: rl.isZero ? null : rl));
+                    setState(() => _tableApplied = true);
+                    Future.delayed(const Duration(seconds: 2), () {
+                      if (mounted) setState(() => _tableApplied = false);
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7C3AED),
                   ),
-                  child: const Text('Apply Table Dims'),
+                  child: Text(_tableApplied ? 'Saved!' : 'Apply Table Dims'),
                 ),
               ],
             ),
