@@ -237,6 +237,16 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
           // ── Add dropdown ──
           // -- Table dimension overrides (per side) --
           if (widget.registry.parts.containsKey(SeatPartType.table)) ...[
+            const SizedBox(height: 4),
+            const Text(
+              'TABLE DIMENSIONS (per side)',
+              style: TextStyle(
+                color: Color(0xFFFFD700),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
             _dimLabel('Left Table W (span across seats, 0=auto)'),
             _dimRow(_leftTableFtCtrl, _leftTableInCtrl, 'ft', 'in'),
             const SizedBox(height: 4),
