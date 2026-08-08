@@ -14,6 +14,10 @@ const double kPixelsPerInch = 4.0;
 /// Safety Guidelines
 const FeetInches kMinAisleWidth = FeetInches(feet: 1, inches: 0);
 const FeetInches kMinInterSeatGap = FeetInches(feet: 1, inches: 0);
+const FeetInches kMinSideSeatGap = FeetInches(feet: 0, inches: 0);
+
+/// Horizontal gap between adjacent seats on the same row.
+const FeetInches kDefaultSideSeatGap = FeetInches(feet: 0, inches: 0);
 
 /// Physical space between the back of one seat row and the front
 /// of the next row (knee‑room + seat‑back thickness).

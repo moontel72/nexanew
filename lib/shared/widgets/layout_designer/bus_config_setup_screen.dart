@@ -1094,6 +1094,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                                   '${_leftSeats}L + ${_rightSeats}R × $_rowCount rows'
                                   '  |  part: ${partL.displayString}'
                                   '  |  ${reg.parts.containsKey(SeatPartType.table) && (reg.parts.containsKey(SeatPartType.reverseSeat) || reg.parts.containsKey(SeatPartType.businessReverseSeat)) ? 'f2f gap: ${reg.faceToFaceGap.displayString}' : 'gap: ${gap.displayString}'}'
+                                  '  |  side gap: ${reg.sideSeatGap.displayString}'
                                   '  |  init gap: ${reg.initialGap.displayString}'
                                   '  |  required: ${requiredLen.displayString}',
                                   style: const TextStyle(

@@ -284,6 +284,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final double gapPx = (registry?.interSeatGap.toPixels ?? 0) > 0
         ? registry!.interSeatGap.toPixels
         : kDefaultInterSeatGap.toPixels;
+    final double sideGapPx = registry?.sideSeatGap.toPixels ?? 0;
     final double rowH = seatLen + gapPx;
     final double seatSpan = fullWidth;
     final double halfWidth = hasBothBerths ? fullWidth / 2 : fullWidth;
@@ -304,7 +305,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
     final double authoritativeWidPx = config.busWidthPx;
     if (authoritativeLenPx > 0 && authoritativeWidPx > 0) {
       canvasH = authoritativeLenPx;
-      final totalUsedW = leftSeats * seatSpan + aisleW + rightSeats * seatSpan;
+      final totalUsedW = leftSeats * seatSpan + (leftSeats > 1 ? (leftSeats - 1) * sideGapPx : 0) + aisleW + rightSeats * seatSpan + (rightSeats > 1 ? (rightSeats - 1) * sideGapPx : 0);
       // Auto-expand canvas width if the seat configuration requires
       // more space than the user-specified bus interior width.
       canvasW = authoritativeWidPx > totalUsedW
@@ -315,7 +316,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
     } else if (bd != null) {
       canvasH = bd.lengthPx;
       canvasW = bd.widthPx;
-      final totalUsedW = leftSeats * seatSpan + aisleW + rightSeats * seatSpan;
+      final totalUsedW = leftSeats * seatSpan + (leftSeats > 1 ? (leftSeats - 1) * sideGapPx : 0) + aisleW + rightSeats * seatSpan + (rightSeats > 1 ? (rightSeats - 1) * sideGapPx : 0);
       final remainingW = canvasW - totalUsedW;
       leftMargin = (remainingW / 2).floorToDouble().clamp(0.0, 28.0);
     } else {
@@ -465,11 +466,11 @@ class _DesignerBodyState extends State<_DesignerBody> {
         }
 
         for (int s = 0; s < leftSeats; s++) {
-          placeSeat(leftMargin + s * seatSpan, y, isReverse);
+          placeSeat(leftMargin + s * (seatSpan + sideGapPx), y, isReverse);
         }
-        final rightStartX = leftMargin + leftSeats * seatSpan + aisleW;
+        final double rightStartX = leftMargin + leftSeats * (seatSpan + sideGapPx) - (leftSeats > 1 ? sideGapPx : 0) + aisleW;
         for (int s = 0; s < rightSeats; s++) {
-          placeSeat(rightStartX + s * seatSpan, y, isReverse);
+          placeSeat(rightStartX + s * (seatSpan + sideGapPx), y, isReverse);
         }
 
         // ── Place tables between the face-to-face pair ──
@@ -480,31 +481,35 @@ class _DesignerBodyState extends State<_DesignerBody> {
           final double tableY = y - f2fGapPx + (f2fGapPx - tableDepth) / 2;
           // Right‑side table (centered over right seats)
           if (rightSeats > 0) {
+            final double rightSeatSpan = rightSeats * seatSpan + (rightSeats > 1 ? (rightSeats - 1) * sideGapPx : 0);
+            final double rightTableW = tableSpan < rightSeatSpan ? tableSpan : rightSeatSpan;
             final double rightTableX =
                 leftMargin +
-                leftSeats * seatSpan +
+                leftSeats * (seatSpan + sideGapPx) - (leftSeats > 1 ? sideGapPx : 0) +
                 aisleW +
-                (rightSeats * seatSpan - tableSpan) / 2;
+                (rightSeatSpan - rightTableW) / 2;
             bloc.add(
               AddComponent(
                 type: ComponentType.restaurantTable,
                 x: rightTableX,
                 y: tableY,
-                width: tableSpan,
+                width: rightTableW,
                 height: tableDepth,
               ),
             );
           }
           // Left‑side table (centered over left seats)
           if (leftSeats > 0) {
+            final double leftSeatSpan = leftSeats * seatSpan + (leftSeats > 1 ? (leftSeats - 1) * sideGapPx : 0);
+            final double leftTableW = tableSpan < leftSeatSpan ? tableSpan : leftSeatSpan;
             final double leftTableX =
-                leftMargin + (leftSeats * seatSpan - tableSpan) / 2;
+                leftMargin + (leftSeatSpan - leftTableW) / 2;
             bloc.add(
               AddComponent(
                 type: ComponentType.restaurantTable,
                 x: leftTableX,
                 y: tableY,
-                width: tableSpan,
+                width: leftTableW,
                 height: tableDepth,
               ),
             );
@@ -522,7 +527,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
       if (y + seatLen > busLenPx) break; // stop at bus boundary
       for (int s = 0; s < leftSeats; s++) {
-        final x = leftMargin + s * seatSpan;
+        final x = leftMargin + s * (seatSpan + sideGapPx);
         if (hasBothBerths) {
           bloc.add(
             AddComponent(
@@ -572,9 +577,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
         counter++;
       }
 
-      final rightStartX = leftMargin + leftSeats * seatSpan + aisleW;
+      final rightStartX = leftMargin + leftSeats * (seatSpan + sideGapPx) - (leftSeats > 1 ? sideGapPx : 0) + aisleW;
       for (int s = 0; s < rightSeats; s++) {
-        final x = rightStartX + s * seatSpan;
+        final x = rightStartX + s * (seatSpan + sideGapPx);
         if (hasBothBerths) {
           bloc.add(
             AddComponent(

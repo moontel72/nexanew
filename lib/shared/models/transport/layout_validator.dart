@@ -47,10 +47,13 @@ class LayoutValidator {
     required int rightSeats,
     required FeetInches partWidth,
     required FeetInches aisleWidth,
+    FeetInches sideSeatGap = FeetInches.zero,
   }) {
     final totalSeats = leftSeats + rightSeats;
     final seatWidth = partWidth * totalSeats;
-    return seatWidth + aisleWidth;
+    final leftGaps = leftSeats > 1 ? sideSeatGap * (leftSeats - 1) : FeetInches.zero;
+    final rightGaps = rightSeats > 1 ? sideSeatGap * (rightSeats - 1) : FeetInches.zero;
+    return seatWidth + leftGaps + rightGaps + aisleWidth;
   }
 
   /// Run all validations and return the first failure, or success.
@@ -87,6 +90,7 @@ class LayoutValidator {
       rightSeats: rightSeats,
       partWidth: partWidth,
       aisleWidth: aisle,
+      sideSeatGap: registry.sideSeatGap,
     );
     if (requiredWidth > dimensions.width) {
       return ValidationFailure(
