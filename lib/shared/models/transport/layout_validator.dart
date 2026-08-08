@@ -126,8 +126,12 @@ class LayoutValidator {
         registry.parts.containsKey(SeatPartType.reverseSeat) ||
         registry.parts.containsKey(SeatPartType.businessReverseSeat);
     if (tableSpec != null && hasReverseSeats) {
-      // Table length = depth between rows (occupies the gap).
-      final tableDepth = tableSpec.length;
+      // The table sits between facing rows.  Use the smaller of
+      // width / length — that is the dimension occupying the gap.
+      final tableDepth =
+          tableSpec.width.totalInches < tableSpec.length.totalInches
+          ? tableSpec.width
+          : tableSpec.length;
       final tableGap = registry.faceToFaceGap;
       final minGapForTable = tableDepth + const FeetInches(feet: 0, inches: 10);
       if (tableGap < minGapForTable) {
