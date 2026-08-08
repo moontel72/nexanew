@@ -418,14 +418,9 @@ class _DesignerBodyState extends State<_DesignerBody> {
 
     if (faceToFace) {
       final tableSpec = registry!.parts[SeatPartType.table]!;
-      // tableDepth = the dimension between facing rows (smaller of width/length)
-      // tableSpan = the dimension across seats (larger of width/length)
-      final double tableDepth = tableSpec.pixelWidth < tableSpec.pixelLength
-          ? tableSpec.pixelWidth
-          : tableSpec.pixelLength;
-      final double tableSpan = tableSpec.pixelWidth > tableSpec.pixelLength
-          ? tableSpec.pixelWidth
-          : tableSpec.pixelLength;
+      // Width = span across seats (horizontal). Length = depth between rows (vertical).
+      final double tableSpan = tableSpec.pixelWidth;
+      final double tableDepth = tableSpec.pixelLength;
       final double f2fGapPx = registry.faceToFaceGap.toPixels;
       // Forward type (use business if both are registered, else standard).
       final bool useBusiness =

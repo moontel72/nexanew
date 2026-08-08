@@ -429,12 +429,9 @@ class LayoutDesignerBloc
     final tableSpec = newReg.parts[SeatPartType.table];
     var comps = state.layout.components;
     if (tableSpec != null) {
-      final tDepth = tableSpec.pixelWidth < tableSpec.pixelLength
-          ? tableSpec.pixelWidth
-          : tableSpec.pixelLength;
-      final tSpan = tableSpec.pixelWidth > tableSpec.pixelLength
-          ? tableSpec.pixelWidth
-          : tableSpec.pixelLength;
+      // Width = span across seats, Length = depth between rows.
+      final tSpan = tableSpec.pixelWidth;
+      final tDepth = tableSpec.pixelLength;
       comps = comps.map((c) {
         if (c.type == ComponentType.restaurantTable) {
           return c.copyWith(width: tSpan, height: tDepth);
