@@ -60,7 +60,7 @@ class CricketAuthBloc extends Bloc<CricketAuthEvent, CricketAuthState> {
         return;
       }
       final token = result['token'] as String;
-      _repo.setBearerToken(token);
+      // Token already stored by CricketRepository.login() via ApiClient
       final manager = await _repo.getManager();
       if (manager == null) {
         emit(const CricketAuthError('Failed to load manager profile.'));

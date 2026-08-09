@@ -77,7 +77,7 @@ class StreamPlayerBloc extends Bloc<StreamPlayerEvent, StreamPlayerState> {
   Future<void> _onLoad(LoadStreams e, Emitter<StreamPlayerState> emit) async {
     emit(StreamPlayerLoading());
     try {
-      final streams = await _repo.getPublicStreams(e.matchId);
+      final streams = await _repo.getStreams(e.matchId);
       if (streams.isEmpty) {
         emit(const StreamPlayerOffline('Stream starting soon...'));
         return;

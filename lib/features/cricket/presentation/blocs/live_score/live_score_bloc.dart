@@ -92,7 +92,8 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
 
     // Subscribe to WebSocket for real-time updates
     _wsSubscription?.cancel();
-    _wsSubscription = _repo.subscribeToScore(e.matchId).listen((score) {
+    _repo.subscribeToScore(e.matchId);
+    _wsSubscription = _repo.scoreStream.listen((score) {
       if (!isClosed) add(_ScoreUpdated(score));
     });
   }
@@ -103,6 +104,7 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
 
   void _onDisconnect(DisconnectFromMatch e, Emitter<LiveScoreState> emit) {
     _wsSubscription?.cancel();
+    _repo.unsubscribeFromScore(_currentMatchId ?? '');
     _currentMatchId = null;
     emit(LiveScoreInitial());
   }
