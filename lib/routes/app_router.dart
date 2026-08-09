@@ -28,6 +28,8 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/add
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_login_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_dashboard.dart';
 import 'package:trace_odd/features/cricket/presentation/pages/manager/manager_login_page.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_list_page.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_add_page.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet_dashboard_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_owners_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_drivers_screen.dart';
@@ -633,6 +635,17 @@ class AppRouter {
                   const AddSubAdminScreen(inShell: true),
             ),
           ],
+        ),
+        // ── Cricket Manager Management (Sub-Admin scope) ──
+        GoRoute(
+          path: '/sub-admin/cricket/managers',
+          name: 'cricket_managers',
+          builder: (context, state) => const CricketManagerListPage(),
+        ),
+        GoRoute(
+          path: '/sub-admin/cricket/managers/add',
+          name: 'cricket_managers_add',
+          builder: (context, state) => const CricketManagerAddPage(),
         ),
       ],
     ),
