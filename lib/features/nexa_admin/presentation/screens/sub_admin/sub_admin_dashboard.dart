@@ -82,7 +82,7 @@ class _DashboardViewState extends State<_DashboardView> {
           backgroundColor: const Color(0xFF0C1D2C),
           body: Row(
             children: [
-              if (wide) _Sidebar(bloc: bloc, state: state),
+              if (wide) _Sidebar(bloc: bloc, state: state, vertical: _vertical),
               Expanded(child: _content(ctx, bloc, state, wide)),
             ],
           ),
@@ -176,7 +176,9 @@ class _DashboardViewState extends State<_DashboardView> {
     }
   }
 
-  // ── Cricket Operations Dashboard ────────────────────
+  // ── Cricket Sub-Admin Dashboard ──────────────────────
+  /// Only provisions and manages Cricket Operations Managers.
+  /// Operational tasks live in the separate Cricket Manager Panel.
   Widget _cricketDashboard(
     BuildContext ctx,
     SubAdminBloc bloc,
@@ -225,7 +227,7 @@ class _DashboardViewState extends State<_DashboardView> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
-                      'TOURNAMENT',
+                      'SUB-ADMIN',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -237,17 +239,17 @@ class _DashboardViewState extends State<_DashboardView> {
               ),
               const Gap(8),
               const Text(
-                'Manage tournaments, live scoring, streams, sponsors & Cricket Managers',
+                'Provision and manage Cricket Operations Managers who handle tournament setup, live scoring, and streaming.',
                 style: TextStyle(color: Colors.white70, fontSize: 13),
               ),
             ],
           ),
         ),
-        const Gap(20),
+        const Gap(24),
 
-        // Quick Actions
+        // Primary Actions — only two
         const Text(
-          'Quick Actions',
+          'Cricket Manager Actions',
           style: TextStyle(
             color: Colors.white,
             fontSize: 16,
@@ -255,31 +257,50 @@ class _DashboardViewState extends State<_DashboardView> {
           ),
         ),
         const Gap(12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _actionBtn(Icons.tour, 'Manage Tournaments', () {
-              ctx.go('/sub-admin/cricket/tournaments');
-            }),
-            _actionBtn(Icons.sports_cricket, 'Live Matches', () {
-              ctx.go('/sub-admin/cricket/matches');
-            }),
-            _actionBtn(Icons.people, 'Cricket Managers', () {
-              ctx.go('/sub-admin/cricket/managers');
-            }),
-            _actionBtn(Icons.videocam, 'Stream Setup', () {
-              ctx.go('/sub-admin/cricket/streams');
-            }),
-          ],
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => ctx.go('/sub-admin/cricket/managers/add'),
+            icon: const Icon(Icons.person_add),
+            label: const Text(
+              'Add Operations Manager',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+        const Gap(12),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF10B981),
+              side: const BorderSide(color: Color(0xFF10B981)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => ctx.go('/sub-admin/cricket/managers'),
+            icon: const Icon(Icons.people),
+            label: const Text(
+              'View All Operations Managers',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+          ),
         ),
         const Gap(24),
 
-        // Stats cards
+        // Stats
         Row(
           children: [
-            _kpiCard('Active Matches', '0', Icons.live_tv, Colors.red),
-            const Gap(12),
             _kpiCard(
               'Cricket Managers',
               '0',
@@ -287,45 +308,10 @@ class _DashboardViewState extends State<_DashboardView> {
               const Color(0xFF10B981),
             ),
             const Gap(12),
+            _kpiCard('Active Matches', '0', Icons.live_tv, Colors.red),
+            const Gap(12),
             _kpiCard('Sponsors', '0', Icons.campaign, Colors.amber),
           ],
-        ),
-        const Gap(24),
-
-        // Tournament section
-        const Text(
-          'Tournament Status',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const Gap(8),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B3A4B),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Center(
-            child: Column(
-              children: [
-                Icon(Icons.event_available, color: Colors.white38, size: 48),
-                Gap(12),
-                Text(
-                  'No active tournament.',
-                  style: TextStyle(color: Colors.white54),
-                ),
-                Gap(4),
-                Text(
-                  'Create a tournament from the Sub-Admin panel to get started.',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
         ),
       ],
     );
@@ -1452,7 +1438,103 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
 class _Sidebar extends StatelessWidget {
   final SubAdminBloc bloc;
   final SubAdminState state;
-  const _Sidebar({required this.bloc, required this.state});
+  final String vertical;
+  const _Sidebar({
+    required this.bloc,
+    required this.state,
+    required this.vertical,
+  });
+
+  /// Build sidebar items dynamically based on the sub-admin's vertical.
+  /// Only `cricket_ops` gets a restricted sidebar; all other verticals
+  /// keep the existing bus/goods/marketplace navigation.
+  List<Widget> _buildNavItems(BuildContext context) {
+    if (vertical == 'cricket_ops') {
+      return [
+        Missile3DButton(
+          label: 'Dashboard',
+          icon: Icons.dashboard,
+          color: const Color(0xFF10B981),
+          height: 64,
+          onTap: () {},
+        ),
+        Missile3DButton(
+          label: 'Cricket Managers',
+          icon: Icons.people,
+          color: const Color(0xFF059669),
+          height: 64,
+          onTap: () => context.go('/sub-admin/cricket/managers'),
+        ),
+        Missile3DButton(
+          label: 'Refresh Data',
+          icon: Icons.refresh,
+          color: const Color(0xFF2563EB),
+          height: 56,
+          onTap: () => bloc.add(const BootstrapDashboard()),
+        ),
+      ];
+    }
+    // Default: existing bus/goods/marketplace sidebar
+    return [
+      Missile3DButton(
+        label: 'Dashboard',
+        icon: Icons.dashboard,
+        color: const Color(0xFF7C3AED),
+        height: 64,
+        onTap: () {},
+      ),
+      Missile3DButton(
+        label: 'Bus Companies',
+        icon: Icons.directions_bus,
+        color: const Color(0xFF16A34A),
+        height: 64,
+        onTap: () {},
+      ),
+      Missile3DButton(
+        label: 'Seat Templates & Presets',
+        icon: Icons.airline_seat_recline_normal,
+        color: const Color(0xFF00B4D8),
+        height: 64,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider<LayoutValidationBloc>(
+                create: (_) => LayoutValidationBloc(),
+                child: const BusConfigSetupScreen(
+                  companyId: '',
+                  companyName: 'Template',
+                  apiPrefix: '/admin',
+                  isPreset: true,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      Missile3DButton(
+        label: 'View All Preset Layouts',
+        icon: Icons.list_alt,
+        color: const Color(0xFF059669),
+        height: 56,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const _SubAdminPresetsListPage(),
+            ),
+          );
+        },
+      ),
+      Missile3DButton(
+        label: 'Refresh Data',
+        icon: Icons.refresh,
+        color: const Color(0xFF2563EB),
+        height: 56,
+        onTap: () => bloc.add(const BootstrapDashboard()),
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1558,65 +1640,7 @@ class _Sidebar extends StatelessWidget {
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              children: [
-                Missile3DButton(
-                  label: 'Dashboard',
-                  icon: Icons.dashboard,
-                  color: const Color(0xFF7C3AED),
-                  height: 64,
-                  onTap: () {},
-                ),
-                Missile3DButton(
-                  label: 'Bus Companies',
-                  icon: Icons.directions_bus,
-                  color: const Color(0xFF16A34A),
-                  height: 64,
-                  onTap: () {},
-                ),
-                Missile3DButton(
-                  label: 'Seat Templates & Presets',
-                  icon: Icons.airline_seat_recline_normal,
-                  color: const Color(0xFF00B4D8),
-                  height: 64,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => BlocProvider<LayoutValidationBloc>(
-                          create: (_) => LayoutValidationBloc(),
-                          child: const BusConfigSetupScreen(
-                            companyId: '',
-                            companyName: 'Template',
-                            apiPrefix: '/admin',
-                            isPreset: true,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                Missile3DButton(
-                  label: 'View All Preset Layouts',
-                  icon: Icons.list_alt,
-                  color: const Color(0xFF059669),
-                  height: 56,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const _SubAdminPresetsListPage(),
-                      ),
-                    );
-                  },
-                ),
-                Missile3DButton(
-                  label: 'Refresh Data',
-                  icon: Icons.refresh,
-                  color: const Color(0xFF2563EB),
-                  height: 56,
-                  onTap: () => bloc.add(const BootstrapDashboard()),
-                ),
-              ],
+              children: _buildNavItems(context),
             ),
           ),
           const Divider(height: 1, color: Color(0x20FFFFFF)),

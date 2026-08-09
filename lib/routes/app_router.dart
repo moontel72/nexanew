@@ -27,6 +27,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/add_sub_admin_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_login_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_dashboard.dart';
+import 'package:trace_odd/features/cricket/presentation/pages/manager/manager_login_page.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet_dashboard_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_owners_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_drivers_screen.dart';
@@ -231,6 +232,9 @@ class AppRouter {
     // Sub-Admin login + dashboard — separate auth from super-admin
     if (path == '/sub-admin/login') return null;
     if (path == '/sub-admin/dashboard') return null;
+    // Cricket Manager Panel — separate auth from sub-admin
+    if (path == '/cricket-manager/login') return null;
+    if (path == '/cricket-manager/dashboard') return null;
     // Bus Owner login — public access for third-party bus owners
     if (path == '/bus-owner/login') return null;
     // Bus Owner dashboard — owner auth is managed by ApiClient token, not super-admin session
@@ -319,6 +323,17 @@ class AppRouter {
       path: '/sub-admin/dashboard',
       name: 'sub_admin_dashboard',
       builder: (context, state) => const SubAdminDashboardScreen(),
+    ),
+    // ── Cricket Operations Manager Panel ──
+    GoRoute(
+      path: '/cricket-manager/login',
+      name: 'cricket_manager_login',
+      builder: (context, state) => const ManagerLoginPage(),
+    ),
+    GoRoute(
+      path: '/cricket-manager/dashboard',
+      name: 'cricket_manager_dashboard',
+      builder: (context, state) => const ManagerDashboardPage(),
     ),
     GoRoute(
       path: '/bus-owner/login',
