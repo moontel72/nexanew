@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/services/api_client.dart';
-import 'package:trace_odd/shared/theme/colors.dart';
 
 /// Sub-Admin page: List all Cricket Operations Managers.
 class CricketManagerListPage extends StatefulWidget {
@@ -43,15 +42,24 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.adminContentBackground,
+      backgroundColor: const Color(0xFF0C1D2C),
       appBar: AppBar(
-        title: const Text('Cricket Operations Managers'),
-        backgroundColor: AppColors.primary,
+        title: const Text(
+          'Cricket Operations Managers',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+        backgroundColor: const Color(0xFF0F2936),
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.go('/sub-admin/dashboard'),
+          tooltip: 'Back to Dashboard',
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _fetchManagers,
+            tooltip: 'Refresh',
           ),
         ],
       ),
@@ -69,6 +77,8 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const Gap(12),
                   Text(_error!, style: const TextStyle(color: Colors.red)),
                   const Gap(12),
                   ElevatedButton(
@@ -79,17 +89,125 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
               ),
             )
           : _managers.isEmpty
-          ? const Center(
-              child: Text(
-                'No cricket managers provisioned yet.',
-                style: TextStyle(color: Colors.grey),
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.people_outline,
+                    color: Colors.white38,
+                    size: 64,
+                  ),
+                  const Gap(16),
+                  const Text(
+                    'No cricket managers provisioned yet.',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                  const Gap(8),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () =>
+                        context.go('/sub-admin/cricket/managers/add'),
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('Add First Manager'),
+                  ),
+                  const Gap(24),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 40),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withOpacity(0.3),
+                      ),
+                    ),
+                    child: const Column(
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Color(0xFF10B981),
+                              size: 16,
+                            ),
+                            Gap(6),
+                            Text(
+                              'Manager Login',
+                              style: TextStyle(
+                                color: Color(0xFF10B981),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Gap(4),
+                        SelectableText(
+                          '/cricket-manager/login',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _managers.length,
+              itemCount: _managers.length + 1, // +1 for login info card
               itemBuilder: (ctx, i) {
-                final m = _managers[i];
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFF10B981).withOpacity(0.3),
+                        ),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Color(0xFF10B981),
+                            size: 16,
+                          ),
+                          Gap(8),
+                          Text(
+                            'Manager Login:',
+                            style: TextStyle(
+                              color: Color(0xFF10B981),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                          Gap(4),
+                          SelectableText(
+                            '/cricket-manager/login',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                final m = _managers[i - 1];
                 return _ManagerCard(
                   manager: m,
                   onToggle: () => _toggleStatus(m),
@@ -129,7 +247,7 @@ class _ManagerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isActive = manager['status'] == 'active';
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       color: const Color(0xFF1B3A4B),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
@@ -154,10 +272,24 @@ class _ManagerCard extends StatelessWidget {
           manager['email'] ?? '',
           style: const TextStyle(color: Colors.white54, fontSize: 12),
         ),
-        trailing: Switch(
-          value: isActive,
-          activeColor: const Color(0xFF10B981),
-          onChanged: (_) => onToggle(),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isActive ? 'ACTIVE' : 'SUSPENDED',
+              style: TextStyle(
+                color: isActive ? const Color(0xFF10B981) : Colors.red,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Gap(8),
+            Switch(
+              value: isActive,
+              activeColor: const Color(0xFF10B981),
+              onChanged: (_) => onToggle(),
+            ),
+          ],
         ),
       ),
     );
