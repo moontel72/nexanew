@@ -58,7 +58,7 @@ class SubAdminController extends Controller
             'email'    => ['required', 'email', 'max:255'],
             'phone'    => ['nullable', 'string', 'max:30'],
             'cnic'     => ['nullable', 'string', 'max:30'],
-            'vertical' => ['required', 'string', 'in:bus_transit,goods_logistics,commercial_marketplace,financial_auditor'],
+            'vertical' => ['required', 'string', 'in:bus_transit,goods_logistics,commercial_marketplace,financial_auditor,cricket_ops'],
             'password' => ['required', 'string', 'min:8'],
         ]);
 
@@ -192,7 +192,7 @@ class SubAdminController extends Controller
             'name'     => ['sometimes', 'string', 'max:160'],
             'email'    => ['sometimes', 'email', 'max:255'],
             'phone'    => ['nullable', 'string', 'max:30'],
-            'vertical' => ['sometimes', 'string', 'in:bus_transit,goods_logistics,commercial_marketplace,financial_auditor'],
+            'vertical' => ['sometimes', 'string', 'in:bus_transit,goods_logistics,commercial_marketplace,financial_auditor,cricket_ops'],
             'password' => ['sometimes', 'string', 'min:8'],
         ]);
 
