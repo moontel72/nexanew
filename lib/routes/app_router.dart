@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
 import 'package:trace_odd/features/nexa_admin/data/repositories/admin_auth_repository.dart';
@@ -28,6 +29,8 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/add
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_login_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_dashboard.dart';
 import 'package:trace_odd/features/cricket/presentation/pages/manager/manager_login_page.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/cricket_auth/cricket_auth_bloc.dart';
+import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_list_page.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_add_page.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet_dashboard_screen.dart';
@@ -343,12 +346,18 @@ class AppRouter {
     GoRoute(
       path: '/cricket-manager/login',
       name: 'cricket_manager_login',
-      builder: (context, state) => const ManagerLoginPage(),
+      builder: (context, state) => BlocProvider(
+        create: (_) => CricketAuthBloc(repo: CricketRepository()),
+        child: const ManagerLoginPage(),
+      ),
     ),
     GoRoute(
       path: '/cricket-manager/dashboard',
       name: 'cricket_manager_dashboard',
-      builder: (context, state) => const ManagerDashboardPage(),
+      builder: (context, state) => BlocProvider(
+        create: (_) => CricketAuthBloc(repo: CricketRepository()),
+        child: const ManagerDashboardPage(),
+      ),
     ),
     GoRoute(
       path: '/bus-owner/login',
