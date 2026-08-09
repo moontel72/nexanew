@@ -55,7 +55,7 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                     ),
                   ),
                   const Text(
-                    'Valley Soon Tournament Control',
+                    'SVSB CUP 2026',
                     style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                   const SizedBox(height: 32),
