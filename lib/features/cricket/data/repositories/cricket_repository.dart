@@ -60,7 +60,7 @@ class CricketRepository {
   Future<Map<String, dynamic>?> login(String email, String password) async {
     try {
       final res = await _http.post(
-        Uri.parse('${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/login'),
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
@@ -81,7 +81,7 @@ class CricketRepository {
   Future<CricketManagerModel?> getManager() async {
     try {
       final res = await _http.get(
-        Uri.parse('${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/me'),
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/me'),
         headers: await _authHeaders(),
       );
       if (res.statusCode == 200) {
@@ -104,7 +104,7 @@ class CricketRepository {
     try {
       final res = await _http.get(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/tournament/active',
+          '${ApiConfig.apiBaseUrl}/cricket/public/tournament/active',
         ),
       );
       if (res.statusCode == 200) {
@@ -121,7 +121,7 @@ class CricketRepository {
 
   Future<List<MatchModel>> getLiveMatches({String? tournamentId}) async {
     try {
-      var url = '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/matches/live';
+      var url = '${ApiConfig.apiBaseUrl}/cricket/public/matches/live';
       if (tournamentId != null) url += '?tournament_id=$tournamentId';
       final res = await _http.get(Uri.parse(url));
       if (res.statusCode == 200) {
@@ -138,7 +138,7 @@ class CricketRepository {
 
   Future<List<MatchModel>> getAllMatches({String? tournamentId}) async {
     try {
-      var url = '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/matches';
+      var url = '${ApiConfig.apiBaseUrl}/cricket/public/matches';
       if (tournamentId != null) url += '?tournament_id=$tournamentId';
       final res = await _http.get(Uri.parse(url));
       if (res.statusCode == 200) {
@@ -157,7 +157,7 @@ class CricketRepository {
     try {
       final res = await _http.get(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/matches/$matchId/score',
+          '${ApiConfig.apiBaseUrl}/cricket/public/matches/$matchId/score',
         ),
       );
       if (res.statusCode == 200) {
@@ -173,7 +173,7 @@ class CricketRepository {
     try {
       final res = await _http.get(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/matches/$matchId/stream',
+          '${ApiConfig.apiBaseUrl}/cricket/public/matches/$matchId/stream',
         ),
       );
       if (res.statusCode == 200) {
@@ -192,7 +192,7 @@ class CricketRepository {
     try {
       final res = await _http.get(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/matches/$matchId/sponsors',
+          '${ApiConfig.apiBaseUrl}/cricket/public/matches/$matchId/sponsors',
         ),
       );
       if (res.statusCode == 200) {
@@ -210,7 +210,7 @@ class CricketRepository {
   Future<List<TeamModel>> getTeams() async {
     try {
       final res = await _http.get(
-        Uri.parse('${ApiConfig.apiBaseUrl}/api/v1/cricket/public/teams'),
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/public/teams'),
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -252,7 +252,7 @@ class CricketRepository {
     try {
       final res = await _http.get(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/matches/$matchId/streams',
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams',
         ),
         headers: await _authHeaders(),
       );
@@ -270,7 +270,7 @@ class CricketRepository {
     try {
       final res = await _http.post(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/matches/$matchId/streams/$streamId/activate',
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams/$streamId/activate',
         ),
         headers: await _authHeaders(),
       );
@@ -284,7 +284,7 @@ class CricketRepository {
     try {
       final res = await _http.post(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/matches/$matchId/streams/$streamId/deactivate',
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams/$streamId/deactivate',
         ),
         headers: await _authHeaders(),
       );
@@ -298,7 +298,7 @@ class CricketRepository {
     try {
       final res = await _http.post(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/matches/$matchId/score',
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/score',
         ),
         headers: await _authHeaders(),
         body: jsonEncode(ball),
@@ -313,7 +313,7 @@ class CricketRepository {
     try {
       final res = await _http.post(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/matches/$matchId/score/undo',
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/score/undo',
         ),
         headers: await _authHeaders(),
       );
@@ -330,7 +330,7 @@ class CricketRepository {
     try {
       final res = await _http.post(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/voice-score/process',
+          '${ApiConfig.apiBaseUrl}/cricket/manager/voice-score/process',
         ),
         headers: await _authHeaders(),
         body: jsonEncode({'match_id': matchId, 'transcript': transcript}),
@@ -346,7 +346,7 @@ class CricketRepository {
     try {
       final res = await _http.post(
         Uri.parse(
-          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/voice-score/$logId/apply',
+          '${ApiConfig.apiBaseUrl}/cricket/manager/voice-score/$logId/apply',
         ),
         headers: await _authHeaders(),
       );
