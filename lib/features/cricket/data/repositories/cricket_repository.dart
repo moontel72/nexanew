@@ -1,44 +1,76 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:trace_odd/core/services/api_client.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/core/services/websocket_hub.dart';
 
 import '../models/cricket_models.dart';
 
-/// Cricket data repository — uses shared ApiClient (singleton) and WebSocketHub.
+/// Cricket data repository.
 ///
-/// Zero custom HTTP or WebSocket clients. All networking goes through
-/// the existing shared infrastructure so auth tokens, retries, and error
-/// handling are consistent across the entire ecosystem.
+/// Manages its own Bearer token under `cricket_manager_token` in
+/// SharedPreferences so it never conflicts with the main app's
+/// sanctum token stored by ApiClient under `auth_token`.
 class CricketRepository {
-  final ApiClient _api = ApiClient();
+  static const _tokenKey = 'cricket_manager_token';
+  final http.Client _http = http.Client();
 
-  /// Stream controller for live score updates from Reverb.
+  String? _bearerToken;
   final _scoreController = StreamController<LiveScoreSnapshot>.broadcast();
-
   Stream<LiveScoreSnapshot> get scoreStream => _scoreController.stream;
 
-  // ═══════════════════════════════════════════════════════════
-  // Auth (Cricket Manager Bearer token — stored as shared token)
-  // ═══════════════════════════════════════════════════════════
+  // ────────────────────────────────────────────────────────────
+  // Token management
+  // ────────────────────────────────────────────────────────────
 
-  Future<void> setAuthToken(String token) => _api.setAuthToken(token);
-  Future<void> clearToken() => _api.clearAuthToken();
+  Future<void> _persistToken(String token) async {
+    _bearerToken = token;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
+  Future<void> _loadToken() async {
+    if (_bearerToken != null) return;
+    final prefs = await SharedPreferences.getInstance();
+    _bearerToken = prefs.getString(_tokenKey);
+  }
+
+  Future<void> clearToken() async {
+    _bearerToken = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+  }
+
+  Future<Map<String, String>> _authHeaders() async {
+    await _loadToken();
+    return _bearerToken != null
+        ? {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_bearerToken',
+          }
+        : {'Content-Type': 'application/json'};
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Auth
+  // ────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>?> login(String email, String password) async {
     try {
-      final res = await _api.post(
-        '/api/v1/cricket/manager/login',
-        body: {'email': email, 'password': password},
-        requiresAuth: false,
+      final res = await _http.post(
+        Uri.parse('${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
       );
-      if (res is Map<String, dynamic>) {
-        final token = res['token']?.toString();
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final token = data['token']?.toString();
         if (token != null && token.isNotEmpty) {
-          await _api.setAuthToken(token);
+          await _persistToken(token);
         }
-        return res;
+        return data;
       }
       return null;
     } catch (_) {
@@ -48,9 +80,15 @@ class CricketRepository {
 
   Future<CricketManagerModel?> getManager() async {
     try {
-      final res = await _api.get('/api/v1/cricket/manager/me');
-      if (res is Map<String, dynamic> && res['manager'] != null) {
-        return CricketManagerModel.fromJson(res['manager']);
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/me'),
+        headers: await _authHeaders(),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        if (data['manager'] != null) {
+          return CricketManagerModel.fromJson(data['manager']);
+        }
       }
       return null;
     } catch (_) {
@@ -58,18 +96,22 @@ class CricketRepository {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════
+  // ────────────────────────────────────────────────────────────
   // Public Endpoints (no auth)
-  // ═══════════════════════════════════════════════════════════
+  // ────────────────────────────────────────────────────────────
 
   Future<TournamentModel?> getActiveTournament() async {
     try {
-      final res = await _api.get(
-        '/api/v1/cricket/public/tournament/active',
-        requiresAuth: false,
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/tournament/active',
+        ),
       );
-      if (res is Map<String, dynamic> && res['tournament'] != null) {
-        return TournamentModel.fromJson(res['tournament']);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['tournament'] != null) {
+          return TournamentModel.fromJson(data['tournament']);
+        }
       }
       return null;
     } catch (_) {
@@ -79,15 +121,12 @@ class CricketRepository {
 
   Future<List<MatchModel>> getLiveMatches({String? tournamentId}) async {
     try {
-      final params = <String, dynamic>{};
-      if (tournamentId != null) params['tournament_id'] = tournamentId;
-      final res = await _api.get(
-        '/api/v1/cricket/public/matches/live',
-        queryParams: params,
-        requiresAuth: false,
-      );
-      if (res is Map<String, dynamic> && res['matches'] is List) {
-        return (res['matches'] as List)
+      var url = '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/matches/live';
+      if (tournamentId != null) url += '?tournament_id=$tournamentId';
+      final res = await _http.get(Uri.parse(url));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['matches'] as List)
             .map((m) => MatchModel.fromJson(m))
             .toList();
       }
@@ -99,15 +138,12 @@ class CricketRepository {
 
   Future<List<MatchModel>> getAllMatches({String? tournamentId}) async {
     try {
-      final params = <String, dynamic>{};
-      if (tournamentId != null) params['tournament_id'] = tournamentId;
-      final res = await _api.get(
-        '/api/v1/cricket/public/matches',
-        queryParams: params,
-        requiresAuth: false,
-      );
-      if (res is Map<String, dynamic> && res['matches'] is List) {
-        return (res['matches'] as List)
+      var url = '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/matches';
+      if (tournamentId != null) url += '?tournament_id=$tournamentId';
+      final res = await _http.get(Uri.parse(url));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['matches'] as List)
             .map((m) => MatchModel.fromJson(m))
             .toList();
       }
@@ -119,12 +155,13 @@ class CricketRepository {
 
   Future<LiveScoreSnapshot?> fetchScore(String matchId) async {
     try {
-      final res = await _api.get(
-        '/api/v1/cricket/public/matches/$matchId/score',
-        requiresAuth: false,
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/matches/$matchId/score',
+        ),
       );
-      if (res is Map<String, dynamic>) {
-        return LiveScoreSnapshot.fromJson(res);
+      if (res.statusCode == 200) {
+        return LiveScoreSnapshot.fromJson(jsonDecode(res.body));
       }
       return null;
     } catch (_) {
@@ -134,12 +171,14 @@ class CricketRepository {
 
   Future<List<StreamModel>> getStreams(String matchId) async {
     try {
-      final res = await _api.get(
-        '/api/v1/cricket/public/matches/$matchId/stream',
-        requiresAuth: false,
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/matches/$matchId/stream',
+        ),
       );
-      if (res is Map<String, dynamic> && res['streams'] is List) {
-        return (res['streams'] as List)
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['streams'] as List)
             .map((s) => StreamModel.fromJson(s))
             .toList();
       }
@@ -151,12 +190,14 @@ class CricketRepository {
 
   Future<List<SponsorModel>> getMatchSponsors(String matchId) async {
     try {
-      final res = await _api.get(
-        '/api/v1/cricket/public/matches/$matchId/sponsors',
-        requiresAuth: false,
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/public/matches/$matchId/sponsors',
+        ),
       );
-      if (res is Map<String, dynamic> && res['sponsors'] is List) {
-        return (res['sponsors'] as List)
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['sponsors'] as List)
             .map((s) => SponsorModel.fromJson(s))
             .toList();
       }
@@ -168,12 +209,12 @@ class CricketRepository {
 
   Future<List<TeamModel>> getTeams() async {
     try {
-      final res = await _api.get(
-        '/api/v1/cricket/public/teams',
-        requiresAuth: false,
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/api/v1/cricket/public/teams'),
       );
-      if (res is Map<String, dynamic> && res['teams'] is List) {
-        return (res['teams'] as List)
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['teams'] as List)
             .map((t) => TeamModel.fromJson(t))
             .toList();
       }
@@ -183,22 +224,18 @@ class CricketRepository {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════
+  // ────────────────────────────────────────────────────────────
   // Live Score — WebSocket via shared WebSocketHub
-  // ═══════════════════════════════════════════════════════════
+  // ────────────────────────────────────────────────────────────
 
   void subscribeToScore(String matchId) {
-    final channel = 'cricket.match.$matchId';
     try {
-      WebSocketHub.instance.subscribe(channel, (event) {
+      WebSocketHub.instance.subscribe('cricket.match.$matchId', (event) {
         try {
-          final score = LiveScoreSnapshot.fromJson(event);
-          _scoreController.add(score);
+          _scoreController.add(LiveScoreSnapshot.fromJson(event));
         } catch (_) {}
       });
-    } catch (_) {
-      // WebSocketHub not initialized — gracefully degrade to REST polling
-    }
+    } catch (_) {}
   }
 
   void unsubscribeFromScore(String matchId) {
@@ -207,17 +244,21 @@ class CricketRepository {
     } catch (_) {}
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // Stream Management (Manager Auth)
-  // ═══════════════════════════════════════════════════════════
+  // ────────────────────────────────────────────────────────────
+  // Manager Auth endpoints
+  // ────────────────────────────────────────────────────────────
 
   Future<List<StreamModel>> getManagerStreams(String matchId) async {
     try {
-      final res = await _api.get(
-        '/api/v1/cricket/manager/matches/$matchId/streams',
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/matches/$matchId/streams',
+        ),
+        headers: await _authHeaders(),
       );
-      if (res is List) {
-        return res.map((s) => StreamModel.fromJson(s)).toList();
+      if (res.statusCode == 200) {
+        final list = jsonDecode(res.body) as List;
+        return list.map((s) => StreamModel.fromJson(s)).toList();
       }
       return [];
     } catch (_) {
@@ -227,10 +268,13 @@ class CricketRepository {
 
   Future<bool> activateStream(String matchId, String streamId) async {
     try {
-      await _api.post(
-        '/api/v1/cricket/manager/matches/$matchId/streams/$streamId/activate',
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/matches/$matchId/streams/$streamId/activate',
+        ),
+        headers: await _authHeaders(),
       );
-      return true;
+      return res.statusCode == 200;
     } catch (_) {
       return false;
     }
@@ -238,26 +282,28 @@ class CricketRepository {
 
   Future<bool> deactivateStream(String matchId, String streamId) async {
     try {
-      await _api.post(
-        '/api/v1/cricket/manager/matches/$matchId/streams/$streamId/deactivate',
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/matches/$matchId/streams/$streamId/deactivate',
+        ),
+        headers: await _authHeaders(),
       );
-      return true;
+      return res.statusCode == 200;
     } catch (_) {
       return false;
     }
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // Score Update (Manager Auth)
-  // ═══════════════════════════════════════════════════════════
-
   Future<bool> updateScore(String matchId, Map<String, dynamic> ball) async {
     try {
-      await _api.post(
-        '/api/v1/cricket/manager/matches/$matchId/score',
-        body: ball,
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/matches/$matchId/score',
+        ),
+        headers: await _authHeaders(),
+        body: jsonEncode(ball),
       );
-      return true;
+      return res.statusCode == 200;
     } catch (_) {
       return false;
     }
@@ -265,27 +311,31 @@ class CricketRepository {
 
   Future<bool> undoLastBall(String matchId) async {
     try {
-      await _api.post('/api/v1/cricket/manager/matches/$matchId/score/undo');
-      return true;
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/matches/$matchId/score/undo',
+        ),
+        headers: await _authHeaders(),
+      );
+      return res.statusCode == 200;
     } catch (_) {
       return false;
     }
   }
-
-  // ═══════════════════════════════════════════════════════════
-  // Voice Score (Manager Auth)
-  // ═══════════════════════════════════════════════════════════
 
   Future<Map<String, dynamic>?> processVoiceScore(
     String matchId,
     String transcript,
   ) async {
     try {
-      final res = await _api.post(
-        '/api/v1/cricket/manager/voice-score/process',
-        body: {'match_id': matchId, 'transcript': transcript},
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/voice-score/process',
+        ),
+        headers: await _authHeaders(),
+        body: jsonEncode({'match_id': matchId, 'transcript': transcript}),
       );
-      if (res is Map<String, dynamic>) return res;
+      if (res.statusCode == 200) return jsonDecode(res.body);
       return null;
     } catch (_) {
       return null;
@@ -294,18 +344,20 @@ class CricketRepository {
 
   Future<bool> applyVoiceScore(String logId) async {
     try {
-      await _api.post('/api/v1/cricket/manager/voice-score/$logId/apply');
-      return true;
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/api/v1/cricket/manager/voice-score/$logId/apply',
+        ),
+        headers: await _authHeaders(),
+      );
+      return res.statusCode == 200;
     } catch (_) {
       return false;
     }
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // Cleanup
-  // ═══════════════════════════════════════════════════════════
-
   void dispose() {
     _scoreController.close();
+    _http.close();
   }
 }
