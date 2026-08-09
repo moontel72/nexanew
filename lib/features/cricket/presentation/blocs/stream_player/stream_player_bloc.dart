@@ -4,7 +4,9 @@ import '../../../data/repositories/cricket_repository.dart';
 
 // ─── States ──────────────────────────────────────────────
 
-sealed class StreamPlayerState {}
+sealed class StreamPlayerState {
+  const StreamPlayerState();
+}
 
 final class StreamPlayerInitial extends StreamPlayerState {}
 
@@ -25,12 +27,11 @@ final class StreamPlayerReady extends StreamPlayerState {
     List<StreamModel>? streams,
     String? activeStreamUrl,
     int? activeCameraIndex,
-  }) =>
-      StreamPlayerReady(
-        streams: streams ?? this.streams,
-        activeStreamUrl: activeStreamUrl ?? this.activeStreamUrl,
-        activeCameraIndex: activeCameraIndex ?? this.activeCameraIndex,
-      );
+  }) => StreamPlayerReady(
+    streams: streams ?? this.streams,
+    activeStreamUrl: activeStreamUrl ?? this.activeStreamUrl,
+    activeCameraIndex: activeCameraIndex ?? this.activeCameraIndex,
+  );
 }
 
 final class StreamPlayerOffline extends StreamPlayerState {
@@ -40,7 +41,9 @@ final class StreamPlayerOffline extends StreamPlayerState {
 
 // ─── Events ──────────────────────────────────────────────
 
-sealed class StreamPlayerEvent {}
+sealed class StreamPlayerEvent {
+  const StreamPlayerEvent();
+}
 
 final class LoadStreams extends StreamPlayerEvent {
   final String matchId;
@@ -64,15 +67,14 @@ class StreamPlayerBloc extends Bloc<StreamPlayerEvent, StreamPlayerState> {
   final CricketRepository _repo;
 
   StreamPlayerBloc({required CricketRepository repo})
-      : _repo = repo,
-        super(StreamPlayerInitial()) {
+    : _repo = repo,
+      super(StreamPlayerInitial()) {
     on<LoadStreams>(_onLoad);
     on<SwitchCamera>(_onSwitch);
     on<ActivateStream>(_onActivate);
   }
 
-  Future<void> _onLoad(
-      LoadStreams e, Emitter<StreamPlayerState> emit) async {
+  Future<void> _onLoad(LoadStreams e, Emitter<StreamPlayerState> emit) async {
     emit(StreamPlayerLoading());
     try {
       final streams = await _repo.getPublicStreams(e.matchId);
@@ -84,11 +86,13 @@ class StreamPlayerBloc extends Bloc<StreamPlayerEvent, StreamPlayerState> {
         (s) => s.isLive,
         orElse: () => streams.first,
       );
-      emit(StreamPlayerReady(
-        streams: streams,
-        activeStreamUrl: primary.hlsPlaylistUrl,
-        activeCameraIndex: streams.indexOf(primary),
-      ));
+      emit(
+        StreamPlayerReady(
+          streams: streams,
+          activeStreamUrl: primary.hlsPlaylistUrl,
+          activeCameraIndex: streams.indexOf(primary),
+        ),
+      );
     } catch (e) {
       emit(StreamPlayerOffline('Failed to load stream: $e'));
     }
@@ -97,14 +101,18 @@ class StreamPlayerBloc extends Bloc<StreamPlayerEvent, StreamPlayerState> {
   void _onSwitch(SwitchCamera e, Emitter<StreamPlayerState> emit) {
     final s = state;
     if (s is! StreamPlayerReady || e.index >= s.streams.length) return;
-    emit(s.copyWith(
-      activeStreamUrl: s.streams[e.index].hlsPlaylistUrl,
-      activeCameraIndex: e.index,
-    ));
+    emit(
+      s.copyWith(
+        activeStreamUrl: s.streams[e.index].hlsPlaylistUrl,
+        activeCameraIndex: e.index,
+      ),
+    );
   }
 
   Future<void> _onActivate(
-      ActivateStream e, Emitter<StreamPlayerState> emit) async {
+    ActivateStream e,
+    Emitter<StreamPlayerState> emit,
+  ) async {
     final ok = await _repo.activateStream(e.matchId, e.streamId);
     if (ok) add(LoadStreams(e.matchId));
   }

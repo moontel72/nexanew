@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/match_list/match_list_bloc.dart';
 import '../../blocs/live_score/live_score_bloc.dart';
 import '../../blocs/sponsor/sponsor_bloc.dart';
+import '../../../data/models/cricket_models.dart';
 import '../../widgets/match_card.dart';
 import '../../widgets/scoreboard_header.dart';
 

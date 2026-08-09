@@ -7,7 +7,9 @@ import '../../../data/repositories/cricket_repository.dart';
 
 // ─── States ──────────────────────────────────────────────
 
-sealed class LiveScoreState {}
+sealed class LiveScoreState {
+  const LiveScoreState();
+}
 
 final class LiveScoreInitial extends LiveScoreState {}
 
@@ -28,12 +30,11 @@ final class LiveScoreConnected extends LiveScoreState {
     LiveScoreSnapshot? score,
     bool? isWebSocket,
     List<CommentaryModel>? commentary,
-  }) =>
-      LiveScoreConnected(
-        score: score ?? this.score,
-        isWebSocket: isWebSocket ?? this.isWebSocket,
-        commentary: commentary ?? this.commentary,
-      );
+  }) => LiveScoreConnected(
+    score: score ?? this.score,
+    isWebSocket: isWebSocket ?? this.isWebSocket,
+    commentary: commentary ?? this.commentary,
+  );
 }
 
 final class LiveScoreError extends LiveScoreState {
@@ -43,7 +44,9 @@ final class LiveScoreError extends LiveScoreState {
 
 // ─── Events ──────────────────────────────────────────────
 
-sealed class LiveScoreEvent {}
+sealed class LiveScoreEvent {
+  const LiveScoreEvent();
+}
 
 final class ConnectToMatch extends LiveScoreEvent {
   final String matchId;
@@ -65,15 +68,17 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
   String? _currentMatchId;
 
   LiveScoreBloc({required CricketRepository repo})
-      : _repo = repo,
-        super(LiveScoreInitial()) {
+    : _repo = repo,
+      super(LiveScoreInitial()) {
     on<ConnectToMatch>(_onConnect);
     on<_ScoreUpdated>(_onScoreUpdated);
     on<DisconnectFromMatch>(_onDisconnect);
   }
 
   Future<void> _onConnect(
-      ConnectToMatch e, Emitter<LiveScoreState> emit) async {
+    ConnectToMatch e,
+    Emitter<LiveScoreState> emit,
+  ) async {
     emit(LiveScoreLoading());
     _currentMatchId = e.matchId;
 
@@ -87,11 +92,9 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
 
     // Subscribe to WebSocket for real-time updates
     _wsSubscription?.cancel();
-    _wsSubscription = _repo.subscribeToScore(e.matchId).listen(
-      (score) {
-        if (!isClosed) add(_ScoreUpdated(score));
-      },
-    );
+    _wsSubscription = _repo.subscribeToScore(e.matchId).listen((score) {
+      if (!isClosed) add(_ScoreUpdated(score));
+    });
   }
 
   void _onScoreUpdated(_ScoreUpdated e, Emitter<LiveScoreState> emit) {

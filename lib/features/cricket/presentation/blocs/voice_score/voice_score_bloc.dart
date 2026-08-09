@@ -3,7 +3,9 @@ import '../../../data/repositories/cricket_repository.dart';
 
 // ─── States ──────────────────────────────────────────────
 
-sealed class VoiceScoreState {}
+sealed class VoiceScoreState {
+  const VoiceScoreState();
+}
 
 final class VoiceScoreIdle extends VoiceScoreState {}
 
@@ -38,7 +40,9 @@ final class VoiceScoreError extends VoiceScoreState {
 
 // ─── Events ──────────────────────────────────────────────
 
-sealed class VoiceScoreEvent {}
+sealed class VoiceScoreEvent {
+  const VoiceScoreEvent();
+}
 
 final class ProcessTranscript extends VoiceScoreEvent {
   final String matchId;
@@ -59,15 +63,17 @@ class VoiceScoreBloc extends Bloc<VoiceScoreEvent, VoiceScoreState> {
   final CricketRepository _repo;
 
   VoiceScoreBloc({required CricketRepository repo})
-      : _repo = repo,
-        super(VoiceScoreIdle()) {
+    : _repo = repo,
+      super(VoiceScoreIdle()) {
     on<ProcessTranscript>(_onProcess);
     on<ApplyVoiceScore>(_onApply);
     on<CancelVoiceScore>(_onCancel);
   }
 
   Future<void> _onProcess(
-      ProcessTranscript e, Emitter<VoiceScoreState> emit) async {
+    ProcessTranscript e,
+    Emitter<VoiceScoreState> emit,
+  ) async {
     emit(VoiceScoreProcessing(e.transcript));
     try {
       final result = await _repo.processVoiceScore(e.matchId, e.transcript);
@@ -75,18 +81,22 @@ class VoiceScoreBloc extends Bloc<VoiceScoreEvent, VoiceScoreState> {
         emit(const VoiceScoreError('Failed to parse voice input.'));
         return;
       }
-      emit(VoiceScoreParsed(
-        logId: result['voice_log_id'] as String,
-        parsedData: result['parsed'] as Map<String, dynamic>,
-        transcript: e.transcript,
-      ));
+      emit(
+        VoiceScoreParsed(
+          logId: result['voice_log_id'] as String,
+          parsedData: result['parsed'] as Map<String, dynamic>,
+          transcript: e.transcript,
+        ),
+      );
     } catch (err) {
       emit(VoiceScoreError(err.toString()));
     }
   }
 
   Future<void> _onApply(
-      ApplyVoiceScore e, Emitter<VoiceScoreState> emit) async {
+    ApplyVoiceScore e,
+    Emitter<VoiceScoreState> emit,
+  ) async {
     emit(const VoiceScoreProcessing('Applying...'));
     try {
       final ok = await _repo.applyVoiceScore(e.logId);

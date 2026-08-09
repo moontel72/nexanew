@@ -4,7 +4,9 @@ import '../../../data/repositories/cricket_repository.dart';
 
 // ─── States ──────────────────────────────────────────────
 
-sealed class SponsorState {}
+sealed class SponsorState {
+  const SponsorState();
+}
 
 final class SponsorInitial extends SponsorState {}
 
@@ -23,7 +25,9 @@ final class SponsorError extends SponsorState {
 
 // ─── Events ──────────────────────────────────────────────
 
-sealed class SponsorEvent {}
+sealed class SponsorEvent {
+  const SponsorEvent();
+}
 
 final class LoadSponsors extends SponsorEvent {
   final String matchId;

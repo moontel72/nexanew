@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
+import 'manager_score_page.dart';
+import 'camera_switcher_page.dart';
+import 'voice_score_page.dart';
+import 'sponsor_manage_page.dart';
 
 /// Cricket Manager login page — isolated Bearer token auth.
 class ManagerLoginPage extends StatefulWidget {
@@ -129,14 +133,19 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                       );
                     },
                   ),
-                  if (state is CricketAuthError)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: Text(
-                        state.message,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
+                  BlocBuilder<CricketAuthBloc, CricketAuthState>(
+                    builder: (context, state) {
+                      if (state is CricketAuthError)
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Text(
+                            state.message,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        );
+                      return const SizedBox.shrink();
+                    },
+                  ),
                 ],
               ),
             ),

@@ -4,7 +4,9 @@ import '../../../data/repositories/cricket_repository.dart';
 
 // ─── States ──────────────────────────────────────────────
 
-sealed class CameraSwitcherState {}
+sealed class CameraSwitcherState {
+  const CameraSwitcherState();
+}
 
 final class CameraSwitcherInitial extends CameraSwitcherState {}
 
@@ -25,12 +27,11 @@ final class CameraSwitcherLoaded extends CameraSwitcherState {
     List<StreamModel>? cameras,
     int? activeIndex,
     bool? hasFailover,
-  }) =>
-      CameraSwitcherLoaded(
-        cameras: cameras ?? this.cameras,
-        activeIndex: activeIndex ?? this.activeIndex,
-        hasFailover: hasFailover ?? this.hasFailover,
-      );
+  }) => CameraSwitcherLoaded(
+    cameras: cameras ?? this.cameras,
+    activeIndex: activeIndex ?? this.activeIndex,
+    hasFailover: hasFailover ?? this.hasFailover,
+  );
 }
 
 final class CameraSwitcherError extends CameraSwitcherState {
@@ -40,7 +41,9 @@ final class CameraSwitcherError extends CameraSwitcherState {
 
 // ─── Events ──────────────────────────────────────────────
 
-sealed class CameraSwitcherEvent {}
+sealed class CameraSwitcherEvent {
+  const CameraSwitcherEvent();
+}
 
 final class LoadCameras extends CameraSwitcherEvent {
   final String matchId;
@@ -60,31 +63,34 @@ class CameraSwitcherBloc
   final CricketRepository _repo;
 
   CameraSwitcherBloc({required CricketRepository repo})
-      : _repo = repo,
-        super(CameraSwitcherInitial()) {
+    : _repo = repo,
+      super(CameraSwitcherInitial()) {
     on<LoadCameras>(_onLoad);
     on<ToggleCamera>(_onToggle);
   }
 
-  Future<void> _onLoad(
-      LoadCameras e, Emitter<CameraSwitcherState> emit) async {
+  Future<void> _onLoad(LoadCameras e, Emitter<CameraSwitcherState> emit) async {
     emit(CameraSwitcherLoading());
     try {
       final cameras = await _repo.getManagerStreams(e.matchId);
       final liveIndex = cameras.indexWhere((c) => c.isLive);
       final hasFailover = cameras.any((c) => c.failoverPriority > 0);
-      emit(CameraSwitcherLoaded(
-        cameras: cameras,
-        activeIndex: liveIndex >= 0 ? liveIndex : 0,
-        hasFailover: hasFailover,
-      ));
+      emit(
+        CameraSwitcherLoaded(
+          cameras: cameras,
+          activeIndex: liveIndex >= 0 ? liveIndex : 0,
+          hasFailover: hasFailover,
+        ),
+      );
     } catch (err) {
       emit(CameraSwitcherError(err.toString()));
     }
   }
 
   Future<void> _onToggle(
-      ToggleCamera e, Emitter<CameraSwitcherState> emit) async {
+    ToggleCamera e,
+    Emitter<CameraSwitcherState> emit,
+  ) async {
     final s = state;
     if (s is! CameraSwitcherLoaded) return;
     final camera = s.cameras[e.cameraIndex];

@@ -51,7 +51,7 @@ class CricketRepository {
   Future<bool> updateScore(String matchId, Map<String, dynamic> ball) =>
       _remote.updateScore(matchId, ball);
 
-  Future<bool> undoLastBall(String matchId) => _remote.undoScore(matchId);
+  Future<bool> undoLastBall(String matchId) => _remote.undoScores(matchId);
 
   // ─── Streams ───────────────────────────────────────────
 

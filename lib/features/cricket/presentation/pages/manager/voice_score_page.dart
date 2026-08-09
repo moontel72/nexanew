@@ -114,6 +114,16 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                     'Ready for voice input.',
                     style: TextStyle(color: Colors.grey),
                   ),
+                  VoiceScoreListening() => const Column(
+                    children: [
+                      Icon(Icons.mic, size: 48, color: Colors.orange),
+                      SizedBox(height: 8),
+                      Text(
+                        'Listening...',
+                        style: TextStyle(color: Colors.orange),
+                      ),
+                    ],
+                  ),
                   VoiceScoreProcessing(:final transcript) => Column(
                     children: [
                       const CircularProgressIndicator(color: Colors.orange),

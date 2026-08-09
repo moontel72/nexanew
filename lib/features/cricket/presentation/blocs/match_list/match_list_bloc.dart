@@ -4,7 +4,9 @@ import '../../../data/repositories/cricket_repository.dart';
 
 // ─── States ──────────────────────────────────────────────
 
-sealed class MatchListState {}
+sealed class MatchListState {
+  const MatchListState();
+}
 
 final class MatchListInitial extends MatchListState {}
 
@@ -29,7 +31,9 @@ final class MatchListError extends MatchListState {
 
 // ─── Events ──────────────────────────────────────────────
 
-sealed class MatchListEvent {}
+sealed class MatchListEvent {
+  const MatchListEvent();
+}
 
 final class LoadMatches extends MatchListEvent {}
 
@@ -41,8 +45,8 @@ class MatchListBloc extends Bloc<MatchListEvent, MatchListState> {
   final CricketRepository _repo;
 
   MatchListBloc({required CricketRepository repo})
-      : _repo = repo,
-        super(MatchListInitial()) {
+    : _repo = repo,
+      super(MatchListInitial()) {
     on<LoadMatches>(_onLoad);
     on<RefreshMatches>(_onRefresh);
   }
@@ -55,17 +59,22 @@ class MatchListBloc extends Bloc<MatchListEvent, MatchListState> {
         _repo.getLiveMatches(tournamentId: tournament?.id),
         _repo.getAllMatches(tournamentId: tournament?.id),
       ]);
-      emit(MatchListLoaded(
-        tournament: tournament,
-        liveMatches: results[0],
-        allMatches: results[1],
-      ));
+      emit(
+        MatchListLoaded(
+          tournament: tournament,
+          liveMatches: results[0],
+          allMatches: results[1],
+        ),
+      );
     } catch (error) {
       emit(MatchListError(error.toString()));
     }
   }
 
-  Future<void> _onRefresh(RefreshMatches e, Emitter<MatchListState> emit) async {
+  Future<void> _onRefresh(
+    RefreshMatches e,
+    Emitter<MatchListState> emit,
+  ) async {
     final s = state;
     if (s is! MatchListLoaded) {
       add(LoadMatches());
@@ -73,7 +82,8 @@ class MatchListBloc extends Bloc<MatchListEvent, MatchListState> {
     }
     try {
       final liveMatches = await _repo.getLiveMatches(
-          tournamentId: s.tournament?.id);
+        tournamentId: s.tournament?.id,
+      );
       emit(s.copyWith(liveMatches: liveMatches));
     } catch (_) {}
   }
@@ -85,10 +95,9 @@ extension _MatchListLoadedX on MatchListLoaded {
     TournamentModel? tournament,
     List<MatchModel>? liveMatches,
     List<MatchModel>? allMatches,
-  }) =>
-      MatchListLoaded(
-        tournament: tournament ?? this.tournament,
-        liveMatches: liveMatches ?? this.liveMatches,
-        allMatches: allMatches ?? this.allMatches,
-      );
+  }) => MatchListLoaded(
+    tournament: tournament ?? this.tournament,
+    liveMatches: liveMatches ?? this.liveMatches,
+    allMatches: allMatches ?? this.allMatches,
+  );
 }

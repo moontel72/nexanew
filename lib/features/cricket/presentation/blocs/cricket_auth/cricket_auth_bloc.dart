@@ -4,7 +4,9 @@ import '../../../data/repositories/cricket_repository.dart';
 
 // ─── States ──────────────────────────────────────────────
 
-sealed class CricketAuthState {}
+sealed class CricketAuthState {
+  const CricketAuthState();
+}
 
 final class CricketAuthInitial extends CricketAuthState {}
 
@@ -24,7 +26,9 @@ final class CricketAuthError extends CricketAuthState {
 
 // ─── Events ──────────────────────────────────────────────
 
-sealed class CricketAuthEvent {}
+sealed class CricketAuthEvent {
+  const CricketAuthEvent();
+}
 
 final class CricketLogin extends CricketAuthEvent {
   final String email;
