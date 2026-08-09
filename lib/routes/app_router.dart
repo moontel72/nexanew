@@ -328,6 +328,17 @@ class AppRouter {
       name: 'sub_admin_dashboard',
       builder: (context, state) => const SubAdminDashboardScreen(),
     ),
+    // ── Cricket Manager Management (Sub-Admin scope) ──
+    GoRoute(
+      path: '/sub-admin/cricket/managers',
+      name: 'cricket_managers',
+      builder: (context, state) => const CricketManagerListPage(),
+    ),
+    GoRoute(
+      path: '/sub-admin/cricket/managers/add',
+      name: 'cricket_managers_add',
+      builder: (context, state) => const CricketManagerAddPage(),
+    ),
     // ── Cricket Operations Manager Panel ──
     GoRoute(
       path: '/cricket-manager/login',
@@ -637,17 +648,6 @@ class AppRouter {
                   const AddSubAdminScreen(inShell: true),
             ),
           ],
-        ),
-        // ── Cricket Manager Management (Sub-Admin scope) ──
-        GoRoute(
-          path: '/sub-admin/cricket/managers',
-          name: 'cricket_managers',
-          builder: (context, state) => const CricketManagerListPage(),
-        ),
-        GoRoute(
-          path: '/sub-admin/cricket/managers/add',
-          name: 'cricket_managers_add',
-          builder: (context, state) => const CricketManagerAddPage(),
         ),
       ],
     ),
