@@ -9,16 +9,339 @@
 
 ## TABLE OF CONTENTS
 
-1. [Professional Camera Ingest Setup](#1-professional-camera-ingest-setup)
+1. [Hybrid Production Architecture (Three Modes)](#1-hybrid-production-architecture-three-modes)
+   - [1.1 Mode Selector: Which Mode Should You Use?](#11-mode-selector-which-mode-should-you-use)
+   - [1.2 Mode A — Hybrid DSLR + Mobile (Recommended)](#12-mode-a--hybrid-dslr--mobile-recommended)
+   - [1.3 Mode B — Pure Smartphone Network (Zero Hardware Cost)](#13-mode-b--pure-smartphone-network-zero-hardware-cost)
+   - [1.4 Mode C — Full Professional (Hardware Switcher)](#14-mode-c--full-professional-hardware-switcher)
+   - [1.5 Camera Placement Plan (All Modes)](#15-camera-placement-plan-all-modes)
+   - [1.6 Power & Weather Protection](#16-power--weather-protection)
 2. [OBS Studio & RTMP Push Configuration](#2-obs-studio--rtmp-push-configuration)
 3. [Final System Handover & Pre-Live Checklist](#3-final-system-handover--pre-live-checklist)
 4. [Troubleshooting Quick Reference](#4-troubleshooting-quick-reference)
+5. [Mode Switching Reference Card](#5-mode-switching-reference-card)
 
 ---
 
-## 1. PROFESSIONAL CAMERA INGEST SETUP
+## 1. HYBRID PRODUCTION ARCHITECTURE (THREE MODES)
 
-### 1.1 Recommended Camera Models
+This system supports **any combination** of professional cameras and smartphones. Choose the mode that matches your available equipment on match day. You can switch modes between matches with zero code changes — only OBS sources change.
+
+### 1.1 Mode Selector: Which Mode Should You Use?
+
+| Mode | Equipment Needed | Cost | Latency | Quality | Best For |
+|------|-----------------|------|---------|---------|----------|
+| **Mode A — Hybrid** | 1-2 DSLRs + 3-4 smartphones | ~$100 (capture cards) | Low | High | Most tournaments — balances quality and cost |
+| **Mode B — Pure Smartphone** | 3-5 smartphones (existing) | $0 | Medium | Good | Zero-budget events, quick setup, remote venues |
+| **Mode C — Full Professional** | 5 camcorders + ATEM switcher | ~$800+ | Ultra-Low | Excellent | Sponsored tournaments, broadcast-grade production |
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    DECISION FLOWCHART                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Do you have a Blackmagic ATEM or similar hardware          │
+│  switcher on-site?                                          │
+│       │                                                      │
+│       ├── YES ──► Use MODE C (Full Professional)            │
+│       │                                                      │
+│       └── NO ──► Do you have at least 1 DSLR/camcorder     │
+│                  with clean HDMI output?                     │
+│                      │                                       │
+│                      ├── YES ──► Use MODE A (Hybrid)        │
+│                      │                                 │
+│                      └── NO ──► Use MODE B (Pure Smartphone) │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 1.2 Mode A — Hybrid DSLR + Mobile (Recommended)
+
+**Concept:** Use 1-2 professional DSLRs/camcorders for main pitch coverage (wired via HDMI capture cards to OBS). Fill boundary/angle positions with smartphones streaming wirelessly via Larix Broadcaster. All sources converge in a single OBS instance.
+
+#### 1.2.1 Signal Flow Diagram
+
+```
+                     ┌────────────────────────────────────┐
+    WIRED (Pitch)    │            OBS LAPTOP              │
+                     │                                    │
+  DSLR 1 ──HDMI──►   │  ┌─ HDMI Capture Dongle ──► CAM 1 │
+  (Main Wide)   │    │  │  (Elgato Cam Link / MiraBox)    │
+                │    │  └─────────────────────────────────│
+  DSLR 2 ──HDMI──►   │  ┌─ HDMI Capture Dongle ──► CAM 2 │
+  (Long-Off)   │    │  │  (Elgato Cam Link / MiraBox)    │
+                │    │  └─────────────────────────────────│
+                     │                                    │
+    WIRELESS         │  ┌─ Media Source ──► CAM 3        │
+    (Boundary)       │  │  (Larix Broadcaster stream)    │
+                     │  ├─────────────────────────────────│
+  Phone 3 ──WiFi──►  │  ├─ Media Source ──► CAM 4        │
+  (Mid-Wicket)  │    │  │  (Larix Broadcaster stream)    │
+                │    │  ├─────────────────────────────────│
+  Phone 4 ──WiFi──►  │  ├─ Media Source ──► CAM 5        │
+  (Square Leg)  │    │  │  (Larix Broadcaster stream)    │
+                │    │  └─────────────────────────────────│
+  Phone 5 ──WiFi──►  │                                    │
+  (Boundary)    │    │  RTMP Output ──► Hetzner SRS       │
+                     └────────────────────────────────────┘
+```
+
+#### 1.2.2 Wired DSLR/Camcorder Setup (CAM 1-2)
+
+| Item | Qty | Model (Budget) | Model (Pro) |
+|------|-----|---------------|-------------|
+| DSLR / Camcorder | 2 | Canon EOS 200D / Sony a6000 | Canon XA55 / Sony Z150 |
+| HDMI cable (10m) | 2 | AmazonBasics High-Speed | BlueRigger 4K |
+| HDMI capture dongle | 2 | MiraBox HSV321 ($25) | Elgato Cam Link 4K ($100) |
+| Tripod (fluid head) | 2 | AmazonBasics 60" | Manfrotto 502AH |
+| AC power adapter | 2 | Third-party dummy battery | OEM AC adapter |
+
+**DSLR Clean HDMI Setup Steps:**
+
+1. Mount DSLR on tripod. Connect HDMI cable to camera HDMI-out port.
+2. Connect HDMI capture dongle to other end of HDMI cable.
+3. Plug capture dongle USB into OBS laptop.
+4. **CRITICAL: Enable Clean HDMI Output:**
+   - Sony: Menu → Setup → HDMI Settings → HDMI Info. Display → OFF
+   - Canon: Menu → HDMI Display → Mirroring → Disable overlays
+   - Panasonic: Menu → HDMI Output → Info Display → OFF
+5. Set camera to **Manual (M) mode**. Configure:
+   - Shutter: 1/60 (for 30fps) or 1/120 (for 60fps)
+   - Aperture: f/5.6-f/8 (daylight) | f/2.8-f/4 (overcast)
+   - ISO: Auto (capped at 3200)
+   - White Balance: 5600K (daylight preset)
+6. **Disable auto-power-off:** Set camera sleep timer to "Off" or "30 min".
+7. In OBS: Add → Video Capture Device → Select "USB Video" device → Name it "CAM 1 — Main Wide".
+
+#### 1.2.3 Wireless Smartphone Setup via Larix Broadcaster (CAM 3-5)
+
+**Larix Broadcaster** is a free Android/iOS app that turns any smartphone into a wireless RTMP/SRT camera feed visible as a network source in OBS.
+
+**Step 1: Install Larix Broadcaster on each phone**
+
+```
+Android: Google Play Store → Search "Larix Broadcaster" → Install
+iOS:     App Store → Search "Larix Broadcaster" → Install
+```
+
+**Step 2: Configure Larix on each phone**
+
+```
+1. Open Larix Broadcaster
+2. Tap gear icon (Settings) → Connections → + New Connection
+3. Configure:
+   - Name:   CAM 3 — Mid-Wicket  (unique per phone)
+   - URL:    rtmp://192.168.1.XXX:1935/live/cam3_midwicket
+             ^^^^^^^^^^^^^^^^ OBS laptop's local IP address
+   - Mode:   Audio + Video
+   - Target: RTMP
+4. Go back → Video Settings:
+   - Resolution: 1280x720
+   - Bitrate:    2500 Kbps
+   - FPS:        30
+   - Camera:     Rear (wide)
+5. Go back → Audio Settings:
+   - Bitrate: 96 Kbps (or mute if no commentary needed)
+6. Return to main screen. You should see camera preview.
+```
+
+**Step 3: Set up local RTMP server on OBS laptop (nginx-rtmp or MediaMTX)**
+
+Since smartphones stream over local WiFi to the OBS laptop, you need a lightweight RTMP receiver running on the laptop itself. The simplest option is **MediaMTX** (single binary, 10 MB):
+
+```bash
+# On the OBS laptop (Windows/Mac/Linux):
+# Download MediaMTX: https://github.com/bluenviron/mediamtx/releases
+
+# Windows (PowerShell, Run as Administrator):
+.\mediamtx.exe
+# Starts RTMP server on port 1935, with built-in HLS on port 8888
+
+# Verify it's running:
+# Open browser → http://localhost:8888 → Should show MediaMTX dashboard
+```
+
+**Alternative: Use SRS directly on Hetzner** (if local WiFi bandwidth to internet is good):
+
+```
+# Phone Larix → directly to Hetzner SRS (bypass local RTMP server):
+URL: rtmp://cricket.traceodd.com:1935/live/cam3_midwicket
+# Then in OBS: Add → Media Source →
+# Input: https://cricket.traceodd.com/hls/live/cam3_midwicket.m3u8
+# (This pulls the HLS from SRS back into OBS — slight delay but simpler)
+```
+
+**Step 4: Add Larix streams as OBS sources**
+
+```
+In OBS Studio:
+1. Add → Media Source → Create new → Name "CAM 3 — Mid-Wicket"
+2. Uncheck "Local File"
+3. Input: rtmp://localhost:1935/live/cam3_midwicket
+   (Or if using direct-to-SRS: https://cricket.traceodd.com/hls/live/cam3_midwicket.m3u8)
+4. Input Format: rtmp (or hls for direct-to-SRS)
+5. Check "Restart playback when source becomes active"
+6. Network Buffering: 2 MB
+7. OK
+8. Repeat for CAM 4 (cam4_squareleg) and CAM 5 (cam5_boundary)
+```
+
+#### 1.2.4 Hybrid Scene Layout in OBS
+
+Your OBS Sources panel will look like this (all sources coexist in the same scene):
+
+```
+OBS SOURCES (Scene: CAM 1 — Main Wide)
+├── [Image]     Sponsor Banner
+├── [Text]      Score Overlay
+├── [Image]     Team A Logo
+├── [Image]     Team B Logo
+├── [Video Capture]  CAM 1 — Main Wide     ← Wired DSLR via HDMI dongle
+│
+├── (Hidden in this scene, used in other scenes)
+│   ├── [Video Capture]  CAM 2 — Long-Off    ← Wired DSLR via HDMI dongle
+│   ├── [Media Source]   CAM 3 — Mid-Wicket  ← Smartphone via Larix RTMP
+│   ├── [Media Source]   CAM 4 — Square Leg  ← Smartphone via Larix RTMP
+│   └── [Media Source]   CAM 5 — Boundary    ← Smartphone via Larix RTMP
+```
+
+> **IMPORTANT:** Wired sources (HDMI dongles) appear as "Video Capture Device". Wireless smartphone sources appear as "Media Source". Both work interchangeably in OBS scenes. The production director switches between them using the same Numpad 1-5 hotkeys regardless of source type.
+
+#### 1.2.5 Mode A Equipment Checklist
+
+| Category | Item | Check |
+|----------|------|-------|
+| **Wired** | DSLR 1 (Main Wide) — HDMI clean output verified | ☐ |
+| **Wired** | DSLR 2 (Long-Off) — HDMI clean output verified | ☐ |
+| **Wired** | 2× HDMI capture dongles recognized in OBS | ☐ |
+| **Wireless** | Phone 3 (Mid-Wicket) — Larix installed + configured | ☐ |
+| **Wireless** | Phone 4 (Square Leg) — Larix installed + configured | ☐ |
+| **Wireless** | Phone 5 (Boundary) — Larix installed + configured | ☐ |
+| **Network** | Local RTMP server (MediaMTX) running on OBS laptop | ☐ |
+| **Network** | All phones on same WiFi as laptop (or strong 4G to Hetzner) | ☐ |
+| **OBS** | All 5 sources previewing with picture | ☐ |
+
+---
+
+### 1.3 Mode B — Pure Smartphone Network (Zero Hardware Cost)
+
+**Concept:** 100% mobile-phone production. Use 3-5 existing smartphones streaming via Larix Broadcaster directly to Hetzner SRS. OBS on a laptop pulls all HLS streams back in for scene switching, then pushes a single composited RTMP output.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                     PURE MOBILE SETUP                     │
+│                                                           │
+│  Phone 1 (Main Wide)  ──Larix RTMP──►                    │
+│  Phone 2 (Long-Off)   ──Larix RTMP──►                    │
+│  Phone 3 (Mid-Wicket) ──Larix RTMP──┼──► Hetzner SRS     │
+│  Phone 4 (Square Leg) ──Larix RTMP──┤   (Port 1935)      │
+│  Phone 5 (Boundary)   ──Larix RTMP──►       │            │
+│                                              │ HLS        │
+│                                              ▼            │
+│                                     OBS Laptop pulls      │
+│                                     all 5 HLS streams     │
+│                                     as Media Sources      │
+│                                              │            │
+│                                              ▼            │
+│                                     OBS composites +      │
+│                                     pushes RTMP output    │
+│                                     to SRS stream_main    │
+└──────────────────────────────────────────────────────────┘
+```
+
+#### 1.3.1 Mode B Larix Configuration (Direct-to-SRS)
+
+Each phone pushes directly to Hetzner SRS using its own stream key. No local server needed.
+
+```
+Phone 1 (Main Wide):
+  URL: rtmp://cricket.traceodd.com:1935/live/mobile_cam1_main
+
+Phone 2 (Long-Off):
+  URL: rtmp://cricket.traceodd.com:1935/live/mobile_cam2_longoff
+
+Phone 3 (Mid-Wicket):
+  URL: rtmp://cricket.traceodd.com:1935/live/mobile_cam3_midwicket
+
+Phone 4 (Square Leg):
+  URL: rtmp://cricket.traceodd.com:1935/live/mobile_cam4_square
+
+Phone 5 (Boundary):
+  URL: rtmp://cricket.traceodd.com:1935/live/mobile_cam5_boundary
+```
+
+**Larix Settings (each phone):**
+```
+Video Resolution: 1280x720
+Video Bitrate:    2000 Kbps  (lower than wired — mobile encoders are less efficient)
+FPS:              25  (reduce frame rate to save bandwidth)
+Audio:            Muted (optional — prevents echo from multiple phones)
+Camera:           Rear wide
+Stabilization:    ON (if available)
+```
+
+#### 1.3.2 Mode B OBS Source Configuration
+
+All camera sources are HLS pull streams from SRS:
+
+```
+In OBS, add each phone as a Media Source:
+
+Source Name:     CAM 1 — Main Wide
+Input:           https://cricket.traceodd.com/hls/live/mobile_cam1_main.m3u8
+Input Format:    hls
+Network Buffering: 3 MB  (higher for mobile networks)
+Reconnect Delay:  2 seconds
+
+Source Name:     CAM 2 — Long-Off
+Input:           https://cricket.traceodd.com/hls/live/mobile_cam2_longoff.m3u8
+...
+
+(Repeat for CAM 3, 4, 5)
+```
+
+> **Latency Note (Mode B):** Each phone → SRS → OBS pull adds ~6-10 seconds delay vs real-time. This is acceptable for cricket broadcasts (not real-time scoring). The score overlay in OBS should also be delayed to match, or the Cricket Manager should update scores slightly ahead of the stream.
+
+#### 1.3.3 Mode B Equipment Checklist
+
+| Category | Item | Check |
+|----------|------|-------|
+| **Phones** | Phone 1 — Larix configured, battery > 80%, airplane mode OFF | ☐ |
+| **Phones** | Phone 2 — Larix configured, battery > 80% | ☐ |
+| **Phones** | Phone 3 — Larix configured, battery > 80% | ☐ |
+| **Phones** | Phone 4 — Larix configured, battery > 80% | ☐ |
+| **Phones** | Phone 5 — Larix configured, battery > 80% | ☐ |
+| **Network** | Each phone: 4G signal strength > 3 bars | ☐ |
+| **Network** | OBS laptop: stable internet (Ethernet preferred) | ☐ |
+| **Power** | Power banks connected to each phone (streaming drains battery fast) | ☐ |
+| **Mount** | Phone tripod mounts (universal clamp + mini tripod) for each phone | ☐ |
+| **OBS** | All 5 HLS Media Sources previewing with picture | ☐ |
+| **SRS** | Verify all 5 mobile streams active: `tail -20 /var/log/srs-cricket.log` | ☐ |
+
+---
+
+### 1.4 Mode C — Full Professional (Hardware Switcher)
+
+**Concept:** The original professional setup using 5 camcorders/DSLRs → Blackmagic ATEM Mini Pro hardware switcher → OBS laptop.
+
+#### 1.4.1 Signal Flow (Mode C)
+
+```
+Camera 1 ──HDMI──┐
+Camera 2 ──HDMI──┤
+Camera 3 ──HDMI──┼──► Blackmagic ATEM Mini Pro ──USB-C──► OBS Laptop
+Camera 4 ──HDMI──┤       (or ATEM Mini Extreme ISO)
+Camera 5 ──HDMI──┘
+                     ┌─────────────────────────────┐
+                     │ ATEM Software Control Panel │
+                     │ (Multi-view monitoring on   │
+                     │  separate HDMI monitor)      │
+                     └─────────────────────────────┘
+```
+
+#### 1.4.2 Recommended Professional Camera Models
 
 | Camera | Output Type | Resolution | Low-Light | Notes |
 |--------|------------|------------|-----------|-------|
@@ -30,7 +353,47 @@
 
 > **Critical: CLEAN HDMI Output.** Every camera MUST be configured to output **clean HDMI** (no on-screen overlays, focus boxes, battery indicators). This is configured in each camera's menu under `HDMI Output Settings → Clean Output = ON`.
 
-### 1.2 Camera Placement Plan (5-Camera Setup)
+#### 1.4.3 ATEM Setup Steps
+
+1. Connect all 5 camera HDMI outputs to ATEM HDMI inputs 1-5.
+2. Connect HDMI monitor to ATEM "HDMI Out" for multi-view preview.
+3. Connect ATEM USB-C to OBS laptop — appears as a single webcam source.
+4. Install Blackmagic ATEM Software Control on the OBS laptop.
+5. In OBS, add "Blackmagic Device" as Video Capture Device source.
+6. Use ATEM Software Control panel for live camera switching (hardware-cut — zero latency).
+
+#### 1.4.4 Mode C Equipment Checklist
+
+| Item | Qty | Model | Est. Cost |
+|------|-----|-------|-----------|
+| HDMI Switcher | 1 | Blackmagic ATEM Mini Pro | $295 |
+| HDMI Cables (15m) | 5 | AmazonBasics / Cable Matters | $15/ea |
+| HDMI Monitor | 1 | Any 15-22" with HDMI input | $80 |
+| USB-C Cable | 1 | Included with ATEM | $0 |
+| Tripods (fluid head) | 5 | Manfrotto / Benro | $80/ea |
+
+#### 1.4.5 USB Capture Dongle Alternative (Mode C Lite)
+
+If the ATEM switcher is unavailable but you have 5 DSLRs/camcorders, use individual HDMI-to-USB dongles per camera:
+
+```
+Camera 1 ──HDMI──► HDMI-to-USB Dongle ──USB──┐
+Camera 2 ──HDMI──► HDMI-to-USB Dongle ──USB──┤
+Camera 3 ──HDMI──► HDMI-to-USB Dongle ──USB──┼──► OBS Laptop
+Camera 4 ──HDMI──► HDMI-to-USB Dongle ──USB──┤   (powered USB hub)
+Camera 5 ──HDMI──► HDMI-to-USB Dongle ──USB──┘
+```
+
+| Item | Qty | Model | Est. Cost |
+|------|-----|-------|-----------|
+| HDMI Capture Dongle | 5 | Elgato Cam Link 4K / MiraBox | $100/ea |
+| Powered USB 3.0 Hub | 1 | Anker 10-port 60W | $40 |
+
+> **Trade-off:** Software switching in OBS adds ~200-400ms latency vs hardware ATEM. Acceptable for cricket broadcast.
+
+---
+
+### 1.5 Camera Placement Plan (All Modes)
 
 ```
                         ┌──────────────────────────────┐
@@ -48,89 +411,33 @@
                                       ▼
                            PRODUCTION TENT
                     ┌─────────────────────────┐
-                    │   Blackmagic ATEM Mini  │
-                    │   Pro / ISO             │
-                    │   (Hardware Switcher)    │
-                    └───────────┬─────────────┘
-                                │ USB-C Out
-                                ▼
-                    ┌─────────────────────────┐
                     │   OBS STUDIO LAPTOP     │
                     │   (Primary)             │
                     │   RTMP → Hetzner SRS    │
                     └─────────────────────────┘
 ```
 
-| Camera # | Label | Position | Lens | Purpose |
-|----------|-------|----------|------|---------|
-| **CAM 1** | Main Wide | Straight, elevated (press box / scaffold) | 12-24x zoom | Master wide shot; follow ball trajectory |
-| **CAM 2** | Long-Off | Behind bowler's arm, straight boundary | 12-20x zoom | Bowler run-up + batsman front view |
-| **CAM 3** | Mid-Wicket | Side-on, square boundary | 8-12x zoom | Batsman side profile; run between wickets |
-| **CAM 4** | Square Leg | Opposite side, square boundary | 8-12x zoom | Alternative angle; LBW appeals |
-| **CAM 5** | Boundary Cam | Roaming / fixed at fine leg | Wide angle | Crowd reactions; boundary catches |
+| Camera # | Label | Position | Recommended Source | Lens/View | Purpose |
+|----------|-------|----------|-------------------|-----------|---------|
+| **CAM 1** | Main Wide | Elevated straight (press box / scaffold) | DSLR / Camcorder | 12-24x zoom | Master wide shot; follow ball trajectory |
+| **CAM 2** | Long-Off | Behind bowler's arm, straight boundary | DSLR / Camcorder | 12-20x zoom | Bowler run-up + batsman front view |
+| **CAM 3** | Mid-Wicket | Side-on, square boundary | Smartphone | Wide (1x) | Batsman side profile; run between wickets |
+| **CAM 4** | Square Leg | Opposite side, square boundary | Smartphone | Wide (1x) | Alternative angle; LBW appeals |
+| **CAM 5** | Boundary Cam | Roaming / fixed at fine leg | Smartphone | Wide (1x) | Crowd reactions; boundary catches |
 
-### 1.3 Signal Flow Architecture
+> **Pro Tip:** Place wired cameras (DSLRs) at CAM 1 and CAM 2 — the two most-used angles. Place smartphones at boundary positions (CAM 3-5) where wireless freedom eliminates long cable runs.
 
-#### OPTION A: Hardware Switcher (Recommended — Lowest Latency)
+---
 
-```
-Camera 1 ──HDMI──┐
-Camera 2 ──HDMI──┤
-Camera 3 ──HDMI──┼──► Blackmagic ATEM Mini Pro ──USB-C──► OBS Laptop
-Camera 4 ──HDMI──┤       (or ATEM Mini Extreme ISO)
-Camera 5 ──HDMI──┘
-                     ┌─────────────────────────────┐
-                     │ ATEM Software Control Panel │
-                     │ (Multi-view monitoring on   │
-                     │  separate HDMI monitor)      │
-                     └─────────────────────────────┘
-```
+### 1.6 Power & Weather Protection
 
-**Equipment Required:**
-
-| Item | Qty | Model | Est. Cost |
-|------|-----|-------|-----------|
-| HDMI Switcher | 1 | Blackmagic ATEM Mini Pro | $295 |
-| HDMI Cables (15m) | 5 | AmazonBasics / Cable Matters | $15/ea |
-| HDMI Monitor | 1 | Any 15-22" with HDMI input | $80 |
-| USB-C Cable | 1 | Included with ATEM | $0 |
-| Tripods (fluid head) | 5 | Manfrotto / Benro | $80/ea |
-
-**ATEM Setup Steps:**
-1. Connect all 5 camera HDMI outputs to ATEM HDMI inputs 1-5.
-2. Connect HDMI monitor to ATEM "HDMI Out" for multi-view preview.
-3. Connect ATEM USB-C to OBS laptop — appears as a single webcam source.
-4. Install Blackmagic ATEM Software Control on the OBS laptop.
-5. In OBS, add "Blackmagic Device" as Video Capture Device source.
-6. Use ATEM Software Control panel for live camera switching (hardware-cut — zero latency).
-
-#### OPTION B: USB Capture Dongles (Budget / No Switcher)
-
-```
-Camera 1 ──HDMI──► HDMI-to-USB Dongle ──USB──┐
-Camera 2 ──HDMI──► HDMI-to-USB Dongle ──USB──┤
-Camera 3 ──HDMI──► HDMI-to-USB Dongle ──USB──┼──► OBS Laptop (5 USB ports)
-Camera 4 ──HDMI──► HDMI-to-USB Dongle ──USB──┤       │
-Camera 5 ──HDMI──► HDMI-to-USB Dongle ──USB──┘       │
-                                                     ▼
-                                              OBS Software Switcher
-                                              (Scene-based switching)
-```
-
-| Item | Qty | Model | Est. Cost |
-|------|-----|-------|-----------|
-| HDMI Capture Dongle | 5 | Elgato Cam Link 4K / MiraBox | $100/ea |
-| Powered USB 3.0 Hub | 1 | Anker 10-port 60W | $40 |
-
-> **Trade-off:** Software switching in OBS adds ~200-400ms latency vs hardware ATEM. Acceptable for cricket (not esports). Cost savings: ~$200.
-
-### 1.4 Power & Weather Protection
-
-- **Batteries:** Each camera needs 2× fully charged batteries (1 active + 1 spare per innings break swap).
+- **DSLR Batteries:** Each camera needs 2× fully charged batteries (1 active + 1 spare per innings break swap).
+- **Smartphone Power Banks:** 20,000 mAh power bank per phone (Larix streaming drains ~15-20% battery per hour). Connect via USB cable during entire match.
 - **Power Strip:** Heavy-duty extension cord to production tent with surge protector.
-- **Tripod Sandbags:** 5 kg per tripod to prevent wind tipping.
-- **Rain Covers:** Camera rain covers (Op/Tech Rainsleeve or similar) — $8/ea.
+- **Tripod Sandbags:** 5 kg per tripod (all cameras — phone tripods are lighter and more wind-prone).
+- **Rain Covers:** Camera rain covers (Op/Tech Rainsleeve or similar) — $8/ea. For phones: zip-lock bag with lens hole cut out.
 - **Laptop Power:** Both primary + backup laptops plugged in. Laptop battery as UPS.
+- **Phone Cooling:** Direct sunlight + streaming = overheating. Shade phones with small umbrella or cardboard hood. If phone displays "Temperature warning", pause streaming for 2 minutes.
 
 ---
 
@@ -471,25 +778,36 @@ php /var/www/traceodd/admin-panel/artisan optimize
 ### 3.2 Pre-Match Checklist (30 Minutes Before Each Match)
 
 ```
-□ CAMERAS
-  □ All 5 cameras powered on, clean HDMI output verified
-  □ All tripods locked, sandbags in place
-  □ Camera batteries > 90% (or AC power connected)
-  □ Rain covers available (check weather forecast)
+□ MODE SELECTION (Choose ONE based on available equipment)
+  □ Mode A (Hybrid): _____ DSLRs + _____ Smartphones
+  □ Mode B (Pure Smartphone): _____ Phones
+  □ Mode C (Full Professional): _____ Camcorders + ATEM ☐ / USB Dongles ☐
 
-□ PRODUCTION TENT
+□ CAMERAS & MOUNTS (Mode-specific — check applicable items)
+  MODE A/B: Phone tripod mounts secured ☐  Power banks connected ☐
+  MODE A/C: DSLR clean HDMI verified ☐  Batteries > 90% ☐
+  MODE C:   ATEM recognized in OBS ☐  Multi-view monitor active ☐
+  ALL:      Tripods locked, sandbags in place ☐
+  ALL:      Rain covers available (check weather forecast) ☐
+  MODE A/B: Phone cooling shades in place (sunny day) ☐
+
+□ PRODUCTION LAPTOP (OBS)
   □ OBS primary laptop booted, OBS launched
-  □ OBS backup laptop booted, OBS launched (standby)
-  □ ATEM / capture dongles all recognized in OBS
+  □ Mode A: MediaMTX local RTMP server running (for phone sources)
+  □ Mode B: All 5 HLS Media Sources connected and previewing
   □ All 8 OBS scenes verified (preview each CAM input)
   □ Audio input working (ambient mic / commentator feed)
   □ Sponsor overlays loaded correctly in OBS
   □ Hotkeys tested (numpad 1-8 switch scenes)
+  □ OBS backup laptop booted, OBS launched (standby)
 
 □ NETWORK
-  □ Ethernet connected (not WiFi) — primary laptop
+  □ Primary laptop: Ethernet connected (not WiFi)
   □ Internet speed test: Upload > 6 Mbps (speedtest.net)
   □ Secondary network (4G hotspot) tested on backup laptop
+  □ Mode A/B: All phones on same WiFi as laptop OR strong 4G (>3 bars)
+  □ Mode A: Local RTMP port 1935 reachable from all phones:
+    (From any phone browser: http://192.168.1.XXX:1935 → should respond)
   □ RTMP push test: "Start Streaming" in OBS → check SRS logs:
     ssh root@135.181.46.27 "tail -20 /var/log/srs-cricket.log"
 
@@ -499,6 +817,8 @@ php /var/www/traceodd/admin-panel/artisan optimize
   □ CDN Pull Zone active: check BunnyCDN dashboard → Status: Active
   □ Redis running: redis-cli ping → PONG
   □ Disk space > 10 GB: df -h /var/www/traceodd/cricket-hls/
+  □ Mode B: Verify SRS receiving all 5 mobile streams:
+    tail -20 /var/log/srs-cricket.log | grep 'publish success'
 
 □ SCORING
   □ Cricket Manager logged into manager panel
@@ -514,6 +834,10 @@ php /var/www/traceodd/admin-panel/artisan optimize
   □ Scoreboard visible and updating
   □ Sponsor banners displaying correctly
   □ PWA "Add to Home Screen" working on Android Chrome
+
+□ MODE SWITCHING READY (in case equipment fails during match)
+  □ Fallback mode identified: If Mode __ fails → switch to Mode __
+  □ Fallback equipment on standby in production tent
 ```
 
 ### 3.3 Post-Match Shutdown Checklist
@@ -666,6 +990,82 @@ curl -s http://localhost:1985/api/v1/versions  # SRS HTTP API version check
 
 ---
 
-> **Document Version:** 1.0 — Valley Soon Cricket Tournament 2026
+## 5. MODE SWITCHING REFERENCE CARD
+
+### 5.1 Quick Mode Switch (Between Matches)
+
+Switching from one mode to another takes **under 5 minutes**:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                   MODE SWITCHING WORKFLOW                    │
+├──────────────────────────────────────────────────────────────┤
+│                                                               │
+│  1. STOP current OBS stream (CTRL+ALT+X)                     │
+│  2. REMOVE old camera sources from OBS:                      │
+│     Right-click each source → Remove                         │
+│  3. ADD new camera sources per the target mode:              │
+│     Mode A: Video Capture Device (HDMI) + Media Source (RTMP)│
+│     Mode B: Media Source (HLS from SRS) for all 5 cameras    │
+│     Mode C: Blackmagic Device (ATEM) + Video Capture (HDMI)  │
+│  4. VERIFY all sources show picture in preview               │
+│  5. START streaming (CTRL+ALT+S)                             │
+│                                                               │
+│  Total downtime: ~5 minutes (between overs/inning break)     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 5.2 Emergency Mode Degradation (Mid-Match)
+
+If primary equipment fails mid-match, degrade to the next available mode without stopping the stream:
+
+| Failure | Degradation Path | Action |
+|---------|-----------------|--------|
+| **ATEM Switcher dies** | Mode C → Mode A | Disconnect ATEM USB. Plug HDMI dongles directly into laptop USB ports. Camera 1-5 sources switch from "Blackmagic Device" to individual "Video Capture Device" sources in OBS. |
+| **DSLR battery dies** | Mode A → degraded Mode A | Switch to smartphone backup camera for that position. Activate Larix stream on phone → add as Media Source in OBS → hotkey to that scene. |
+| **WiFi router fails** | Mode A → Mode B (direct-to-SRS) | Reconfigure Larix on all phones from `rtmp://192.168.1.XXX:1935/live/...` to `rtmp://cricket.traceodd.com:1935/live/...`. In OBS, swap Media Source inputs from local RTMP to SRS HLS URLs. |
+| **Internet down** | All modes → Local recording | OBS: Start Recording (not streaming). Archive MP4 file locally. Upload to SRS after connection restores using `ffmpeg -re -i recording.mp4 -c copy rtmp://cricket.traceodd.com/live/stream_main`. |
+| **All wired cameras fail** | Mode A/C → Mode B | Switch entirely to smartphone network. All 5 phones streaming via Larix direct-to-SRS. Replace all OBS sources with HLS Media Sources. |
+
+### 5.3 Mode Comparison Matrix
+
+| Feature | Mode A (Hybrid) | Mode B (Pure Mobile) | Mode C (Professional) |
+|---------|----------------|---------------------|----------------------|
+| **Setup time** | 20 min | 10 min | 30 min |
+| **Cost (new equipment)** | ~$100 | $0 | ~$800+ |
+| **Video quality** | High (DSLR) + Medium (phones) | Medium (720p mobile) | Excellent (1080p broadcast) |
+| **Latency (glass-to-glass)** | 3-6 sec | 8-15 sec | 2-4 sec |
+| **Internet required** | 5-6 Mbps up | 10-15 Mbps up (5 phones) | 5-6 Mbps up (single output) |
+| **Cable runs** | 2× HDMI (20m total) | Zero | 5× HDMI (80m total) |
+| **Failover complexity** | Medium | Low (just swap phones) | High (need spare hardware) |
+| **Best for** | Club tournaments, semi-pro | Community events, remote venues | Sponsored leagues, broadcast TV |
+
+### 5.4 Mode-Specific OBS Profile Files
+
+Save each mode as a separate OBS Profile so you can switch in seconds:
+
+```
+OBS → Profile → New
+  Name: "Cricket — Mode A Hybrid"
+  Configure all sources for Mode A
+  Export: Profile → Export → "cricket-mode-a-hybrid"
+
+OBS → Profile → New
+  Name: "Cricket — Mode B Mobile"
+  Configure all sources for Mode B
+  Export: Profile → Export → "cricket-mode-b-mobile"
+
+OBS → Profile → New
+  Name: "Cricket — Mode C Professional"
+  Configure all sources for Mode C
+  Export: Profile → Export → "cricket-mode-c-pro"
+
+# To switch modes on match day:
+OBS → Profile → Select the target mode → All sources swap instantly
+```
+
+---
+
+> **Document Version:** 2.0 — Valley Soon Cricket Tournament 2026
 > **Last Updated:** 2026-08-09
 > **Maintained By:** NexaTrace Engineering Team
