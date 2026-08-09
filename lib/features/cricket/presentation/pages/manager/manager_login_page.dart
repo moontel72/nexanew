@@ -56,7 +56,11 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                   ),
                   const Text(
                     'SVSB CUP 2026',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
