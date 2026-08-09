@@ -33,7 +33,7 @@ class SubAdminListScreen extends StatelessWidget {
     'goods_logistics': Icons.local_shipping_rounded,
     'commercial_marketplace': Icons.storefront_rounded,
     'financial_auditor': Icons.account_balance_rounded,
-    'cricket_ops': Icons.sports_cricket_rounded,
+    'cricket_ops': Icons.sports_cricket,
   };
 
   Color _color(String? v) => _verticalColors[v] ?? AppColors.gray500;

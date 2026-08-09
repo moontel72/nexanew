@@ -41,7 +41,7 @@ class AddSubAdminScreen extends StatelessWidget {
     {
       'code': 'cricket_ops',
       'label': 'Cricket Operations Manager',
-      'icon': Icons.sports_cricket_rounded,
+      'icon': Icons.sports_cricket,
       'desc':
           'Live cricket streaming, tournament setup, scorekeeping, sponsors & manager provisioning',
     },
@@ -166,7 +166,7 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
                   ),
                   const Gap(6),
                   const Text(
-                    const Text('Assign a sub-admin to manage one of the five ecosystem verticals.',
+                    'Assign a sub-admin to manage one of the five ecosystem verticals.',
                     style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
