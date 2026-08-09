@@ -234,6 +234,8 @@ class AppRouter {
     // Sub-Admin login + dashboard — separate auth from super-admin
     if (path == '/sub-admin/login') return null;
     if (path == '/sub-admin/dashboard') return null;
+    // All sub-admin scoped routes (cricket managers, etc.)
+    if (path.startsWith('/sub-admin/')) return null;
     // Cricket Manager Panel — separate auth from sub-admin
     if (path == '/cricket-manager/login') return null;
     if (path == '/cricket-manager/dashboard') return null;
