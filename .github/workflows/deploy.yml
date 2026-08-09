@@ -84,6 +84,28 @@ jobs:
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/nexatrace-queue.service root@135.181.46.27:/etc/systemd/system/nexatrace-queue.service
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "systemctl daemon-reload && systemctl enable nexatrace-queue"
 
+      # --- CRICKET MODULE: Phase 2 Infrastructure ---
+      - name: Deploy Cricket Nginx server block
+        run: |
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket.conf root@135.181.46.27:/etc/nginx/sites-available/cricket
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "nginx -t && echo 'Cricket Nginx config OK'"
+
+      - name: Deploy Cricket SRS systemd unit
+        run: |
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-srs.service root@135.181.46.27:/etc/systemd/system/cricket-srs.service
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "systemctl daemon-reload"
+
+      - name: Deploy Cricket SRS configuration
+        run: |
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /usr/local/srs/conf"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/srs-cricket.conf root@135.181.46.27:/usr/local/srs/conf/cricket.conf
+
+      - name: Deploy Cricket lifecycle scripts
+        run: |
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .scripts/cricket-sleep.sh root@135.181.46.27:/usr/local/bin/cricket-sleep.sh
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .scripts/cricket-wake.sh root@135.181.46.27:/usr/local/bin/cricket-wake.sh
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "chmod +x /usr/local/bin/cricket-sleep.sh /usr/local/bin/cricket-wake.sh"
+
       - name: Server Post-Deployment Tasks
         run: |
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "

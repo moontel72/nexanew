@@ -1,0 +1,28 @@
+[Unit]
+Description=NexaTrace Cricket — SRS Media Server
+Documentation=https://github.com/ossrs/srs
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/usr/local/srs
+ExecStart=/usr/local/srs/objs/srs -c /usr/local/srs/conf/cricket.conf
+ExecStop=/bin/kill -TERM $MAINPID
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=32768
+CPUQuota=200%
+MemoryMax=2G
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+
+# Stop gracefully — allow HLS segments to flush
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
