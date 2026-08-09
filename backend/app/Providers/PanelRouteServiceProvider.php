@@ -49,6 +49,7 @@ class PanelRouteServiceProvider extends ServiceProvider
         'bus_owner'   => 'bus_owner',
         'goods_fleet' => 'goods_fleet',
         'passenger'   => 'passenger',
+        'cricket'     => 'cricket',
     ];
 
     /**

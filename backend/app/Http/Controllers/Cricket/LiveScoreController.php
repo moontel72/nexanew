@@ -1,0 +1,156 @@
+<?php
+
+namespace App\Http\Controllers\Cricket;
+
+use App\Http\Controllers\Controller;
+use App\Http\Middleware\Cricket\CricketManagerAuth;
+use App\Models\Cricket\LiveScore;
+use App\Models\Cricket\ManagerSessionLog;
+use App\Services\Cricket\LiveScoreService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+
+class LiveScoreController extends Controller
+{
+    private LiveScoreService $scoreService;
+
+    public function __construct(LiveScoreService $scoreService)
+    {
+        $this->scoreService = $scoreService;
+    }
+
+    /**
+     * Get current score for a match (REST fallback).
+     * Uses Redis cache with DB fallback. No auth required (public endpoint).
+     */
+    public function show(Request $request, string $matchId): \Illuminate\Http\JsonResponse
+    {
+        // Try Redis cache first
+        $cached = LiveScoreService::getCachedScore($matchId);
+        if ($cached) {
+            return response()->json(['score' => $cached, 'source' => 'cache']);
+        }
+
+        // Fallback to DB
+        $liveScore = LiveScore::where('match_id', $matchId)->first();
+        if (!$liveScore) {
+            return response()->json(['message' => 'No live score available for this match.'], 404);
+        }
+
+        return response()->json(['score' => $liveScore->full_snapshot, 'source' => 'database']);
+    }
+
+    /**
+     * Get full scorecard (innings + commentary + live score).
+     */
+    public function fullScorecard(Request $request, string $matchId): \Illuminate\Http\JsonResponse
+    {
+        $match = \App\Models\Cricket\MatchModel::with([
+            'teamA', 'teamB',
+            'innings.battingTeam', 'innings.bowlingTeam',
+            'liveScore',
+            'commentary' => fn($q) => $q->latest('ball_number')->limit(50),
+        ])->findOrFail($matchId);
+
+        return response()->json([
+            'match' => [
+                'id' => $match->id,
+                'status' => $match->status,
+                'team_a' => $match->teamA?->name,
+                'team_b' => $match->teamB?->name,
+                'venue' => $match->venue,
+                'match_type' => $match->match_type,
+                'overs_per_side' => $match->overs_per_side,
+            ],
+            'innings' => $match->innings->map(fn($i) => [
+                'innings_number' => $i->innings_number,
+                'batting_team' => $i->battingTeam->name ?? '',
+                'bowling_team' => $i->bowlingTeam->name ?? '',
+                'total_runs' => $i->total_runs,
+                'total_wickets' => $i->total_wickets,
+                'total_overs' => $i->total_overs,
+                'status' => $i->status,
+            ]),
+            'live_score' => $match->liveScore?->full_snapshot,
+            'recent_commentary' => $match->commentary->take(20)->map(fn($c) => [
+                'over' => $c->over_number,
+                'text' => $c->commentary_text,
+                'event' => $c->event_type,
+            ]),
+        ]);
+    }
+
+    /**
+     * Update the score — called by Cricket Manager.
+     * This is the core scoring endpoint.
+     */
+    public function update(Request $request, string $matchId): \Illuminate\Http\JsonResponse
+    {
+        $manager = CricketManagerAuth::manager($request);
+
+        $validator = Validator::make($request->all(), [
+            'runs' => 'required|integer|min:0|max:7',
+            'is_wicket' => 'boolean',
+            'wicket_type' => 'nullable|string|in:bowled,caught,lbw,run_out,stumped,hit_wicket',
+            'dismissed_player_id' => 'nullable|uuid|exists:cricket_players,id',
+            'fielder_id' => 'nullable|uuid|exists:cricket_players,id',
+            'extras_type' => 'nullable|string|in:wide,no_ball,bye,leg_bye',
+            'bowler_id' => 'nullable|uuid|exists:cricket_players,id',
+            'batsman_id' => 'nullable|uuid|exists:cricket_players,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $ballData = $validator->validated();
+
+        try {
+            $liveScore = $this->scoreService->processBall($matchId, $ballData, $manager->id);
+
+            // Log action
+            ManagerSessionLog::create([
+                'cricket_manager_id' => $manager->id,
+                'match_id' => $matchId,
+                'action' => 'update_score',
+                'metadata' => ['ball' => $ballData],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'message' => 'Score updated.',
+                'score' => $liveScore->full_snapshot,
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Undo the last ball.
+     */
+    public function undoLastBall(Request $request, string $matchId): \Illuminate\Http\JsonResponse
+    {
+        $manager = CricketManagerAuth::manager($request);
+
+        try {
+            $liveScore = $this->scoreService->undoLastBall($matchId, $manager->id);
+
+            ManagerSessionLog::create([
+                'cricket_manager_id' => $manager->id,
+                'match_id' => $matchId,
+                'action' => 'update_score',
+                'metadata' => ['action' => 'undo_last_ball'],
+                'ip_address' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'message' => 'Last ball undone.',
+                'score' => $liveScore->full_snapshot,
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+}

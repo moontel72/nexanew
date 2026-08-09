@@ -95,6 +95,14 @@ Broadcast::channel('delivery.{deliveryId}', function ($user, string $deliveryId)
     return $user !== null;
 });
 
+// ─── CRICKET CHANNELS ──────────────────────────────────
+
+Broadcast::channel('cricket.match.{matchId}', function ($user, string $matchId) {
+    // Public cricket score data — any user can subscribe
+    // to receive live score updates during a match.
+    return true;
+});
+
 // ─── STORE KEEPER CHANNELS ────────────────────────────
 
 Broadcast::channel('store_keeper.{storeKeeperId}', function ($user, string $storeKeeperId) {

@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             NexaBootstrapSeeder::class,
             FeatureRegistrySeeder::class,
+            CricketFeatureRegistrySeeder::class,
             MasterAdminSeeder::class,
             SubAdminSeeder::class,
             SubscriptionPlansSeeder::class,

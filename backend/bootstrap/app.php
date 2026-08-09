@@ -56,6 +56,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // Wave 3 — Bus Fleet Panel Gate (Defect #1 fix)
             'bus.fleet' => \App\Http\Middleware\BusFleetGate::class,
+
+            // Cricket Module — Cricket Manager Auth (isolated Bearer token guard)
+            'cricket.manager' => \App\Http\Middleware\Cricket\CricketManagerAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
