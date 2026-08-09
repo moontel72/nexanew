@@ -123,7 +123,20 @@ jobs:
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" >> /var/www/traceodd/bus-fleet/version.txt"
 
       # ──────────────────────────────────────────────────────────────
-      # STEP F: Copy Nginx config & reload
+      # STEP F: Build & Deploy Cricket Portal (main_cricket.dart)
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Cricket Portal (main_cricket.dart)
+        run: flutter build web --release --target=lib/main_cricket.dart --base-href "/"
+
+      - name: Deploy Cricket Portal to /cricket-web/
+        run: |
+          cp assets/cricket/manifest.json build/web/manifest.json 2>/dev/null || true
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/cricket-web/
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" >> /var/www/traceodd/cricket-web/version.txt"
+
+      # ──────────────────────────────────────────────────────────────
+      # STEP G: Copy Nginx config & reload
       # ──────────────────────────────────────────────────────────────
 
       - name: Deploy Nginx Configuration
@@ -149,5 +162,7 @@ jobs:
             chmod -R 755 /var/www/traceodd/bus-owner && \
             chown -R www-data:www-data /var/www/traceodd/bus-fleet && \
             chmod -R 755 /var/www/traceodd/bus-fleet && \
+            chown -R www-data:www-data /var/www/traceodd/cricket-web && \
+            chmod -R 755 /var/www/traceodd/cricket-web && \
             systemctl reload nginx
           "
