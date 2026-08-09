@@ -55,20 +55,11 @@ class CricketAuthBloc extends Bloc<CricketAuthEvent, CricketAuthState> {
     emit(CricketAuthLoading());
     try {
       final result = await _repo.login(e.email, e.password);
-      if (result == null || result['token'] == null) {
-        emit(const CricketAuthError('Invalid credentials.'));
-        return;
-      }
       final token = result['token'] as String;
-      // Token already stored by CricketRepository.login() via ApiClient
       final manager = await _repo.getManager();
-      if (manager == null) {
-        emit(const CricketAuthError('Failed to load manager profile.'));
-        return;
-      }
       emit(CricketAuthLoggedIn(manager: manager, token: token));
     } catch (err) {
-      emit(CricketAuthError(err.toString()));
+      emit(CricketAuthError(err.toString().replaceFirst('Exception: ', '')));
     }
   }
 

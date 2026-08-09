@@ -57,43 +57,41 @@ class CricketRepository {
   // Auth
   // ────────────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>?> login(String email, String password) async {
-    try {
-      final res = await _http.post(
-        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
+  Future<Map<String, dynamic>> login(String email, String password) async {
+    final res = await _http.post(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
+    );
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw Exception(
+        body['message'] ?? 'Login failed (HTTP ${res.statusCode})',
       );
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body) as Map<String, dynamic>;
-        final token = data['token']?.toString();
-        if (token != null && token.isNotEmpty) {
-          await _persistToken(token);
-        }
-        return data;
-      }
-      return null;
-    } catch (_) {
-      return null;
     }
+    final token = body['token']?.toString();
+    if (token == null || token.isEmpty) {
+      throw Exception('No token in login response');
+    }
+    await _persistToken(token);
+    return body;
   }
 
-  Future<CricketManagerModel?> getManager() async {
-    try {
-      final res = await _http.get(
-        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/me'),
-        headers: await _authHeaders(),
+  Future<CricketManagerModel> getManager() async {
+    final res = await _http.get(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/me'),
+      headers: await _authHeaders(),
+    );
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw Exception(
+        body['message'] ?? 'Failed to load profile (HTTP ${res.statusCode})',
       );
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body) as Map<String, dynamic>;
-        if (data['manager'] != null) {
-          return CricketManagerModel.fromJson(data['manager']);
-        }
-      }
-      return null;
-    } catch (_) {
-      return null;
     }
+    if (body['manager'] == null) {
+      throw Exception('Profile data missing');
+    }
+    return CricketManagerModel.fromJson(body['manager']);
   }
 
   // ────────────────────────────────────────────────────────────
@@ -103,9 +101,7 @@ class CricketRepository {
   Future<TournamentModel?> getActiveTournament() async {
     try {
       final res = await _http.get(
-        Uri.parse(
-          '${ApiConfig.apiBaseUrl}/cricket/public/tournament/active',
-        ),
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/public/tournament/active'),
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
