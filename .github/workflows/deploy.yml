@@ -137,6 +137,7 @@ jobs:
             grep -q '^REVERB_SERVER_PORT=' .env 2>/dev/null || echo 'REVERB_SERVER_PORT=8080' >> .env
 
             php artisan migrate --force
+            php artisan db:seed --class=CricketFeatureRegistrySeeder --force
             php artisan optimize:clear
             php artisan optimize
 
