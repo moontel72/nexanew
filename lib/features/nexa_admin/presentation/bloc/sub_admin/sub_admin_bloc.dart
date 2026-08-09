@@ -67,7 +67,7 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
         );
         await prefs.setString(
           'sub_admin_vertical',
-          (data['identity_type'] ?? '').toString(),
+          (data['sub_admin_vertical'] ?? data['identity_type'] ?? '').toString(),
         );
         await prefs.setString(
           'sub_admin_email',

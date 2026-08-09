@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/sub_admin/sub_admin_bloc.dart';
@@ -37,14 +38,37 @@ class SubAdminDashboardScreen extends StatelessWidget {
   }
 }
 
-class _DashboardView extends StatelessWidget {
+class _DashboardView extends StatefulWidget {
   const _DashboardView();
+
+  @override
+  State<_DashboardView> createState() => _DashboardViewState();
+}
+
+class _DashboardViewState extends State<_DashboardView> {
+  String _vertical = '';
+  bool _verticalLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVertical();
+  }
+
+  Future<void> _loadVertical() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _vertical = prefs.getString('sub_admin_vertical') ?? '';
+      _verticalLoaded = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SubAdminBloc, SubAdminState>(
       builder: (ctx, state) {
-        if (state.dashStatus == SubAdminViewStatus.loading) {
+        if (state.dashStatus == SubAdminViewStatus.loading ||
+            !_verticalLoaded) {
           return const Scaffold(
             backgroundColor: Color(0xFF0C1D2C),
             body: Center(
@@ -136,8 +160,183 @@ class _DashboardView extends StatelessWidget {
     );
   }
 
-  // ── Main Dashboard View ──
+  // ── Dynamic Main View — delegates to vertical-specific dashboard ──
   Widget _mainView(BuildContext ctx, SubAdminBloc bloc, SubAdminState state) {
+    // Dynamically select dashboard content based on stored vertical code.
+    // New verticals only need a new builder method — no switch statement changes.
+    switch (_vertical) {
+      case 'cricket_ops':
+        return _cricketDashboard(ctx, bloc, state);
+      case 'bus_transit':
+      case 'goods_logistics':
+      case 'commercial_marketplace':
+      case 'financial_auditor':
+      default:
+        return _busDashboard(ctx, bloc, state);
+    }
+  }
+
+  // ── Cricket Operations Dashboard ────────────────────
+  Widget _cricketDashboard(
+    BuildContext ctx,
+    SubAdminBloc bloc,
+    SubAdminState state,
+  ) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF10B981), Color(0xFF059669)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.sports_cricket,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                  const Gap(12),
+                  const Expanded(
+                    child: Text(
+                      'Cricket Operations',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'TOURNAMENT',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Gap(8),
+              const Text(
+                'Manage tournaments, live scoring, streams, sponsors & Cricket Managers',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+        const Gap(20),
+
+        // Quick Actions
+        const Text(
+          'Quick Actions',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const Gap(12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _actionBtn(Icons.tour, 'Manage Tournaments', () {
+              ctx.go('/sub-admin/cricket/tournaments');
+            }),
+            _actionBtn(Icons.sports_cricket, 'Live Matches', () {
+              ctx.go('/sub-admin/cricket/matches');
+            }),
+            _actionBtn(Icons.people, 'Cricket Managers', () {
+              ctx.go('/sub-admin/cricket/managers');
+            }),
+            _actionBtn(Icons.videocam, 'Stream Setup', () {
+              ctx.go('/sub-admin/cricket/streams');
+            }),
+          ],
+        ),
+        const Gap(24),
+
+        // Stats cards
+        Row(
+          children: [
+            _kpiCard('Active Matches', '0', Icons.live_tv, Colors.red),
+            const Gap(12),
+            _kpiCard(
+              'Cricket Managers',
+              '0',
+              Icons.people,
+              const Color(0xFF10B981),
+            ),
+            const Gap(12),
+            _kpiCard('Sponsors', '0', Icons.campaign, Colors.amber),
+          ],
+        ),
+        const Gap(24),
+
+        // Tournament section
+        const Text(
+          'Tournament Status',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const Gap(8),
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1B3A4B),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Center(
+            child: Column(
+              children: [
+                Icon(Icons.event_available, color: Colors.white38, size: 48),
+                Gap(12),
+                Text(
+                  'No active tournament.',
+                  style: TextStyle(color: Colors.white54),
+                ),
+                Gap(4),
+                Text(
+                  'Create a tournament from the Sub-Admin panel to get started.',
+                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Bus Management Dashboard (existing verticals) ────
+  Widget _busDashboard(
+    BuildContext ctx,
+    SubAdminBloc bloc,
+    SubAdminState state,
+  ) {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -997,8 +1196,8 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
               snapMap?['front_partition_px'];
           final double frontBoundary = frontPxRaw is num
               ? (frontPxRaw).toDouble() > 0
-                  ? (frontPxRaw).toDouble()
-                  : 0.0
+                    ? (frontPxRaw).toDouble()
+                    : 0.0
               : 0.0;
           const structural = {
             'driverCabin',
@@ -1038,21 +1237,30 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
               final t = c['type']?.toString() ?? '';
               final y = (c['y'] as num?)?.toDouble();
               if (y != null && firstY != null && (y - firstY!).abs() < 5) {
-                if (t == 'sleeperLower' || t == 'sleeperUpper') { hasBerths = true; break; }
+                if (t == 'sleeperLower' || t == 'sleeperUpper') {
+                  hasBerths = true;
+                  break;
+                }
               }
             }
             final mergeGap = hasBerths ? 80.0 : 20.0;
             final merged = <double>[firstRowXs.first];
             for (int i = 1; i < firstRowXs.length; i++) {
-              if (firstRowXs[i] - merged.last > mergeGap) merged.add(firstRowXs[i]);
+              if (firstRowXs[i] - merged.last > mergeGap)
+                merged.add(firstRowXs[i]);
             }
             double maxGap = 0;
             int gapIdx = 0;
             for (int i = 1; i < merged.length; i++) {
               final gap = merged[i] - merged[i - 1];
-              if (gap > maxGap) { maxGap = gap; gapIdx = i; }
+              if (gap > maxGap) {
+                maxGap = gap;
+                gapIdx = i;
+              }
             }
-            final avgGap = merged.length > 1 ? (merged.last - merged.first) / (merged.length - 1) : 0.0;
+            final avgGap = merged.length > 1
+                ? (merged.last - merged.first) / (merged.length - 1)
+                : 0.0;
             if (maxGap > 30 && merged.length > 1 && maxGap >= avgGap * 1.5) {
               lC = gapIdx;
               rC = merged.length - gapIdx;
@@ -1070,7 +1278,10 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
                 rC = 0;
               } else {
                 for (final x in merged) {
-                  if (x < cw / 2) lC++; else rC++;
+                  if (x < cw / 2)
+                    lC++;
+                  else
+                    rC++;
                 }
               }
             }

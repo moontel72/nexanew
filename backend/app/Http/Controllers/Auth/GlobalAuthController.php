@@ -168,6 +168,7 @@ class GlobalAuthController extends Controller
                 'identity_token'     => $identity->identity_token,
                 'display_name'       => $identity->display_name,
                 'identity_type'      => $identity->identity_type,
+                'sub_admin_vertical' => $this->resolveSubAdminVertical($identity->id),
                 'kyc_tier'           => $identity->kyc_tier,
                 'kyc_status'         => $identity->kyc_status,
                 'claim_id'           => $claim->id,
@@ -346,6 +347,20 @@ class GlobalAuthController extends Controller
                 : 'global_identity',
             'status'              => 'active',
         ]);
+    }
+
+    /**
+     * Dynamically resolve the sub-admin's active vertical code.
+     * Queries sub_admin_assignments JOIN sub_admin_verticals.
+     * Returns null if identity is not a sub-admin or has no active vertical.
+     */
+    private function resolveSubAdminVertical(string $globalIdentityId): ?string
+    {
+        return \Illuminate\Support\Facades\DB::table('sub_admin_assignments')
+            ->join('sub_admin_verticals', 'sub_admin_assignments.vertical_id', '=', 'sub_admin_verticals.id')
+            ->where('sub_admin_assignments.global_identity_id', $globalIdentityId)
+            ->whereNull('sub_admin_assignments.revoked_at')
+            ->value('sub_admin_verticals.code');
     }
 
     private function logFailure(
