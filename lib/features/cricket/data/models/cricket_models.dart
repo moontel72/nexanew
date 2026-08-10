@@ -2,6 +2,9 @@
 ///
 /// All models use factory constructors from JSON for clean API deserialization.
 /// Zero dependency on existing non-cricket models.
+///
+/// NOTE: short_code and tournament_id are nullable in DB since migration 000004.
+/// TeamModel.fromJson handles null short_code with empty string fallback.
 
 class TournamentModel {
   final String id;

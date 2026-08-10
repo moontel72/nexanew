@@ -28,7 +28,10 @@ class PublicMatchController extends Controller
             ->first();
 
         if (!$tournament) {
-            return response()->json(['message' => 'No active tournament.'], 404);
+            return response()->json([
+                'tournament' => null,
+                'message' => 'No active tournament.',
+            ], 200);
         }
 
         return response()->json([
