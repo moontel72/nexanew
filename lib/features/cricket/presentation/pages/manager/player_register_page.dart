@@ -126,7 +126,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.home),
+            icon: const Icon(Icons.home, color: Color(0xFF10B981)),
             tooltip: 'Back to Dashboard',
             onPressed: () =>
                 Navigator.popUntil(context, (route) => route.isFirst),
@@ -374,7 +374,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
       foregroundColor: Colors.white,
       actions: [
         IconButton(
-          icon: const Icon(Icons.home),
+          icon: const Icon(Icons.home, color: Color(0xFF10B981)),
           tooltip: 'Back to Dashboard',
           onPressed: () =>
               Navigator.popUntil(context, (route) => route.isFirst),

@@ -132,8 +132,9 @@ class CricketRepository {
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        if (data['tournament'] != null) {
-          return TournamentModel.fromJson(data['tournament']);
+        final tournament = data['tournament'];
+        if (tournament != null && tournament is Map) {
+          return TournamentModel.fromJson(tournament as Map<String, dynamic>);
         }
       }
       return null;

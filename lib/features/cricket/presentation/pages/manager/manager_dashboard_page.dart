@@ -343,6 +343,37 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
   Widget build(BuildContext context) {
     return BlocBuilder<MatchListBloc, MatchListState>(
       builder: (ctx, state) {
+        if (state is MatchListLoading) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF10B981)),
+          );
+        }
+        if (state is MatchListError) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.cloud_off, size: 48, color: Color(0xFFEF4444)),
+                const SizedBox(height: 12),
+                Text(
+                  state.message.replaceFirst('Exception: ', ''),
+                  style: const TextStyle(color: Color(0xFFBDD8DB)),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                  onPressed: () =>
+                      context.read<MatchListBloc>().add(LoadMatches()),
+                ),
+              ],
+            ),
+          );
+        }
         final matches = state is MatchListLoaded
             ? [...state.liveMatches, ...state.allMatches]
             : <MatchModel>[];
