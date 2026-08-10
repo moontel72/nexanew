@@ -114,6 +114,10 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF0C1D2C),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'Register New Player',
           style: TextStyle(color: Colors.white),
@@ -353,6 +357,14 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
 
   Widget _successView() => Scaffold(
     backgroundColor: const Color(0xFF0C1D2C),
+    appBar: AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => Navigator.pop(context, true),
+      ),
+      backgroundColor: const Color(0xFF0F2936),
+      foregroundColor: Colors.white,
+    ),
     body: Center(
       child: Padding(
         padding: const EdgeInsets.all(32),

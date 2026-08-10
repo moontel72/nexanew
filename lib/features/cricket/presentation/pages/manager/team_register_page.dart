@@ -82,6 +82,10 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF0C1D2C),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'Register New Team',
           style: TextStyle(color: Colors.white),
@@ -237,6 +241,14 @@ class _SuccessView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: const Color(0xFF0C1D2C),
+    appBar: AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: onDone,
+      ),
+      backgroundColor: const Color(0xFF0F2936),
+      foregroundColor: Colors.white,
+    ),
     body: Center(
       child: Padding(
         padding: const EdgeInsets.all(32),

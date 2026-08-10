@@ -21,6 +21,10 @@ class ManagerScorePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: CricketColors.background,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text('Live Scoring'),
         backgroundColor: CricketColors.surface,
         foregroundColor: CricketColors.textPrimary,

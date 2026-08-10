@@ -763,7 +763,10 @@ class CricketRepository {
         final data = jsonDecode(res.body);
         return TeamModel.fromJson(data['team']);
       }
-      return null;
+      final err = _parseBody(res);
+      throw Exception(
+        err?['message'] ?? 'Failed to create team (HTTP ${res.statusCode})',
+      );
     } catch (_) {
       return null;
     }
@@ -812,7 +815,10 @@ class CricketRepository {
         final data = jsonDecode(res.body);
         return PlayerModel.fromJson(data['player']);
       }
-      return null;
+      final err = _parseBody(res);
+      throw Exception(
+        err?['message'] ?? 'Failed to create player (HTTP ${res.statusCode})',
+      );
     } catch (_) {
       return null;
     }

@@ -30,6 +30,10 @@ class _CameraSwitcherPageState extends State<CameraSwitcherPage> {
     return Scaffold(
       backgroundColor: CricketColors.background,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text('Camera Switcher'),
         backgroundColor: CricketColors.surface,
         foregroundColor: CricketColors.textPrimary,

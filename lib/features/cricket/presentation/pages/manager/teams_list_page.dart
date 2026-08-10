@@ -48,6 +48,10 @@ class _TeamsListPageState extends State<TeamsListPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF0C1D2C),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text('Teams', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF0F2936),
         foregroundColor: Colors.white,
