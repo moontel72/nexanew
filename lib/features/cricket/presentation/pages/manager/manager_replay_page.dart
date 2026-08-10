@@ -39,6 +39,10 @@ class _ManagerReplayPageState extends State<ManagerReplayPage> {
     return Scaffold(
       backgroundColor: CricketColors.background,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           '${widget.matchTitle} — VAR Console',
           style: TextStyle(color: CricketColors.textPrimary),
@@ -46,6 +50,12 @@ class _ManagerReplayPageState extends State<ManagerReplayPage> {
         backgroundColor: CricketColors.surface,
         foregroundColor: CricketColors.textPrimary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Back to Dashboard',
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+          ),
           IconButton(
             icon: Icon(Icons.refresh, color: CricketColors.textSecondary),
             onPressed: () => context.read<ReplayBloc>().add(

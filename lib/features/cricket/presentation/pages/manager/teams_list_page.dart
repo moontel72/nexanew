@@ -55,6 +55,14 @@ class _TeamsListPageState extends State<TeamsListPage> {
         title: const Text('Teams', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF0F2936),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Back to Dashboard',
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+        ],
       ),
       body: Column(
         children: [

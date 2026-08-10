@@ -58,13 +58,13 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
           _createdTeam = team;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to create team'),
-            backgroundColor: Color(0xFFEF4444),
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: const Color(0xFFEF4444),
           ),
         );
       }
@@ -92,6 +92,14 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
         ),
         backgroundColor: const Color(0xFF0F2936),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Back to Dashboard',
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -248,6 +256,14 @@ class _SuccessView extends StatelessWidget {
       ),
       backgroundColor: const Color(0xFF0F2936),
       foregroundColor: Colors.white,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.home),
+          tooltip: 'Back to Dashboard',
+          onPressed: () =>
+              Navigator.popUntil(context, (route) => route.isFirst),
+        ),
+      ],
     ),
     body: Center(
       child: Padding(

@@ -37,6 +37,14 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
         title: const Text('Sponsor Management'),
         backgroundColor: CricketColors.surface,
         foregroundColor: CricketColors.textPrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Back to Dashboard',
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+        ],
       ),
       body: BlocBuilder<SponsorBloc, SponsorState>(
         builder: (context, state) => switch (state) {

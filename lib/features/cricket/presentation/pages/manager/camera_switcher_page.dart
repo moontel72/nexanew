@@ -39,6 +39,12 @@ class _CameraSwitcherPageState extends State<CameraSwitcherPage> {
         foregroundColor: CricketColors.textPrimary,
         actions: [
           IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Back to Dashboard',
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => context.read<CameraSwitcherBloc>().add(
               LoadCameras(widget.matchId),

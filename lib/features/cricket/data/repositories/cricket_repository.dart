@@ -110,6 +110,17 @@ class CricketRepository {
     }
   }
 
+  /// Extract the first validation error message from a 422 response.
+  String? _extractValidationErrors(Map<String, dynamic>? body) {
+    if (body == null) return null;
+    final errors = body['errors'];
+    if (errors is Map) {
+      final first = errors.values.first;
+      if (first is List && first.isNotEmpty) return first.first.toString();
+    }
+    return null;
+  }
+
   // ────────────────────────────────────────────────────────────
   // Public Endpoints (no auth)
   // ────────────────────────────────────────────────────────────
@@ -742,34 +753,32 @@ class CricketRepository {
     }
   }
 
-  Future<TeamModel?> createTeam({
+  Future<TeamModel> createTeam({
     required String name,
     String? shortCode,
     String? homeCity,
     String? primaryColor,
   }) async {
-    try {
-      final res = await _http.post(
-        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/teams'),
-        headers: await _authHeaders(),
-        body: jsonEncode({
-          'name': name,
-          if (shortCode != null) 'short_code': shortCode,
-          if (homeCity != null) 'home_city': homeCity,
-          if (primaryColor != null) 'primary_color': primaryColor,
-        }),
-      );
-      if (res.statusCode == 201) {
-        final data = jsonDecode(res.body);
-        return TeamModel.fromJson(data['team']);
-      }
-      final err = _parseBody(res);
-      throw Exception(
-        err?['message'] ?? 'Failed to create team (HTTP ${res.statusCode})',
-      );
-    } catch (_) {
-      return null;
+    final res = await _http.post(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/teams'),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'name': name,
+        if (shortCode != null) 'short_code': shortCode,
+        if (homeCity != null) 'home_city': homeCity,
+        if (primaryColor != null) 'primary_color': primaryColor,
+      }),
+    );
+    if (res.statusCode == 201) {
+      final data = jsonDecode(res.body);
+      return TeamModel.fromJson(data['team']);
     }
+    final err = _parseBody(res);
+    final msg =
+        err?['message'] ??
+        _extractValidationErrors(err) ??
+        'Failed to create team (HTTP ${res.statusCode})';
+    throw Exception(msg);
   }
 
   Future<List<PlayerModel>> getAllPlayers() async {
@@ -790,7 +799,7 @@ class CricketRepository {
     }
   }
 
-  Future<PlayerModel?> createPlayer({
+  Future<PlayerModel> createPlayer({
     required String teamId,
     required String name,
     required String role,
@@ -798,29 +807,27 @@ class CricketRepository {
     String? battingStyle,
     String? bowlingStyle,
   }) async {
-    try {
-      final res = await _http.post(
-        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/players'),
-        headers: await _authHeaders(),
-        body: jsonEncode({
-          'team_id': teamId,
-          'name': name,
-          'role': role,
-          if (jerseyNumber != null) 'jersey_number': jerseyNumber,
-          if (battingStyle != null) 'batting_style': battingStyle,
-          if (bowlingStyle != null) 'bowling_style': bowlingStyle,
-        }),
-      );
-      if (res.statusCode == 201) {
-        final data = jsonDecode(res.body);
-        return PlayerModel.fromJson(data['player']);
-      }
-      final err = _parseBody(res);
-      throw Exception(
-        err?['message'] ?? 'Failed to create player (HTTP ${res.statusCode})',
-      );
-    } catch (_) {
-      return null;
+    final res = await _http.post(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/players'),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'team_id': teamId,
+        'name': name,
+        'role': role,
+        if (jerseyNumber != null) 'jersey_number': jerseyNumber,
+        if (battingStyle != null) 'batting_style': battingStyle,
+        if (bowlingStyle != null) 'bowling_style': bowlingStyle,
+      }),
+    );
+    if (res.statusCode == 201) {
+      final data = jsonDecode(res.body);
+      return PlayerModel.fromJson(data['player']);
     }
+    final err = _parseBody(res);
+    final msg =
+        err?['message'] ??
+        _extractValidationErrors(err) ??
+        'Failed to create player (HTTP ${res.statusCode})';
+    throw Exception(msg);
   }
 }

@@ -28,6 +28,14 @@ class ManagerScorePage extends StatelessWidget {
         title: const Text('Live Scoring'),
         backgroundColor: CricketColors.surface,
         foregroundColor: CricketColors.textPrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Back to Dashboard',
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+        ],
       ),
       body: Column(
         children: [

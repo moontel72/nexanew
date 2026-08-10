@@ -36,6 +36,14 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
         title: const Text('Voice-to-Score'),
         backgroundColor: CricketColors.surface,
         foregroundColor: CricketColors.textPrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Back to Dashboard',
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+        ],
       ),
       body: BlocConsumer<VoiceScoreBloc, VoiceScoreState>(
         listener: (context, state) {

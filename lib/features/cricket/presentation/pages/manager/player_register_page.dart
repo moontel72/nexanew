@@ -94,13 +94,13 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
           _isSubmitting = false;
           _createdPlayer = player;
         });
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to create player'),
-            backgroundColor: Color(0xFFEF4444),
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: const Color(0xFFEF4444),
           ),
         );
       }
@@ -124,6 +124,14 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
         ),
         backgroundColor: const Color(0xFF0F2936),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Back to Dashboard',
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -364,6 +372,14 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
       ),
       backgroundColor: const Color(0xFF0F2936),
       foregroundColor: Colors.white,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.home),
+          tooltip: 'Back to Dashboard',
+          onPressed: () =>
+              Navigator.popUntil(context, (route) => route.isFirst),
+        ),
+      ],
     ),
     body: Center(
       child: Padding(

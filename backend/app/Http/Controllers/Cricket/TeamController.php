@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Cricket;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cricket\Team;
+use App\Models\Cricket\Tournament;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -44,7 +45,17 @@ class TeamController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $team = Team::create($validator->validated());
+        $data = $validator->validated();
+
+        // Auto-assign active tournament if none provided
+        if (empty($data['tournament_id'])) {
+            $activeTournament = Tournament::where('status', 'active')->first();
+            if ($activeTournament) {
+                $data['tournament_id'] = $activeTournament->id;
+            }
+        }
+
+        $team = Team::create($data);
 
         return response()->json([
             'message' => 'Team created.',
