@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Cricket;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cricket\CricketManager;
+use App\Models\Cricket\ManagerSessionLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -46,7 +48,7 @@ class CricketManagerController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
-            'password' => $request->password,
+            'password' => Hash::make($request->password),
             'permissions' => $request->permissions ?? [
                 'can_manage_scores' => true,
                 'can_manage_streams' => false,
@@ -87,7 +89,11 @@ class CricketManagerController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $manager->update($validator->validated());
+        $data = $validator->validated();
+        if (isset($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        }
+        $manager->update($data);
 
         return response()->json([
             'message' => 'Cricket Manager updated.',
