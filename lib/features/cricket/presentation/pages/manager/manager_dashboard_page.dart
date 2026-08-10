@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
 import '../../blocs/match_list/match_list_bloc.dart';
 import '../../blocs/tournament_hub/tournament_hub_bloc.dart';
+import '../../blocs/live_score/live_score_bloc.dart';
+import '../../blocs/camera_switcher/camera_switcher_bloc.dart';
+import '../../blocs/voice_score/voice_score_bloc.dart';
+import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../../data/repositories/cricket_repository.dart';
 import 'manager_login_page.dart';
@@ -166,8 +170,12 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              ManagerScorePage(matchId: _selectedMatchId!),
+                          builder: (_) => RepositoryProvider.value(
+                            value: RepositoryProvider.of<CricketRepository>(
+                              context,
+                            ),
+                            child: ManagerScorePage(matchId: _selectedMatchId!),
+                          ),
                         ),
                       ),
                     ),
@@ -178,8 +186,16 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              CameraSwitcherPage(matchId: _selectedMatchId!),
+                          builder: (_) => BlocProvider(
+                            create: (_) => CameraSwitcherBloc(
+                              repo: RepositoryProvider.of<CricketRepository>(
+                                context,
+                              ),
+                            ),
+                            child: CameraSwitcherPage(
+                              matchId: _selectedMatchId!,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -190,8 +206,14 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              VoiceScorePage(matchId: _selectedMatchId!),
+                          builder: (_) => BlocProvider(
+                            create: (_) => VoiceScoreBloc(
+                              repo: RepositoryProvider.of<CricketRepository>(
+                                context,
+                              ),
+                            ),
+                            child: VoiceScorePage(matchId: _selectedMatchId!),
+                          ),
                         ),
                       ),
                     ),
@@ -202,8 +224,16 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              SponsorManagePage(matchId: _selectedMatchId!),
+                          builder: (_) => BlocProvider(
+                            create: (_) => SponsorBloc(
+                              repo: RepositoryProvider.of<CricketRepository>(
+                                context,
+                              ),
+                            ),
+                            child: SponsorManagePage(
+                              matchId: _selectedMatchId!,
+                            ),
+                          ),
                         ),
                       ),
                     ),

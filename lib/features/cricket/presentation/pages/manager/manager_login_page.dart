@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
+import '../../blocs/match_list/match_list_bloc.dart';
+import '../../blocs/tournament_hub/tournament_hub_bloc.dart';
+import '../../blocs/live_score/live_score_bloc.dart';
+import '../../blocs/camera_switcher/camera_switcher_bloc.dart';
+import '../../blocs/voice_score/voice_score_bloc.dart';
+import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../../data/repositories/cricket_repository.dart';
 import 'manager_dashboard_page.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
@@ -88,10 +94,35 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                   BlocConsumer<CricketAuthBloc, CricketAuthState>(
                     listener: (context, state) {
                       if (state is CricketAuthLoggedIn) {
+                        final repo = RepositoryProvider.of<CricketRepository>(
+                          context,
+                        );
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
-                            builder: (_) => BlocProvider.value(
-                              value: context.read<CricketAuthBloc>(),
+                            builder: (_) => MultiBlocProvider(
+                              providers: [
+                                BlocProvider.value(
+                                  value: context.read<CricketAuthBloc>(),
+                                ),
+                                BlocProvider(
+                                  create: (_) => MatchListBloc(repo: repo),
+                                ),
+                                BlocProvider(
+                                  create: (_) => TournamentHubBloc(repo: repo),
+                                ),
+                                BlocProvider(
+                                  create: (_) => LiveScoreBloc(repo: repo),
+                                ),
+                                BlocProvider(
+                                  create: (_) => CameraSwitcherBloc(repo: repo),
+                                ),
+                                BlocProvider(
+                                  create: (_) => VoiceScoreBloc(repo: repo),
+                                ),
+                                BlocProvider(
+                                  create: (_) => SponsorBloc(repo: repo),
+                                ),
+                              ],
                               child: const ManagerDashboardPage(),
                             ),
                           ),

@@ -40,6 +40,10 @@ import 'package:trace_odd/features/cricket/presentation/blocs/tournament_hub/tou
 import 'package:trace_odd/features/cricket/presentation/blocs/player_career/player_career_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/match_analytics/match_analytics_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/match_list/match_list_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/live_score/live_score_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/camera_switcher/camera_switcher_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/voice_score/voice_score_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/sponsor/sponsor_bloc.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
@@ -359,18 +363,37 @@ class AppRouter {
     GoRoute(
       path: '/cricket-manager/login',
       name: 'cricket_manager_login',
-      builder: (context, state) => BlocProvider(
-        create: (_) => CricketAuthBloc(repo: CricketRepository()),
-        child: const ManagerLoginPage(),
+      builder: (context, state) => RepositoryProvider(
+        create: (_) => CricketRepository(),
+        child: BlocProvider(
+          create: (ctx) => CricketAuthBloc(
+            repo: RepositoryProvider.of<CricketRepository>(ctx),
+          ),
+          child: const ManagerLoginPage(),
+        ),
       ),
     ),
     GoRoute(
       path: '/cricket-manager/dashboard',
       name: 'cricket_manager_dashboard',
-      builder: (context, state) => BlocProvider(
-        create: (_) => CricketAuthBloc(repo: CricketRepository()),
-        child: const ManagerDashboardPage(),
-      ),
+      builder: (context, state) {
+        final repo = CricketRepository();
+        return RepositoryProvider.value(
+          value: repo,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider(create: (_) => CricketAuthBloc(repo: repo)),
+              BlocProvider(create: (_) => MatchListBloc(repo: repo)),
+              BlocProvider(create: (_) => TournamentHubBloc(repo: repo)),
+              BlocProvider(create: (_) => LiveScoreBloc(repo: repo)),
+              BlocProvider(create: (_) => CameraSwitcherBloc(repo: repo)),
+              BlocProvider(create: (_) => VoiceScoreBloc(repo: repo)),
+              BlocProvider(create: (_) => SponsorBloc(repo: repo)),
+            ],
+            child: const ManagerDashboardPage(),
+          ),
+        );
+      },
     ),
     // ── Cricket Public Viewer Routes ──
     GoRoute(
