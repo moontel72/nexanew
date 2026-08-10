@@ -379,7 +379,7 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                   child: Text(
                     '$ta vs $tb (${m.status})',
                     style: TextStyle(
-                      color: m.isLive ? Colors.red : Colors.white,
+                      color: m.isLive ? const Color(0xFFEF4444) : Colors.white,
                     ),
                   ),
                 );
@@ -778,7 +778,7 @@ class _TournamentTab extends StatelessWidget {
                           style: TextStyle(
                             color: e.nrr >= 0
                                 ? const Color(0xFF10B981)
-                                : Colors.red,
+                                : const Color(0xFFEF4444),
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
