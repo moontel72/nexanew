@@ -151,6 +151,49 @@ class VoiceScoreController extends Controller
     }
 
     /**
+     * Health check — verify DeepSeek API key works.
+     */
+    public function health(): \Illuminate\Http\JsonResponse
+    {
+        $apiKey = config('services.deepseek.api_key');
+
+        if (empty($apiKey)) {
+            return response()->json(['status' => 'error', 'message' => 'No API key configured.'], 500);
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(5)
+                ->withToken($apiKey)
+                ->post('https://api.deepseek.com/v1/chat/completions', [
+                    'model' => 'deepseek-chat',
+                    'messages' => [
+                        ['role' => 'user', 'content' => 'Say "DeepSeek API is working!"'],
+                    ],
+                    'max_tokens' => 20,
+                ]);
+
+            if ($response->successful()) {
+                return response()->json([
+                    'status' => 'ok',
+                    'message' => 'DeepSeek API connected successfully.',
+                    'response' => $response->json('choices.0.message.content'),
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'API returned HTTP ' . $response->status(),
+                'body' => $response->body(),
+            ], 500);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Call DeepSeek V4 Pro API to parse cricket score voice input.
      *
      * The system prompt instructs the AI to extract structured cricket

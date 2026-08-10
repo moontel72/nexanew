@@ -71,7 +71,10 @@ Route::prefix('api/v1/cricket/public')->group(function (): void {
     Route::get('best-xi', [BestXiController::class, 'index']);
     Route::get('best-xi/{id}', [BestXiController::class, 'show']);
 
-    // Public Replays
+    // AI Health Check
+    Route::get('voice-score/health', [VoiceScoreController::class, 'health']);
+
+    // Public replays
     Route::get('matches/{matchId}/replays', [ReplayController::class, 'publicReplays']);
     Route::get('replays/{clipId}/stream', [ReplayController::class, 'publicStream']);
 });
@@ -109,6 +112,7 @@ Route::prefix('api/v1/cricket/manager')
         Route::delete('matches/{matchId}/streams/{streamId}', [StreamController::class, 'destroy']);
 
         // Voice-to-Score AI
+        Route::get('voice-score/health', [VoiceScoreController::class, 'health']);
         Route::post('voice-score/process', [VoiceScoreController::class, 'process']);
         Route::post('voice-score/{logId}/apply', [VoiceScoreController::class, 'apply']);
         Route::post('voice-score/{logId}/reject', [VoiceScoreController::class, 'reject']);
