@@ -367,6 +367,199 @@ class CricketRepository {
     }
   }
 
+  // ────────────────────────────────────────────────────────────
+  // V2 — Tournament Hub & Analytics
+  // ────────────────────────────────────────────────────────────
+
+  Future<List<PointsTableEntry>> getStandings(String tournamentId) async {
+    try {
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/public/tournaments/$tournamentId/standings',
+        ),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['standings'] as List)
+            .map((s) => PointsTableEntry.fromJson(s))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<Map<String, List<TopPerformer>>> getTopPerformers(
+    String tournamentId,
+  ) async {
+    try {
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/public/tournaments/$tournamentId/top-performers',
+        ),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return {
+          'most_runs': (data['most_runs'] as List)
+              .map((p) => TopPerformer.fromJson(p))
+              .toList(),
+          'most_wickets': (data['most_wickets'] as List)
+              .map((p) => TopPerformer.fromJson(p))
+              .toList(),
+        };
+      }
+      return {'most_runs': [], 'most_wickets': []};
+    } catch (_) {
+      return {'most_runs': [], 'most_wickets': []};
+    }
+  }
+
+  Future<PlayerCareerModel?> getPlayerCareer(String playerId) async {
+    try {
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/public/players/$playerId/career',
+        ),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['career'] != null) {
+          return PlayerCareerModel.fromJson(data['career']);
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<WagonWheelShot>> getWagonWheel(
+    String matchId, {
+    String? batsmanId,
+  }) async {
+    try {
+      var url =
+          '${ApiConfig.apiBaseUrl}/cricket/public/matches/$matchId/wagon-wheel';
+      if (batsmanId != null) url += '?batsman_id=$batsmanId';
+      final res = await _http.get(Uri.parse(url));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['shots'] as List)
+            .map((s) => WagonWheelShot.fromJson(s))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<RunDistribution?> getRunDistribution(String matchId) async {
+    try {
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/public/matches/$matchId/run-distribution',
+        ),
+      );
+      if (res.statusCode == 200) {
+        return RunDistribution.fromJson(jsonDecode(res.body));
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<ConcededRunsBreakdown?> getConcededRuns(
+    String matchId, {
+    String? bowlerId,
+  }) async {
+    try {
+      var url =
+          '${ApiConfig.apiBaseUrl}/cricket/public/matches/$matchId/conceded-runs';
+      if (bowlerId != null) url += '?bowler_id=$bowlerId';
+      final res = await _http.get(Uri.parse(url));
+      if (res.statusCode == 200) {
+        return ConcededRunsBreakdown.fromJson(jsonDecode(res.body));
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<ClubModel?> getClub(String identifier) async {
+    try {
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/public/clubs/$identifier'),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return ClubModel.fromJson(data['club']);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<ClubModel>> getClubs() async {
+    try {
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/public/clubs'),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['clubs'] as List)
+            .map((c) => ClubModel.fromJson(c))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<BestXiModel?> getBestXi(String id) async {
+    try {
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/public/best-xi/$id'),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return BestXiModel.fromJson(data['best_xi']);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<BestXiModel>> getBestXiList({
+    String? tournamentId,
+    String? matchId,
+  }) async {
+    try {
+      var url = '${ApiConfig.apiBaseUrl}/cricket/public/best-xi';
+      final params = <String>[];
+      if (tournamentId != null) params.add('tournament_id=$tournamentId');
+      if (matchId != null) params.add('match_id=$matchId');
+      if (params.isNotEmpty) url += '?${params.join('&')}';
+      final res = await _http.get(Uri.parse(url));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['best_xi'] as List)
+            .map((x) => BestXiModel.fromJson(x))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   void dispose() {
     _scoreController.close();
     _http.close();

@@ -29,8 +29,19 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/add
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_login_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/sub_admin_dashboard.dart';
 import 'package:trace_odd/features/cricket/presentation/pages/manager/manager_login_page.dart';
+import 'package:trace_odd/features/cricket/presentation/pages/manager/manager_dashboard_page.dart';
+import 'package:trace_odd/features/cricket/presentation/pages/public/tournament_hub_page.dart';
+import 'package:trace_odd/features/cricket/presentation/pages/public/player_profile_page.dart';
+import 'package:trace_odd/features/cricket/presentation/pages/public/match_analytics_page.dart';
+import 'package:trace_odd/features/cricket/presentation/pages/public/best_xi_page.dart';
+import 'package:trace_odd/features/cricket/presentation/pages/public/club_home_page.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/cricket_auth/cricket_auth_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/tournament_hub/tournament_hub_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/player_career/player_career_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/match_analytics/match_analytics_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/match_list/match_list_bloc.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
+import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_list_page.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_add_page.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet_dashboard_screen.dart';
@@ -239,9 +250,8 @@ class AppRouter {
     if (path == '/sub-admin/dashboard') return null;
     // All sub-admin scoped routes (cricket managers, etc.)
     if (path.startsWith('/sub-admin/')) return null;
-    // Cricket Manager Panel — separate auth from sub-admin
-    if (path == '/cricket-manager/login') return null;
-    if (path == '/cricket-manager/dashboard') return null;
+    // Cricket Public Viewer — no auth required
+    if (path.startsWith('/cricket/')) return null;
     // Bus Owner login — public access for third-party bus owners
     if (path == '/bus-owner/login') return null;
     // Bus Owner dashboard — owner auth is managed by ApiClient token, not super-admin session
@@ -358,6 +368,88 @@ class AppRouter {
         create: (_) => CricketAuthBloc(repo: CricketRepository()),
         child: const ManagerDashboardPage(),
       ),
+    ),
+    // ── Cricket Public Viewer Routes ──
+    GoRoute(
+      path: '/cricket/tournament/:tournamentId',
+      name: 'cricket_tournament_hub',
+      builder: (context, state) {
+        final tid = state.pathParameters['tournamentId']!;
+        final name = state.uri.queryParameters['name'] ?? 'Tournament';
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => TournamentHubBloc(repo: CricketRepository()),
+            ),
+            BlocProvider(
+              create: (_) => MatchListBloc(repo: CricketRepository()),
+            ),
+          ],
+          child: TournamentHubPage(tournamentId: tid, tournamentName: name),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/cricket/player/:playerId',
+      name: 'cricket_player_profile',
+      builder: (context, state) {
+        final pid = state.pathParameters['playerId']!;
+        final name = state.uri.queryParameters['name'] ?? 'Player';
+        return BlocProvider(
+          create: (_) => PlayerCareerBloc(repo: CricketRepository()),
+          child: PlayerProfilePage(playerId: pid, playerName: name),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/cricket/match/:matchId/analytics',
+      name: 'cricket_match_analytics',
+      builder: (context, state) {
+        final mid = state.pathParameters['matchId']!;
+        final title = state.uri.queryParameters['title'] ?? 'Match';
+        return BlocProvider(
+          create: (_) => MatchAnalyticsBloc(repo: CricketRepository()),
+          child: MatchAnalyticsPage(matchId: mid, matchTitle: title),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/cricket/club/:clubId',
+      name: 'cricket_club_home',
+      builder: (context, state) {
+        final cid = state.pathParameters['clubId']!;
+        return FutureBuilder<ClubModel?>(
+          future: CricketRepository().getClub(cid),
+          builder: (ctx, snap) {
+            if (snap.hasData && snap.data != null) {
+              return ClubHomePage(club: snap.data!);
+            }
+            return const Scaffold(
+              backgroundColor: Color(0xFF0A0E21),
+              body: Center(child: CircularProgressIndicator()),
+            );
+          },
+        );
+      },
+    ),
+    GoRoute(
+      path: '/cricket/best-xi/:xiId',
+      name: 'cricket_best_xi',
+      builder: (context, state) {
+        final xid = state.pathParameters['xiId']!;
+        return FutureBuilder<BestXiModel?>(
+          future: CricketRepository().getBestXi(xid),
+          builder: (ctx, snap) {
+            if (snap.hasData && snap.data != null) {
+              return BestXiPage(bestXi: snap.data!);
+            }
+            return const Scaffold(
+              backgroundColor: Color(0xFF0A0E21),
+              body: Center(child: CircularProgressIndicator()),
+            );
+          },
+        );
+      },
     ),
     GoRoute(
       path: '/bus-owner/login',

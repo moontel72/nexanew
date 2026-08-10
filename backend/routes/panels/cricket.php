@@ -1,10 +1,15 @@
 <?php
 
+use App\Http\Controllers\Cricket\BestXiController;
+use App\Http\Controllers\Cricket\ClubController;
 use App\Http\Controllers\Cricket\CricketManagerAuthController;
 use App\Http\Controllers\Cricket\CricketManagerController;
 use App\Http\Controllers\Cricket\LiveScoreController;
+use App\Http\Controllers\Cricket\MatchAnalyticsController;
 use App\Http\Controllers\Cricket\MatchController;
+use App\Http\Controllers\Cricket\PlayerCareerController;
 use App\Http\Controllers\Cricket\PlayerController;
+use App\Http\Controllers\Cricket\PointsTableController;
 use App\Http\Controllers\Cricket\PublicMatchController;
 use App\Http\Controllers\Cricket\SponsorController;
 use App\Http\Controllers\Cricket\StreamController;
@@ -41,6 +46,29 @@ Route::prefix('api/v1/cricket/public')->group(function (): void {
     Route::get('matches/{matchId}/stream', [PublicMatchController::class, 'streamUrl']);
     Route::get('matches/{matchId}/sponsors', [PublicMatchController::class, 'matchSponsors']);
     Route::get('teams', [PublicMatchController::class, 'teams']);
+
+    // Tournament Hub
+    Route::get('tournaments/{tournamentId}/standings', [PointsTableController::class, 'standings']);
+    Route::get('tournaments/{tournamentId}/top-performers', [PointsTableController::class, 'topPerformers']);
+
+    // Player Career
+    Route::get('players/{playerId}/career', [PlayerCareerController::class, 'show']);
+    Route::get('players/leaderboard', [PlayerCareerController::class, 'leaderboard']);
+
+    // Match Analytics
+    Route::get('matches/{matchId}/wagon-wheel', [MatchAnalyticsController::class, 'wagonWheel']);
+    Route::get('matches/{matchId}/run-distribution', [MatchAnalyticsController::class, 'runDistribution']);
+    Route::get('matches/{matchId}/side-split', [MatchAnalyticsController::class, 'sideSplit']);
+    Route::get('matches/{matchId}/conceded-runs', [MatchAnalyticsController::class, 'concededRuns']);
+    Route::get('matches/{matchId}/partnerships', [MatchAnalyticsController::class, 'partnerships']);
+
+    // Clubs
+    Route::get('clubs', [ClubController::class, 'index']);
+    Route::get('clubs/{identifier}', [ClubController::class, 'show']);
+
+    // Best XI
+    Route::get('best-xi', [BestXiController::class, 'index']);
+    Route::get('best-xi/{id}', [BestXiController::class, 'show']);
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -142,4 +170,20 @@ Route::prefix('api/v1/cricket/admin')
         Route::get('matches/{matchId}/sponsors', [SponsorController::class, 'matchSponsors']);
         Route::post('matches/{matchId}/sponsors', [SponsorController::class, 'assignToMatch']);
         Route::delete('matches/{matchId}/sponsors/{assignmentId}', [SponsorController::class, 'removeFromMatch']);
+
+        // Points Table — Admin
+        Route::post('tournaments/{tournamentId}/standings/recompute', [PointsTableController::class, 'recompute']);
+
+        // Player Career — Admin
+        Route::post('players/{playerId}/career/rebuild', [PlayerCareerController::class, 'rebuild']);
+
+        // Clubs — Admin CRUD
+        Route::post('clubs', [ClubController::class, 'store']);
+        Route::put('clubs/{id}', [ClubController::class, 'update']);
+        Route::delete('clubs/{id}', [ClubController::class, 'destroy']);
+
+        // Best XI — Admin CRUD
+        Route::post('best-xi', [BestXiController::class, 'store']);
+        Route::put('best-xi/{id}', [BestXiController::class, 'update']);
+        Route::delete('best-xi/{id}', [BestXiController::class, 'destroy']);
     });

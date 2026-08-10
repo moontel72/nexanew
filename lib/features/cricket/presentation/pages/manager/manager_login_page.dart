@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
-import 'manager_score_page.dart';
-import 'camera_switcher_page.dart';
-import 'voice_score_page.dart';
-import 'sponsor_manage_page.dart';
+import 'manager_dashboard_page.dart';
 
 /// Cricket Manager login page — isolated Bearer token auth.
 class ManagerLoginPage extends StatefulWidget {
@@ -170,130 +167,6 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
       borderSide: BorderSide.none,
-    ),
-  );
-}
-
-/// Manager dashboard — navigation hub after login.
-class ManagerDashboardPage extends StatelessWidget {
-  const ManagerDashboardPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<CricketAuthBloc, CricketAuthState>(
-      builder: (context, state) {
-        final manager = state is CricketAuthLoggedIn ? state.manager : null;
-        return Scaffold(
-          backgroundColor: const Color(0xFF0A0E21),
-          appBar: AppBar(
-            title: Text(manager?.name ?? 'Dashboard'),
-            backgroundColor: const Color(0xFF1A1E31),
-            foregroundColor: Colors.white,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () {
-                  context.read<CricketAuthBloc>().add(CricketLogout());
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const ManagerLoginPage()),
-                  );
-                },
-              ),
-            ],
-          ),
-          body: GridView.count(
-            crossAxisCount: 2,
-            padding: const EdgeInsets.all(16),
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            children: [
-              _DashboardCard(
-                icon: Icons.scoreboard,
-                label: 'Live Scoring',
-                color: Colors.green,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ManagerScorePage(matchId: ''),
-                  ),
-                ),
-              ),
-              _DashboardCard(
-                icon: Icons.videocam,
-                label: 'Cameras',
-                color: Colors.blue,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const CameraSwitcherPage(matchId: ''),
-                  ),
-                ),
-              ),
-              _DashboardCard(
-                icon: Icons.mic,
-                label: 'Voice Score',
-                color: Colors.orange,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const VoiceScorePage(matchId: ''),
-                  ),
-                ),
-              ),
-              _DashboardCard(
-                icon: Icons.campaign,
-                label: 'Sponsors',
-                color: Colors.purple,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SponsorManagePage(matchId: ''),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _DashboardCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _DashboardCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1E31),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 48, color: color),
-          const SizedBox(height: 12),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
     ),
   );
 }
