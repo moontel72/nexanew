@@ -50,6 +50,9 @@ class TeamModel {
   final String shortCode;
   final String? logoUrl;
   final String? primaryColor;
+  final String? teamCode;
+  final String? homeCity;
+  final int? playerCount;
 
   const TeamModel({
     required this.id,
@@ -57,6 +60,9 @@ class TeamModel {
     required this.shortCode,
     this.logoUrl,
     this.primaryColor,
+    this.teamCode,
+    this.homeCity,
+    this.playerCount,
   });
 
   factory TeamModel.fromJson(Map<String, dynamic> json) => TeamModel(
@@ -65,6 +71,9 @@ class TeamModel {
     shortCode: json['short_code'] as String,
     logoUrl: json['logo_url'] as String?,
     primaryColor: json['primary_color'] as String?,
+    teamCode: json['team_code'] as String?,
+    homeCity: json['home_city'] as String?,
+    playerCount: json['player_count'] as int?,
   );
 }
 
@@ -862,4 +871,54 @@ class BestXiPlayer {
     y: (json['y'] as num?)?.toDouble() ?? 0.5,
     rating: (json['rating'] as num?)?.toDouble(),
   );
+}
+
+class PlayerModel {
+  final String id;
+  final String name;
+  final String? playerCode;
+  final String? teamId;
+  final String? teamName;
+  final String? teamShortCode;
+  final String? jerseyNumber;
+  final String role;
+  final String? battingStyle;
+  final String? bowlingStyle;
+  final String? photoUrl;
+  final bool isCaptain;
+  final bool isWicketKeeper;
+
+  const PlayerModel({
+    required this.id,
+    required this.name,
+    this.playerCode,
+    this.teamId,
+    this.teamName,
+    this.teamShortCode,
+    this.jerseyNumber,
+    required this.role,
+    this.battingStyle,
+    this.bowlingStyle,
+    this.photoUrl,
+    this.isCaptain = false,
+    this.isWicketKeeper = false,
+  });
+
+  factory PlayerModel.fromJson(Map<String, dynamic> json) => PlayerModel(
+    id: json['id'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+    playerCode: json['player_code'] as String?,
+    teamId: json['team_id'] as String?,
+    teamName: json['team']?['name'] as String?,
+    teamShortCode: json['team']?['short_code'] as String?,
+    jerseyNumber: json['jersey_number'] as String?,
+    role: json['role'] as String? ?? 'batsman',
+    battingStyle: json['batting_style'] as String?,
+    bowlingStyle: json['bowling_style'] as String?,
+    photoUrl: json['photo_url'] as String?,
+    isCaptain: json['is_captain'] as bool? ?? false,
+    isWicketKeeper: json['is_wicket_keeper'] as bool? ?? false,
+  );
+
+  String get roleDisplay => role.replaceAll('_', ' ').toUpperCase();
 }

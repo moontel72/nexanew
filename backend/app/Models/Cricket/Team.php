@@ -19,6 +19,7 @@ class Team extends Model
         'id',
         'tournament_id',
         'name',
+        'team_code',
         'short_code',
         'logo_url',
         'captain_name',
@@ -34,7 +35,19 @@ class Team extends Model
             if (empty($team->id)) {
                 $team->id = (string) Str::orderedUuid();
             }
+            if (empty($team->team_code)) {
+                $team->team_code = self::generateUniqueCode();
+            }
         });
+    }
+
+    private static function generateUniqueCode(): string
+    {
+        do {
+            $code = str_pad((string) random_int(0, 999), 3, '0', STR_PAD_LEFT);
+        } while (self::where('team_code', $code)->withTrashed()->exists());
+
+        return $code;
     }
 
     public function tournament()

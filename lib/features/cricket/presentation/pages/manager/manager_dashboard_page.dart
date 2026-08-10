@@ -15,6 +15,9 @@ import 'manager_score_page.dart';
 import 'camera_switcher_page.dart';
 import 'voice_score_page.dart';
 import 'sponsor_manage_page.dart';
+import 'team_register_page.dart';
+import 'teams_list_page.dart';
+import 'player_register_page.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 
 /// Manager Dashboard — 3D Pencil Sidebar layout matching Sub-Admin panel design.
@@ -506,74 +509,61 @@ class _TeamManagerTab extends StatelessWidget {
         icon: Icons.groups,
         title: 'Team Manager',
         subtitle:
-            'Manage team rosters, player assignments, captain designations, and jersey numbers.',
+            'Register teams, manage players, assign captains, and set jersey numbers.',
         colors: const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
       ),
       const SizedBox(height: 20),
       Missile3DButton(
-        label: 'Roster Upload',
-        icon: Icons.upload_file,
+        label: 'Register New Team',
+        icon: Icons.group_add,
         color: const Color(0xFF2563EB),
-        subtitle: 'Import team rosters from CSV/JSON',
-        onTap: () => _snack(context, 'Roster Upload — coming in next release'),
-      ),
-      Missile3DButton(
-        label: 'Player Management',
-        icon: Icons.person_add,
-        color: const Color(0xFF3B82F6),
-        subtitle: 'Add, edit, or remove players from teams',
-        onTap: () =>
-            _snack(context, 'Player Management — coming in next release'),
-      ),
-      Missile3DButton(
-        label: 'Captain & Wicket-Keeper',
-        icon: Icons.assignment_ind,
-        color: const Color(0xFF6366F1),
-        subtitle: 'Assign team captains and wicket-keepers',
-        onTap: () => _dialog(
+        subtitle: 'Create a team with auto-generated 3-digit code',
+        onTap: () => Navigator.push(
           context,
-          'Captain & Wicket-Keeper',
-          'Use the Sub-Admin panel to assign captains and wicket-keepers.\n\nNavigate to Admin → Players to manage roles.',
+          MaterialPageRoute(builder: (_) => const TeamRegisterPage()),
         ),
       ),
       Missile3DButton(
-        label: 'Jersey Numbers',
-        icon: Icons.badge,
-        color: const Color(0xFF8B5CF6),
-        subtitle: 'Assign jersey numbers to players',
-        onTap: () => _dialog(
+        label: 'View All Teams',
+        icon: Icons.list_alt,
+        color: const Color(0xFF3B82F6),
+        subtitle: 'Browse, search, and manage teams',
+        onTap: () => Navigator.push(
           context,
-          'Jersey Numbers',
-          'Use the Sub-Admin panel to assign jersey numbers.\n\nNavigate to Admin → Players → Edit to set jersey numbers.',
+          MaterialPageRoute(builder: (_) => const TeamsListPage()),
+        ),
+      ),
+      Missile3DButton(
+        label: 'Register New Player',
+        icon: Icons.person_add,
+        color: const Color(0xFF6366F1),
+        subtitle: 'Add a player with auto-generated 3-digit code',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PlayerRegisterPage()),
+        ),
+      ),
+      Missile3DButton(
+        label: 'View All Players',
+        icon: Icons.people,
+        color: const Color(0xFF8B5CF6),
+        subtitle: 'Browse players by team',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TeamsListPage()),
         ),
       ),
       Missile3DButton(
         label: 'Team Logos & Photos',
         icon: Icons.image,
         color: const Color(0xFFA855F7),
-        subtitle: 'Upload team logos and player photos',
-        onTap: () => _snack(context, 'Team Logos — coming in next release'),
+        subtitle: 'Manage team logos and player photos',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TeamsListPage()),
+        ),
       ),
     ],
-  );
-
-  void _snack(BuildContext c, String msg) =>
-      ScaffoldMessenger.of(c).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: const Color(0xFFF59E0B)),
-      );
-  void _dialog(BuildContext c, String t, String b) => showDialog(
-    context: c,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: const Color(0xFF0F2936),
-      title: Text(t, style: const TextStyle(color: Colors.white)),
-      content: Text(b, style: const TextStyle(color: Color(0xFFBDD8DB))),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('OK'),
-        ),
-      ],
-    ),
   );
 }
 

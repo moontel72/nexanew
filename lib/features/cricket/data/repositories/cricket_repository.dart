@@ -719,4 +719,102 @@ class CricketRepository {
       return [];
     }
   }
+
+  // ────────────────────────────────────────────────────────────
+  // V4 — Team & Player Management
+  // ────────────────────────────────────────────────────────────
+
+  Future<List<TeamModel>> getAllTeams() async {
+    try {
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/teams/all'),
+        headers: await _authHeaders(),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['data'] as List)
+            .map((t) => TeamModel.fromJson(t))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<TeamModel?> createTeam({
+    required String name,
+    String? shortCode,
+    String? homeCity,
+    String? primaryColor,
+  }) async {
+    try {
+      final res = await _http.post(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/teams'),
+        headers: await _authHeaders(),
+        body: jsonEncode({
+          'name': name,
+          if (shortCode != null) 'short_code': shortCode,
+          if (homeCity != null) 'home_city': homeCity,
+          if (primaryColor != null) 'primary_color': primaryColor,
+        }),
+      );
+      if (res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        return TeamModel.fromJson(data['team']);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<PlayerModel>> getAllPlayers() async {
+    try {
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/players/all'),
+        headers: await _authHeaders(),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['data'] as List)
+            .map((p) => PlayerModel.fromJson(p))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<PlayerModel?> createPlayer({
+    required String teamId,
+    required String name,
+    required String role,
+    String? jerseyNumber,
+    String? battingStyle,
+    String? bowlingStyle,
+  }) async {
+    try {
+      final res = await _http.post(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/players'),
+        headers: await _authHeaders(),
+        body: jsonEncode({
+          'team_id': teamId,
+          'name': name,
+          'role': role,
+          if (jerseyNumber != null) 'jersey_number': jerseyNumber,
+          if (battingStyle != null) 'batting_style': battingStyle,
+          if (bowlingStyle != null) 'bowling_style': bowlingStyle,
+        }),
+      );
+      if (res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        return PlayerModel.fromJson(data['player']);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 }

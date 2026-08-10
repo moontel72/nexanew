@@ -19,6 +19,7 @@ class Player extends Model
         'id',
         'team_id',
         'name',
+        'player_code',
         'jersey_number',
         'role',
         'batting_style',
@@ -41,7 +42,19 @@ class Player extends Model
             if (empty($player->id)) {
                 $player->id = (string) Str::orderedUuid();
             }
+            if (empty($player->player_code)) {
+                $player->player_code = self::generateUniqueCode();
+            }
         });
+    }
+
+    private static function generateUniqueCode(): string
+    {
+        do {
+            $code = str_pad((string) random_int(0, 999), 3, '0', STR_PAD_LEFT);
+        } while (self::where('player_code', $code)->withTrashed()->exists());
+
+        return $code;
     }
 
     public function team()

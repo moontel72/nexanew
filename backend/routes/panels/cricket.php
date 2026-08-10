@@ -114,6 +114,18 @@ Route::prefix('api/v1/cricket/manager')
         Route::post('voice-score/{logId}/reject', [VoiceScoreController::class, 'reject']);
         Route::get('matches/{matchId}/voice-logs', [VoiceScoreController::class, 'history']);
 
+        // Team Management
+        Route::get('teams/all', [TeamController::class, 'listAll']);
+        Route::post('teams', [TeamController::class, 'store']);
+        Route::get('teams/{id}', [TeamController::class, 'show']);
+        Route::put('teams/{id}', [TeamController::class, 'update']);
+
+        // Player Management
+        Route::get('players/all', [PlayerController::class, 'listAll']);
+        Route::post('players', [PlayerController::class, 'store']);
+        Route::get('players/{id}', [PlayerController::class, 'show']);
+        Route::put('players/{id}', [PlayerController::class, 'update']);
+
         // Instant Replay / VAR
         Route::post('matches/{matchId}/replay/event', [ReplayController::class, 'markEvent']);
         Route::put('replay/events/{eventId}/annotate', [ReplayController::class, 'annotate']);
