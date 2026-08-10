@@ -7,6 +7,7 @@ import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/core/services/websocket_hub.dart';
 
 import '../models/cricket_models.dart';
+import '../models/replay_models.dart';
 
 /// Cricket data repository.
 ///
@@ -215,6 +216,20 @@ class CricketRepository {
       return [];
     } catch (_) {
       return [];
+    }
+  }
+
+  Future<bool> deleteSponsor(String matchId, String sponsorId) async {
+    try {
+      final res = await _http.delete(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/sponsors/$sponsorId',
+        ),
+        headers: await _authHeaders(),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -563,5 +578,145 @@ class CricketRepository {
   void dispose() {
     _scoreController.close();
     _http.close();
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // V3 — Instant Replay / VAR
+  // ────────────────────────────────────────────────────────────
+
+  Future<bool> markReplayEvent(
+    String matchId,
+    String eventType,
+    int frameTimestamp, {
+    String? annotation,
+  }) async {
+    try {
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/replay/event',
+        ),
+        headers: await _authHeaders(),
+        body: jsonEncode({
+          'event_type': eventType,
+          'frame_timestamp': frameTimestamp,
+          if (annotation != null) 'annotation': annotation,
+        }),
+      );
+      return res.statusCode == 201;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> annotateEvent(String eventId, String annotation) async {
+    try {
+      final res = await _http.put(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/replay/events/$eventId/annotate',
+        ),
+        headers: await _authHeaders(),
+        body: jsonEncode({'annotation': annotation}),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<List<ReplayEventModel>> getReplayEvents(String matchId) async {
+    try {
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/replay/events',
+        ),
+        headers: await _authHeaders(),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['events'] as List)
+            .map((e) => ReplayEventModel.fromJson(e))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<ReplayClipModel?> createClip(
+    String matchId,
+    String eventId, {
+    int bufferBeforeMs = 5000,
+    int bufferAfterMs = 5000,
+    double speed = 1.0,
+  }) async {
+    try {
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/replay/clip',
+        ),
+        headers: await _authHeaders(),
+        body: jsonEncode({
+          'event_id': eventId,
+          'buffer_before_ms': bufferBeforeMs,
+          'buffer_after_ms': bufferAfterMs,
+          'playback_speed': speed,
+        }),
+      );
+      if (res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        return ReplayClipModel.fromJson(data['clip']);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> publishClip(String clipId) async {
+    try {
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/replay/clips/$clipId/publish',
+        ),
+        headers: await _authHeaders(),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteClip(String clipId) async {
+    try {
+      final res = await _http.delete(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/replay/clips/$clipId',
+        ),
+        headers: await _authHeaders(),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<List<ReplayClipModel>> getPublicReplays(String matchId) async {
+    try {
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/public/matches/$matchId/replays',
+        ),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return (data['replays'] as List)
+            .map((r) => ReplayClipModel.fromJson(r))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
   }
 }

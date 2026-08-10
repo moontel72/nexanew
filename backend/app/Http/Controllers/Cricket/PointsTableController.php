@@ -48,69 +48,87 @@ class PointsTableController extends Controller
     /**
      * Get top performers for a tournament (public).
      * Returns most runs and most wickets across all matches.
+     *
+     * Uses PostgreSQL jsonb_array_elements for O(deliveries) single-query
+     * aggregation instead of loading all deliveries into PHP memory.
+     * Results cached in Redis for 60 seconds.
      */
     public function topPerformers(string $tournamentId): \Illuminate\Http\JsonResponse
     {
-        $tournament = Tournament::with([
-            'matches.innings',
-            'teams.players',
-        ])->findOrFail($tournamentId);
+        $cacheKey = "cricket:tournament:{$tournamentId}:top_performers";
 
-        $playerStats = [];
-
-        foreach ($tournament->matches as $match) {
-            foreach ($match->innings as $innings) {
-                $deliveries = $innings->deliveries ?? [];
-
-                foreach ($deliveries as $ball) {
-                    $batsmanId = $ball['batsman_id'] ?? null;
-                    $bowlerId = $ball['bowler_id'] ?? null;
-                    $runs = $ball['runs'] ?? 0;
-                    $isWicket = !empty($ball['is_wicket']) && empty($ball['extras_type']);
-
-                    if ($batsmanId) {
-                        if (!isset($playerStats[$batsmanId])) {
-                            $playerStats[$batsmanId] = ['runs' => 0, 'wickets' => 0, 'name' => ''];
-                        }
-                        $playerStats[$batsmanId]['runs'] += $runs;
-                    }
-
-                    if ($bowlerId && $isWicket) {
-                        if (!isset($playerStats[$bowlerId])) {
-                            $playerStats[$bowlerId] = ['runs' => 0, 'wickets' => 0, 'name' => ''];
-                        }
-                        $playerStats[$bowlerId]['wickets']++;
-                    }
-                }
+        try {
+            $cached = \Illuminate\Support\Facades\Redis::get($cacheKey);
+            if ($cached) {
+                return response()->json(json_decode($cached, true));
             }
+        } catch (\Throwable) {
+            // Redis unavailable — compute live
         }
 
-        // Resolve player names
-        $allPlayers = $tournament->teams->flatMap(fn($t) => $t->players);
-        foreach ($allPlayers as $p) {
-            if (isset($playerStats[$p->id])) {
-                $playerStats[$p->id]['name'] = $p->name;
-                $playerStats[$p->id]['team'] = $p->team->short_code ?? '';
-            }
-        }
+        // Single efficient query: unnest JSONB deliveries, aggregate in DB
+        $topBatsmen = DB::table('cricket_innings as i')
+            ->join('cricket_matches as m', 'm.id', '=', 'i.match_id')
+            ->crossJoin(DB::raw("jsonb_array_elements(i.deliveries) as d"))
+            ->leftJoin('cricket_players as p', 'p.id', '=', DB::raw("(d->>'batsman_id')::uuid"))
+            ->leftJoin('cricket_teams as t', 't.id', '=', 'p.team_id')
+            ->where('m.tournament_id', $tournamentId)
+            ->whereNotNull(DB::raw("d->>'batsman_id'"))
+            ->selectRaw("
+                (d->>'batsman_id') as player_id,
+                p.name as name,
+                t.short_code as team,
+                SUM(COALESCE((d->>'runs')::int, 0)) as runs
+            ")
+            ->groupBy(DB::raw("d->>'batsman_id', p.name, t.short_code"))
+            ->orderByDesc('runs')
+            ->limit(5)
+            ->get()
+            ->map(fn($r) => [
+                'player_id' => $r->player_id,
+                'name' => $r->name ?? '',
+                'team' => $r->team ?? '',
+                'runs' => (int) $r->runs,
+            ]);
 
-        // Sort for most runs
-        $topBatsmen = collect($playerStats)
-            ->sortByDesc('runs')
-            ->take(5)
-            ->map(fn($s, $id) => ['player_id' => $id, ...$s])
-            ->values();
+        // Same pattern for bowlers — aggregate wickets from jsonb
+        $topBowlers = DB::table('cricket_innings as i')
+            ->join('cricket_matches as m', 'm.id', '=', 'i.match_id')
+            ->crossJoin(DB::raw("jsonb_array_elements(i.deliveries) as d"))
+            ->leftJoin('cricket_players as p', 'p.id', '=', DB::raw("(d->>'bowler_id')::uuid"))
+            ->leftJoin('cricket_teams as t', 't.id', '=', 'p.team_id')
+            ->where('m.tournament_id', $tournamentId)
+            ->whereNotNull(DB::raw("d->>'bowler_id'"))
+            ->where(DB::raw("(d->>'is_wicket')::boolean"), true)
+            ->whereNull(DB::raw("d->>'extras_type'"))
+            ->selectRaw("
+                (d->>'bowler_id') as player_id,
+                p.name as name,
+                t.short_code as team,
+                COUNT(*) as wickets
+            ")
+            ->groupBy(DB::raw("d->>'bowler_id', p.name, t.short_code"))
+            ->orderByDesc('wickets')
+            ->limit(5)
+            ->get()
+            ->map(fn($r) => [
+                'player_id' => $r->player_id,
+                'name' => $r->name ?? '',
+                'team' => $r->team ?? '',
+                'wickets' => (int) $r->wickets,
+            ]);
 
-        // Sort for most wickets
-        $topBowlers = collect($playerStats)
-            ->sortByDesc('wickets')
-            ->take(5)
-            ->map(fn($s, $id) => ['player_id' => $id, ...$s])
-            ->values();
-
-        return response()->json([
+        $result = [
             'most_runs' => $topBatsmen,
             'most_wickets' => $topBowlers,
-        ]);
+        ];
+
+        // Cache for 60s
+        try {
+            \Illuminate\Support\Facades\Redis::setex($cacheKey, 60, json_encode($result));
+        } catch (\Throwable) {
+        }
+
+        return response()->json($result);
     }
 }

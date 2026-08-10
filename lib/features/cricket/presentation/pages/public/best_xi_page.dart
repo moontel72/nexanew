@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
+import 'package:trace_odd/features/cricket/presentation/widgets/field_overlay_painter.dart';
 
 class BestXiPage extends StatelessWidget {
   final BestXiModel bestXi;
@@ -9,11 +11,11 @@ class BestXiPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: CricketColors.background,
       appBar: AppBar(
         title: Text(bestXi.teamLabel),
-        backgroundColor: const Color(0xFF1A1E31),
-        foregroundColor: Colors.white,
+        backgroundColor: CricketColors.surface,
+        foregroundColor: CricketColors.textPrimary,
       ),
       body: Column(
         children: [
@@ -24,7 +26,7 @@ class BestXiPage extends StatelessWidget {
               maxScale: 2.0,
               child: CustomPaint(
                 size: const Size(double.infinity, 500),
-                painter: _FieldOverlayPainter(players: bestXi.selections),
+                painter: FieldOverlayPainter(players: bestXi.selections),
               ),
             ),
           ),
@@ -57,12 +59,14 @@ class _TeamFilterBarState extends State<_TeamFilterBar> {
                 label: Text(
                   e.value,
                   style: TextStyle(
-                    color: _selected == e.key ? Colors.white : Colors.grey,
+                    color: _selected == e.key
+                        ? CricketColors.textPrimary
+                        : CricketColors.textSecondary,
                   ),
                 ),
                 selected: _selected == e.key,
                 selectedColor: AppColors.secondary,
-                backgroundColor: const Color(0xFF1A1E31),
+                backgroundColor: CricketColors.surface,
                 onSelected: (_) => setState(() => _selected = e.key),
               ),
             ),
@@ -89,16 +93,16 @@ class _PlayerLegend extends StatelessWidget {
           backgroundColor: AppColors.secondary,
           child: Text(
             '${i + 1}',
-            style: const TextStyle(color: Colors.white, fontSize: 11),
+            style: TextStyle(color: CricketColors.textPrimary, fontSize: 11),
           ),
         ),
         title: Text(
           players[i].playerName,
-          style: const TextStyle(color: Colors.white, fontSize: 13),
+          style: TextStyle(color: CricketColors.textPrimary, fontSize: 13),
         ),
         subtitle: Text(
           players[i].positionName,
-          style: const TextStyle(color: Colors.grey, fontSize: 11),
+          style: TextStyle(color: CricketColors.textSecondary, fontSize: 11),
         ),
         trailing: players[i].rating != null
             ? Container(
@@ -119,100 +123,4 @@ class _PlayerLegend extends StatelessWidget {
       ),
     ),
   );
-}
-
-class _FieldOverlayPainter extends CustomPainter {
-  final List<BestXiPlayer> players;
-  _FieldOverlayPainter({required this.players});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Draw grass
-    final grass = Paint()..color = const Color(0xFF2D5A27);
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), grass);
-
-    // Draw elliptical field boundary
-    final boundary = Paint()
-      ..color = Colors.white.withOpacity(0.3)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    final fieldRect = Rect.fromLTWH(20, 40, size.width - 40, size.height - 80);
-    canvas.drawOval(fieldRect, boundary);
-
-    // Draw pitch strip (30-yard circle)
-    final pitchPaint = Paint()..color = const Color(0xFFC4A35A);
-    canvas.drawRect(
-      Rect.fromCenter(
-        center: Offset(size.width / 2, size.height / 2),
-        width: 60,
-        height: 4,
-      ),
-      pitchPaint,
-    );
-
-    // Inner circle
-    final innerCircle = Paint()
-      ..color = Colors.white.withOpacity(0.1)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawCircle(
-      Offset(size.width / 2, size.height / 2),
-      size.width * 0.3,
-      innerCircle,
-    );
-
-    // Draw players
-    for (final player in players) {
-      final px = player.x * size.width;
-      final py = 40 + player.y * (size.height - 80);
-
-      // Player dot
-      final dot = Paint()
-        ..color = player.teamShort == 'T1' ? Colors.blue : Colors.red;
-      canvas.drawCircle(Offset(px, py), 12, dot);
-
-      // White outline
-      final outline = Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
-      canvas.drawCircle(Offset(px, py), 12, outline);
-
-      // Rating badge
-      if (player.rating != null) {
-        final badgeBg = Paint()..color = AppColors.accent;
-        canvas.drawCircle(Offset(px + 16, py - 14), 11, badgeBg);
-
-        final tp = TextPainter(
-          text: TextSpan(
-            text: player.rating!.toStringAsFixed(1),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        tp.paint(
-          canvas,
-          Offset(px + 16 - tp.width / 2, py - 14 - tp.height / 2),
-        );
-      }
-
-      // Position name
-      final tp = TextPainter(
-        text: TextSpan(
-          text: player.positionName,
-          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 8),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(px - tp.width / 2, py + 16));
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _FieldOverlayPainter old) =>
-      old.players != players;
 }

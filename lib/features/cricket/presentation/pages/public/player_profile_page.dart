@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/player_career/player_career_bloc.dart';
@@ -38,16 +39,16 @@ class _PlayerProfilePageState extends State<PlayerProfilePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: CricketColors.background,
       appBar: AppBar(
         title: Text(widget.playerName),
-        backgroundColor: const Color(0xFF1A1E31),
-        foregroundColor: Colors.white,
+        backgroundColor: CricketColors.inputFill,
+        foregroundColor: CricketColors.textPrimary,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.secondary,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.grey,
+          labelColor: CricketColors.textPrimary,
+          unselectedLabelColor: CricketColors.textSecondary,
           tabs: const [
             Tab(text: 'Batting'),
             Tab(text: 'Bowling'),
@@ -73,12 +74,15 @@ class _PlayerProfilePageState extends State<PlayerProfilePage>
             ],
           ),
           PlayerCareerError(:final message) => Center(
-            child: Text(message, style: const TextStyle(color: Colors.red)),
+            child: Text(
+              message,
+              style: const TextStyle(color: CricketColors.wicket),
+            ),
           ),
           _ => const Center(
             child: Text(
               'Select a player',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: CricketColors.textSecondary),
             ),
           ),
         },
@@ -96,11 +100,17 @@ class _StatRow extends StatelessWidget {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: CricketColors.textSecondary,
+            fontSize: 14,
+          ),
+        ),
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
+            color: CricketColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -213,7 +223,7 @@ class _FormBadge extends StatelessWidget {
     else if (entry.runs >= 25)
       color = AppColors.accent;
     else if (entry.runs == 0)
-      color = Colors.red;
+      color = CricketColors.wicket;
     else
       color = Colors.blueGrey;
     return Chip(

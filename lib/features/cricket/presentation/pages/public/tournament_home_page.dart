@@ -6,9 +6,11 @@ import '../../blocs/live_score/live_score_bloc.dart';
 import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../widgets/match_card.dart';
-import '../../widgets/scoreboard_header.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 /// Public-facing tournament home page — shows all matches.
+/// Tournament name is dynamic from active tournament data.
 class TournamentHomePage extends StatefulWidget {
   const TournamentHomePage({super.key});
 
@@ -26,15 +28,22 @@ class _TournamentHomePageState extends State<TournamentHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: CricketColors.background,
       appBar: AppBar(
-        title: const Text('Valley Soon Cricket'),
-        backgroundColor: const Color(0xFF1A1E31),
-        foregroundColor: Colors.white,
+        title: BlocBuilder<MatchListBloc, MatchListState>(
+          builder: (context, state) {
+            final name = state is MatchListLoaded
+                ? state.tournament?.name ?? 'Cricket'
+                : 'Cricket';
+            return Text(name);
+          },
+        ),
+        backgroundColor: CricketColors.surface,
+        foregroundColor: CricketColors.textPrimary,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh, color: CricketColors.textSecondary),
             onPressed: () =>
                 context.read<MatchListBloc>().add(RefreshMatches()),
           ),
@@ -43,12 +52,17 @@ class _TournamentHomePageState extends State<TournamentHomePage> {
       body: BlocBuilder<MatchListBloc, MatchListState>(
         builder: (context, state) => switch (state) {
           MatchListLoading() => const Center(
-            child: CircularProgressIndicator(color: Colors.green),
+            child: CircularProgressIndicator(color: AppColors.secondary),
           ),
           MatchListLoaded(:final liveMatches, :final allMatches) =>
             _buildMatchList(liveMatches, allMatches),
           MatchListError(:final message) => _buildError(message),
-          _ => const Center(child: Text('Loading...')),
+          _ => Center(
+            child: Text(
+              'Loading...',
+              style: TextStyle(color: CricketColors.textSecondary),
+            ),
+          ),
         },
       ),
     );
@@ -59,7 +73,7 @@ class _TournamentHomePageState extends State<TournamentHomePage> {
     List<MatchModel> allMatches,
   ) {
     return RefreshIndicator(
-      color: Colors.green,
+      color: AppColors.secondary,
       onRefresh: () async {
         context.read<MatchListBloc>().add(RefreshMatches());
       },
@@ -92,9 +106,9 @@ class _TournamentHomePageState extends State<TournamentHomePage> {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+        Icon(Icons.cloud_off, size: 64, color: CricketColors.textTertiary),
         const SizedBox(height: 16),
-        Text(message, style: const TextStyle(color: Colors.grey)),
+        Text(message, style: TextStyle(color: CricketColors.textSecondary)),
         const SizedBox(height: 16),
         ElevatedButton(
           onPressed: () => context.read<MatchListBloc>().add(LoadMatches()),

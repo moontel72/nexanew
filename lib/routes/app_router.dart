@@ -42,6 +42,7 @@ import 'package:trace_odd/features/cricket/presentation/blocs/match_analytics/ma
 import 'package:trace_odd/features/cricket/presentation/blocs/match_list/match_list_bloc.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_list_page.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_add_page.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet_dashboard_screen.dart';
@@ -252,6 +253,8 @@ class AppRouter {
     if (path.startsWith('/sub-admin/')) return null;
     // Cricket Public Viewer — no auth required
     if (path.startsWith('/cricket/')) return null;
+    // Cricket Manager Panel — separate Bearer auth, no super-admin session needed
+    if (path.startsWith('/cricket-manager/')) return null;
     // Bus Owner login — public access for third-party bus owners
     if (path == '/bus-owner/login') return null;
     // Bus Owner dashboard — owner auth is managed by ApiClient token, not super-admin session
@@ -425,7 +428,7 @@ class AppRouter {
               return ClubHomePage(club: snap.data!);
             }
             return const Scaffold(
-              backgroundColor: Color(0xFF0A0E21),
+              backgroundColor: CricketColors.background,
               body: Center(child: CircularProgressIndicator()),
             );
           },
@@ -444,7 +447,7 @@ class AppRouter {
               return BestXiPage(bestXi: snap.data!);
             }
             return const Scaffold(
-              backgroundColor: Color(0xFF0A0E21),
+              backgroundColor: CricketColors.background,
               body: Center(child: CircularProgressIndicator()),
             );
           },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 import '../../blocs/voice_score/voice_score_bloc.dart';
 
@@ -25,11 +26,11 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: CricketColors.background,
       appBar: AppBar(
         title: const Text('Voice-to-Score'),
-        backgroundColor: const Color(0xFF1A1E31),
-        foregroundColor: Colors.white,
+        backgroundColor: CricketColors.surface,
+        foregroundColor: CricketColors.textPrimary,
       ),
       body: BlocConsumer<VoiceScoreBloc, VoiceScoreState>(
         listener: (context, state) {
@@ -52,7 +53,7 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1E31),
+                    color: CricketColors.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Column(
@@ -62,7 +63,7 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                       Text(
                         'Speak or Type Score Update',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: CricketColors.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -70,7 +71,10 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                       SizedBox(height: 8),
                       Text(
                         'Examples: "Four runs", "Wicket, bowled",\n"Wide ball", "Six over mid-wicket"',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        style: TextStyle(
+                          color: CricketColors.textSecondary,
+                          fontSize: 12,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -81,13 +85,15 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                 // Text input field
                 TextField(
                   controller: _textCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: CricketColors.textPrimary),
                   maxLines: 3,
                   decoration: InputDecoration(
                     hintText: 'Type score commentary...',
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: const TextStyle(
+                      color: CricketColors.placeholder,
+                    ),
                     filled: true,
-                    fillColor: const Color(0xFF1A1E31),
+                    fillColor: CricketColors.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide.none,
@@ -112,7 +118,7 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                 switch (state) {
                   VoiceScoreIdle() => const Text(
                     'Ready for voice input.',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: CricketColors.textSecondary),
                   ),
                   VoiceScoreListening() => const Column(
                     children: [
@@ -130,7 +136,9 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                       const SizedBox(height: 8),
                       Text(
                         'Processing: "$transcript"',
-                        style: const TextStyle(color: Colors.grey),
+                        style: const TextStyle(
+                          color: CricketColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -184,7 +192,7 @@ class _ParsedScoreCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1E31),
+        color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.green.withOpacity(0.3)),
       ),
@@ -242,11 +250,17 @@ class _DataRow extends StatelessWidget {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: CricketColors.textSecondary,
+            fontSize: 13,
+          ),
+        ),
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
+            color: CricketColors.textPrimary,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),

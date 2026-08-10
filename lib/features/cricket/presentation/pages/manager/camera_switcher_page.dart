@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 import '../../blocs/camera_switcher/camera_switcher_bloc.dart';
 import '../../../data/models/cricket_models.dart';
@@ -26,11 +27,11 @@ class _CameraSwitcherPageState extends State<CameraSwitcherPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: CricketColors.background,
       appBar: AppBar(
         title: const Text('Camera Switcher'),
-        backgroundColor: const Color(0xFF1A1E31),
-        foregroundColor: Colors.white,
+        backgroundColor: CricketColors.surface,
+        foregroundColor: CricketColors.textPrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -53,7 +54,7 @@ class _CameraSwitcherPageState extends State<CameraSwitcherPage> {
           _ => const Center(
             child: Text(
               'Enter a match ID to load cameras.',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: CricketColors.textSecondary),
             ),
           ),
         },
@@ -94,11 +95,11 @@ class _CameraTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1E31),
+        color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: isActive
             ? Border.all(color: Colors.green, width: 2)
-            : Border.all(color: Colors.grey.withOpacity(0.2)),
+            : Border.all(color: CricketColors.textSecondary.withOpacity(0.2)),
       ),
       child: Row(
         children: [
@@ -108,7 +109,7 @@ class _CameraTile extends StatelessWidget {
             height: 12,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isActive ? Colors.green : Colors.grey,
+              color: isActive ? Colors.green : CricketColors.textSecondary,
             ),
           ),
           const SizedBox(width: 12),
@@ -120,7 +121,7 @@ class _CameraTile extends StatelessWidget {
                 Text(
                   'Camera ${camera.cameraNumber}: ${camera.cameraLabel}',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: CricketColors.textPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -129,7 +130,9 @@ class _CameraTile extends StatelessWidget {
                   children: [
                     _StatusBadge(
                       label: camera.streamStatus.toUpperCase(),
-                      color: isActive ? Colors.green : Colors.grey,
+                      color: isActive
+                          ? Colors.green
+                          : CricketColors.textSecondary,
                     ),
                     if (camera.isPrimary)
                       const _StatusBadge(label: 'PRIMARY', color: Colors.blue),

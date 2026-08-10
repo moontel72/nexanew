@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import '../../data/models/cricket_models.dart';
 
 /// Live scoreboard — the core cricket score display.
@@ -14,12 +15,12 @@ class CricketScoreboard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1A1E31), Color(0xFF0A0E21)],
+          colors: [CricketColors.inputFill, CricketColors.background],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
+        border: Border.all(color: CricketColors.complete.withOpacity(0.3)),
       ),
       child: Column(
         children: [
@@ -30,14 +31,17 @@ class CricketScoreboard extends StatelessWidget {
               Text(
                 score.battingTeam ?? 'BAT',
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14),
+                  color: CricketColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
               Text(
                 score.bowlingTeam ?? 'BOWL',
                 style: const TextStyle(
-                    color: Colors.grey, fontSize: 12),
+                  color: CricketColors.textSecondary,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -52,7 +56,7 @@ class CricketScoreboard extends StatelessWidget {
               Text(
                 score.score ?? '0/0',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: CricketColors.textPrimary,
                   fontSize: 42,
                   fontWeight: FontWeight.bold,
                 ),
@@ -60,8 +64,10 @@ class CricketScoreboard extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 '(${score.overs.toStringAsFixed(1)} ov)',
-                style:
-                    const TextStyle(color: Colors.grey, fontSize: 16),
+                style: const TextStyle(
+                  color: CricketColors.textSecondary,
+                  fontSize: 16,
+                ),
               ),
             ],
           ),
@@ -84,7 +90,10 @@ class CricketScoreboard extends StatelessWidget {
           if (score.partnershipRuns > 0 || score.partnershipBalls > 0)
             Text(
               'Partnership: ${score.partnershipRuns}(${score.partnershipBalls})',
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
+              style: const TextStyle(
+                color: CricketColors.textSecondary,
+                fontSize: 12,
+              ),
             ),
         ],
       ),
@@ -99,14 +108,22 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        children: [
-          Text(label,
-              style: const TextStyle(color: Colors.grey, fontSize: 10)),
-          Text(value,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold)),
-        ],
-      );
+    children: [
+      Text(
+        label,
+        style: const TextStyle(
+          color: CricketColors.textSecondary,
+          fontSize: 10,
+        ),
+      ),
+      Text(
+        value,
+        style: const TextStyle(
+          color: CricketColors.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ],
+  );
 }

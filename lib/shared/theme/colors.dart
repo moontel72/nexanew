@@ -126,6 +126,15 @@ class AppColors {
   static const Color fleetWarning = Color(0xFFF59E0B);
   static const Color fleetInfo = Color(0xFF2563EB);
 
+  // ── Cricket Dark Theme (delegates to CricketColors) ───
+  static const Color cricketBackground = Color(0xFF0A0E21);
+  static const Color cricketSurface = Color(0xFF141829);
+  static const Color cricketTextPrimary = Color(0xFFF5F5F5);
+  static const Color cricketTextSecondary = Color(0xFFA0AAB8);
+  static const Color cricketPlaceholder = Color(0xFF8B95A5);
+  static const Color cricketFieldGreen = Color(0xFF2D5A27);
+  static const Color cricketPitchBrown = Color(0xFFD4A373);
+
   // Get color by code status
   static Color getCodeStatusColor(String status) {
     switch (status.toLowerCase()) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import '../../data/models/cricket_models.dart';
 
 /// Ball-by-ball recent-over ticker with visual run/wicket indicators.
@@ -12,7 +13,10 @@ class BallByBallTicker extends StatelessWidget {
     final balls = score.recentBalls;
     if (balls.isEmpty) {
       return const Center(
-        child: Text('No deliveries yet.', style: TextStyle(color: Colors.grey)),
+        child: Text(
+          'No deliveries yet.',
+          style: TextStyle(color: CricketColors.textSecondary),
+        ),
       );
     }
 
@@ -20,7 +24,7 @@ class BallByBallTicker extends StatelessWidget {
       margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1E31),
+        color: CricketColors.inputFill,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -29,7 +33,7 @@ class BallByBallTicker extends StatelessWidget {
           const Text(
             'RECENT BALLS',
             style: TextStyle(
-              color: Colors.grey,
+              color: CricketColors.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
@@ -50,12 +54,15 @@ class BallByBallTicker extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.15),
+                color: CricketColors.wicket.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 score.lastWicketInfo!,
-                style: const TextStyle(color: Colors.red, fontSize: 12),
+                style: const TextStyle(
+                  color: CricketColors.wicket,
+                  fontSize: 12,
+                ),
               ),
             ),
         ],
@@ -71,30 +78,30 @@ class _BallIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color bgColor;
-    Color textColor = Colors.white;
+    Color textColor = CricketColors.textPrimary;
 
     if (ball.isWicket) {
-      bgColor = Colors.red;
+      bgColor = CricketColors.wicket;
     } else {
       switch (ball.runs) {
         case 0:
-          bgColor = Colors.grey.withOpacity(0.3);
+          bgColor = CricketColors.textTertiary.withOpacity(0.3);
           break;
         case 4:
-          bgColor = Colors.green;
+          bgColor = CricketColors.runFour;
           break;
         case 6:
-          bgColor = Colors.blue;
+          bgColor = CricketColors.teamA;
           break;
         default:
-          bgColor = Colors.grey;
+          bgColor = CricketColors.textSecondary;
       }
     }
 
     if (ball.extrasType == 'wide') {
-      bgColor = Colors.orange;
+      bgColor = CricketColors.roleAllRounder;
     } else if (ball.extrasType == 'no_ball') {
-      bgColor = Colors.orange.shade700;
+      bgColor = CricketColors.roleAllRounder;
     }
 
     return Container(

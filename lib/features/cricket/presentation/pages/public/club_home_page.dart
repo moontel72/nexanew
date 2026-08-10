@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
+import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 
 class ClubHomePage extends StatelessWidget {
   final ClubModel club;
@@ -11,15 +13,15 @@ class ClubHomePage extends StatelessWidget {
     return DefaultTabController(
       length: 5,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0A0E21),
+        backgroundColor: CricketColors.background,
         appBar: AppBar(
           title: Text(club.name),
-          backgroundColor: const Color(0xFF1A1E31),
-          foregroundColor: Colors.white,
+          backgroundColor: CricketColors.inputFill,
+          foregroundColor: CricketColors.textPrimary,
           bottom: const TabBar(
             indicatorColor: AppColors.secondary,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.grey,
+            labelColor: CricketColors.textPrimary,
+            unselectedLabelColor: CricketColors.textSecondary,
             tabs: [
               Tab(text: 'Matches'),
               Tab(text: 'Tournaments'),
@@ -38,10 +40,10 @@ class ClubHomePage extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  _TabPlaceholder('Scheduled matches feed'),
-                  _TabPlaceholder('Tournaments hosted'),
-                  _TabPlaceholder('Top performance spotlights'),
-                  _TabPlaceholder('Teams roster'),
+                  _ClubMatchesTab(club: club),
+                  _ClubTournamentsTab(club: club),
+                  _ClubStatisticsTab(club: club),
+                  _ClubTeamsTab(club: club),
                   _ClubInfo(club: club),
                 ],
               ),
@@ -53,6 +55,384 @@ class ClubHomePage extends StatelessWidget {
   }
 }
 
+// ─── Matches Tab ─────────────────────────────────────────────
+class _ClubMatchesTab extends StatelessWidget {
+  final ClubModel club;
+  const _ClubMatchesTab({required this.club});
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<MatchModel>>(
+    future: CricketRepository().getAllMatches(),
+    builder: (ctx, snap) {
+      if (snap.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (snap.hasError) {
+        return Center(
+          child: Text(
+            'Failed to load matches',
+            style: TextStyle(color: CricketColors.wicket),
+          ),
+        );
+      }
+      final matches = snap.data ?? [];
+      if (matches.isEmpty) {
+        return Center(
+          child: Text(
+            'No matches scheduled',
+            style: TextStyle(color: CricketColors.textSecondary),
+          ),
+        );
+      }
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: matches.length,
+        itemBuilder: (_, i) => Card(
+          color: CricketColors.inputFill,
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: AppColors.secondary,
+              child: Icon(
+                Icons.sports_cricket,
+                color: CricketColors.textPrimary,
+              ),
+            ),
+            title: Text(
+              '${matches[i].teamAShort ?? 'T1'} vs ${matches[i].teamBShort ?? 'T2'}',
+              style: const TextStyle(
+                color: CricketColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: Text(
+              matches[i].status,
+              style: TextStyle(
+                color: matches[i].isLive
+                    ? CricketColors.live
+                    : CricketColors.textSecondary,
+              ),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: CricketColors.textSecondary,
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+// ─── Tournaments Tab ─────────────────────────────────────────
+class _ClubTournamentsTab extends StatelessWidget {
+  final ClubModel club;
+  const _ClubTournamentsTab({required this.club});
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<TournamentModel?>(
+    future: CricketRepository().getActiveTournament(),
+    builder: (ctx, snap) {
+      if (snap.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      final tournament = snap.data;
+      if (tournament == null) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'No active tournaments',
+              style: TextStyle(
+                color: CricketColors.textSecondary,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        );
+      }
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            color: CricketColors.inputFill,
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: AppColors.secondary,
+                child: const Icon(
+                  Icons.emoji_events,
+                  color: CricketColors.textPrimary,
+                ),
+              ),
+              title: Text(
+                tournament.name,
+                style: const TextStyle(
+                  color: CricketColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: Text(
+                '${_formatDate(tournament.startDate)} – ${_formatDate(tournament.endDate)}',
+                style: const TextStyle(color: CricketColors.textSecondary),
+              ),
+              trailing: Icon(
+                tournament.status == 'live'
+                    ? Icons.fiber_manual_record
+                    : Icons.schedule,
+                color: tournament.status == 'live'
+                    ? CricketColors.live
+                    : CricketColors.textSecondary,
+                size: 12,
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  String _formatDate(DateTime dt) => '${dt.day}/${dt.month}/${dt.year}';
+}
+
+// ─── Statistics Tab ──────────────────────────────────────────
+class _ClubStatisticsTab extends StatelessWidget {
+  final ClubModel club;
+  const _ClubStatisticsTab({required this.club});
+
+  @override
+  Widget build(BuildContext context) =>
+      FutureBuilder<Map<String, List<TopPerformer>>>(
+        future: _fetchTopPerformers(),
+        builder: (ctx, snap) {
+          final performers = snap.data;
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const _SectionTitle('Club Overview'),
+              _StatCard(
+                icon: Icons.sports_cricket,
+                label: 'Matches Hosted',
+                value: '${club.totalMatchesHosted}',
+              ),
+              _StatCard(
+                icon: Icons.emoji_events,
+                label: 'Tournaments Hosted',
+                value: '${club.totalTournamentsHosted}',
+              ),
+              _StatCard(
+                icon: Icons.people,
+                label: 'Followers',
+                value: '${club.followerCount}',
+              ),
+              _StatCard(
+                icon: Icons.visibility,
+                label: 'Total Views',
+                value: '${club.clubViews}',
+              ),
+              if (performers != null &&
+                  performers['most_runs'] != null &&
+                  performers['most_runs']!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const _SectionTitle('Top Run Scorers'),
+                ...performers['most_runs']!
+                    .take(3)
+                    .map(
+                      (p) =>
+                          _PerformerRow(name: p.name, value: '${p.runs} runs'),
+                    ),
+              ],
+              if (performers != null &&
+                  performers['most_wickets'] != null &&
+                  performers['most_wickets']!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const _SectionTitle('Top Wicket Takers'),
+                ...performers['most_wickets']!
+                    .take(3)
+                    .map(
+                      (p) => _PerformerRow(
+                        name: p.name,
+                        value: '${p.wickets} wkts',
+                      ),
+                    ),
+              ],
+              if (performers == null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: Text(
+                    'No performance data available yet.',
+                    style: TextStyle(color: CricketColors.textSecondary),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+            ],
+          );
+        },
+      );
+
+  Future<Map<String, List<TopPerformer>>> _fetchTopPerformers() async {
+    try {
+      final activeTournament = await CricketRepository().getActiveTournament();
+      if (activeTournament != null) {
+        return await CricketRepository().getTopPerformers(activeTournament.id);
+      }
+    } catch (_) {}
+    return {};
+  }
+}
+
+// ─── Teams Tab ───────────────────────────────────────────────
+class _ClubTeamsTab extends StatelessWidget {
+  final ClubModel club;
+  const _ClubTeamsTab({required this.club});
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<TeamModel>>(
+    future: CricketRepository().getTeams(),
+    builder: (ctx, snap) {
+      if (snap.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (snap.hasError) {
+        return Center(
+          child: Text(
+            'Failed to load teams',
+            style: TextStyle(color: CricketColors.wicket),
+          ),
+        );
+      }
+      final teams = snap.data ?? [];
+      if (teams.isEmpty) {
+        return Center(
+          child: Text(
+            'No teams registered',
+            style: TextStyle(color: CricketColors.textSecondary),
+          ),
+        );
+      }
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: teams.length,
+        itemBuilder: (_, i) => Card(
+          color: CricketColors.inputFill,
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: AppColors.secondary,
+              child: Text(
+                teams[i].name[0].toUpperCase(),
+                style: const TextStyle(
+                  color: CricketColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            title: Text(
+              teams[i].name,
+              style: const TextStyle(
+                color: CricketColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            subtitle: Text(
+              teams[i].shortCode,
+              style: const TextStyle(color: CricketColors.textSecondary),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: CricketColors.textSecondary,
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+// ─── Shared helpers ──────────────────────────────────────────
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  const _SectionTitle(this.title);
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Text(
+      title,
+      style: const TextStyle(
+        color: AppColors.secondary,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  );
+}
+
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+  @override
+  Widget build(BuildContext context) => Card(
+    color: CricketColors.inputFill,
+    margin: const EdgeInsets.only(bottom: 8),
+    child: ListTile(
+      leading: Icon(icon, color: AppColors.secondary),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: CricketColors.textSecondary,
+          fontSize: 13,
+        ),
+      ),
+      trailing: Text(
+        value,
+        style: const TextStyle(
+          color: CricketColors.textPrimary,
+          fontWeight: FontWeight.bold,
+          fontSize: 15,
+        ),
+      ),
+    ),
+  );
+}
+
+class _PerformerRow extends StatelessWidget {
+  final String name;
+  final String value;
+  const _PerformerRow({required this.name, required this.value});
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          name,
+          style: const TextStyle(
+            color: CricketColors.textPrimary,
+            fontSize: 14,
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: AppColors.secondary,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ─── Original club widgets (colors updated) ──────────────────
+
 class _ClubHeader extends StatelessWidget {
   final ClubModel club;
   const _ClubHeader({required this.club});
@@ -63,8 +443,8 @@ class _ClubHeader extends StatelessWidget {
     decoration: BoxDecoration(
       gradient: LinearGradient(
         colors: [
-          const Color(0xFF1A1E31),
-          const Color(0xFF0A0E21).withOpacity(0.5),
+          CricketColors.inputFill,
+          CricketColors.background.withOpacity(0.5),
         ],
       ),
     ),
@@ -76,7 +456,10 @@ class _ClubHeader extends StatelessWidget {
           backgroundColor: AppColors.secondary,
           child: Text(
             club.name[0].toUpperCase(),
-            style: const TextStyle(fontSize: 32, color: Colors.white),
+            style: const TextStyle(
+              fontSize: 32,
+              color: CricketColors.textPrimary,
+            ),
           ),
         ),
         const SizedBox(width: 16),
@@ -88,7 +471,7 @@ class _ClubHeader extends StatelessWidget {
               Text(
                 club.name,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: CricketColors.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -96,12 +479,18 @@ class _ClubHeader extends StatelessWidget {
               if (club.location != null)
                 Text(
                   club.location!,
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  style: const TextStyle(
+                    color: CricketColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
               if (club.establishedYear != null)
                 Text(
                   'Est. ${club.establishedYear}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: const TextStyle(
+                    color: CricketColors.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
             ],
           ),
@@ -162,12 +551,18 @@ class _StatItem extends StatelessWidget {
       Text(
         value,
         style: const TextStyle(
-          color: Colors.white,
+          color: CricketColors.textPrimary,
           fontWeight: FontWeight.bold,
           fontSize: 16,
         ),
       ),
-      Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+      Text(
+        label,
+        style: const TextStyle(
+          color: CricketColors.textSecondary,
+          fontSize: 10,
+        ),
+      ),
     ],
   );
 }
@@ -180,16 +575,7 @@ class _ClubInfo extends StatelessWidget {
     padding: const EdgeInsets.all(16),
     child: Text(
       club.description ?? 'No description available.',
-      style: const TextStyle(color: Colors.grey),
+      style: const TextStyle(color: CricketColors.textSecondary),
     ),
-  );
-}
-
-class _TabPlaceholder extends StatelessWidget {
-  final String text;
-  const _TabPlaceholder(this.text);
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Text(text, style: const TextStyle(color: Colors.grey)),
   );
 }

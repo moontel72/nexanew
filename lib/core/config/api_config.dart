@@ -2,9 +2,11 @@
 // API Configuration for NexaTrace System
 // This file contains API endpoints and configuration
 
+import 'environment.dart';
+
 class ApiConfig {
-  // Base URLs
-  static const String baseUrl = 'http://135.181.46.27';
+  // Base URLs — resolved from Environment (override via --dart-define=API_BASE_URL=...)
+  static const String baseUrl = Environment.apiBaseUrl;
   static const String apiVersion = 'v1';
   static const String apiBaseUrl = '$baseUrl/api/$apiVersion';
 

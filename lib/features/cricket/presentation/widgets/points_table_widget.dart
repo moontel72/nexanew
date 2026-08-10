@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/cricket_models.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 /// Compact, sortable points table for a tournament.
 ///
@@ -105,7 +106,7 @@ class _PointsTableWidgetState extends State<PointsTableWidget> {
           padding: EdgeInsets.all(24),
           child: Text(
             'No standings data available.',
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(color: CricketColors.textSecondary),
           ),
         ),
       );
@@ -113,7 +114,7 @@ class _PointsTableWidgetState extends State<PointsTableWidget> {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1E31),
+        color: CricketColors.inputFill,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white10),
       ),
@@ -190,15 +191,19 @@ class _PointsTableWidgetState extends State<PointsTableWidget> {
                 DataCell(_DataText('${e.lost}')),
                 DataCell(_DataText('${e.tied}')),
                 DataCell(_DataText('${e.noResult}')),
-                DataCell(_DataText(
-                  '${e.points}',
-                  bold: true,
-                  color: isHighlight ? AppColors.secondary : null,
-                )),
-                DataCell(_DataText(
-                  e.nrrDisplay,
-                  color: e.nrr >= 0 ? AppColors.success : AppColors.error,
-                )),
+                DataCell(
+                  _DataText(
+                    '${e.points}',
+                    bold: true,
+                    color: isHighlight ? AppColors.secondary : null,
+                  ),
+                ),
+                DataCell(
+                  _DataText(
+                    e.nrrDisplay,
+                    color: e.nrr >= 0 ? AppColors.success : AppColors.error,
+                  ),
+                ),
               ],
             );
           }),
@@ -229,7 +234,7 @@ class _HeaderLabel extends StatelessWidget {
         Text(
           text,
           style: TextStyle(
-            color: active ? AppColors.secondary : Colors.grey,
+            color: active ? AppColors.secondary : CricketColors.textSecondary,
             fontWeight: active ? FontWeight.bold : FontWeight.normal,
             fontSize: 11,
           ),
@@ -273,7 +278,9 @@ class _PosCell extends StatelessWidget {
       child: Text(
         '$rank',
         style: TextStyle(
-          color: rank <= 2 ? Colors.black : Colors.white,
+          color: rank <= 2
+              ? CricketColors.background
+              : CricketColors.textPrimary,
           fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
@@ -294,7 +301,7 @@ class _DataText extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        color: color ?? Colors.white,
+        color: color ?? CricketColors.textPrimary,
         fontWeight: bold ? FontWeight.bold : FontWeight.normal,
         fontSize: 12,
       ),

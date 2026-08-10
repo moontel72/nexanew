@@ -34,6 +34,12 @@ final class LoadSponsors extends SponsorEvent {
   const LoadSponsors(this.matchId);
 }
 
+final class RemoveSponsor extends SponsorEvent {
+  final String matchId;
+  final String sponsorId;
+  const RemoveSponsor(this.matchId, this.sponsorId);
+}
+
 // ─── BLoC ────────────────────────────────────────────────
 
 class SponsorBloc extends Bloc<SponsorEvent, SponsorState> {
@@ -43,6 +49,7 @@ class SponsorBloc extends Bloc<SponsorEvent, SponsorState> {
     : _repo = repo,
       super(SponsorInitial()) {
     on<LoadSponsors>(_onLoad);
+    on<RemoveSponsor>(_onRemove);
   }
 
   Future<void> _onLoad(LoadSponsors e, Emitter<SponsorState> emit) async {
@@ -53,5 +60,11 @@ class SponsorBloc extends Bloc<SponsorEvent, SponsorState> {
     } catch (err) {
       emit(SponsorError(err.toString()));
     }
+  }
+
+  Future<void> _onRemove(RemoveSponsor e, Emitter<SponsorState> emit) async {
+    await _repo.deleteSponsor(e.matchId, e.sponsorId);
+    // Reload after deletion to reflect changes
+    add(LoadSponsors(e.matchId));
   }
 }

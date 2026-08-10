@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 import '../../data/models/cricket_models.dart';
 
@@ -18,8 +19,8 @@ class FieldOverlayPainter extends CustomPainter {
 
   FieldOverlayPainter({
     required this.players,
-    this.grassColor = const Color(0xFF2D5A27),
-    this.pitchColor = const Color(0xFFD4A373),
+    this.grassColor = CricketColors.fieldGrass,
+    this.pitchColor = CricketColors.pitchBrown,
     this.boundaryColor = Colors.white,
   });
 
@@ -194,23 +195,23 @@ class FieldOverlayPainter extends CustomPainter {
   Color _roleColor(String? role) {
     switch (role?.toLowerCase()) {
       case 'batsman':
-        return const Color(0xFF4CAF50); // green
+        return CricketColors.roleBatsman;
       case 'bowler':
-        return const Color(0xFFF44336); // red
+        return CricketColors.roleBowler;
       case 'all-rounder':
-        return const Color(0xFFFF9800); // orange
+        return CricketColors.roleAllRounder;
       case 'wicket-keeper':
-        return const Color(0xFF2196F3); // blue
+        return CricketColors.roleWicketKeeper;
       default:
-        return Colors.grey;
+        return CricketColors.textTertiary;
     }
   }
 
   Color _ratingColor(double rating) {
-    if (rating >= 90) return const Color(0xFFFFD700); // gold
-    if (rating >= 80) return const Color(0xFF4CAF50); // green
-    if (rating >= 70) return const Color(0xFF2196F3); // blue
-    return Colors.grey;
+    if (rating >= 90) return CricketColors.ratingGold;
+    if (rating >= 80) return CricketColors.ratingGreen;
+    if (rating >= 70) return CricketColors.ratingBlue;
+    return CricketColors.ratingGrey;
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 import '../../blocs/live_score/live_score_bloc.dart';
 import '../../blocs/match_list/match_list_bloc.dart';
@@ -17,11 +18,11 @@ class ManagerScorePage extends StatelessWidget {
     final repo = RepositoryProvider.of<CricketRepository>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: CricketColors.background,
       appBar: AppBar(
         title: const Text('Live Scoring'),
-        backgroundColor: const Color(0xFF1A1E31),
-        foregroundColor: Colors.white,
+        backgroundColor: CricketColors.surface,
+        foregroundColor: CricketColors.textPrimary,
       ),
       body: Column(
         children: [
@@ -36,7 +37,10 @@ class ManagerScorePage extends StatelessWidget {
                   children: [
                     const Text(
                       'Match Score Controls',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
+                      style: TextStyle(
+                        color: CricketColors.textPrimary,
+                        fontSize: 18,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     _BallButtonGrid(repo: repo, matchId: matchId),
@@ -49,7 +53,7 @@ class ManagerScorePage extends StatelessWidget {
               child: Center(
                 child: Text(
                   'Select a match to start scoring.',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: CricketColors.textSecondary),
                 ),
               ),
             ),
@@ -81,10 +85,10 @@ class _BallButtonGrid extends StatelessWidget {
                 matchId: matchId,
                 repo: repo,
                 color: runs == 0
-                    ? Colors.grey
+                    ? CricketColors.textSecondary
                     : runs == 3
                     ? Colors.teal
-                    : Colors.white,
+                    : CricketColors.textPrimary,
               );
             }).toList(),
           ),
@@ -183,7 +187,7 @@ class _RunButton extends StatelessWidget {
       width: 64,
       height: 64,
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1E31),
+        color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
@@ -241,15 +245,18 @@ class _WicketButton extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1E31),
-        title: const Text('Wicket Type', style: TextStyle(color: Colors.white)),
+        backgroundColor: CricketColors.surface,
+        title: const Text(
+          'Wicket Type',
+          style: TextStyle(color: CricketColors.textPrimary),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: types.map((t) {
             return ListTile(
               title: Text(
                 t.replaceAll('_', ' ').toUpperCase(),
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: CricketColors.textPrimary),
               ),
               onTap: () {
                 repo.updateScore(matchId, {
@@ -288,7 +295,7 @@ class _ExtraButton extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1E31),
+        color: CricketColors.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.orange.withOpacity(0.3)),
       ),

@@ -1,10 +1,11 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/match_analytics/match_analytics_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/widgets/wagon_wheel_painter.dart';
 
 class MatchAnalyticsPage extends StatefulWidget {
   final String matchId;
@@ -20,6 +21,10 @@ class MatchAnalyticsPage extends StatefulWidget {
 }
 
 class _MatchAnalyticsPageState extends State<MatchAnalyticsPage> {
+  WagonWheelLoaded? _wagonState;
+  RunDistributionLoaded? _distState;
+  ConcededRunsLoaded? _concededState;
+
   @override
   void initState() {
     super.initState();
@@ -32,26 +37,52 @@ class _MatchAnalyticsPageState extends State<MatchAnalyticsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: CricketColors.background,
       appBar: AppBar(
         title: Text('${widget.matchTitle} — Analytics'),
-        backgroundColor: const Color(0xFF1A1E31),
-        foregroundColor: Colors.white,
+        backgroundColor: CricketColors.surface,
+        foregroundColor: CricketColors.textPrimary,
       ),
       body: BlocBuilder<MatchAnalyticsBloc, MatchAnalyticsState>(
-        builder: (ctx, state) => SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              if (state is WagonWheelLoaded)
-                _WagonWheelSection(shots: state.shots),
-              if (state is RunDistributionLoaded)
-                _DistributionSection(dist: state.distribution),
-              if (state is ConcededRunsLoaded)
-                _ConcededSection(breakdown: state.breakdown),
-            ],
-          ),
-        ),
+        builder: (ctx, state) {
+          // Accumulate loaded states
+          if (state is WagonWheelLoaded) _wagonState = state;
+          if (state is RunDistributionLoaded) _distState = state;
+          if (state is ConcededRunsLoaded) _concededState = state;
+
+          final hasData =
+              _wagonState != null ||
+              _distState != null ||
+              _concededState != null;
+
+          if (!hasData && state is MatchAnalyticsLoading) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.secondary),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                if (_wagonState != null)
+                  _WagonWheelSection(shots: _wagonState!.shots),
+                if (_distState != null)
+                  _DistributionSection(dist: _distState!.distribution),
+                if (_concededState != null)
+                  _ConcededSection(breakdown: _concededState!.breakdown),
+                if (state is MatchAnalyticsError)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      state.message,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -65,31 +96,31 @@ class _WagonWheelSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Text(
+        Text(
           'Wagon Wheel',
           style: TextStyle(
-            color: Colors.white,
+            color: CricketColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 300,
+          height: 320,
           child: CustomPaint(
-            size: const Size(300, 300),
-            painter: _WagonWheelPainter(shots: shots),
+            size: const Size(double.infinity, 320),
+            painter: WagonWheelPainter(shots: shots),
           ),
         ),
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _LegendItem(color: Colors.grey, label: '0'),
-            _LegendItem(color: Colors.white, label: '1'),
-            _LegendItem(color: Colors.cyan, label: '2'),
-            _LegendItem(color: Colors.green, label: '4'),
-            _LegendItem(color: Colors.amber, label: '6'),
+            _LegendItem(color: CricketColors.runDot, label: '0'),
+            _LegendItem(color: CricketColors.runSingle, label: '1'),
+            _LegendItem(color: CricketColors.runTwo, label: '2'),
+            _LegendItem(color: CricketColors.runFour, label: '4'),
+            _LegendItem(color: CricketColors.runSix, label: '6'),
           ],
         ),
       ],
@@ -119,95 +150,6 @@ class _LegendItem extends StatelessWidget {
   );
 }
 
-class _WagonWheelPainter extends CustomPainter {
-  final List<WagonWheelShot> shots;
-  _WagonWheelPainter({required this.shots});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 20;
-
-    // Draw field circle
-    final fieldPaint = Paint()
-      ..color = const Color(0xFF2D5A27)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius, fieldPaint);
-
-    // Draw boundary
-    final boundaryPaint = Paint()
-      ..color = Colors.white.withOpacity(0.3)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(center, radius, boundaryPaint);
-
-    // Draw pitch strip
-    final pitchPaint = Paint()..color = const Color(0xFFC4A35A);
-    canvas.drawRect(
-      Rect.fromCenter(center: center, width: 8, height: radius * 1.2),
-      pitchPaint,
-    );
-
-    // Draw shots
-    for (final shot in shots) {
-      if (shot.direction == null) continue;
-      final angle = (shot.direction! - 90) * (pi / 180);
-      final shotRadius = radius * 0.85;
-      final endX = center.dx + shotRadius * cos(angle);
-      final endY = center.dy + shotRadius * sin(angle);
-
-      Color shotColor;
-      switch (shot.runs) {
-        case 0:
-          shotColor = Colors.grey;
-          break;
-        case 1:
-          shotColor = Colors.white;
-          break;
-        case 2:
-          shotColor = Colors.cyanAccent;
-          break;
-        case 3:
-          shotColor = Colors.teal;
-          break;
-        case 4:
-          shotColor = Colors.greenAccent;
-          break;
-        case 6:
-          shotColor = Colors.amber;
-          break;
-        default:
-          shotColor = Colors.white54;
-      }
-
-      final paint = Paint()
-        ..color = shotColor.withOpacity(0.7)
-        ..strokeWidth = shot.isBoundary ? 3.0 : 1.5
-        ..style = PaintingStyle.stroke;
-      canvas.drawLine(center, Offset(endX, endY), paint);
-    }
-
-    // Off-side / Leg-side labels
-    final textStyle = TextStyle(
-      color: Colors.white.withOpacity(0.5),
-      fontSize: 10,
-    );
-    final offPainter = TextPainter(
-      text: TextSpan(text: 'OFF', style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    offPainter.paint(canvas, Offset(center.dx + radius - 30, center.dy - 8));
-    final legPainter = TextPainter(
-      text: TextSpan(text: 'LEG', style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    legPainter.paint(canvas, Offset(center.dx - radius + 10, center.dy - 8));
-  }
-
-  @override
-  bool shouldRepaint(covariant _WagonWheelPainter old) => old.shots != shots;
-}
-
 class _DistributionSection extends StatelessWidget {
   final RunDistribution dist;
   const _DistributionSection({required this.dist});
@@ -218,10 +160,10 @@ class _DistributionSection extends StatelessWidget {
     return Column(
       children: [
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'Run Distribution',
           style: TextStyle(
-            color: Colors.white,
+            color: CricketColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -231,37 +173,37 @@ class _DistributionSection extends StatelessWidget {
           label: 'Dot Balls',
           count: dist.dotBalls,
           total: dist.totalBalls,
-          color: Colors.grey,
+          color: CricketColors.runDot,
         ),
         _DistBar(
           label: '1s',
           count: dist.singles,
           total: total,
-          color: Colors.white,
+          color: CricketColors.runSingle,
         ),
         _DistBar(
           label: '2s',
           count: dist.twos,
           total: total,
-          color: Colors.cyanAccent,
+          color: CricketColors.runTwo,
         ),
         _DistBar(
           label: '3s',
           count: dist.threes,
           total: total,
-          color: Colors.teal,
+          color: CricketColors.runThree,
         ),
         _DistBar(
           label: '4s',
           count: dist.fours,
           total: total,
-          color: Colors.greenAccent,
+          color: CricketColors.runFour,
         ),
         _DistBar(
           label: '6s',
           count: dist.sixes,
           total: total,
-          color: Colors.amber,
+          color: CricketColors.runSix,
         ),
         _DistBar(
           label: 'Extras',
@@ -271,7 +213,7 @@ class _DistributionSection extends StatelessWidget {
               dist.extrasByes +
               dist.extrasLegByes,
           total: total,
-          color: Colors.orange,
+          color: AppColors.warning,
         ),
       ],
     );
@@ -327,10 +269,10 @@ class _ConcededSection extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: [
       const SizedBox(height: 24),
-      const Text(
+      Text(
         'Conceded Runs',
         style: TextStyle(
-          color: Colors.white,
+          color: CricketColors.textPrimary,
           fontSize: 18,
           fontWeight: FontWeight.bold,
         ),
@@ -338,15 +280,35 @@ class _ConcededSection extends StatelessWidget {
       const SizedBox(height: 12),
       Text(
         'Total: ${breakdown.totalConceded} runs',
-        style: const TextStyle(color: Colors.grey),
+        style: TextStyle(color: CricketColors.textSecondary),
       ),
       const SizedBox(height: 8),
-      _PctRow(label: '1s', pct: breakdown.singlesPct, color: Colors.white),
-      _PctRow(label: '2s', pct: breakdown.twosPct, color: Colors.cyanAccent),
-      _PctRow(label: '3s', pct: breakdown.threesPct, color: Colors.teal),
-      _PctRow(label: '4s', pct: breakdown.foursPct, color: Colors.greenAccent),
-      _PctRow(label: '6s', pct: breakdown.sixesPct, color: Colors.amber),
-      _PctRow(label: 'Extras', pct: breakdown.extrasPct, color: Colors.orange),
+      _PctRow(
+        label: '1s',
+        pct: breakdown.singlesPct,
+        color: CricketColors.runSingle,
+      ),
+      _PctRow(label: '2s', pct: breakdown.twosPct, color: CricketColors.runTwo),
+      _PctRow(
+        label: '3s',
+        pct: breakdown.threesPct,
+        color: CricketColors.runThree,
+      ),
+      _PctRow(
+        label: '4s',
+        pct: breakdown.foursPct,
+        color: CricketColors.runFour,
+      ),
+      _PctRow(
+        label: '6s',
+        pct: breakdown.sixesPct,
+        color: CricketColors.runSix,
+      ),
+      _PctRow(
+        label: 'Extras',
+        pct: breakdown.extrasPct,
+        color: AppColors.warning,
+      ),
     ],
   );
 }

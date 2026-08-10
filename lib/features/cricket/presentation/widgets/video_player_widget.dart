@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 /// HLS video player widget with adaptive bitrate streaming.
 /// Uses platform-native players via the better_player or video_player package.
@@ -12,16 +13,16 @@ class CricketVideoPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     if (hlsUrl.isEmpty) {
       return Container(
-        color: Colors.black,
+        color: CricketColors.background,
         child: const Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.live_tv, size: 48, color: Colors.grey),
+              Icon(Icons.live_tv, size: 48, color: CricketColors.textSecondary),
               SizedBox(height: 8),
               Text(
                 'Stream starting soon...',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: CricketColors.textSecondary),
               ),
             ],
           ),
@@ -35,18 +36,18 @@ class CricketVideoPlayer extends StatelessWidget {
     // );
 
     return Container(
-      color: Colors.black,
+      color: CricketColors.background,
       child: Stack(
         alignment: Alignment.center,
         children: [
           // Placeholder for actual video player
           Container(
-            color: Colors.black,
-            child: const Center(
+            color: CricketColors.background,
+            child: Center(
               child: Icon(
                 Icons.play_circle_outline,
                 size: 64,
-                color: Colors.white54,
+                color: CricketColors.textPrimary.withOpacity(0.54),
               ),
             ),
           ),
@@ -57,10 +58,14 @@ class CricketVideoPlayer extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.black54,
+                color: CricketColors.background.withOpacity(0.54),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const Icon(Icons.volume_up, size: 20, color: Colors.white),
+              child: const Icon(
+                Icons.volume_up,
+                size: 20,
+                color: CricketColors.textPrimary,
+              ),
             ),
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../../data/models/cricket_models.dart';
@@ -26,11 +27,11 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: CricketColors.background,
       appBar: AppBar(
         title: const Text('Sponsor Management'),
-        backgroundColor: const Color(0xFF1A1E31),
-        foregroundColor: Colors.white,
+        backgroundColor: CricketColors.surface,
+        foregroundColor: CricketColors.textPrimary,
       ),
       body: BlocBuilder<SponsorBloc, SponsorState>(
         builder: (context, state) => switch (state) {
@@ -44,7 +45,7 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
           _ => const Center(
             child: Text(
               'Load sponsors for a match.',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: CricketColors.textSecondary),
             ),
           ),
         },
@@ -62,7 +63,7 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
       return const Center(
         child: Text(
           'No sponsors assigned.\nTap + to add.',
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(color: CricketColors.textSecondary),
           textAlign: TextAlign.center,
         ),
       );
@@ -77,7 +78,7 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1E31),
+            color: CricketColors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: _tierColor(s.tier).withOpacity(0.3)),
           ),
@@ -105,7 +106,7 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
                     Text(
                       s.name,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: CricketColors.textPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -132,9 +133,7 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
-                onPressed: () {
-                  // Remove sponsor — call Sub-Admin API
-                },
+                onPressed: () => _confirmDelete(context, s),
               ),
             ],
           ),
@@ -151,15 +150,50 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
     _ => Colors.grey,
   };
 
+  void _confirmDelete(BuildContext context, SponsorModel sponsor) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: CricketColors.surface,
+        title: const Text(
+          'Delete Sponsor',
+          style: TextStyle(color: CricketColors.textPrimary),
+        ),
+        content: Text(
+          'Are you sure you want to remove "${sponsor.name}"?',
+          style: const TextStyle(color: CricketColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<SponsorBloc>().add(
+                RemoveSponsor(widget.matchId, sponsor.id),
+              );
+              Navigator.pop(ctx);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddSponsorDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1E31),
-        title: const Text('Add Sponsor', style: TextStyle(color: Colors.white)),
+        backgroundColor: CricketColors.surface,
+        title: const Text(
+          'Add Sponsor',
+          style: TextStyle(color: CricketColors.textPrimary),
+        ),
         content: const Text(
           'Use the Sub-Admin panel to add sponsors.\n\nSponsors can be assigned to matches from the Super Admin dashboard.',
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(color: CricketColors.textSecondary),
         ),
         actions: [
           TextButton(

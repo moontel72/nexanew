@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
+import '../../../data/repositories/cricket_repository.dart';
 import 'manager_dashboard_page.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 /// Cricket Manager login page — isolated Bearer token auth.
 class ManagerLoginPage extends StatefulWidget {
@@ -27,7 +29,7 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: CricketColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -43,26 +45,31 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                     color: Colors.green,
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Cricket Manager',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: CricketColors.textPrimary,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const Text(
-                    'SVSB CUP 2026',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
+                  FutureBuilder<String>(
+                    future: CricketRepository().getActiveTournament().then(
+                      (t) => t?.name ?? 'Cricket Tournament',
+                    ),
+                    builder: (ctx, snap) => Text(
+                      snap.data ?? 'Cricket Tournament',
+                      style: TextStyle(
+                        color: CricketColors.textSecondary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
                     controller: _emailCtrl,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: CricketColors.textPrimary),
                     decoration: _inputDecoration('Email'),
                     keyboardType: TextInputType.emailAddress,
                     validator: (v) =>
@@ -71,7 +78,7 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passCtrl,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: CricketColors.textPrimary),
                     decoration: _inputDecoration('Password'),
                     obscureText: true,
                     validator: (v) =>
@@ -125,12 +132,12 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text(
+                              : Text(
                                   'LOGIN',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    color: CricketColors.textPrimary,
                                   ),
                                 ),
                         ),
@@ -161,9 +168,9 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
 
   InputDecoration _inputDecoration(String label) => InputDecoration(
     labelText: label,
-    labelStyle: const TextStyle(color: Colors.grey),
+    labelStyle: TextStyle(color: CricketColors.placeholder),
     filled: true,
-    fillColor: const Color(0xFF1A1E31),
+    fillColor: CricketColors.surface,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
       borderSide: BorderSide.none,

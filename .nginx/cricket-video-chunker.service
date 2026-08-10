@@ -1,0 +1,39 @@
+[Unit]
+Description=NexaTrace Cricket Video Chunker
+Documentation=https://github.com/traceodd/trace-odd-system
+After=network.target cricket-srs.service
+Requires=cricket-srs.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/nexatrace
+ExecStart=/opt/nexatrace/video-chunker \
+    --hls-dir /var/www/traceodd/public/hls \
+    --replay-dir /var/replays \
+    --laravel-url http://127.0.0.1/api/v1/cricket/internal \
+    --http-port 9090 \
+    --chunk-duration-secs 300
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cricket-video-chunker
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Resource limits
+MemoryHigh=2G
+MemoryMax=3G
+CPUQuota=200%
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/replays /var/www/traceodd/public/hls
+ReadOnlyPaths=/usr/bin/ffmpeg
+
+[Install]
+WantedBy=multi−user.target

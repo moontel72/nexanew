@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import '../../data/models/cricket_models.dart';
 
 /// Horizontal scrolling sponsor banner strip for live match overlay.
@@ -13,7 +14,7 @@ class SponsorBanner extends StatelessWidget {
 
     return Container(
       height: 48,
-      color: const Color(0xFF1A1E31),
+      color: CricketColors.inputFill,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -41,7 +42,7 @@ class SponsorBanner extends StatelessWidget {
               Text(
                 s.name,
                 style: const TextStyle(
-                  color: Colors.white70,
+                  color: CricketColors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -55,11 +56,11 @@ class SponsorBanner extends StatelessWidget {
 
   Widget _tierIcon(String tier) {
     final color = switch (tier) {
-      'title' => Colors.amber,
-      'gold' => Colors.amber.shade700,
-      'silver' => Colors.grey,
-      'bronze' => Colors.brown,
-      _ => Colors.grey,
+      'title' => CricketColors.tierTitle,
+      'gold' => CricketColors.tierGold,
+      'silver' => CricketColors.tierSilver,
+      'bronze' => CricketColors.tierBronze,
+      _ => CricketColors.tierSilver,
     };
     return Icon(Icons.star, color: color, size: 28);
   }

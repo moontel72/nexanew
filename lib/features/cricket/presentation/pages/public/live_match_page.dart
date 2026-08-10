@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 import '../../blocs/live_score/live_score_bloc.dart';
 import '../../blocs/stream_player/stream_player_bloc.dart';
@@ -42,14 +43,14 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: CricketColors.background,
       appBar: AppBar(
         title: Text(
           '${widget.match.teamAShort ?? 'T1'} vs ${widget.match.teamBShort ?? 'T2'}',
           style: const TextStyle(fontSize: 16),
         ),
-        backgroundColor: const Color(0xFF1A1E31),
-        foregroundColor: Colors.white,
+        backgroundColor: CricketColors.inputFill,
+        foregroundColor: CricketColors.textPrimary,
       ),
       body: Column(
         children: [
@@ -64,11 +65,13 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
                 StreamPlayerOffline(:final message) => Center(
                   child: Text(
                     message,
-                    style: const TextStyle(color: Colors.grey),
+                    style: const TextStyle(color: CricketColors.textSecondary),
                   ),
                 ),
                 _ => const Center(
-                  child: CircularProgressIndicator(color: Colors.green),
+                  child: CircularProgressIndicator(
+                    color: CricketColors.complete,
+                  ),
                 ),
               },
             ),
@@ -92,11 +95,14 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
               ),
               LiveScoreLoading() => const Padding(
                 padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(color: Colors.green),
+                child: CircularProgressIndicator(color: CricketColors.complete),
               ),
               LiveScoreError(:final message) => Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text(message, style: const TextStyle(color: Colors.red)),
+                child: Text(
+                  message,
+                  style: const TextStyle(color: CricketColors.wicket),
+                ),
               ),
               _ => const SizedBox.shrink(),
             },
@@ -112,7 +118,7 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
                 _ => const Center(
                   child: Text(
                     'Waiting for match data...',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: CricketColors.textSecondary),
                   ),
                 ),
               },

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 import '../../data/models/cricket_models.dart';
 
@@ -26,8 +27,8 @@ class WagonWheelPainter extends CustomPainter {
 
   WagonWheelPainter({
     required this.shots,
-    this.pitchColor = const Color(0xFFD4A373),
-    this.grassColor = const Color(0xFF2D5A27),
+    this.pitchColor = CricketColors.pitchBrown,
+    this.grassColor = CricketColors.fieldGrass,
   });
 
   @override
@@ -165,17 +166,17 @@ class WagonWheelPainter extends CustomPainter {
   Color _colorForRuns(int runs) {
     switch (runs) {
       case 6:
-        return const Color(0xFFFFD700); // gold
+        return CricketColors.runSix; // gold
       case 4:
-        return const Color(0xFF4CAF50); // green
+        return CricketColors.runFour; // green
       case 3:
-        return const Color(0xFF00897B); // teal
+        return CricketColors.runThree; // teal
       case 2:
-        return const Color(0xFF00BCD4); // cyan
+        return CricketColors.runTwo; // cyan
       case 1:
-        return Colors.white;
+        return CricketColors.runSingle;
       default:
-        return Colors.grey;
+        return CricketColors.runDot;
     }
   }
 

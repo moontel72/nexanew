@@ -11,6 +11,7 @@ use App\Http\Controllers\Cricket\PlayerCareerController;
 use App\Http\Controllers\Cricket\PlayerController;
 use App\Http\Controllers\Cricket\PointsTableController;
 use App\Http\Controllers\Cricket\PublicMatchController;
+use App\Http\Controllers\Cricket\ReplayController;
 use App\Http\Controllers\Cricket\SponsorController;
 use App\Http\Controllers\Cricket\StreamController;
 use App\Http\Controllers\Cricket\TeamController;
@@ -69,6 +70,10 @@ Route::prefix('api/v1/cricket/public')->group(function (): void {
     // Best XI
     Route::get('best-xi', [BestXiController::class, 'index']);
     Route::get('best-xi/{id}', [BestXiController::class, 'show']);
+
+    // Public Replays
+    Route::get('matches/{matchId}/replays', [ReplayController::class, 'publicReplays']);
+    Route::get('replays/{clipId}/stream', [ReplayController::class, 'publicStream']);
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -108,6 +113,14 @@ Route::prefix('api/v1/cricket/manager')
         Route::post('voice-score/{logId}/apply', [VoiceScoreController::class, 'apply']);
         Route::post('voice-score/{logId}/reject', [VoiceScoreController::class, 'reject']);
         Route::get('matches/{matchId}/voice-logs', [VoiceScoreController::class, 'history']);
+
+        // Instant Replay / VAR
+        Route::post('matches/{matchId}/replay/event', [ReplayController::class, 'markEvent']);
+        Route::put('replay/events/{eventId}/annotate', [ReplayController::class, 'annotate']);
+        Route::get('matches/{matchId}/replay/events', [ReplayController::class, 'listEvents']);
+        Route::post('matches/{matchId}/replay/clip', [ReplayController::class, 'createClip']);
+        Route::post('replay/clips/{clipId}/publish', [ReplayController::class, 'publishClip']);
+        Route::delete('replay/clips/{clipId}', [ReplayController::class, 'deleteClip']);
     });
 
 // ═══════════════════════════════════════════════════════════════
@@ -186,4 +199,12 @@ Route::prefix('api/v1/cricket/admin')
         Route::post('best-xi', [BestXiController::class, 'store']);
         Route::put('best-xi/{id}', [BestXiController::class, 'update']);
         Route::delete('best-xi/{id}', [BestXiController::class, 'destroy']);
+    });
+
+// ═══════════════════════════════════════════════════════════════
+// INTERNAL: Sidecar-to-Laravel endpoints (Rust video chunker)
+// ═══════════════════════════════════════════════════════════════
+Route::prefix('api/v1/cricket/internal')
+    ->group(function (): void {
+        Route::post('replay/chunk', [ReplayController::class, 'recordChunk']);
     });

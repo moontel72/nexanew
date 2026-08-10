@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../data/models/cricket_models.dart';
+import 'package:trace_odd/shared/theme/cricket_colors.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 /// Compact match card for the tournament home page list.
+/// Navigation uses go_router named routes for clean deep linking.
 class MatchCard extends StatelessWidget {
   final MatchModel match;
 
@@ -9,23 +14,26 @@ class MatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final teamA = match.teamAShort ?? match.teamAName ?? '—';
+    final teamB = match.teamBShort ?? match.teamBName ?? '—';
+
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) =>
-                _LiveMatchPageShell(matchId: match.id, match: match),
-          ),
+        // Navigate to match analytics via go_router
+        context.goNamed(
+          'cricket_match_analytics',
+          pathParameters: {'matchId': match.id},
+          queryParameters: {'title': '$teamA vs $teamB'},
         );
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1E31),
+          color: CricketColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: match.isLive
-              ? Border.all(color: Colors.red.withOpacity(0.5), width: 1)
+              ? Border.all(color: CricketColors.live.withOpacity(0.5), width: 1)
               : null,
         ),
         child: Row(
@@ -37,9 +45,9 @@ class MatchCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        '${match.teamAShort ?? 'T1'} vs ${match.teamBShort ?? 'T2'}',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        '$teamA vs $teamB',
+                        style: TextStyle(
+                          color: CricketColors.textPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -52,13 +60,13 @@ class MatchCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.red,
+                            color: CricketColors.live,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text(
+                          child: Text(
                             'LIVE',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: CricketColors.textPrimary,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -71,15 +79,18 @@ class MatchCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       match.liveScore!.score ?? '',
-                      style: const TextStyle(
-                        color: Colors.green,
+                      style: TextStyle(
+                        color: AppColors.secondary,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       'Overs: ${match.liveScore!.overs.toStringAsFixed(1)}',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      style: TextStyle(
+                        color: CricketColors.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ],
@@ -89,7 +100,10 @@ class MatchCard extends StatelessWidget {
               Flexible(
                 child: Text(
                   match.venue!,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: TextStyle(
+                    color: CricketColors.textTertiary,
+                    fontSize: 12,
+                  ),
                   textAlign: TextAlign.right,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -97,89 +111,6 @@ class MatchCard extends StatelessWidget {
               ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Shell widget that provides BLoC context for live match page.
-class _LiveMatchPageShell extends StatelessWidget {
-  final String matchId;
-  final MatchModel match;
-
-  const _LiveMatchPageShell({required this.matchId, required this.match});
-
-  @override
-  Widget build(BuildContext context) {
-    // We defer to the public LiveMatchPage — importing here to avoid
-    // circular dependency with the full page definition.
-    return _LiveMatchPageContent(match: match);
-  }
-}
-
-/// Inline live match content (avoids extra import complexity).
-class _LiveMatchPageContent extends StatefulWidget {
-  final MatchModel match;
-  const _LiveMatchPageContent({required this.match});
-
-  @override
-  State<_LiveMatchPageContent> createState() => _LiveMatchPageContentState();
-}
-
-class _LiveMatchPageContentState extends State<_LiveMatchPageContent> {
-  @override
-  Widget build(BuildContext context) {
-    // Use the BLoCs from the cricket app scope
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(
-          '${widget.match.teamAShort ?? 'T1'} vs ${widget.match.teamBShort ?? 'T2'}',
-        ),
-        backgroundColor: const Color(0xFF1A1E31),
-        foregroundColor: Colors.white,
-      ),
-      body: _MatchDetailBody(matchId: widget.match.id),
-    );
-  }
-}
-
-/// Match detail body that connects to BLoCs.
-class _MatchDetailBody extends StatefulWidget {
-  final String matchId;
-  const _MatchDetailBody({required this.matchId});
-
-  @override
-  State<_MatchDetailBody> createState() => _MatchDetailBodyState();
-}
-
-class _MatchDetailBodyState extends State<_MatchDetailBody> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final bloc = context.findAncestorStateOfType<_MatchDetailBodyState>();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.sports_cricket, size: 64, color: Colors.green),
-          SizedBox(height: 16),
-          Text(
-            'Match Details',
-            style: TextStyle(color: Colors.white, fontSize: 20),
-          ),
-          Text(
-            'Live score and stream will appear when match is in progress.',
-            style: TextStyle(color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-        ],
       ),
     );
   }
