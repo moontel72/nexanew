@@ -67,7 +67,7 @@ class CricketManagerAuthController extends Controller
 
     public function logout(Request $request): \Illuminate\Http\JsonResponse
     {
-        $manager = $request->userResolver()();
+        $manager = \App\Http\Middleware\Cricket\CricketManagerAuth::manager($request);
 
         if ($manager instanceof CricketManager) {
             ManagerSessionLog::create([
@@ -85,7 +85,7 @@ class CricketManagerAuthController extends Controller
 
     public function me(Request $request): \Illuminate\Http\JsonResponse
     {
-        $manager = $request->userResolver()();
+        $manager = \App\Http\Middleware\Cricket\CricketManagerAuth::manager($request);
 
         if (!$manager instanceof CricketManager) {
             return response()->json(['message' => 'Not authenticated.'], 401);

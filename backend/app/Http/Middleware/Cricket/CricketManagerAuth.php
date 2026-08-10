@@ -5,7 +5,6 @@ namespace App\Http\Middleware\Cricket;
 use App\Models\Cricket\CricketManager;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -19,6 +18,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class CricketManagerAuth
 {
+    public const REQUEST_KEY = '_cricket_manager';
+
     public function handle(Request $request, Closure $next): Response
     {
         $token = $request->bearerToken();
@@ -49,15 +50,14 @@ class CricketManagerAuth
             ], 401);
         }
 
-        // Extend token expiry by 1 hour on activity
+        // Extend token expiry on activity
         if ($manager->token_expires_at) {
             $manager->token_expires_at = now()->addHours(12);
             $manager->save();
         }
 
-        // Attach manager to request for downstream use
-        $request->merge(['_cricket_manager' => $manager->id]);
-        $request->setUserResolver(fn () => $manager);
+        // Attach manager to request via attributes bag (Laravel standard)
+        $request->attributes->set(self::REQUEST_KEY, $manager);
 
         return $next($request);
     }
@@ -67,6 +67,6 @@ class CricketManagerAuth
      */
     public static function manager(Request $request): ?CricketManager
     {
-        return $request->userResolver()();
+        return $request->attributes->get(self::REQUEST_KEY);
     }
 }
