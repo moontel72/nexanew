@@ -75,7 +75,7 @@ class CricketRepository {
       throw Exception('No token in login response');
     }
     await _persistToken(token);
-    return body!;
+    return body ?? {'token': token};
   }
 
   Future<CricketManagerModel> getManager() async {
