@@ -86,7 +86,10 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                       if (state is CricketAuthLoggedIn) {
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
-                            builder: (_) => const ManagerDashboardPage(),
+                            builder: (_) => BlocProvider.value(
+                              value: context.read<CricketAuthBloc>(),
+                              child: const ManagerDashboardPage(),
+                            ),
                           ),
                         );
                       }
