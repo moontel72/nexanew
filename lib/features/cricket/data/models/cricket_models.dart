@@ -68,7 +68,7 @@ class TeamModel {
   factory TeamModel.fromJson(Map<String, dynamic> json) => TeamModel(
     id: json['id'] as String,
     name: json['name'] as String,
-    shortCode: json['short_code'] as String,
+    shortCode: json['short_code'] as String? ?? '',
     logoUrl: json['logo_url'] as String?,
     primaryColor: json['primary_color'] as String?,
     teamCode: json['team_code'] as String?,

@@ -61,9 +61,10 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                     ),
                   ),
                   FutureBuilder<String>(
-                    future: CricketRepository().getActiveTournament().then(
-                      (t) => t?.name ?? 'Cricket Tournament',
-                    ),
+                    future: CricketRepository()
+                        .getActiveTournament()
+                        .then((t) => t?.name ?? 'Cricket Tournament')
+                        .catchError((_) => 'Cricket Tournament'),
                     builder: (ctx, snap) => Text(
                       snap.data ?? 'Cricket Tournament',
                       style: TextStyle(
@@ -100,31 +101,36 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                         );
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
-                            builder: (_) => MultiBlocProvider(
-                              providers: [
-                                BlocProvider.value(
-                                  value: context.read<CricketAuthBloc>(),
-                                ),
-                                BlocProvider(
-                                  create: (_) => MatchListBloc(repo: repo),
-                                ),
-                                BlocProvider(
-                                  create: (_) => TournamentHubBloc(repo: repo),
-                                ),
-                                BlocProvider(
-                                  create: (_) => LiveScoreBloc(repo: repo),
-                                ),
-                                BlocProvider(
-                                  create: (_) => CameraSwitcherBloc(repo: repo),
-                                ),
-                                BlocProvider(
-                                  create: (_) => VoiceScoreBloc(repo: repo),
-                                ),
-                                BlocProvider(
-                                  create: (_) => SponsorBloc(repo: repo),
-                                ),
-                              ],
-                              child: const ManagerDashboardPage(),
+                            builder: (_) => RepositoryProvider.value(
+                              value: repo,
+                              child: MultiBlocProvider(
+                                providers: [
+                                  BlocProvider.value(
+                                    value: context.read<CricketAuthBloc>(),
+                                  ),
+                                  BlocProvider(
+                                    create: (_) => MatchListBloc(repo: repo),
+                                  ),
+                                  BlocProvider(
+                                    create: (_) =>
+                                        TournamentHubBloc(repo: repo),
+                                  ),
+                                  BlocProvider(
+                                    create: (_) => LiveScoreBloc(repo: repo),
+                                  ),
+                                  BlocProvider(
+                                    create: (_) =>
+                                        CameraSwitcherBloc(repo: repo),
+                                  ),
+                                  BlocProvider(
+                                    create: (_) => VoiceScoreBloc(repo: repo),
+                                  ),
+                                  BlocProvider(
+                                    create: (_) => SponsorBloc(repo: repo),
+                                  ),
+                                ],
+                                child: const ManagerDashboardPage(),
+                              ),
                             ),
                           ),
                         );
