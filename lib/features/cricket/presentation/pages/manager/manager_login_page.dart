@@ -10,6 +10,7 @@ import '../../blocs/voice_score/voice_score_bloc.dart';
 import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../../data/repositories/cricket_repository.dart';
 import 'manager_dashboard_page.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 /// Cricket Manager login page — isolated Bearer token auth.
@@ -48,7 +49,7 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                   const Icon(
                     Icons.sports_cricket,
                     size: 80,
-                    color: Colors.green,
+                    color: AppColors.secondary,
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -136,7 +137,7 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                         height: 48,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: AppColors.secondary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -159,7 +160,7 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                                   width: 24,
                                   height: 24,
                                   child: CircularProgressIndicator(
-                                    color: Colors.white,
+                                    color: CricketColors.textPrimary,
                                     strokeWidth: 2,
                                   ),
                                 )
@@ -182,7 +183,7 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                           padding: const EdgeInsets.only(top: 16),
                           child: Text(
                             state.message,
-                            style: const TextStyle(color: Colors.red),
+                            style: TextStyle(color: CricketColors.wicket),
                           ),
                         );
                       return const SizedBox.shrink();

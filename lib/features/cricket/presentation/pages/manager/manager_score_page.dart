@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 import '../../blocs/live_score/live_score_bloc.dart';
@@ -87,7 +88,7 @@ class _BallButtonGrid extends StatelessWidget {
                 color: runs == 0
                     ? CricketColors.textSecondary
                     : runs == 3
-                    ? Colors.teal
+                    ? CricketColors.runThree
                     : CricketColors.textPrimary,
               );
             }).toList(),
@@ -102,14 +103,14 @@ class _BallButtonGrid extends StatelessWidget {
                 runs: 4,
                 matchId: matchId,
                 repo: repo,
-                color: Colors.green,
+                color: CricketColors.runFour,
               ),
               _RunButton(
                 label: 'SIX',
                 runs: 6,
                 matchId: matchId,
                 repo: repo,
-                color: Colors.blue,
+                color: CricketColors.runSix,
               ),
             ],
           ),
@@ -151,8 +152,8 @@ class _BallButtonGrid extends StatelessWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.orange,
-                side: const BorderSide(color: Colors.orange),
+                foregroundColor: AppColors.warning,
+                side: const BorderSide(color: AppColors.warning),
               ),
               onPressed: () => repo.undoLastBall(matchId),
               icon: const Icon(Icons.undo),
@@ -217,15 +218,15 @@ class _WicketButton extends StatelessWidget {
       width: 64,
       height: 64,
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.2),
+        color: CricketColors.wicket.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.withOpacity(0.5)),
+        border: Border.all(color: CricketColors.wicket.withOpacity(0.5)),
       ),
       alignment: Alignment.center,
       child: const Text(
         'W',
         style: TextStyle(
-          color: Colors.red,
+          color: CricketColors.wicket,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
@@ -297,13 +298,13 @@ class _ExtraButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+        border: Border.all(color: AppColors.warning.withOpacity(0.3)),
       ),
       alignment: Alignment.center,
       child: Text(
         label,
         style: const TextStyle(
-          color: Colors.orange,
+          color: AppColors.warning,
           fontSize: 13,
           fontWeight: FontWeight.bold,
         ),

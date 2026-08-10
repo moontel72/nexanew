@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 import '../../blocs/camera_switcher/camera_switcher_bloc.dart';
 import '../../../data/models/cricket_models.dart';
@@ -44,12 +45,15 @@ class _CameraSwitcherPageState extends State<CameraSwitcherPage> {
       body: BlocBuilder<CameraSwitcherBloc, CameraSwitcherState>(
         builder: (context, state) => switch (state) {
           CameraSwitcherLoading() => const Center(
-            child: CircularProgressIndicator(color: Colors.green),
+            child: CircularProgressIndicator(color: AppColors.secondary),
           ),
           CameraSwitcherLoaded(:final cameras, :final hasFailover) =>
             _buildCameraGrid(cameras),
           CameraSwitcherError(:final message) => Center(
-            child: Text(message, style: const TextStyle(color: Colors.red)),
+            child: Text(
+              message,
+              style: const TextStyle(color: CricketColors.wicket),
+            ),
           ),
           _ => const Center(
             child: Text(
@@ -98,7 +102,7 @@ class _CameraTile extends StatelessWidget {
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: isActive
-            ? Border.all(color: Colors.green, width: 2)
+            ? Border.all(color: AppColors.secondary, width: 2)
             : Border.all(color: CricketColors.textSecondary.withOpacity(0.2)),
       ),
       child: Row(
@@ -109,7 +113,9 @@ class _CameraTile extends StatelessWidget {
             height: 12,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isActive ? Colors.green : CricketColors.textSecondary,
+              color: isActive
+                  ? AppColors.secondary
+                  : CricketColors.textSecondary,
             ),
           ),
           const SizedBox(width: 12),
@@ -131,15 +137,18 @@ class _CameraTile extends StatelessWidget {
                     _StatusBadge(
                       label: camera.streamStatus.toUpperCase(),
                       color: isActive
-                          ? Colors.green
+                          ? AppColors.secondary
                           : CricketColors.textSecondary,
                     ),
                     if (camera.isPrimary)
-                      const _StatusBadge(label: 'PRIMARY', color: Colors.blue),
+                      const _StatusBadge(
+                        label: 'PRIMARY',
+                        color: CricketColors.teamA,
+                      ),
                     if (camera.failoverPriority > 0)
                       _StatusBadge(
                         label: 'FAILOVER #${camera.failoverPriority}',
-                        color: Colors.orange,
+                        color: CricketColors.roleAllRounder,
                       ),
                   ],
                 ),
@@ -149,7 +158,7 @@ class _CameraTile extends StatelessWidget {
           // Toggle button
           Switch.adaptive(
             value: isActive,
-            activeColor: Colors.green,
+            activeColor: AppColors.secondary,
             onChanged: (_) {
               context.read<CameraSwitcherBloc>().add(
                 ToggleCamera(matchId, camera.cameraNumber - 1),

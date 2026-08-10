@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 import '../../blocs/voice_score/voice_score_bloc.dart';
 
@@ -38,7 +39,7 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.green,
+                backgroundColor: AppColors.secondary,
               ),
             );
           }
@@ -58,7 +59,11 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                   ),
                   child: const Column(
                     children: [
-                      Icon(Icons.mic, size: 48, color: Colors.orange),
+                      Icon(
+                        Icons.mic,
+                        size: 48,
+                        color: CricketColors.roleAllRounder,
+                      ),
                       SizedBox(height: 8),
                       Text(
                         'Speak or Type Score Update',
@@ -99,7 +104,7 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                       borderSide: BorderSide.none,
                     ),
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.green),
+                      icon: const Icon(Icons.send, color: AppColors.secondary),
                       onPressed: () {
                         final text = _textCtrl.text.trim();
                         if (text.isNotEmpty && widget.matchId.isNotEmpty) {
@@ -122,17 +127,23 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                   ),
                   VoiceScoreListening() => const Column(
                     children: [
-                      Icon(Icons.mic, size: 48, color: Colors.orange),
+                      Icon(
+                        Icons.mic,
+                        size: 48,
+                        color: CricketColors.roleAllRounder,
+                      ),
                       SizedBox(height: 8),
                       Text(
                         'Listening...',
-                        style: TextStyle(color: Colors.orange),
+                        style: TextStyle(color: CricketColors.roleAllRounder),
                       ),
                     ],
                   ),
                   VoiceScoreProcessing(:final transcript) => Column(
                     children: [
-                      const CircularProgressIndicator(color: Colors.orange),
+                      const CircularProgressIndicator(
+                        color: CricketColors.roleAllRounder,
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         'Processing: "$transcript"',
@@ -149,12 +160,12 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                       const Icon(
                         Icons.check_circle,
                         size: 48,
-                        color: Colors.green,
+                        color: AppColors.secondary,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         message,
-                        style: const TextStyle(color: Colors.green),
+                        style: const TextStyle(color: AppColors.secondary),
                       ),
                     ],
                   ),
@@ -163,10 +174,13 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                       const Icon(
                         Icons.error_outline,
                         size: 48,
-                        color: Colors.red,
+                        color: CricketColors.wicket,
                       ),
                       const SizedBox(height: 8),
-                      Text(message, style: const TextStyle(color: Colors.red)),
+                      Text(
+                        message,
+                        style: const TextStyle(color: CricketColors.wicket),
+                      ),
                     ],
                   ),
                 },
@@ -194,13 +208,16 @@ class _ParsedScoreCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
+        border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
       ),
       child: Column(
         children: [
           const Text(
             'PARSED SCORE',
-            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: AppColors.secondary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 12),
           _DataRow(label: 'Runs', value: '${data['runs'] ?? 0}'),
@@ -219,13 +236,17 @@ class _ParsedScoreCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               OutlinedButton(
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: CricketColors.wicket,
+                ),
                 onPressed: () =>
                     context.read<VoiceScoreBloc>().add(CancelVoiceScore()),
                 child: const Text('REJECT'),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                ),
                 onPressed: () =>
                     context.read<VoiceScoreBloc>().add(ApplyVoiceScore(logId)),
                 child: const Text('APPLY SCORE'),
