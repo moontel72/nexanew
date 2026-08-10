@@ -63,18 +63,18 @@ class CricketRepository {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
-    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final body = _parseBody(res);
     if (res.statusCode != 200) {
       throw Exception(
-        body['message'] ?? 'Login failed (HTTP ${res.statusCode})',
+        body?['message'] ?? 'Login failed (HTTP ${res.statusCode})',
       );
     }
-    final token = body['token']?.toString();
+    final token = body?['token']?.toString();
     if (token == null || token.isEmpty) {
       throw Exception('No token in login response');
     }
     await _persistToken(token);
-    return body;
+    return body!;
   }
 
   Future<CricketManagerModel> getManager() async {
@@ -82,16 +82,31 @@ class CricketRepository {
       Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/me'),
       headers: await _authHeaders(),
     );
-    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final body = _parseBody(res);
     if (res.statusCode != 200) {
       throw Exception(
-        body['message'] ?? 'Failed to load profile (HTTP ${res.statusCode})',
+        body?['message'] ?? 'Failed to load profile (HTTP ${res.statusCode})',
       );
     }
-    if (body['manager'] == null) {
+    if (body?['manager'] == null) {
       throw Exception('Profile data missing');
     }
-    return CricketManagerModel.fromJson(body['manager']);
+    return CricketManagerModel.fromJson(body!['manager']);
+  }
+
+  /// Safely parse response body as JSON. Returns null if body is HTML/plaintext.
+  Map<String, dynamic>? _parseBody(http.Response res) {
+    try {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {
+      // Server returned non-JSON (HTML error page)
+      if (res.statusCode >= 500) {
+        throw Exception(
+          'Server error (HTTP ${res.statusCode}). Check Laravel logs.',
+        );
+      }
+      return null;
+    }
   }
 
   // ────────────────────────────────────────────────────────────
