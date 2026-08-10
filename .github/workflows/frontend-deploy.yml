@@ -42,6 +42,7 @@ jobs:
 
       # ──────────────────────────────────────────────────────────────
       # STEP A: Build & Deploy Admin Panel (main.dart) — PRIMARY
+      # Includes Cricket Manager at /cricket-manager/* routes.
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Admin Panel (main.dart)

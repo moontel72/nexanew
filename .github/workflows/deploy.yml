@@ -6,6 +6,8 @@ on:
       - mainnew
     paths:
       - "backend/**"
+      - "lib/**"
+      - "web/**"
       - "rust/**"
       - ".nginx/**"
       - ".github/workflows/deploy.yml"
