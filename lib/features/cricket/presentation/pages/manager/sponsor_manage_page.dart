@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
+import 'package:trace_odd/shared/theme/colors.dart';
 
 import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../../data/models/cricket_models.dart';
@@ -36,11 +37,11 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
       body: BlocBuilder<SponsorBloc, SponsorState>(
         builder: (context, state) => switch (state) {
           SponsorLoading() => const Center(
-            child: CircularProgressIndicator(color: Colors.green),
+            child: CircularProgressIndicator(color: AppColors.secondary),
           ),
           SponsorLoaded(:final sponsors) => _buildSponsorList(sponsors),
           SponsorError(:final message) => Center(
-            child: Text(message, style: const TextStyle(color: Colors.red)),
+            child: Text(message, style: TextStyle(color: CricketColors.wicket)),
           ),
           _ => const Center(
             child: Text(
@@ -51,7 +52,7 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.secondary,
         onPressed: () => _showAddSponsorDialog(context),
         child: const Icon(Icons.add),
       ),
@@ -123,7 +124,7 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
                             label: s.placement!
                                 .replaceAll('_', ' ')
                                 .toUpperCase(),
-                            color: Colors.blue,
+                            color: CricketColors.teamA,
                           ),
                         ],
                       ],
@@ -132,7 +133,7 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                icon: Icon(Icons.delete_outline, color: CricketColors.wicket),
                 onPressed: () => _confirmDelete(context, s),
               ),
             ],
@@ -143,11 +144,11 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
   }
 
   Color _tierColor(String tier) => switch (tier) {
-    'title' => Colors.amber,
-    'gold' => Colors.amber.shade700,
-    'silver' => Colors.grey.shade400,
-    'bronze' => Colors.brown,
-    _ => Colors.grey,
+    'title' => CricketColors.tierTitle,
+    'gold' => CricketColors.tierGold,
+    'silver' => CricketColors.tierSilver,
+    'bronze' => CricketColors.tierBronze,
+    _ => CricketColors.textSecondary,
   };
 
   void _confirmDelete(BuildContext context, SponsorModel sponsor) {
@@ -175,7 +176,10 @@ class _SponsorManagePageState extends State<SponsorManagePage> {
               );
               Navigator.pop(ctx);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: CricketColors.wicket),
+            ),
           ),
         ],
       ),

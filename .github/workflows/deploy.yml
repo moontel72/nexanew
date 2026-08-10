@@ -42,7 +42,7 @@ jobs:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
-          ssh-private-key: ${{ secrets.SSH_KYE_HATZNER }}
+          ssh-private-key: ${{ secrets.SSH_KEY_HETZNER }}
 
       - name: Add server to known_hosts
         run: |

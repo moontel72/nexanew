@@ -36,7 +36,7 @@ class ClubHomePage extends StatelessWidget {
             _ClubHeader(club: club),
             const SizedBox(height: 8),
             _ClubStats(club: club),
-            const Divider(color: Colors.white12),
+            const Divider(color: CricketColors.border),
             Expanded(
               child: TabBarView(
                 children: [

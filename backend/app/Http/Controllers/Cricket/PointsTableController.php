@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cricket;
 use App\Http\Controllers\Controller;
 use App\Models\Cricket\Tournament;
 use App\Services\Cricket\PointsTableService;
+use Illuminate\Support\Facades\DB;
 
 class PointsTableController extends Controller
 {

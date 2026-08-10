@@ -162,7 +162,7 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                     _ActionChip(
                       icon: Icons.scoreboard,
                       label: 'Scoring',
-                      color: Colors.green,
+                      color: CricketColors.runFour,
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -174,7 +174,7 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                     _ActionChip(
                       icon: Icons.videocam,
                       label: 'Cameras',
-                      color: Colors.blue,
+                      color: CricketColors.teamA,
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -186,7 +186,7 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                     _ActionChip(
                       icon: Icons.mic,
                       label: 'Voice',
-                      color: Colors.orange,
+                      color: CricketColors.roleAllRounder,
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -198,7 +198,7 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                     _ActionChip(
                       icon: Icons.campaign,
                       label: 'Sponsors',
-                      color: Colors.purple,
+                      color: AppColors.secondary,
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -653,7 +653,7 @@ class _TournamentTab extends StatelessWidget {
                             ),
                           ),
                         ),
-                    const Divider(color: Colors.white12),
+                    const Divider(color: CricketColors.border),
                     Text(
                       'Most Wickets',
                       style: TextStyle(
