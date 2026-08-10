@@ -933,7 +933,7 @@ class _ModuleTile extends StatelessWidget {
           subtitle,
           style: TextStyle(color: CricketColors.textSecondary, fontSize: 12),
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        trailing: Icon(Icons.chevron_right, color: CricketColors.textSecondary),
         onTap: onTap,
       ),
     );
