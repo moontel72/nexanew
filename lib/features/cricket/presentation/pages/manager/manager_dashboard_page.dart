@@ -75,11 +75,9 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                       selectedTab: _selectedTab,
                       onLogout: () {
                         context.read<CricketAuthBloc>().add(CricketLogout());
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => const ManagerLoginPage(),
-                          ),
-                        );
+                        // Use GoRouter navigation instead of pushReplacement
+                        // to ensure the new route gets proper RepositoryProvider setup
+                        context.go('/cricket-manager/login');
                       },
                     ),
                     if (!wide)

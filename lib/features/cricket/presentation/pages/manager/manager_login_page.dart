@@ -25,6 +25,7 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -87,8 +88,19 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
                   TextFormField(
                     controller: _passCtrl,
                     style: TextStyle(color: CricketColors.textPrimary),
-                    decoration: _inputDecoration('Password'),
-                    obscureText: true,
+                    decoration: _inputDecoration('Password').copyWith(
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: CricketColors.textSecondary,
+                        ),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                    ),
+                    obscureText: _obscurePassword,
                     validator: (v) =>
                         v?.isEmpty == true ? 'Password required' : null,
                   ),
