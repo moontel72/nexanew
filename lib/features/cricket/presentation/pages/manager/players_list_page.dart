@@ -93,23 +93,520 @@ class _PlayersListPageState extends State<PlayersListPage> {
     return list;
   }
 
-  Color _roleColor(String role) {
-    switch (role) {
-      case 'batsman':
-        return const Color(0xFF10B981); // green
-      case 'bowler':
-        return const Color(0xFFEF4444); // red
-      case 'all_rounder':
-        return const Color(0xFFA855F7); // purple
-      case 'wicket_keeper':
-        return const Color(0xFF3B82F6); // blue
+  /// Returns players grouped by team, with each group sorted by position
+  /// priority (ASC), then active-first, then name A–Z.
+  Map<String?, List<PlayerModel>> get _sortedGrouped {
+    final raw = <String?, List<PlayerModel>>{};
+    for (final p in _filtered) {
+      raw.putIfAbsent(p.teamId, () => []).add(p);
+    }
+    for (final list in raw.values) {
+      list.sort((a, b) {
+        final posC = _positionSort(
+          a.position,
+        ).compareTo(_positionSort(b.position));
+        if (posC != 0) return posC;
+        final activeA = a.status == 'active' ? 0 : 1;
+        final activeB = b.status == 'active' ? 0 : 1;
+        final statusC = activeA.compareTo(activeB);
+        if (statusC != 0) return statusC;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+    }
+    // Sort group keys: named teams alphabetically, then "No Team" (null) last
+    final sorted = <String?, List<PlayerModel>>{};
+    final namedKeys = raw.keys.where((k) => k != null).toList()
+      ..sort((a, b) {
+        final teamA = _teams.cast<TeamModel?>().firstWhere(
+          (t) => t!.id == a,
+          orElse: () => null,
+        );
+        final teamB = _teams.cast<TeamModel?>().firstWhere(
+          (t) => t!.id == b,
+          orElse: () => null,
+        );
+        return (teamA?.name ?? '').toLowerCase().compareTo(
+          (teamB?.name ?? '').toLowerCase(),
+        );
+      });
+    for (final k in namedKeys) {
+      sorted[k] = raw[k]!;
+    }
+    if (raw.containsKey(null)) {
+      sorted[null] = raw[null]!;
+    }
+    return sorted;
+  }
+
+  int get _groupedItemCount {
+    int c = 0;
+    for (final entry in _sortedGrouped.entries) {
+      c += 1 + entry.value.length; // header + players
+    }
+    return c;
+  }
+
+  Widget _buildGroupedItem(int index) {
+    int cursor = 0;
+    for (final entry in _sortedGrouped.entries) {
+      if (index == cursor) return _buildTeamHeader(entry.key);
+      cursor++;
+      final groupLen = entry.value.length;
+      if (index < cursor + groupLen) {
+        return _buildPlayerCard(entry.value[index - cursor]);
+      }
+      cursor += groupLen;
+    }
+    return const SizedBox.shrink();
+  }
+
+  int _positionSort(String position) {
+    switch (position) {
+      case 'manager':
+        return 0;
+      case 'coach':
+        return 1;
+      case 'captain':
+        return 2;
+      case 'vice_captain':
+        return 3;
+      case 'player':
+        return 4;
+      case 'extra':
+        return 5;
       default:
-        return const Color(0xFF9CA3AF); // grey
+        return 6;
+    }
+  }
+
+  Color _positionColor(String position) {
+    switch (position) {
+      case 'manager':
+        return const Color(0xFF8B5CF6); // purple
+      case 'coach':
+        return const Color(0xFFF59E0B); // amber
+      case 'captain':
+        return const Color(0xFFF59E0B); // gold
+      case 'vice_captain':
+        return const Color(0xFF06B6D4); // teal
+      case 'player':
+        return const Color(0xFF2563EB); // blue
+      case 'extra':
+        return const Color(0xFF6B7280); // grey
+      default:
+        return const Color(0xFF2563EB);
+    }
+  }
+
+  String _positionLabel(String position) {
+    switch (position) {
+      case 'manager':
+        return 'Manager';
+      case 'coach':
+        return 'Coach';
+      case 'captain':
+        return 'Captain';
+      case 'vice_captain':
+        return 'Vice Captain';
+      case 'player':
+        return 'Player';
+      case 'extra':
+        return 'Extra';
+      default:
+        return position;
     }
   }
 
   String _formatDate(DateTime dt) {
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildTeamHeader(String? teamId) {
+    if (teamId == null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              backgroundColor: Color(0xFF2563EB),
+              radius: 16,
+              child: Text(
+                '?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'No Team',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    final team = _teams.cast<TeamModel?>().firstWhere(
+      (t) => t!.id == teamId,
+      orElse: () => null,
+    );
+    final name = team?.name ?? 'Unknown Team';
+    final short = team?.shortCode ?? '';
+    Color avatarColor = const Color(0xFF2563EB);
+    if (team?.primaryColor != null && team!.primaryColor!.isNotEmpty) {
+      try {
+        avatarColor = Color(
+          int.parse(team.primaryColor!.replaceFirst('#', '0xFF')),
+        );
+      } catch (_) {}
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: avatarColor,
+            radius: 16,
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          if (short.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                short,
+                style: const TextStyle(
+                  color: Color(0xFF10B981),
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayerCard(PlayerModel p) {
+    final posColor = _positionColor(p.position);
+    final isActive = p.status == 'active';
+    final isSuspended = p.status == 'suspended';
+
+    Color statusDotColor;
+    if (isActive) {
+      statusDotColor = const Color(0xFF10B981);
+    } else if (isSuspended) {
+      statusDotColor = const Color(0xFFEF4444);
+    } else {
+      statusDotColor = const Color(0xFF6B7280);
+    }
+
+    return Card(
+      color: const Color(0xFF0F2936),
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${p.name} — ${_positionLabel(p.position)}'),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Status dot
+              Container(
+                width: 10,
+                height: 10,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: statusDotColor,
+                ),
+              ),
+              // Player avatar
+              CircleAvatar(
+                backgroundColor: posColor.withOpacity(0.2),
+                radius: 22,
+                child: Text(
+                  p.name.isNotEmpty ? p.name[0].toUpperCase() : '?',
+                  style: TextStyle(
+                    color: posColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Player info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      p.name,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        decoration: (!isActive && !isSuspended)
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    // Position badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: posColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: posColor.withOpacity(0.5)),
+                      ),
+                      child: Text(
+                        _positionLabel(p.position),
+                        style: TextStyle(
+                          color: posColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Jersey number
+              if (p.jerseyNumber != null && p.jerseyNumber!.isNotEmpty)
+                Container(
+                  width: 40,
+                  height: 40,
+                  margin: const EdgeInsets.only(left: 8),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF6B7280).withOpacity(0.4),
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    p.jerseyNumber!,
+                    style: const TextStyle(
+                      color: Color(0xFFBDD8DB),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              // Action menu
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.white),
+                color: const Color(0xFF0F2936),
+                onSelected: (action) async {
+                  final repo = _safeRepo();
+                  if (repo == null) return;
+                  switch (action) {
+                    case 'edit':
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Edit coming soon')),
+                      );
+                    case 'delete':
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: const Color(0xFF0F2936),
+                          title: const Text(
+                            'Delete Player',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          content: Text(
+                            'Delete "${p.name}"? This cannot be undone.',
+                            style: const TextStyle(color: Color(0xFFBDD8DB)),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text(
+                                'Delete',
+                                style: TextStyle(color: Color(0xFFEF4444)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true) {
+                        try {
+                          await repo.deletePlayer(p.id);
+                          _load();
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('$e'),
+                                backgroundColor: const Color(0xFFEF4444),
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    case 'mark_active':
+                      try {
+                        await repo.updatePlayerStatus(p.id, 'active');
+                        _load();
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('$e'),
+                              backgroundColor: const Color(0xFFEF4444),
+                            ),
+                          );
+                        }
+                      }
+                    case 'mark_inactive':
+                      try {
+                        await repo.updatePlayerStatus(p.id, 'inactive');
+                        _load();
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('$e'),
+                              backgroundColor: const Color(0xFFEF4444),
+                            ),
+                          );
+                        }
+                      }
+                    case 'suspend':
+                      try {
+                        await repo.updatePlayerStatus(p.id, 'suspended');
+                        _load();
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('$e'),
+                              backgroundColor: const Color(0xFFEF4444),
+                            ),
+                          );
+                        }
+                      }
+                  }
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit, color: Colors.white),
+                      title: Text(
+                        'Edit',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete, color: Color(0xFFEF4444)),
+                      title: Text(
+                        'Delete',
+                        style: TextStyle(color: Color(0xFFEF4444)),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  if (p.status == 'active')
+                    const PopupMenuItem(
+                      value: 'mark_inactive',
+                      child: ListTile(
+                        leading: Icon(Icons.block, color: Colors.white70),
+                        title: Text(
+                          'Mark Inactive',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    )
+                  else
+                    const PopupMenuItem(
+                      value: 'mark_active',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF10B981),
+                        ),
+                        title: Text(
+                          'Mark Active',
+                          style: TextStyle(color: Color(0xFF10B981)),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  const PopupMenuItem(
+                    value: 'suspend',
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.pause_circle,
+                        color: Color(0xFFF97316),
+                      ),
+                      title: Text(
+                        'Suspend',
+                        style: TextStyle(color: Color(0xFFF97316)),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -265,8 +762,9 @@ class _PlayersListPageState extends State<PlayersListPage> {
                       ],
                     ),
                   )
-                : RefreshIndicator(
-                    onRefresh: () async => _load(),
+                : _showingTrash
+                ? RefreshIndicator(
+                    onRefresh: () async => _loadTrash(),
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -281,513 +779,106 @@ class _PlayersListPageState extends State<PlayersListPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(10),
-                            onTap: _showingTrash
-                                ? null
-                                : () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          '${p.name} — ${p.roleDisplay}',
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: const Color(0xFF2563EB),
+                                  radius: 22,
+                                  child: Text(
+                                    p.name.isNotEmpty
+                                        ? p.name[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        p.name,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        p.deletedAt != null
+                                            ? 'Deleted ${_formatDate(p.deletedAt!)}'
+                                            : '(deleted)',
+                                        style: const TextStyle(
+                                          color: Color(0xFFEF4444),
+                                          fontSize: 12,
                                         ),
                                       ),
-                                    );
+                                    ],
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  icon: const Icon(Icons.restore, size: 18),
+                                  label: const Text('Restore'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: const Color(0xFF10B981),
+                                  ),
+                                  onPressed: () async {
+                                    final repo = _safeRepo();
+                                    if (repo == null) return;
+                                    try {
+                                      await repo.restorePlayer(p.id);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('${p.name} restored'),
+                                            backgroundColor: const Color(
+                                              0xFF10B981,
+                                            ),
+                                          ),
+                                        );
+                                        _loadTrash();
+                                        _load();
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('$e'),
+                                            backgroundColor: const Color(
+                                              0xFFEF4444,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Row(
-                                children: [
-                                  // Player avatar
-                                  CircleAvatar(
-                                    backgroundColor: const Color(0xFF2563EB),
-                                    radius: 22,
-                                    child: Text(
-                                      p.name.isNotEmpty
-                                          ? p.name[0].toUpperCase()
-                                          : '?',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  // Player info
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Name + captain badge
-                                        Row(
-                                          children: [
-                                            Flexible(
-                                              child: Text(
-                                                p.name,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 15,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            if (p.isCaptain)
-                                              const Padding(
-                                                padding: EdgeInsets.only(
-                                                  left: 6,
-                                                ),
-                                                child: Icon(
-                                                  Icons.star,
-                                                  color: Color(0xFFFBBF24),
-                                                  size: 16,
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 6),
-                                        if (_showingTrash)
-                                          Text(
-                                            p.deletedAt != null
-                                                ? 'Deleted ${_formatDate(p.deletedAt!)}'
-                                                : '(deleted)',
-                                            style: const TextStyle(
-                                              color: Color(0xFFEF4444),
-                                              fontSize: 12,
-                                            ),
-                                          )
-                                        else
-                                          // Role chip + team info
-                                          Wrap(
-                                            spacing: 8,
-                                            runSpacing: 4,
-                                            crossAxisAlignment:
-                                                WrapCrossAlignment.center,
-                                            children: [
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 3,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: _roleColor(
-                                                    p.role,
-                                                  ).withOpacity(0.15),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                    color: _roleColor(
-                                                      p.role,
-                                                    ).withOpacity(0.5),
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  p.roleDisplay,
-                                                  style: TextStyle(
-                                                    color: _roleColor(p.role),
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                              if (p.teamName != null) ...[
-                                                Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    const Icon(
-                                                      Icons.shield,
-                                                      size: 13,
-                                                      color: Color(0xFF6B7280),
-                                                    ),
-                                                    const SizedBox(width: 3),
-                                                    Flexible(
-                                                      child: Text(
-                                                        p.teamName!,
-                                                        style: const TextStyle(
-                                                          color: Color(
-                                                            0xFFBDD8DB,
-                                                          ),
-                                                          fontSize: 12,
-                                                        ),
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                      ),
-                                                    ),
-                                                    if (p.teamShortCode !=
-                                                            null &&
-                                                        p
-                                                            .teamShortCode!
-                                                            .isNotEmpty) ...[
-                                                      const SizedBox(width: 4),
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 4,
-                                                              vertical: 1,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color: const Color(
-                                                            0xFF10B981,
-                                                          ).withOpacity(0.15),
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                4,
-                                                              ),
-                                                        ),
-                                                        child: Text(
-                                                          p.teamShortCode!,
-                                                          style:
-                                                              const TextStyle(
-                                                                color: Color(
-                                                                  0xFF10B981,
-                                                                ),
-                                                                fontSize: 10,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (!_showingTrash) ...[
-                                    // Jersey number
-                                    if (p.jerseyNumber != null &&
-                                        p.jerseyNumber!.isNotEmpty)
-                                      Container(
-                                        width: 40,
-                                        height: 40,
-                                        margin: const EdgeInsets.only(left: 8),
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: const Color(
-                                              0xFF6B7280,
-                                            ).withOpacity(0.4),
-                                          ),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          p.jerseyNumber!,
-                                          style: const TextStyle(
-                                            color: Color(0xFFBDD8DB),
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    // Action menu
-                                    PopupMenuButton<String>(
-                                      icon: const Icon(
-                                        Icons.more_vert,
-                                        color: Colors.white,
-                                      ),
-                                      color: const Color(0xFF0F2936),
-                                      onSelected: (action) async {
-                                        final repo = _safeRepo();
-                                        if (repo == null) return;
-                                        switch (action) {
-                                          case 'edit':
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Edit coming soon',
-                                                ),
-                                              ),
-                                            );
-                                          case 'delete':
-                                            final confirmed =
-                                                await showDialog<bool>(
-                                                  context: context,
-                                                  builder: (ctx) => AlertDialog(
-                                                    backgroundColor:
-                                                        const Color(0xFF0F2936),
-                                                    title: const Text(
-                                                      'Delete Player',
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                    content: Text(
-                                                      'Delete "${p.name}"? This cannot be undone.',
-                                                      style: const TextStyle(
-                                                        color: Color(
-                                                          0xFFBDD8DB,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    actions: [
-                                                      TextButton(
-                                                        onPressed: () =>
-                                                            Navigator.pop(
-                                                              ctx,
-                                                              false,
-                                                            ),
-                                                        child: const Text(
-                                                          'Cancel',
-                                                        ),
-                                                      ),
-                                                      TextButton(
-                                                        onPressed: () =>
-                                                            Navigator.pop(
-                                                              ctx,
-                                                              true,
-                                                            ),
-                                                        child: const Text(
-                                                          'Delete',
-                                                          style: TextStyle(
-                                                            color: Color(
-                                                              0xFFEF4444,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                            if (confirmed == true) {
-                                              try {
-                                                await repo.deletePlayer(p.id);
-                                                _load();
-                                              } catch (e) {
-                                                if (mounted) {
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text('${e}'),
-                                                      backgroundColor:
-                                                          const Color(
-                                                            0xFFEF4444,
-                                                          ),
-                                                    ),
-                                                  );
-                                                }
-                                              }
-                                            }
-                                          case 'mark_active':
-                                            try {
-                                              await repo.updatePlayerStatus(
-                                                p.id,
-                                                'active',
-                                              );
-                                              _load();
-                                            } catch (e) {
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('${e}'),
-                                                    backgroundColor:
-                                                        const Color(0xFFEF4444),
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          case 'mark_inactive':
-                                            try {
-                                              await repo.updatePlayerStatus(
-                                                p.id,
-                                                'inactive',
-                                              );
-                                              _load();
-                                            } catch (e) {
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('${e}'),
-                                                    backgroundColor:
-                                                        const Color(0xFFEF4444),
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          case 'suspend':
-                                            try {
-                                              await repo.updatePlayerStatus(
-                                                p.id,
-                                                'suspended',
-                                              );
-                                              _load();
-                                            } catch (e) {
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('${e}'),
-                                                    backgroundColor:
-                                                        const Color(0xFFEF4444),
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                        }
-                                      },
-                                      itemBuilder: (ctx) => [
-                                        const PopupMenuItem(
-                                          value: 'edit',
-                                          child: ListTile(
-                                            leading: Icon(
-                                              Icons.edit,
-                                              color: Colors.white,
-                                            ),
-                                            title: Text(
-                                              'Edit',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            contentPadding: EdgeInsets.zero,
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'delete',
-                                          child: ListTile(
-                                            leading: Icon(
-                                              Icons.delete,
-                                              color: Color(0xFFEF4444),
-                                            ),
-                                            title: Text(
-                                              'Delete',
-                                              style: TextStyle(
-                                                color: Color(0xFFEF4444),
-                                              ),
-                                            ),
-                                            contentPadding: EdgeInsets.zero,
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
-                                        ),
-                                        if (p.status == 'active')
-                                          const PopupMenuItem(
-                                            value: 'mark_inactive',
-                                            child: ListTile(
-                                              leading: Icon(
-                                                Icons.block,
-                                                color: Colors.white70,
-                                              ),
-                                              title: Text(
-                                                'Mark Inactive',
-                                                style: TextStyle(
-                                                  color: Colors.white70,
-                                                ),
-                                              ),
-                                              contentPadding: EdgeInsets.zero,
-                                              visualDensity:
-                                                  VisualDensity.compact,
-                                            ),
-                                          )
-                                        else
-                                          const PopupMenuItem(
-                                            value: 'mark_active',
-                                            child: ListTile(
-                                              leading: Icon(
-                                                Icons.check_circle,
-                                                color: Color(0xFF10B981),
-                                              ),
-                                              title: Text(
-                                                'Mark Active',
-                                                style: TextStyle(
-                                                  color: Color(0xFF10B981),
-                                                ),
-                                              ),
-                                              contentPadding: EdgeInsets.zero,
-                                              visualDensity:
-                                                  VisualDensity.compact,
-                                            ),
-                                          ),
-                                        const PopupMenuItem(
-                                          value: 'suspend',
-                                          child: ListTile(
-                                            leading: Icon(
-                                              Icons.pause_circle,
-                                              color: Color(0xFFF97316),
-                                            ),
-                                            title: Text(
-                                              'Suspend',
-                                              style: TextStyle(
-                                                color: Color(0xFFF97316),
-                                              ),
-                                            ),
-                                            contentPadding: EdgeInsets.zero,
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                  if (_showingTrash)
-                                    TextButton.icon(
-                                      icon: const Icon(Icons.restore, size: 18),
-                                      label: const Text('Restore'),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: const Color(
-                                          0xFF10B981,
-                                        ),
-                                      ),
-                                      onPressed: () async {
-                                        final repo = _safeRepo();
-                                        if (repo == null) return;
-                                        try {
-                                          await repo.restorePlayer(p.id);
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  '${p.name} restored',
-                                                ),
-                                                backgroundColor: const Color(
-                                                  0xFF10B981,
-                                                ),
-                                              ),
-                                            );
-                                            _loadTrash();
-                                            _load();
-                                          }
-                                        } catch (e) {
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text('${e}'),
-                                                backgroundColor: const Color(
-                                                  0xFFEF4444,
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      },
-                                    ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         );
                       },
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: () async => _load(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      itemCount: _groupedItemCount,
+                      itemBuilder: (_, i) => _buildGroupedItem(i),
                     ),
                   ),
           ),

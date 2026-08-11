@@ -906,6 +906,7 @@ class PlayerModel {
   final String? teamShortCode;
   final String? jerseyNumber;
   final String role;
+  final String position;
   final String? battingStyle;
   final String? bowlingStyle;
   final String? photoUrl;
@@ -923,6 +924,7 @@ class PlayerModel {
     this.teamShortCode,
     this.jerseyNumber,
     required this.role,
+    this.position = 'player',
     this.battingStyle,
     this.bowlingStyle,
     this.photoUrl,
@@ -942,6 +944,7 @@ class PlayerModel {
         ?.toString(),
     jerseyNumber: json['jersey_number']?.toString(),
     role: json['role']?.toString() ?? 'batsman',
+    position: json['position']?.toString() ?? 'player',
     battingStyle: json['batting_style']?.toString(),
     bowlingStyle: json['bowling_style']?.toString(),
     photoUrl: json['photo_url']?.toString(),

@@ -27,6 +27,7 @@ class Player extends Model
         'photo_url',
         'is_captain',
         'is_wicket_keeper',
+        'position',
         'status',
     ];
 

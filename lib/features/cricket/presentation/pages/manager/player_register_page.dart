@@ -18,7 +18,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
   final _jerseyCtrl = TextEditingController();
   String? _selectedTeamId;
   String? _selectedTeamName;
-  String _role = 'batsman';
+  String _position = 'player';
   String _battingStyle = 'right_hand';
   String? _bowlingStyle;
   List<TeamModel> _teams = [];
@@ -26,7 +26,22 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
   bool _loadingTeams = true;
   PlayerModel? _createdPlayer;
 
-  static const _roles = ['batsman', 'bowler', 'all_rounder', 'wicket_keeper'];
+  static const _positions = [
+    'player',
+    'captain',
+    'vice_captain',
+    'coach',
+    'manager',
+    'extra',
+  ];
+  static const _positionLabels = {
+    'player': 'Player',
+    'captain': 'Captain',
+    'vice_captain': 'Vice Captain',
+    'coach': 'Coach',
+    'manager': 'Team Manager',
+    'extra': 'Extra Player',
+  };
   static const _battingStyles = ['right_hand', 'left_hand'];
   static const _bowlingStyles = [
     'right_arm_fast',
@@ -105,7 +120,8 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
       final player = await repo.createPlayer(
         teamId: _selectedTeamId!,
         name: _nameCtrl.text.trim(),
-        role: _role,
+        role: 'player',
+        position: _position,
         jerseyNumber: _jerseyCtrl.text.trim().isEmpty
             ? null
             : _jerseyCtrl.text.trim(),
@@ -249,14 +265,14 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
                       }),
                     ),
               const SizedBox(height: 16),
-              // Role
+              // Position
               const Text(
-                'Role *',
+                'Position *',
                 style: TextStyle(color: Colors.white, fontSize: 14),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _role,
+                value: _position,
                 dropdownColor: const Color(0xFF0F2936),
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
@@ -266,15 +282,15 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
                     borderSide: BorderSide(color: Color(0x20FFFFFF)),
                   ),
                 ),
-                items: _roles
+                items: _positions
                     .map(
-                      (r) => DropdownMenuItem(
-                        value: r,
-                        child: Text(r.replaceAll('_', ' ').toUpperCase()),
+                      (p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(_positionLabels[p] ?? p),
                       ),
                     )
                     .toList(),
-                onChanged: (v) => setState(() => _role = v!),
+                onChanged: (v) => setState(() => _position = v!),
               ),
               const SizedBox(height: 16),
               // Batting style
@@ -304,36 +320,34 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
                     .toList(),
                 onChanged: (v) => setState(() => _battingStyle = v!),
               ),
-              // Bowling style (only for bowler/all_rounder)
-              if (_role == 'bowler' || _role == 'all_rounder') ...[
-                const SizedBox(height: 16),
-                const Text(
-                  'Bowling Style',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _bowlingStyle,
-                  dropdownColor: const Color(0xFF0F2936),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    filled: true,
-                    fillColor: Color(0xFF0F2936),
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: Color(0x20FFFFFF)),
-                    ),
+              // Bowling style
+              const SizedBox(height: 16),
+              const Text(
+                'Bowling Style',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _bowlingStyle,
+                dropdownColor: const Color(0xFF0F2936),
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  filled: true,
+                  fillColor: Color(0xFF0F2936),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0x20FFFFFF)),
                   ),
-                  items: _bowlingStyles
-                      .map(
-                        (s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(s.replaceAll('_', ' ').toUpperCase()),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _bowlingStyle = v),
                 ),
-              ],
+                items: _bowlingStyles
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s.replaceAll('_', ' ').toUpperCase()),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => _bowlingStyle = v),
+              ),
               const SizedBox(height: 16),
               _buildField('Jersey Number', _jerseyCtrl, 'e.g. 7'),
               const SizedBox(height: 32),

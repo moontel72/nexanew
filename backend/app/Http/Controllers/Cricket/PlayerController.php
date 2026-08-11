@@ -23,8 +23,17 @@ class PlayerController extends Controller
     public function listAll(): \Illuminate\Http\JsonResponse
     {
         $players = Player::with('team:id,name,short_code,team_code')
+            ->orderByRaw("CASE 
+                WHEN position = 'manager' THEN 1
+                WHEN position = 'coach' THEN 2
+                WHEN position = 'captain' THEN 3
+                WHEN position = 'vice_captain' THEN 4
+                WHEN position = 'player' THEN 5
+                WHEN position = 'extra' THEN 6
+                ELSE 7 END")
+            ->orderByRaw("CASE WHEN status = 'active' THEN 1 ELSE 2 END")
             ->orderBy('name')
-            ->paginate(50);
+            ->paginate(100);
 
         // Ensure consistent typing in the response
         $players->getCollection()->transform(function ($player) {
@@ -40,6 +49,7 @@ class PlayerController extends Controller
                 'photo_url' => $player->photo_url ? (string) $player->photo_url : null,
                 'is_captain' => (bool) $player->is_captain,
                 'is_wicket_keeper' => (bool) $player->is_wicket_keeper,
+                'position' => $player->position ? (string) $player->position : 'player',
                 'status' => (string) ($player->status ?? 'active'),
                 'team' => $player->team,
             ];
@@ -60,6 +70,7 @@ class PlayerController extends Controller
             'photo' => 'nullable|image|max:5120',
             'is_captain' => 'boolean',
             'is_wicket_keeper' => 'boolean',
+            'position' => 'nullable|in:player,captain,vice_captain,coach,manager,extra',
         ]);
 
         if ($validator->fails()) {
@@ -92,6 +103,7 @@ class PlayerController extends Controller
                 'photo_url' => $player->photo_url ? (string) $player->photo_url : null,
                 'is_captain' => (bool) $player->is_captain,
                 'is_wicket_keeper' => (bool) $player->is_wicket_keeper,
+                'position' => $player->position ? (string) $player->position : 'player',
                 'status' => (string) ($player->status ?? 'active'),
                 'team' => $player->team,
             ],
@@ -117,6 +129,7 @@ class PlayerController extends Controller
             'photo' => 'nullable|image|max:5120',
             'is_captain' => 'boolean',
             'is_wicket_keeper' => 'boolean',
+            'position' => 'nullable|in:player,captain,vice_captain,coach,manager,extra',
         ]);
 
         if ($validator->fails()) {
