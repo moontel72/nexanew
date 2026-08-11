@@ -441,9 +441,8 @@ class _PlayersListPageState extends State<PlayersListPage> {
                   if (repo == null) return;
                   switch (action) {
                     case 'edit':
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Edit coming soon')),
-                      );
+                      _showEditPlayerDialog(p);
+                      break;
                     case 'delete':
                       final confirmed = await showDialog<bool>(
                         context: context,
@@ -607,6 +606,178 @@ class _PlayersListPageState extends State<PlayersListPage> {
         ),
       ),
     );
+  }
+
+  InputDecoration _darkInputDecoration(String label) => InputDecoration(
+    labelText: label,
+    labelStyle: const TextStyle(color: Color(0xFFBDD8DB)),
+    filled: true,
+    fillColor: const Color(0xFF0C1D2C),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0x20FFFFFF)),
+    ),
+  );
+
+  Future<void> _showEditPlayerDialog(PlayerModel player) async {
+    final nameCtrl = TextEditingController(text: player.name);
+    final jerseyCtrl = TextEditingController(text: player.jerseyNumber ?? '');
+    String selectedPosition = player.position;
+    String selectedStatus = player.status;
+    String? selectedTeamId = player.teamId;
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF0F2936),
+          title: const Text(
+            'Edit Player',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Name field
+                  TextFormField(
+                    controller: nameCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Name'),
+                    validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  // Position dropdown
+                  DropdownButtonFormField<String>(
+                    value: selectedPosition,
+                    dropdownColor: const Color(0xFF0F2936),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Position'),
+                    items:
+                        [
+                              'player',
+                              'captain',
+                              'vice_captain',
+                              'coach',
+                              'manager',
+                              'extra',
+                            ]
+                            .map(
+                              (p) => DropdownMenuItem(
+                                value: p,
+                                child: Text(_positionLabel(p)),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (v) =>
+                        setDialogState(() => selectedPosition = v!),
+                  ),
+                  const SizedBox(height: 12),
+                  // Status dropdown
+                  DropdownButtonFormField<String>(
+                    value: selectedStatus,
+                    dropdownColor: const Color(0xFF0F2936),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Status'),
+                    items: ['active', 'inactive', 'suspended']
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(s[0].toUpperCase() + s.substring(1)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setDialogState(() => selectedStatus = v!),
+                  ),
+                  const SizedBox(height: 12),
+                  // Team transfer dropdown
+                  DropdownButtonFormField<String>(
+                    value: selectedTeamId,
+                    dropdownColor: const Color(0xFF0F2936),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Team (Transfer)'),
+                    hint: const Text(
+                      'Select team',
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                    ),
+                    items: _teams
+                        .map(
+                          (t) => DropdownMenuItem(
+                            value: t.id,
+                            child: Text(
+                              '${t.name} ${t.teamCode != null ? "(${t.teamCode})" : ""}',
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setDialogState(() => selectedTeamId = v),
+                  ),
+                  const SizedBox(height: 12),
+                  // Jersey number
+                  TextFormField(
+                    controller: jerseyCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Jersey Number'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+              ),
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
+                try {
+                  final repo = _safeRepo();
+                  if (repo == null) return;
+                  await repo.updatePlayer(
+                    playerId: player.id,
+                    name: nameCtrl.text.trim(),
+                    position: selectedPosition,
+                    status: selectedStatus,
+                    teamId: selectedTeamId,
+                    jerseyNumber: jerseyCtrl.text.trim().isEmpty
+                        ? null
+                        : jerseyCtrl.text.trim(),
+                  );
+                  if (ctx.mounted) Navigator.pop(ctx, true);
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(
+                        content: Text(e.toString()),
+                        backgroundColor: const Color(0xFFEF4444),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true && mounted) {
+      _load();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Player updated'),
+          backgroundColor: Color(0xFF10B981),
+        ),
+      );
+    }
   }
 
   @override

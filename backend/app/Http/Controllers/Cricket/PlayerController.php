@@ -121,6 +121,7 @@ class PlayerController extends Controller
         $player = Player::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
+            'team_id' => 'sometimes|uuid|exists:cricket_teams,id',
             'name' => 'sometimes|string|max:200',
             'jersey_number' => 'nullable|string|max:5',
             'role' => 'sometimes|in:batsman,bowler,all_rounder,wicket_keeper',
@@ -130,6 +131,7 @@ class PlayerController extends Controller
             'is_captain' => 'boolean',
             'is_wicket_keeper' => 'boolean',
             'position' => 'nullable|in:player,captain,vice_captain,coach,manager,extra',
+            'status' => 'sometimes|in:active,inactive,suspended',
         ]);
 
         if ($validator->fails()) {
