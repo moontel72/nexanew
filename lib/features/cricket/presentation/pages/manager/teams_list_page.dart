@@ -91,6 +91,18 @@ class _TeamsListPageState extends State<TeamsListPage> {
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 
+  Color _teamColor(TeamModel t) {
+    if (t.primaryColor == null || t.primaryColor!.isEmpty) {
+      return const Color(0xFF2563EB);
+    }
+    try {
+      final hex = t.primaryColor!.replaceFirst('#', '0xFF');
+      return Color(int.parse(hex));
+    } catch (_) {
+      return const Color(0xFF2563EB);
+    }
+  }
+
   void _showDetailModal(TeamModel team) {
     showModalBottomSheet(
       context: context,
@@ -229,7 +241,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
       backgroundColor: const Color(0xFF0C1D2C),
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Teams', style: TextStyle(color: Colors.white)),
@@ -255,7 +267,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.home, color: Colors.white),
+            icon: const Icon(Icons.home, color: Color(0xFF10B981)),
             tooltip: 'Back to Dashboard',
             onPressed: () {
               try {
@@ -326,7 +338,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: const Color(0xFF2563EB),
+                              backgroundColor: _teamColor(t),
                               child: Text(
                                 t.name.isNotEmpty
                                     ? t.name[0].toUpperCase()

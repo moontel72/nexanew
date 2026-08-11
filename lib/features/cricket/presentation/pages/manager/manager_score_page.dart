@@ -22,7 +22,7 @@ class ManagerScorePage extends StatelessWidget {
       backgroundColor: CricketColors.background,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Live Scoring'),
@@ -30,7 +30,7 @@ class ManagerScorePage extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.home, color: Colors.white),
+            icon: const Icon(Icons.home, color: Color(0xFF10B981)),
             tooltip: 'Back to Dashboard',
             onPressed: () =>
                 Navigator.popUntil(context, (route) => route.isFirst),

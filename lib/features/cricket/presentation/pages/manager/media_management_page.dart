@@ -61,7 +61,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
       backgroundColor: const Color(0xFF0C1D2C),
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -72,7 +72,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.home, color: Colors.white),
+            icon: const Icon(Icons.home, color: Color(0xFF10B981)),
             tooltip: 'Back to Dashboard',
             onPressed: () {
               try {
