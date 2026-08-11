@@ -73,10 +73,11 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                     _TopBar(
                       managerName: name,
                       selectedTab: _selectedTab,
-                      onLogout: () {
-                        // Navigate FIRST, then clear auth state
+                      onLogout: () async {
+                        // Clear token FIRST, then navigate
+                        await context.read<CricketRepository>().clearToken();
+                        if (!context.mounted) return;
                         context.go('/cricket-manager/login');
-                        context.read<CricketAuthBloc>().add(CricketLogout());
                       },
                     ),
                     if (!wide)
