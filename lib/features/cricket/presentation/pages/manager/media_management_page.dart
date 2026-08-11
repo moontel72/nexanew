@@ -72,7 +72,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.home, color: Color(0xFF10B981)),
+            icon: const Icon(Icons.home, color: Colors.white),
             tooltip: 'Back to Dashboard',
             onPressed: () {
               try {

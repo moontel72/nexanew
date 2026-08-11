@@ -48,16 +48,16 @@ class _ManagerReplayPageState extends State<ManagerReplayPage> {
           style: TextStyle(color: CricketColors.textPrimary),
         ),
         backgroundColor: CricketColors.surface,
-        foregroundColor: CricketColors.textPrimary,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.home, color: Color(0xFF10B981)),
+            icon: const Icon(Icons.home, color: Colors.white),
             tooltip: 'Back to Dashboard',
             onPressed: () =>
                 Navigator.popUntil(context, (route) => route.isFirst),
           ),
           IconButton(
-            icon: Icon(Icons.refresh, color: CricketColors.textSecondary),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () => context.read<ReplayBloc>().add(
               LoadReplayEvents(widget.matchId),
             ),

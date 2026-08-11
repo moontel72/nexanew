@@ -239,7 +239,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
           IconButton(
             icon: Icon(
               _showingTrash ? Icons.restore : Icons.delete_outline,
-              color: _showingTrash ? const Color(0xFF10B981) : null,
+              color: Colors.white,
             ),
             tooltip: _showingTrash ? 'Back to Teams' : 'View Trash',
             onPressed: () {
@@ -255,7 +255,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.home, color: Color(0xFF10B981)),
+            icon: const Icon(Icons.home, color: Colors.white),
             tooltip: 'Back to Dashboard',
             onPressed: () {
               try {
