@@ -19,7 +19,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
   String? _selectedTeamId;
   String? _selectedTeamName;
   String _position = 'player';
-  String _battingStyle = 'right_hand';
+  String? _battingStyle;
   String? _bowlingStyle;
   List<TeamModel> _teams = [];
   bool _isSubmitting = false;
@@ -299,26 +299,35 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
                 style: TextStyle(color: Colors.white, fontSize: 14),
               ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<String?>(
                 value: _battingStyle,
                 dropdownColor: const Color(0xFF0F2936),
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
                   filled: true,
                   fillColor: Color(0xFF0F2936),
+                  hintText: 'None',
+                  hintStyle: TextStyle(color: Color(0xFF6B7280)),
                   border: OutlineInputBorder(
                     borderSide: BorderSide(color: Color(0x20FFFFFF)),
                   ),
                 ),
-                items: _battingStyles
-                    .map(
-                      (s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(s.replaceAll('_', ' ').toUpperCase()),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _battingStyle = v!),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text(
+                      'None',
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                    ),
+                  ),
+                  ..._battingStyles.map(
+                    (s) => DropdownMenuItem<String?>(
+                      value: s,
+                      child: Text(s.replaceAll('_', ' ').toUpperCase()),
+                    ),
+                  ),
+                ],
+                onChanged: (v) => setState(() => _battingStyle = v),
               ),
               // Bowling style
               const SizedBox(height: 16),
@@ -327,25 +336,34 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
                 style: TextStyle(color: Colors.white, fontSize: 14),
               ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<String?>(
                 value: _bowlingStyle,
                 dropdownColor: const Color(0xFF0F2936),
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
                   filled: true,
                   fillColor: Color(0xFF0F2936),
+                  hintText: 'None',
+                  hintStyle: TextStyle(color: Color(0xFF6B7280)),
                   border: OutlineInputBorder(
                     borderSide: BorderSide(color: Color(0x20FFFFFF)),
                   ),
                 ),
-                items: _bowlingStyles
-                    .map(
-                      (s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(s.replaceAll('_', ' ').toUpperCase()),
-                      ),
-                    )
-                    .toList(),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text(
+                      'None',
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                    ),
+                  ),
+                  ..._bowlingStyles.map(
+                    (s) => DropdownMenuItem<String?>(
+                      value: s,
+                      child: Text(s.replaceAll('_', ' ').toUpperCase()),
+                    ),
+                  ),
+                ],
                 onChanged: (v) => setState(() => _bowlingStyle = v),
               ),
               const SizedBox(height: 16),

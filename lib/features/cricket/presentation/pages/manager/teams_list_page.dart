@@ -235,6 +235,163 @@ class _TeamsListPageState extends State<TeamsListPage> {
     );
   }
 
+  Future<void> _showEditTeamDialog(TeamModel team) async {
+    final nameCtrl = TextEditingController(text: team.name);
+    final cityCtrl = TextEditingController(text: team.homeCity ?? '');
+    final detailsCtrl = TextEditingController(text: team.details ?? '');
+    Color selectedColor = const Color(0xFF2563EB);
+    if (team.primaryColor != null) {
+      try {
+        selectedColor = Color(
+          int.parse(team.primaryColor!.replaceFirst('#', '0xFF')),
+        );
+      } catch (_) {}
+    }
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF0F2936),
+          title: const Text('Edit Team', style: TextStyle(color: Colors.white)),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Team Name'),
+                    validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: cityCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Home City'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: detailsCtrl,
+                    maxLines: 3,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Team Details'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Primary Color',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children:
+                        const [
+                              Color(0xFF2563EB),
+                              Color(0xFF10B981),
+                              Color(0xFFF59E0B),
+                              Color(0xFFEF4444),
+                              Color(0xFF8B5CF6),
+                              Color(0xFFEC4899),
+                              Color(0xFF06B6D4),
+                              Color(0xFF84CC16),
+                            ]
+                            .map(
+                              (c) => GestureDetector(
+                                onTap: () =>
+                                    setDialogState(() => selectedColor = c),
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: c,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: selectedColor == c
+                                          ? Colors.white
+                                          : Colors.transparent,
+                                      width: 3,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+              ),
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
+                try {
+                  final repo = _safeRepo();
+                  if (repo == null) return;
+                  await repo.updateTeam(
+                    teamId: team.id,
+                    name: nameCtrl.text.trim(),
+                    homeCity: cityCtrl.text.trim().isEmpty
+                        ? null
+                        : cityCtrl.text.trim(),
+                    details: detailsCtrl.text.trim().isEmpty
+                        ? null
+                        : detailsCtrl.text.trim(),
+                    primaryColor:
+                        '#${selectedColor.value.toRadixString(16).substring(2)}',
+                  );
+                  if (ctx.mounted) Navigator.pop(ctx, true);
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(
+                        content: Text(e.toString()),
+                        backgroundColor: const Color(0xFFEF4444),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true && mounted) {
+      _load();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Team updated'),
+          backgroundColor: Color(0xFF10B981),
+        ),
+      );
+    }
+  }
+
+  InputDecoration _darkInputDecoration(String label) => InputDecoration(
+    labelText: label,
+    labelStyle: const TextStyle(color: Color(0xFFBDD8DB)),
+    filled: true,
+    fillColor: const Color(0xFF0C1D2C),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0x20FFFFFF)),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -351,6 +508,19 @@ class _TeamsListPageState extends State<TeamsListPage> {
                             ),
                             title: Row(
                               children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: t.status == 'active'
+                                        ? const Color(0xFF10B981)
+                                        : t.status == 'inactive'
+                                        ? const Color(0xFF6B7280)
+                                        : const Color(0xFFEF4444),
+                                  ),
+                                ),
                                 Flexible(
                                   child: Text(
                                     t.name,
@@ -465,13 +635,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                       if (repo == null) return;
                                       switch (action) {
                                         case 'edit':
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Edit coming soon'),
-                                            ),
-                                          );
+                                          _showEditTeamDialog(t);
                                         case 'delete':
                                           final confirmed = await showDialog<bool>(
                                             context: context,
@@ -630,44 +794,48 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                           visualDensity: VisualDensity.compact,
                                         ),
                                       ),
-                                      if (t.status == 'active')
-                                        const PopupMenuItem(
-                                          value: 'mark_inactive',
-                                          child: ListTile(
-                                            leading: Icon(
-                                              Icons.block,
-                                              color: Colors.white70,
-                                            ),
-                                            title: Text(
-                                              'Mark Inactive',
-                                              style: TextStyle(
-                                                color: Colors.white70,
-                                              ),
-                                            ),
-                                            contentPadding: EdgeInsets.zero,
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
-                                        )
-                                      else
-                                        const PopupMenuItem(
-                                          value: 'mark_active',
-                                          child: ListTile(
-                                            leading: Icon(
+                                      PopupMenuItem(
+                                        value: 'mark_active',
+                                        child: Row(
+                                          children: [
+                                            Icon(
                                               Icons.check_circle,
-                                              color: Color(0xFF10B981),
+                                              size: 16,
+                                              color: t.status == 'active'
+                                                  ? const Color(0xFF10B981)
+                                                  : Colors.transparent,
                                             ),
-                                            title: Text(
-                                              'Mark Active',
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Active',
                                               style: TextStyle(
-                                                color: Color(0xFF10B981),
+                                                color: Colors.white,
                                               ),
                                             ),
-                                            contentPadding: EdgeInsets.zero,
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
+                                          ],
                                         ),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'mark_inactive',
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.check_circle,
+                                              size: 16,
+                                              color: t.status == 'inactive'
+                                                  ? const Color(0xFF10B981)
+                                                  : Colors.transparent,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Inactive',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                       const PopupMenuItem(
                                         value: 'suspend',
                                         child: ListTile(

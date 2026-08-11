@@ -861,6 +861,34 @@ class CricketRepository {
     throw Exception(err?['message'] ?? 'Failed to update team status');
   }
 
+  Future<TeamModel> updateTeam({
+    required String teamId,
+    String? name,
+    String? homeCity,
+    String? details,
+    String? primaryColor,
+    String? shortCode,
+  }) async {
+    final body = <String, dynamic>{};
+    if (name != null) body['name'] = name;
+    if (homeCity != null) body['home_city'] = homeCity;
+    if (details != null) body['details'] = details;
+    if (primaryColor != null) body['primary_color'] = primaryColor;
+    if (shortCode != null) body['short_code'] = shortCode;
+
+    final res = await _http.put(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/teams/$teamId'),
+      headers: await _authHeaders(),
+      body: jsonEncode(body),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return TeamModel.fromJson(data['team'] ?? data);
+    }
+    final err = _parseBody(res);
+    throw Exception(err?['message'] ?? 'Failed to update team');
+  }
+
   Future<void> deletePlayer(String playerId) async {
     final res = await _http.delete(
       Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/players/$playerId'),
