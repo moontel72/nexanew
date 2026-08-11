@@ -44,9 +44,28 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
     _loadTeams();
   }
 
+  CricketRepository? _safeRepo() {
+    try {
+      return RepositoryProvider.of<CricketRepository>(context);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Service unavailable — please go back and try again.',
+            ),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+      }
+      return null;
+    }
+  }
+
   Future<void> _loadTeams() async {
     try {
-      final repo = RepositoryProvider.of<CricketRepository>(context);
+      final repo = _safeRepo();
+      if (repo == null) return;
       final teams = await repo.getAllTeams();
       if (mounted)
         setState(() {
@@ -78,7 +97,11 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
     }
     setState(() => _isSubmitting = true);
     try {
-      final repo = RepositoryProvider.of<CricketRepository>(context);
+      final repo = _safeRepo();
+      if (repo == null) {
+        setState(() => _isSubmitting = false);
+        return;
+      }
       final player = await repo.createPlayer(
         teamId: _selectedTeamId!,
         name: _nameCtrl.text.trim(),
@@ -128,8 +151,17 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
           IconButton(
             icon: const Icon(Icons.home, color: Color(0xFF10B981)),
             tooltip: 'Back to Dashboard',
-            onPressed: () =>
-                Navigator.popUntil(context, (route) => route.isFirst),
+            onPressed: () {
+              try {
+                Navigator.of(context).popUntil(
+                  (route) =>
+                      route.settings.name == 'cricket_manager_dashboard' ||
+                      route.isFirst,
+                );
+              } catch (_) {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
+            },
           ),
         ],
       ),
@@ -376,8 +408,17 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
         IconButton(
           icon: const Icon(Icons.home, color: Color(0xFF10B981)),
           tooltip: 'Back to Dashboard',
-          onPressed: () =>
-              Navigator.popUntil(context, (route) => route.isFirst),
+          onPressed: () {
+            try {
+              Navigator.of(context).popUntil(
+                (route) =>
+                    route.settings.name == 'cricket_manager_dashboard' ||
+                    route.isFirst,
+              );
+            } catch (_) {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            }
+          },
         ),
       ],
     ),
@@ -399,10 +440,11 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              _createdPlayer!.name,
+              _createdPlayer?.name ?? '',
               style: const TextStyle(color: Color(0xFFBDD8DB), fontSize: 18),
             ),
-            if (_createdPlayer!.playerCode != null) ...[
+            if (_createdPlayer?.playerCode != null &&
+                _createdPlayer!.playerCode!.isNotEmpty) ...[
               const SizedBox(height: 24),
               Container(
                 padding: const EdgeInsets.symmetric(

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
-import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/team/team_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/team/team_event.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/team/team_state.dart';
 
 class TeamRegisterPage extends StatefulWidget {
   const TeamRegisterPage({super.key});
@@ -15,8 +16,6 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
   final _shortCodeCtrl = TextEditingController();
   final _homeCityCtrl = TextEditingController();
   Color _selectedColor = const Color(0xFF2563EB);
-  bool _isSubmitting = false;
-  TeamModel? _createdTeam;
 
   static const _colorOptions = [
     Color(0xFF2563EB),
@@ -37,12 +36,11 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isSubmitting = true);
-    try {
-      final repo = RepositoryProvider.of<CricketRepository>(context);
-      final team = await repo.createTeam(
+    if (!context.mounted) return;
+    context.read<TeamBloc>().add(
+      CreateTeamRequested(
         name: _nameCtrl.text.trim(),
         shortCode: _shortCodeCtrl.text.trim().isEmpty
             ? null
@@ -51,171 +49,187 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
             ? null
             : _homeCityCtrl.text.trim(),
         primaryColor: '#${_selectedColor.value.toRadixString(16).substring(2)}',
-      );
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          _createdTeam = team;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceFirst('Exception: ', '')),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
-    }
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_createdTeam != null)
-      return _SuccessView(
-        team: _createdTeam!,
-        onDone: () => Navigator.pop(context, true),
-      );
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF0C1D2C),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Register New Team',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: const Color(0xFF0F2936),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.home, color: Color(0xFF10B981)),
-            tooltip: 'Back to Dashboard',
-            onPressed: () =>
-                Navigator.popUntil(context, (route) => route.isFirst),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.group_add, color: Colors.white, size: 28),
-                        SizedBox(width: 12),
-                        Text(
-                          'Team Registration',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Create a new team with auto-generated 3-digit code.',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              _buildField('Team Name *', _nameCtrl, 'Enter team name'),
-              const SizedBox(height: 16),
-              _buildField('Short Code', _shortCodeCtrl, 'e.g. IND, AUS'),
-              const SizedBox(height: 16),
-              _buildField('Home City', _homeCityCtrl, 'e.g. Mumbai'),
-              const SizedBox(height: 20),
-              const Text(
-                'Primary Color',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 10,
-                children: _colorOptions
-                    .map(
-                      (c) => GestureDetector(
-                        onTap: () => setState(() => _selectedColor = c),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: c,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: _selectedColor == c
-                                  ? Colors.white
-                                  : Colors.transparent,
-                              width: 3,
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: _isSubmitting ? null : _submit,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          'CREATE TEAM',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
+    return BlocConsumer<TeamBloc, TeamState>(
+      listener: (context, state) {
+        if (state is TeamSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Team "${state.team.name}" created!'),
+              backgroundColor: const Color(0xFF10B981),
+            ),
+          );
+          Navigator.of(context).pop(true);
+        } else if (state is TeamFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: const Color(0xFFEF4444),
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is TeamLoading;
+        return Scaffold(
+          backgroundColor: const Color(0xFF0C1D2C),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: const Text(
+              'Register New Team',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: const Color(0xFF0F2936),
+            foregroundColor: Colors.white,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.home, color: Color(0xFF10B981)),
+                tooltip: 'Back to Dashboard',
+                onPressed: () {
+                  // Use GoRouter navigation instead of popUntil to avoid
+                  // destroying the cricket manager widget tree
+                  try {
+                    Navigator.of(context).popUntil(
+                      (route) =>
+                          route.settings.name == 'cricket_manager_dashboard' ||
+                          route.isFirst,
+                    );
+                  } catch (_) {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
+                },
               ),
             ],
           ),
-        ),
-      ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.group_add,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Team Registration',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Create a new team with auto-generated 3-digit code.',
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildField('Team Name *', _nameCtrl, 'Enter team name'),
+                  const SizedBox(height: 16),
+                  _buildField('Short Code', _shortCodeCtrl, 'e.g. IND, AUS'),
+                  const SizedBox(height: 16),
+                  _buildField('Home City', _homeCityCtrl, 'e.g. Mumbai'),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Primary Color',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 10,
+                    children: _colorOptions
+                        .map(
+                          (c) => GestureDetector(
+                            onTap: () => setState(() => _selectedColor = c),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: c,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: _selectedColor == c
+                                      ? Colors.white
+                                      : Colors.transparent,
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'CREATE TEAM',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -239,105 +253,4 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
             ? 'Required'
             : null,
       );
-}
-
-class _SuccessView extends StatelessWidget {
-  final TeamModel team;
-  final VoidCallback onDone;
-  const _SuccessView({required this.team, required this.onDone});
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFF0C1D2C),
-    appBar: AppBar(
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: onDone,
-      ),
-      backgroundColor: const Color(0xFF0F2936),
-      foregroundColor: Colors.white,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.home, color: Color(0xFF10B981)),
-          tooltip: 'Back to Dashboard',
-          onPressed: () =>
-              Navigator.popUntil(context, (route) => route.isFirst),
-        ),
-      ],
-    ),
-    body: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle, size: 80, color: Color(0xFF10B981)),
-            const SizedBox(height: 24),
-            const Text(
-              'Team Created!',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              team.name,
-              style: const TextStyle(color: Color(0xFFBDD8DB), fontSize: 18),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F2936),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF10B981)),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'Team Code',
-                    style: TextStyle(color: Color(0xFFBDD8DB), fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    team.teamCode ?? '---',
-                    style: const TextStyle(
-                      color: Color(0xFF10B981),
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 8,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: onDone,
-                child: const Text(
-                  'DONE',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }

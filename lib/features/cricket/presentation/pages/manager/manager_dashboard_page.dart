@@ -8,6 +8,7 @@ import '../../blocs/tournament_hub/tournament_hub_bloc.dart';
 import '../../blocs/camera_switcher/camera_switcher_bloc.dart';
 import '../../blocs/voice_score/voice_score_bloc.dart';
 import '../../blocs/sponsor/sponsor_bloc.dart';
+import '../../blocs/team/team_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../../data/repositories/cricket_repository.dart';
 import 'manager_login_page.dart';
@@ -533,69 +534,100 @@ class _TeamManagerTab extends StatelessWidget {
   const _TeamManagerTab();
 
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(20),
-    children: [
-      _GradientHeader(
-        icon: Icons.groups,
-        title: 'Team Manager',
-        subtitle:
-            'Register teams, manage players, assign captains, and set jersey numbers.',
-        colors: const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-      ),
-      const SizedBox(height: 20),
-      Missile3DButton(
-        label: 'Register New Team',
-        icon: Icons.group_add,
-        color: const Color(0xFF2563EB),
-        subtitle: 'Create a team with auto-generated 3-digit code',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const TeamRegisterPage()),
+  Widget build(BuildContext context) {
+    final repo = RepositoryProvider.of<CricketRepository>(context);
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _GradientHeader(
+          icon: Icons.groups,
+          title: 'Team Manager',
+          subtitle:
+              'Register teams, manage players, assign captains, and set jersey numbers.',
+          colors: const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
         ),
-      ),
-      Missile3DButton(
-        label: 'View All Teams',
-        icon: Icons.list_alt,
-        color: const Color(0xFF3B82F6),
-        subtitle: 'Browse, search, and manage teams',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const TeamsListPage()),
+        const SizedBox(height: 20),
+        Missile3DButton(
+          label: 'Register New Team',
+          icon: Icons.group_add,
+          color: const Color(0xFF2563EB),
+          subtitle: 'Create a team with auto-generated 3-digit code',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RepositoryProvider.value(
+                value: repo,
+                child: BlocProvider(
+                  create: (_) => TeamBloc(repo: repo),
+                  child: const TeamRegisterPage(),
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
-      Missile3DButton(
-        label: 'Register New Player',
-        icon: Icons.person_add,
-        color: const Color(0xFF6366F1),
-        subtitle: 'Add a player with auto-generated 3-digit code',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const PlayerRegisterPage()),
+        Missile3DButton(
+          label: 'View All Teams',
+          icon: Icons.list_alt,
+          color: const Color(0xFF3B82F6),
+          subtitle: 'Browse, search, and manage teams',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RepositoryProvider.value(
+                value: repo,
+                child: const TeamsListPage(),
+              ),
+            ),
+          ),
         ),
-      ),
-      Missile3DButton(
-        label: 'View All Players',
-        icon: Icons.people,
-        color: const Color(0xFF8B5CF6),
-        subtitle: 'Browse players by team',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const TeamsListPage()),
+        Missile3DButton(
+          label: 'Register New Player',
+          icon: Icons.person_add,
+          color: const Color(0xFF6366F1),
+          subtitle: 'Add a player with auto-generated 3-digit code',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RepositoryProvider.value(
+                value: repo,
+                child: const PlayerRegisterPage(),
+              ),
+            ),
+          ),
         ),
-      ),
-      Missile3DButton(
-        label: 'Team Logos & Photos',
-        icon: Icons.image,
-        color: const Color(0xFFA855F7),
-        subtitle: 'Manage team logos and player photos',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const TeamsListPage()),
+        Missile3DButton(
+          label: 'View All Players',
+          icon: Icons.people,
+          color: const Color(0xFF8B5CF6),
+          subtitle: 'Browse players by team',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RepositoryProvider.value(
+                value: repo,
+                child: const TeamsListPage(),
+              ),
+            ),
+          ),
         ),
-      ),
-    ],
-  );
+        Missile3DButton(
+          label: 'Team Logos & Photos',
+          icon: Icons.image,
+          color: const Color(0xFFA855F7),
+          subtitle: 'Manage team logos and player photos',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RepositoryProvider.value(
+                value: repo,
+                child: const TeamsListPage(),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════

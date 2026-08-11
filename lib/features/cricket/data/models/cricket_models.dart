@@ -25,16 +25,22 @@ class TournamentModel {
     required this.status,
   });
 
-  factory TournamentModel.fromJson(Map<String, dynamic> json) =>
-      TournamentModel(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        location: json['location'] as String?,
-        startDate: DateTime.parse(json['start_date'] as String),
-        endDate: DateTime.parse(json['end_date'] as String),
-        logoUrl: json['logo_url'] as String?,
-        status: json['status'] as String,
-      );
+  factory TournamentModel.fromJson(Map<String, dynamic> json) {
+    DateTime _safeDate(String? v) {
+      if (v == null) return DateTime.now();
+      return DateTime.tryParse(v) ?? DateTime.now();
+    }
+
+    return TournamentModel(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      location: json['location']?.toString(),
+      startDate: _safeDate(json['start_date']?.toString()),
+      endDate: _safeDate(json['end_date']?.toString()),
+      logoUrl: json['logo_url']?.toString(),
+      status: json['status']?.toString() ?? 'unknown',
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -69,14 +75,16 @@ class TeamModel {
   });
 
   factory TeamModel.fromJson(Map<String, dynamic> json) => TeamModel(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    shortCode: json['short_code'] as String? ?? '',
-    logoUrl: json['logo_url'] as String?,
-    primaryColor: json['primary_color'] as String?,
-    teamCode: json['team_code'] as String?,
-    homeCity: json['home_city'] as String?,
-    playerCount: json['player_count'] as int?,
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
+    shortCode: json['short_code']?.toString() ?? '',
+    logoUrl: json['logo_url']?.toString(),
+    primaryColor: json['primary_color']?.toString(),
+    teamCode: json['team_code']?.toString(),
+    homeCity: json['home_city']?.toString(),
+    playerCount: json['player_count'] is int
+        ? json['player_count'] as int
+        : int.tryParse(json['player_count']?.toString() ?? ''),
   );
 }
 
@@ -301,10 +309,12 @@ class CricketManagerModel {
 
   factory CricketManagerModel.fromJson(Map<String, dynamic> json) =>
       CricketManagerModel(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        email: json['email'] as String,
-        permissions: json['permissions'] as Map<String, dynamic>?,
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        email: json['email']?.toString() ?? '',
+        permissions: json['permissions'] is Map<String, dynamic>
+            ? json['permissions'] as Map<String, dynamic>
+            : null,
       );
 
   bool canManageScores() => permissions?['can_manage_scores'] == true;
@@ -908,19 +918,21 @@ class PlayerModel {
   });
 
   factory PlayerModel.fromJson(Map<String, dynamic> json) => PlayerModel(
-    id: json['id'] as String? ?? '',
-    name: json['name'] as String? ?? '',
-    playerCode: json['player_code'] as String?,
-    teamId: json['team_id'] as String?,
-    teamName: json['team']?['name'] as String?,
-    teamShortCode: json['team']?['short_code'] as String?,
-    jerseyNumber: json['jersey_number'] as String?,
-    role: json['role'] as String? ?? 'batsman',
-    battingStyle: json['batting_style'] as String?,
-    bowlingStyle: json['bowling_style'] as String?,
-    photoUrl: json['photo_url'] as String?,
-    isCaptain: json['is_captain'] as bool? ?? false,
-    isWicketKeeper: json['is_wicket_keeper'] as bool? ?? false,
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
+    playerCode: json['player_code']?.toString(),
+    teamId: json['team_id']?.toString(),
+    teamName: (json['team'] as Map<String, dynamic>?)?['name']?.toString(),
+    teamShortCode: (json['team'] as Map<String, dynamic>?)?['short_code']
+        ?.toString(),
+    jerseyNumber: json['jersey_number']?.toString(),
+    role: json['role']?.toString() ?? 'batsman',
+    battingStyle: json['batting_style']?.toString(),
+    bowlingStyle: json['bowling_style']?.toString(),
+    photoUrl: json['photo_url']?.toString(),
+    isCaptain: json['is_captain'] == true || json['is_captain'] == 1,
+    isWicketKeeper:
+        json['is_wicket_keeper'] == true || json['is_wicket_keeper'] == 1,
   );
 
   String get roleDisplay => role.replaceAll('_', ' ').toUpperCase();

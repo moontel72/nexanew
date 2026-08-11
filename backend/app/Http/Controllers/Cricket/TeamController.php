@@ -26,6 +26,20 @@ class TeamController extends Controller
             ->orderBy('name')
             ->paginate(50);
 
+        // Ensure consistent typing in the response
+        $teams->getCollection()->transform(function ($team) {
+            return [
+                'id' => (string) $team->id,
+                'name' => (string) $team->name,
+                'short_code' => (string) ($team->short_code ?? ''),
+                'logo_url' => $team->logo_url ? (string) $team->logo_url : null,
+                'primary_color' => $team->primary_color ? (string) $team->primary_color : null,
+                'team_code' => $team->team_code ? (string) $team->team_code : null,
+                'home_city' => $team->home_city ? (string) $team->home_city : null,
+                'player_count' => (int) ($team->players_count ?? 0),
+            ];
+        });
+
         return response()->json($teams);
     }
 
@@ -42,7 +56,10 @@ class TeamController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
         $data = $validator->validated();
@@ -59,7 +76,16 @@ class TeamController extends Controller
 
         return response()->json([
             'message' => 'Team created.',
-            'team' => $team,
+            'team' => [
+                'id' => (string) $team->id,
+                'name' => (string) $team->name,
+                'short_code' => (string) ($team->short_code ?? ''),
+                'logo_url' => $team->logo_url ? (string) $team->logo_url : null,
+                'primary_color' => $team->primary_color ? (string) $team->primary_color : null,
+                'team_code' => $team->team_code ? (string) $team->team_code : null,
+                'home_city' => $team->home_city ? (string) $team->home_city : null,
+                'player_count' => 0,
+            ],
         ], 201);
     }
 
