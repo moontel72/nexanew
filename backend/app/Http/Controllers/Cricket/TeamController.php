@@ -127,6 +127,52 @@ class TeamController extends Controller
         return response()->json(['message' => 'Team deleted.']);
     }
 
+    /**
+     * List soft-deleted teams (trash).
+     */
+    public function trashed(): \Illuminate\Http\JsonResponse
+    {
+        $teams = Team::onlyTrashed()
+            ->orderBy('deleted_at', 'desc')
+            ->paginate(50);
+
+        $teams->getCollection()->transform(function ($team) {
+            return [
+                'id' => (string) $team->id,
+                'name' => (string) $team->name,
+                'short_code' => (string) ($team->short_code ?? ''),
+                'logo_url' => $team->logo_url ? (string) $team->logo_url : null,
+                'primary_color' => $team->primary_color ? (string) $team->primary_color : null,
+                'team_code' => $team->team_code ? (string) $team->team_code : null,
+                'home_city' => $team->home_city ? (string) $team->home_city : null,
+                'player_count' => 0,
+                'details' => $team->details ? (string) $team->details : null,
+                'status' => (string) ($team->status ?? 'active'),
+                'deleted_at' => $team->deleted_at ? $team->deleted_at->toIso8601String() : null,
+            ];
+        });
+
+        return response()->json($teams);
+    }
+
+    /**
+     * Restore a soft-deleted team.
+     */
+    public function restore(string $id): \Illuminate\Http\JsonResponse
+    {
+        $team = Team::onlyTrashed()->findOrFail($id);
+        $team->restore();
+
+        return response()->json([
+            'message' => 'Team restored successfully.',
+            'team' => [
+                'id' => (string) $team->id,
+                'name' => (string) $team->name,
+                'status' => (string) ($team->status ?? 'active'),
+            ],
+        ]);
+    }
+
     public function updateStatus(Request $request, string $id): \Illuminate\Http\JsonResponse
     {
         $validator = Validator::make($request->all(), [

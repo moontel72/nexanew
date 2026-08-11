@@ -120,19 +120,23 @@ Route::prefix('api/v1/cricket/manager')
 
         // Team Management
         Route::get('teams/all', [TeamController::class, 'listAll']);
+        Route::get('teams/trashed', [TeamController::class, 'trashed']);
         Route::post('teams', [TeamController::class, 'store']);
         Route::get('teams/{id}', [TeamController::class, 'show']);
         Route::put('teams/{id}', [TeamController::class, 'update']);
         Route::delete('teams/{id}', [TeamController::class, 'destroy']);
         Route::patch('teams/{id}/status', [TeamController::class, 'updateStatus']);
+        Route::post('teams/{id}/restore', [TeamController::class, 'restore']);
 
         // Player Management
         Route::get('players/all', [PlayerController::class, 'listAll']);
+        Route::get('players/trashed', [PlayerController::class, 'trashed']);
         Route::post('players', [PlayerController::class, 'store']);
         Route::get('players/{id}', [PlayerController::class, 'show']);
         Route::put('players/{id}', [PlayerController::class, 'update']);
         Route::delete('players/{id}', [PlayerController::class, 'destroy']);
         Route::patch('players/{id}/status', [PlayerController::class, 'updateStatus']);
+        Route::post('players/{id}/restore', [PlayerController::class, 'restore']);
 
         // Instant Replay / VAR
         Route::post('matches/{matchId}/replay/event', [ReplayController::class, 'markEvent']);

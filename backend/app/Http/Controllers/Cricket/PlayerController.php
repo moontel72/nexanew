@@ -142,6 +142,56 @@ class PlayerController extends Controller
         return response()->json(['message' => 'Player deleted.']);
     }
 
+    /**
+     * List soft-deleted players (trash).
+     */
+    public function trashed(): \Illuminate\Http\JsonResponse
+    {
+        $players = Player::onlyTrashed()
+            ->with('team:id,name,short_code,team_code')
+            ->orderBy('deleted_at', 'desc')
+            ->paginate(50);
+
+        $players->getCollection()->transform(function ($player) {
+            return [
+                'id' => (string) $player->id,
+                'team_id' => (string) $player->team_id,
+                'name' => (string) $player->name,
+                'player_code' => $player->player_code ? (string) $player->player_code : null,
+                'jersey_number' => $player->jersey_number ? (string) $player->jersey_number : null,
+                'role' => (string) $player->role,
+                'batting_style' => $player->batting_style ? (string) $player->batting_style : null,
+                'bowling_style' => $player->bowling_style ? (string) $player->bowling_style : null,
+                'photo_url' => $player->photo_url ? (string) $player->photo_url : null,
+                'is_captain' => (bool) $player->is_captain,
+                'is_wicket_keeper' => (bool) $player->is_wicket_keeper,
+                'status' => (string) ($player->status ?? 'active'),
+                'deleted_at' => $player->deleted_at ? $player->deleted_at->toIso8601String() : null,
+                'team' => $player->team,
+            ];
+        });
+
+        return response()->json($players);
+    }
+
+    /**
+     * Restore a soft-deleted player.
+     */
+    public function restore(string $id): \Illuminate\Http\JsonResponse
+    {
+        $player = Player::onlyTrashed()->findOrFail($id);
+        $player->restore();
+
+        return response()->json([
+            'message' => 'Player restored successfully.',
+            'player' => [
+                'id' => (string) $player->id,
+                'name' => (string) $player->name,
+                'status' => (string) ($player->status ?? 'active'),
+            ],
+        ]);
+    }
+
     public function updateStatus(Request $request, string $id): \Illuminate\Http\JsonResponse
     {
         $validator = Validator::make($request->all(), [

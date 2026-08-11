@@ -16,6 +16,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -29,12 +30,13 @@ jobs:
       - name: Install PHP dependencies (with Reverb)
         run: |
           cd backend
-          composer require laravel/reverb --no-interaction --prefer-dist --optimize-autoloader
+          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build Rust binary (CLI)
+        timeout-minutes: 8
         run: |
           cd rust
           cargo build --release
@@ -109,6 +111,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "chmod +x /usr/local/bin/cricket-sleep.sh /usr/local/bin/cricket-wake.sh"
 
       - name: Server Post-Deployment Tasks
+        timeout-minutes: 10
         run: |
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
             set -e
@@ -124,7 +127,7 @@ jobs:
             chown -R www-data:www-data /var/www/traceodd/rust-lib
             chown -R www-data:www-data /var/www/traceodd/admin-panel/rust
 
-            composer require laravel/reverb --no-interaction --prefer-dist --optimize-autoloader
+            composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
             grep -q '^QUEUE_CONNECTION=' .env 2>/dev/null || echo 'QUEUE_CONNECTION=redis' >> .env
             grep -q '^CACHE_STORE=' .env 2>/dev/null || echo 'CACHE_STORE=redis' >> .env

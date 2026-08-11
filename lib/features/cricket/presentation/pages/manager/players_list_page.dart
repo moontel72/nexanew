@@ -12,8 +12,10 @@ class PlayersListPage extends StatefulWidget {
 
 class _PlayersListPageState extends State<PlayersListPage> {
   List<PlayerModel> _players = [];
+  List<PlayerModel> _trashedPlayers = [];
   List<TeamModel> _teams = [];
   bool _loading = true;
+  bool _showingTrash = false;
   String _search = '';
   String? _selectedTeamId;
 
@@ -43,6 +45,22 @@ class _PlayersListPageState extends State<PlayersListPage> {
     }
   }
 
+  Future<void> _loadTrash() async {
+    setState(() => _loading = true);
+    try {
+      final repo = _safeRepo();
+      if (repo == null) return;
+      final players = await repo.getTrashedPlayers();
+      if (mounted)
+        setState(() {
+          _trashedPlayers = players;
+          _loading = false;
+        });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   /// Safely access CricketRepository, falling back gracefully.
   CricketRepository? _safeRepo() {
     try {
@@ -63,13 +81,13 @@ class _PlayersListPageState extends State<PlayersListPage> {
   }
 
   List<PlayerModel> get _filtered {
-    var list = _players;
+    var list = _showingTrash ? _trashedPlayers : _players;
     if (_search.isNotEmpty) {
       list = list
           .where((p) => p.name.toLowerCase().contains(_search.toLowerCase()))
           .toList();
     }
-    if (_selectedTeamId != null) {
+    if (!_showingTrash && _selectedTeamId != null) {
       list = list.where((p) => p.teamId == _selectedTeamId).toList();
     }
     return list;
@@ -90,6 +108,10 @@ class _PlayersListPageState extends State<PlayersListPage> {
     }
   }
 
+  String _formatDate(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,6 +125,24 @@ class _PlayersListPageState extends State<PlayersListPage> {
         backgroundColor: const Color(0xFF0F2936),
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: Icon(
+              _showingTrash ? Icons.restore : Icons.delete_outline,
+              color: _showingTrash ? const Color(0xFF10B981) : null,
+            ),
+            tooltip: _showingTrash ? 'Back to Players' : 'View Trash',
+            onPressed: () {
+              setState(() {
+                _showingTrash = !_showingTrash;
+                _search = '';
+              });
+              if (_showingTrash) {
+                _loadTrash();
+              } else {
+                _load();
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.home, color: Color(0xFF10B981)),
             tooltip: 'Back to Dashboard',
@@ -142,47 +182,48 @@ class _PlayersListPageState extends State<PlayersListPage> {
             ),
           ),
           // Team filter dropdown
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F2936),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0x20FFFFFF)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String?>(
-                  value: _selectedTeamId,
-                  isExpanded: true,
-                  dropdownColor: const Color(0xFF0F2936),
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  icon: const Icon(
-                    Icons.arrow_drop_down,
-                    color: Color(0xFF6B7280),
-                  ),
-                  hint: const Text(
-                    'All Teams',
-                    style: TextStyle(color: Color(0xFF6B7280)),
-                  ),
-                  items: [
-                    const DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text('All Teams'),
+          if (!_showingTrash)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F2936),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0x20FFFFFF)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String?>(
+                    value: _selectedTeamId,
+                    isExpanded: true,
+                    dropdownColor: const Color(0xFF0F2936),
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    icon: const Icon(
+                      Icons.arrow_drop_down,
+                      color: Color(0xFF6B7280),
                     ),
-                    ..._teams.map(
-                      (t) => DropdownMenuItem<String?>(
-                        value: t.id,
-                        child: Text(t.name),
+                    hint: const Text(
+                      'All Teams',
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('All Teams'),
                       ),
-                    ),
-                  ],
-                  onChanged: (v) => setState(() => _selectedTeamId = v),
+                      ..._teams.map(
+                        (t) => DropdownMenuItem<String?>(
+                          value: t.id,
+                          child: Text(t.name),
+                        ),
+                      ),
+                    ],
+                    onChanged: (v) => setState(() => _selectedTeamId = v),
+                  ),
                 ),
               ),
             ),
-          ),
           // Results count
           if (!_loading)
             Padding(
@@ -214,7 +255,9 @@ class _PlayersListPageState extends State<PlayersListPage> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No players found',
+                          _showingTrash
+                              ? 'No trashed players'
+                              : 'No players found',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.5),
                           ),
@@ -240,13 +283,17 @@ class _PlayersListPageState extends State<PlayersListPage> {
                           ),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(10),
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('${p.name} — ${p.roleDisplay}'),
-                                ),
-                              );
-                            },
+                            onTap: _showingTrash
+                                ? null
+                                : () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '${p.name} — ${p.roleDisplay}',
+                                        ),
+                                      ),
+                                    );
+                                  },
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Row(
@@ -301,189 +348,242 @@ class _PlayersListPageState extends State<PlayersListPage> {
                                           ],
                                         ),
                                         const SizedBox(height: 6),
-                                        // Role chip + team info
-                                        Wrap(
-                                          spacing: 8,
-                                          runSpacing: 4,
-                                          crossAxisAlignment:
-                                              WrapCrossAlignment.center,
-                                          children: [
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 3,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: _roleColor(
-                                                  p.role,
-                                                ).withOpacity(0.15),
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                border: Border.all(
+                                        if (_showingTrash)
+                                          Text(
+                                            p.deletedAt != null
+                                                ? 'Deleted ${_formatDate(p.deletedAt!)}'
+                                                : '(deleted)',
+                                            style: const TextStyle(
+                                              color: Color(0xFFEF4444),
+                                              fontSize: 12,
+                                            ),
+                                          )
+                                        else
+                                          // Role chip + team info
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 4,
+                                            crossAxisAlignment:
+                                                WrapCrossAlignment.center,
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3,
+                                                    ),
+                                                decoration: BoxDecoration(
                                                   color: _roleColor(
                                                     p.role,
-                                                  ).withOpacity(0.5),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                p.roleDisplay,
-                                                style: TextStyle(
-                                                  color: _roleColor(p.role),
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                            if (p.teamName != null) ...[
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(
-                                                    Icons.shield,
-                                                    size: 13,
-                                                    color: Color(0xFF6B7280),
+                                                  ).withOpacity(0.15),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: _roleColor(
+                                                      p.role,
+                                                    ).withOpacity(0.5),
                                                   ),
-                                                  const SizedBox(width: 3),
-                                                  Flexible(
-                                                    child: Text(
-                                                      p.teamName!,
+                                                ),
+                                                child: Text(
+                                                  p.roleDisplay,
+                                                  style: TextStyle(
+                                                    color: _roleColor(p.role),
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (p.teamName != null) ...[
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.shield,
+                                                      size: 13,
+                                                      color: Color(0xFF6B7280),
+                                                    ),
+                                                    const SizedBox(width: 3),
+                                                    Flexible(
+                                                      child: Text(
+                                                        p.teamName!,
+                                                        style: const TextStyle(
+                                                          color: Color(
+                                                            0xFFBDD8DB,
+                                                          ),
+                                                          fontSize: 12,
+                                                        ),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                    if (p.teamShortCode !=
+                                                            null &&
+                                                        p
+                                                            .teamShortCode!
+                                                            .isNotEmpty) ...[
+                                                      const SizedBox(width: 4),
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 4,
+                                                              vertical: 1,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color: const Color(
+                                                            0xFF10B981,
+                                                          ).withOpacity(0.15),
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                4,
+                                                              ),
+                                                        ),
+                                                        child: Text(
+                                                          p.teamShortCode!,
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Color(
+                                                                  0xFF10B981,
+                                                                ),
+                                                                fontSize: 10,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (!_showingTrash) ...[
+                                    // Jersey number
+                                    if (p.jerseyNumber != null &&
+                                        p.jerseyNumber!.isNotEmpty)
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        margin: const EdgeInsets.only(left: 8),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: const Color(
+                                              0xFF6B7280,
+                                            ).withOpacity(0.4),
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          p.jerseyNumber!,
+                                          style: const TextStyle(
+                                            color: Color(0xFFBDD8DB),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    // Action menu
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(
+                                        Icons.more_vert,
+                                        color: Colors.white,
+                                      ),
+                                      color: const Color(0xFF0F2936),
+                                      onSelected: (action) async {
+                                        final repo = _safeRepo();
+                                        if (repo == null) return;
+                                        switch (action) {
+                                          case 'edit':
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Edit coming soon',
+                                                ),
+                                              ),
+                                            );
+                                          case 'delete':
+                                            final confirmed =
+                                                await showDialog<bool>(
+                                                  context: context,
+                                                  builder: (ctx) => AlertDialog(
+                                                    backgroundColor:
+                                                        const Color(0xFF0F2936),
+                                                    title: const Text(
+                                                      'Delete Player',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                    content: Text(
+                                                      'Delete "${p.name}"? This cannot be undone.',
                                                       style: const TextStyle(
                                                         color: Color(
                                                           0xFFBDD8DB,
                                                         ),
-                                                        fontSize: 12,
                                                       ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
                                                     ),
-                                                  ),
-                                                  if (p.teamShortCode != null &&
-                                                      p
-                                                          .teamShortCode!
-                                                          .isNotEmpty) ...[
-                                                    const SizedBox(width: 4),
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 4,
-                                                            vertical: 1,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: const Color(
-                                                          0xFF10B981,
-                                                        ).withOpacity(0.15),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              4,
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(
+                                                              ctx,
+                                                              false,
                                                             ),
-                                                      ),
-                                                      child: Text(
-                                                        p.teamShortCode!,
-                                                        style: const TextStyle(
-                                                          color: Color(
-                                                            0xFF10B981,
-                                                          ),
-                                                          fontSize: 10,
-                                                          fontWeight:
-                                                              FontWeight.bold,
+                                                        child: const Text(
+                                                          'Cancel',
                                                         ),
                                                       ),
-                                                    ),
-                                                  ],
-                                                ],
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Jersey number
-                                  if (p.jerseyNumber != null &&
-                                      p.jerseyNumber!.isNotEmpty)
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      margin: const EdgeInsets.only(left: 8),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: const Color(
-                                            0xFF6B7280,
-                                          ).withOpacity(0.4),
-                                        ),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        p.jerseyNumber!,
-                                        style: const TextStyle(
-                                          color: Color(0xFFBDD8DB),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  // Action menu
-                                  PopupMenuButton<String>(
-                                    icon: const Icon(
-                                      Icons.more_vert,
-                                      color: Colors.white,
-                                    ),
-                                    color: const Color(0xFF0F2936),
-                                    onSelected: (action) async {
-                                      final repo = _safeRepo();
-                                      if (repo == null) return;
-                                      switch (action) {
-                                        case 'edit':
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Edit coming soon'),
-                                            ),
-                                          );
-                                        case 'delete':
-                                          final confirmed = await showDialog<bool>(
-                                            context: context,
-                                            builder: (ctx) => AlertDialog(
-                                              backgroundColor: const Color(
-                                                0xFF0F2936,
-                                              ),
-                                              title: const Text(
-                                                'Delete Player',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                              content: Text(
-                                                'Delete "${p.name}"? This cannot be undone.',
-                                                style: const TextStyle(
-                                                  color: Color(0xFFBDD8DB),
-                                                ),
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(ctx, false),
-                                                  child: const Text('Cancel'),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(ctx, true),
-                                                  child: const Text(
-                                                    'Delete',
-                                                    style: TextStyle(
-                                                      color: Color(0xFFEF4444),
-                                                    ),
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(
+                                                              ctx,
+                                                              true,
+                                                            ),
+                                                        child: const Text(
+                                                          'Delete',
+                                                          style: TextStyle(
+                                                            color: Color(
+                                                              0xFFEF4444,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                          if (confirmed == true) {
+                                                );
+                                            if (confirmed == true) {
+                                              try {
+                                                await repo.deletePlayer(p.id);
+                                                _load();
+                                              } catch (e) {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('${e}'),
+                                                      backgroundColor:
+                                                          const Color(
+                                                            0xFFEF4444,
+                                                          ),
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            }
+                                          case 'mark_active':
                                             try {
-                                              await repo.deletePlayer(p.id);
+                                              await repo.updatePlayerStatus(
+                                                p.id,
+                                                'active',
+                                              );
                                               _load();
                                             } catch (e) {
                                               if (mounted) {
@@ -498,138 +598,134 @@ class _PlayersListPageState extends State<PlayersListPage> {
                                                 );
                                               }
                                             }
-                                          }
-                                        case 'mark_active':
-                                          try {
-                                            await repo.updatePlayerStatus(
-                                              p.id,
-                                              'active',
-                                            );
-                                            _load();
-                                          } catch (e) {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('${e}'),
-                                                  backgroundColor: const Color(
-                                                    0xFFEF4444,
-                                                  ),
-                                                ),
+                                          case 'mark_inactive':
+                                            try {
+                                              await repo.updatePlayerStatus(
+                                                p.id,
+                                                'inactive',
                                               );
-                                            }
-                                          }
-                                        case 'mark_inactive':
-                                          try {
-                                            await repo.updatePlayerStatus(
-                                              p.id,
-                                              'inactive',
-                                            );
-                                            _load();
-                                          } catch (e) {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('${e}'),
-                                                  backgroundColor: const Color(
-                                                    0xFFEF4444,
+                                              _load();
+                                            } catch (e) {
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('${e}'),
+                                                    backgroundColor:
+                                                        const Color(0xFFEF4444),
                                                   ),
-                                                ),
-                                              );
+                                                );
+                                              }
                                             }
-                                          }
-                                        case 'suspend':
-                                          try {
-                                            await repo.updatePlayerStatus(
-                                              p.id,
-                                              'suspended',
-                                            );
-                                            _load();
-                                          } catch (e) {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('${e}'),
-                                                  backgroundColor: const Color(
-                                                    0xFFEF4444,
+                                          case 'suspend':
+                                            try {
+                                              await repo.updatePlayerStatus(
+                                                p.id,
+                                                'suspended',
+                                              );
+                                              _load();
+                                            } catch (e) {
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('${e}'),
+                                                    backgroundColor:
+                                                        const Color(0xFFEF4444),
                                                   ),
-                                                ),
-                                              );
+                                                );
+                                              }
                                             }
-                                          }
-                                      }
-                                    },
-                                    itemBuilder: (ctx) => [
-                                      const PopupMenuItem(
-                                        value: 'edit',
-                                        child: ListTile(
-                                          leading: Icon(
-                                            Icons.edit,
-                                            color: Colors.white,
-                                          ),
-                                          title: Text(
-                                            'Edit',
-                                            style: TextStyle(
+                                        }
+                                      },
+                                      itemBuilder: (ctx) => [
+                                        const PopupMenuItem(
+                                          value: 'edit',
+                                          child: ListTile(
+                                            leading: Icon(
+                                              Icons.edit,
                                               color: Colors.white,
                                             ),
+                                            title: Text(
+                                              'Edit',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            contentPadding: EdgeInsets.zero,
+                                            visualDensity:
+                                                VisualDensity.compact,
                                           ),
-                                          contentPadding: EdgeInsets.zero,
-                                          visualDensity: VisualDensity.compact,
                                         ),
-                                      ),
-                                      const PopupMenuItem(
-                                        value: 'delete',
-                                        child: ListTile(
-                                          leading: Icon(
-                                            Icons.delete,
-                                            color: Color(0xFFEF4444),
-                                          ),
-                                          title: Text(
-                                            'Delete',
-                                            style: TextStyle(
+                                        const PopupMenuItem(
+                                          value: 'delete',
+                                          child: ListTile(
+                                            leading: Icon(
+                                              Icons.delete,
                                               color: Color(0xFFEF4444),
                                             ),
-                                          ),
-                                          contentPadding: EdgeInsets.zero,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                      ),
-                                      if (p.status == 'active')
-                                        const PopupMenuItem(
-                                          value: 'mark_inactive',
-                                          child: ListTile(
-                                            leading: Icon(
-                                              Icons.block,
-                                              color: Colors.white70,
-                                            ),
                                             title: Text(
-                                              'Mark Inactive',
+                                              'Delete',
                                               style: TextStyle(
+                                                color: Color(0xFFEF4444),
+                                              ),
+                                            ),
+                                            contentPadding: EdgeInsets.zero,
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                          ),
+                                        ),
+                                        if (p.status == 'active')
+                                          const PopupMenuItem(
+                                            value: 'mark_inactive',
+                                            child: ListTile(
+                                              leading: Icon(
+                                                Icons.block,
                                                 color: Colors.white70,
                                               ),
+                                              title: Text(
+                                                'Mark Inactive',
+                                                style: TextStyle(
+                                                  color: Colors.white70,
+                                                ),
+                                              ),
+                                              contentPadding: EdgeInsets.zero,
+                                              visualDensity:
+                                                  VisualDensity.compact,
                                             ),
-                                            contentPadding: EdgeInsets.zero,
-                                            visualDensity:
-                                                VisualDensity.compact,
+                                          )
+                                        else
+                                          const PopupMenuItem(
+                                            value: 'mark_active',
+                                            child: ListTile(
+                                              leading: Icon(
+                                                Icons.check_circle,
+                                                color: Color(0xFF10B981),
+                                              ),
+                                              title: Text(
+                                                'Mark Active',
+                                                style: TextStyle(
+                                                  color: Color(0xFF10B981),
+                                                ),
+                                              ),
+                                              contentPadding: EdgeInsets.zero,
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                            ),
                                           ),
-                                        )
-                                      else
                                         const PopupMenuItem(
-                                          value: 'mark_active',
+                                          value: 'suspend',
                                           child: ListTile(
                                             leading: Icon(
-                                              Icons.check_circle,
-                                              color: Color(0xFF10B981),
+                                              Icons.pause_circle,
+                                              color: Color(0xFFF97316),
                                             ),
                                             title: Text(
-                                              'Mark Active',
+                                              'Suspend',
                                               style: TextStyle(
-                                                color: Color(0xFF10B981),
+                                                color: Color(0xFFF97316),
                                               ),
                                             ),
                                             contentPadding: EdgeInsets.zero,
@@ -637,25 +733,55 @@ class _PlayersListPageState extends State<PlayersListPage> {
                                                 VisualDensity.compact,
                                           ),
                                         ),
-                                      const PopupMenuItem(
-                                        value: 'suspend',
-                                        child: ListTile(
-                                          leading: Icon(
-                                            Icons.pause_circle,
-                                            color: Color(0xFFF97316),
-                                          ),
-                                          title: Text(
-                                            'Suspend',
-                                            style: TextStyle(
-                                              color: Color(0xFFF97316),
-                                            ),
-                                          ),
-                                          contentPadding: EdgeInsets.zero,
-                                          visualDensity: VisualDensity.compact,
+                                      ],
+                                    ),
+                                  ],
+                                  if (_showingTrash)
+                                    TextButton.icon(
+                                      icon: const Icon(Icons.restore, size: 18),
+                                      label: const Text('Restore'),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: const Color(
+                                          0xFF10B981,
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                      onPressed: () async {
+                                        final repo = _safeRepo();
+                                        if (repo == null) return;
+                                        try {
+                                          await repo.restorePlayer(p.id);
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  '${p.name} restored',
+                                                ),
+                                                backgroundColor: const Color(
+                                                  0xFF10B981,
+                                                ),
+                                              ),
+                                            );
+                                            _loadTrash();
+                                            _load();
+                                          }
+                                        } catch (e) {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text('${e}'),
+                                                backgroundColor: const Color(
+                                                  0xFFEF4444,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
                                 ],
                               ),
                             ),
@@ -667,24 +793,26 @@ class _PlayersListPageState extends State<PlayersListPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF2563EB),
-        onPressed: () async {
-          final repo = _safeRepo();
-          if (repo == null) return;
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => RepositoryProvider.value(
-                value: repo,
-                child: PlayerRegisterPage(),
-              ),
+      floatingActionButton: _showingTrash
+          ? null
+          : FloatingActionButton(
+              backgroundColor: const Color(0xFF2563EB),
+              onPressed: () async {
+                final repo = _safeRepo();
+                if (repo == null) return;
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RepositoryProvider.value(
+                      value: repo,
+                      child: PlayerRegisterPage(),
+                    ),
+                  ),
+                );
+                if (result == true) _load();
+              },
+              child: const Icon(Icons.add, color: Colors.white),
             ),
-          );
-          if (result == true) _load();
-        },
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
     );
   }
 }

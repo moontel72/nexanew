@@ -64,6 +64,7 @@ class TeamModel {
   final int? playerCount;
   final String? details;
   final String status;
+  final DateTime? deletedAt;
 
   const TeamModel({
     required this.id,
@@ -76,6 +77,7 @@ class TeamModel {
     this.playerCount,
     this.details,
     this.status = 'active',
+    this.deletedAt,
   });
 
   factory TeamModel.fromJson(Map<String, dynamic> json) => TeamModel(
@@ -91,6 +93,9 @@ class TeamModel {
         : int.tryParse(json['player_count']?.toString() ?? ''),
     details: json['details']?.toString(),
     status: json['status']?.toString() ?? 'active',
+    deletedAt: json['deleted_at'] != null
+        ? DateTime.parse(json['deleted_at'] as String)
+        : null,
   );
 }
 
@@ -907,6 +912,7 @@ class PlayerModel {
   final bool isCaptain;
   final bool isWicketKeeper;
   final String status;
+  final DateTime? deletedAt;
 
   const PlayerModel({
     required this.id,
@@ -923,6 +929,7 @@ class PlayerModel {
     this.isCaptain = false,
     this.isWicketKeeper = false,
     this.status = 'active',
+    this.deletedAt,
   });
 
   factory PlayerModel.fromJson(Map<String, dynamic> json) => PlayerModel(
@@ -942,6 +949,9 @@ class PlayerModel {
     isWicketKeeper:
         json['is_wicket_keeper'] == true || json['is_wicket_keeper'] == 1,
     status: json['status']?.toString() ?? 'active',
+    deletedAt: json['deleted_at'] != null
+        ? DateTime.parse(json['deleted_at'] as String)
+        : null,
   );
 
   String get roleDisplay => role.replaceAll('_', ' ').toUpperCase();

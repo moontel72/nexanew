@@ -885,4 +885,56 @@ class CricketRepository {
     final err = _parseBody(res);
     throw Exception(err?['message'] ?? 'Failed to update player status');
   }
+
+  Future<List<TeamModel>> getTrashedTeams() async {
+    final res = await _http.get(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/teams/trashed'),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return (data['data'] as List).map((t) => TeamModel.fromJson(t)).toList();
+    }
+    return [];
+  }
+
+  Future<void> restoreTeam(String teamId) async {
+    final res = await _http.post(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/teams/$teamId/restore',
+      ),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200) {
+      final err = _parseBody(res);
+      throw Exception(err?['message'] ?? 'Failed to restore team');
+    }
+  }
+
+  Future<List<PlayerModel>> getTrashedPlayers() async {
+    final res = await _http.get(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/players/trashed'),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return (data['data'] as List)
+          .map((p) => PlayerModel.fromJson(p))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<void> restorePlayer(String playerId) async {
+    final res = await _http.post(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/players/$playerId/restore',
+      ),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200) {
+      final err = _parseBody(res);
+      throw Exception(err?['message'] ?? 'Failed to restore player');
+    }
+  }
 }
