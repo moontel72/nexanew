@@ -805,7 +805,7 @@ class CricketRepository {
   Future<PlayerModel> createPlayer({
     required String teamId,
     required String name,
-    required String role,
+    String? role,
     String? jerseyNumber,
     String? battingStyle,
     String? bowlingStyle,
@@ -821,7 +821,7 @@ class CricketRepository {
       body: jsonEncode({
         'team_id': teamId,
         'name': name,
-        'role': role,
+        if (role != null) 'role': role,
         if (position != null) 'position': position,
         if (jerseyNumber != null) 'jersey_number': jerseyNumber,
         if (battingStyle != null) 'batting_style': battingStyle,
@@ -950,6 +950,47 @@ class CricketRepository {
     }
     final err = _parseBody(res);
     throw Exception(err?['message'] ?? 'Failed to update player');
+  }
+
+  /// Upload player photo — returns the photo URL.
+  Future<String?> uploadPlayerPhoto(String playerId, String filePath) async {
+    final uri = Uri.parse(
+      '${ApiConfig.apiBaseUrl}/cricket/manager/players/$playerId',
+    );
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(await _authHeaders())
+      ..files.add(await http.MultipartFile.fromPath('photo', filePath));
+    // Use _method spoofing for PUT since some servers don't handle multipart PUT well
+    request.fields['_method'] = 'PUT';
+
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return data['player']?['photo_url'] ?? data['photo_url'];
+    }
+    final err = _parseBody(res);
+    throw Exception(err?['message'] ?? 'Failed to upload photo');
+  }
+
+  /// Upload team logo — returns the logo URL.
+  Future<String?> uploadTeamLogo(String teamId, String filePath) async {
+    final uri = Uri.parse(
+      '${ApiConfig.apiBaseUrl}/cricket/manager/teams/$teamId',
+    );
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(await _authHeaders())
+      ..files.add(await http.MultipartFile.fromPath('logo', filePath));
+    request.fields['_method'] = 'PUT';
+
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return data['team']?['logo_url'] ?? data['logo_url'];
+    }
+    final err = _parseBody(res);
+    throw Exception(err?['message'] ?? 'Failed to upload logo');
   }
 
   Future<List<TeamModel>> getTrashedTeams() async {

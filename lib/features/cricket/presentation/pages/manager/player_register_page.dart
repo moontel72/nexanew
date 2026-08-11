@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
@@ -29,6 +32,8 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
   bool _isSubmitting = false;
   bool _loadingTeams = true;
   PlayerModel? _createdPlayer;
+  String? _selectedPhotoPath;
+  String? _photoFileName;
 
   static const _positions = [
     'player',
@@ -127,7 +132,9 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
       final player = await repo.createPlayer(
         teamId: _selectedTeamId!,
         name: _nameCtrl.text.trim(),
-        role: 'player',
+        role: ['player', 'captain', 'vice_captain', 'extra'].contains(_position)
+            ? 'batsman'
+            : null,
         position: _position,
         jerseyNumber: _jerseyCtrl.text.trim().isEmpty
             ? null
@@ -141,6 +148,13 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
             : _idCardCtrl.text.trim(),
         dateOfBirth: _dob?.toIso8601String().split('T').first,
       );
+      if (_selectedPhotoPath != null) {
+        try {
+          await repo.uploadPlayerPhoto(player.id, _selectedPhotoPath!);
+        } catch (_) {
+          // Photo upload failed but player was created — non-fatal
+        }
+      }
       if (mounted)
         setState(() {
           _isSubmitting = false;
@@ -234,6 +248,67 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+              // Photo picker
+              GestureDetector(
+                onTap: () async {
+                  final result = await FilePicker.platform.pickFiles(
+                    type: FileType.image,
+                  );
+                  if (result != null && result.files.isNotEmpty) {
+                    setState(() {
+                      _selectedPhotoPath = result.files.first.path;
+                      _photoFileName = result.files.first.name;
+                    });
+                  }
+                },
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F2936),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0x40FFFFFF)),
+                  ),
+                  child: _selectedPhotoPath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(_selectedPhotoPath!),
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.camera_alt,
+                              color: Color(0xFFBDD8DB),
+                              size: 32,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Photo',
+                              style: TextStyle(
+                                color: Color(0xFFBDD8DB),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (_photoFileName != null)
+                Text(
+                  _photoFileName!,
+                  style: const TextStyle(
+                    color: Color(0xFF10B981),
+                    fontSize: 12,
+                  ),
+                ),
               const SizedBox(height: 24),
               _buildField('Player Name *', _nameCtrl, 'Enter player name'),
               const SizedBox(height: 16),

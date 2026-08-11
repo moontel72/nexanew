@@ -496,15 +496,21 @@ class _TeamsListPageState extends State<TeamsListPage> {
                           child: ListTile(
                             leading: CircleAvatar(
                               backgroundColor: _teamColor(t),
-                              child: Text(
-                                t.name.isNotEmpty
-                                    ? t.name[0].toUpperCase()
-                                    : '?',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              backgroundImage:
+                                  t.logoUrl != null && t.logoUrl!.isNotEmpty
+                                  ? NetworkImage(t.logoUrl!)
+                                  : null,
+                              child: t.logoUrl == null || t.logoUrl!.isEmpty
+                                  ? Text(
+                                      t.name.isNotEmpty
+                                          ? t.name[0].toUpperCase()
+                                          : '?',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             title: Row(
                               children: [

@@ -357,16 +357,21 @@ class _PlayersListPageState extends State<PlayersListPage> {
               ),
               // Player avatar
               CircleAvatar(
-                backgroundColor: posColor.withOpacity(0.2),
                 radius: 22,
-                child: Text(
-                  p.name.isNotEmpty ? p.name[0].toUpperCase() : '?',
-                  style: TextStyle(
-                    color: posColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+                backgroundColor: posColor.withOpacity(0.2),
+                backgroundImage: p.photoUrl != null && p.photoUrl!.isNotEmpty
+                    ? NetworkImage(p.photoUrl!)
+                    : null,
+                child: p.photoUrl == null || p.photoUrl!.isEmpty
+                    ? Text(
+                        p.name.isNotEmpty ? p.name[0].toUpperCase() : '?',
+                        style: TextStyle(
+                          color: posColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      )
+                    : null,
               ),
               const SizedBox(width: 12),
               // Player info

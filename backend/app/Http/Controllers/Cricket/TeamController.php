@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cricket\Team;
 use App\Models\Cricket\Tournament;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class TeamController extends Controller
@@ -67,6 +68,13 @@ class TeamController extends Controller
 
         $data = $validator->validated();
 
+        // Handle logo upload
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('teams', 'public');
+            $data['logo_url'] = Storage::url($path);
+        }
+        unset($data['logo']);
+
         // Auto-assign active tournament if none provided
         if (empty($data['tournament_id'])) {
             $activeTournament = Tournament::where('status', 'active')->first();
@@ -117,7 +125,16 @@ class TeamController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $team->update($validator->validated());
+        $data = $validator->validated();
+
+        // Handle logo upload
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('teams', 'public');
+            $data['logo_url'] = Storage::url($path);
+        }
+        unset($data['logo']);
+
+        $team->update($data);
         return response()->json($team);
     }
 

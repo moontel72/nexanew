@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/team/team_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/team/team_event.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/team/team_state.dart';
@@ -16,6 +20,8 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
   final _detailsCtrl = TextEditingController();
   final _homeCityCtrl = TextEditingController();
   Color _selectedColor = const Color(0xFF2563EB);
+  String? _selectedLogoPath;
+  String? _logoFileName;
 
   static const _colorOptions = [
     Color(0xFF2563EB),
@@ -56,8 +62,17 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<TeamBloc, TeamState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state is TeamSuccess) {
+          if (_selectedLogoPath != null) {
+            try {
+              final repo = RepositoryProvider.of<CricketRepository>(context);
+              await repo.uploadTeamLogo(state.team.id, _selectedLogoPath!);
+            } catch (_) {
+              // Logo upload failed but team was created — non-fatal
+            }
+          }
+          if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Team "${state.team.name}" created!'),
@@ -153,6 +168,67 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  // Logo picker
+                  GestureDetector(
+                    onTap: () async {
+                      final result = await FilePicker.platform.pickFiles(
+                        type: FileType.image,
+                      );
+                      if (result != null && result.files.isNotEmpty) {
+                        setState(() {
+                          _selectedLogoPath = result.files.first.path;
+                          _logoFileName = result.files.first.name;
+                        });
+                      }
+                    },
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F2936),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0x40FFFFFF)),
+                      ),
+                      child: _selectedLogoPath != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                File(_selectedLogoPath!),
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.image,
+                                  color: Color(0xFFBDD8DB),
+                                  size: 32,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Logo',
+                                  style: TextStyle(
+                                    color: Color(0xFFBDD8DB),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_logoFileName != null)
+                    Text(
+                      _logoFileName!,
+                      style: const TextStyle(
+                        color: Color(0xFF10B981),
+                        fontSize: 12,
+                      ),
+                    ),
                   const SizedBox(height: 24),
                   _buildField('Team Name *', _nameCtrl, 'Enter team name'),
                   const SizedBox(height: 16),

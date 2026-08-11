@@ -72,7 +72,7 @@ class PlayerController extends Controller
             'team_id' => 'required|uuid|exists:cricket_teams,id',
             'name' => 'required|string|max:200',
             'jersey_number' => 'nullable|string|max:5',
-            'role' => 'required|in:batsman,bowler,all_rounder,wicket_keeper',
+            'role' => 'nullable|in:batsman,bowler,all_rounder,wicket_keeper',
             'batting_style' => 'nullable|string|max:50',
             'bowling_style' => 'nullable|string|max:100',
             'photo' => 'nullable|image|max:5120',
