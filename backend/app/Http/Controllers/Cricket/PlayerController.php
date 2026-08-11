@@ -26,6 +26,25 @@ class PlayerController extends Controller
             ->orderBy('name')
             ->paginate(50);
 
+        // Ensure consistent typing in the response
+        $players->getCollection()->transform(function ($player) {
+            return [
+                'id' => (string) $player->id,
+                'team_id' => (string) $player->team_id,
+                'name' => (string) $player->name,
+                'player_code' => $player->player_code ? (string) $player->player_code : null,
+                'jersey_number' => $player->jersey_number ? (string) $player->jersey_number : null,
+                'role' => (string) $player->role,
+                'batting_style' => $player->batting_style ? (string) $player->batting_style : null,
+                'bowling_style' => $player->bowling_style ? (string) $player->bowling_style : null,
+                'photo_url' => $player->photo_url ? (string) $player->photo_url : null,
+                'is_captain' => (bool) $player->is_captain,
+                'is_wicket_keeper' => (bool) $player->is_wicket_keeper,
+                'status' => (string) ($player->status ?? 'active'),
+                'team' => $player->team,
+            ];
+        });
+
         return response()->json($players);
     }
 
@@ -61,7 +80,21 @@ class PlayerController extends Controller
 
         return response()->json([
             'message' => 'Player created.',
-            'player' => $player->load('team:id,name,short_code,team_code'),
+            'player' => [
+                'id' => (string) $player->id,
+                'team_id' => (string) $player->team_id,
+                'name' => (string) $player->name,
+                'player_code' => $player->player_code ? (string) $player->player_code : null,
+                'jersey_number' => $player->jersey_number ? (string) $player->jersey_number : null,
+                'role' => (string) $player->role,
+                'batting_style' => $player->batting_style ? (string) $player->batting_style : null,
+                'bowling_style' => $player->bowling_style ? (string) $player->bowling_style : null,
+                'photo_url' => $player->photo_url ? (string) $player->photo_url : null,
+                'is_captain' => (bool) $player->is_captain,
+                'is_wicket_keeper' => (bool) $player->is_wicket_keeper,
+                'status' => (string) ($player->status ?? 'active'),
+                'team' => $player->team,
+            ],
         ], 201);
     }
 
@@ -107,5 +140,32 @@ class PlayerController extends Controller
     {
         Player::findOrFail($id)->delete();
         return response()->json(['message' => 'Player deleted.']);
+    }
+
+    public function updateStatus(Request $request, string $id): \Illuminate\Http\JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:active,inactive,suspended',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $player = Player::findOrFail($id);
+        $player->status = $request->status;
+        $player->save();
+
+        return response()->json([
+            'message' => "Player status updated to {$player->status}.",
+            'player' => [
+                'id' => (string) $player->id,
+                'name' => (string) $player->name,
+                'status' => (string) $player->status,
+            ],
+        ]);
     }
 }

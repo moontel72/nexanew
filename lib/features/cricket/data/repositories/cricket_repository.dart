@@ -833,4 +833,56 @@ class CricketRepository {
         'Failed to create player (HTTP ${res.statusCode})';
     throw Exception(msg);
   }
+
+  Future<void> deleteTeam(String teamId) async {
+    final res = await _http.delete(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/teams/$teamId'),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      final err = _parseBody(res);
+      throw Exception(err?['message'] ?? 'Failed to delete team');
+    }
+  }
+
+  Future<TeamModel> updateTeamStatus(String teamId, String status) async {
+    final res = await _http.patch(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/teams/$teamId/status'),
+      headers: await _authHeaders(),
+      body: jsonEncode({'status': status}),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return TeamModel.fromJson(data['team']);
+    }
+    final err = _parseBody(res);
+    throw Exception(err?['message'] ?? 'Failed to update team status');
+  }
+
+  Future<void> deletePlayer(String playerId) async {
+    final res = await _http.delete(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/players/$playerId'),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      final err = _parseBody(res);
+      throw Exception(err?['message'] ?? 'Failed to delete player');
+    }
+  }
+
+  Future<PlayerModel> updatePlayerStatus(String playerId, String status) async {
+    final res = await _http.patch(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/players/$playerId/status',
+      ),
+      headers: await _authHeaders(),
+      body: jsonEncode({'status': status}),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return PlayerModel.fromJson(data['player']);
+    }
+    final err = _parseBody(res);
+    throw Exception(err?['message'] ?? 'Failed to update player status');
+  }
 }

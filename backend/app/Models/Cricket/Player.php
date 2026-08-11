@@ -27,11 +27,13 @@ class Player extends Model
         'photo_url',
         'is_captain',
         'is_wicket_keeper',
+        'status',
     ];
 
     protected $casts = [
         'is_captain' => 'boolean',
         'is_wicket_keeper' => 'boolean',
+        'status' => 'string',
     ];
 
     protected static function boot(): void

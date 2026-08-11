@@ -123,12 +123,16 @@ Route::prefix('api/v1/cricket/manager')
         Route::post('teams', [TeamController::class, 'store']);
         Route::get('teams/{id}', [TeamController::class, 'show']);
         Route::put('teams/{id}', [TeamController::class, 'update']);
+        Route::delete('teams/{id}', [TeamController::class, 'destroy']);
+        Route::patch('teams/{id}/status', [TeamController::class, 'updateStatus']);
 
         // Player Management
         Route::get('players/all', [PlayerController::class, 'listAll']);
         Route::post('players', [PlayerController::class, 'store']);
         Route::get('players/{id}', [PlayerController::class, 'show']);
         Route::put('players/{id}', [PlayerController::class, 'update']);
+        Route::delete('players/{id}', [PlayerController::class, 'destroy']);
+        Route::patch('players/{id}/status', [PlayerController::class, 'updateStatus']);
 
         // Instant Replay / VAR
         Route::post('matches/{matchId}/replay/event', [ReplayController::class, 'markEvent']);
@@ -158,6 +162,7 @@ Route::prefix('api/v1/cricket/admin')
         Route::get('teams/{id}', [TeamController::class, 'show']);
         Route::put('teams/{id}', [TeamController::class, 'update']);
         Route::delete('teams/{id}', [TeamController::class, 'destroy']);
+        Route::patch('teams/{id}/status', [TeamController::class, 'updateStatus']);
 
         // Players
         Route::get('teams/{teamId}/players', [PlayerController::class, 'index']);
@@ -165,6 +170,7 @@ Route::prefix('api/v1/cricket/admin')
         Route::get('players/{id}', [PlayerController::class, 'show']);
         Route::put('players/{id}', [PlayerController::class, 'update']);
         Route::delete('players/{id}', [PlayerController::class, 'destroy']);
+        Route::patch('players/{id}/status', [PlayerController::class, 'updateStatus']);
 
         // Matches
         Route::get('tournaments/{tournamentId}/matches', [MatchController::class, 'index']);

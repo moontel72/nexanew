@@ -26,6 +26,11 @@ class Team extends Model
         'home_city',
         'primary_color',
         'details',
+        'status',
+    ];
+
+    protected $casts = [
+        'status' => 'string',
     ];
 
     protected static function boot(): void

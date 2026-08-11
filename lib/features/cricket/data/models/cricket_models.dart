@@ -63,6 +63,7 @@ class TeamModel {
   final String? homeCity;
   final int? playerCount;
   final String? details;
+  final String status;
 
   const TeamModel({
     required this.id,
@@ -74,6 +75,7 @@ class TeamModel {
     this.homeCity,
     this.playerCount,
     this.details,
+    this.status = 'active',
   });
 
   factory TeamModel.fromJson(Map<String, dynamic> json) => TeamModel(
@@ -88,6 +90,7 @@ class TeamModel {
         ? json['player_count'] as int
         : int.tryParse(json['player_count']?.toString() ?? ''),
     details: json['details']?.toString(),
+    status: json['status']?.toString() ?? 'active',
   );
 }
 
@@ -903,6 +906,7 @@ class PlayerModel {
   final String? photoUrl;
   final bool isCaptain;
   final bool isWicketKeeper;
+  final String status;
 
   const PlayerModel({
     required this.id,
@@ -918,6 +922,7 @@ class PlayerModel {
     this.photoUrl,
     this.isCaptain = false,
     this.isWicketKeeper = false,
+    this.status = 'active',
   });
 
   factory PlayerModel.fromJson(Map<String, dynamic> json) => PlayerModel(
@@ -936,6 +941,7 @@ class PlayerModel {
     isCaptain: json['is_captain'] == true || json['is_captain'] == 1,
     isWicketKeeper:
         json['is_wicket_keeper'] == true || json['is_wicket_keeper'] == 1,
+    status: json['status']?.toString() ?? 'active',
   );
 
   String get roleDisplay => role.replaceAll('_', ' ').toUpperCase();

@@ -343,31 +343,242 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                 fontSize: 12,
                               ),
                             ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TextButton(
-                                  onPressed: () => _showDetailModal(t),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
+                            trailing: PopupMenuButton<String>(
+                              icon: const Icon(
+                                Icons.more_vert,
+                                color: Colors.white,
+                              ),
+                              color: const Color(0xFF0F2936),
+                              onSelected: (action) async {
+                                final repo = _safeRepo();
+                                if (repo == null) return;
+                                switch (action) {
+                                  case 'edit':
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Edit coming soon'),
+                                      ),
+                                    );
+                                  case 'delete':
+                                    final confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        backgroundColor: const Color(
+                                          0xFF0F2936,
+                                        ),
+                                        title: const Text(
+                                          'Delete Team',
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                        content: Text(
+                                          'Delete "${t.name}"? This cannot be undone.',
+                                          style: const TextStyle(
+                                            color: Color(0xFFBDD8DB),
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, true),
+                                            child: const Text(
+                                              'Delete',
+                                              style: TextStyle(
+                                                color: Color(0xFFEF4444),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmed == true) {
+                                      try {
+                                        await repo.deleteTeam(t.id);
+                                        _load();
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text('${e}'),
+                                              backgroundColor: const Color(
+                                                0xFFEF4444,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  case 'mark_active':
+                                    try {
+                                      await repo.updateTeamStatus(
+                                        t.id,
+                                        'active',
+                                      );
+                                      _load();
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('${e}'),
+                                            backgroundColor: const Color(
+                                              0xFFEF4444,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  case 'mark_inactive':
+                                    try {
+                                      await repo.updateTeamStatus(
+                                        t.id,
+                                        'inactive',
+                                      );
+                                      _load();
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('${e}'),
+                                            backgroundColor: const Color(
+                                              0xFFEF4444,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  case 'suspend':
+                                    try {
+                                      await repo.updateTeamStatus(
+                                        t.id,
+                                        'suspended',
+                                      );
+                                      _load();
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('${e}'),
+                                            backgroundColor: const Color(
+                                              0xFFEF4444,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  case 'detail':
+                                    _showDetailModal(t);
+                                }
+                              },
+                              itemBuilder: (ctx) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: ListTile(
+                                    leading: Icon(
+                                      Icons.edit,
+                                      color: Colors.white,
                                     ),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  child: const Text(
-                                    'Detail',
-                                    style: TextStyle(
-                                      color: Color(0xFF10B981),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
+                                    title: Text(
+                                      'Edit',
+                                      style: TextStyle(color: Colors.white),
                                     ),
+                                    contentPadding: EdgeInsets.zero,
+                                    visualDensity: VisualDensity.compact,
                                   ),
                                 ),
-                                const Icon(
-                                  Icons.chevron_right,
-                                  color: Color(0xFF6B7280),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: ListTile(
+                                    leading: Icon(
+                                      Icons.delete,
+                                      color: Color(0xFFEF4444),
+                                    ),
+                                    title: Text(
+                                      'Delete',
+                                      style: TextStyle(
+                                        color: Color(0xFFEF4444),
+                                      ),
+                                    ),
+                                    contentPadding: EdgeInsets.zero,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ),
+                                if (t.status == 'active')
+                                  const PopupMenuItem(
+                                    value: 'mark_inactive',
+                                    child: ListTile(
+                                      leading: Icon(
+                                        Icons.block,
+                                        color: Colors.white70,
+                                      ),
+                                      title: Text(
+                                        'Mark Inactive',
+                                        style: TextStyle(color: Colors.white70),
+                                      ),
+                                      contentPadding: EdgeInsets.zero,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  )
+                                else
+                                  const PopupMenuItem(
+                                    value: 'mark_active',
+                                    child: ListTile(
+                                      leading: Icon(
+                                        Icons.check_circle,
+                                        color: Color(0xFF10B981),
+                                      ),
+                                      title: Text(
+                                        'Mark Active',
+                                        style: TextStyle(
+                                          color: Color(0xFF10B981),
+                                        ),
+                                      ),
+                                      contentPadding: EdgeInsets.zero,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  ),
+                                const PopupMenuItem(
+                                  value: 'suspend',
+                                  child: ListTile(
+                                    leading: Icon(
+                                      Icons.pause_circle,
+                                      color: Color(0xFFF97316),
+                                    ),
+                                    title: Text(
+                                      'Suspend',
+                                      style: TextStyle(
+                                        color: Color(0xFFF97316),
+                                      ),
+                                    ),
+                                    contentPadding: EdgeInsets.zero,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'detail',
+                                  child: ListTile(
+                                    leading: Icon(
+                                      Icons.info_outline,
+                                      color: Colors.white,
+                                    ),
+                                    title: Text(
+                                      'Detail',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    contentPadding: EdgeInsets.zero,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
                                 ),
                               ],
                             ),

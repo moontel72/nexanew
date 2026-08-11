@@ -37,6 +37,7 @@ class TeamController extends Controller
                 'details' => $team->details ? (string) $team->details : null,
                 'team_code' => $team->team_code ? (string) $team->team_code : null,
                 'home_city' => $team->home_city ? (string) $team->home_city : null,
+                'status' => (string) ($team->status ?? 'active'),
                 'player_count' => (int) ($team->players_count ?? 0),
             ];
         });
@@ -87,6 +88,7 @@ class TeamController extends Controller
                 'details' => $team->details ? (string) $team->details : null,
                 'team_code' => $team->team_code ? (string) $team->team_code : null,
                 'home_city' => $team->home_city ? (string) $team->home_city : null,
+                'status' => (string) ($team->status ?? 'active'),
                 'player_count' => 0,
             ],
         ], 201);
@@ -123,5 +125,32 @@ class TeamController extends Controller
     {
         Team::findOrFail($id)->delete();
         return response()->json(['message' => 'Team deleted.']);
+    }
+
+    public function updateStatus(Request $request, string $id): \Illuminate\Http\JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:active,inactive,suspended',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $team = Team::findOrFail($id);
+        $team->status = $request->status;
+        $team->save();
+
+        return response()->json([
+            'message' => "Team status updated to {$team->status}.",
+            'team' => [
+                'id' => (string) $team->id,
+                'name' => (string) $team->name,
+                'status' => (string) $team->status,
+            ],
+        ]);
     }
 }
