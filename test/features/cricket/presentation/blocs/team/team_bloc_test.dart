@@ -25,6 +25,7 @@ class FakeCricketRepository implements CricketRepository {
     String? shortCode,
     String? homeCity,
     String? primaryColor,
+    String? details,
   }) async {
     if (_createTeamError != null) throw _createTeamError!;
     if (_createTeamResult != null) return _createTeamResult!;
