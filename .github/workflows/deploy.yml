@@ -30,7 +30,7 @@ jobs:
       - name: Install PHP dependencies (with Reverb)
         run: |
           cd backend
-          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+          composer require laravel/reverb --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
