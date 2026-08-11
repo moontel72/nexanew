@@ -154,3 +154,36 @@ jobs:
             chmod -R 775 /var/www/traceodd/admin-panel/bootstrap/cache
             systemctl reload nginx
           "
+
+      - name: Smoke test API for null/type regressions
+        if: always()
+        run: |
+          echo "=== Cricket Teams API Smoke Test ==="
+          RESPONSE=$(curl -s http://135.181.46.27/api/v1/cricket/public/teams 2>/dev/null || echo '{"error":"API unavailable"}')
+          echo "$RESPONSE" | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    teams = data.get('data', data) if isinstance(data, dict) else data
+    if not isinstance(teams, list):
+        print('WARNING: Unexpected response structure')
+        sys.exit(0)
+    issues = 0
+    for t in teams:
+        if not isinstance(t, dict): continue
+        for f in ['id', 'name', 'short_code']:
+            if t.get(f) is None:
+                print(f'NULL FIELD: {f} in team {t.get(\"name\",\"?\")}')
+                issues += 1
+        tid = t.get('id')
+        if tid is not None and not isinstance(tid, str):
+            print(f'TYPE ERROR: id is {type(tid).__name__} (expected str) in team {t.get(\"name\",\"?\")}')
+            issues += 1
+    if issues == 0:
+        print(f'OK: {len(teams)} teams checked, 0 issues')
+    else:
+        print(f'WARNING: {issues} field issues detected')
+except Exception as e:
+    print(f'Smoke test error (non-fatal): {e}')
+"
+          echo "=== Smoke test done ==="
