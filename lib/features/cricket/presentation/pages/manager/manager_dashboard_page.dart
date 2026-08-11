@@ -74,10 +74,23 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                       managerName: name,
                       selectedTab: _selectedTab,
                       onLogout: () async {
-                        // Clear token FIRST, then navigate
                         await context.read<CricketRepository>().clearToken();
                         if (!context.mounted) return;
-                        context.go('/cricket-manager/login');
+                        // Use pushAndRemoveUntil for reliable navigation
+                        // after token clear (GoRouter context.go can render blank)
+                        final repo = CricketRepository();
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (_) => RepositoryProvider.value(
+                              value: repo,
+                              child: BlocProvider(
+                                create: (_) => CricketAuthBloc(repo: repo),
+                                child: const ManagerLoginPage(),
+                              ),
+                            ),
+                          ),
+                          (route) => false,
+                        );
                       },
                     ),
                     if (!wide)

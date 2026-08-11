@@ -42,7 +42,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
     'manager': 'Team Manager',
     'extra': 'Extra Player',
   };
-  static const _battingStyles = ['right_hand', 'left_hand'];
+  static const _battingStyles = ['right_hand', 'left_hand', 'all_rounder'];
   static const _bowlingStyles = [
     'right_arm_fast',
     'left_arm_fast',
