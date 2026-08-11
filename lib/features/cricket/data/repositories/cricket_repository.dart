@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -953,13 +954,19 @@ class CricketRepository {
   }
 
   /// Upload player photo — returns the photo URL.
-  Future<String?> uploadPlayerPhoto(String playerId, String filePath) async {
+  Future<String?> uploadPlayerPhoto(
+    String playerId,
+    Uint8List bytes,
+    String fileName,
+  ) async {
     final uri = Uri.parse(
       '${ApiConfig.apiBaseUrl}/cricket/manager/players/$playerId',
     );
     final request = http.MultipartRequest('POST', uri)
       ..headers.addAll(await _authHeaders())
-      ..files.add(await http.MultipartFile.fromPath('photo', filePath));
+      ..files.add(
+        http.MultipartFile.fromBytes('photo', bytes, filename: fileName),
+      );
     // Use _method spoofing for PUT since some servers don't handle multipart PUT well
     request.fields['_method'] = 'PUT';
 
@@ -974,13 +981,19 @@ class CricketRepository {
   }
 
   /// Upload team logo — returns the logo URL.
-  Future<String?> uploadTeamLogo(String teamId, String filePath) async {
+  Future<String?> uploadTeamLogo(
+    String teamId,
+    Uint8List bytes,
+    String fileName,
+  ) async {
     final uri = Uri.parse(
       '${ApiConfig.apiBaseUrl}/cricket/manager/teams/$teamId',
     );
     final request = http.MultipartRequest('POST', uri)
       ..headers.addAll(await _authHeaders())
-      ..files.add(await http.MultipartFile.fromPath('logo', filePath));
+      ..files.add(
+        http.MultipartFile.fromBytes('logo', bytes, filename: fileName),
+      );
     request.fields['_method'] = 'PUT';
 
     final streamed = await request.send();

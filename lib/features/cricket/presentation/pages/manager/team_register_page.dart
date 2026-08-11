@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +20,7 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
   final _detailsCtrl = TextEditingController();
   final _homeCityCtrl = TextEditingController();
   Color _selectedColor = const Color(0xFF2563EB);
-  String? _selectedLogoPath;
+  Uint8List? _selectedLogoBytes;
   String? _logoFileName;
 
   static const _colorOptions = [
@@ -64,10 +64,14 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
     return BlocConsumer<TeamBloc, TeamState>(
       listener: (context, state) async {
         if (state is TeamSuccess) {
-          if (_selectedLogoPath != null) {
+          if (_selectedLogoBytes != null) {
             try {
               final repo = RepositoryProvider.of<CricketRepository>(context);
-              await repo.uploadTeamLogo(state.team.id, _selectedLogoPath!);
+              await repo.uploadTeamLogo(
+                state.team.id,
+                _selectedLogoBytes!,
+                _logoFileName ?? 'logo.jpg',
+              );
             } catch (_) {
               // Logo upload failed but team was created — non-fatal
             }
@@ -174,10 +178,11 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
                     onTap: () async {
                       final result = await FilePicker.platform.pickFiles(
                         type: FileType.image,
+                        withData: true,
                       );
                       if (result != null && result.files.isNotEmpty) {
                         setState(() {
-                          _selectedLogoPath = result.files.first.path;
+                          _selectedLogoBytes = result.files.first.bytes;
                           _logoFileName = result.files.first.name;
                         });
                       }
@@ -190,11 +195,11 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0x40FFFFFF)),
                       ),
-                      child: _selectedLogoPath != null
+                      child: _selectedLogoBytes != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: Image.file(
-                                File(_selectedLogoPath!),
+                              child: Image.memory(
+                                _selectedLogoBytes!,
                                 width: 100,
                                 height: 100,
                                 fit: BoxFit.cover,

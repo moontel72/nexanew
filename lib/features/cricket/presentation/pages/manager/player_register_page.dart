@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -32,7 +32,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
   bool _isSubmitting = false;
   bool _loadingTeams = true;
   PlayerModel? _createdPlayer;
-  String? _selectedPhotoPath;
+  Uint8List? _selectedPhotoBytes;
   String? _photoFileName;
 
   static const _positions = [
@@ -148,9 +148,13 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
             : _idCardCtrl.text.trim(),
         dateOfBirth: _dob?.toIso8601String().split('T').first,
       );
-      if (_selectedPhotoPath != null) {
+      if (_selectedPhotoBytes != null) {
         try {
-          await repo.uploadPlayerPhoto(player.id, _selectedPhotoPath!);
+          await repo.uploadPlayerPhoto(
+            player.id,
+            _selectedPhotoBytes!,
+            _photoFileName ?? 'photo.jpg',
+          );
         } catch (_) {
           // Photo upload failed but player was created — non-fatal
         }
@@ -254,10 +258,11 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
                 onTap: () async {
                   final result = await FilePicker.platform.pickFiles(
                     type: FileType.image,
+                    withData: true,
                   );
                   if (result != null && result.files.isNotEmpty) {
                     setState(() {
-                      _selectedPhotoPath = result.files.first.path;
+                      _selectedPhotoBytes = result.files.first.bytes;
                       _photoFileName = result.files.first.name;
                     });
                   }
@@ -270,11 +275,11 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: const Color(0x40FFFFFF)),
                   ),
-                  child: _selectedPhotoPath != null
+                  child: _selectedPhotoBytes != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.file(
-                            File(_selectedPhotoPath!),
+                          child: Image.memory(
+                            _selectedPhotoBytes!,
                             width: 100,
                             height: 100,
                             fit: BoxFit.cover,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'player_register_page.dart';
@@ -78,6 +79,11 @@ class _PlayersListPageState extends State<PlayersListPage> {
       }
       return null;
     }
+  }
+
+  String _fullUrl(String path) {
+    if (path.startsWith('http')) return path;
+    return '${ApiConfig.baseUrl}$path';
   }
 
   List<PlayerModel> get _filtered {
@@ -360,7 +366,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                 radius: 22,
                 backgroundColor: posColor.withOpacity(0.2),
                 backgroundImage: p.photoUrl != null && p.photoUrl!.isNotEmpty
-                    ? NetworkImage(p.photoUrl!)
+                    ? NetworkImage(_fullUrl(p.photoUrl!))
                     : null,
                 child: p.photoUrl == null || p.photoUrl!.isEmpty
                     ? Text(

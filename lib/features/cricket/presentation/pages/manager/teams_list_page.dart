@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/team/team_bloc.dart';
@@ -101,6 +102,11 @@ class _TeamsListPageState extends State<TeamsListPage> {
     } catch (_) {
       return const Color(0xFF2563EB);
     }
+  }
+
+  String _fullUrl(String path) {
+    if (path.startsWith('http')) return path;
+    return '${ApiConfig.baseUrl}$path';
   }
 
   void _showDetailModal(TeamModel team) {
@@ -498,7 +504,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
                               backgroundColor: _teamColor(t),
                               backgroundImage:
                                   t.logoUrl != null && t.logoUrl!.isNotEmpty
-                                  ? NetworkImage(t.logoUrl!)
+                                  ? NetworkImage(_fullUrl(t.logoUrl!))
                                   : null,
                               child: t.logoUrl == null || t.logoUrl!.isEmpty
                                   ? Text(
