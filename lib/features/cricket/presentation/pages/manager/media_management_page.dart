@@ -55,16 +55,6 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
     }
   }
 
-  Color _teamColor(TeamModel? t) {
-    if (t?.primaryColor == null) return const Color(0xFF2563EB);
-    try {
-      final hex = t!.primaryColor!.replaceFirst('#', '0xFF');
-      return Color(int.parse(hex));
-    } catch (_) {
-      return const Color(0xFF2563EB);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -131,10 +121,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
                 itemCount: _teams.length,
                 itemBuilder: (_, i) {
                   final team = _teams[i];
-                  return _TeamMediaCard(
-                    team: team,
-                    avatarColor: _teamColor(team),
-                  );
+                  return _TeamMediaCard(team: team);
                 },
               ),
             ),
@@ -144,8 +131,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
 
 class _TeamMediaCard extends StatelessWidget {
   final TeamModel team;
-  final Color avatarColor;
-  const _TeamMediaCard({required this.team, required this.avatarColor});
+  const _TeamMediaCard({required this.team});
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +152,7 @@ class _TeamMediaCard extends StatelessWidget {
             // Placeholder avatar
             CircleAvatar(
               radius: 36,
-              backgroundColor: avatarColor,
+              backgroundColor: const Color(0xFF2563EB),
               child: Text(
                 initial,
                 style: const TextStyle(

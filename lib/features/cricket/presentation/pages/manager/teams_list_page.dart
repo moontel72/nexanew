@@ -196,16 +196,6 @@ class _TeamsListPageState extends State<TeamsListPage> {
     );
   }
 
-  Color _teamColor(TeamModel? t) {
-    if (t?.primaryColor == null) return const Color(0xFF2563EB);
-    try {
-      final hex = t!.primaryColor!.replaceFirst('#', '0xFF');
-      return Color(int.parse(hex));
-    } catch (_) {
-      return const Color(0xFF2563EB);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -291,7 +281,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: _teamColor(t),
+                              backgroundColor: const Color(0xFF2563EB),
                               child: Text(
                                 t.name.isNotEmpty
                                     ? t.name[0].toUpperCase()

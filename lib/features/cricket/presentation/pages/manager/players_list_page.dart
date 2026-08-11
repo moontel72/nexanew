@@ -89,25 +89,6 @@ class _PlayersListPageState extends State<PlayersListPage> {
     }
   }
 
-  TeamModel? _findTeam(String? teamId) {
-    if (teamId == null) return null;
-    try {
-      return _teams.firstWhere((t) => t.id == teamId);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Color _teamColor(TeamModel? t) {
-    if (t?.primaryColor == null) return const Color(0xFF2563EB);
-    try {
-      final hex = t!.primaryColor!.replaceFirst('#', '0xFF');
-      return Color(int.parse(hex));
-    } catch (_) {
-      return const Color(0xFF2563EB);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -262,9 +243,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                               children: [
                                 // Player avatar
                                 CircleAvatar(
-                                  backgroundColor: _teamColor(
-                                    _findTeam(p.teamId),
-                                  ),
+                                  backgroundColor: const Color(0xFF2563EB),
                                   radius: 22,
                                   child: Text(
                                     p.name.isNotEmpty
