@@ -914,6 +914,10 @@ class PlayerModel {
   final bool isWicketKeeper;
   final String status;
   final DateTime? deletedAt;
+  final String? email;
+  final String? phone;
+  final String? idCardNumber;
+  final String? dateOfBirth;
 
   const PlayerModel({
     required this.id,
@@ -932,6 +936,10 @@ class PlayerModel {
     this.isWicketKeeper = false,
     this.status = 'active',
     this.deletedAt,
+    this.email,
+    this.phone,
+    this.idCardNumber,
+    this.dateOfBirth,
   });
 
   factory PlayerModel.fromJson(Map<String, dynamic> json) => PlayerModel(
@@ -955,6 +963,10 @@ class PlayerModel {
     deletedAt: json['deleted_at'] != null
         ? DateTime.parse(json['deleted_at'] as String)
         : null,
+    email: json['email']?.toString(),
+    phone: json['phone']?.toString(),
+    idCardNumber: json['id_card_number']?.toString(),
+    dateOfBirth: json['date_of_birth']?.toString(),
   );
 
   String get roleDisplay => role.replaceAll('_', ' ').toUpperCase();

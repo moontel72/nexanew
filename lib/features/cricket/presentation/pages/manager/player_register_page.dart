@@ -16,11 +16,15 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _jerseyCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _idCardCtrl = TextEditingController();
   String? _selectedTeamId;
   String? _selectedTeamName;
   String _position = 'player';
   String? _battingStyle;
   String? _bowlingStyle;
+  DateTime? _dob;
   List<TeamModel> _teams = [];
   bool _isSubmitting = false;
   bool _loadingTeams = true;
@@ -96,6 +100,9 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
   void dispose() {
     _nameCtrl.dispose();
     _jerseyCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _idCardCtrl.dispose();
     super.dispose();
   }
 
@@ -127,6 +134,12 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
             : _jerseyCtrl.text.trim(),
         battingStyle: _battingStyle,
         bowlingStyle: _bowlingStyle,
+        email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        idCardNumber: _idCardCtrl.text.trim().isEmpty
+            ? null
+            : _idCardCtrl.text.trim(),
+        dateOfBirth: _dob?.toIso8601String().split('T').first,
       );
       if (mounted)
         setState(() {
@@ -368,6 +381,73 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
               ),
               const SizedBox(height: 16),
               _buildField('Jersey Number', _jerseyCtrl, 'e.g. 7'),
+              const SizedBox(height: 16),
+              _buildField(
+                'Email (Optional)',
+                _emailCtrl,
+                'Enter email',
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+              _buildField(
+                'Phone (Optional)',
+                _phoneCtrl,
+                'Enter phone',
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              _buildField(
+                'ID Card Number (Optional)',
+                _idCardCtrl,
+                'Enter ID card',
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Date of Birth (Optional)',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _dob ?? DateTime(2000),
+                    firstDate: DateTime(1950),
+                    lastDate: DateTime.now(),
+                    builder: (ctx, child) => Theme(
+                      data: ThemeData.dark().copyWith(
+                        colorScheme: const ColorScheme.dark(
+                          primary: Color(0xFF10B981),
+                        ),
+                      ),
+                      child: child!,
+                    ),
+                  );
+                  if (picked != null) setState(() => _dob = picked);
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F2936),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0x20FFFFFF)),
+                  ),
+                  child: Text(
+                    _dob != null
+                        ? '${_dob!.year}-${_dob!.month.toString().padLeft(2, '0')}-${_dob!.day.toString().padLeft(2, '0')}'
+                        : 'Select Date',
+                    style: TextStyle(
+                      color: _dob != null
+                          ? Colors.white
+                          : const Color(0xFF6B7280),
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -406,26 +486,31 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController ctrl, String hint) =>
-      TextFormField(
-        controller: ctrl,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Color(0xFFBDD8DB)),
-          hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFF6B7280)),
-          filled: true,
-          fillColor: const Color(0xFF0F2936),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0x20FFFFFF)),
-          ),
-        ),
-        validator: (v) => label.contains('*') && (v == null || v.trim().isEmpty)
-            ? 'Required'
-            : null,
-      );
+  Widget _buildField(
+    String label,
+    TextEditingController ctrl,
+    String hint, {
+    TextInputType? keyboardType,
+  }) => TextFormField(
+    controller: ctrl,
+    keyboardType: keyboardType,
+    style: const TextStyle(color: Colors.white),
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Color(0xFFBDD8DB)),
+      hintText: hint,
+      hintStyle: const TextStyle(color: Color(0xFF6B7280)),
+      filled: true,
+      fillColor: const Color(0xFF0F2936),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0x20FFFFFF)),
+      ),
+    ),
+    validator: (v) => label.contains('*') && (v == null || v.trim().isEmpty)
+        ? 'Required'
+        : null,
+  );
 
   Widget _successView() => Scaffold(
     backgroundColor: const Color(0xFF0C1D2C),

@@ -19,6 +19,10 @@ class Player extends Model
         'id',
         'team_id',
         'name',
+        'email',
+        'phone',
+        'id_card_number',
+        'date_of_birth',
         'player_code',
         'jersey_number',
         'role',
@@ -34,6 +38,7 @@ class Player extends Model
     protected $casts = [
         'is_captain' => 'boolean',
         'is_wicket_keeper' => 'boolean',
+        'date_of_birth' => 'date',
         'status' => 'string',
     ];
 

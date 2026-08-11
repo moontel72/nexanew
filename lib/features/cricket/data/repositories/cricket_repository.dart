@@ -810,6 +810,10 @@ class CricketRepository {
     String? battingStyle,
     String? bowlingStyle,
     String? position,
+    String? email,
+    String? phone,
+    String? idCardNumber,
+    String? dateOfBirth,
   }) async {
     final res = await _http.post(
       Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/players'),
@@ -822,6 +826,10 @@ class CricketRepository {
         if (jerseyNumber != null) 'jersey_number': jerseyNumber,
         if (battingStyle != null) 'batting_style': battingStyle,
         if (bowlingStyle != null) 'bowling_style': bowlingStyle,
+        if (email != null) 'email': email,
+        if (phone != null) 'phone': phone,
+        if (idCardNumber != null) 'id_card_number': idCardNumber,
+        if (dateOfBirth != null) 'date_of_birth': dateOfBirth,
       }),
     );
     if (res.statusCode == 201) {

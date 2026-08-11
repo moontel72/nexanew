@@ -41,6 +41,14 @@ class PlayerController extends Controller
                 'id' => (string) $player->id,
                 'team_id' => (string) $player->team_id,
                 'name' => (string) $player->name,
+                'email' => $player->email ? (string) $player->email : null,
+                'phone' => $player->phone ? (string) $player->phone : null,
+                'id_card_number' => $player->id_card_number ? (string) $player->id_card_number : null,
+                'date_of_birth' => $player->date_of_birth
+                    ? ($player->date_of_birth instanceof \Carbon\Carbon
+                        ? $player->date_of_birth->toDateString()
+                        : $player->date_of_birth)
+                    : null,
                 'player_code' => $player->player_code ? (string) $player->player_code : null,
                 'jersey_number' => $player->jersey_number ? (string) $player->jersey_number : null,
                 'role' => (string) $player->role,
@@ -70,6 +78,10 @@ class PlayerController extends Controller
             'photo' => 'nullable|image|max:5120',
             'is_captain' => 'boolean',
             'is_wicket_keeper' => 'boolean',
+            'email' => 'nullable|email|max:200',
+            'phone' => 'nullable|string|max:30',
+            'id_card_number' => 'nullable|string|max:50',
+            'date_of_birth' => 'nullable|date',
             'position' => 'nullable|in:player,captain,vice_captain,coach,manager,extra',
         ]);
 
@@ -95,6 +107,14 @@ class PlayerController extends Controller
                 'id' => (string) $player->id,
                 'team_id' => (string) $player->team_id,
                 'name' => (string) $player->name,
+                'email' => $player->email ? (string) $player->email : null,
+                'phone' => $player->phone ? (string) $player->phone : null,
+                'id_card_number' => $player->id_card_number ? (string) $player->id_card_number : null,
+                'date_of_birth' => $player->date_of_birth
+                    ? ($player->date_of_birth instanceof \Carbon\Carbon
+                        ? $player->date_of_birth->toDateString()
+                        : $player->date_of_birth)
+                    : null,
                 'player_code' => $player->player_code ? (string) $player->player_code : null,
                 'jersey_number' => $player->jersey_number ? (string) $player->jersey_number : null,
                 'role' => (string) $player->role,
@@ -130,6 +150,10 @@ class PlayerController extends Controller
             'photo' => 'nullable|image|max:5120',
             'is_captain' => 'boolean',
             'is_wicket_keeper' => 'boolean',
+            'email' => 'nullable|email|max:200',
+            'phone' => 'nullable|string|max:30',
+            'id_card_number' => 'nullable|string|max:50',
+            'date_of_birth' => 'nullable|date',
             'position' => 'nullable|in:player,captain,vice_captain,coach,manager,extra',
             'status' => 'sometimes|in:active,inactive,suspended',
         ]);
@@ -172,6 +196,14 @@ class PlayerController extends Controller
                 'id' => (string) $player->id,
                 'team_id' => (string) $player->team_id,
                 'name' => (string) $player->name,
+                'email' => $player->email ? (string) $player->email : null,
+                'phone' => $player->phone ? (string) $player->phone : null,
+                'id_card_number' => $player->id_card_number ? (string) $player->id_card_number : null,
+                'date_of_birth' => $player->date_of_birth
+                    ? ($player->date_of_birth instanceof \Carbon\Carbon
+                        ? $player->date_of_birth->toDateString()
+                        : $player->date_of_birth)
+                    : null,
                 'player_code' => $player->player_code ? (string) $player->player_code : null,
                 'jersey_number' => $player->jersey_number ? (string) $player->jersey_number : null,
                 'role' => (string) $player->role,
