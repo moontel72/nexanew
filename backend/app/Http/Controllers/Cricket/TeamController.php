@@ -34,6 +34,7 @@ class TeamController extends Controller
                 'short_code' => (string) ($team->short_code ?? ''),
                 'logo_url' => $team->logo_url ? (string) $team->logo_url : null,
                 'primary_color' => $team->primary_color ? (string) $team->primary_color : null,
+                'details' => $team->details ? (string) $team->details : null,
                 'team_code' => $team->team_code ? (string) $team->team_code : null,
                 'home_city' => $team->home_city ? (string) $team->home_city : null,
                 'player_count' => (int) ($team->players_count ?? 0),
@@ -53,6 +54,7 @@ class TeamController extends Controller
             'captain_name' => 'nullable|string|max:200',
             'home_city' => 'nullable|string|max:200',
             'primary_color' => 'nullable|string|max:7',
+            'details' => 'nullable|string|max:5000',
         ]);
 
         if ($validator->fails()) {
@@ -82,6 +84,7 @@ class TeamController extends Controller
                 'short_code' => (string) ($team->short_code ?? ''),
                 'logo_url' => $team->logo_url ? (string) $team->logo_url : null,
                 'primary_color' => $team->primary_color ? (string) $team->primary_color : null,
+                'details' => $team->details ? (string) $team->details : null,
                 'team_code' => $team->team_code ? (string) $team->team_code : null,
                 'home_city' => $team->home_city ? (string) $team->home_city : null,
                 'player_count' => 0,

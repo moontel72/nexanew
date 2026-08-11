@@ -759,6 +759,7 @@ class CricketRepository {
     String? shortCode,
     String? homeCity,
     String? primaryColor,
+    String? details,
   }) async {
     final res = await _http.post(
       Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/teams'),
@@ -768,6 +769,7 @@ class CricketRepository {
         if (shortCode != null) 'short_code': shortCode,
         if (homeCity != null) 'home_city': homeCity,
         if (primaryColor != null) 'primary_color': primaryColor,
+        if (details != null) 'details': details,
       }),
     );
     if (res.statusCode == 201) {

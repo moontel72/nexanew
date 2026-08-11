@@ -64,6 +64,138 @@ class _TeamsListPageState extends State<TeamsListPage> {
             .where((t) => t.name.toLowerCase().contains(_search.toLowerCase()))
             .toList();
 
+  void _showDetailModal(TeamModel team) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0F2936),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title row with close icon
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    team.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Color(0xFF6B7280)),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Info chips
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                if (team.teamCode != null && team.teamCode!.isNotEmpty)
+                  _infoChip('Code: ${team.teamCode}'),
+                if (team.homeCity != null && team.homeCity!.isNotEmpty)
+                  _infoChip('City: ${team.homeCity}'),
+                if (team.shortCode.isNotEmpty)
+                  _infoChip('Short: ${team.shortCode}'),
+              ],
+            ),
+            const SizedBox(height: 20),
+            // Details section
+            const Text(
+              'Details',
+              style: TextStyle(
+                color: Color(0xFFBDD8DB),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (team.details != null && team.details!.isNotEmpty)
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.35,
+                ),
+                child: SingleChildScrollView(
+                  child: Text(
+                    team.details!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              )
+            else
+              const Text(
+                'No details available',
+                style: TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontStyle: FontStyle.italic,
+                  fontSize: 14,
+                ),
+              ),
+            const SizedBox(height: 24),
+            // Close button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoChip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10B981).withOpacity(0.15),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4)),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF10B981),
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -211,9 +343,33 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                 fontSize: 12,
                               ),
                             ),
-                            trailing: const Icon(
-                              Icons.chevron_right,
-                              color: Color(0xFF6B7280),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextButton(
+                                  onPressed: () => _showDetailModal(t),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text(
+                                    'Detail',
+                                    style: TextStyle(
+                                      color: Color(0xFF10B981),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ],
                             ),
                             onTap: () {
                               final repo = _safeRepo();

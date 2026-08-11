@@ -25,6 +25,7 @@ class Team extends Model
         'captain_name',
         'home_city',
         'primary_color',
+        'details',
     ];
 
     protected static function boot(): void

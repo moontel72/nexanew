@@ -7,12 +7,14 @@ final class CreateTeamRequested extends TeamEvent {
   final String? shortCode;
   final String? homeCity;
   final String? primaryColor;
+  final String? details;
 
   const CreateTeamRequested({
     required this.name,
     this.shortCode,
     this.homeCity,
     this.primaryColor,
+    this.details,
   });
 }
 

@@ -62,6 +62,7 @@ class TeamModel {
   final String? teamCode;
   final String? homeCity;
   final int? playerCount;
+  final String? details;
 
   const TeamModel({
     required this.id,
@@ -72,6 +73,7 @@ class TeamModel {
     this.teamCode,
     this.homeCity,
     this.playerCount,
+    this.details,
   });
 
   factory TeamModel.fromJson(Map<String, dynamic> json) => TeamModel(
@@ -85,6 +87,7 @@ class TeamModel {
     playerCount: json['player_count'] is int
         ? json['player_count'] as int
         : int.tryParse(json['player_count']?.toString() ?? ''),
+    details: json['details']?.toString(),
   );
 }
 

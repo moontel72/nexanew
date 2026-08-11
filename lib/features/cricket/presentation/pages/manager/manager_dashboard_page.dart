@@ -19,6 +19,8 @@ import 'sponsor_manage_page.dart';
 import 'team_register_page.dart';
 import 'teams_list_page.dart';
 import 'player_register_page.dart';
+import 'players_list_page.dart';
+import 'media_management_page.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 
 /// Manager Dashboard — 3D Pencil Sidebar layout matching Sub-Admin panel design.
@@ -605,7 +607,7 @@ class _TeamManagerTab extends StatelessWidget {
             MaterialPageRoute(
               builder: (_) => RepositoryProvider.value(
                 value: repo,
-                child: const TeamsListPage(),
+                child: const PlayersListPage(),
               ),
             ),
           ),
@@ -620,7 +622,7 @@ class _TeamManagerTab extends StatelessWidget {
             MaterialPageRoute(
               builder: (_) => RepositoryProvider.value(
                 value: repo,
-                child: const TeamsListPage(),
+                child: const MediaManagementPage(),
               ),
             ),
           ),

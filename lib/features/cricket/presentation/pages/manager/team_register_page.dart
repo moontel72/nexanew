@@ -13,7 +13,7 @@ class TeamRegisterPage extends StatefulWidget {
 class _TeamRegisterPageState extends State<TeamRegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
-  final _shortCodeCtrl = TextEditingController();
+  final _detailsCtrl = TextEditingController();
   final _homeCityCtrl = TextEditingController();
   Color _selectedColor = const Color(0xFF2563EB);
 
@@ -31,7 +31,7 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _shortCodeCtrl.dispose();
+    _detailsCtrl.dispose();
     _homeCityCtrl.dispose();
     super.dispose();
   }
@@ -42,13 +42,13 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
     context.read<TeamBloc>().add(
       CreateTeamRequested(
         name: _nameCtrl.text.trim(),
-        shortCode: _shortCodeCtrl.text.trim().isEmpty
-            ? null
-            : _shortCodeCtrl.text.trim(),
         homeCity: _homeCityCtrl.text.trim().isEmpty
             ? null
             : _homeCityCtrl.text.trim(),
         primaryColor: '#${_selectedColor.value.toRadixString(16).substring(2)}',
+        details: _detailsCtrl.text.trim().isEmpty
+            ? null
+            : _detailsCtrl.text.trim(),
       ),
     );
   }
@@ -156,9 +156,26 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
                   const SizedBox(height: 24),
                   _buildField('Team Name *', _nameCtrl, 'Enter team name'),
                   const SizedBox(height: 16),
-                  _buildField('Short Code', _shortCodeCtrl, 'e.g. IND, AUS'),
-                  const SizedBox(height: 16),
                   _buildField('Home City', _homeCityCtrl, 'e.g. Mumbai'),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _detailsCtrl,
+                    maxLines: 4,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Team Details',
+                      labelStyle: const TextStyle(color: Color(0xFFBDD8DB)),
+                      hintText:
+                          'Enter team background, history, achievements...',
+                      hintStyle: const TextStyle(color: Color(0xFF6B7280)),
+                      filled: true,
+                      fillColor: const Color(0xFF0F2936),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0x20FFFFFF)),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   const Text(
                     'Primary Color',

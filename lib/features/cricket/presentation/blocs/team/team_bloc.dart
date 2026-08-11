@@ -25,6 +25,7 @@ class TeamBloc extends Bloc<TeamEvent, TeamState> {
         shortCode: event.shortCode,
         homeCity: event.homeCity,
         primaryColor: event.primaryColor,
+        details: event.details,
       );
       emit(TeamSuccess(team));
     } catch (e) {
