@@ -110,240 +110,256 @@ class _TeamsListPageState extends State<TeamsListPage> {
   }
 
   void _showDetailModal(TeamModel team) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      backgroundColor: const Color(0xFF0F2936),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title row with close icon
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      team.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Color(0xFF6B7280)),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Team logo — tap to change
-              Center(
-                child: GestureDetector(
-                  onTap: () async {
-                    final result = await FilePicker.platform.pickFiles(
-                      type: FileType.image,
-                      withData: true,
-                    );
-                    if (result != null && result.files.isNotEmpty) {
-                      final repo = _safeRepo();
-                      if (repo == null) return;
-                      try {
-                        await repo.uploadTeamLogo(
-                          team.id,
-                          result.files.first.bytes!,
-                          result.files.first.name,
-                        );
-                        if (mounted) {
-                          Navigator.pop(ctx); // close modal
-                          _load(); // refresh list
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Logo updated'),
-                              backgroundColor: Color(0xFF10B981),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Failed: $e'),
-                            backgroundColor: const Color(0xFFEF4444),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  child: CircleAvatar(
-                    radius: 30,
-                    backgroundColor: _teamColor(team),
-                    backgroundImage:
-                        team.logoUrl != null && team.logoUrl!.isNotEmpty
-                        ? NetworkImage(_fullUrl(team.logoUrl!))
-                        : null,
-                    child: team.logoUrl == null || team.logoUrl!.isEmpty
-                        ? Text(
-                            team.name.isNotEmpty
-                                ? team.name[0].toUpperCase()
-                                : '?',
+      barrierColor: Colors.black54,
+      builder: (ctx) => Align(
+        alignment: Alignment.topCenter,
+        child: Material(
+          color: const Color(0xFF0F2936),
+          type: MaterialType.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title row with close icon
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            team.name,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 24,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
                             ),
-                          )
-                        : null,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Info chips
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  if (team.teamCode != null && team.teamCode!.isNotEmpty)
-                    _infoChip('Code: ${team.teamCode}'),
-                  if (team.homeCity != null && team.homeCity!.isNotEmpty)
-                    _infoChip('City: ${team.homeCity}'),
-                  if (team.shortCode.isNotEmpty)
-                    _infoChip('Short: ${team.shortCode}'),
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Details section
-              const Text(
-                'Details',
-                style: TextStyle(
-                  color: Color(0xFFBDD8DB),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (team.details != null && team.details!.isNotEmpty)
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.35,
-                  ),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      team.details!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        height: 1.5,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            color: Color(0xFF6B7280),
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Team logo — tap to change
+                    Center(
+                      child: GestureDetector(
+                        onTap: () async {
+                          final result = await FilePicker.platform.pickFiles(
+                            type: FileType.image,
+                            withData: true,
+                          );
+                          if (result != null && result.files.isNotEmpty) {
+                            final repo = _safeRepo();
+                            if (repo == null) return;
+                            try {
+                              await repo.uploadTeamLogo(
+                                team.id,
+                                result.files.first.bytes!,
+                                result.files.first.name,
+                              );
+                              if (mounted) {
+                                Navigator.pop(ctx); // close modal
+                                _load(); // refresh list
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Logo updated'),
+                                    backgroundColor: Color(0xFF10B981),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed: $e'),
+                                  backgroundColor: const Color(0xFFEF4444),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: CircleAvatar(
+                          radius: 30,
+                          backgroundColor: _teamColor(team),
+                          backgroundImage:
+                              team.logoUrl != null && team.logoUrl!.isNotEmpty
+                              ? NetworkImage(_fullUrl(team.logoUrl!))
+                              : null,
+                          child: team.logoUrl == null || team.logoUrl!.isEmpty
+                              ? Text(
+                                  team.name.isNotEmpty
+                                      ? team.name[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                  ),
+                                )
+                              : null,
+                        ),
                       ),
                     ),
-                  ),
-                )
-              else
-                const Text(
-                  'No details available',
-                  style: TextStyle(
-                    color: Color(0xFF6B7280),
-                    fontStyle: FontStyle.italic,
-                    fontSize: 14,
-                  ),
-                ),
-              const SizedBox(height: 16),
-              // Team members section
-              const Text(
-                'Team Members',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              FutureBuilder<List<PlayerModel>>(
-                future:
-                    _safeRepo()?.getAllPlayers().then(
-                      (all) => all.where((p) => p.teamId == team.id).toList(),
-                    ) ??
-                    Future.value([]),
-                builder: (ctx, snap) {
-                  if (!snap.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final players = snap.data ?? [];
-                  if (players.isEmpty) {
-                    return const Text(
-                      'No players registered',
-                      style: TextStyle(color: Color(0xFF6B7280)),
-                    );
-                  }
-                  return SizedBox(
-                    height: 200,
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: players.length,
-                      itemBuilder: (_, i) {
-                        final p = players[i];
-                        return ListTile(
-                          dense: true,
-                          title: Text(
-                            p.name,
+                    const SizedBox(height: 12),
+                    // Info chips
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        if (team.teamCode != null && team.teamCode!.isNotEmpty)
+                          _infoChip('Code: ${team.teamCode}'),
+                        if (team.homeCity != null && team.homeCity!.isNotEmpty)
+                          _infoChip('City: ${team.homeCity}'),
+                        if (team.shortCode.isNotEmpty)
+                          _infoChip('Short: ${team.shortCode}'),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Details section
+                    const Text(
+                      'Details',
+                      style: TextStyle(
+                        color: Color(0xFFBDD8DB),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (team.details != null && team.details!.isNotEmpty)
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.35,
+                        ),
+                        child: SingleChildScrollView(
+                          child: Text(
+                            team.details!,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 14,
+                              height: 1.5,
                             ),
                           ),
-                          subtitle: Text(
-                            _positionLabel(p.position),
-                            style: const TextStyle(
-                              color: Color(0xFFBDD8DB),
-                              fontSize: 12,
-                            ),
-                          ),
-                          leading: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: p.status == 'active'
-                                  ? const Color(0xFF10B981)
-                                  : const Color(0xFF6B7280),
-                            ),
+                        ),
+                      )
+                    else
+                      const Text(
+                        'No details available',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontStyle: FontStyle.italic,
+                          fontSize: 14,
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    // Team members section
+                    const Text(
+                      'Team Members',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    FutureBuilder<List<PlayerModel>>(
+                      future:
+                          _safeRepo()?.getAllPlayers().then(
+                            (all) =>
+                                all.where((p) => p.teamId == team.id).toList(),
+                          ) ??
+                          Future.value([]),
+                      builder: (ctx, snap) {
+                        if (!snap.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        final players = snap.data ?? [];
+                        if (players.isEmpty) {
+                          return const Text(
+                            'No players registered',
+                            style: TextStyle(color: Color(0xFF6B7280)),
+                          );
+                        }
+                        return SizedBox(
+                          height: 200,
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: players.length,
+                            itemBuilder: (_, i) {
+                              final p = players[i];
+                              return ListTile(
+                                dense: true,
+                                title: Text(
+                                  p.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  _positionLabel(p.position),
+                                  style: const TextStyle(
+                                    color: Color(0xFFBDD8DB),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                leading: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: p.status == 'active'
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFF6B7280),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
-              // Close button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 24),
+                    // Close button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text(
+                          'Close',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -640,23 +656,65 @@ class _TeamsListPageState extends State<TeamsListPage> {
                           color: const Color(0xFF0F2936),
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: _teamColor(t),
-                              backgroundImage:
-                                  t.logoUrl != null && t.logoUrl!.isNotEmpty
-                                  ? NetworkImage(_fullUrl(t.logoUrl!))
-                                  : null,
-                              child: t.logoUrl == null || t.logoUrl!.isEmpty
-                                  ? Text(
-                                      t.name.isNotEmpty
-                                          ? t.name[0].toUpperCase()
-                                          : '?',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    )
-                                  : null,
+                            leading: GestureDetector(
+                              onTap: () async {
+                                final result = await FilePicker.platform
+                                    .pickFiles(
+                                      type: FileType.image,
+                                      withData: true,
+                                    );
+                                if (result != null && result.files.isNotEmpty) {
+                                  final repo = _safeRepo();
+                                  if (repo == null) return;
+                                  try {
+                                    await repo.uploadTeamLogo(
+                                      t.id,
+                                      result.files.first.bytes!,
+                                      result.files.first.name,
+                                    );
+                                    if (mounted) {
+                                      _load();
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Logo updated'),
+                                          backgroundColor: Color(0xFF10B981),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Failed: $e'),
+                                          backgroundColor: Color(0xFFEF4444),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                }
+                              },
+                              child: CircleAvatar(
+                                backgroundColor: _teamColor(t),
+                                backgroundImage:
+                                    t.logoUrl != null && t.logoUrl!.isNotEmpty
+                                    ? NetworkImage(_fullUrl(t.logoUrl!))
+                                    : null,
+                                child: t.logoUrl == null || t.logoUrl!.isEmpty
+                                    ? Text(
+                                        t.name.isNotEmpty
+                                            ? t.name[0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      )
+                                    : null,
+                              ),
                             ),
                             title: Row(
                               children: [
@@ -713,6 +771,48 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                     ),
                                   ),
                                 ],
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (t.status == 'active'
+                                                ? const Color(0xFF10B981)
+                                                : t.status == 'inactive'
+                                                ? const Color(0xFF6B7280)
+                                                : const Color(0xFFEF4444))
+                                            .withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color:
+                                          (t.status == 'active'
+                                                  ? const Color(0xFF10B981)
+                                                  : t.status == 'inactive'
+                                                  ? const Color(0xFF6B7280)
+                                                  : const Color(0xFFEF4444))
+                                              .withOpacity(0.5),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    t.status == 'active'
+                                        ? 'Active'
+                                        : t.status == 'inactive'
+                                        ? 'Inactive'
+                                        : 'Suspended',
+                                    style: TextStyle(
+                                      color: t.status == 'active'
+                                          ? const Color(0xFF10B981)
+                                          : t.status == 'inactive'
+                                          ? const Color(0xFF6B7280)
+                                          : const Color(0xFFEF4444),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                             subtitle: _showingTrash
@@ -776,251 +876,277 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                       }
                                     },
                                   )
-                                : PopupMenuButton<String>(
-                                    icon: const Icon(
-                                      Icons.more_vert,
-                                      color: Colors.white,
-                                    ),
-                                    color: const Color(0xFF0F2936),
-                                    onSelected: (action) async {
-                                      final repo = _safeRepo();
-                                      if (repo == null) return;
-                                      switch (action) {
-                                        case 'edit':
-                                          _showEditTeamDialog(t);
-                                        case 'delete':
-                                          final confirmed = await showDialog<bool>(
-                                            context: context,
-                                            builder: (ctx) => AlertDialog(
-                                              backgroundColor: const Color(
-                                                0xFF0F2936,
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TextButton(
+                                        onPressed: () => _showDetailModal(t),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: const Color(
+                                            0xFF2563EB,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'DETAIL',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      PopupMenuButton<String>(
+                                        icon: const Icon(
+                                          Icons.more_vert,
+                                          color: Colors.white,
+                                        ),
+                                        color: const Color(0xFF0F2936),
+                                        onSelected: (action) async {
+                                          final repo = _safeRepo();
+                                          if (repo == null) return;
+                                          switch (action) {
+                                            case 'edit':
+                                              _showEditTeamDialog(t);
+                                            case 'delete':
+                                              final confirmed =
+                                                  await showDialog<bool>(
+                                                    context: context,
+                                                    builder: (ctx) => AlertDialog(
+                                                      backgroundColor:
+                                                          const Color(
+                                                            0xFF0F2936,
+                                                          ),
+                                                      title: const Text(
+                                                        'Delete Team',
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                      content: Text(
+                                                        'Delete "${t.name}"? This cannot be undone.',
+                                                        style: const TextStyle(
+                                                          color: Color(
+                                                            0xFFBDD8DB,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      actions: [
+                                                        TextButton(
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                ctx,
+                                                                false,
+                                                              ),
+                                                          child: const Text(
+                                                            'Cancel',
+                                                          ),
+                                                        ),
+                                                        TextButton(
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                ctx,
+                                                                true,
+                                                              ),
+                                                          child: const Text(
+                                                            'Delete',
+                                                            style: TextStyle(
+                                                              color: Color(
+                                                                0xFFEF4444,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                              if (confirmed == true) {
+                                                try {
+                                                  await repo.deleteTeam(t.id);
+                                                  _load();
+                                                } catch (e) {
+                                                  if (mounted) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text('${e}'),
+                                                        backgroundColor:
+                                                            const Color(
+                                                              0xFFEF4444,
+                                                            ),
+                                                      ),
+                                                    );
+                                                  }
+                                                }
+                                              }
+                                            case 'mark_active':
+                                              try {
+                                                await repo.updateTeamStatus(
+                                                  t.id,
+                                                  'active',
+                                                );
+                                                _load();
+                                              } catch (e) {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('${e}'),
+                                                      backgroundColor:
+                                                          const Color(
+                                                            0xFFEF4444,
+                                                          ),
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            case 'mark_inactive':
+                                              try {
+                                                await repo.updateTeamStatus(
+                                                  t.id,
+                                                  'inactive',
+                                                );
+                                                _load();
+                                              } catch (e) {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('${e}'),
+                                                      backgroundColor:
+                                                          const Color(
+                                                            0xFFEF4444,
+                                                          ),
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            case 'suspend':
+                                              try {
+                                                await repo.updateTeamStatus(
+                                                  t.id,
+                                                  'suspended',
+                                                );
+                                                _load();
+                                              } catch (e) {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('${e}'),
+                                                      backgroundColor:
+                                                          const Color(
+                                                            0xFFEF4444,
+                                                          ),
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                          }
+                                        },
+                                        itemBuilder: (ctx) => [
+                                          const PopupMenuItem(
+                                            value: 'edit',
+                                            child: ListTile(
+                                              leading: Icon(
+                                                Icons.edit,
+                                                color: Colors.white,
                                               ),
-                                              title: const Text(
-                                                'Delete Team',
+                                              title: Text(
+                                                'Edit',
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                 ),
                                               ),
-                                              content: Text(
-                                                'Delete "${t.name}"? This cannot be undone.',
-                                                style: const TextStyle(
-                                                  color: Color(0xFFBDD8DB),
+                                              contentPadding: EdgeInsets.zero,
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                            ),
+                                          ),
+                                          const PopupMenuItem(
+                                            value: 'delete',
+                                            child: ListTile(
+                                              leading: Icon(
+                                                Icons.delete,
+                                                color: Color(0xFFEF4444),
+                                              ),
+                                              title: Text(
+                                                'Delete',
+                                                style: TextStyle(
+                                                  color: Color(0xFFEF4444),
                                                 ),
                                               ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(ctx, false),
-                                                  child: const Text('Cancel'),
+                                              contentPadding: EdgeInsets.zero,
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                            ),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'mark_active',
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.check_circle,
+                                                  size: 16,
+                                                  color: t.status == 'active'
+                                                      ? const Color(0xFF10B981)
+                                                      : Colors.transparent,
                                                 ),
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(ctx, true),
-                                                  child: const Text(
-                                                    'Delete',
-                                                    style: TextStyle(
-                                                      color: Color(0xFFEF4444),
-                                                    ),
+                                                const SizedBox(width: 8),
+                                                const Text(
+                                                  'Active',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                          );
-                                          if (confirmed == true) {
-                                            try {
-                                              await repo.deleteTeam(t.id);
-                                              _load();
-                                            } catch (e) {
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('${e}'),
-                                                    backgroundColor:
-                                                        const Color(0xFFEF4444),
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          }
-                                        case 'mark_active':
-                                          try {
-                                            await repo.updateTeamStatus(
-                                              t.id,
-                                              'active',
-                                            );
-                                            _load();
-                                          } catch (e) {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('${e}'),
-                                                  backgroundColor: const Color(
-                                                    0xFFEF4444,
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'mark_inactive',
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.check_circle,
+                                                  size: 16,
+                                                  color: t.status == 'inactive'
+                                                      ? const Color(0xFF10B981)
+                                                      : Colors.transparent,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Text(
+                                                  'Inactive',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
                                                   ),
                                                 ),
-                                              );
-                                            }
-                                          }
-                                        case 'mark_inactive':
-                                          try {
-                                            await repo.updateTeamStatus(
-                                              t.id,
-                                              'inactive',
-                                            );
-                                            _load();
-                                          } catch (e) {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('${e}'),
-                                                  backgroundColor: const Color(
-                                                    0xFFEF4444,
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                          }
-                                        case 'suspend':
-                                          try {
-                                            await repo.updateTeamStatus(
-                                              t.id,
-                                              'suspended',
-                                            );
-                                            _load();
-                                          } catch (e) {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('${e}'),
-                                                  backgroundColor: const Color(
-                                                    0xFFEF4444,
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                          }
-                                        case 'detail':
-                                          _showDetailModal(t);
-                                      }
-                                    },
-                                    itemBuilder: (ctx) => [
-                                      const PopupMenuItem(
-                                        value: 'edit',
-                                        child: ListTile(
-                                          leading: Icon(
-                                            Icons.edit,
-                                            color: Colors.white,
-                                          ),
-                                          title: Text(
-                                            'Edit',
-                                            style: TextStyle(
-                                              color: Colors.white,
+                                              ],
                                             ),
                                           ),
-                                          contentPadding: EdgeInsets.zero,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                      ),
-                                      const PopupMenuItem(
-                                        value: 'delete',
-                                        child: ListTile(
-                                          leading: Icon(
-                                            Icons.delete,
-                                            color: Color(0xFFEF4444),
-                                          ),
-                                          title: Text(
-                                            'Delete',
-                                            style: TextStyle(
-                                              color: Color(0xFFEF4444),
-                                            ),
-                                          ),
-                                          contentPadding: EdgeInsets.zero,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'mark_active',
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.check_circle,
-                                              size: 16,
-                                              color: t.status == 'active'
-                                                  ? const Color(0xFF10B981)
-                                                  : Colors.transparent,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            const Text(
-                                              'Active',
-                                              style: TextStyle(
-                                                color: Colors.white,
+                                          const PopupMenuItem(
+                                            value: 'suspend',
+                                            child: ListTile(
+                                              leading: Icon(
+                                                Icons.pause_circle,
+                                                color: Color(0xFFF97316),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'mark_inactive',
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.check_circle,
-                                              size: 16,
-                                              color: t.status == 'inactive'
-                                                  ? const Color(0xFF10B981)
-                                                  : Colors.transparent,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            const Text(
-                                              'Inactive',
-                                              style: TextStyle(
-                                                color: Colors.white,
+                                              title: Text(
+                                                'Suspend',
+                                                style: TextStyle(
+                                                  color: Color(0xFFF97316),
+                                                ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const PopupMenuItem(
-                                        value: 'suspend',
-                                        child: ListTile(
-                                          leading: Icon(
-                                            Icons.pause_circle,
-                                            color: Color(0xFFF97316),
-                                          ),
-                                          title: Text(
-                                            'Suspend',
-                                            style: TextStyle(
-                                              color: Color(0xFFF97316),
+                                              contentPadding: EdgeInsets.zero,
+                                              visualDensity:
+                                                  VisualDensity.compact,
                                             ),
                                           ),
-                                          contentPadding: EdgeInsets.zero,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                      ),
-                                      const PopupMenuItem(
-                                        value: 'detail',
-                                        child: ListTile(
-                                          leading: Icon(
-                                            Icons.info_outline,
-                                            color: Colors.white,
-                                          ),
-                                          title: Text(
-                                            'Detail',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          contentPadding: EdgeInsets.zero,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
+                                        ],
                                       ),
                                     ],
                                   ),
