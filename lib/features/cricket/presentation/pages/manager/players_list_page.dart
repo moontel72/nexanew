@@ -633,9 +633,19 @@ class _PlayersListPageState extends State<PlayersListPage> {
   Future<void> _showEditPlayerDialog(PlayerModel player) async {
     final nameCtrl = TextEditingController(text: player.name);
     final jerseyCtrl = TextEditingController(text: player.jerseyNumber ?? '');
+    final emailCtrl = TextEditingController(text: player.email ?? '');
+    final phoneCtrl = TextEditingController(text: player.phone ?? '');
+    final idCardCtrl = TextEditingController(text: player.idCardNumber ?? '');
     String selectedPosition = player.position;
     String selectedStatus = player.status;
     String? selectedTeamId = player.teamId;
+    String? selectedRole = player.role;
+    String? selectedBattingStyle = player.battingStyle;
+    String? selectedBowlingStyle = player.bowlingStyle;
+    DateTime? selectedDob;
+    if (player.dateOfBirth != null) {
+      selectedDob = DateTime.tryParse(player.dateOfBirth!);
+    }
     final formKey = GlobalKey<FormState>();
 
     final result = await showDialog<bool>(
@@ -687,7 +697,97 @@ class _PlayersListPageState extends State<PlayersListPage> {
                         setDialogState(() => selectedPosition = v!),
                   ),
                   const SizedBox(height: 12),
-                  // Status dropdown
+                  // Role Type dropdown
+                  DropdownButtonFormField<String?>(
+                    value: selectedRole,
+                    dropdownColor: const Color(0xFF0F2936),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Role Type'),
+                    items: const [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('None'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'batsman',
+                        child: Text('Batsman'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'bowler',
+                        child: Text('Bowler'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'all_rounder',
+                        child: Text('All Rounder'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'wicket_keeper',
+                        child: Text('Wicket Keeper'),
+                      ),
+                    ],
+                    onChanged: (v) => setDialogState(() => selectedRole = v),
+                  ),
+                  const SizedBox(height: 12),
+                  // Batting style dropdown
+                  DropdownButtonFormField<String?>(
+                    value: selectedBattingStyle,
+                    dropdownColor: const Color(0xFF0F2936),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Batting Style'),
+                    items: const [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('None'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'right_hand',
+                        child: Text('Right Hand'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'left_hand',
+                        child: Text('Left Hand'),
+                      ),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => selectedBattingStyle = v),
+                  ),
+                  const SizedBox(height: 12),
+                  // Bowling style dropdown
+                  DropdownButtonFormField<String?>(
+                    value: selectedBowlingStyle,
+                    dropdownColor: const Color(0xFF0F2936),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Bowling Style'),
+                    items: const [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('None'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'right_arm_fast',
+                        child: Text('Right Arm Fast'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'left_arm_fast',
+                        child: Text('Left Arm Fast'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'right_arm_off_spin',
+                        child: Text('Off Spin'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'right_arm_leg_spin',
+                        child: Text('Leg Spin'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'left_arm_orthodox',
+                        child: Text('Orthodox'),
+                      ),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => selectedBowlingStyle = v),
+                  ),
+                  const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     value: selectedStatus,
                     dropdownColor: const Color(0xFF0F2936),
@@ -733,6 +833,74 @@ class _PlayersListPageState extends State<PlayersListPage> {
                     style: const TextStyle(color: Colors.white),
                     decoration: _darkInputDecoration('Jersey Number'),
                   ),
+                  const SizedBox(height: 12),
+                  // Email
+                  TextFormField(
+                    controller: emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Email'),
+                  ),
+                  const SizedBox(height: 12),
+                  // Phone
+                  TextFormField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('Phone'),
+                  ),
+                  const SizedBox(height: 12),
+                  // ID Card Number
+                  TextFormField(
+                    controller: idCardCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _darkInputDecoration('ID Card Number'),
+                  ),
+                  const SizedBox(height: 12),
+                  // Date of Birth
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: selectedDob ?? DateTime(2000),
+                        firstDate: DateTime(1950),
+                        lastDate: DateTime.now(),
+                        builder: (pickerCtx, child) => Theme(
+                          data: ThemeData.dark().copyWith(
+                            colorScheme: const ColorScheme.dark(
+                              primary: Color(0xFF10B981),
+                            ),
+                          ),
+                          child: child!,
+                        ),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => selectedDob = picked);
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0C1D2C),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0x20FFFFFF)),
+                      ),
+                      child: Text(
+                        selectedDob != null
+                            ? '${selectedDob!.year}-${selectedDob!.month.toString().padLeft(2, '0')}-${selectedDob!.day.toString().padLeft(2, '0')}'
+                            : 'Date of Birth',
+                        style: TextStyle(
+                          color: selectedDob != null
+                              ? Colors.white
+                              : const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -760,6 +928,21 @@ class _PlayersListPageState extends State<PlayersListPage> {
                     jerseyNumber: jerseyCtrl.text.trim().isEmpty
                         ? null
                         : jerseyCtrl.text.trim(),
+                    role: selectedRole,
+                    battingStyle: selectedBattingStyle,
+                    bowlingStyle: selectedBowlingStyle,
+                    email: emailCtrl.text.trim().isEmpty
+                        ? null
+                        : emailCtrl.text.trim(),
+                    phone: phoneCtrl.text.trim().isEmpty
+                        ? null
+                        : phoneCtrl.text.trim(),
+                    idCardNumber: idCardCtrl.text.trim().isEmpty
+                        ? null
+                        : idCardCtrl.text.trim(),
+                    dateOfBirth: selectedDob != null
+                        ? '${selectedDob!.year}-${selectedDob!.month.toString().padLeft(2, '0')}-${selectedDob!.day.toString().padLeft(2, '0')}'
+                        : null,
                   );
                   if (ctx.mounted) Navigator.pop(ctx, true);
                 } catch (e) {

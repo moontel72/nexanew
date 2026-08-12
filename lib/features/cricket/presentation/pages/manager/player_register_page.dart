@@ -25,6 +25,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
   String? _selectedTeamId;
   String? _selectedTeamName;
   String _position = 'player';
+  String? _role;
   String? _battingStyle;
   String? _bowlingStyle;
   DateTime? _dob;
@@ -51,7 +52,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
     'manager': 'Team Manager',
     'extra': 'Extra Player',
   };
-  static const _battingStyles = ['right_hand', 'left_hand', 'all_rounder'];
+  static const _battingStyles = ['right_hand', 'left_hand'];
   static const _bowlingStyles = [
     'right_arm_fast',
     'left_arm_fast',
@@ -132,9 +133,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
       final player = await repo.createPlayer(
         teamId: _selectedTeamId!,
         name: _nameCtrl.text.trim(),
-        role: ['player', 'captain', 'vice_captain', 'extra'].contains(_position)
-            ? 'batsman'
-            : null,
+        role: _role,
         position: _position,
         jerseyNumber: _jerseyCtrl.text.trim().isEmpty
             ? null
@@ -384,6 +383,52 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
                     )
                     .toList(),
                 onChanged: (v) => setState(() => _position = v!),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Role Type',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String?>(
+                value: _role,
+                dropdownColor: const Color(0xFF0F2936),
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  filled: true,
+                  fillColor: Color(0xFF0F2936),
+                  hintText: 'None',
+                  hintStyle: TextStyle(color: Color(0xFF6B7280)),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0x20FFFFFF)),
+                  ),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text(
+                      'None',
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                    ),
+                  ),
+                  const DropdownMenuItem<String?>(
+                    value: 'batsman',
+                    child: Text('Batsman'),
+                  ),
+                  const DropdownMenuItem<String?>(
+                    value: 'bowler',
+                    child: Text('Bowler'),
+                  ),
+                  const DropdownMenuItem<String?>(
+                    value: 'all_rounder',
+                    child: Text('All Rounder'),
+                  ),
+                  const DropdownMenuItem<String?>(
+                    value: 'wicket_keeper',
+                    child: Text('Wicket Keeper'),
+                  ),
+                ],
+                onChanged: (v) => setState(() => _role = v),
               ),
               const SizedBox(height: 16),
               // Batting style

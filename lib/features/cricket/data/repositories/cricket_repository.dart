@@ -932,6 +932,13 @@ class CricketRepository {
     String? status,
     String? teamId,
     String? jerseyNumber,
+    String? role,
+    String? battingStyle,
+    String? bowlingStyle,
+    String? email,
+    String? phone,
+    String? idCardNumber,
+    String? dateOfBirth,
   }) async {
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
@@ -939,6 +946,13 @@ class CricketRepository {
     if (status != null) body['status'] = status;
     if (teamId != null) body['team_id'] = teamId;
     if (jerseyNumber != null) body['jersey_number'] = jerseyNumber;
+    if (role != null) body['role'] = role;
+    if (battingStyle != null) body['batting_style'] = battingStyle;
+    if (bowlingStyle != null) body['bowling_style'] = bowlingStyle;
+    if (email != null) body['email'] = email;
+    if (phone != null) body['phone'] = phone;
+    if (idCardNumber != null) body['id_card_number'] = idCardNumber;
+    if (dateOfBirth != null) body['date_of_birth'] = dateOfBirth;
 
     final res = await _http.put(
       Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/players/$playerId'),
