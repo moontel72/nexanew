@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/core/config/api_config.dart';
@@ -5,7 +6,6 @@ import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/team/team_bloc.dart';
 import 'team_register_page.dart';
-import 'player_register_page.dart';
 
 class TeamsListPage extends StatefulWidget {
   const TeamsListPage({super.key});
@@ -116,107 +116,235 @@ class _TeamsListPageState extends State<TeamsListPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title row with close icon
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    team.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+      builder: (ctx) => SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title row with close icon
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      team.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Color(0xFF6B7280)),
-                  onPressed: () => Navigator.pop(ctx),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Info chips
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                if (team.teamCode != null && team.teamCode!.isNotEmpty)
-                  _infoChip('Code: ${team.teamCode}'),
-                if (team.homeCity != null && team.homeCity!.isNotEmpty)
-                  _infoChip('City: ${team.homeCity}'),
-                if (team.shortCode.isNotEmpty)
-                  _infoChip('Short: ${team.shortCode}'),
-              ],
-            ),
-            const SizedBox(height: 20),
-            // Details section
-            const Text(
-              'Details',
-              style: TextStyle(
-                color: Color(0xFFBDD8DB),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Color(0xFF6B7280)),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            if (team.details != null && team.details!.isNotEmpty)
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.35,
-                ),
-                child: SingleChildScrollView(
-                  child: Text(
-                    team.details!,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
+              const SizedBox(height: 12),
+              // Team logo — tap to change
+              Center(
+                child: GestureDetector(
+                  onTap: () async {
+                    final result = await FilePicker.platform.pickFiles(
+                      type: FileType.image,
+                      withData: true,
+                    );
+                    if (result != null && result.files.isNotEmpty) {
+                      final repo = _safeRepo();
+                      if (repo == null) return;
+                      try {
+                        await repo.uploadTeamLogo(
+                          team.id,
+                          result.files.first.bytes!,
+                          result.files.first.name,
+                        );
+                        if (mounted) {
+                          Navigator.pop(ctx); // close modal
+                          _load(); // refresh list
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Logo updated'),
+                              backgroundColor: Color(0xFF10B981),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed: $e'),
+                            backgroundColor: const Color(0xFFEF4444),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: CircleAvatar(
+                    radius: 30,
+                    backgroundColor: _teamColor(team),
+                    backgroundImage:
+                        team.logoUrl != null && team.logoUrl!.isNotEmpty
+                        ? NetworkImage(_fullUrl(team.logoUrl!))
+                        : null,
+                    child: team.logoUrl == null || team.logoUrl!.isEmpty
+                        ? Text(
+                            team.name.isNotEmpty
+                                ? team.name[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                            ),
+                          )
+                        : null,
                   ),
                 ),
-              )
-            else
+              ),
+              const SizedBox(height: 12),
+              // Info chips
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  if (team.teamCode != null && team.teamCode!.isNotEmpty)
+                    _infoChip('Code: ${team.teamCode}'),
+                  if (team.homeCity != null && team.homeCity!.isNotEmpty)
+                    _infoChip('City: ${team.homeCity}'),
+                  if (team.shortCode.isNotEmpty)
+                    _infoChip('Short: ${team.shortCode}'),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Details section
               const Text(
-                'No details available',
+                'Details',
                 style: TextStyle(
-                  color: Color(0xFF6B7280),
-                  fontStyle: FontStyle.italic,
+                  color: Color(0xFFBDD8DB),
                   fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            const SizedBox(height: 24),
-            // Close button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              const SizedBox(height: 8),
+              if (team.details != null && team.details!.isNotEmpty)
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.35,
                   ),
-                ),
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text(
-                  'Close',
+                  child: SingleChildScrollView(
+                    child: Text(
+                      team.details!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                const Text(
+                  'No details available',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF6B7280),
+                    fontStyle: FontStyle.italic,
+                    fontSize: 14,
+                  ),
+                ),
+              const SizedBox(height: 16),
+              // Team members section
+              const Text(
+                'Team Members',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              FutureBuilder<List<PlayerModel>>(
+                future:
+                    _safeRepo()?.getAllPlayers().then(
+                      (all) => all.where((p) => p.teamId == team.id).toList(),
+                    ) ??
+                    Future.value([]),
+                builder: (ctx, snap) {
+                  if (!snap.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final players = snap.data ?? [];
+                  if (players.isEmpty) {
+                    return const Text(
+                      'No players registered',
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                    );
+                  }
+                  return SizedBox(
+                    height: 200,
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: players.length,
+                      itemBuilder: (_, i) {
+                        final p = players[i];
+                        return ListTile(
+                          dense: true,
+                          title: Text(
+                            p.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Text(
+                            _positionLabel(p.position),
+                            style: const TextStyle(
+                              color: Color(0xFFBDD8DB),
+                              fontSize: 12,
+                            ),
+                          ),
+                          leading: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: p.status == 'active'
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF6B7280),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              // Close button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -239,6 +367,18 @@ class _TeamsListPageState extends State<TeamsListPage> {
         ),
       ),
     );
+  }
+
+  String _positionLabel(String position) {
+    const labels = {
+      'player': 'Player',
+      'captain': 'Captain',
+      'vice_captain': 'Vice Captain',
+      'coach': 'Coach',
+      'manager': 'Team Manager',
+      'extra': 'Extra Player',
+    };
+    return labels[position] ?? position.replaceAll('_', ' ');
   }
 
   Future<void> _showEditTeamDialog(TeamModel team) async {
@@ -886,23 +1026,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                   ),
                             onTap: _showingTrash
                                 ? null
-                                : () {
-                                    final repo = _safeRepo();
-                                    if (repo == null) return;
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            RepositoryProvider.value(
-                                              value: repo,
-                                              child: PlayerRegisterPage(
-                                                teamId: t.id,
-                                                teamName: t.name,
-                                              ),
-                                            ),
-                                      ),
-                                    );
-                                  },
+                                : () => _showDetailModal(t),
                           ),
                         );
                       },

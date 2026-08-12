@@ -19,20 +19,8 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
   final _nameCtrl = TextEditingController();
   final _detailsCtrl = TextEditingController();
   final _homeCityCtrl = TextEditingController();
-  Color _selectedColor = const Color(0xFF2563EB);
   Uint8List? _selectedLogoBytes;
   String? _logoFileName;
-
-  static const _colorOptions = [
-    Color(0xFF2563EB),
-    Color(0xFF10B981),
-    Color(0xFFF59E0B),
-    Color(0xFFEF4444),
-    Color(0xFF8B5CF6),
-    Color(0xFFEC4899),
-    Color(0xFF06B6D4),
-    Color(0xFF84CC16),
-  ];
 
   @override
   void dispose() {
@@ -51,7 +39,6 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
         homeCity: _homeCityCtrl.text.trim().isEmpty
             ? null
             : _homeCityCtrl.text.trim(),
-        primaryColor: '#${_selectedColor.value.toRadixString(16).substring(2)}',
         details: _detailsCtrl.text.trim().isEmpty
             ? null
             : _detailsCtrl.text.trim(),
@@ -256,40 +243,6 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
                         borderSide: const BorderSide(color: Color(0x20FFFFFF)),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Primary Color',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 10,
-                    children: _colorOptions
-                        .map(
-                          (c) => GestureDetector(
-                            onTap: () => setState(() => _selectedColor = c),
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: c,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: _selectedColor == c
-                                      ? Colors.white
-                                      : Colors.transparent,
-                                  width: 3,
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
                   ),
                   const SizedBox(height: 32),
                   SizedBox(
