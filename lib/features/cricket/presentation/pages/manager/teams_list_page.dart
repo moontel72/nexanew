@@ -490,7 +490,14 @@ class _TeamsListPageState extends State<TeamsListPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFEF4444),
+                textStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              child: const Text('✕ CANCEL'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(

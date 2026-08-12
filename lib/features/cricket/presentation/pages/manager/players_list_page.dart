@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/core/config/api_config.dart';
@@ -340,13 +341,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${p.name} — ${_positionLabel(p.position)}'),
-            ),
-          );
-        },
+        onTap: () => _showPlayerDetail(p),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -362,22 +357,59 @@ class _PlayersListPageState extends State<PlayersListPage> {
                 ),
               ),
               // Player avatar
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: posColor.withOpacity(0.2),
-                backgroundImage: p.photoUrl != null && p.photoUrl!.isNotEmpty
-                    ? NetworkImage(_fullUrl(p.photoUrl!))
-                    : null,
-                child: p.photoUrl == null || p.photoUrl!.isEmpty
-                    ? Text(
-                        p.name.isNotEmpty ? p.name[0].toUpperCase() : '?',
-                        style: TextStyle(
-                          color: posColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      )
-                    : null,
+              GestureDetector(
+                onTap: () async {
+                  final result = await FilePicker.platform.pickFiles(
+                    type: FileType.image,
+                    withData: true,
+                  );
+                  if (result != null && result.files.isNotEmpty) {
+                    final repo = _safeRepo();
+                    if (repo == null) return;
+                    try {
+                      await repo.uploadPlayerPhoto(
+                        p.id,
+                        result.files.first.bytes!,
+                        result.files.first.name,
+                      );
+                      if (mounted) {
+                        _load();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Photo updated'),
+                            backgroundColor: Color(0xFF10B981),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed: $e'),
+                            backgroundColor: Color(0xFFEF4444),
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: posColor.withOpacity(0.2),
+                  backgroundImage: p.photoUrl != null && p.photoUrl!.isNotEmpty
+                      ? NetworkImage(_fullUrl(p.photoUrl!))
+                      : null,
+                  child: p.photoUrl == null || p.photoUrl!.isEmpty
+                      ? Text(
+                          p.name.isNotEmpty ? p.name[0].toUpperCase() : '?',
+                          style: TextStyle(
+                            color: posColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        )
+                      : null,
+                ),
               ),
               const SizedBox(width: 12),
               // Player info
@@ -615,6 +647,250 @@ class _PlayersListPageState extends State<PlayersListPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showPlayerDetail(PlayerModel p) {
+    final age = _calcAge(p.dateOfBirth);
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => Align(
+        alignment: Alignment.topCenter,
+        child: Material(
+          color: const Color(0xFF0F2936),
+          type: MaterialType.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520, maxHeight: 650),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header: photo + code + name
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 32,
+                          backgroundColor: _positionColor(p.position),
+                          backgroundImage:
+                              p.photoUrl != null && p.photoUrl!.isNotEmpty
+                              ? NetworkImage(_fullUrl(p.photoUrl!))
+                              : null,
+                          child: p.photoUrl == null || p.photoUrl!.isEmpty
+                              ? Text(
+                                  p.name.isNotEmpty
+                                      ? p.name[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                p.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (p.playerCode != null &&
+                                  p.playerCode!.isNotEmpty)
+                                Text(
+                                  'CODE: ${p.playerCode}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF10B981),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            color: Color(0xFF6B7280),
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Partition 1: Position + Role (blue)
+                    _detailRow(
+                      'POSITION',
+                      _positionLabel(p.position),
+                      const Color(0xFF2563EB),
+                    ),
+                    const SizedBox(height: 8),
+                    _detailRow(
+                      'ROLE TYPE',
+                      _roleLabel(p.role),
+                      const Color(0xFF1D4ED8),
+                    ),
+                    const SizedBox(height: 8),
+                    // Partition 2: Playing styles (purple)
+                    _detailRow(
+                      'BATTING STYLE',
+                      p.battingStyle?.replaceAll('_', ' ').toUpperCase() ?? '—',
+                      const Color(0xFF8B5CF6),
+                    ),
+                    const SizedBox(height: 8),
+                    _detailRow(
+                      'BOWLING STYLE',
+                      p.bowlingStyle?.replaceAll('_', ' ').toUpperCase() ?? '—',
+                      const Color(0xFF7C3AED),
+                    ),
+                    const SizedBox(height: 8),
+                    // Partition 3: Identity (teal)
+                    _detailRow(
+                      'JERSEY NUMBER',
+                      p.jerseyNumber ?? '—',
+                      const Color(0xFF06B6D4),
+                    ),
+                    const SizedBox(height: 8),
+                    _detailRow(
+                      'AGE',
+                      age != null ? '$age' : '—',
+                      const Color(0xFF0EA5E9),
+                    ),
+                    const SizedBox(height: 8),
+                    // Partition 4: Contact (green)
+                    _detailRow(
+                      'EMAIL',
+                      p.email ?? '—',
+                      const Color(0xFF10B981),
+                    ),
+                    const SizedBox(height: 8),
+                    _detailRow(
+                      'PHONE',
+                      p.phone ?? '—',
+                      const Color(0xFF059669),
+                    ),
+                    const SizedBox(height: 8),
+                    _detailRow(
+                      'ID CARD',
+                      p.idCardNumber ?? '—',
+                      const Color(0xFF047857),
+                    ),
+                    const SizedBox(height: 8),
+                    // Partition 5: Status (color by status)
+                    _detailRow(
+                      'STATUS',
+                      p.status.toUpperCase(),
+                      p.status == 'active'
+                          ? const Color(0xFF10B981)
+                          : p.status == 'inactive'
+                          ? const Color(0xFF6B7280)
+                          : const Color(0xFFEF4444),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('CLOSE'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _roleLabel(String? role) {
+    switch (role) {
+      case 'batsman':
+        return 'Batsman';
+      case 'bowler':
+        return 'Bowler';
+      case 'all_rounder':
+        return 'All Rounder';
+      case 'wicket_keeper':
+        return 'Wicket Keeper';
+      default:
+        return '—';
+    }
+  }
+
+  int? _calcAge(String? dob) {
+    if (dob == null || dob.isEmpty) return null;
+    try {
+      final parts = dob.split('-');
+      final birth = DateTime(
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+        int.parse(parts[2]),
+      );
+      final now = DateTime.now();
+      var age = now.year - birth.year;
+      if (now.month < birth.month ||
+          (now.month == birth.month && now.day < birth.day)) {
+        age--;
+      }
+      return age;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _detailRow(String label, String value, Color color) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: color.withOpacity(0.8),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -908,7 +1184,14 @@ class _PlayersListPageState extends State<PlayersListPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFEF4444),
+                textStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              child: const Text('✕ CANCEL'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
