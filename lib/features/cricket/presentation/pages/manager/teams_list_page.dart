@@ -163,26 +163,71 @@ class _TeamsListPageState extends State<TeamsListPage> {
                             type: FileType.image,
                             withData: true,
                           );
-                          if (result != null && result.files.isNotEmpty) {
-                            final repo = _safeRepo();
-                            if (repo == null) return;
-                            try {
-                              await repo.uploadTeamLogo(
-                                team.id,
-                                result.files.first.bytes!,
-                                result.files.first.name,
-                              );
-                              if (mounted) {
-                                Navigator.pop(ctx); // close modal
-                                _load(); // refresh list
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Logo updated'),
-                                    backgroundColor: Color(0xFF10B981),
+                          if (result == null || result.files.isEmpty) return;
+                          final bytes = result.files.first.bytes;
+                          final fileName = result.files.first.name;
+                          if (bytes == null) return;
+
+                          // Preview dialog with Save/Cancel
+                          final confirmed = await showDialog<bool>(
+                            context: ctx,
+                            builder: (dialogCtx) => AlertDialog(
+                              backgroundColor: const Color(0xFF0F2936),
+                              title: const Text(
+                                'New Logo',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              content: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.memory(
+                                  bytes,
+                                  width: 200,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(dialogCtx, false),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: const Color(0xFFEF4444),
+                                    textStyle: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                );
-                              }
-                            } catch (e) {
+                                  child: const Text('✕ CANCEL'),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2563EB),
+                                  ),
+                                  onPressed: () =>
+                                      Navigator.pop(dialogCtx, true),
+                                  child: const Text('SAVE'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirmed != true) return;
+                          final repo = _safeRepo();
+                          if (repo == null) return;
+                          try {
+                            await repo.uploadTeamLogo(team.id, bytes, fileName);
+                            if (mounted) {
+                              Navigator.pop(ctx); // close modal
+                              _load(); // refresh list
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Logo updated'),
+                                  backgroundColor: Color(0xFF10B981),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Failed: $e'),
@@ -670,37 +715,88 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                       type: FileType.image,
                                       withData: true,
                                     );
-                                if (result != null && result.files.isNotEmpty) {
-                                  final repo = _safeRepo();
-                                  if (repo == null) return;
-                                  try {
-                                    await repo.uploadTeamLogo(
-                                      t.id,
-                                      result.files.first.bytes!,
-                                      result.files.first.name,
+                                if (result == null ||
+                                    result.files.isEmpty ||
+                                    !mounted) {
+                                  return;
+                                }
+                                final bytes = result.files.first.bytes;
+                                final fileName = result.files.first.name;
+                                if (bytes == null) return;
+
+                                // Preview dialog with Save/Cancel
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    backgroundColor: const Color(0xFF0F2936),
+                                    title: const Text(
+                                      'New Logo',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    content: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.memory(
+                                        bytes,
+                                        width: 200,
+                                        height: 200,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, false),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: const Color(
+                                            0xFFEF4444,
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        child: const Text('✕ CANCEL'),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xFF2563EB,
+                                          ),
+                                        ),
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, true),
+                                        child: const Text('SAVE'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirmed != true || !mounted) return;
+                                final repo = _safeRepo();
+                                if (repo == null) return;
+                                try {
+                                  await repo.uploadTeamLogo(
+                                    t.id,
+                                    bytes,
+                                    fileName,
+                                  );
+                                  if (mounted) {
+                                    _load();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Logo updated'),
+                                        backgroundColor: Color(0xFF10B981),
+                                      ),
                                     );
-                                    if (mounted) {
-                                      _load();
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Logo updated'),
-                                          backgroundColor: Color(0xFF10B981),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Failed: $e'),
-                                          backgroundColor: Color(0xFFEF4444),
-                                        ),
-                                      );
-                                    }
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Failed: $e'),
+                                        backgroundColor: Color(0xFFEF4444),
+                                      ),
+                                    );
                                   }
                                 }
                               },

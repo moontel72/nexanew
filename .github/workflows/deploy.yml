@@ -58,7 +58,7 @@ jobs:
 
       - name: Deploy backend via rsync
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --exclude='.env' backend/ root@135.181.46.27:/var/www/traceodd/admin-panel/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --exclude='.env' --exclude='storage' --exclude='vendor' --exclude='bootstrap/cache' backend/ root@135.181.46.27:/var/www/traceodd/admin-panel/
 
       - name: Deploy Rust directory to server
         run: |
