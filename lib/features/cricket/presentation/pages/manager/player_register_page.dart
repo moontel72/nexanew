@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 
@@ -87,6 +88,11 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
     }
   }
 
+  String _fullUrl(String path) {
+    if (path.startsWith('http')) return path;
+    return '${ApiConfig.baseUrl}$path';
+  }
+
   Future<void> _loadTeams() async {
     try {
       final repo = _safeRepo();
@@ -130,7 +136,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
         setState(() => _isSubmitting = false);
         return;
       }
-      final player = await repo.createPlayer(
+      var player = await repo.createPlayer(
         teamId: _selectedTeamId!,
         name: _nameCtrl.text.trim(),
         role: _role,
@@ -149,11 +155,14 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
       );
       if (_selectedPhotoBytes != null) {
         try {
-          await repo.uploadPlayerPhoto(
+          final photoUrl = await repo.uploadPlayerPhoto(
             player.id,
             _selectedPhotoBytes!,
             _photoFileName ?? 'photo.jpg',
           );
+          if (photoUrl != null && photoUrl.isNotEmpty) {
+            player = player.copyWith(photoUrl: photoUrl);
+          }
         } catch (_) {
           // Photo upload failed but player was created — non-fatal
         }
@@ -671,6 +680,17 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.check_circle, size: 80, color: Color(0xFF10B981)),
+            if (_createdPlayer?.photoUrl != null &&
+                _createdPlayer!.photoUrl!.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              CircleAvatar(
+                radius: 48,
+                backgroundColor: const Color(0xFF2563EB),
+                backgroundImage: NetworkImage(
+                  _fullUrl(_createdPlayer!.photoUrl!),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             const Text(
               'Player Created!',

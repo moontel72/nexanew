@@ -265,6 +265,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
     );
     final name = team?.name ?? 'Unknown Team';
     final short = team?.shortCode ?? '';
+    final logoUrl = team?.logoUrl;
     Color avatarColor = const Color(0xFF2563EB);
     if (team?.primaryColor != null && team!.primaryColor!.isNotEmpty) {
       try {
@@ -280,14 +281,19 @@ class _PlayersListPageState extends State<PlayersListPage> {
           CircleAvatar(
             backgroundColor: avatarColor,
             radius: 16,
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
+            backgroundImage: logoUrl != null && logoUrl.isNotEmpty
+                ? NetworkImage(_fullUrl(logoUrl))
+                : null,
+            child: logoUrl == null || logoUrl.isEmpty
+                ? Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  )
+                : null,
           ),
           const SizedBox(width: 10),
           Text(
@@ -737,12 +743,14 @@ class _PlayersListPageState extends State<PlayersListPage> {
                       'POSITION',
                       _positionLabel(p.position),
                       const Color(0xFF2563EB),
+                      const Color(0xFFFFD54F),
                     ),
                     const SizedBox(height: 8),
                     _detailRow(
                       'ROLE TYPE',
                       _roleLabel(p.role),
                       const Color(0xFF1D4ED8),
+                      const Color(0xFFFFD54F),
                     ),
                     const SizedBox(height: 8),
                     // Partition 2: Playing styles (purple)
@@ -750,12 +758,14 @@ class _PlayersListPageState extends State<PlayersListPage> {
                       'BATTING STYLE',
                       p.battingStyle?.replaceAll('_', ' ').toUpperCase() ?? '—',
                       const Color(0xFF8B5CF6),
+                      const Color(0xFFFFB74D),
                     ),
                     const SizedBox(height: 8),
                     _detailRow(
                       'BOWLING STYLE',
                       p.bowlingStyle?.replaceAll('_', ' ').toUpperCase() ?? '—',
                       const Color(0xFF7C3AED),
+                      const Color(0xFFFFB74D),
                     ),
                     const SizedBox(height: 8),
                     // Partition 3: Identity (teal)
@@ -763,12 +773,14 @@ class _PlayersListPageState extends State<PlayersListPage> {
                       'JERSEY NUMBER',
                       p.jerseyNumber ?? '—',
                       const Color(0xFF06B6D4),
+                      const Color(0xFFFFF59D),
                     ),
                     const SizedBox(height: 8),
                     _detailRow(
                       'AGE',
                       age != null ? '$age' : '—',
                       const Color(0xFF0EA5E9),
+                      const Color(0xFFFFF59D),
                     ),
                     const SizedBox(height: 8),
                     // Partition 4: Contact (green)
@@ -776,18 +788,21 @@ class _PlayersListPageState extends State<PlayersListPage> {
                       'EMAIL',
                       p.email ?? '—',
                       const Color(0xFF10B981),
+                      const Color(0xFFFFCC80),
                     ),
                     const SizedBox(height: 8),
                     _detailRow(
                       'PHONE',
                       p.phone ?? '—',
                       const Color(0xFF059669),
+                      const Color(0xFFFFCC80),
                     ),
                     const SizedBox(height: 8),
                     _detailRow(
                       'ID CARD',
                       p.idCardNumber ?? '—',
                       const Color(0xFF047857),
+                      const Color(0xFFFFCC80),
                     ),
                     const SizedBox(height: 8),
                     // Partition 5: Status (color by status)
@@ -799,6 +814,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                           : p.status == 'inactive'
                           ? const Color(0xFF6B7280)
                           : const Color(0xFFEF4444),
+                      Colors.white,
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
@@ -857,7 +873,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
     }
   }
 
-  Widget _detailRow(String label, String value, Color color) {
+  Widget _detailRow(String label, String value, Color color, Color labelColor) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -872,9 +888,9 @@ class _PlayersListPageState extends State<PlayersListPage> {
           Text(
             label,
             style: TextStyle(
-              color: color.withOpacity(0.8),
+              color: labelColor,
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               letterSpacing: 1,
             ),
           ),
@@ -1434,16 +1450,24 @@ class _PlayersListPageState extends State<PlayersListPage> {
                                 CircleAvatar(
                                   backgroundColor: const Color(0xFF2563EB),
                                   radius: 22,
-                                  child: Text(
-                                    p.name.isNotEmpty
-                                        ? p.name[0].toUpperCase()
-                                        : '?',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
+                                  backgroundImage:
+                                      p.photoUrl != null &&
+                                          p.photoUrl!.isNotEmpty
+                                      ? NetworkImage(_fullUrl(p.photoUrl!))
+                                      : null,
+                                  child:
+                                      p.photoUrl == null || p.photoUrl!.isEmpty
+                                      ? Text(
+                                          p.name.isNotEmpty
+                                              ? p.name[0].toUpperCase()
+                                              : '?',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        )
+                                      : null,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
