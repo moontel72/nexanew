@@ -88,11 +88,18 @@ jobs:
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/nexatrace-queue.service root@135.181.46.27:/etc/systemd/system/nexatrace-queue.service
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "systemctl daemon-reload && systemctl enable nexatrace-queue"
 
-      # --- CRICKET MODULE: Phase 2 Infrastructure ---
-      - name: Deploy Cricket Nginx server block
+      # --- CRICKET MODULE: Dual-Subdomain Infrastructure ---
+      - name: Deploy Cricket Nginx server blocks (public + manager)
         run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket.conf root@135.181.46.27:/etc/nginx/sites-available/cricket
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "nginx -t && echo 'Cricket Nginx config OK'"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-public.conf root@135.181.46.27:/etc/nginx/sites-available/cricket-public
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-manager.conf root@135.181.46.27:/etc/nginx/sites-available/cricket-manager
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
+            ln -sf /etc/nginx/sites-available/cricket-public /etc/nginx/sites-enabled/cricket-public
+            ln -sf /etc/nginx/sites-available/cricket-manager /etc/nginx/sites-enabled/cricket-manager
+            rm -f /etc/nginx/sites-enabled/cricket
+            rm -f /etc/nginx/sites-available/cricket.disabled
+            nginx -t && echo 'Cricket Nginx configs OK'
+          "
 
       - name: Deploy Cricket SRS systemd unit
         run: |

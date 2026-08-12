@@ -1,18 +1,18 @@
 #!/bin/bash
 # =============================================================================
-# NEXATRACE CRICKET — SLEEP MODE SCRIPT
+# NEXATRACE CRICKET — SLEEP MODE SCRIPT (DUAL-SUBDOMAIN v2)
 # =============================================================================
 # Path: /usr/local/bin/cricket-sleep.sh
 #
 # Puts the cricket module into dormant "sleep" mode after tournament concludes.
-# Frees 100% of CPU, RAM, and DB connections for the core 17 modules.
+# Frees 100% of CPU, RAM, and DB connections for the core modules.
 #
 # ACTIONS:
 #   1. Stop SRS media server (kills RTMP ingest + FFmpeg transcoding)
 #   2. Set tournament is_active = false in database
 #   3. Clear Redis cricket cache keys
-#   4. Optionally disable Nginx server block (serve dormant page instead)
-#   5. Log all actions
+#   4. Disable BOTH Nginx cricket server blocks
+#   5. Verify clean shutdown
 #
 # USAGE:
 #   sudo /usr/local/bin/cricket-sleep.sh
@@ -28,7 +28,7 @@ log() {
 }
 
 log "══════════════════════════════════════════════"
-log "CRICKET MODULE — ENTERING SLEEP MODE"
+log "CRICKET MODULE — ENTERING SLEEP MODE (DUAL-SUBDOMAIN)"
 log "══════════════════════════════════════════════"
 
 # ─── 1. Stop SRS Media Server ──────────────────────────
@@ -64,15 +64,23 @@ REDIS_RESULT=$(sudo -u www-data php /var/www/traceodd/admin-panel/artisan tinker
 " 2>&1)
 log "  $REDIS_RESULT"
 
-# ─── 4. Optional: Disable Nginx Server Block ────────────
-log "Step 4/5: Disabling Nginx cricket server block..."
-if [ -f /etc/nginx/sites-enabled/cricket ]; then
-    mv /etc/nginx/sites-enabled/cricket /etc/nginx/sites-available/cricket.disabled
-    nginx -t && systemctl reload nginx
-    log "  ✓ Cricket Nginx block disabled. Visitors see main domain."
-else
-    log "  → Cricket Nginx block already disabled. Skipped."
-fi
+# ─── 4. Disable BOTH Nginx Server Blocks ───────────────
+log "Step 4/5: Disabling Nginx cricket server blocks (public + manager)..."
+
+disable_block() {
+    local name="$1"
+    if [ -f "/etc/nginx/sites-enabled/$name" ]; then
+        mv "/etc/nginx/sites-enabled/$name" "/etc/nginx/sites-available/$name.disabled"
+        log "  ✓ $name block disabled. Visitors see the main domain."
+    else
+        log "  → $name block already disabled. Skipped."
+    fi
+}
+
+disable_block "cricket-public"
+disable_block "cricket-manager"
+
+nginx -t && systemctl reload nginx
 
 # ─── 5. Verify Clean Shutdown ─────────────────────────
 log "Step 5/5: Verifying clean shutdown..."
@@ -93,7 +101,7 @@ log "  ℹ Free memory: ${FREE_MEM} MB"
 
 log "══════════════════════════════════════════════"
 log "CRICKET MODULE SLEEP MODE ACTIVATED"
-log "All resources returned to core 17 modules."
+log "All resources returned to core modules."
 log "To wake: sudo /usr/local/bin/cricket-wake.sh"
 log "══════════════════════════════════════════════"
 

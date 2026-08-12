@@ -133,5 +133,6 @@ flutter:
     - assets/animations/
     - assets/translations/
     - assets/logo/
+    - assets/landing/
 
   generate: true

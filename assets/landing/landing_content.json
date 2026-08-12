@@ -1,0 +1,239 @@
+{
+  "meta": {
+    "brand": "Trace Odd",
+    "brandFull": "TRACE ODD",
+    "logoText": "TRACE\u00B7ODD",
+    "logoAsset": "assets/logo/traceodd_logo.svg",
+    "announcementBadge": "COMING SOON TO PAKISTAN",
+    "launchTarget": "2026-12-31T00:00:00Z",
+    "defaultInterest": "All Verticals"
+  },
+  "nav": [
+    { "label": "Ecosystem", "anchor": "verticals" },
+    { "label": "Platforms", "anchor": "pricing" },
+    { "label": "Roadmap", "anchor": "roadmap" },
+    { "label": "Early Access", "anchor": "signup" }
+  ],
+  "hero": {
+    "eyebrow": "TRACE ODD — THE ENTERPRISE ECOSYSTEM OF PAKISTAN",
+    "headline": "One Ecosystem. Every Movement. Fully Traced.",
+    "subheadline": "From the factory floor to the cricket ground, from your bus seat to your bike's ignition — Trace Odd is building Pakistan's first fully integrated digital infrastructure for transport, commerce, industry, and entertainment.",
+    "primaryCta": "Notify Me on Launch",
+    "secondaryCta": "Explore the Ecosystem",
+    "countdownLabel": "Launching in"
+  },
+  "stats": [
+    { "value": "7", "label": "Core Verticals" },
+    { "value": "1", "label": "Super-App Identity" },
+    { "value": "24/7", "label": "Live Tracking" },
+    { "value": "0", "label": "Siloed Systems" }
+  ],
+  "verticals": [
+    {
+      "id": "bus-fleet",
+      "order": 1,
+      "tag": "PUBLIC TRANSPORT",
+      "title": "Bus-Fleet System",
+      "headline": "Public Transport, Reimagined for the Modern Passenger.",
+      "copy": "Trace Odd digitizes inter-city bus networks end-to-end. Fleet owners get live telemetry and automated route scheduling; passengers get smart seat booking, airline-style seat grids, and real-time tracking of every coach.",
+      "features": [
+        "Smart seat booking vectors",
+        "Automated route & waypoint scheduling",
+        "Real-time passenger tracking canvas",
+        "Contactless boarding & NFC check-in",
+        "Revenue-ledger automation for operators"
+      ],
+      "icon": "bus",
+      "accent": "#00C49F"
+    },
+    {
+      "id": "goods-logistics",
+      "order": 2,
+      "tag": "FREIGHT & LOGISTICS",
+      "title": "Goods Company System & Services",
+      "headline": "The Freight Network That Moves Pakistan's Economy.",
+      "copy": "A complete cargo ecosystem — automated freight dispatch, spot-market bidding and auctions, multi-owner fleet matrices, and escrow-protected carrier payments. Every load, every truck, every rupee accounted for.",
+      "features": [
+        "Automated spot-freight auctions",
+        "Multi-owner fleet aggregation",
+        "Real-time fleet telemetry console",
+        "Intelligent multi-drop route optimization",
+        "Escrow-secured carrier payouts"
+      ],
+      "icon": "truck",
+      "accent": "#FF9900"
+    },
+    {
+      "id": "b2b-marketplace",
+      "order": 3,
+      "tag": "WHOLESALE MARKETPLACE",
+      "title": "B2B E-Commerce Platform",
+      "headline": "Manufacturers Meet Verified Buyers. Direct.",
+      "copy": "A high-throughput wholesale marketplace connecting manufacturers directly with distributors and bulk buyers. Volume-tier pricing, group order pooling, and encrypted commercial chat — with escrow clearing on every transaction.",
+      "features": [
+        "Verified corporate storefronts",
+        "Dynamic volume-tier pricing",
+        "Multi-buyer order pooling",
+        "Secure B2B escrow clearinghouse",
+        "Elasticsearch-powered instant catalogs"
+      ],
+      "icon": "storefront",
+      "accent": "#4CAF50"
+    },
+    {
+      "id": "factory-supply-chain",
+      "order": 4,
+      "tag": "ANTI-COUNTERFEIT INDUSTRY",
+      "title": "Factory Supply Chain & Reseller Matrix",
+      "headline": "End-to-End Supply Chain, From Factory Gate to Shop Shelf.",
+      "copy": "The complete industrial pipeline linking factories, distributors, resellers, and shopkeepers — sealed with Trace Odd's proprietary Smart Auth Code: every bundle, carton, and unit cryptographically verified against counterfeiting.",
+      "features": [
+        "Proprietary Smart Auth Code verification",
+        "Bundle → Carton → Packet → Unit trace hierarchy",
+        "SHA256 cryptographic serial vault",
+        "Batch code import & print-ready export",
+        "Full lineage map for every product"
+      ],
+      "icon": "factory",
+      "accent": "#2196F3"
+    },
+    {
+      "id": "cricket",
+      "order": 5,
+      "tag": "SPORTS & STREAMING",
+      "title": "Cricket Live Stream & Tournament Management",
+      "headline": "Every Ball. Live. Everywhere.",
+      "copy": "A dual-engine sports platform: a powerful manager panel for tournament setup, scoring, and multi-camera streaming — and an ultra-low-latency public portal delivering ball-by-ball scores and live video to fans nationwide.",
+      "features": [
+        "Dual-panel architecture (manager + public portals)",
+        "Ball-by-ball live scoring over WebSockets",
+        "Multi-camera RTMP ingest & HLS streaming",
+        "Voice-to-score AI assistance",
+        "Sponsor & tournament management"
+      ],
+      "icon": "cricket",
+      "accent": "#F44336"
+    },
+    {
+      "id": "iot-security",
+      "order": 6,
+      "tag": "HARDWARE + SOFTWARE · NEW",
+      "title": "TraceOdd Smart IoT Vehicle Security & Tracking",
+      "headline": "Your Vehicle. Guarded by Trace Odd. 24/7.",
+      "copy": "Affordable, subscription-based IoT tracking devices engineered for cars, commercial fleets, and motorbikes. Instant anti-theft immobilization, geofence monitoring, and high-frequency real-time GPS — all from your phone.",
+      "features": [
+        "Real-time high-frequency GPS tracking",
+        "Instant anti-theft remote immobilization",
+        "Geofence & tamper alerts",
+        "Fleet-wide dashboards for commercial operators",
+        "Simple monthly subscription — no upfront hardware cost"
+      ],
+      "icon": "iot",
+      "accent": "#9C27B0"
+    },
+    {
+      "id": "super-app",
+      "order": 7,
+      "tag": "ONE IDENTITY",
+      "title": "Universal Customer Super-App",
+      "headline": "One App. Your Entire World, Connected.",
+      "copy": "The single unified digital gateway for every Trace Odd user. Book a bus seat, track a cargo dispatch, order factory-direct, and monitor your vehicle's security — all under one mobile identity, one wallet, one history.",
+      "features": [
+        "Interlinks bus bookings, cargo tracking & factory orders",
+        "Camera-based Smart Auth Code scanning",
+        "Personal IoT vehicle alerts in one feed",
+        "Unified wallet & loyalty engine",
+        "One-time identity across the whole ecosystem"
+      ],
+      "icon": "superapp",
+      "accent": "#00BCD4"
+    }
+  ],
+  "pricing": {
+    "title": "IoT Device Subscription Plans",
+    "subtitle": "Launch pricing for the TraceOdd Smart IoT tracking hardware. No hidden fees — cancel anytime.",
+    "note": "Introductory launch pricing. Taxes included.",
+    "tiers": [
+      {
+        "name": "Rider",
+        "device": "Motorbikes",
+        "price": "PKR 499",
+        "period": "/month",
+        "features": [
+          "Real-time GPS tracking",
+          "Remote engine immobilization",
+          "Geofence alerts",
+          "Mobile app access"
+        ],
+        "highlight": false
+      },
+      {
+        "name": "Driver",
+        "device": "Cars & SUVs",
+        "price": "PKR 899",
+        "period": "/month",
+        "features": [
+          "Everything in Rider",
+          "High-frequency tracking (5s)",
+          "Tamper & tow alerts",
+          "Trip history reports"
+        ],
+        "highlight": true
+      },
+      {
+        "name": "Fleet",
+        "device": "Commercial Fleets",
+        "price": "Custom",
+        "period": "per vehicle",
+        "features": [
+          "Everything in Driver",
+          "Fleet-wide command dashboard",
+          "Driver behavior analytics",
+          "API & dispatch integrations"
+        ],
+        "highlight": false
+      }
+    ]
+  },
+  "roadmap": {
+    "title": "Launch Roadmap",
+    "subtitle": "Five phases. One connected Pakistan.",
+    "phases": [
+      { "phase": "Phase 1", "title": "Cricket Launch", "detail": "Dual-subdomain tournament platform goes live: public streaming portal + manager panel." },
+      { "phase": "Phase 2", "title": "Bus & Goods Rollout", "detail": "Inter-city bus booking and freight auction ecosystems open to partners." },
+      { "phase": "Phase 3", "title": "Marketplace & Factory Chain", "detail": "B2B wholesale marketplace and Smart Auth Code supply chain go into production." },
+      { "phase": "Phase 4", "title": "IoT Devices Ship", "detail": "TraceOdd Smart tracking hardware ships with monthly subscription plans." },
+      { "phase": "Phase 5", "title": "Super-App GA", "detail": "Universal Customer Super-App unifies every vertical under one identity." }
+    ]
+  },
+  "signup": {
+    "headline": "Be First on the Platform.",
+    "copy": "Join the launch list. Early partners get priority onboarding, zero platform fees for the first 90 days, and a founding-member badge.",
+    "button": "Request Early Access",
+    "interestLabel": "I'm interested in",
+    "interestOptions": [
+      "All Verticals",
+      "Bus-Fleet System",
+      "Goods & Logistics",
+      "B2B Marketplace",
+      "Factory Supply Chain",
+      "Cricket Platform",
+      "IoT Vehicle Security",
+      "Super-App"
+    ],
+    "successTitle": "You're on the list!",
+    "successBody": "We'll notify you the moment Trace Odd launches in Pakistan.",
+    "endpoint": ""
+  },
+  "footer": {
+    "tagline": "Built for Pakistan — Coming Soon.",
+    "contactEmail": "hello@traceodd.com",
+    "contactLabel": "Contact Us",
+    "copyright": "© 2026 Trace Odd. All rights reserved.",
+    "links": [
+      { "label": "Live Sports", "url": "https://cricket.traceodd.com" },
+      { "label": "Privacy Policy", "url": "#" },
+      { "label": "Terms of Service", "url": "#" }
+    ]
+  }
+}

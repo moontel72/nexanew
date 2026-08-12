@@ -11,6 +11,8 @@ on:
       - "pubspec.yaml"
       - "pubspec.lock"
       - "rust/**"
+      - ".nginx/**"
+      - ".scripts/**"
       - ".github/workflows/frontend-deploy.yml"
   workflow_dispatch:
 
@@ -40,22 +42,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # ──────────────────────────────────────────────────────────────
-      # STEP A: Build & Deploy Admin Panel (main.dart) — PRIMARY
-      # Includes Cricket Manager at /cricket-manager/* routes.
-      # ──────────────────────────────────────────────────────────────
-
-      - name: Build Admin Panel (main.dart)
-        run: flutter build web --release
-
-      - name: Verify Admin Panel build
-        run: |
-          if [ ! -f "build/web/index.html" ]; then
-            echo "❌ Build failed: index.html not found"
-            exit 1
-          fi
-          echo "✅ Admin Panel build verified ($(du -sh build/web | cut -f1))"
-
       # 🔥 SSH Setup
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
@@ -71,12 +57,72 @@ jobs:
           echo '  StrictHostKeyChecking no' >> ~/.ssh/config
           echo '  UserKnownHostsFile=/dev/null' >> ~/.ssh/config
 
+      # ──────────────────────────────────────────────────────────────
+      # STEP A: Build & Deploy Admin Panel (main.dart) — PRIMARY
+      # Served at admin.traceodd.com
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Admin Panel (main.dart)
+        run: flutter build web --release
+
+      - name: Verify Admin Panel build
+        run: |
+          if [ ! -f "build/web/index.html" ]; then
+            echo "❌ Build failed: index.html not found"
+            exit 1
+          fi
+          echo "✅ Admin Panel build verified ($(du -sh build/web | cut -f1))"
+
       - name: Deploy Admin Panel to /frontend/
         run: |
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/frontend/
 
       # ──────────────────────────────────────────────────────────────
-      # STEP B: Build & Deploy Reseller App (main_reseller.dart)
+      # STEP B: Build & Deploy Landing Page (main_landing.dart)
+      # Served at traceodd.com + www.traceodd.com
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Landing Page (main_landing.dart)
+        run: flutter build web --release --target=lib/main_landing.dart --pwa-strategy none
+
+      - name: Deploy Landing Page to /landing/
+        run: |
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/landing/
+
+      # ──────────────────────────────────────────────────────────────
+      # STEP C: Build & Deploy Cricket Public Portal
+      # (main_cricket_public.dart) → cricket.traceodd.com
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Cricket Public Portal (main_cricket_public.dart)
+        run: |
+          flutter build web --release \
+            --target=lib/main_cricket_public.dart \
+            --pwa-strategy none \
+            --dart-define=API_BASE_URL=https://cricket.traceodd.com
+
+      - name: Deploy Cricket Public Portal to /cricket-public-web/
+        run: |
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/cricket-public-web/
+
+      # ──────────────────────────────────────────────────────────────
+      # STEP D: Build & Deploy Cricket Manager Panel
+      # (main_cricket_manager.dart) → manager.cricket.traceodd.com
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Cricket Manager Panel (main_cricket_manager.dart)
+        run: |
+          flutter build web --release \
+            --target=lib/main_cricket_manager.dart \
+            --pwa-strategy none \
+            --dart-define=API_BASE_URL=https://manager.cricket.traceodd.com
+
+      - name: Deploy Cricket Manager Panel to /cricket-manager-web/
+        run: |
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/cricket-manager-web/
+
+      # ──────────────────────────────────────────────────────────────
+      # STEP E: Build & Deploy Reseller App (main_reseller.dart)
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Reseller App (main_reseller.dart)
@@ -88,7 +134,7 @@ jobs:
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/reseller/
 
       # ──────────────────────────────────────────────────────────────
-      # STEP C: Build & Deploy Driver App (main_driver.dart)
+      # STEP F: Build & Deploy Driver App (main_driver.dart)
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Driver App (main_driver.dart)
@@ -100,7 +146,7 @@ jobs:
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/driver/
 
       # ──────────────────────────────────────────────────────────────
-      # STEP D: Build & Deploy Bus Owner App (main_bus_owner.dart)
+      # STEP G: Build & Deploy Bus Owner App (main_bus_owner.dart)
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Bus Owner App (main_bus_owner.dart)
@@ -112,7 +158,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" >> /var/www/traceodd/bus-owner/version.txt"
 
       # ──────────────────────────────────────────────────────────────
-      # STEP E: Build & Deploy Bus Fleet Admin Panel (main_bus_fleet.dart)
+      # STEP H: Build & Deploy Bus Fleet Admin Panel (main_bus_fleet.dart)
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Bus Fleet Admin (main_bus_fleet.dart)
@@ -124,13 +170,21 @@ jobs:
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" >> /var/www/traceodd/bus-fleet/version.txt"
 
       # ──────────────────────────────────────────────────────────────
-      # STEP F: Copy Nginx config & reload
+      # STEP I: Copy Nginx configs (traceodd + cricket dual-panel) & reload
       # ──────────────────────────────────────────────────────────────
 
-      - name: Deploy Nginx Configuration
+      - name: Deploy Nginx Configurations
         run: |
           scp -o StrictHostKeyChecking=no .nginx/traceodd.conf root@135.181.46.27:/etc/nginx/sites-available/traceodd
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "nginx -t && systemctl reload nginx"
+          scp -o StrictHostKeyChecking=no .nginx/cricket-public.conf root@135.181.46.27:/etc/nginx/sites-available/cricket-public
+          scp -o StrictHostKeyChecking=no .nginx/cricket-manager.conf root@135.181.46.27:/etc/nginx/sites-available/cricket-manager
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
+            ln -sf /etc/nginx/sites-available/cricket-public /etc/nginx/sites-enabled/cricket-public
+            ln -sf /etc/nginx/sites-available/cricket-manager /etc/nginx/sites-enabled/cricket-manager
+            rm -f /etc/nginx/sites-enabled/cricket
+            rm -f /etc/nginx/sites-available/cricket.disabled
+            nginx -t && systemctl reload nginx
+          "
 
       # ──────────────────────────────────────────────────────────────
       # Post-Deployment: Fix permissions for all apps
@@ -142,6 +196,12 @@ jobs:
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
             chown -R www-data:www-data /var/www/traceodd/frontend && \
             chmod -R 755 /var/www/traceodd/frontend && \
+            chown -R www-data:www-data /var/www/traceodd/landing && \
+            chmod -R 755 /var/www/traceodd/landing && \
+            chown -R www-data:www-data /var/www/traceodd/cricket-public-web && \
+            chmod -R 755 /var/www/traceodd/cricket-public-web && \
+            chown -R www-data:www-data /var/www/traceodd/cricket-manager-web && \
+            chmod -R 755 /var/www/traceodd/cricket-manager-web && \
             chown -R www-data:www-data /var/www/traceodd/reseller && \
             chmod -R 755 /var/www/traceodd/reseller && \
             chown -R www-data:www-data /var/www/traceodd/driver && \
