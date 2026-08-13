@@ -21,6 +21,8 @@ class MatchModel extends Model
         'team_a_id',
         'team_b_id',
         'venue',
+        'ground_id',
+        'stage',
         'scheduled_at',
         'match_type',
         'overs_per_side',
@@ -64,6 +66,11 @@ class MatchModel extends Model
     public function teamB()
     {
         return $this->belongsTo(Team::class, 'team_b_id');
+    }
+
+    public function ground()
+    {
+        return $this->belongsTo(Ground::class, 'ground_id');
     }
 
     public function innings()

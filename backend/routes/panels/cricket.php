@@ -4,6 +4,7 @@ use App\Http\Controllers\Cricket\BestXiController;
 use App\Http\Controllers\Cricket\ClubController;
 use App\Http\Controllers\Cricket\CricketManagerAuthController;
 use App\Http\Controllers\Cricket\CricketManagerController;
+use App\Http\Controllers\Cricket\GroundController;
 use App\Http\Controllers\Cricket\LiveScoreController;
 use App\Http\Controllers\Cricket\MatchAnalyticsController;
 use App\Http\Controllers\Cricket\MatchController;
@@ -139,6 +140,23 @@ Route::prefix('api/v1/cricket/manager')
         Route::patch('players/{id}/status', [PlayerController::class, 'updateStatus']);
         Route::post('players/{id}/restore', [PlayerController::class, 'restore']);
         Route::delete('players/{id}/force', [PlayerController::class, 'forceDelete']);
+
+        // Fixture Scheduling — Match CRUD (manager-scoped)
+        Route::get('matches', [MatchController::class, 'index']);
+        Route::post('matches', [MatchController::class, 'store']);
+        Route::get('matches/{id}', [MatchController::class, 'show']);
+        Route::put('matches/{id}', [MatchController::class, 'update']);
+        Route::delete('matches/{id}', [MatchController::class, 'destroy']);
+        Route::patch('matches/{id}/status', [MatchController::class, 'updateStatus']);
+
+        // Fixture Scheduling — Round-Robin auto-generation
+        Route::post('tournaments/{tournamentId}/fixtures/generate', [MatchController::class, 'generateFixtures']);
+
+        // Grounds / Venues registry (manager-scoped)
+        Route::get('grounds', [GroundController::class, 'index']);
+        Route::post('grounds', [GroundController::class, 'store']);
+        Route::put('grounds/{id}', [GroundController::class, 'update']);
+        Route::delete('grounds/{id}', [GroundController::class, 'destroy']);
 
         // Instant Replay / VAR
         Route::post('matches/{matchId}/replay/event', [ReplayController::class, 'markEvent']);
