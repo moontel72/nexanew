@@ -41,7 +41,10 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Root-relative URLs so clients resolve images against their
+            // own origin (domain, IP, HTTPS) instead of a host baked into
+            // the database at upload time.
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

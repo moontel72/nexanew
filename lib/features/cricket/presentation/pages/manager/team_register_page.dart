@@ -51,6 +51,7 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
     return BlocConsumer<TeamBloc, TeamState>(
       listener: (context, state) async {
         if (state is TeamSuccess) {
+          String? logoError;
           if (_selectedLogoBytes != null) {
             try {
               final repo = RepositoryProvider.of<CricketRepository>(context);
@@ -59,17 +60,32 @@ class _TeamRegisterPageState extends State<TeamRegisterPage> {
                 _selectedLogoBytes!,
                 _logoFileName ?? 'logo.jpg',
               );
-            } catch (_) {
-              // Logo upload failed but team was created — non-fatal
+            } catch (e) {
+              // Team was created, but the logo upload failed — surface it
+              // so the user can retry instead of silently losing the logo.
+              logoError = e.toString().replaceFirst('Exception: ', '');
             }
           }
           if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Team "${state.team.name}" created!'),
-              backgroundColor: const Color(0xFF10B981),
-            ),
-          );
+          if (logoError != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Team "${state.team.name}" created, but the logo upload '
+                  'failed: $logoError\nYou can retry it from Media Management.',
+                ),
+                backgroundColor: const Color(0xFFEF4444),
+                duration: const Duration(seconds: 8),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Team "${state.team.name}" created!'),
+                backgroundColor: const Color(0xFF10B981),
+              ),
+            );
+          }
           Navigator.of(context).pop(true);
         } else if (state is TeamFailure) {
           ScaffoldMessenger.of(context).showSnackBar(

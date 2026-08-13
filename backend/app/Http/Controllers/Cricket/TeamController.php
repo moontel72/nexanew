@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Cricket\Team;
 use App\Models\Cricket\Tournament;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class TeamController extends Controller
@@ -68,10 +67,12 @@ class TeamController extends Controller
 
         $data = $validator->validated();
 
-        // Handle logo upload
+        // Handle logo upload.
+        // Store a root-relative path (/storage/teams/<file>) so any client
+        // (domain, IP, HTTP or HTTPS) resolves it against its own origin.
         if ($request->hasFile('logo')) {
             $path = $request->file('logo')->store('teams', 'public');
-            $data['logo_url'] = Storage::url($path);
+            $data['logo_url'] = '/storage/'.$path;
         }
         unset($data['logo']);
 
@@ -127,10 +128,10 @@ class TeamController extends Controller
 
         $data = $validator->validated();
 
-        // Handle logo upload
+        // Handle logo upload (root-relative path — see store()).
         if ($request->hasFile('logo')) {
             $path = $request->file('logo')->store('teams', 'public');
-            $data['logo_url'] = Storage::url($path);
+            $data['logo_url'] = '/storage/'.$path;
         }
         unset($data['logo']);
 

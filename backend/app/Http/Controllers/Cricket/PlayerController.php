@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Cricket;
 use App\Http\Controllers\Controller;
 use App\Models\Cricket\Player;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class PlayerController extends Controller
@@ -91,10 +90,12 @@ class PlayerController extends Controller
 
         $data = $validator->validated();
 
-        // Handle photo upload
+        // Handle photo upload.
+        // Store a root-relative path (/storage/players/<file>) so any client
+        // (domain, IP, HTTP or HTTPS) resolves it against its own origin.
         if ($request->hasFile('photo')) {
             $path = $request->file('photo')->store('players', 'public');
-            $data['photo_url'] = Storage::url($path);
+            $data['photo_url'] = '/storage/'.$path;
         }
 
         unset($data['photo']);
@@ -164,9 +165,10 @@ class PlayerController extends Controller
 
         $data = $validator->validated();
 
+        // Handle photo upload (root-relative path — see store()).
         if ($request->hasFile('photo')) {
             $path = $request->file('photo')->store('players', 'public');
-            $data['photo_url'] = Storage::url($path);
+            $data['photo_url'] = '/storage/'.$path;
         }
 
         unset($data['photo']);

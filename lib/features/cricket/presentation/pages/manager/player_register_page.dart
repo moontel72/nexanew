@@ -163,8 +163,22 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
           if (photoUrl != null && photoUrl.isNotEmpty) {
             player = player.copyWith(photoUrl: photoUrl);
           }
-        } catch (_) {
-          // Photo upload failed but player was created — non-fatal
+        } catch (e) {
+          // Player was created, but the photo upload failed — surface it
+          // so the user can retry instead of silently losing the picture.
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Player created, but the photo upload failed. '
+                  'You can retry it from the Players list.\n'
+                  '${e.toString().replaceFirst('Exception: ', '')}',
+                ),
+                backgroundColor: const Color(0xFFEF4444),
+                duration: const Duration(seconds: 8),
+              ),
+            );
+          }
         }
       }
       if (mounted)
