@@ -3,6 +3,10 @@
 // Renders all 7 ecosystem verticals as accent-coded feature cards.
 // Every field (tag, title, headline, copy, features, icon, accent color)
 // comes from the LandingVertical models parsed out of the JSON.
+//
+// Layout: fluid — cards size to their natural content height inside a
+// Wrap with explicit run spacing, so stacked cards can NEVER overlap or
+// clip each other on any viewport.
 
 import 'package:flutter/material.dart';
 
@@ -17,11 +21,10 @@ class VerticalsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.of(context).size.width > 900;
     return Container(
       width: double.infinity,
       color: LandingPalette.background,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 72),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 72),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -44,17 +47,21 @@ class VerticalsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 36),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: wide ? 2 : 1,
-              crossAxisSpacing: 20,
-              mainAxisSpacing: 20,
-              childAspectRatio: wide ? 1.55 : 1.05,
-            ),
-            itemCount: verticals.length,
-            itemBuilder: (context, i) => _VerticalCard(v: verticals[i]),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth > 900;
+              final cardWidth = wide
+                  ? (constraints.maxWidth - 24) / 2
+                  : constraints.maxWidth;
+              return Wrap(
+                spacing: 24,
+                runSpacing: 28,
+                children: [
+                  for (final v in verticals)
+                    SizedBox(width: cardWidth, child: _VerticalCard(v: v)),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -77,9 +84,11 @@ class _VerticalCard extends StatelessWidget {
         border: Border.all(color: LandingPalette.border),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 44,
@@ -132,14 +141,12 @@ class _VerticalCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Expanded(
-            child: Text(
-              v.copy,
-              style: const TextStyle(
-                color: LandingPalette.textSecondary,
-                fontSize: 12.5,
-                height: 1.55,
-              ),
+          Text(
+            v.copy,
+            style: const TextStyle(
+              color: LandingPalette.textSecondary,
+              fontSize: 12.5,
+              height: 1.55,
             ),
           ),
           const SizedBox(height: 12),

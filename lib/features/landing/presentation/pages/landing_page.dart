@@ -2,6 +2,8 @@
 //
 // Single-page brand landing site. Composes all sections and renders them
 // exclusively from LandingContentLoaded state — 100% JSON-driven UI.
+// On compact viewports the Scaffold exposes an endDrawer (hamburger menu)
+// rendered from the same JSON nav links as the desktop bar.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +17,7 @@ import '../widgets/hero_section.dart';
 import '../widgets/landing_anchors.dart';
 import '../widgets/landing_footer.dart';
 import '../widgets/landing_nav_bar.dart';
+import '../widgets/landing_nav_drawer.dart';
 import '../widgets/pricing_section.dart';
 import '../widgets/roadmap_section.dart';
 import '../widgets/signup_section.dart';
@@ -26,25 +29,30 @@ class LandingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: LandingPalette.background,
-      body: BlocConsumer<LandingContentBloc, LandingContentState>(
-        listener: (context, state) {
-          // Once content is loaded, arm the countdown from the JSON meta.
-          if (state is LandingContentLoaded) {
-            final target = state.content.meta.launchTarget;
-            if (target != null) {
-              context.read<CountdownBloc>().add(CountdownStarted(target));
-            }
+    return BlocConsumer<LandingContentBloc, LandingContentState>(
+      listener: (context, state) {
+        // Once content is loaded, arm the countdown from the JSON meta.
+        if (state is LandingContentLoaded) {
+          final target = state.content.meta.launchTarget;
+          if (target != null) {
+            context.read<CountdownBloc>().add(CountdownStarted(target));
           }
-        },
-        builder: (context, state) => switch (state) {
-          LandingContentInitial() => const _LoadingView(),
-          LandingContentLoading() => const _LoadingView(),
-          LandingContentLoaded(:final content) => _LoadedView(content: content),
-          LandingContentError(:final message) => _ErrorView(message: message),
-        },
-      ),
+        }
+      },
+      builder: (context, state) => switch (state) {
+        LandingContentInitial() => const _LoadingView(),
+        LandingContentLoading() => const _LoadingView(),
+        LandingContentLoaded(:final content) => Scaffold(
+          backgroundColor: LandingPalette.background,
+          endDrawer: LandingNavDrawer(
+            meta: content.meta,
+            nav: content.nav,
+            ctaLabel: content.signup.button,
+          ),
+          body: _LoadedView(content: content),
+        ),
+        LandingContentError(:final message) => _ErrorView(message: message),
+      },
     );
   }
 }
@@ -58,6 +66,7 @@ class _LoadedView extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           LandingNavBar(meta: content.meta, links: content.nav),
           HeroSection(
@@ -99,8 +108,11 @@ class _LoadingView extends StatelessWidget {
   const _LoadingView();
 
   @override
-  Widget build(BuildContext context) => const Center(
-    child: CircularProgressIndicator(color: LandingPalette.accent),
+  Widget build(BuildContext context) => const Scaffold(
+    backgroundColor: LandingPalette.background,
+    body: Center(
+      child: CircularProgressIndicator(color: LandingPalette.accent),
+    ),
   );
 }
 
@@ -111,33 +123,39 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.cloud_off,
-            size: 56,
-            color: LandingPalette.textTertiary,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: LandingPalette.textSecondary),
-          ),
-          const SizedBox(height: 18),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: LandingPalette.accent,
-              foregroundColor: LandingPalette.background,
+    return Scaffold(
+      backgroundColor: LandingPalette.background,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off,
+              size: 56,
+              color: LandingPalette.textTertiary,
             ),
-            onPressed: () => context.read<LandingContentBloc>().add(
-              const RetryLoadLandingContent(),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: LandingPalette.textSecondary),
+              ),
             ),
-            child: const Text('Retry'),
-          ),
-        ],
+            const SizedBox(height: 18),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: LandingPalette.accent,
+                foregroundColor: LandingPalette.background,
+              ),
+              onPressed: () => context.read<LandingContentBloc>().add(
+                const RetryLoadLandingContent(),
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ name: Deploy Flutter Web Frontend
 on:
   push:
     branches:
+      - main
       - mainnew
     paths:
       - "lib/**"

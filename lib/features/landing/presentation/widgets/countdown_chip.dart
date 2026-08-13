@@ -32,17 +32,20 @@ class CountdownChip extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _Cell(value: state.days, unit: 'DAYS'),
-                _Dot(),
-                _Cell(value: state.hours, unit: 'HRS'),
-                _Dot(),
-                _Cell(value: state.minutes, unit: 'MIN'),
-                _Dot(),
-                _Cell(value: state.seconds, unit: 'SEC'),
-              ],
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _Cell(value: state.days, unit: 'DAYS'),
+                  _Dot(),
+                  _Cell(value: state.hours, unit: 'HRS'),
+                  _Dot(),
+                  _Cell(value: state.minutes, unit: 'MIN'),
+                  _Dot(),
+                  _Cell(value: state.seconds, unit: 'SEC'),
+                ],
+              ),
             ),
           ],
         );
