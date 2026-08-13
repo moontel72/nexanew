@@ -64,7 +64,10 @@ jobs:
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Admin Panel (main.dart)
-        run: flutter build web --release
+        run: |
+          flutter build web --release
+          rm -f build/web/flutter_service_worker.js
+          bash .scripts/version-web-build.sh build/web
 
       - name: Verify Admin Panel build
         run: |
@@ -84,7 +87,10 @@ jobs:
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Landing Page (main_landing.dart)
-        run: flutter build web --release --target=lib/main_landing.dart --pwa-strategy none
+        run: |
+          flutter build web --release --target=lib/main_landing.dart --pwa-strategy none
+          rm -f build/web/flutter_service_worker.js
+          bash .scripts/version-web-build.sh build/web
 
       - name: Deploy Landing Page to /landing/
         run: |
@@ -100,6 +106,8 @@ jobs:
           flutter build web --release \
             --target=lib/main_cricket_public.dart \
             --pwa-strategy none
+          rm -f build/web/flutter_service_worker.js
+          bash .scripts/version-web-build.sh build/web
 
       - name: Deploy Cricket Public Portal to /cricket-public-web/
         run: |
@@ -116,6 +124,8 @@ jobs:
           flutter build web --release \
             --target=lib/main_cricket_manager.dart \
             --pwa-strategy none
+          rm -f build/web/flutter_service_worker.js
+          bash .scripts/version-web-build.sh build/web
 
       - name: Deploy Cricket Manager Panel to /cricket-manager-web/
         run: |
@@ -127,7 +137,10 @@ jobs:
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Reseller App (main_reseller.dart)
-        run: flutter build web --release --target=lib/main_reseller.dart --base-href "/reseller/"
+        run: |
+          flutter build web --release --target=lib/main_reseller.dart --base-href "/reseller/"
+          rm -f build/web/flutter_service_worker.js
+          bash .scripts/version-web-build.sh build/web
 
       - name: Deploy Reseller App to /reseller/
         continue-on-error: true
@@ -139,7 +152,10 @@ jobs:
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Driver App (main_driver.dart)
-        run: flutter build web --release --target=lib/main_driver.dart --base-href "/driver/"
+        run: |
+          flutter build web --release --target=lib/main_driver.dart --base-href "/driver/"
+          rm -f build/web/flutter_service_worker.js
+          bash .scripts/version-web-build.sh build/web
 
       - name: Deploy Driver App to /driver/
         continue-on-error: true
@@ -151,7 +167,10 @@ jobs:
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Bus Owner App (main_bus_owner.dart)
-        run: flutter build web --release --target=lib/main_bus_owner.dart --base-href "/bus-owner/" --pwa-strategy none
+        run: |
+          flutter build web --release --target=lib/main_bus_owner.dart --base-href "/bus-owner/" --pwa-strategy none
+          rm -f build/web/flutter_service_worker.js
+          bash .scripts/version-web-build.sh build/web
 
       - name: Deploy Bus Owner App to /bus-owner/
         run: |
@@ -163,7 +182,10 @@ jobs:
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Bus Fleet Admin (main_bus_fleet.dart)
-        run: flutter build web --release --target=lib/main_bus_fleet.dart --base-href "/bus-fleet/" --pwa-strategy none
+        run: |
+          flutter build web --release --target=lib/main_bus_fleet.dart --base-href "/bus-fleet/" --pwa-strategy none
+          rm -f build/web/flutter_service_worker.js
+          bash .scripts/version-web-build.sh build/web
 
       - name: Deploy Bus Fleet Admin to /bus-fleet/
         run: |
