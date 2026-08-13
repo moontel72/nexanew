@@ -239,6 +239,20 @@ class PlayerController extends Controller
         ]);
     }
 
+    /**
+     * Permanently delete a soft-deleted player (cannot be undone).
+     */
+    public function forceDelete(string $id): \Illuminate\Http\JsonResponse
+    {
+        $player = Player::onlyTrashed()->findOrFail($id);
+        $name = (string) $player->name;
+        $player->forceDelete();
+
+        return response()->json([
+            'message' => "Player '{$name}' permanently deleted.",
+        ]);
+    }
+
     public function updateStatus(Request $request, string $id): \Illuminate\Http\JsonResponse
     {
         $validator = Validator::make($request->all(), [

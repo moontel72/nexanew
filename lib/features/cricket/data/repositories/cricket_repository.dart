@@ -1057,6 +1057,18 @@ class CricketRepository {
     }
   }
 
+  /// Permanently delete a trashed team (cannot be undone).
+  Future<void> permanentlyDeleteTeam(String teamId) async {
+    final res = await _http.delete(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/teams/$teamId/force'),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200) {
+      final err = _parseBody(res);
+      throw Exception(err?['message'] ?? 'Failed to permanently delete team');
+    }
+  }
+
   Future<List<PlayerModel>> getTrashedPlayers() async {
     final res = await _http.get(
       Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/players/trashed'),
@@ -1081,6 +1093,20 @@ class CricketRepository {
     if (res.statusCode != 200) {
       final err = _parseBody(res);
       throw Exception(err?['message'] ?? 'Failed to restore player');
+    }
+  }
+
+  /// Permanently delete a trashed player (cannot be undone).
+  Future<void> permanentlyDeletePlayer(String playerId) async {
+    final res = await _http.delete(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/players/$playerId/force',
+      ),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200) {
+      final err = _parseBody(res);
+      throw Exception(err?['message'] ?? 'Failed to permanently delete player');
     }
   }
 }

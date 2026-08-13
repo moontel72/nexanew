@@ -1524,46 +1524,146 @@ class _PlayersListPageState extends State<PlayersListPage> {
                                     ],
                                   ),
                                 ),
-                                TextButton.icon(
-                                  icon: const Icon(Icons.restore, size: 18),
-                                  label: const Text('Restore'),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: const Color(0xFF10B981),
-                                  ),
-                                  onPressed: () async {
-                                    final repo = _safeRepo();
-                                    if (repo == null) return;
-                                    try {
-                                      await repo.restorePlayer(p.id);
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text('${p.name} restored'),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TextButton.icon(
+                                      icon: const Icon(Icons.restore, size: 18),
+                                      label: const Text('Restore'),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: const Color(
+                                          0xFF10B981,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        final repo = _safeRepo();
+                                        if (repo == null) return;
+                                        try {
+                                          await repo.restorePlayer(p.id);
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  '${p.name} restored',
+                                                ),
+                                                backgroundColor: const Color(
+                                                  0xFF10B981,
+                                                ),
+                                              ),
+                                            );
+                                            _loadTrash();
+                                            _load();
+                                          }
+                                        } catch (e) {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text('$e'),
+                                                backgroundColor: const Color(
+                                                  0xFFEF4444,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                    TextButton.icon(
+                                      icon: const Icon(
+                                        Icons.delete_forever,
+                                        size: 18,
+                                      ),
+                                      label: const Text('Delete Forever'),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: const Color(
+                                          0xFFEF4444,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        final confirmed = await showDialog<bool>(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
                                             backgroundColor: const Color(
-                                              0xFF10B981,
+                                              0xFF0F2936,
                                             ),
+                                            title: const Text(
+                                              'Permanently Delete Player?',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            content: Text(
+                                              '"${p.name}" will be permanently deleted and cannot be restored.',
+                                              style: const TextStyle(
+                                                color: Color(0xFFBDD8DB),
+                                              ),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () =>
+                                                    Navigator.pop(ctx, false),
+                                                child: const Text('CANCEL'),
+                                              ),
+                                              TextButton(
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor: const Color(
+                                                    0xFFEF4444,
+                                                  ),
+                                                ),
+                                                onPressed: () =>
+                                                    Navigator.pop(ctx, true),
+                                                child: const Text(
+                                                  'DELETE FOREVER',
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         );
-                                        _loadTrash();
-                                        _load();
-                                      }
-                                    } catch (e) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text('$e'),
-                                            backgroundColor: const Color(
-                                              0xFFEF4444,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
+                                        if (confirmed != true || !mounted) {
+                                          return;
+                                        }
+                                        final repo = _safeRepo();
+                                        if (repo == null) return;
+                                        try {
+                                          await repo.permanentlyDeletePlayer(
+                                            p.id,
+                                          );
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  '${p.name} permanently deleted',
+                                                ),
+                                                backgroundColor: const Color(
+                                                  0xFFEF4444,
+                                                ),
+                                              ),
+                                            );
+                                            _loadTrash();
+                                          }
+                                        } catch (e) {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text('$e'),
+                                                backgroundColor: const Color(
+                                                  0xFFEF4444,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),

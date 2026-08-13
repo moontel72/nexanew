@@ -190,6 +190,20 @@ class TeamController extends Controller
         ]);
     }
 
+    /**
+     * Permanently delete a soft-deleted team (cannot be undone).
+     */
+    public function forceDelete(string $id): \Illuminate\Http\JsonResponse
+    {
+        $team = Team::onlyTrashed()->findOrFail($id);
+        $name = (string) $team->name;
+        $team->forceDelete();
+
+        return response()->json([
+            'message' => "Team '{$name}' permanently deleted.",
+        ]);
+    }
+
     public function updateStatus(Request $request, string $id): \Illuminate\Http\JsonResponse
     {
         $validator = Validator::make($request->all(), [

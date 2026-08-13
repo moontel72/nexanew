@@ -127,6 +127,7 @@ Route::prefix('api/v1/cricket/manager')
         Route::delete('teams/{id}', [TeamController::class, 'destroy']);
         Route::patch('teams/{id}/status', [TeamController::class, 'updateStatus']);
         Route::post('teams/{id}/restore', [TeamController::class, 'restore']);
+        Route::delete('teams/{id}/force', [TeamController::class, 'forceDelete']);
 
         // Player Management
         Route::get('players/all', [PlayerController::class, 'listAll']);
@@ -137,6 +138,7 @@ Route::prefix('api/v1/cricket/manager')
         Route::delete('players/{id}', [PlayerController::class, 'destroy']);
         Route::patch('players/{id}/status', [PlayerController::class, 'updateStatus']);
         Route::post('players/{id}/restore', [PlayerController::class, 'restore']);
+        Route::delete('players/{id}/force', [PlayerController::class, 'forceDelete']);
 
         // Instant Replay / VAR
         Route::post('matches/{matchId}/replay/event', [ReplayController::class, 'markEvent']);
