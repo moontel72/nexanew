@@ -1,9 +1,9 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
+import 'package:trace_odd/features/cricket/presentation/widgets/cricket_image_resolver.dart';
 
 class MediaManagementPage extends StatefulWidget {
   const MediaManagementPage({super.key});
@@ -136,11 +136,6 @@ class _TeamMediaCard extends StatelessWidget {
   final VoidCallback onChanged;
   const _TeamMediaCard({required this.team, required this.onChanged});
 
-  String _fullUrl(String path) {
-    if (path.startsWith('http')) return path;
-    return '${ApiConfig.baseUrl}$path';
-  }
-
   Future<void> _pickAndUploadLogo(BuildContext context) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
@@ -212,6 +207,7 @@ class _TeamMediaCard extends StatelessWidget {
     final code = team.shortCode.isNotEmpty
         ? team.shortCode
         : (team.teamCode ?? '');
+    final logo = resolveImageUrl(team.logoUrl);
 
     return Card(
       color: const Color(0xFF0F2936),
@@ -226,10 +222,8 @@ class _TeamMediaCard extends StatelessWidget {
             CircleAvatar(
               radius: 36,
               backgroundColor: const Color(0xFF1E2238),
-              backgroundImage: team.logoUrl != null && team.logoUrl!.isNotEmpty
-                  ? NetworkImage(_fullUrl(team.logoUrl!))
-                  : null,
-              child: team.logoUrl == null || team.logoUrl!.isEmpty
+              backgroundImage: logo != null ? NetworkImage(logo) : null,
+              child: logo == null
                   ? const Icon(
                       Icons.shield_outlined,
                       color: Color(0xFFA0AAB8),

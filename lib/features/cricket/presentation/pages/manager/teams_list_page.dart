@@ -1,10 +1,10 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/team/team_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/widgets/cricket_image_resolver.dart';
 import 'team_register_page.dart';
 
 class TeamsListPage extends StatefulWidget {
@@ -104,12 +104,8 @@ class _TeamsListPageState extends State<TeamsListPage> {
     }
   }
 
-  String _fullUrl(String path) {
-    if (path.startsWith('http')) return path;
-    return '${ApiConfig.baseUrl}$path';
-  }
-
   void _showDetailModal(TeamModel team) {
+    final logo = resolveImageUrl(team.logoUrl);
     showDialog(
       context: context,
       barrierColor: Colors.black54,
@@ -240,11 +236,10 @@ class _TeamsListPageState extends State<TeamsListPage> {
                         child: CircleAvatar(
                           radius: 30,
                           backgroundColor: _teamColor(team),
-                          backgroundImage:
-                              team.logoUrl != null && team.logoUrl!.isNotEmpty
-                              ? NetworkImage(_fullUrl(team.logoUrl!))
+                          backgroundImage: logo != null
+                              ? NetworkImage(logo)
                               : null,
-                          child: team.logoUrl == null || team.logoUrl!.isEmpty
+                          child: logo == null
                               ? const Icon(
                                   Icons.shield_outlined,
                                   color: Colors.white,
@@ -700,6 +695,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
                       itemCount: _filtered.length,
                       itemBuilder: (_, i) {
                         final t = _filtered[i];
+                        final logo = resolveImageUrl(t.logoUrl);
                         return Card(
                           color: const Color(0xFF0F2936),
                           margin: const EdgeInsets.only(bottom: 8),
@@ -798,11 +794,10 @@ class _TeamsListPageState extends State<TeamsListPage> {
                               },
                               child: CircleAvatar(
                                 backgroundColor: _teamColor(t),
-                                backgroundImage:
-                                    t.logoUrl != null && t.logoUrl!.isNotEmpty
-                                    ? NetworkImage(_fullUrl(t.logoUrl!))
+                                backgroundImage: logo != null
+                                    ? NetworkImage(logo)
                                     : null,
-                                child: t.logoUrl == null || t.logoUrl!.isEmpty
+                                child: logo == null
                                     ? const Icon(
                                         Icons.shield_outlined,
                                         color: Colors.white,
@@ -826,107 +821,116 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                         : const Color(0xFFEF4444),
                                   ),
                                 ),
-                                Flexible(
+                                Expanded(
                                   child: Text(
                                     t.name,
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
                                     ),
                                     overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (t.teamCode != null &&
-                                    t.teamCode!.isNotEmpty) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF10B981,
-                                      ).withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(
-                                        color: const Color(
-                                          0xFF10B981,
-                                        ).withOpacity(0.5),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      t.teamCode!,
-                                      style: const TextStyle(
-                                        color: Color(0xFF10B981),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 2,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        (t.status == 'active'
-                                                ? const Color(0xFF10B981)
-                                                : t.status == 'inactive'
-                                                ? const Color(0xFF6B7280)
-                                                : const Color(0xFFEF4444))
-                                            .withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(
-                                      color:
-                                          (t.status == 'active'
-                                                  ? const Color(0xFF10B981)
-                                                  : t.status == 'inactive'
-                                                  ? const Color(0xFF6B7280)
-                                                  : const Color(0xFFEF4444))
-                                              .withOpacity(0.5),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    t.status == 'active'
-                                        ? 'Active'
-                                        : t.status == 'inactive'
-                                        ? 'Inactive'
-                                        : 'Suspended',
-                                    style: TextStyle(
-                                      color: t.status == 'active'
-                                          ? const Color(0xFF10B981)
-                                          : t.status == 'inactive'
-                                          ? const Color(0xFF6B7280)
-                                          : const Color(0xFFEF4444),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    maxLines: 1,
                                   ),
                                 ),
                               ],
                             ),
-                            subtitle: _showingTrash
-                                ? Text(
-                                    t.deletedAt != null
-                                        ? 'Deleted ${_formatDate(t.deletedAt!)}'
-                                        : '(deleted)',
-                                    style: const TextStyle(
-                                      color: Color(0xFFEF4444),
-                                      fontSize: 12,
-                                    ),
-                                  )
-                                : Text(
-                                    '${t.playerCount ?? 0} players${t.homeCity != null ? ' · ${t.homeCity}' : ''}',
-                                    style: const TextStyle(
-                                      color: Color(0xFFBDD8DB),
-                                      fontSize: 12,
-                                    ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _showingTrash
+                                      ? (t.deletedAt != null
+                                            ? 'Deleted ${_formatDate(t.deletedAt!)}'
+                                            : '(deleted)')
+                                      : '${t.playerCount ?? 0} players${t.homeCity != null ? ' · ${t.homeCity}' : ''}',
+                                  style: TextStyle(
+                                    color: _showingTrash
+                                        ? const Color(0xFFEF4444)
+                                        : const Color(0xFFBDD8DB),
+                                    fontSize: 12,
                                   ),
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: [
+                                    if (t.teamCode != null &&
+                                        t.teamCode!.isNotEmpty)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(
+                                            0xFF10B981,
+                                          ).withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(
+                                              0xFF10B981,
+                                            ).withOpacity(0.5),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          t.teamCode!,
+                                          style: const TextStyle(
+                                            color: Color(0xFF10B981),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            (t.status == 'active'
+                                                    ? const Color(0xFF10B981)
+                                                    : t.status == 'inactive'
+                                                    ? const Color(0xFF6B7280)
+                                                    : const Color(0xFFEF4444))
+                                                .withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color:
+                                              (t.status == 'active'
+                                                      ? const Color(0xFF10B981)
+                                                      : t.status == 'inactive'
+                                                      ? const Color(0xFF6B7280)
+                                                      : const Color(0xFFEF4444))
+                                                  .withOpacity(0.5),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        t.status == 'active'
+                                            ? 'Active'
+                                            : t.status == 'inactive'
+                                            ? 'Inactive'
+                                            : 'Suspended',
+                                        style: TextStyle(
+                                          color: t.status == 'active'
+                                              ? const Color(0xFF10B981)
+                                              : t.status == 'inactive'
+                                              ? const Color(0xFF6B7280)
+                                              : const Color(0xFFEF4444),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                             trailing: _showingTrash
                                 ? Row(
                                     mainAxisSize: MainAxisSize.min,

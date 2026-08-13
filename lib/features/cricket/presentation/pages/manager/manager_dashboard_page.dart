@@ -20,7 +20,6 @@ import 'team_register_page.dart';
 import 'teams_list_page.dart';
 import 'player_register_page.dart';
 import 'players_list_page.dart';
-import 'media_management_page.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 
 /// Manager Dashboard — 3D Pencil Sidebar layout matching Sub-Admin panel design.
@@ -617,21 +616,6 @@ class _TeamManagerTab extends StatelessWidget {
               builder: (_) => RepositoryProvider.value(
                 value: repo,
                 child: const PlayersListPage(),
-              ),
-            ),
-          ),
-        ),
-        Missile3DButton(
-          label: 'Team Logos & Photos',
-          icon: Icons.image,
-          color: const Color(0xFFA855F7),
-          subtitle: 'Manage team logos and player photos',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => RepositoryProvider.value(
-                value: repo,
-                child: const MediaManagementPage(),
               ),
             ),
           ),
