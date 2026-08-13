@@ -4,8 +4,8 @@
 //! Accepts JSON on stdin and returns JSON on stdout.
 //!
 //! Usage:
-//!   echo '{"code_type":"unit","count":1000,...}' | nexatrace_rust generate
-//!   nexatrace_rust --version
+//!   echo '{"code_type":"unit","count":1000,...}' | trace_odd_rust generate
+//!   trace_odd_rust --version
 
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
@@ -63,12 +63,12 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() >= 2 && (args[1] == "--version" || args[1] == "-V") {
-        println!("nexatrace_rust {}", env!("CARGO_PKG_VERSION"));
+        println!("trace_odd_rust {}", env!("CARGO_PKG_VERSION"));
         return;
     }
 
     if args.len() < 2 {
-        eprintln!("Usage: nexatrace_rust <generate|--version>");
+        eprintln!("Usage: trace_odd_rust <generate|--version>");
         std::process::exit(1);
     }
 

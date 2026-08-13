@@ -10,6 +10,7 @@
 
 // Re-export public API
 pub mod algorithms;
+pub mod ffi_abi;
 pub mod generators;
 pub mod international;
 pub mod models;
@@ -86,8 +87,8 @@ pub fn generate_carton_code_with_format(
     factory_id: String,
     company_prefix: Option<String>,
 ) -> Result<String, String> {
-    let format = generators::carton::CartonCodeFormat::from_str(&code_format)
-        .map_err(|e| e.to_string())?;
+    let format =
+        generators::carton::CartonCodeFormat::from_str(&code_format).map_err(|e| e.to_string())?;
     let params = generators::carton::CartonGenerationParams {
         code_format: format,
         prefix,
@@ -100,8 +101,7 @@ pub fn generate_carton_code_with_format(
         units_per_packet: None,
         packet_prefix: None,
     };
-    generators::carton::generate_single_code_with_format(&params)
-        .map_err(|e| e.to_string())
+    generators::carton::generate_single_code_with_format(&params).map_err(|e| e.to_string())
 }
 
 /// Generate multiple carton codes in batch with a specific format
@@ -117,8 +117,8 @@ pub fn generate_carton_codes_batch_with_format(
     factory_id: String,
     company_prefix: Option<String>,
 ) -> Result<Vec<String>, String> {
-    let format = generators::carton::CartonCodeFormat::from_str(&code_format)
-        .map_err(|e| e.to_string())?;
+    let format =
+        generators::carton::CartonCodeFormat::from_str(&code_format).map_err(|e| e.to_string())?;
     let params = generators::carton::CartonGenerationParams {
         code_format: format,
         prefix,
@@ -131,8 +131,7 @@ pub fn generate_carton_codes_batch_with_format(
         units_per_packet: None,
         packet_prefix: None,
     };
-    generators::carton::generate_batch_with_format(&params)
-        .map_err(|e| e.to_string())
+    generators::carton::generate_batch_with_format(&params).map_err(|e| e.to_string())
 }
 
 /// Get all supported carton code format identifiers
@@ -146,14 +145,10 @@ pub fn get_carton_code_formats() -> Vec<String> {
 
 /// Validate a carton code against a specific format
 #[frb]
-pub fn validate_carton_code_with_format(
-    code: String,
-    code_format: String,
-) -> Result<bool, String> {
-    let format = generators::carton::CartonCodeFormat::from_str(&code_format)
-        .map_err(|e| e.to_string())?;
-    generators::carton::validate_code_with_format(&code, format)
-        .map_err(|e| e.to_string())
+pub fn validate_carton_code_with_format(code: String, code_format: String) -> Result<bool, String> {
+    let format =
+        generators::carton::CartonCodeFormat::from_str(&code_format).map_err(|e| e.to_string())?;
+    generators::carton::validate_code_with_format(&code, format).map_err(|e| e.to_string())
 }
 
 /// Generate a single packet code
@@ -193,8 +188,8 @@ pub fn generate_packet_code_with_format(
     factory_id: String,
     company_prefix: Option<String>,
 ) -> Result<String, String> {
-    let format = generators::carton::CartonCodeFormat::from_str(&code_format)
-        .map_err(|e| e.to_string())?;
+    let format =
+        generators::carton::CartonCodeFormat::from_str(&code_format).map_err(|e| e.to_string())?;
     let params = generators::packet::PacketGenerationParams {
         code_format: format,
         prefix,
@@ -206,8 +201,7 @@ pub fn generate_packet_code_with_format(
         units_per_packet: None,
         unit_prefix: None,
     };
-    generators::packet::generate_single_code_with_format(&params)
-        .map_err(|e| e.to_string())
+    generators::packet::generate_single_code_with_format(&params).map_err(|e| e.to_string())
 }
 
 /// Generate multiple packet codes in batch with a specific format
@@ -223,8 +217,8 @@ pub fn generate_packet_codes_batch_with_format(
     factory_id: String,
     company_prefix: Option<String>,
 ) -> Result<Vec<String>, String> {
-    let format = generators::carton::CartonCodeFormat::from_str(&code_format)
-        .map_err(|e| e.to_string())?;
+    let format =
+        generators::carton::CartonCodeFormat::from_str(&code_format).map_err(|e| e.to_string())?;
     let params = generators::packet::PacketGenerationParams {
         code_format: format,
         prefix,
@@ -236,8 +230,7 @@ pub fn generate_packet_codes_batch_with_format(
         units_per_packet: None,
         unit_prefix: None,
     };
-    generators::packet::generate_batch_with_format(&params)
-        .map_err(|e| e.to_string())
+    generators::packet::generate_batch_with_format(&params).map_err(|e| e.to_string())
 }
 
 /// Get all supported packet code format identifiers
@@ -251,14 +244,10 @@ pub fn get_packet_code_formats() -> Vec<String> {
 
 /// Validate a packet code against a specific format
 #[frb]
-pub fn validate_packet_code_with_format(
-    code: String,
-    code_format: String,
-) -> Result<bool, String> {
-    let format = generators::carton::CartonCodeFormat::from_str(&code_format)
-        .map_err(|e| e.to_string())?;
-    generators::packet::validate_code_with_format(&code, format)
-        .map_err(|e| e.to_string())
+pub fn validate_packet_code_with_format(code: String, code_format: String) -> Result<bool, String> {
+    let format =
+        generators::carton::CartonCodeFormat::from_str(&code_format).map_err(|e| e.to_string())?;
+    generators::packet::validate_code_with_format(&code, format).map_err(|e| e.to_string())
 }
 
 /// Generate a single unit (authentication) code
@@ -326,58 +315,53 @@ pub fn generate_gs1_code(
 
 /// Generate QR code data for a code
 #[frb]
-pub fn generate_qr_code_data(code: String, additional_data: Option<String>) -> Result<String, String> {
-    international::qr::generate_qr_data(code, additional_data)
-        .map_err(|e| e.to_string())
+pub fn generate_qr_code_data(
+    code: String,
+    additional_data: Option<String>,
+) -> Result<String, String> {
+    international::qr::generate_qr_data(code, additional_data).map_err(|e| e.to_string())
 }
 
 /// Generate barcode data for a code
 #[frb]
 pub fn generate_barcode_data(code: String, barcode_type: String) -> Result<String, String> {
-    international::barcode::generate_barcode_data(code, barcode_type)
-        .map_err(|e| e.to_string())
+    international::barcode::generate_barcode_data(code, barcode_type).map_err(|e| e.to_string())
 }
 
 /// Validate a code format
 #[frb]
 pub fn validate_code_format(code: String, code_type: String) -> Result<bool, String> {
-    utils::validation::validate_code_format(&code, &code_type)
-        .map_err(|e| e.to_string())
+    utils::validation::validate_code_format(&code, &code_type).map_err(|e| e.to_string())
 }
 
 /// Generate secure authentication code
 #[frb]
 pub fn generate_authentication_code(length: u32) -> Result<String, String> {
-    algorithms::authentication::generate_secure_code(length)
-        .map_err(|e| e.to_string())
+    algorithms::authentication::generate_secure_code(length).map_err(|e| e.to_string())
 }
 
 /// Verify authentication code
 #[frb]
 pub fn verify_authentication_code(code: String, expected_length: u32) -> Result<bool, String> {
-    algorithms::authentication::verify_code(&code, expected_length)
-        .map_err(|e| e.to_string())
+    algorithms::authentication::verify_code(&code, expected_length).map_err(|e| e.to_string())
 }
 
 /// Calculate checksum for a code
 #[frb]
 pub fn calculate_checksum(code: String) -> Result<String, String> {
-    algorithms::checksum::calculate(&code)
-        .map_err(|e| e.to_string())
+    algorithms::checksum::calculate(&code).map_err(|e| e.to_string())
 }
 
 /// Encrypt code data
 #[frb]
 pub fn encrypt_code_data(data: String, key: String) -> Result<String, String> {
-    algorithms::encryption::encrypt(&data, &key)
-        .map_err(|e| e.to_string())
+    algorithms::encryption::encrypt(&data, &key).map_err(|e| e.to_string())
 }
 
 /// Decrypt code data
 #[frb]
 pub fn decrypt_code_data(encrypted_data: String, key: String) -> Result<String, String> {
-    algorithms::encryption::decrypt(&encrypted_data, &key)
-        .map_err(|e| e.to_string())
+    algorithms::encryption::decrypt(&encrypted_data, &key).map_err(|e| e.to_string())
 }
 
 /// Get module version

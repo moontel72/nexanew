@@ -9,22 +9,38 @@ import 'package:ffi/ffi.dart';
 /// Rust FFI Configuration
 /// Handles platform-specific dynamic library loading for Rust module integration
 class RustFFI {
-  /// Get the platform-specific dynamic library
+  /// Get the platform-specific dynamic library.
+  ///
+  /// The crate builds `libtrace_odd_rust.{so,dylib}` (cdylib); the legacy
+  /// `rust_module` names are kept as fallbacks for older local builds.
   static DynamicLibrary get nativeLib {
     if (Platform.isWindows) {
-      return DynamicLibrary.open('rust_module.dll');
+      return _openAny(['trace_odd_rust.dll', 'rust_module.dll']);
     } else if (Platform.isLinux) {
-      return DynamicLibrary.open('librust_module.so');
+      return _openAny(['libtrace_odd_rust.so', 'librust_module.so']);
     } else if (Platform.isMacOS) {
-      return DynamicLibrary.open('librust_module.dylib');
+      return _openAny(['libtrace_odd_rust.dylib', 'librust_module.dylib']);
     } else if (Platform.isAndroid) {
-      return DynamicLibrary.open('librust_module.so');
+      return _openAny(['libtrace_odd_rust.so', 'librust_module.so']);
     } else if (Platform.isIOS) {
       return DynamicLibrary.open('rust_module.framework/rust_module');
     } else {
       throw UnsupportedError(
-          'Unsupported platform: ${Platform.operatingSystem}');
+        'Unsupported platform: ${Platform.operatingSystem}',
+      );
     }
+  }
+
+  static DynamicLibrary _openAny(List<String> names) {
+    Object? lastError;
+    for (final name in names) {
+      try {
+        return DynamicLibrary.open(name);
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    throw lastError ?? Exception('Failed to load Rust module library');
   }
 
   /// Initialize Rust module
@@ -51,51 +67,71 @@ class RustModule {
   static final DynamicLibrary _lib = RustFFI.nativeLib;
 
   // Code Generation Functions
-  static final Pointer<Utf8> Function(Pointer<Utf8>) generateCodes =
-      _lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
-          Pointer<Utf8> Function(Pointer<Utf8>)>('generate_codes');
+  static final Pointer<Utf8> Function(Pointer<Utf8>) generateCodes = _lib
+      .lookupFunction<
+        Pointer<Utf8> Function(Pointer<Utf8>),
+        Pointer<Utf8> Function(Pointer<Utf8>)
+      >('generate_codes');
 
-  static final Pointer<Utf8> Function(Pointer<Utf8>) generateBundleCodes =
-      _lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
-          Pointer<Utf8> Function(Pointer<Utf8>)>('generate_bundle_codes');
+  static final Pointer<Utf8> Function(Pointer<Utf8>) generateBundleCodes = _lib
+      .lookupFunction<
+        Pointer<Utf8> Function(Pointer<Utf8>),
+        Pointer<Utf8> Function(Pointer<Utf8>)
+      >('generate_bundle_codes');
 
-  static final Pointer<Utf8> Function(Pointer<Utf8>) generateCartonCodes =
-      _lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
-          Pointer<Utf8> Function(Pointer<Utf8>)>('generate_carton_codes');
+  static final Pointer<Utf8> Function(Pointer<Utf8>) generateCartonCodes = _lib
+      .lookupFunction<
+        Pointer<Utf8> Function(Pointer<Utf8>),
+        Pointer<Utf8> Function(Pointer<Utf8>)
+      >('generate_carton_codes');
 
-  static final Pointer<Utf8> Function(Pointer<Utf8>) generatePacketCodes =
-      _lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
-          Pointer<Utf8> Function(Pointer<Utf8>)>('generate_packet_codes');
+  static final Pointer<Utf8> Function(Pointer<Utf8>) generatePacketCodes = _lib
+      .lookupFunction<
+        Pointer<Utf8> Function(Pointer<Utf8>),
+        Pointer<Utf8> Function(Pointer<Utf8>)
+      >('generate_packet_codes');
 
-  static final Pointer<Utf8> Function(Pointer<Utf8>) generateUnitCodes =
-      _lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
-          Pointer<Utf8> Function(Pointer<Utf8>)>('generate_unit_codes');
+  static final Pointer<Utf8> Function(Pointer<Utf8>) generateUnitCodes = _lib
+      .lookupFunction<
+        Pointer<Utf8> Function(Pointer<Utf8>),
+        Pointer<Utf8> Function(Pointer<Utf8>)
+      >('generate_unit_codes');
 
   // Validation Functions
-  static final Pointer<Utf8> Function(Pointer<Utf8>) validateCode =
-      _lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
-          Pointer<Utf8> Function(Pointer<Utf8>)>('validate_code');
+  static final Pointer<Utf8> Function(Pointer<Utf8>) validateCode = _lib
+      .lookupFunction<
+        Pointer<Utf8> Function(Pointer<Utf8>),
+        Pointer<Utf8> Function(Pointer<Utf8>)
+      >('validate_code');
 
-  static final Pointer<Utf8> Function(Pointer<Utf8>) validateCodeBatch =
-      _lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
-          Pointer<Utf8> Function(Pointer<Utf8>)>('validate_code_batch');
+  static final Pointer<Utf8> Function(Pointer<Utf8>) validateCodeBatch = _lib
+      .lookupFunction<
+        Pointer<Utf8> Function(Pointer<Utf8>),
+        Pointer<Utf8> Function(Pointer<Utf8>)
+      >('validate_code_batch');
 
   // Utility Functions
-  static final Pointer<Utf8> Function(Pointer<Utf8>) generateChecksum =
-      _lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
-          Pointer<Utf8> Function(Pointer<Utf8>)>('generate_checksum');
+  static final Pointer<Utf8> Function(Pointer<Utf8>) generateChecksum = _lib
+      .lookupFunction<
+        Pointer<Utf8> Function(Pointer<Utf8>),
+        Pointer<Utf8> Function(Pointer<Utf8>)
+      >('generate_checksum');
 
-  static final Pointer<Utf8> Function(Pointer<Utf8>) encryptCode =
-      _lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
-          Pointer<Utf8> Function(Pointer<Utf8>)>('encrypt_code');
+  static final Pointer<Utf8> Function(Pointer<Utf8>) encryptCode = _lib
+      .lookupFunction<
+        Pointer<Utf8> Function(Pointer<Utf8>),
+        Pointer<Utf8> Function(Pointer<Utf8>)
+      >('encrypt_code');
 
-  static final Pointer<Utf8> Function(Pointer<Utf8>) decryptCode =
-      _lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
-          Pointer<Utf8> Function(Pointer<Utf8>)>('decrypt_code');
+  static final Pointer<Utf8> Function(Pointer<Utf8>) decryptCode = _lib
+      .lookupFunction<
+        Pointer<Utf8> Function(Pointer<Utf8>),
+        Pointer<Utf8> Function(Pointer<Utf8>)
+      >('decrypt_code');
 
   // Initialization function
-  static final void Function() initRustModule =
-      _lib.lookupFunction<Void Function(), void Function()>('init_rust_module');
+  static final void Function() initRustModule = _lib
+      .lookupFunction<Void Function(), void Function()>('init_rust_module');
 }
 
 /// Rust Module Service

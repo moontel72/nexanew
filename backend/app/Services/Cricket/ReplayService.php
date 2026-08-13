@@ -7,6 +7,7 @@ use App\Models\Cricket\ReplayChunk;
 use App\Models\Cricket\ReplayClip;
 use App\Models\Cricket\ReplayEvent;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -204,16 +205,58 @@ class ReplayService
             ->first();
     }
 
+    /**
+     * Ask the Rust video-chunker sidecar to trim the clip from its
+     * source chunk. The sidecar runs FFmpeg with the buffer offsets and
+     * speed filter, then returns the output path.
+     *
+     * Never throws: clip creation must succeed even when the sidecar is
+     * down — the clip stays with an empty file path until trimmed.
+     */
     private function requestClipTrim(ReplayClip $clip): void
     {
-        // TODO: Send HTTP request to Rust sidecar on :9090
-        // POST http://127.0.0.1:9090/clip/trim
-        // Body: { clip_id, chunk_id, buffer_before_ms, buffer_after_ms, speed, output_path }
-        //
-        // The Rust sidecar will:
-        // 1. Locate the source chunk file
-        // 2. Run ffmpeg with the buffer offsets and speed filter
-        // 3. Write the trimmed clip to /var/replays/{match_id}/clips/
-        // 4. POST back to Laravel to update the clip_file_path
+        $chunk = $clip->event?->chunk;
+        if (!$chunk || empty($chunk->file_path) || !file_exists($chunk->file_path)) {
+            Log::warning('Cricket: Replay clip trim skipped — source chunk not available', [
+                'clip_id' => $clip->id,
+                'chunk_id' => $chunk?->id,
+            ]);
+            return;
+        }
+
+        $outputPath = '/var/replays/' . $clip->match_id . '/clips/' . $clip->id . '.mp4';
+        $baseUrl = rtrim(env('RUST_CHUNKER_URL', 'http://127.0.0.1:9090'), '/');
+
+        try {
+            $response = Http::timeout(300)->post($baseUrl . '/clip/trim', [
+                'clip_id' => $clip->id,
+                'chunk_id' => $chunk->id,
+                'source_path' => $chunk->file_path,
+                'buffer_before_ms' => (int) $clip->buffer_before_ms,
+                'buffer_after_ms' => (int) $clip->buffer_after_ms,
+                'speed' => (float) ($clip->playback_speed ?? 1.0),
+                'output_path' => $outputPath,
+            ]);
+
+            if ($response->successful() && $response->json('success')) {
+                $resolvedPath = $response->json('output_path') ?? $outputPath;
+                $clip->update(['clip_file_path' => $resolvedPath]);
+                Log::info('Cricket: Replay clip trimmed by Rust sidecar', [
+                    'clip_id' => $clip->id,
+                    'output' => $resolvedPath,
+                ]);
+            } else {
+                Log::warning('Cricket: Replay clip trim failed', [
+                    'clip_id' => $clip->id,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Cricket: Rust sidecar unreachable for clip trim', [
+                'clip_id' => $clip->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

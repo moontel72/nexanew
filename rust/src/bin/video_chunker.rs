@@ -1,10 +1,13 @@
+use chrono::Utc;
 use clap::Parser;
+use reqwest::Client;
+use serde::Deserialize;
+use serde_json::json;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Arc;
-use chrono::Utc;
-use reqwest::Client;
-use serde_json::json;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 
@@ -126,10 +129,7 @@ impl ChunkingEngine {
         let match_dir = self.replay_dir.join(match_id).join("chunks");
         tokio::fs::create_dir_all(&match_dir).await?;
 
-        let output_file = match_dir.join(format!(
-            "MATCH_{}_{:06}.mp4",
-            timestamp, counter
-        ));
+        let output_file = match_dir.join(format!("MATCH_{}_{:06}.mp4", timestamp, counter));
 
         info!(
             "Assembling chunk {:06}: {} → {:?}",
@@ -151,10 +151,14 @@ impl ChunkingEngine {
         let output = Command::new("ffmpeg")
             .args([
                 "-y",
-                "-f", "concat",
-                "-safe", "0",
-                "-i", &concat_path.to_string_lossy(),
-                "-c", "copy",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                &concat_path.to_string_lossy(),
+                "-c",
+                "copy",
                 &output_file.to_string_lossy(),
             ])
             .output()?;
@@ -210,12 +214,7 @@ impl ChunkingEngine {
             "file_size_bytes": file_size,
         });
 
-        let resp = self
-            .http_client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await?;
+        let resp = self.http_client.post(&url).json(&payload).send().await?;
 
         if !resp.status().is_success() {
             warn!(
@@ -250,10 +249,14 @@ impl ChunkingEngine {
         let trim = Command::new("ffmpeg")
             .args([
                 "-y",
-                "-ss", &format!("{}ms", buffer_before_ms),
-                "-t", &format!("{}ms", duration_ms),
-                "-i", source_path,
-                "-c", "copy",
+                "-ss",
+                &format!("{}ms", buffer_before_ms),
+                "-t",
+                &format!("{}ms", duration_ms),
+                "-i",
+                source_path,
+                "-c",
+                "copy",
                 &temp_output,
             ])
             .output()?;
@@ -269,9 +272,12 @@ impl ChunkingEngine {
         let output = Command::new("ffmpeg")
             .args([
                 "-y",
-                "-i", &temp_output,
-                "-filter:v", &speed_filter,
-                "-filter:a", &audio_filter,
+                "-i",
+                &temp_output,
+                "-filter:v",
+                &speed_filter,
+                "-filter:a",
+                &audio_filter,
                 output_path,
             ])
             .output()?;
@@ -288,18 +294,166 @@ impl ChunkingEngine {
     }
 }
 
-// ── HTTP Server (stub) ─────────────────────────────────────────
+// ── HTTP Server (clip trim API) ──────────────────────────────
 
-async fn start_http_server(_port: u16, _engine: Arc<ChunkingEngine>) {
-    info!("HTTP server placeholder — implement with axum or actix-web in production");
-    // In production, use axum:
-    //
-    // use axum::{Router, routing::get, Json};
-    //
-    // let app = Router::new()
-    //     .route("/health", get(|| async { "ok" }))
-    //     .route("/clip/trim", post(trim_clip_handler));
-    //
-    // let listener = tokio::net::TcpListener::bind(("0.0.0.0", port)).await?;
-    // axum::serve(listener, app).await?;
+/// Request body for `POST /clip/trim` (sent by Laravel's ReplayService).
+#[derive(Deserialize)]
+struct ClipTrimRequest {
+    clip_id: String,
+    chunk_id: Option<String>,
+    source_path: String,
+    buffer_before_ms: i64,
+    buffer_after_ms: i64,
+    #[serde(default = "default_speed")]
+    speed: f64,
+    output_path: String,
+}
+
+fn default_speed() -> f64 {
+    1.0
+}
+
+async fn start_http_server(port: u16, engine: Arc<ChunkingEngine>) {
+    let addr = format!("0.0.0.0:{}", port);
+    let listener = match TcpListener::bind(&addr).await {
+        Ok(l) => l,
+        Err(e) => {
+            error!("Failed to bind clip trim HTTP server on {}: {}", addr, e);
+            return;
+        }
+    };
+    info!("Clip trim HTTP server listening on {}", addr);
+
+    loop {
+        let (socket, _peer) = match listener.accept().await {
+            Ok(conn) => conn,
+            Err(e) => {
+                warn!("HTTP accept error: {}", e);
+                continue;
+            }
+        };
+
+        let engine = engine.clone();
+        tokio::spawn(async move {
+            if let Err(e) = handle_http_connection(socket, engine).await {
+                warn!("HTTP connection error: {}", e);
+            }
+        });
+    }
+}
+
+async fn handle_http_connection(
+    mut socket: TcpStream,
+    engine: Arc<ChunkingEngine>,
+) -> anyhow::Result<()> {
+    let mut buf: Vec<u8> = Vec::new();
+    let mut tmp = [0u8; 4096];
+
+    // Read until the header terminator (and then the body).
+    let header_end = loop {
+        let n = socket.read(&mut tmp).await?;
+        if n == 0 {
+            return Ok(());
+        }
+        buf.extend_from_slice(&tmp[..n]);
+        if let Some(pos) = find_subsequence(&buf, b"\r\n\r\n") {
+            break pos + 4;
+        }
+        if buf.len() > 64 * 1024 {
+            anyhow::bail!("HTTP request headers too large");
+        }
+    };
+
+    let header_text = String::from_utf8_lossy(&buf[..header_end]).to_string();
+    let mut lines = header_text.split("\r\n");
+    let request_line = lines.next().unwrap_or("");
+    let mut parts = request_line.split(' ');
+    let method = parts.next().unwrap_or("").to_string();
+    let path = parts.next().unwrap_or("").to_string();
+
+    let mut content_length = 0usize;
+    for line in lines {
+        if let Some((key, value)) = line.split_once(':') {
+            if key.eq_ignore_ascii_case("content-length") {
+                content_length = value.trim().parse().unwrap_or(0);
+            }
+        }
+    }
+
+    while buf.len() < header_end + content_length {
+        let n = socket.read(&mut tmp).await?;
+        if n == 0 {
+            break;
+        }
+        buf.extend_from_slice(&tmp[..n]);
+    }
+    let body_end = (header_end + content_length).min(buf.len());
+    let body = &buf[header_end..body_end];
+
+    let (status, response_json): (u16, serde_json::Value) = match (method.as_str(), path.as_str()) {
+        ("GET", "/health") => (
+            200,
+            json!({"status": "ok", "service": "video-chunker", "version": env!("CARGO_PKG_VERSION")}),
+        ),
+        ("POST", "/clip/trim") => match serde_json::from_slice::<ClipTrimRequest>(body) {
+            Ok(req) => {
+                info!(
+                    "Trim request: clip={} chunk={:?} speed={}x",
+                    req.clip_id, req.chunk_id, req.speed
+                );
+                if let Some(parent) = std::path::Path::new(&req.output_path).parent() {
+                    if let Err(e) = tokio::fs::create_dir_all(parent).await {
+                        error!("Failed to create clip output dir {:?}: {}", parent, e);
+                    }
+                }
+                match engine
+                    .trim_clip(
+                        &req.source_path,
+                        req.buffer_before_ms,
+                        req.buffer_after_ms,
+                        req.speed,
+                        &req.output_path,
+                    )
+                    .await
+                {
+                    Ok(()) => (
+                        200,
+                        json!({"success": true, "output_path": req.output_path}),
+                    ),
+                    Err(e) => (500, json!({"success": false, "error": e.to_string()})),
+                }
+            }
+            Err(e) => (
+                400,
+                json!({"success": false, "error": format!("Invalid request: {}", e)}),
+            ),
+        },
+        _ => (404, json!({"success": false, "error": "Not found"})),
+    };
+
+    let response_body = response_json.to_string();
+    let response = format!(
+        "HTTP/1.1 {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        status_text(status),
+        response_body.len(),
+        response_body
+    );
+    socket.write_all(response.as_bytes()).await?;
+
+    Ok(())
+}
+
+fn status_text(code: u16) -> &'static str {
+    match code {
+        200 => "200 OK",
+        400 => "400 Bad Request",
+        404 => "404 Not Found",
+        _ => "500 Internal Server Error",
+    }
+}
+
+fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    haystack
+        .windows(needle.len())
+        .position(|window| window == needle)
 }

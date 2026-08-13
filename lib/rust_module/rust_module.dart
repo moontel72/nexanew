@@ -2,6 +2,8 @@
 // Main export file for Rust module integration
 // Re-exports all Rust module functionality for easy importing
 
+import 'dart:convert';
+
 import 'ffi_config.dart';
 
 export 'ffi_config.dart' show RustFFI, RustModule, RustModuleService;
@@ -18,7 +20,7 @@ class RustModuleConstants {
     'bundle',
     'carton',
     'packet',
-    'unit'
+    'unit',
   ];
 
   // Maximum batch sizes
@@ -104,33 +106,18 @@ class RustModuleUtils {
     }
   }
 
-  // Private JSON helper methods
+  // Private JSON helper methods — real JSON via dart:convert so the
+  // Rust module responses are parsed properly (no demo placeholders).
   static String _encodeJson(Map<String, dynamic> data) {
-    // Simple JSON encoding - in real implementation, use dart:convert
-    final entries = data.entries.map((e) {
-      final value = e.value is String ? '"${e.value}"' : e.value;
-      return '"${e.key}": $value';
-    }).join(', ');
-
-    return '{$entries}';
+    return jsonEncode(data);
   }
 
   static Map<String, dynamic> _decodeJson(String json) {
-    // Simple JSON decoding - in real implementation, use dart:convert
-    // This is a simplified version for demonstration
-    if (json.contains('"codes"')) {
-      return {
-        'status': 'success',
-        'codes': ['DEMO_CODE_001', 'DEMO_CODE_002'],
-      };
-    } else if (json.contains('"error"')) {
-      return {
-        'status': 'error',
-        'error': 'Demo error',
-      };
+    try {
+      return jsonDecode(json) as Map<String, dynamic>;
+    } catch (_) {
+      return {'status': 'error', 'error': 'Invalid JSON from Rust module'};
     }
-
-    return {'status': 'unknown'};
   }
 }
 
@@ -140,7 +127,7 @@ class RustIntegrationService {
   final bool _useRustModule;
 
   RustIntegrationService({bool useRustModule = true})
-      : _useRustModule = useRustModule;
+    : _useRustModule = useRustModule;
 
   /// Generate codes with automatic fallback
   Future<List<String>> generateCodes({

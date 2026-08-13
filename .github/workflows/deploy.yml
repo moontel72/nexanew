@@ -36,13 +36,14 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Rust binary (CLI)
-        timeout-minutes: 8
+      - name: Build Rust binaries (CLI + video chunker)
+        timeout-minutes: 12
         run: |
           cd rust
           cargo build --release
           ls -la target/release/trace_odd_rust
-          chmod +x target/release/trace_odd_rust
+          ls -la target/release/video_chunker
+          chmod +x target/release/trace_odd_rust target/release/video_chunker
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
@@ -64,6 +65,18 @@ jobs:
       - name: Deploy Rust directory to server
         run: |
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" rust/ root@135.181.46.27:/var/www/traceodd/admin-panel/rust/
+
+      - name: Deploy Rust binaries to /opt/nexatrace
+        run: |
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /opt/nexatrace /var/replays /var/www/traceodd/cricket-hls && chown -R www-data:www-data /var/replays"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" rust/target/release/trace_odd_rust root@135.181.46.27:/opt/nexatrace/trace_odd_rust
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" rust/target/release/video_chunker root@135.181.46.27:/opt/nexatrace/video_chunker
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "chmod +x /opt/nexatrace/trace_odd_rust /opt/nexatrace/video_chunker && ln -sf /opt/nexatrace/trace_odd_rust /usr/local/bin/trace_odd_rust && echo 'Rust binaries installed'"
+
+      - name: Install Cricket Video Chunker systemd unit
+        run: |
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-video-chunker.service root@135.181.46.27:/etc/systemd/system/cricket-video-chunker.service
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "systemctl daemon-reload && systemctl enable cricket-video-chunker && systemctl restart cricket-video-chunker && echo 'Video chunker unit active'"
 
       - name: Deploy Rust shared libraries
         continue-on-error: true
@@ -139,6 +152,7 @@ jobs:
 
             grep -q '^QUEUE_CONNECTION=' .env 2>/dev/null || echo 'QUEUE_CONNECTION=redis' >> .env
             grep -q '^CACHE_STORE=' .env 2>/dev/null || echo 'CACHE_STORE=redis' >> .env
+            grep -q '^RUST_CHUNKER_URL=' .env 2>/dev/null || echo 'RUST_CHUNKER_URL=http://127.0.0.1:9090' >> .env
             grep -q '^BROADCAST_DRIVER=' .env 2>/dev/null || echo 'BROADCAST_DRIVER=reverb' >> .env
             grep -q '^REVERB_APP_ID=' .env 2>/dev/null || echo 'REVERB_APP_ID=428540' >> .env
             grep -q '^REVERB_APP_KEY=' .env 2>/dev/null || echo 'REVERB_APP_KEY=nxbrv_app_key_nexa_2026' >> .env

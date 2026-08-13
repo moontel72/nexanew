@@ -9,13 +9,13 @@ use RuntimeException;
 /**
  * Rust Code Generator Bridge
  *
- * Calls the compiled Rust binary (nexatrace_rust) for high-volume code generation.
+ * Calls the compiled Rust binary (trace_odd_rust) for high-volume code generation.
  * Falls back to the PHP CodeGenerator when the Rust binary is unavailable.
  *
  * Architecture: 1:1 clone of the Carton/Packet/Unit generation pipeline.
  * The Rust binary accepts JSON on stdin and returns JSON on stdout.
  *
- * Binary path: base_path('rust/target/release/nexatrace_rust')
+ * Binary path: base_path('rust/target/release/trace_odd_rust')
  * Build: cd rust && cargo build --release
  */
 class RustCodeGenerator
@@ -88,7 +88,13 @@ class RustCodeGenerator
 
     private function detectBinary(): void
     {
+        // Match the cargo crate output name (`trace_odd_rust`); legacy
+        // `nexatrace_rust` paths are kept as a fallback for older installs.
         $candidates = [
+            base_path('rust/target/release/trace_odd_rust'),
+            base_path('rust/target/release/trace_odd_rust.exe'),
+            '/usr/local/bin/trace_odd_rust',
+            '/opt/nexatrace/trace_odd_rust',
             base_path('rust/target/release/nexatrace_rust'),
             base_path('rust/target/release/nexatrace_rust.exe'),
             '/usr/local/bin/nexatrace_rust',
