@@ -15,14 +15,12 @@ class HeroSection extends StatelessWidget {
   final LandingHero hero;
   final String announcementBadge;
   final String logoAsset;
-  final String logoText;
 
   const HeroSection({
     super.key,
     required this.hero,
     required this.announcementBadge,
     required this.logoAsset,
-    required this.logoText,
   });
 
   @override
@@ -40,7 +38,7 @@ class HeroSection extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          LandingLogo(assetPath: logoAsset, size: 96, showWordmark: false),
+          LandingLogo(assetPath: logoAsset, width: 260),
           const SizedBox(height: 28),
           _Badge(text: announcementBadge),
           const SizedBox(height: 28),

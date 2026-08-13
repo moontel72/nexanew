@@ -98,8 +98,7 @@ jobs:
         run: |
           flutter build web --release \
             --target=lib/main_cricket_public.dart \
-            --pwa-strategy none \
-            --dart-define=API_BASE_URL=https://cricket.traceodd.com
+            --pwa-strategy none
 
       - name: Deploy Cricket Public Portal to /cricket-public-web/
         run: |
@@ -114,8 +113,7 @@ jobs:
         run: |
           flutter build web --release \
             --target=lib/main_cricket_manager.dart \
-            --pwa-strategy none \
-            --dart-define=API_BASE_URL=https://manager.cricket.traceodd.com
+            --pwa-strategy none
 
       - name: Deploy Cricket Manager Panel to /cricket-manager-web/
         run: |

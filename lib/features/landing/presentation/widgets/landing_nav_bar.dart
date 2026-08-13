@@ -23,11 +23,7 @@ class LandingNavBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
       child: Row(
         children: [
-          LandingLogo(
-            assetPath: meta.logoAsset,
-            size: 34,
-            wordmark: meta.logoText,
-          ),
+          LandingLogo(assetPath: meta.logoAsset, width: 96),
           const Spacer(),
           ...links.map(
             (link) => Padding(

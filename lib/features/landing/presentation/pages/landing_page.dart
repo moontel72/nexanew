@@ -64,7 +64,6 @@ class _LoadedView extends StatelessWidget {
             hero: content.hero,
             announcementBadge: content.meta.announcementBadge,
             logoAsset: content.meta.logoAsset,
-            logoText: content.meta.logoText,
           ),
           StatsStrip(stats: content.stats),
           KeyedSubtree(
@@ -89,7 +88,6 @@ class _LoadedView extends StatelessWidget {
           LandingFooterSection(
             footer: content.footer,
             logoAsset: content.meta.logoAsset,
-            logoText: content.meta.logoText,
           ),
         ],
       ),

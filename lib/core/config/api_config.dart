@@ -1,14 +1,17 @@
 //lib/core/config/api_config.dart
 // API Configuration for NexaTrace System
-// This file contains API endpoints and configuration
+//
+// NOTE: Base URLs are resolved at runtime via Environment.apiBaseUrl
+// (same-origin on web, --dart-define override, or IP fallback). All
+// endpoint fields are therefore getters, not compile-time constants.
 
 import 'environment.dart';
 
 class ApiConfig {
-  // Base URLs — resolved from Environment (override via --dart-define=API_BASE_URL=...)
-  static const String baseUrl = Environment.apiBaseUrl;
+  // Base URLs — resolved from Environment at runtime.
+  static String get baseUrl => Environment.apiBaseUrl;
   static const String apiVersion = 'v1';
-  static const String apiBaseUrl = '$baseUrl/api/$apiVersion';
+  static String get apiBaseUrl => '$baseUrl/api/$apiVersion';
 
   // Timeout settings
   static const int connectTimeout = 30000; // milliseconds
@@ -21,162 +24,161 @@ class ApiConfig {
 }
 
 class AuthEndpoints {
-  static const String login = '${ApiConfig.apiBaseUrl}/auth/login';
-  static const String register = '${ApiConfig.apiBaseUrl}/auth/register';
-  static const String logout = '${ApiConfig.apiBaseUrl}/auth/logout';
-  static const String refresh = '${ApiConfig.apiBaseUrl}/auth/refresh';
-  static const String forgotPassword =
+  static String get login => '${ApiConfig.apiBaseUrl}/auth/login';
+  static String get register => '${ApiConfig.apiBaseUrl}/auth/register';
+  static String get logout => '${ApiConfig.apiBaseUrl}/auth/logout';
+  static String get refresh => '${ApiConfig.apiBaseUrl}/auth/refresh';
+  static String get forgotPassword =>
       '${ApiConfig.apiBaseUrl}/auth/forgot-password';
-  static const String resetPassword =
+  static String get resetPassword =>
       '${ApiConfig.apiBaseUrl}/auth/reset-password';
-  static const String verifyEmail = '${ApiConfig.apiBaseUrl}/auth/verify-email';
-  static const String profile = '${ApiConfig.apiBaseUrl}/auth/profile';
-  static const String changePassword =
+  static String get verifyEmail => '${ApiConfig.apiBaseUrl}/auth/verify-email';
+  static String get profile => '${ApiConfig.apiBaseUrl}/auth/profile';
+  static String get changePassword =>
       '${ApiConfig.apiBaseUrl}/auth/change-password';
 }
 
 class CompanyEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/companies';
-  static const String list = '$base/list';
-  static const String create = '$base/create';
-  static const String update = '$base/update';
-  static const String delete = '$base/delete';
-  static const String details = '$base/details';
-  static const String statistics = '$base/statistics';
-  static const String subscription = '$base/subscription';
-  static const String users = '$base/users';
+  static String get base => '${ApiConfig.apiBaseUrl}/companies';
+  static String get list => '$base/list';
+  static String get create => '$base/create';
+  static String get update => '$base/update';
+  static String get delete => '$base/delete';
+  static String get details => '$base/details';
+  static String get statistics => '$base/statistics';
+  static String get subscription => '$base/subscription';
+  static String get users => '$base/users';
 }
 
 class CodeEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/codes';
-  static const String bundles = '$base/bundles';
-  static const String generate = '$base/generate';
-  static const String validate = '$base/validate';
-  static const String track = '$base/track';
-  static const String statistics = '$base/statistics';
-  static const String export = '$base/export';
-  static const String import = '$base/import';
+  static String get base => '${ApiConfig.apiBaseUrl}/codes';
+  static String get bundles => '$base/bundles';
+  static String get generate => '$base/generate';
+  static String get validate => '$base/validate';
+  static String get track => '$base/track';
+  static String get statistics => '$base/statistics';
+  static String get export => '$base/export';
+  static String get import => '$base/import';
 
   // Specific code type endpoints
-  static const String bundleCodes = '$base/bundles';
-  static const String cartonCodes = '$base/cartons';
-  static const String packetCodes = '$base/packets';
-  static const String unitCodes = '$base/units';
+  static String get bundleCodes => '$base/bundles';
+  static String get cartonCodes => '$base/cartons';
+  static String get packetCodes => '$base/packets';
+  static String get unitCodes => '$base/units';
 }
 
 class PlanEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/plans';
-  static const String list = '$base/list';
-  static const String create = '$base/create';
-  static const String update = '$base/update';
-  static const String delete = '$base/delete';
-  static const String details = '$base/details';
-  static const String features = '$base/features';
-  static const String pricing = '$base/pricing';
+  static String get base => '${ApiConfig.apiBaseUrl}/plans';
+  static String get list => '$base/list';
+  static String get create => '$base/create';
+  static String get update => '$base/update';
+  static String get delete => '$base/delete';
+  static String get details => '$base/details';
+  static String get features => '$base/features';
+  static String get pricing => '$base/pricing';
 }
 
 class SubscriptionEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/subscriptions';
-  static const String list = '$base/list';
-  static const String create = '$base/create';
-  static const String update = '$base/update';
-  static const String cancel = '$base/cancel';
-  static const String renew = '$base/renew';
-  static const String history = '$base/history';
-  static const String invoices = '$base/invoices';
+  static String get base => '${ApiConfig.apiBaseUrl}/subscriptions';
+  static String get list => '$base/list';
+  static String get create => '$base/create';
+  static String get update => '$base/update';
+  static String get cancel => '$base/cancel';
+  static String get renew => '$base/renew';
+  static String get history => '$base/history';
+  static String get invoices => '$base/invoices';
 }
 
 class UserEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/users';
-  static const String list = '$base/list';
-  static const String create = '$base/create';
-  static const String update = '$base/update';
-  static const String delete = '$base/delete';
-  static const String profile = '$base/profile';
-  static const String roles = '$base/roles';
-  static const String permissions = '$base/permissions';
+  static String get base => '${ApiConfig.apiBaseUrl}/users';
+  static String get list => '$base/list';
+  static String get create => '$base/create';
+  static String get update => '$base/update';
+  static String get delete => '$base/delete';
+  static String get profile => '$base/profile';
+  static String get roles => '$base/roles';
+  static String get permissions => '$base/permissions';
 }
 
 class FactoryEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/factories';
-  static const String list = '$base/list';
-  static const String create = '$base/create';
-  static const String update = '$base/update';
-  static const String delete = '$base/delete';
-  static const String details = '$base/details';
-  static const String employees = '$base/employees';
-  static const String products = '$base/products';
-  static const String dashboard = '$base/dashboard';
+  static String get base => '${ApiConfig.apiBaseUrl}/factories';
+  static String get list => '$base/list';
+  static String get create => '$base/create';
+  static String get update => '$base/update';
+  static String get delete => '$base/delete';
+  static String get details => '$base/details';
+  static String get employees => '$base/employees';
+  static String get products => '$base/products';
+  static String get dashboard => '$base/dashboard';
 
   // Additional factory endpoints
-  static const String factoryContext = '$base/context';
-  static const String switchFactoryContext = '$base/switch-context';
-  static const String accessibleFactories = '$base/accessible';
-  static const String factorySubscription = '$base/{id}/subscription';
-  static const String factoryUsage = '$base/{id}/usage';
-  static const String updateFactoryUsage = '$base/{id}/update-usage';
-  static const String addFactoryEmployee = '$base/{id}/add-employee';
-  static const String removeFactoryEmployee = '$base/{id}/remove-employee';
-  static const String storeKeepers = '$base/store-keepers';
-  static const String drivers = '$base/drivers';
+  static String get factoryContext => '$base/context';
+  static String get switchFactoryContext => '$base/switch-context';
+  static String get accessibleFactories => '$base/accessible';
+  static String get factorySubscription => '$base/{id}/subscription';
+  static String get factoryUsage => '$base/{id}/usage';
+  static String get updateFactoryUsage => '$base/{id}/update-usage';
+  static String get addFactoryEmployee => '$base/{id}/add-employee';
+  static String get storeKeepers => '$base/store-keepers';
+  static String get drivers => '$base/drivers';
 }
 
 class DeliveryEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/deliveries';
-  static const String list = '$base/list';
-  static const String create = '$base/create';
-  static const String update = '$base/update';
-  static const String track = '$base/track';
-  static const String scan = '$base/scan';
-  static const String verify = '$base/verify';
-  static const String reports = '$base/reports';
+  static String get base => '${ApiConfig.apiBaseUrl}/deliveries';
+  static String get list => '$base/list';
+  static String get create => '$base/create';
+  static String get update => '$base/update';
+  static String get track => '$base/track';
+  static String get scan => '$base/scan';
+  static String get verify => '$base/verify';
+  static String get reports => '$base/reports';
 }
 
 class AdminEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/admin';
-  static const String dashboard = '$base/dashboard';
-  static const String companies = '$base/companies';
-  static const String plans = '$base/plans';
-  static const String subscriptions = '$base/subscriptions';
-  static const String users = '$base/users';
-  static const String reports = '$base/reports';
-  static const String settings = '$base/settings';
-  static const String auditLogs = '$base/audit-logs';
+  static String get base => '${ApiConfig.apiBaseUrl}/admin';
+  static String get dashboard => '$base/dashboard';
+  static String get companies => '$base/companies';
+  static String get plans => '$base/plans';
+  static String get subscriptions => '$base/subscriptions';
+  static String get users => '$base/users';
+  static String get reports => '$base/reports';
+  static String get settings => '$base/settings';
+  static String get auditLogs => '$base/audit-logs';
 }
 
 class NotificationEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/notifications';
-  static const String list = '$base/list';
-  static const String markRead = '$base/mark-read';
-  static const String markAllRead = '$base/mark-all-read';
-  static const String delete = '$base/delete';
-  static const String settings = '$base/settings';
+  static String get base => '${ApiConfig.apiBaseUrl}/notifications';
+  static String get list => '$base/list';
+  static String get markRead => '$base/mark-read';
+  static String get markAllRead => '$base/mark-all-read';
+  static String get delete => '$base/delete';
+  static String get settings => '$base/settings';
 }
 
 class ReportEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/reports';
-  static const String usage = '$base/usage';
-  static const String revenue = '$base/revenue';
-  static const String codes = '$base/codes';
-  static const String deliveries = '$base/deliveries';
-  static const String factories = '$base/factories';
-  static const String export = '$base/export';
+  static String get base => '${ApiConfig.apiBaseUrl}/reports';
+  static String get usage => '$base/usage';
+  static String get revenue => '$base/revenue';
+  static String get codes => '$base/codes';
+  static String get deliveries => '$base/deliveries';
+  static String get factories => '$base/factories';
+  static String get export => '$base/export';
 }
 
 class AnalyticsEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/analytics';
-  static const String overview = '$base/overview';
-  static const String realtime = '$base/realtime';
-  static const String trends = '$base/trends';
-  static const String predictions = '$base/predictions';
+  static String get base => '${ApiConfig.apiBaseUrl}/analytics';
+  static String get overview => '$base/overview';
+  static String get realtime => '$base/realtime';
+  static String get trends => '$base/trends';
+  static String get predictions => '$base/predictions';
 }
 
 class FileEndpoints {
-  static const String base = '${ApiConfig.apiBaseUrl}/files';
-  static const String upload = '$base/upload';
-  static const String download = '$base/download';
-  static const String delete = '$base/delete';
-  static const String list = '$base/list';
+  static String get base => '${ApiConfig.apiBaseUrl}/files';
+  static String get upload => '$base/upload';
+  static String get download => '$base/download';
+  static String get delete => '$base/delete';
+  static String get list => '$base/list';
 }
 
 class ApiEndpoints {

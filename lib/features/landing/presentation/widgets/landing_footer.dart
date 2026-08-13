@@ -12,13 +12,11 @@ import 'landing_logo.dart';
 class LandingFooterSection extends StatelessWidget {
   final models.LandingFooter footer;
   final String logoAsset;
-  final String logoText;
 
   const LandingFooterSection({
     super.key,
     required this.footer,
     required this.logoAsset,
-    required this.logoText,
   });
 
   @override
@@ -29,7 +27,7 @@ class LandingFooterSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       child: Column(
         children: [
-          LandingLogo(assetPath: logoAsset, size: 44, wordmark: logoText),
+          LandingLogo(assetPath: logoAsset, width: 150),
           const SizedBox(height: 18),
           Text(
             footer.tagline,
