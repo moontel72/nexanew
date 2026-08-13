@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../blocs/fixture/fixture_bloc.dart';
 import '../../widgets/cricket_lookups.dart';
+import '../../widgets/cricket_top_sheet.dart';
 import '../../widgets/ground_picker.dart';
 import '../../widgets/match_card.dart';
 
@@ -149,15 +150,8 @@ class _GenerateFixturesSheetState extends State<GenerateFixturesSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Generate Round-Robin Fixtures',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
+              const CricketSheetHeader(title: 'Generate Round-Robin Fixtures'),
+              const SizedBox(height: 8),
               BlocBuilder<FixtureBloc, FixtureState>(
                 builder: (context, state) {
                   if (state is! FixtureLoaded) {

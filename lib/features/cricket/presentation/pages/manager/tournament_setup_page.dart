@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/tournament_setup/tournament_setup_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../widgets/cricket_lookups.dart';
+import '../../widgets/cricket_top_sheet.dart';
 import '../../widgets/match_card.dart';
 
 /// Tournament lifecycle screen for the Cricket Manager panel:
@@ -13,17 +14,11 @@ class TournamentSetupPage extends StatelessWidget {
   const TournamentSetupPage({super.key});
 
   void _showForm(BuildContext context, {TournamentModel? existing}) {
-    // The sheet opens in the navigator overlay, above the page's
-    // BlocProvider — re-provide the bloc so the form can find it.
+    // Re-provide the bloc: dialog routes live above the page's providers.
     final bloc = context.read<TournamentSetupBloc>();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F2936),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => BlocProvider.value(
+    showCricketTopSheet(
+      context,
+      child: BlocProvider.value(
         value: bloc,
         child: TournamentFormSheet(existing: existing),
       ),
@@ -462,17 +457,12 @@ class _TournamentFormSheetState extends State<TournamentFormSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                widget.existing == null
+              CricketSheetHeader(
+                title: widget.existing == null
                     ? 'Create Tournament'
                     : 'Edit Tournament',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
               TextField(
                 controller: _nameCtrl,
                 style: const TextStyle(color: Colors.white),

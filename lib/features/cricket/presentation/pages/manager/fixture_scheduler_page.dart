@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../blocs/fixture/fixture_bloc.dart';
 import '../../widgets/cricket_lookups.dart';
+import '../../widgets/cricket_top_sheet.dart';
 import '../../widgets/match_card.dart';
 import 'generate_fixtures_sheet.dart';
 import 'match_form_sheet.dart';
@@ -36,17 +37,11 @@ class FixtureSchedulerPage extends StatelessWidget {
   const FixtureSchedulerPage({super.key});
 
   void _showMatchForm(BuildContext context, {MatchModel? existing}) {
-    // The sheet opens in the navigator overlay, above the page's
-    // BlocProvider — re-provide the bloc so the form can find it.
+    // Re-provide the bloc: dialog routes live above the page's providers.
     final bloc = context.read<FixtureBloc>();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F2936),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => BlocProvider.value(
+    showCricketTopSheet(
+      context,
+      child: BlocProvider.value(
         value: bloc,
         child: MatchFormSheet(existing: existing),
       ),
@@ -56,15 +51,12 @@ class FixtureSchedulerPage extends StatelessWidget {
   void _showGenerator(BuildContext context) {
     // Same overlay-provider caveat as _showMatchForm.
     final bloc = context.read<FixtureBloc>();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F2936),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    showCricketTopSheet(
+      context,
+      child: BlocProvider.value(
+        value: bloc,
+        child: const GenerateFixturesSheet(),
       ),
-      builder: (_) =>
-          BlocProvider.value(value: bloc, child: const GenerateFixturesSheet()),
     );
   }
 

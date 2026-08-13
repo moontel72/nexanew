@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../blocs/fixture/fixture_bloc.dart';
 import '../../widgets/cricket_lookups.dart';
+import '../../widgets/cricket_top_sheet.dart';
 import '../../widgets/ground_picker.dart';
 import '../../widgets/match_card.dart';
 
@@ -165,15 +166,10 @@ class _MatchFormSheetState extends State<MatchFormSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                widget.existing == null ? 'Add Fixture' : 'Edit Fixture',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              CricketSheetHeader(
+                title: widget.existing == null ? 'Add Fixture' : 'Edit Fixture',
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
               BlocBuilder<FixtureBloc, FixtureState>(
                 builder: (context, state) {
                   if (state is! FixtureLoaded) {
