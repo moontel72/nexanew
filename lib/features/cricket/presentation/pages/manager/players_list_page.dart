@@ -235,9 +235,13 @@ class _PlayersListPageState extends State<PlayersListPage> {
         child: Row(
           children: [
             const CircleAvatar(
-              backgroundColor: Color(0xFF2563EB),
+              backgroundColor: Color(0xFF1E2238),
               radius: 16,
-              child: Icon(Icons.shield_outlined, color: Colors.white, size: 16),
+              child: Icon(
+                Icons.shield_outlined,
+                color: Color(0xFFA0AAB8),
+                size: 16,
+              ),
             ),
             const SizedBox(width: 10),
             const Text(
@@ -1476,7 +1480,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: const Color(0xFF2563EB),
+                                  backgroundColor: _positionColor(p.position),
                                   radius: 22,
                                   backgroundImage:
                                       p.photoUrl != null &&

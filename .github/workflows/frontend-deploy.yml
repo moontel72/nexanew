@@ -104,6 +104,7 @@ jobs:
       - name: Deploy Cricket Public Portal to /cricket-public-web/
         run: |
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/cricket-public-web/
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" > /var/www/traceodd/cricket-public-web/version.txt"
 
       # ──────────────────────────────────────────────────────────────
       # STEP D: Build & Deploy Cricket Manager Panel
@@ -119,6 +120,7 @@ jobs:
       - name: Deploy Cricket Manager Panel to /cricket-manager-web/
         run: |
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/cricket-manager-web/
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" > /var/www/traceodd/cricket-manager-web/version.txt"
 
       # ──────────────────────────────────────────────────────────────
       # STEP E: Build & Deploy Reseller App (main_reseller.dart)

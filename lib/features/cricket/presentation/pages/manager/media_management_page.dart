@@ -225,14 +225,14 @@ class _TeamMediaCard extends StatelessWidget {
             // Team logo (or neutral placeholder)
             CircleAvatar(
               radius: 36,
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: const Color(0xFF1E2238),
               backgroundImage: team.logoUrl != null && team.logoUrl!.isNotEmpty
                   ? NetworkImage(_fullUrl(team.logoUrl!))
                   : null,
               child: team.logoUrl == null || team.logoUrl!.isEmpty
                   ? const Icon(
                       Icons.shield_outlined,
-                      color: Colors.white,
+                      color: Color(0xFFA0AAB8),
                       size: 32,
                     )
                   : null,
