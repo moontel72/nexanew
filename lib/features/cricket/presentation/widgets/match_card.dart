@@ -1,117 +1,174 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../data/models/cricket_models.dart';
-import 'package:trace_odd/shared/theme/cricket_colors.dart';
-import 'package:trace_odd/shared/theme/colors.dart';
+import 'cricket_lookups.dart';
 
-/// Compact match card for the tournament home page list.
-/// Navigation uses go_router named routes for clean deep linking.
+/// Section header format: `2026-08-20`.
+String formatMatchDate(DateTime dt) =>
+    '${dt.year.toString().padLeft(4, '0')}-'
+    '${dt.month.toString().padLeft(2, '0')}-'
+    '${dt.day.toString().padLeft(2, '0')}';
+
+/// Kickoff format: `14:30`.
+String formatMatchTime(DateTime dt) =>
+    '${dt.hour.toString().padLeft(2, '0')}:'
+    '${dt.minute.toString().padLeft(2, '0')}';
+
+/// A single fixture row used by the Fixture Scheduler list.
 class MatchCard extends StatelessWidget {
   final MatchModel match;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final VoidCallback? onToggleStatus;
 
-  const MatchCard({super.key, required this.match});
+  const MatchCard({
+    super.key,
+    required this.match,
+    this.onEdit,
+    this.onDelete,
+    this.onToggleStatus,
+  });
+
+  String get _teamALabel =>
+      '${match.teamAShort ?? match.teamAName ?? 'TBD'} ${match.teamAName != null && match.teamAShort != null ? '· ${match.teamAName}' : ''}'
+          .trim();
+
+  String get _teamBLabel =>
+      '${match.teamBShort ?? match.teamBName ?? 'TBD'} ${match.teamBName != null && match.teamBShort != null ? '· ${match.teamBName}' : ''}'
+          .trim();
+
+  String? get _venueLabel {
+    if (match.groundName != null && match.groundName!.isNotEmpty) {
+      final loc = match.groundLocation;
+      return loc != null && loc.isNotEmpty
+          ? '${match.groundName} · $loc'
+          : match.groundName;
+    }
+    return match.venue;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final teamA = match.teamAShort ?? match.teamAName ?? '—';
-    final teamB = match.teamBShort ?? match.teamBName ?? '—';
+    final canEdit = match.status == 'scheduled' || match.status == 'cancelled';
+    final scheduled = match.scheduledAt?.toLocal();
 
-    return GestureDetector(
-      onTap: () {
-        // Navigate to match analytics via go_router
-        context.goNamed(
-          'cricket_match_analytics',
-          pathParameters: {'matchId': match.id},
-          queryParameters: {'title': '$teamA vs $teamB'},
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: CricketColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: match.isLive
-              ? Border.all(color: CricketColors.live.withOpacity(0.5), width: 1)
-              : null,
-        ),
-        child: Row(
+    return Card(
+      color: const Color(0xFF0F2936),
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        '$teamA vs $teamB',
-                        style: TextStyle(
-                          color: CricketColors.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      if (match.isLive) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: CricketColors.live,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'LIVE',
-                            style: TextStyle(
-                              color: CricketColors.textPrimary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '$_teamALabel  vs  $_teamBLabel',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
-                  if (match.liveScore != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      match.liveScore!.score ?? '',
-                      style: TextStyle(
-                        color: AppColors.secondary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'Overs: ${match.liveScore!.overs.toStringAsFixed(1)}',
-                      style: TextStyle(
-                        color: CricketColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                ),
+                StageChip(stage: match.stage ?? 'group_stage'),
+              ],
             ),
-            if (match.venue != null)
-              Flexible(
-                child: Text(
-                  match.venue!,
-                  style: TextStyle(
-                    color: CricketColors.textTertiary,
-                    fontSize: 12,
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                MatchStatusChip(status: match.status),
+                if (scheduled != null)
+                  _MetaLine(
+                    icon: Icons.access_time,
+                    text:
+                        '${formatMatchDate(scheduled)} · ${formatMatchTime(scheduled)}',
                   ),
-                  textAlign: TextAlign.right,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                if (_venueLabel != null && _venueLabel!.isNotEmpty)
+                  _MetaLine(icon: Icons.location_on, text: _venueLabel!),
+                if (match.matchType != null)
+                  _MetaLine(
+                    icon: Icons.sports_cricket,
+                    text:
+                        '${cricketMatchTypeLabel(match.matchType!)} · ${match.oversPerSide} ov',
+                  ),
+              ],
+            ),
+            if (canEdit &&
+                (onEdit != null || onDelete != null || onToggleStatus != null))
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (onEdit != null)
+                      TextButton.icon(
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('Edit'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF3B82F6),
+                        ),
+                        onPressed: onEdit,
+                      ),
+                    if (onToggleStatus != null)
+                      TextButton.icon(
+                        icon: Icon(
+                          match.status == 'cancelled'
+                              ? Icons.event_available
+                              : Icons.event_busy,
+                          size: 16,
+                        ),
+                        label: Text(
+                          match.status == 'cancelled' ? 'Re-open' : 'Cancel',
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFFF59E0B),
+                        ),
+                        onPressed: onToggleStatus,
+                      ),
+                    if (onDelete != null)
+                      TextButton.icon(
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: const Text('Delete'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFFEF4444),
+                        ),
+                        onPressed: onDelete,
+                      ),
+                  ],
                 ),
               ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MetaLine extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _MetaLine({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: const Color(0xFFBDD8DB)),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(color: Color(0xFFBDD8DB), fontSize: 12),
+        ),
+      ],
     );
   }
 }

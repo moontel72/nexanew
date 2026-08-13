@@ -9,6 +9,7 @@ import '../../blocs/camera_switcher/camera_switcher_bloc.dart';
 import '../../blocs/voice_score/voice_score_bloc.dart';
 import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../blocs/team/team_bloc.dart';
+import '../../blocs/fixture/fixture_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../../data/repositories/cricket_repository.dart';
 import 'manager_login_page.dart';
@@ -20,6 +21,7 @@ import 'team_register_page.dart';
 import 'teams_list_page.dart';
 import 'player_register_page.dart';
 import 'players_list_page.dart';
+import 'fixture_scheduler_page.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 
 /// Manager Dashboard — 3D Pencil Sidebar layout matching Sub-Admin panel design.
@@ -649,7 +651,22 @@ class _TournamentTab extends StatelessWidget {
         icon: Icons.calendar_month,
         color: const Color(0xFFF59E0B),
         subtitle: 'Create, edit, and schedule matches',
-        onTap: () => _showFixtureScheduler(context),
+        onTap: () {
+          final repo = RepositoryProvider.of<CricketRepository>(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RepositoryProvider.value(
+                value: repo,
+                child: BlocProvider(
+                  create: (_) =>
+                      FixtureBloc(repo: repo)..add(const LoadFixtures()),
+                  child: const FixtureSchedulerPage(),
+                ),
+              ),
+            ),
+          );
+        },
       ),
       Missile3DButton(
         label: 'Points Table',
@@ -686,43 +703,6 @@ class _TournamentTab extends StatelessWidget {
       ),
     ],
   );
-
-  void _showFixtureScheduler(BuildContext c) {
-    showModalBottomSheet(
-      context: c,
-      backgroundColor: const Color(0xFF0F2936),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Fixture Scheduler',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Use the Sub-Admin panel to create and schedule matches.\n\nNavigate to Admin → Tournaments → Matches.',
-              style: TextStyle(color: Color(0xFFBDD8DB)),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(c),
-                child: const Text('OK'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showPointsTable(BuildContext c) {
     final matchState = c.read<MatchListBloc>().state;

@@ -134,6 +134,18 @@ class CricketRepository {
     return null;
   }
 
+  /// Build a user-friendly error message from a failed API response.
+  String _apiError(http.Response res) {
+    final body = _parseBody(res);
+    final message = body?['message'];
+    if (message != null && message.toString().isNotEmpty) {
+      return message.toString();
+    }
+    final validation = _extractValidationErrors(body);
+    if (validation != null) return validation;
+    return 'Request failed (HTTP ${res.statusCode})';
+  }
+
   // ────────────────────────────────────────────────────────────
   // Public Endpoints (no auth)
   // ────────────────────────────────────────────────────────────
@@ -1031,6 +1043,207 @@ class CricketRepository {
     final err = _parseBody(res);
     throw Exception(err?['message'] ?? 'Failed to upload logo');
   }
+
+  // ────────────────────────────────────────────────────────────
+  // Fixture Scheduling (manager endpoints)
+  // ────────────────────────────────────────────────────────────
+
+  /// List fixtures for a tournament (optionally filtered).
+  Future<List<MatchModel>> getManagerMatches({
+    String? tournamentId,
+    String? status,
+    String? stage,
+    String? date,
+  }) async {
+    final params = <String, String>{
+      'per_page': '100',
+      if (tournamentId != null) 'tournament_id': tournamentId,
+      if (status != null) 'status': status,
+      if (stage != null) 'stage': stage,
+      if (date != null) 'date': date,
+    };
+    final uri = Uri.parse(
+      '${ApiConfig.apiBaseUrl}/cricket/manager/matches',
+    ).replace(queryParameters: params);
+    final res = await _http.get(uri, headers: await _authHeaders());
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return (data['data'] as List)
+          .map((m) => MatchModel.fromJson(m as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<MatchModel> createMatch({
+    required String tournamentId,
+    required String teamAId,
+    required String teamBId,
+    required DateTime scheduledAt,
+    required String matchType,
+    String? venue,
+    String? groundId,
+    int? oversPerSide,
+    String? stage,
+  }) async {
+    final res = await _http.post(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/matches'),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'tournament_id': tournamentId,
+        'team_a_id': teamAId,
+        'team_b_id': teamBId,
+        'scheduled_at': scheduledAt.toUtc().toIso8601String(),
+        'match_type': matchType,
+        if (venue != null && venue.isNotEmpty) 'venue': venue,
+        if (groundId != null) 'ground_id': groundId,
+        if (oversPerSide != null) 'overs_per_side': oversPerSide,
+        if (stage != null) 'stage': stage,
+      }),
+    );
+    if (res.statusCode == 201) {
+      return MatchModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    }
+    throw Exception(_apiError(res));
+  }
+
+  Future<MatchModel> updateMatch({
+    required String matchId,
+    String? teamAId,
+    String? teamBId,
+    String? venue,
+    String? groundId,
+    DateTime? scheduledAt,
+    String? matchType,
+    int? oversPerSide,
+    String? stage,
+  }) async {
+    final res = await _http.put(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId'),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        if (teamAId != null) 'team_a_id': teamAId,
+        if (teamBId != null) 'team_b_id': teamBId,
+        if (venue != null) 'venue': venue,
+        if (groundId != null) 'ground_id': groundId,
+        if (scheduledAt != null)
+          'scheduled_at': scheduledAt.toUtc().toIso8601String(),
+        if (matchType != null) 'match_type': matchType,
+        if (oversPerSide != null) 'overs_per_side': oversPerSide,
+        if (stage != null) 'stage': stage,
+      }),
+    );
+    if (res.statusCode == 200) {
+      return MatchModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    }
+    throw Exception(_apiError(res));
+  }
+
+  Future<void> deleteMatch(String matchId) async {
+    final res = await _http.delete(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId'),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      throw Exception(_apiError(res));
+    }
+  }
+
+  Future<MatchModel> updateMatchStatus(String matchId, String status) async {
+    final res = await _http.patch(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/status',
+      ),
+      headers: await _authHeaders(),
+      body: jsonEncode({'status': status}),
+    );
+    if (res.statusCode == 200) {
+      return MatchModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    }
+    throw Exception(_apiError(res));
+  }
+
+  /// Auto-generate round-robin fixtures. Returns the number of fixtures
+  /// created.
+  Future<int> generateFixtures({
+    required String tournamentId,
+    required String format,
+    required DateTime startDate,
+    List<String> teamIds = const [],
+    int matchIntervalDays = 1,
+    String? kickoffTime,
+    int? matchGapHours,
+    String matchType = 't20',
+    int? oversPerSide,
+    String? venue,
+    String? groundId,
+    String stage = 'group_stage',
+    bool force = false,
+  }) async {
+    final res = await _http.post(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/tournaments/$tournamentId/fixtures/generate',
+      ),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'format': format,
+        'start_date': _dateOnly(startDate),
+        if (teamIds.isNotEmpty) 'team_ids': teamIds,
+        'match_interval_days': matchIntervalDays,
+        if (kickoffTime != null) 'kickoff_time': kickoffTime,
+        if (matchGapHours != null) 'match_gap_hours': matchGapHours,
+        'default_match_type': matchType,
+        if (oversPerSide != null) 'default_overs_per_side': oversPerSide,
+        if (venue != null && venue.isNotEmpty) 'default_venue': venue,
+        if (groundId != null) 'default_ground_id': groundId,
+        'stage': stage,
+        'force': force,
+      }),
+    );
+    if (res.statusCode == 201) {
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      return data['count'] is int ? data['count'] as int : 0;
+    }
+    throw Exception(_apiError(res));
+  }
+
+  /// List registered grounds/venues.
+  Future<List<GroundModel>> getGrounds() async {
+    final uri = Uri.parse(
+      '${ApiConfig.apiBaseUrl}/cricket/manager/grounds',
+    ).replace(queryParameters: {'per_page': '100'});
+    final res = await _http.get(uri, headers: await _authHeaders());
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return (data['data'] as List)
+          .map((g) => GroundModel.fromJson(g as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<GroundModel> createGround({
+    required String name,
+    String? location,
+  }) async {
+    final res = await _http.post(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/grounds'),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'name': name,
+        if (location != null && location.isNotEmpty) 'location': location,
+      }),
+    );
+    if (res.statusCode == 201) {
+      return GroundModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    }
+    throw Exception(_apiError(res));
+  }
+
+  static String _dateOnly(DateTime dt) =>
+      '${dt.year.toString().padLeft(4, '0')}-'
+      '${dt.month.toString().padLeft(2, '0')}-'
+      '${dt.day.toString().padLeft(2, '0')}';
 
   Future<List<TeamModel>> getTrashedTeams() async {
     final res = await _http.get(

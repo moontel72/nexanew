@@ -106,11 +106,17 @@ class MatchModel {
   final String? teamBName;
   final String? teamAShort;
   final String? teamBShort;
+  final String? teamAId;
+  final String? teamBId;
   final String? venue;
   final String? matchType;
   final int oversPerSide;
   final DateTime? scheduledAt;
   final LiveScoreSnapshot? liveScore;
+  final String? stage;
+  final String? groundId;
+  final String? groundName;
+  final String? groundLocation;
 
   const MatchModel({
     required this.id,
@@ -119,32 +125,89 @@ class MatchModel {
     this.teamBName,
     this.teamAShort,
     this.teamBShort,
+    this.teamAId,
+    this.teamBId,
     this.venue,
     this.matchType,
     this.oversPerSide = 20,
     this.scheduledAt,
     this.liveScore,
+    this.stage,
+    this.groundId,
+    this.groundName,
+    this.groundLocation,
   });
+
+  /// Public endpoints return `team_a` as a name string; manager endpoints
+  /// return it as a relation object — accept both shapes.
+  static String? _teamNameOf(dynamic value) {
+    if (value == null) return null;
+    if (value is Map) return value['name']?.toString();
+    return value.toString();
+  }
 
   factory MatchModel.fromJson(Map<String, dynamic> json) => MatchModel(
     id: json['id'] as String,
     status: json['status'] as String,
-    teamAName: json['team_a'] as String?,
-    teamBName: json['team_b'] as String?,
-    teamAShort: json['team_a_short'] as String?,
-    teamBShort: json['team_b_short'] as String?,
-    venue: json['venue'] as String?,
-    matchType: json['match_type'] as String?,
-    oversPerSide: json['overs_per_side'] as int? ?? 20,
+    teamAName: _teamNameOf(json['team_a']),
+    teamBName: _teamNameOf(json['team_b']),
+    teamAShort:
+        json['team_a_short']?.toString() ??
+        (json['team_a'] is Map
+            ? (json['team_a'] as Map)['short_code']?.toString()
+            : null),
+    teamBShort:
+        json['team_b_short']?.toString() ??
+        (json['team_b'] is Map
+            ? (json['team_b'] as Map)['short_code']?.toString()
+            : null),
+    teamAId: json['team_a_id']?.toString(),
+    teamBId: json['team_b_id']?.toString(),
+    venue: json['venue']?.toString(),
+    matchType: json['match_type']?.toString(),
+    oversPerSide: json['overs_per_side'] is int
+        ? json['overs_per_side'] as int
+        : int.tryParse(json['overs_per_side']?.toString() ?? '') ?? 20,
     scheduledAt: json['scheduled_at'] != null
         ? DateTime.parse(json['scheduled_at'] as String)
         : null,
     liveScore: json['live_score'] != null
         ? LiveScoreSnapshot.fromJson(json['live_score'] as Map<String, dynamic>)
         : null,
+    stage: json['stage']?.toString() ?? 'group_stage',
+    groundId: json['ground_id']?.toString(),
+    groundName: json['ground'] is Map
+        ? (json['ground'] as Map)['name']?.toString()
+        : null,
+    groundLocation: json['ground'] is Map
+        ? (json['ground'] as Map)['location']?.toString()
+        : null,
   );
 
   bool get isLive => status == 'in_progress' || status == 'innings_break';
+}
+
+class GroundModel {
+  final String id;
+  final String name;
+  final String? location;
+  final int? capacity;
+
+  const GroundModel({
+    required this.id,
+    required this.name,
+    this.location,
+    this.capacity,
+  });
+
+  factory GroundModel.fromJson(Map<String, dynamic> json) => GroundModel(
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
+    location: json['location']?.toString(),
+    capacity: json['capacity'] is int
+        ? json['capacity'] as int
+        : int.tryParse(json['capacity']?.toString() ?? ''),
+  );
 }
 
 class LiveScoreSnapshot {
