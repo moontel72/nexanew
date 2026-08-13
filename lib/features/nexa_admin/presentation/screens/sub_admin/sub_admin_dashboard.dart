@@ -296,23 +296,6 @@ class _DashboardViewState extends State<_DashboardView> {
             ),
           ),
         ),
-        const Gap(24),
-
-        // Stats
-        Row(
-          children: [
-            _kpiCard(
-              'Cricket Managers',
-              '0',
-              Icons.people,
-              const Color(0xFF10B981),
-            ),
-            const Gap(12),
-            _kpiCard('Active Matches', '0', Icons.live_tv, Colors.red),
-            const Gap(12),
-            _kpiCard('Sponsors', '0', Icons.campaign, Colors.amber),
-          ],
-        ),
       ],
     );
   }
@@ -1450,27 +1433,15 @@ class _Sidebar extends StatelessWidget {
   /// keep the existing bus/goods/marketplace navigation.
   List<Widget> _buildNavItems(BuildContext context) {
     if (vertical == 'cricket_ops') {
+      // Cricket vertical: Sub-Admin only manages Cricket Operations
+      // Manager accounts — single navigation item.
       return [
-        Missile3DButton(
-          label: 'Dashboard',
-          icon: Icons.dashboard,
-          color: const Color(0xFF10B981),
-          height: 64,
-          onTap: () {},
-        ),
         Missile3DButton(
           label: 'Cricket Managers',
           icon: Icons.people,
           color: const Color(0xFF059669),
           height: 64,
           onTap: () => context.go('/sub-admin/cricket/managers'),
-        ),
-        Missile3DButton(
-          label: 'Refresh Data',
-          icon: Icons.refresh,
-          color: const Color(0xFF2563EB),
-          height: 56,
-          onTap: () => bloc.add(const BootstrapDashboard()),
         ),
       ];
     }
@@ -1520,9 +1491,7 @@ class _Sidebar extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const _SubAdminPresetsListPage(),
-            ),
+            MaterialPageRoute(builder: (_) => const _SubAdminPresetsListPage()),
           );
         },
       ),

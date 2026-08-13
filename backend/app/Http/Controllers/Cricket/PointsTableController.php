@@ -34,19 +34,6 @@ class PointsTableController extends Controller
     }
 
     /**
-     * Recompute standings (admin trigger).
-     */
-    public function recompute(string $tournamentId): \Illuminate\Http\JsonResponse
-    {
-        $standings = $this->pointsService->recomputeForTournament($tournamentId);
-
-        return response()->json([
-            'message' => 'Points table recomputed.',
-            'standings' => $standings,
-        ]);
-    }
-
-    /**
      * Get top performers for a tournament (public).
      * Returns most runs and most wickets across all matches.
      *

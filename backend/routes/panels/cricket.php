@@ -13,10 +13,9 @@ use App\Http\Controllers\Cricket\PlayerController;
 use App\Http\Controllers\Cricket\PointsTableController;
 use App\Http\Controllers\Cricket\PublicMatchController;
 use App\Http\Controllers\Cricket\ReplayController;
-use App\Http\Controllers\Cricket\SponsorController;
 use App\Http\Controllers\Cricket\StreamController;
 use App\Http\Controllers\Cricket\TeamController;
-use App\Http\Controllers\Cricket\TournamentController;
+use App\Http\Controllers\Cricket\TournamentSetupController;
 use App\Http\Controllers\Cricket\VoiceScoreController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,8 +29,11 @@ use Illuminate\Support\Facades\Route;
 |
 | Three route groups:
 |   1. PUBLIC  — No auth, consumed by Flutter public app / web PWA
-|   2. MANAGER — Cricket Manager auth (Bearer token)
-|   3. ADMIN   — Super/Sub-Admin (existing Sanctum auth)
+|   2. MANAGER — Cricket Manager auth (Bearer token) — owns all
+|               operational cricket features (tournaments, fixtures,
+|               teams, players, scoring, streams, replays)
+|   3. ADMIN   — Super/Sub-Admin (Sanctum) — ONLY provisions and
+|               manages Cricket Operations Manager accounts
 |
 | ISOLATION: All routes prefixed `api/v1/cricket/`.
 | Zero modification to existing route files.
@@ -149,6 +151,13 @@ Route::prefix('api/v1/cricket/manager')
         Route::delete('matches/{id}', [MatchController::class, 'destroy']);
         Route::patch('matches/{id}/status', [MatchController::class, 'updateStatus']);
 
+        // Tournament Setup (manager-scoped)
+        Route::get('tournaments', [TournamentSetupController::class, 'index']);
+        Route::post('tournaments', [TournamentSetupController::class, 'store']);
+        Route::get('tournaments/{id}', [TournamentSetupController::class, 'show']);
+        Route::put('tournaments/{id}', [TournamentSetupController::class, 'update']);
+        Route::post('tournaments/{id}/activate', [TournamentSetupController::class, 'activate']);
+
         // Fixture Scheduling — Round-Robin auto-generation
         Route::post('tournaments/{tournamentId}/fixtures/generate', [MatchController::class, 'generateFixtures']);
 
@@ -170,44 +179,13 @@ Route::prefix('api/v1/cricket/manager')
 // ═══════════════════════════════════════════════════════════════
 // GROUP 3: SUPER / SUB-ADMIN ENDPOINTS (Sanctum Auth)
 //
-// These endpoints manage the cricket module from the
-// Super Admin / Sub-Admin dashboard.
+// The Sub-Admin panel ONLY provisions and manages Cricket Operations
+// Manager accounts. All operational cricket features live in the
+// Manager panel (GROUP 2).
 // ═══════════════════════════════════════════════════════════════
 Route::prefix('api/v1/cricket/admin')
     ->middleware(['auth:sanctum', 'sub.admin'])
     ->group(function (): void {
-
-        // Tournaments
-        Route::apiResource('tournaments', TournamentController::class);
-
-        // Teams
-        Route::get('tournaments/{tournamentId}/teams', [TeamController::class, 'index']);
-        Route::post('teams', [TeamController::class, 'store']);
-        Route::get('teams/{id}', [TeamController::class, 'show']);
-        Route::put('teams/{id}', [TeamController::class, 'update']);
-        Route::delete('teams/{id}', [TeamController::class, 'destroy']);
-        Route::patch('teams/{id}/status', [TeamController::class, 'updateStatus']);
-
-        // Players
-        Route::get('teams/{teamId}/players', [PlayerController::class, 'index']);
-        Route::post('players', [PlayerController::class, 'store']);
-        Route::get('players/{id}', [PlayerController::class, 'show']);
-        Route::put('players/{id}', [PlayerController::class, 'update']);
-        Route::delete('players/{id}', [PlayerController::class, 'destroy']);
-        Route::patch('players/{id}/status', [PlayerController::class, 'updateStatus']);
-
-        // Matches
-        Route::get('tournaments/{tournamentId}/matches', [MatchController::class, 'index']);
-        Route::post('matches', [MatchController::class, 'store']);
-        Route::get('matches/{id}', [MatchController::class, 'show']);
-        Route::put('matches/{id}', [MatchController::class, 'update']);
-        Route::delete('matches/{id}', [MatchController::class, 'destroy']);
-        Route::post('matches/{id}/toss', [MatchController::class, 'updateToss']);
-        Route::post('matches/{id}/start', [MatchController::class, 'startMatch']);
-
-        // Match Manager Assignments
-        Route::post('matches/{id}/managers', [MatchController::class, 'assignManager']);
-        Route::delete('matches/{matchId}/managers/{assignmentId}', [MatchController::class, 'removeManager']);
 
         // Cricket Manager Accounts (provisioned by Sub-Admin)
         Route::get('managers', [CricketManagerController::class, 'index']);
@@ -217,34 +195,6 @@ Route::prefix('api/v1/cricket/admin')
         Route::post('managers/{id}/suspend', [CricketManagerController::class, 'suspend']);
         Route::post('managers/{id}/activate', [CricketManagerController::class, 'activate']);
         Route::delete('managers/{id}', [CricketManagerController::class, 'destroy']);
-
-        // Sponsors
-        Route::get('tournaments/{tournamentId}/sponsors', [SponsorController::class, 'index']);
-        Route::post('sponsors', [SponsorController::class, 'store']);
-        Route::get('sponsors/{id}', [SponsorController::class, 'show']);
-        Route::put('sponsors/{id}', [SponsorController::class, 'update']);
-        Route::delete('sponsors/{id}', [SponsorController::class, 'destroy']);
-
-        // Match Sponsors
-        Route::get('matches/{matchId}/sponsors', [SponsorController::class, 'matchSponsors']);
-        Route::post('matches/{matchId}/sponsors', [SponsorController::class, 'assignToMatch']);
-        Route::delete('matches/{matchId}/sponsors/{assignmentId}', [SponsorController::class, 'removeFromMatch']);
-
-        // Points Table — Admin
-        Route::post('tournaments/{tournamentId}/standings/recompute', [PointsTableController::class, 'recompute']);
-
-        // Player Career — Admin
-        Route::post('players/{playerId}/career/rebuild', [PlayerCareerController::class, 'rebuild']);
-
-        // Clubs — Admin CRUD
-        Route::post('clubs', [ClubController::class, 'store']);
-        Route::put('clubs/{id}', [ClubController::class, 'update']);
-        Route::delete('clubs/{id}', [ClubController::class, 'destroy']);
-
-        // Best XI — Admin CRUD
-        Route::post('best-xi', [BestXiController::class, 'store']);
-        Route::put('best-xi/{id}', [BestXiController::class, 'update']);
-        Route::delete('best-xi/{id}', [BestXiController::class, 'destroy']);
     });
 
 // ═══════════════════════════════════════════════════════════════

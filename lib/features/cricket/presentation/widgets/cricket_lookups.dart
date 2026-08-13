@@ -45,6 +45,21 @@ String cricketStatusLabel(String status) => switch (status) {
   _ => status,
 };
 
+String cricketTournamentStatusLabel(String status) => switch (status) {
+  'upcoming' => 'Upcoming',
+  'active' => 'Active',
+  'completed' => 'Completed',
+  'cancelled' => 'Cancelled',
+  _ => status,
+};
+
+Color cricketTournamentStatusColor(String status) => switch (status) {
+  'active' => const Color(0xFF10B981),
+  'completed' => const Color(0xFF3B82F6),
+  'cancelled' => const Color(0xFF6B7280),
+  _ => const Color(0xFFF59E0B),
+};
+
 Color cricketStageColor(String stage) => switch (stage) {
   'quarter_final' => const Color(0xFF8B5CF6),
   'semi_final' => const Color(0xFFF59E0B),

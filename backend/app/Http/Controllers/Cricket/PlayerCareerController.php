@@ -5,17 +5,9 @@ namespace App\Http\Controllers\Cricket;
 use App\Http\Controllers\Controller;
 use App\Models\Cricket\Player;
 use App\Models\Cricket\PlayerCareerStats;
-use App\Services\Cricket\PlayerCareerService;
 
 class PlayerCareerController extends Controller
 {
-    private PlayerCareerService $careerService;
-
-    public function __construct(PlayerCareerService $careerService)
-    {
-        $this->careerService = $careerService;
-    }
-
     /**
      * Get career profile for a player (public).
      */
@@ -71,23 +63,6 @@ class PlayerCareerController extends Controller
                     'logo_url' => $career->club->logo_url,
                 ] : null,
             ],
-        ]);
-    }
-
-    /**
-     * Rebuild career stats for a player (admin trigger).
-     */
-    public function rebuild(string $playerId): \Illuminate\Http\JsonResponse
-    {
-        $career = $this->careerService->rebuildForPlayer($playerId);
-
-        if (!$career) {
-            return response()->json(['message' => 'Player not found.'], 404);
-        }
-
-        return response()->json([
-            'message' => 'Career stats rebuilt.',
-            'career' => $career,
         ]);
     }
 

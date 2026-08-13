@@ -63,9 +63,4 @@ class Tournament extends Model
     {
         return $this->hasMany(Sponsor::class);
     }
-
-    public function officials()
-    {
-        return $this->hasMany(MatchOfficial::class);
-    }
 }

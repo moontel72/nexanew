@@ -10,6 +10,7 @@ import '../../blocs/voice_score/voice_score_bloc.dart';
 import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../blocs/team/team_bloc.dart';
 import '../../blocs/fixture/fixture_bloc.dart';
+import '../../blocs/tournament_setup/tournament_setup_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../../data/repositories/cricket_repository.dart';
 import 'manager_login_page.dart';
@@ -22,6 +23,7 @@ import 'teams_list_page.dart';
 import 'player_register_page.dart';
 import 'players_list_page.dart';
 import 'fixture_scheduler_page.dart';
+import 'tournament_setup_page.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 
 /// Manager Dashboard — 3D Pencil Sidebar layout matching Sub-Admin panel design.
@@ -646,6 +648,29 @@ class _TournamentTab extends StatelessWidget {
         colors: const [Color(0xFFF59E0B), Color(0xFFD97706)],
       ),
       const SizedBox(height: 20),
+      Missile3DButton(
+        label: 'Tournament Setup',
+        icon: Icons.emoji_events,
+        color: const Color(0xFF10B981),
+        subtitle: 'Create and activate tournaments',
+        onTap: () {
+          final repo = RepositoryProvider.of<CricketRepository>(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RepositoryProvider.value(
+                value: repo,
+                child: BlocProvider(
+                  create: (_) =>
+                      TournamentSetupBloc(repo: repo)
+                        ..add(const LoadTournaments()),
+                  child: const TournamentSetupPage(),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
       Missile3DButton(
         label: 'Fixture Scheduler',
         icon: Icons.calendar_month,

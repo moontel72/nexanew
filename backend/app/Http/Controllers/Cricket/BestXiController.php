@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Cricket;
 use App\Http\Controllers\Controller;
 use App\Models\Cricket\BestXi;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class BestXiController extends Controller
 {
@@ -65,72 +64,5 @@ class BestXiController extends Controller
                 'selections' => $resolvedSelections,
             ],
         ]);
-    }
-
-    /**
-     * Create a Best XI selection (admin).
-     */
-    public function store(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'tournament_id' => 'nullable|uuid|exists:cricket_tournaments,id',
-            'match_id' => 'nullable|uuid|exists:cricket_matches,id',
-            'team_label' => 'required|string|max:100',
-            'selections' => 'required|array|min:1|max:11',
-            'selections.*.player_id' => 'required|uuid|exists:cricket_players,id',
-            'selections.*.position_name' => 'required|string|max:50',
-            'selections.*.x' => 'required|numeric|min:0|max:1',
-            'selections.*.y' => 'required|numeric|min:0|max:1',
-            'selections.*.rating' => 'nullable|numeric|min:0|max:20',
-            'selections.*.role' => 'nullable|string|max:50',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $xi = BestXi::create($validator->validated());
-
-        return response()->json(['best_xi' => $xi], 201);
-    }
-
-    /**
-     * Update a Best XI selection (admin).
-     */
-    public function update(Request $request, string $id): \Illuminate\Http\JsonResponse
-    {
-        $xi = BestXi::findOrFail($id);
-
-        $validator = Validator::make($request->all(), [
-            'tournament_id' => 'nullable|uuid|exists:cricket_tournaments,id',
-            'match_id' => 'nullable|uuid|exists:cricket_matches,id',
-            'team_label' => 'string|max:100',
-            'selections' => 'array|min:1|max:11',
-            'selections.*.player_id' => 'uuid|exists:cricket_players,id',
-            'selections.*.position_name' => 'string|max:50',
-            'selections.*.x' => 'numeric|min:0|max:1',
-            'selections.*.y' => 'numeric|min:0|max:1',
-            'selections.*.rating' => 'nullable|numeric|min:0|max:20',
-            'selections.*.role' => 'nullable|string|max:50',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $xi->update($validator->validated());
-
-        return response()->json(['best_xi' => $xi->fresh()]);
-    }
-
-    /**
-     * Delete a Best XI selection (admin).
-     */
-    public function destroy(string $id): \Illuminate\Http\JsonResponse
-    {
-        $xi = BestXi::findOrFail($id);
-        $xi->delete();
-
-        return response()->json(['message' => 'Best XI deleted.']);
     }
 }

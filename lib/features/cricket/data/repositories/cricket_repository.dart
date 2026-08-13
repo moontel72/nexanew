@@ -1240,6 +1240,102 @@ class CricketRepository {
     throw Exception(_apiError(res));
   }
 
+  // ────────────────────────────────────────────────────────────
+  // Tournament Setup (manager endpoints)
+  // ────────────────────────────────────────────────────────────
+
+  Future<List<TournamentModel>> getTournaments() async {
+    final uri = Uri.parse(
+      '${ApiConfig.apiBaseUrl}/cricket/manager/tournaments',
+    ).replace(queryParameters: {'per_page': '100'});
+    final res = await _http.get(uri, headers: await _authHeaders());
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return (data['data'] as List)
+          .map((t) => TournamentModel.fromJson(t as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<TournamentModel> createTournament({
+    required String name,
+    required DateTime startDate,
+    required DateTime endDate,
+    String? location,
+    String? description,
+  }) async {
+    final res = await _http.post(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/tournaments'),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'name': name,
+        'start_date': _dateOnly(startDate),
+        'end_date': _dateOnly(endDate),
+        if (location != null && location.isNotEmpty) 'location': location,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+      }),
+    );
+    if (res.statusCode == 201) {
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      return TournamentModel.fromJson(
+        data['tournament'] as Map<String, dynamic>,
+      );
+    }
+    throw Exception(_apiError(res));
+  }
+
+  Future<TournamentModel> updateTournament({
+    required String tournamentId,
+    String? name,
+    String? location,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? description,
+    String? status,
+    bool? isActive,
+  }) async {
+    final res = await _http.put(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/tournaments/$tournamentId',
+      ),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        if (name != null) 'name': name,
+        if (location != null) 'location': location,
+        if (startDate != null) 'start_date': _dateOnly(startDate),
+        if (endDate != null) 'end_date': _dateOnly(endDate),
+        if (description != null) 'description': description,
+        if (status != null) 'status': status,
+        if (isActive != null) 'is_active': isActive,
+      }),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      return TournamentModel.fromJson(
+        data['tournament'] as Map<String, dynamic>,
+      );
+    }
+    throw Exception(_apiError(res));
+  }
+
+  Future<TournamentModel> activateTournament(String tournamentId) async {
+    final res = await _http.post(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/tournaments/$tournamentId/activate',
+      ),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      return TournamentModel.fromJson(
+        data['tournament'] as Map<String, dynamic>,
+      );
+    }
+    throw Exception(_apiError(res));
+  }
+
   static String _dateOnly(DateTime dt) =>
       '${dt.year.toString().padLeft(4, '0')}-'
       '${dt.month.toString().padLeft(2, '0')}-'

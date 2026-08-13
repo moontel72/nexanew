@@ -14,6 +14,10 @@ class TournamentModel {
   final DateTime endDate;
   final String? logoUrl;
   final String status;
+  final String? description;
+  final bool isActive;
+  final int teamsCount;
+  final int matchesCount;
 
   const TournamentModel({
     required this.id,
@@ -23,6 +27,10 @@ class TournamentModel {
     required this.endDate,
     this.logoUrl,
     required this.status,
+    this.description,
+    this.isActive = false,
+    this.teamsCount = 0,
+    this.matchesCount = 0,
   });
 
   factory TournamentModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +47,14 @@ class TournamentModel {
       endDate: _safeDate(json['end_date']?.toString()),
       logoUrl: json['logo_url']?.toString(),
       status: json['status']?.toString() ?? 'unknown',
+      description: json['description']?.toString(),
+      isActive: json['is_active'] == true || json['is_active'] == 1,
+      teamsCount: json['teams_count'] is int
+          ? json['teams_count'] as int
+          : int.tryParse(json['teams_count']?.toString() ?? '') ?? 0,
+      matchesCount: json['matches_count'] is int
+          ? json['matches_count'] as int
+          : int.tryParse(json['matches_count']?.toString() ?? '') ?? 0,
     );
   }
 
@@ -50,6 +66,7 @@ class TournamentModel {
     'end_date': endDate.toIso8601String(),
     'logo_url': logoUrl,
     'status': status,
+    'is_active': isActive,
   };
 }
 
