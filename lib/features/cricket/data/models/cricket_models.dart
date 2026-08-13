@@ -164,8 +164,8 @@ class MatchModel {
   }
 
   factory MatchModel.fromJson(Map<String, dynamic> json) => MatchModel(
-    id: json['id'] as String,
-    status: json['status'] as String,
+    id: json['id']?.toString() ?? '',
+    status: json['status']?.toString() ?? 'unknown',
     teamAName: _teamNameOf(json['team_a']),
     teamBName: _teamNameOf(json['team_b']),
     teamAShort:

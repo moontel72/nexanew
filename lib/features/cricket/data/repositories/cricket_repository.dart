@@ -146,6 +146,19 @@ class CricketRepository {
     return 'Request failed (HTTP ${res.statusCode})';
   }
 
+  /// Parse a paginated `data` list defensively — skips null/non-map rows
+  /// so a single malformed record can never crash a page.
+  List<Map<String, dynamic>> _pagedRows(http.Response res) {
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map) return const [];
+    final rows = decoded['data'];
+    if (rows is! List) return const [];
+    return rows
+        .whereType<Map>()
+        .map((r) => Map<String, dynamic>.from(r))
+        .toList();
+  }
+
   // ────────────────────────────────────────────────────────────
   // Public Endpoints (no auth)
   // ────────────────────────────────────────────────────────────
@@ -768,10 +781,7 @@ class CricketRepository {
         headers: await _authHeaders(),
       );
       if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        return (data['data'] as List)
-            .map((t) => TeamModel.fromJson(t))
-            .toList();
+        return _pagedRows(res).map((t) => TeamModel.fromJson(t)).toList();
       }
       return [];
     } catch (_) {
@@ -816,10 +826,7 @@ class CricketRepository {
         headers: await _authHeaders(),
       );
       if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        return (data['data'] as List)
-            .map((p) => PlayerModel.fromJson(p))
-            .toList();
+        return _pagedRows(res).map((p) => PlayerModel.fromJson(p)).toList();
       }
       return [];
     } catch (_) {
@@ -1067,10 +1074,7 @@ class CricketRepository {
     ).replace(queryParameters: params);
     final res = await _http.get(uri, headers: await _authHeaders());
     if (res.statusCode == 200) {
-      final data = jsonDecode(res.body);
-      return (data['data'] as List)
-          .map((m) => MatchModel.fromJson(m as Map<String, dynamic>))
-          .toList();
+      return _pagedRows(res).map((m) => MatchModel.fromJson(m)).toList();
     }
     return [];
   }
@@ -1214,10 +1218,7 @@ class CricketRepository {
     ).replace(queryParameters: {'per_page': '100'});
     final res = await _http.get(uri, headers: await _authHeaders());
     if (res.statusCode == 200) {
-      final data = jsonDecode(res.body);
-      return (data['data'] as List)
-          .map((g) => GroundModel.fromJson(g as Map<String, dynamic>))
-          .toList();
+      return _pagedRows(res).map((g) => GroundModel.fromJson(g)).toList();
     }
     return [];
   }
@@ -1250,10 +1251,7 @@ class CricketRepository {
     ).replace(queryParameters: {'per_page': '100'});
     final res = await _http.get(uri, headers: await _authHeaders());
     if (res.statusCode == 200) {
-      final data = jsonDecode(res.body);
-      return (data['data'] as List)
-          .map((t) => TournamentModel.fromJson(t as Map<String, dynamic>))
-          .toList();
+      return _pagedRows(res).map((t) => TournamentModel.fromJson(t)).toList();
     }
     return [];
   }
@@ -1347,8 +1345,7 @@ class CricketRepository {
       headers: await _authHeaders(),
     );
     if (res.statusCode == 200) {
-      final data = jsonDecode(res.body);
-      return (data['data'] as List).map((t) => TeamModel.fromJson(t)).toList();
+      return _pagedRows(res).map((t) => TeamModel.fromJson(t)).toList();
     }
     return [];
   }
@@ -1384,10 +1381,7 @@ class CricketRepository {
       headers: await _authHeaders(),
     );
     if (res.statusCode == 200) {
-      final data = jsonDecode(res.body);
-      return (data['data'] as List)
-          .map((p) => PlayerModel.fromJson(p))
-          .toList();
+      return _pagedRows(res).map((p) => PlayerModel.fromJson(p)).toList();
     }
     return [];
   }
