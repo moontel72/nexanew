@@ -36,6 +36,9 @@ class FixtureSchedulerPage extends StatelessWidget {
   const FixtureSchedulerPage({super.key});
 
   void _showMatchForm(BuildContext context, {MatchModel? existing}) {
+    // The sheet opens in the navigator overlay, above the page's
+    // BlocProvider — re-provide the bloc so the form can find it.
+    final bloc = context.read<FixtureBloc>();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -43,11 +46,16 @@ class FixtureSchedulerPage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => MatchFormSheet(existing: existing),
+      builder: (_) => BlocProvider.value(
+        value: bloc,
+        child: MatchFormSheet(existing: existing),
+      ),
     );
   }
 
   void _showGenerator(BuildContext context) {
+    // Same overlay-provider caveat as _showMatchForm.
+    final bloc = context.read<FixtureBloc>();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -55,7 +63,8 @@ class FixtureSchedulerPage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => const GenerateFixturesSheet(),
+      builder: (_) =>
+          BlocProvider.value(value: bloc, child: const GenerateFixturesSheet()),
     );
   }
 

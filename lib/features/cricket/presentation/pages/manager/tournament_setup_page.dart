@@ -13,6 +13,9 @@ class TournamentSetupPage extends StatelessWidget {
   const TournamentSetupPage({super.key});
 
   void _showForm(BuildContext context, {TournamentModel? existing}) {
+    // The sheet opens in the navigator overlay, above the page's
+    // BlocProvider — re-provide the bloc so the form can find it.
+    final bloc = context.read<TournamentSetupBloc>();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -20,7 +23,10 @@ class TournamentSetupPage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => TournamentFormSheet(existing: existing),
+      builder: (_) => BlocProvider.value(
+        value: bloc,
+        child: TournamentFormSheet(existing: existing),
+      ),
     );
   }
 
