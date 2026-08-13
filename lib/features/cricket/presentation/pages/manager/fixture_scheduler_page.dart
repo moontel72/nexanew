@@ -109,13 +109,14 @@ class FixtureSchedulerPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<FixtureBloc, FixtureState>(
       listener: (context, state) {
-        if (state is FixtureNotice) {
+        if (state is FixtureNotice && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
               backgroundColor: state.success
                   ? const Color(0xFF10B981)
                   : const Color(0xFFEF4444),
+              duration: Duration(seconds: state.success ? 3 : 10),
             ),
           );
         }

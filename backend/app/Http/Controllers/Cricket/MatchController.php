@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cricket;
 use App\Http\Controllers\Controller;
 use App\Models\Cricket\MatchManager;
 use App\Models\Cricket\MatchModel;
+use App\Models\Cricket\Team;
 use App\Models\Cricket\Tournament;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,19 @@ class MatchController extends Controller
 
     public function store(Request $request): \Illuminate\Http\JsonResponse
     {
+        // Self-heal: teams registered before a tournament was activated have
+        // no tournament_id — attach any referenced orphan team to this
+        // tournament so scheduling works without manual SQL fixes.
+        $referencedTeamIds = array_filter([
+            $request->input('team_a_id'),
+            $request->input('team_b_id'),
+        ]);
+        if (!empty($referencedTeamIds) && $request->filled('tournament_id')) {
+            Team::whereIn('id', $referencedTeamIds)
+                ->whereNull('tournament_id')
+                ->update(['tournament_id' => $request->tournament_id]);
+        }
+
         $validator = Validator::make($request->all(), [
             'tournament_id' => 'required|uuid|exists:cricket_tournaments,id',
             'team_a_id' => [
@@ -57,6 +71,10 @@ class MatchController extends Controller
             'match_type' => 'required|in:'.self::MATCH_TYPES,
             'overs_per_side' => 'nullable|integer|min:1|max:90',
             'stage' => 'nullable|in:'.self::STAGES,
+        ], [
+            'team_a_id.exists' => 'Team A does not belong to the active tournament.',
+            'team_b_id.exists' => 'Team B does not belong to the active tournament.',
+            'team_a_id.different' => 'Team A and Team B must be different.',
         ]);
 
         if ($validator->fails()) {
@@ -108,6 +126,17 @@ class MatchController extends Controller
     {
         $match = MatchModel::findOrFail($id);
 
+        // Self-heal orphan teams on edit as well (see store()).
+        $referencedTeamIds = array_filter([
+            $request->input('team_a_id'),
+            $request->input('team_b_id'),
+        ]);
+        if (!empty($referencedTeamIds)) {
+            Team::whereIn('id', $referencedTeamIds)
+                ->whereNull('tournament_id')
+                ->update(['tournament_id' => $match->tournament_id]);
+        }
+
         $validator = Validator::make($request->all(), [
             'team_a_id' => [
                 'sometimes', 'uuid',
@@ -128,6 +157,10 @@ class MatchController extends Controller
             'match_type' => 'sometimes|in:'.self::MATCH_TYPES,
             'overs_per_side' => 'nullable|integer|min:1|max:90',
             'stage' => 'sometimes|in:'.self::STAGES,
+        ], [
+            'team_a_id.exists' => 'Team A does not belong to this fixture\'s tournament.',
+            'team_b_id.exists' => 'Team B does not belong to this fixture\'s tournament.',
+            'team_a_id.different' => 'Team A and Team B must be different.',
         ]);
 
         if ($validator->fails()) {

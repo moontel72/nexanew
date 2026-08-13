@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Cricket;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cricket\Team;
 use App\Models\Cricket\Tournament;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -100,22 +101,33 @@ class TournamentSetupController extends Controller
     /**
      * Activate this tournament and deactivate all others so the public
      * portal and Fixture Scheduler always resolve a single active one.
+     *
+     * Teams registered before any tournament existed have no
+     * tournament_id — they are attached to the activated tournament so
+     * fixture scheduling works without manual fixes.
      */
     public function activate(string $id): \Illuminate\Http\JsonResponse
     {
         $tournament = Tournament::findOrFail($id);
 
-        DB::transaction(function () use ($tournament) {
+        $assignedTeams = DB::transaction(function () use ($tournament) {
             Tournament::where('id', '!=', $tournament->id)
                 ->update(['is_active' => false]);
             $tournament->update([
                 'status' => 'active',
                 'is_active' => true,
             ]);
+
+            return Team::whereNull('tournament_id')
+                ->update(['tournament_id' => $tournament->id]);
         });
 
         return response()->json([
-            'message' => 'Tournament activated.',
+            'message' => 'Tournament activated.'
+                . ($assignedTeams > 0
+                    ? " {$assignedTeams} existing team(s) attached to it."
+                    : ''),
+            'assigned_teams' => $assignedTeams,
             'tournament' => $tournament->fresh(),
         ]);
     }

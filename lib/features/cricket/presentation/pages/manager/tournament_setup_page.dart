@@ -445,6 +445,7 @@ class _TournamentFormSheetState extends State<TournamentFormSheet> {
       listenWhen: (_, state) =>
           state is TournamentSetupNotice && state.action == 'saveTournament',
       listener: (context, state) {
+        if (!context.mounted) return;
         if ((state as TournamentSetupNotice).success) {
           Navigator.of(context).pop();
         }

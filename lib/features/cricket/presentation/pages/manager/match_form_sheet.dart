@@ -148,6 +148,7 @@ class _MatchFormSheetState extends State<MatchFormSheet> {
       listenWhen: (_, state) =>
           state is FixtureNotice && state.action == 'saveMatch',
       listener: (context, state) {
+        if (!context.mounted) return;
         if ((state as FixtureNotice).success) {
           Navigator.of(context).pop();
         }

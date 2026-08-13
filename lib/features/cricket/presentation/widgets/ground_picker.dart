@@ -114,6 +114,7 @@ class _AddGroundDialogState extends State<AddGroundDialog> {
       listenWhen: (_, state) =>
           state is FixtureNotice && state.action == 'groundCreated',
       listener: (context, state) {
+        if (!context.mounted) return;
         if ((state as FixtureNotice).success) {
           Navigator.of(context).pop();
         }
