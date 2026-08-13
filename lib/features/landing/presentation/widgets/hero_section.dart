@@ -151,13 +151,16 @@ class _Badge extends StatelessWidget {
             size: 18,
           ),
           const SizedBox(width: 8),
-          Text(
-            text,
-            style: const TextStyle(
-              color: LandingPalette.accent,
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-              letterSpacing: 2,
+          Flexible(
+            child: Text(
+              text,
+              softWrap: true,
+              style: const TextStyle(
+                color: LandingPalette.accent,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+                letterSpacing: 2,
+              ),
             ),
           ),
         ],

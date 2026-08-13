@@ -153,6 +153,7 @@ jobs:
             php artisan db:seed --class=CricketFeatureRegistrySeeder --force
             php artisan optimize:clear
             php artisan optimize
+            php artisan storage:link 2>/dev/null || true
 
             systemctl restart nexatrace-reverb || echo 'Reverb not yet installed'
             systemctl restart nexatrace-queue || echo 'Queue worker not yet installed'

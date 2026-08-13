@@ -58,7 +58,10 @@ class VerticalsSection extends StatelessWidget {
                 runSpacing: 28,
                 children: [
                   for (final v in verticals)
-                    SizedBox(width: cardWidth, child: _VerticalCard(v: v)),
+                    SizedBox(
+                      width: cardWidth,
+                      child: _VerticalCard(v: v),
+                    ),
                 ],
               );
             },
@@ -157,8 +160,8 @@ class _VerticalCard extends StatelessWidget {
                 .map(
                   (f) => Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
+                      horizontal: 12,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: LandingPalette.surfaceElevated,
@@ -166,15 +169,27 @@ class _VerticalCard extends StatelessWidget {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.check_circle, color: v.accent, size: 13),
-                        const SizedBox(width: 5),
-                        Text(
-                          f,
-                          style: const TextStyle(
-                            color: LandingPalette.textPrimary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 1.5),
+                          child: Icon(
+                            Icons.check_circle,
+                            color: v.accent,
+                            size: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            f,
+                            softWrap: true,
+                            style: const TextStyle(
+                              color: LandingPalette.textPrimary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              height: 1.4,
+                            ),
                           ),
                         ),
                       ],

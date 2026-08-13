@@ -55,6 +55,18 @@ class CricketRepository {
         : {'Content-Type': 'application/json'};
   }
 
+  /// Auth headers for multipart uploads.
+  ///
+  /// CRITICAL: must NOT set Content-Type — the http package generates the
+  /// `multipart/form-data; boundary=...` header itself. Setting
+  /// `application/json` here would make the server ignore the file body.
+  Future<Map<String, String>> _authHeadersMultipart() async {
+    await _loadToken();
+    return _bearerToken != null
+        ? {'Authorization': 'Bearer $_bearerToken'}
+        : const <String, String>{};
+  }
+
   // ────────────────────────────────────────────────────────────
   // Auth
   // ────────────────────────────────────────────────────────────
@@ -977,7 +989,7 @@ class CricketRepository {
       '${ApiConfig.apiBaseUrl}/cricket/manager/players/$playerId',
     );
     final request = http.MultipartRequest('POST', uri)
-      ..headers.addAll(await _authHeaders())
+      ..headers.addAll(await _authHeadersMultipart())
       ..files.add(
         http.MultipartFile.fromBytes('photo', bytes, filename: fileName),
       );
@@ -1004,7 +1016,7 @@ class CricketRepository {
       '${ApiConfig.apiBaseUrl}/cricket/manager/teams/$teamId',
     );
     final request = http.MultipartRequest('POST', uri)
-      ..headers.addAll(await _authHeaders())
+      ..headers.addAll(await _authHeadersMultipart())
       ..files.add(
         http.MultipartFile.fromBytes('logo', bytes, filename: fileName),
       );

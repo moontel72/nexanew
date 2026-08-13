@@ -146,15 +146,13 @@ class _TopBar extends StatelessWidget {
     ),
     child: Row(
       children: [
-        CircleAvatar(
+        const CircleAvatar(
           radius: 20,
-          backgroundColor: const Color(0xFF10B981),
-          child: Text(
-            managerName.isNotEmpty ? managerName[0].toUpperCase() : 'M',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
+          backgroundColor: Color(0xFF10B981),
+          child: Icon(
+            Icons.verified_user_outlined,
+            color: Colors.white,
+            size: 22,
           ),
         ),
         const SizedBox(width: 12),

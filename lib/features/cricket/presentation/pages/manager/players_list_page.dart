@@ -237,14 +237,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
             const CircleAvatar(
               backgroundColor: Color(0xFF2563EB),
               radius: 16,
-              child: Text(
-                '?',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
+              child: Icon(Icons.shield_outlined, color: Colors.white, size: 16),
             ),
             const SizedBox(width: 10),
             const Text(
@@ -285,13 +278,10 @@ class _PlayersListPageState extends State<PlayersListPage> {
                 ? NetworkImage(_fullUrl(logoUrl))
                 : null,
             child: logoUrl == null || logoUrl.isEmpty
-                ? Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                ? const Icon(
+                    Icons.shield_outlined,
+                    color: Colors.white,
+                    size: 16,
                   )
                 : null,
           ),
@@ -732,15 +722,10 @@ class _PlayersListPageState extends State<PlayersListPage> {
                               ? NetworkImage(_fullUrl(p.photoUrl!))
                               : null,
                           child: p.photoUrl == null || p.photoUrl!.isEmpty
-                              ? Text(
-                                  p.name.isNotEmpty
-                                      ? p.name[0].toUpperCase()
-                                      : '?',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              ? const Icon(
+                                  Icons.sports_cricket,
+                                  color: Colors.white,
+                                  size: 30,
                                 )
                               : null,
                         ),
@@ -1500,15 +1485,10 @@ class _PlayersListPageState extends State<PlayersListPage> {
                                       : null,
                                   child:
                                       p.photoUrl == null || p.photoUrl!.isEmpty
-                                      ? Text(
-                                          p.name.isNotEmpty
-                                              ? p.name[0].toUpperCase()
-                                              : '?',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
+                                      ? const Icon(
+                                          Icons.sports_cricket,
+                                          color: Colors.white,
+                                          size: 20,
                                         )
                                       : null,
                                 ),

@@ -1,5 +1,7 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 
@@ -121,7 +123,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
                 itemCount: _teams.length,
                 itemBuilder: (_, i) {
                   final team = _teams[i];
-                  return _TeamMediaCard(team: team);
+                  return _TeamMediaCard(team: team, onChanged: _load);
                 },
               ),
             ),
@@ -131,11 +133,82 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
 
 class _TeamMediaCard extends StatelessWidget {
   final TeamModel team;
-  const _TeamMediaCard({required this.team});
+  final VoidCallback onChanged;
+  const _TeamMediaCard({required this.team, required this.onChanged});
+
+  String _fullUrl(String path) {
+    if (path.startsWith('http')) return path;
+    return '${ApiConfig.baseUrl}$path';
+  }
+
+  Future<void> _pickAndUploadLogo(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final bytes = result.files.first.bytes;
+    final fileName = result.files.first.name;
+    if (bytes == null) return;
+    if (!context.mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F2936),
+        title: const Text('New Logo', style: TextStyle(color: Colors.white)),
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.memory(
+            bytes,
+            width: 200,
+            height: 200,
+            fit: BoxFit.cover,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFEF4444),
+            ),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+            ),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await CricketRepository().uploadTeamLogo(team.id, bytes, fileName);
+      onChanged();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Logo updated'),
+          backgroundColor: Color(0xFF10B981),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final initial = team.name.isNotEmpty ? team.name[0].toUpperCase() : '?';
     final code = team.shortCode.isNotEmpty
         ? team.shortCode
         : (team.teamCode ?? '');
@@ -149,18 +222,20 @@ class _TeamMediaCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Placeholder avatar
+            // Team logo (or neutral placeholder)
             CircleAvatar(
               radius: 36,
               backgroundColor: const Color(0xFF2563EB),
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              backgroundImage: team.logoUrl != null && team.logoUrl!.isNotEmpty
+                  ? NetworkImage(_fullUrl(team.logoUrl!))
+                  : null,
+              child: team.logoUrl == null || team.logoUrl!.isEmpty
+                  ? const Icon(
+                      Icons.shield_outlined,
+                      color: Colors.white,
+                      size: 32,
+                    )
+                  : null,
             ),
             const SizedBox(height: 10),
             // Team name
@@ -198,7 +273,7 @@ class _TeamMediaCard extends StatelessWidget {
               ),
             ],
             const Spacer(),
-            // Upload Logo button (disabled)
+            // Upload Logo button
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -207,10 +282,10 @@ class _TeamMediaCard extends StatelessWidget {
                   'Upload Logo',
                   style: TextStyle(fontSize: 12),
                 ),
-                onPressed: null,
+                onPressed: () => _pickAndUploadLogo(context),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF6B7280),
-                  side: const BorderSide(color: Color(0xFF374151)),
+                  foregroundColor: const Color(0xFF10B981),
+                  side: const BorderSide(color: Color(0xFF10B981)),
                   padding: const EdgeInsets.symmetric(vertical: 6),
                 ),
               ),

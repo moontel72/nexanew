@@ -245,14 +245,10 @@ class _TeamsListPageState extends State<TeamsListPage> {
                               ? NetworkImage(_fullUrl(team.logoUrl!))
                               : null,
                           child: team.logoUrl == null || team.logoUrl!.isEmpty
-                              ? Text(
-                                  team.name.isNotEmpty
-                                      ? team.name[0].toUpperCase()
-                                      : '?',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                  ),
+                              ? const Icon(
+                                  Icons.shield_outlined,
+                                  color: Colors.white,
+                                  size: 28,
                                 )
                               : null,
                         ),
@@ -807,14 +803,10 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                     ? NetworkImage(_fullUrl(t.logoUrl!))
                                     : null,
                                 child: t.logoUrl == null || t.logoUrl!.isEmpty
-                                    ? Text(
-                                        t.name.isNotEmpty
-                                            ? t.name[0].toUpperCase()
-                                            : '?',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                    ? const Icon(
+                                        Icons.shield_outlined,
+                                        color: Colors.white,
+                                        size: 24,
                                       )
                                     : null,
                               ),
