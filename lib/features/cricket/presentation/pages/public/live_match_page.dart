@@ -59,9 +59,63 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
             height: 220,
             child: BlocBuilder<StreamPlayerBloc, StreamPlayerState>(
               builder: (context, state) => switch (state) {
-                StreamPlayerReady(:final activeStreamUrl) => CricketVideoPlayer(
-                  hlsUrl: activeStreamUrl ?? '',
-                ),
+                StreamPlayerReady(
+                  :final activeStreamUrl,
+                  :final streams,
+                  :final activeCameraIndex,
+                ) =>
+                  Column(
+                    children: [
+                      Expanded(
+                        child:
+                            activeStreamUrl != null &&
+                                activeStreamUrl.isNotEmpty
+                            ? CricketVideoPlayer(
+                                hlsUrl: activeStreamUrl,
+                                autoPlay: true,
+                              )
+                            : const Center(
+                                child: Text(
+                                  'Stream starting soon...',
+                                  style: TextStyle(
+                                    color: CricketColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                      ),
+                      // Multi-camera selector (3-mobile test)
+                      if (streams.length > 1)
+                        SizedBox(
+                          height: 36,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            itemCount: streams.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              final s = streams[index];
+                              final selected = index == activeCameraIndex;
+                              return ChoiceChip(
+                                label: Text(s.cameraLabel),
+                                selected: selected,
+                                backgroundColor: CricketColors.inputFill,
+                                selectedColor: CricketColors.complete,
+                                labelStyle: TextStyle(
+                                  color: selected
+                                      ? Colors.white
+                                      : CricketColors.textSecondary,
+                                  fontSize: 11,
+                                ),
+                                onSelected: (_) => context
+                                    .read<StreamPlayerBloc>()
+                                    .add(SwitchCamera(index)),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
                 StreamPlayerOffline(:final message) => Center(
                   child: Text(
                     message,

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../blocs/match_list/match_list_bloc.dart';
-import '../../blocs/live_score/live_score_bloc.dart';
-import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../widgets/match_card.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
@@ -86,7 +85,12 @@ class _TournamentHomePageState extends State<TournamentHomePage> {
               icon: Icons.live_tv,
               color: Colors.red,
             ),
-            ...liveMatches.map((m) => MatchCard(match: m)),
+            ...liveMatches.map(
+              (m) => MatchCard(
+                match: m,
+                onTap: () => context.push('/cricket/match/${m.id}', extra: m),
+              ),
+            ),
             const SizedBox(height: 24),
           ],
           const _SectionHeader(
@@ -96,7 +100,12 @@ class _TournamentHomePageState extends State<TournamentHomePage> {
           ),
           ...allMatches
               .where((m) => !liveMatches.any((l) => l.id == m.id))
-              .map((m) => MatchCard(match: m)),
+              .map(
+                (m) => MatchCard(
+                  match: m,
+                  onTap: () => context.push('/cricket/match/${m.id}', extra: m),
+                ),
+              ),
         ],
       ),
     );

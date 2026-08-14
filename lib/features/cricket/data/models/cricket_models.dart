@@ -327,6 +327,8 @@ class StreamModel {
   final String id;
   final String cameraLabel;
   final int cameraNumber;
+  final String? rtmpIngestUrl;
+  final String? rtmpStreamKey;
   final String? hlsPlaylistUrl;
   final String streamStatus;
   final bool isPrimary;
@@ -336,6 +338,8 @@ class StreamModel {
     required this.id,
     required this.cameraLabel,
     required this.cameraNumber,
+    this.rtmpIngestUrl,
+    this.rtmpStreamKey,
     this.hlsPlaylistUrl,
     required this.streamStatus,
     this.isPrimary = false,
@@ -346,6 +350,8 @@ class StreamModel {
     id: json['id'] as String,
     cameraLabel: json['camera_label'] as String,
     cameraNumber: json['camera_number'] as int,
+    rtmpIngestUrl: json['rtmp_ingest_url'] as String?,
+    rtmpStreamKey: json['rtmp_stream_key'] as String?,
     hlsPlaylistUrl: json['hls_playlist_url'] as String?,
     streamStatus: json['stream_status'] as String,
     isPrimary: json['is_primary'] as bool? ?? false,
@@ -353,6 +359,41 @@ class StreamModel {
   );
 
   bool get isLive => streamStatus == 'live';
+}
+
+/// Realtime program-feed context pushed by the backend when the manager
+/// switches cameras (`stream.updated` event). When [isLive] is false the
+/// manager has ended the live feed.
+class CricketStreamUpdate {
+  final String? streamId;
+  final int? cameraNumber;
+  final String? cameraLabel;
+  final String? hlsPlaylistUrl;
+  final bool isLive;
+
+  const CricketStreamUpdate({
+    this.streamId,
+    this.cameraNumber,
+    this.cameraLabel,
+    this.hlsPlaylistUrl,
+    this.isLive = false,
+  });
+
+  factory CricketStreamUpdate.fromJson(Map<String, dynamic> json) {
+    final active = json['active_stream'];
+    if (active is Map) {
+      final m = Map<String, dynamic>.from(active);
+      return CricketStreamUpdate(
+        streamId: m['id']?.toString(),
+        cameraNumber: (m['camera_number'] as num?)?.toInt(),
+        cameraLabel: m['camera_label']?.toString(),
+        hlsPlaylistUrl: m['hls_playlist_url']?.toString(),
+        isLive: true,
+      );
+    }
+    // active_stream: null → nothing is live.
+    return const CricketStreamUpdate();
+  }
 }
 
 class SponsorModel {

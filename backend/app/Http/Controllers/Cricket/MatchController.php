@@ -499,7 +499,11 @@ class MatchController extends Controller
      */
     public function takeOver(Request $request, string $id): \Illuminate\Http\JsonResponse
     {
-        $manager = $request->userResolver()();
+        $manager = \App\Http\Middleware\Cricket\CricketManagerAuth::manager($request);
+
+        if (!$manager) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
 
         $assignment = MatchManager::where('match_id', $id)
             ->where('cricket_manager_id', $manager->id)

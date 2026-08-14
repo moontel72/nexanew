@@ -17,8 +17,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:trace_odd/core/config/environment.dart';
-import 'package:trace_odd/core/services/websocket_hub.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/camera_switcher/camera_switcher_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/cricket_auth/cricket_auth_bloc.dart';
@@ -41,21 +39,9 @@ bool _managerAuthed = false;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) usePathUrlStrategy();
-  _initRealtimeHub();
   final prefs = await SharedPreferences.getInstance();
   _managerAuthed = (prefs.getString('cricket_manager_token') ?? '').isNotEmpty;
   runApp(const CricketManagerApp());
-}
-
-/// Initialize the shared WebSocket hub so live score streams are available
-/// inside the dashboard. Failures fall back silently to REST.
-void _initRealtimeHub() {
-  try {
-    WebSocketHub(baseUrl: Environment.apiBaseUrl);
-    WebSocketHub.instance.connect();
-  } catch (_) {
-    // Web platforms without WebSocket support — REST fallback handles it.
-  }
 }
 
 class CricketManagerApp extends StatelessWidget {

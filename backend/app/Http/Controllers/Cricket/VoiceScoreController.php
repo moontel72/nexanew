@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\Cricket\CricketManagerAuth;
 use App\Models\Cricket\ManagerSessionLog;
 use App\Models\Cricket\VoiceScoreLog;
+use App\Services\Cricket\LiveScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -25,6 +26,10 @@ use Illuminate\Support\Facades\Validator;
 class VoiceScoreController extends Controller
 {
     private const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+
+    public function __construct(private readonly LiveScoreService $scoreService)
+    {
+    }
 
     /**
      * Process voice input (transcript text) and return parsed score data.
@@ -103,6 +108,10 @@ class VoiceScoreController extends Controller
 
     /**
      * Confirm and apply a parsed voice score to the live match.
+     *
+     * Maps the AI-parsed payload to the ball format expected by
+     * LiveScoreService::processBall, records the ball, and broadcasts
+     * the updated score to all connected clients.
      */
     public function apply(Request $request, string $logId): \Illuminate\Http\JsonResponse
     {
@@ -114,13 +123,58 @@ class VoiceScoreController extends Controller
             return response()->json(['message' => 'Voice log is not in parsed state.'], 422);
         }
 
+        $parsed = $log->parsed_score_data ?? [];
+
+        // Map AI output to the ball payload (only keys the score service
+        // understands — commentary hints stay on the log for history).
+        $runs = isset($parsed['runs']) ? (int) $parsed['runs'] : 0;
+        $runs = max(0, min(7, $runs));
+
+        $extrasType = $parsed['extras_type'] ?? null;
+        if (!in_array($extrasType, ['wide', 'no_ball', 'bye', 'leg_bye'], true)) {
+            $extrasType = null;
+        }
+
+        $isWicket = !empty($parsed['is_wicket']);
+        $wicketType = $parsed['wicket_type'] ?? null;
+        if ($isWicket && !in_array($wicketType, ['bowled', 'caught', 'lbw', 'run_out', 'stumped', 'hit_wicket'], true)) {
+            $wicketType = null;
+        }
+
+        $ballData = [
+            'runs' => $runs,
+            'is_wicket' => $isWicket,
+            'extras_type' => $extrasType,
+        ];
+        if ($isWicket && $wicketType !== null) {
+            $ballData['wicket_type'] = $wicketType;
+        }
+
+        try {
+            $liveScore = $this->scoreService->processBall(
+                $log->match_id,
+                $ballData,
+                $manager->id
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
         $log->was_applied = true;
         $log->status = 'applied';
         $log->save();
 
+        ManagerSessionLog::create([
+            'cricket_manager_id' => $manager->id,
+            'match_id' => $log->match_id,
+            'action' => 'voice_score_apply',
+            'metadata' => ['voice_log_id' => $log->id, 'ball' => $ballData],
+            'ip_address' => $request->ip(),
+        ]);
+
         return response()->json([
-            'message' => 'Voice score marked as applied.',
-            'parsed_data' => $log->parsed_score_data,
+            'message' => 'Voice score applied to live match.',
+            'score' => $liveScore->full_snapshot,
         ]);
     }
 

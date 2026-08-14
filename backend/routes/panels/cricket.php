@@ -78,6 +78,9 @@ Route::prefix('api/v1/cricket/public')->group(function (): void {
     // AI Health Check
     Route::get('voice-score/health', [VoiceScoreController::class, 'health']);
 
+    // Realtime (WebSocket) connection config for live score streaming
+    Route::get('realtime-config', [PublicMatchController::class, 'realtimeConfig']);
+
     // Public replays
     Route::get('matches/{matchId}/replays', [ReplayController::class, 'publicReplays']);
     Route::get('replays/{clipId}/stream', [ReplayController::class, 'publicStream']);
@@ -106,6 +109,10 @@ Route::prefix('api/v1/cricket/manager')
         Route::post('matches/{matchId}/score', [LiveScoreController::class, 'update']);
         Route::post('matches/{matchId}/score/undo', [LiveScoreController::class, 'undoLastBall']);
         Route::get('matches/{matchId}/scorecard', [LiveScoreController::class, 'fullScorecard']);
+
+        // Match lifecycle — toss & start (unlocks the scoring flow end-to-end)
+        Route::post('matches/{id}/toss', [MatchController::class, 'updateToss']);
+        Route::post('matches/{id}/start', [MatchController::class, 'startMatch']);
 
         // Stream Management
         Route::get('matches/{matchId}/streams', [StreamController::class, 'index']);

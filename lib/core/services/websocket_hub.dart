@@ -19,9 +19,9 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show WebSocket, WebSocketException;
 import 'package:flutter/foundation.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
+import 'ws_socket.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Event payload types
@@ -32,7 +32,7 @@ typedef WsEventCallback = void Function(Map<String, dynamic> event);
 /// Parsed WebSocket frame from the backend.
 class WsEvent {
   final String channel;
-  final String event;   // e.g. "FleetLocationUpdated"
+  final String event; // e.g. "FleetLocationUpdated"
   final Map<String, dynamic> payload;
   final DateTime timestamp;
   const WsEvent({
@@ -47,7 +47,9 @@ class WsEvent {
     payload: (json['data'] ?? json['payload'] is Map)
         ? Map<String, dynamic>.from(json['data'] ?? json['payload'])
         : <String, dynamic>{},
-    timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ?? DateTime.now(),
+    timestamp:
+        DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
+        DateTime.now(),
   );
 }
 
@@ -59,7 +61,7 @@ class WebSocketHub {
   static WebSocketHub? _instance;
 
   final String _baseUrl;
-  WebSocket? _socket;
+  WsSocket? _socket;
   Timer? _reconnectTimer;
   Timer? _pingTimer;
 
@@ -87,7 +89,9 @@ class WebSocketHub {
 
   static WebSocketHub get instance {
     if (_instance == null) {
-      throw StateError('WebSocketHub not initialized. Call WebSocketHub(baseUrl: ...) first.');
+      throw StateError(
+        'WebSocketHub not initialized. Call WebSocketHub(baseUrl: ...) first.',
+      );
     }
     return _instance!;
   }
@@ -110,9 +114,8 @@ class WebSocketHub {
   );
 
   /// Notification blasts from Super Admin (Step 7).
-  Stream<WsEvent> get notificationBlast => events.where(
-    (e) => e.channel == 'admin.notifications',
-  );
+  Stream<WsEvent> get notificationBlast =>
+      events.where((e) => e.channel == 'admin.notifications');
 
   /// Fleet location stream (factory/truck panels).
   Stream<WsEvent> get fleetLocations => events.where(
@@ -121,7 +124,9 @@ class WebSocketHub {
 
   /// Geofence scan unlock events (Step 4).
   Stream<WsEvent> get geofenceScans => events.where(
-    (e) => e.channel.startsWith('store_keeper.') && e.event == 'GeofenceScanUnlocked',
+    (e) =>
+        e.channel.startsWith('store_keeper.') &&
+        e.event == 'GeofenceScanUnlocked',
   );
 
   // ── Connection management ─────────────────────────────────
@@ -135,16 +140,14 @@ class WebSocketHub {
     final uri = Uri.parse('$wsUrl/ws');
 
     try {
-      _socket = await WebSocket.connect(
+      _socket = await connectWsSocket(
         uri.toString(),
-        headers: {
-          if (authToken != null) 'Authorization': 'Bearer $authToken',
-        },
+        headers: {if (authToken != null) 'Authorization': 'Bearer $authToken'},
       ).timeout(const Duration(seconds: 10));
 
       _backoffSeconds = 1; // Reset backoff on successful connect.
       _startPing();
-      _socket!.listen(
+      _socket!.stream.listen(
         _onMessage,
         onError: _onError,
         onDone: _onDone,
@@ -152,11 +155,11 @@ class WebSocketHub {
       );
 
       if (kDebugMode) debugPrint('WS_HUB: Connected to $uri');
-    } on WebSocketException catch (e) {
-      if (kDebugMode) debugPrint('WS_HUB: Connection failed — ${e.message}');
-      _scheduleReconnect();
     } on TimeoutException {
       if (kDebugMode) debugPrint('WS_HUB: Connection timed out');
+      _scheduleReconnect();
+    } catch (e) {
+      if (kDebugMode) debugPrint('WS_HUB: Connection failed — $e');
       _scheduleReconnect();
     }
   }

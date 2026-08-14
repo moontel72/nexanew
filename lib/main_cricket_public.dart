@@ -14,16 +14,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
-import 'package:trace_odd/core/config/environment.dart';
-import 'package:trace_odd/core/services/websocket_hub.dart';
 import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/features/cricket/data/repositories/cricket_repository.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/live_score/live_score_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/match_analytics/match_analytics_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/match_list/match_list_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/player_career/player_career_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/sponsor/sponsor_bloc.dart';
+import 'package:trace_odd/features/cricket/presentation/blocs/stream_player/stream_player_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/blocs/tournament_hub/tournament_hub_bloc.dart';
 import 'package:trace_odd/features/cricket/presentation/pages/public/best_xi_page.dart';
 import 'package:trace_odd/features/cricket/presentation/pages/public/club_home_page.dart';
+import 'package:trace_odd/features/cricket/presentation/pages/public/live_match_page.dart';
 import 'package:trace_odd/features/cricket/presentation/pages/public/match_analytics_page.dart';
 import 'package:trace_odd/features/cricket/presentation/pages/public/player_profile_page.dart';
 import 'package:trace_odd/features/cricket/presentation/pages/public/tournament_home_page.dart';
@@ -33,19 +35,7 @@ import 'package:trace_odd/shared/theme/cricket_colors.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) usePathUrlStrategy();
-  _initRealtimeHub();
   runApp(const CricketPublicApp());
-}
-
-/// Initialize the shared WebSocket hub so live score updates push in
-/// realtime. Failures fall back silently to the repository's REST polling.
-void _initRealtimeHub() {
-  try {
-    WebSocketHub(baseUrl: Environment.apiBaseUrl);
-    WebSocketHub.instance.connect();
-  } catch (_) {
-    // Web platforms without WebSocket support — REST fallback handles it.
-  }
 }
 
 class CricketPublicApp extends StatelessWidget {
@@ -61,6 +51,31 @@ class CricketPublicApp extends StatelessWidget {
           create: (_) => MatchListBloc(repo: CricketRepository()),
           child: const TournamentHomePage(),
         ),
+      ),
+      GoRoute(
+        path: '/cricket/match/:matchId',
+        name: 'cricket_live_match',
+        builder: (context, state) {
+          final mid = state.pathParameters['matchId']!;
+          final extra = state.extra;
+          final match = extra is MatchModel
+              ? extra
+              : MatchModel(id: mid, status: 'unknown');
+          return MultiBlocProvider(
+            providers: [
+              BlocProvider(
+                create: (_) => LiveScoreBloc(repo: CricketRepository()),
+              ),
+              BlocProvider(
+                create: (_) => StreamPlayerBloc(repo: CricketRepository()),
+              ),
+              BlocProvider(
+                create: (_) => SponsorBloc(repo: CricketRepository()),
+              ),
+            ],
+            child: LiveMatchPage(match: match),
+          );
+        },
       ),
       GoRoute(
         path: '/cricket/tournament/:tournamentId',

@@ -6,6 +6,11 @@ import 'package:trace_odd/shared/theme/colors.dart';
 import '../../blocs/voice_score/voice_score_bloc.dart';
 
 /// Voice-to-score interface — microphone trigger → DeepSeek V4 → score.
+///
+/// Flow: tap the mic → browser SpeechRecognition transcribes → the final
+/// utterance is auto-sent to the voice-score API → the parsed result card
+/// shows → the manager confirms (Apply) or discards (Reject) → the ball is
+/// recorded into the live score and broadcast to all viewers.
 class VoiceScorePage extends StatefulWidget {
   final String matchId;
 
@@ -47,16 +52,21 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
       ),
       body: BlocConsumer<VoiceScoreBloc, VoiceScoreState>(
         listener: (context, state) {
-          if (state is VoiceScoreApplied) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.secondary,
-              ),
-            );
+          if (state is VoiceScoreNotice) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: state.message.contains('rejected')
+                      ? CricketColors.wicket
+                      : AppColors.secondary,
+                ),
+              );
           }
         },
         builder: (context, state) {
+          final listening = state is VoiceScoreListening;
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -99,13 +109,62 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                 ),
                 const SizedBox(height: 20),
 
-                // Text input field
+                // ── Mic trigger ─────────────────────────────
+                GestureDetector(
+                  onTap: () {
+                    final bloc = context.read<VoiceScoreBloc>();
+                    if (listening) {
+                      bloc.add(StopListening());
+                    } else {
+                      bloc.add(StartListening(widget.matchId));
+                    }
+                  },
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: listening
+                          ? CricketColors.wicket
+                          : CricketColors.roleAllRounder,
+                      boxShadow: listening
+                          ? [
+                              BoxShadow(
+                                color: CricketColors.wicket.withOpacity(0.4),
+                                blurRadius: 16,
+                                spreadRadius: 4,
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Icon(
+                      listening ? Icons.stop : Icons.mic,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  listening
+                      ? 'Listening… tap to stop'
+                      : 'Tap to speak a score update',
+                  style: TextStyle(
+                    color: listening
+                        ? CricketColors.wicket
+                        : CricketColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── Text input fallback ─────────────────────
                 TextField(
                   controller: _textCtrl,
                   style: const TextStyle(color: CricketColors.textPrimary),
-                  maxLines: 3,
+                  maxLines: 2,
                   decoration: InputDecoration(
-                    hintText: 'Type score commentary...',
+                    hintText: '…or type the score commentary',
                     hintStyle: const TextStyle(
                       color: CricketColors.placeholder,
                     ),
@@ -131,24 +190,36 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                 ),
                 const SizedBox(height: 20),
 
-                // Processing / results
+                // ── Processing / results ────────────────────
                 switch (state) {
                   VoiceScoreIdle() => const Text(
                     'Ready for voice input.',
                     style: TextStyle(color: CricketColors.textSecondary),
                   ),
-                  VoiceScoreListening() => const Column(
+                  VoiceScoreListening(:final transcript) => Column(
                     children: [
-                      Icon(
-                        Icons.mic,
-                        size: 48,
-                        color: CricketColors.roleAllRounder,
+                      const Icon(
+                        Icons.graphic_eq,
+                        size: 40,
+                        color: CricketColors.wicket,
                       ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Listening...',
-                        style: TextStyle(color: CricketColors.roleAllRounder),
-                      ),
+                      const SizedBox(height: 8),
+                      if (transcript.isNotEmpty)
+                        Text(
+                          transcript,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: CricketColors.textPrimary,
+                            fontSize: 15,
+                          ),
+                        )
+                      else
+                        const Text(
+                          'Speak now…',
+                          style: TextStyle(
+                            color: CricketColors.textSecondary,
+                          ),
+                        ),
                     ],
                   ),
                   VoiceScoreProcessing(:final transcript) => Column(
@@ -159,6 +230,7 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                       const SizedBox(height: 8),
                       Text(
                         'Processing: "$transcript"',
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: CricketColors.textSecondary,
                         ),
@@ -167,7 +239,7 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                   ),
                   VoiceScoreParsed(:final parsedData, :final logId) =>
                     _ParsedScoreCard(data: parsedData, logId: logId),
-                  VoiceScoreApplied(:final message) => Column(
+                  VoiceScoreNotice(:final message) => Column(
                     children: [
                       const Icon(
                         Icons.check_circle,
@@ -191,6 +263,7 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                       const SizedBox(height: 8),
                       Text(
                         message,
+                        textAlign: TextAlign.center,
                         style: const TextStyle(color: CricketColors.wicket),
                       ),
                     ],
@@ -251,8 +324,9 @@ class _ParsedScoreCard extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: CricketColors.wicket,
                 ),
-                onPressed: () =>
-                    context.read<VoiceScoreBloc>().add(CancelVoiceScore()),
+                onPressed: () => context
+                    .read<VoiceScoreBloc>()
+                    .add(RejectVoiceScore(logId)),
                 child: const Text('REJECT'),
               ),
               ElevatedButton(

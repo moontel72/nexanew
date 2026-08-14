@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
+import '../../blocs/live_score/live_score_bloc.dart';
 import '../../blocs/match_list/match_list_bloc.dart';
 import '../../blocs/tournament_hub/tournament_hub_bloc.dart';
 import '../../blocs/camera_switcher/camera_switcher_bloc.dart';
@@ -447,7 +448,14 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                   MaterialPageRoute(
                     builder: (_) => RepositoryProvider.value(
                       value: RepositoryProvider.of<CricketRepository>(context),
-                      child: ManagerScorePage(matchId: _selectedMatchId!),
+                      child: BlocProvider(
+                        create: (_) => LiveScoreBloc(
+                          repo: RepositoryProvider.of<CricketRepository>(
+                            context,
+                          ),
+                        ),
+                        child: ManagerScorePage(matchId: _selectedMatchId!),
+                      ),
                     ),
                   ),
                 ),

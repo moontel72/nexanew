@@ -5,10 +5,10 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trace_odd/core/config/api_config.dart';
-import 'package:trace_odd/core/services/websocket_hub.dart';
 
 import '../models/cricket_models.dart';
 import '../models/replay_models.dart';
+import '../realtime/cricket_realtime_client.dart';
 
 /// Cricket data repository.
 ///
@@ -22,6 +22,15 @@ class CricketRepository {
   String? _bearerToken;
   final _scoreController = StreamController<LiveScoreSnapshot>.broadcast();
   Stream<LiveScoreSnapshot> get scoreStream => _scoreController.stream;
+
+  // Director-style program feed updates (manager camera switches).
+  final _streamController = StreamController<CricketStreamUpdate>.broadcast();
+  Stream<CricketStreamUpdate> get streamUpdates => _streamController.stream;
+
+  // Realtime (Reverb) client — lazily created from the backend's
+  // `realtime-config` endpoint so the app key is never hardcoded.
+  CricketRealtimeClient? _realtime;
+  StreamSubscription<CricketRealtimeEvent>? _realtimeSubscription;
 
   // ────────────────────────────────────────────────────────────
   // Token management
@@ -422,23 +431,55 @@ class CricketRepository {
   }
 
   // ────────────────────────────────────────────────────────────
-  // Live Score — WebSocket via shared WebSocketHub
+  // Live Score — realtime via Reverb (Pusher protocol)
   // ────────────────────────────────────────────────────────────
 
-  void subscribeToScore(String matchId) {
+  /// Subscribe to live score pushes for a match. Falls back silently to
+  /// REST polling (handled by the bloc) when Reverb is unavailable.
+  Future<void> subscribeToScore(String matchId) async {
     try {
-      WebSocketHub.instance.subscribe('cricket.match.$matchId', (event) {
-        try {
-          _scoreController.add(LiveScoreSnapshot.fromJson(event));
-        } catch (_) {}
-      });
+      _realtime ??= await _createRealtimeClient();
+      _realtime?.subscribe('cricket.match.$matchId');
     } catch (_) {}
   }
 
   void unsubscribeFromScore(String matchId) {
     try {
-      WebSocketHub.instance.unsubscribe('cricket.match.$matchId');
+      _realtime?.unsubscribe();
     } catch (_) {}
+  }
+
+  Future<CricketRealtimeClient?> _createRealtimeClient() async {
+    try {
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/public/realtime-config'),
+      );
+      if (res.statusCode != 200) return null;
+      final config = jsonDecode(res.body) as Map<String, dynamic>;
+      if (config['driver'] != 'reverb' || config['key'] == null) return null;
+
+      final client = CricketRealtimeClient(
+        baseUrl: ApiConfig.baseUrl,
+        appKey: config['key'] as String,
+        wsPath: config['path'] as String? ?? '/app',
+      );
+      _realtimeSubscription?.cancel();
+      _realtimeSubscription = client.events.listen((e) {
+        try {
+          switch (e.event) {
+            case 'score.updated':
+              _scoreController.add(LiveScoreSnapshot.fromJson(e.data));
+            case 'stream.updated':
+              _streamController.add(CricketStreamUpdate.fromJson(e.data));
+            default:
+              break;
+          }
+        } catch (_) {}
+      });
+      return client;
+    } catch (_) {
+      return null;
+    }
   }
 
   // ────────────────────────────────────────────────────────────
@@ -491,7 +532,84 @@ class CricketRepository {
     }
   }
 
-  Future<bool> updateScore(String matchId, Map<String, dynamic> ball) async {
+  /// Create a new camera stream row for a match. The backend generates the
+  /// RTMP stream key when one is not supplied — the returned model carries
+  /// the ingest URL + stream key for the mobile camera operator.
+  Future<StreamModel?> createStream(
+    String matchId, {
+    required String cameraLabel,
+    required int cameraNumber,
+    String? rtmpIngestUrl,
+    bool isPrimary = false,
+  }) async {
+    try {
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams',
+        ),
+        headers: await _authHeaders(),
+        body: jsonEncode({
+          'camera_label': cameraLabel,
+          'camera_number': cameraNumber,
+          if (rtmpIngestUrl != null && rtmpIngestUrl.isNotEmpty)
+            'rtmp_ingest_url': rtmpIngestUrl,
+          'is_primary': isPrimary,
+        }),
+      );
+      if (res.statusCode != 201) return null;
+      return StreamModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> updateStream(
+    String matchId,
+    String streamId, {
+    String? cameraLabel,
+    String? rtmpIngestUrl,
+    String? hlsPlaylistUrl,
+    bool? isPrimary,
+  }) async {
+    try {
+      final res = await _http.put(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams/$streamId',
+        ),
+        headers: await _authHeaders(),
+        body: jsonEncode({
+          if (cameraLabel != null) 'camera_label': cameraLabel,
+          if (rtmpIngestUrl != null) 'rtmp_ingest_url': rtmpIngestUrl,
+          if (hlsPlaylistUrl != null) 'hls_playlist_url': hlsPlaylistUrl,
+          if (isPrimary != null) 'is_primary': isPrimary,
+        }),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteStream(String matchId, String streamId) async {
+    try {
+      final res = await _http.delete(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams/$streamId',
+        ),
+        headers: await _authHeaders(),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Submit a ball to the score. Returns the fresh score snapshot on
+  /// success (backend returns `{message, score}`), null on failure.
+  Future<LiveScoreSnapshot?> updateScore(
+    String matchId,
+    Map<String, dynamic> ball,
+  ) async {
     try {
       final res = await _http.post(
         Uri.parse(
@@ -500,13 +618,19 @@ class CricketRepository {
         headers: await _authHeaders(),
         body: jsonEncode(ball),
       );
-      return res.statusCode == 200;
+      if (res.statusCode != 200) return null;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final score = data['score'];
+      return score is Map
+          ? LiveScoreSnapshot.fromJson(Map<String, dynamic>.from(score))
+          : null;
     } catch (_) {
-      return false;
+      return null;
     }
   }
 
-  Future<bool> undoLastBall(String matchId) async {
+  /// Undo the last ball. Returns the fresh score snapshot on success.
+  Future<LiveScoreSnapshot?> undoLastBall(String matchId) async {
     try {
       final res = await _http.post(
         Uri.parse(
@@ -514,9 +638,84 @@ class CricketRepository {
         ),
         headers: await _authHeaders(),
       );
-      return res.statusCode == 200;
+      if (res.statusCode != 200) return null;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final score = data['score'];
+      return score is Map
+          ? LiveScoreSnapshot.fromJson(Map<String, dynamic>.from(score))
+          : null;
     } catch (_) {
-      return false;
+      return null;
+    }
+  }
+
+  /// Fetch a single match via the manager endpoint (includes team ids).
+  Future<MatchModel?> getMatch(String matchId) async {
+    try {
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId'),
+        headers: await _authHeaders(),
+      );
+      if (res.statusCode != 200) return null;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final match = data['match'] ?? data;
+      return match is Map
+          ? MatchModel.fromJson(Map<String, dynamic>.from(match))
+          : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Record the toss result (moves the match to `toss_done`).
+  Future<MatchModel?> recordToss(
+    String matchId, {
+    required String tossWinnerTeamId,
+    required String tossDecision,
+    required String battingTeamId,
+    required String bowlingTeamId,
+  }) async {
+    try {
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/toss',
+        ),
+        headers: await _authHeaders(),
+        body: jsonEncode({
+          'toss_winner_team_id': tossWinnerTeamId,
+          'toss_decision': tossDecision,
+          'current_batting_team_id': battingTeamId,
+          'current_bowling_team_id': bowlingTeamId,
+        }),
+      );
+      if (res.statusCode != 200) return null;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final match = data['match'] ?? data;
+      return match is Map
+          ? MatchModel.fromJson(Map<String, dynamic>.from(match))
+          : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Start the match (moves it to `in_progress` and opens innings 1).
+  Future<MatchModel?> startMatch(String matchId) async {
+    try {
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/start',
+        ),
+        headers: await _authHeaders(),
+      );
+      if (res.statusCode != 200) return null;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final match = data['match'] ?? data;
+      return match is Map
+          ? MatchModel.fromJson(Map<String, dynamic>.from(match))
+          : null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -544,6 +743,21 @@ class CricketRepository {
       final res = await _http.post(
         Uri.parse(
           '${ApiConfig.apiBaseUrl}/cricket/manager/voice-score/$logId/apply',
+        ),
+        headers: await _authHeaders(),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Reject a parsed voice score without applying it.
+  Future<bool> rejectVoiceScore(String logId) async {
+    try {
+      final res = await _http.post(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/voice-score/$logId/reject',
         ),
         headers: await _authHeaders(),
       );
@@ -747,7 +961,12 @@ class CricketRepository {
   }
 
   void dispose() {
+    _realtimeSubscription?.cancel();
+    _realtimeSubscription = null;
+    _realtime?.dispose();
+    _realtime = null;
     _scoreController.close();
+    _streamController.close();
     _http.close();
   }
 

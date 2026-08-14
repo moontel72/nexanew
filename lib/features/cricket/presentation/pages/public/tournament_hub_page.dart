@@ -429,7 +429,13 @@ class _MatchesTab extends StatelessWidget {
         ),
       );
 
+  /// Live matches open the live-stream page (score + video + sponsors);
+  /// scheduled / completed matches open the analytics page.
   void _navigateToAnalytics(BuildContext context, MatchModel match) {
+    if (match.isLive) {
+      context.go('/cricket/match/${match.id}', extra: match);
+      return;
+    }
     context.go(
       '/cricket/match/${match.id}/analytics'
       '?title=${Uri.encodeComponent(match.teamAShort ?? 'T1')}'

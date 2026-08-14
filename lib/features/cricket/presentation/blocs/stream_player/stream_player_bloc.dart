@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../../data/repositories/cricket_repository.dart';
@@ -61,10 +63,19 @@ final class ActivateStream extends StreamPlayerEvent {
   const ActivateStream(this.matchId, this.streamId);
 }
 
+/// Realtime program-feed change pushed by the manager's camera switch.
+final class _StreamContextUpdated extends StreamPlayerEvent {
+  final CricketStreamUpdate update;
+  const _StreamContextUpdated(this.update);
+}
+
 // ─── BLoC ────────────────────────────────────────────────
 
 class StreamPlayerBloc extends Bloc<StreamPlayerEvent, StreamPlayerState> {
   final CricketRepository _repo;
+
+  StreamSubscription<CricketStreamUpdate>? _realtimeSub;
+  String? _matchId;
 
   StreamPlayerBloc({required CricketRepository repo})
     : _repo = repo,
@@ -72,29 +83,66 @@ class StreamPlayerBloc extends Bloc<StreamPlayerEvent, StreamPlayerState> {
     on<LoadStreams>(_onLoad);
     on<SwitchCamera>(_onSwitch);
     on<ActivateStream>(_onActivate);
+    on<_StreamContextUpdated>(_onStreamContextUpdated);
   }
 
   Future<void> _onLoad(LoadStreams e, Emitter<StreamPlayerState> emit) async {
     emit(StreamPlayerLoading());
+    _matchId = e.matchId;
+
     try {
       final streams = await _repo.getStreams(e.matchId);
       if (streams.isEmpty) {
         emit(const StreamPlayerOffline('Stream starting soon...'));
+      } else {
+        final primary = streams.firstWhere(
+          (s) => s.isLive,
+          orElse: () => streams.first,
+        );
+        emit(
+          StreamPlayerReady(
+            streams: streams,
+            activeStreamUrl: primary.hlsPlaylistUrl,
+            activeCameraIndex: streams.indexOf(primary),
+          ),
+        );
+      }
+    } catch (err) {
+      emit(StreamPlayerOffline('Failed to load stream: $err'));
+    }
+
+    // Director feed: the manager's activation instantly overrides whatever
+    // the viewer is watching. Subscribe once and keep it for the page's
+    // lifetime.
+    _realtimeSub ??= _repo.streamUpdates.listen((update) {
+      if (!isClosed) add(_StreamContextUpdated(update));
+    });
+  }
+
+  void _onStreamContextUpdated(
+    _StreamContextUpdated e,
+    Emitter<StreamPlayerState> emit,
+  ) {
+    final update = e.update;
+
+    if (update.isLive) {
+      final s = state;
+      if (s is! StreamPlayerReady) {
+        // Player was offline — refresh the camera list with the new feed.
+        final matchId = _matchId;
+        if (matchId != null) add(LoadStreams(matchId));
         return;
       }
-      final primary = streams.firstWhere(
-        (s) => s.isLive,
-        orElse: () => streams.first,
-      );
+      final index = s.streams.indexWhere((c) => c.id == update.streamId);
       emit(
         StreamPlayerReady(
-          streams: streams,
-          activeStreamUrl: primary.hlsPlaylistUrl,
-          activeCameraIndex: streams.indexOf(primary),
+          streams: s.streams,
+          activeStreamUrl: update.hlsPlaylistUrl ?? s.activeStreamUrl,
+          activeCameraIndex: index >= 0 ? index : s.activeCameraIndex,
         ),
       );
-    } catch (e) {
-      emit(StreamPlayerOffline('Failed to load stream: $e'));
+    } else {
+      emit(const StreamPlayerOffline('The live stream has ended.'));
     }
   }
 
@@ -115,5 +163,11 @@ class StreamPlayerBloc extends Bloc<StreamPlayerEvent, StreamPlayerState> {
   ) async {
     final ok = await _repo.activateStream(e.matchId, e.streamId);
     if (ok) add(LoadStreams(e.matchId));
+  }
+
+  @override
+  Future<void> close() {
+    _realtimeSub?.cancel();
+    return super.close();
   }
 }

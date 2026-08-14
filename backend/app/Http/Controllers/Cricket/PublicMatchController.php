@@ -19,6 +19,25 @@ use Illuminate\Http\Request;
 class PublicMatchController extends Controller
 {
     /**
+     * Realtime (WebSocket) connection details for live score streaming.
+     *
+     * The client connects same-origin through Nginx (which proxies
+     * /app and /apps to the Reverb server), so only the app key and
+     * path are needed. Everything is read from config — nothing hardcoded.
+     */
+    public function realtimeConfig(): \Illuminate\Http\JsonResponse
+    {
+        $apps = config('reverb.apps.apps', []);
+        $app = $apps[0] ?? [];
+
+        return response()->json([
+            'driver' => config('broadcasting.default', 'log'),
+            'key' => $app['key'] ?? null,
+            'path' => '/app',
+        ]);
+    }
+
+    /**
      * Get the currently active tournament.
      */
     public function activeTournament(): \Illuminate\Http\JsonResponse
