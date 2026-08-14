@@ -250,6 +250,8 @@ class CricketRepository {
     }
   }
 
+  /// Sponsors assigned to a match. Uses the public endpoint so the
+  /// public portal banner strip and the manager panel share one source.
   Future<List<SponsorModel>> getMatchSponsors(String matchId) async {
     try {
       final res = await _http.get(
@@ -259,9 +261,13 @@ class CricketRepository {
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        return (data['sponsors'] as List)
-            .map((s) => SponsorModel.fromJson(s))
-            .toList();
+        final rows = data['sponsors'];
+        if (rows is List) {
+          return rows
+              .whereType<Map>()
+              .map((s) => SponsorModel.fromJson(Map<String, dynamic>.from(s)))
+              .toList();
+        }
       }
       return [];
     } catch (_) {
@@ -269,17 +275,132 @@ class CricketRepository {
     }
   }
 
-  Future<bool> deleteSponsor(String matchId, String sponsorId) async {
+  /// Unassign a sponsor from a match. Throws so the bloc can surface
+  /// the server's error message to the manager.
+  Future<void> deleteSponsor(String matchId, String sponsorId) async {
+    final res = await _http.delete(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/sponsors/$sponsorId',
+      ),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_apiError(res));
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Sponsor Management — manager-owned library & match assignment
+  // ────────────────────────────────────────────────────────────
+
+  /// List the manager's sponsor library (bound to the active tournament).
+  Future<List<SponsorModel>> getSponsors({String? tournamentId}) async {
     try {
-      final res = await _http.delete(
-        Uri.parse(
-          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/sponsors/$sponsorId',
-        ),
-        headers: await _authHeaders(),
-      );
-      return res.statusCode == 200;
+      final params = <String, String>{
+        'per_page': '100',
+        if (tournamentId != null) 'tournament_id': tournamentId,
+      };
+      final uri = Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/sponsors',
+      ).replace(queryParameters: params);
+      final res = await _http.get(uri, headers: await _authHeaders());
+      if (res.statusCode == 200) {
+        return _pagedRows(res).map((s) => SponsorModel.fromJson(s)).toList();
+      }
+      return [];
     } catch (_) {
-      return false;
+      return [];
+    }
+  }
+
+  Future<void> createSponsor({
+    required String name,
+    required String tier,
+    String? logoUrl,
+    String? bannerImageUrl,
+    String? websiteUrl,
+    int? displayOrder,
+  }) async {
+    final res = await _http.post(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/sponsors'),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'name': name,
+        'tier': tier,
+        if (logoUrl != null && logoUrl.isNotEmpty) 'logo_url': logoUrl,
+        if (bannerImageUrl != null && bannerImageUrl.isNotEmpty)
+          'banner_image_url': bannerImageUrl,
+        if (websiteUrl != null && websiteUrl.isNotEmpty)
+          'website_url': websiteUrl,
+        if (displayOrder != null) 'display_order': displayOrder,
+      }),
+    );
+    if (res.statusCode != 201 && res.statusCode != 200) {
+      throw Exception(_apiError(res));
+    }
+  }
+
+  Future<void> updateSponsor({
+    required String id,
+    required String name,
+    required String tier,
+    String? logoUrl,
+    String? bannerImageUrl,
+    String? websiteUrl,
+    int? displayOrder,
+  }) async {
+    final res = await _http.put(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/sponsors/$id'),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'name': name,
+        'tier': tier,
+        'logo_url': (logoUrl == null || logoUrl.isEmpty) ? null : logoUrl,
+        'banner_image_url': (bannerImageUrl == null || bannerImageUrl.isEmpty)
+            ? null
+            : bannerImageUrl,
+        'website_url': (websiteUrl == null || websiteUrl.isEmpty)
+            ? null
+            : websiteUrl,
+        if (displayOrder != null) 'display_order': displayOrder,
+      }),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_apiError(res));
+    }
+  }
+
+  /// Delete a sponsor from the library (also removes match assignments).
+  Future<void> destroySponsor(String id) async {
+    final res = await _http.delete(
+      Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/sponsors/$id'),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_apiError(res));
+    }
+  }
+
+  /// Assign a sponsor to a match at a placement.
+  Future<void> assignSponsorToMatch({
+    required String matchId,
+    required String sponsorId,
+    required String placement,
+    int? displayOrder,
+  }) async {
+    final res = await _http.post(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/sponsors',
+      ),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'sponsor_id': sponsorId,
+        'placement': placement,
+        'display_order': displayOrder ?? 0,
+      }),
+    );
+    if (res.statusCode != 201) {
+      throw Exception(_apiError(res));
     }
   }
 

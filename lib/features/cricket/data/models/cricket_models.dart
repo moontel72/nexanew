@@ -363,6 +363,7 @@ class SponsorModel {
   final String? websiteUrl;
   final String tier;
   final String? placement;
+  final int displayOrder;
 
   const SponsorModel({
     required this.id,
@@ -372,16 +373,18 @@ class SponsorModel {
     this.websiteUrl,
     required this.tier,
     this.placement,
+    this.displayOrder = 0,
   });
 
   factory SponsorModel.fromJson(Map<String, dynamic> json) => SponsorModel(
-    id: json['id'] as String? ?? json['sponsor_id'] as String? ?? '',
-    name: json['name'] as String,
+    id: json['id']?.toString() ?? json['sponsor_id']?.toString() ?? '',
+    name: json['name']?.toString() ?? 'Sponsor',
     logoUrl: json['logo_url'] as String?,
     bannerImageUrl: json['banner_image_url'] as String?,
     websiteUrl: json['website_url'] as String?,
     tier: json['tier'] as String? ?? 'silver',
     placement: json['placement'] as String?,
+    displayOrder: (json['display_order'] as num?)?.toInt() ?? 0,
   );
 }
 

@@ -10,10 +10,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * CricketManagerController — Sub-Admin provisions & manages
- * Cricket Manager accounts dynamically.
+ * CricketManagerController — the admin panel provisions and manages
+ * Cricket Operations Manager accounts.
  *
- * ONLY accessible to Super Admin / Sub-Admin.
+ * Accessible only from the admin panel (account provisioning scope).
  */
 class CricketManagerController extends Controller
 {

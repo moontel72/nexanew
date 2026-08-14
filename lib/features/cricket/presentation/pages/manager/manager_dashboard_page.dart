@@ -26,7 +26,7 @@ import 'fixture_scheduler_page.dart';
 import 'tournament_setup_page.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 
-/// Manager Dashboard — 3D Pencil Sidebar layout matching Sub-Admin panel design.
+/// Manager Dashboard — 3D Pencil Sidebar layout.
 
 const _tabs = [
   _TabInfo(Icons.live_tv, 'Live Console', 'Scoring, cameras, voice, sponsors'),
@@ -490,7 +490,7 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                 label: 'Sponsor Management',
                 icon: Icons.campaign,
                 color: const Color(0xFF8B5CF6),
-                subtitle: 'Assign sponsor banners to match',
+                subtitle: 'Sponsor library & match banners',
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(

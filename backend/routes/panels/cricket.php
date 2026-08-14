@@ -13,6 +13,7 @@ use App\Http\Controllers\Cricket\PlayerController;
 use App\Http\Controllers\Cricket\PointsTableController;
 use App\Http\Controllers\Cricket\PublicMatchController;
 use App\Http\Controllers\Cricket\ReplayController;
+use App\Http\Controllers\Cricket\SponsorController;
 use App\Http\Controllers\Cricket\StreamController;
 use App\Http\Controllers\Cricket\TeamController;
 use App\Http\Controllers\Cricket\TournamentSetupController;
@@ -25,14 +26,14 @@ use Illuminate\Support\Facades\Route;
 |═══════════════════════════════════════════════════════════════
 |
 | ROLE HIERARCHY:
-|   Super Admin → Sub-Admin → Cricket Manager(s) → Field Crew
+|   Admin panel → Cricket Operations Manager(s) → Field Crew
 |
 | Three route groups:
 |   1. PUBLIC  — No auth, consumed by Flutter public app / web PWA
 |   2. MANAGER — Cricket Manager auth (Bearer token) — owns all
 |               operational cricket features (tournaments, fixtures,
 |               teams, players, scoring, streams, replays)
-|   3. ADMIN   — Super/Sub-Admin (Sanctum) — ONLY provisions and
+|   3. ADMIN   — Admin panel (Sanctum) — ONLY provisions and
 |               manages Cricket Operations Manager accounts
 |
 | ISOLATION: All routes prefixed `api/v1/cricket/`.
@@ -161,6 +162,15 @@ Route::prefix('api/v1/cricket/manager')
         // Fixture Scheduling — Round-Robin auto-generation
         Route::post('tournaments/{tournamentId}/fixtures/generate', [MatchController::class, 'generateFixtures']);
 
+        // Sponsor Management — manager-owned sponsor lifecycle & assignment
+        Route::get('sponsors', [SponsorController::class, 'index']);
+        Route::post('sponsors', [SponsorController::class, 'store']);
+        Route::put('sponsors/{id}', [SponsorController::class, 'update']);
+        Route::delete('sponsors/{id}', [SponsorController::class, 'destroy']);
+        Route::get('matches/{matchId}/sponsors', [SponsorController::class, 'matchSponsors']);
+        Route::post('matches/{matchId}/sponsors', [SponsorController::class, 'assignToMatch']);
+        Route::delete('matches/{matchId}/sponsors/{sponsorId}', [SponsorController::class, 'removeFromMatch']);
+
         // Grounds / Venues registry (manager-scoped)
         Route::get('grounds', [GroundController::class, 'index']);
         Route::post('grounds', [GroundController::class, 'store']);
@@ -177,9 +187,9 @@ Route::prefix('api/v1/cricket/manager')
     });
 
 // ═══════════════════════════════════════════════════════════════
-// GROUP 3: SUPER / SUB-ADMIN ENDPOINTS (Sanctum Auth)
+// GROUP 3: ADMIN PROVISIONING ENDPOINTS (Sanctum Auth)
 //
-// The Sub-Admin panel ONLY provisions and manages Cricket Operations
+// The admin panel ONLY provisions and manages Cricket Operations
 // Manager accounts. All operational cricket features live in the
 // Manager panel (GROUP 2).
 // ═══════════════════════════════════════════════════════════════

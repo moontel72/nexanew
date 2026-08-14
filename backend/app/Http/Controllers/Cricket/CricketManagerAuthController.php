@@ -34,7 +34,7 @@ class CricketManagerAuthController extends Controller
         }
 
         if (!$manager->isActive()) {
-            return response()->json(['message' => 'Account is suspended. Contact your Sub-Admin.'], 403);
+            return response()->json(['message' => 'Account is suspended. Contact your account administrator.'], 403);
         }
 
         // Generate token

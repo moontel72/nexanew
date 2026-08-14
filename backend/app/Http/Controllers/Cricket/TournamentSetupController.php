@@ -11,11 +11,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 /**
- * Tournament setup — Cricket Manager scope.
+ * Tournament setup — Cricket Operations Manager scope.
  *
- * Tournament lifecycle (create, edit, activate) previously lived in the
- * Sub-Admin panel; it now belongs to the Cricket Manager panel so the
- * manager can set up a tournament and activate it before scheduling
+ * The manager creates, edits, and activates tournaments before scheduling
  * fixtures. The public portal and Fixture Scheduler resolve the active
  * tournament via status = 'active' AND is_active = true.
  */
