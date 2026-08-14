@@ -112,7 +112,8 @@ jobs:
             ln -sf /etc/nginx/sites-available/cricket-manager /etc/nginx/sites-enabled/cricket-manager
             rm -f /etc/nginx/sites-enabled/cricket
             rm -f /etc/nginx/sites-available/cricket.disabled
-            nginx -t && echo 'Cricket Nginx configs OK'
+            nginx -t && systemctl reload nginx
+            nginx -T 2>/dev/null | grep -q 'server_name cricket-manager.traceodd.com' && echo 'Cricket Nginx configs live'
           "
 
       - name: Deploy Cricket SRS systemd unit
