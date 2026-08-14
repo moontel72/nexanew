@@ -468,7 +468,14 @@ class CricketRepository {
         try {
           switch (e.event) {
             case 'score.updated':
-              _scoreController.add(LiveScoreSnapshot.fromJson(e.data));
+              // Reverb wraps the snapshot under `score` — unwrap before
+              // parsing so live pushes render identically to REST fetches.
+              final score = e.data['score'];
+              if (score is Map) {
+                _scoreController.add(
+                  LiveScoreSnapshot.fromJson(Map<String, dynamic>.from(score)),
+                );
+              }
             case 'stream.updated':
               _streamController.add(CricketStreamUpdate.fromJson(e.data));
             default:

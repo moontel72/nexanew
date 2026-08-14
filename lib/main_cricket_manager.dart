@@ -1,4 +1,4 @@
-// Cricket Manager Panel Entrypoint — manager.cricket.traceodd.com
+// Cricket Manager Panel Entrypoint — cricket-manager.traceodd.com
 //
 // Standalone Flutter web build hosting ONLY the cricket operations routes:
 // manager login + manager dashboard (scoring, cameras, voice, sponsors,
@@ -9,7 +9,7 @@
 //
 // Build:
 //   flutter build web --release --target=lib/main_cricket_manager.dart \
-//     --dart-define=API_BASE_URL=https://manager.cricket.traceodd.com
+//     --dart-define=API_BASE_URL=https://cricket-manager.traceodd.com
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';

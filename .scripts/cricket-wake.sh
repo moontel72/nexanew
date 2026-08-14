@@ -124,7 +124,7 @@ log "═════════════════════════
 log ""
 log "Next steps:"
 log "  1. Verify public portal: https://cricket.traceodd.com"
-log "  2. Verify manager panel: https://manager.cricket.traceodd.com"
+log "  2. Verify manager panel: https://cricket-manager.traceodd.com"
 log "  3. Verify RTMP ingest: rtmp://cricket.traceodd.com:1935/live/{stream_key}"
 log "  4. Verify HLS output: https://cricket.traceodd.com/hls/live/{stream_key}.m3u8"
 log "  5. Configure CDN Pull Zone (see BunnyCDN docs)"

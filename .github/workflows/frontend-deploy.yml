@@ -116,7 +116,7 @@ jobs:
 
       # ──────────────────────────────────────────────────────────────
       # STEP D: Build & Deploy Cricket Manager Panel
-      # (main_cricket_manager.dart) → manager.cricket.traceodd.com
+      # (main_cricket_manager.dart) → cricket-manager.traceodd.com
       # ──────────────────────────────────────────────────────────────
 
       - name: Build Cricket Manager Panel (main_cricket_manager.dart)
