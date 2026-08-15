@@ -148,18 +148,26 @@ class CameraSwitcherBloc
     final s = state;
     if (s is! CameraSwitcherLoaded) return;
 
-    final created = await _repo.createStream(
-      e.matchId,
-      cameraLabel: e.cameraLabel,
-      cameraNumber: e.cameraNumber,
-      isPrimary: e.isPrimary,
-    );
+    StreamModel? created;
+    try {
+      created = await _repo.createStream(
+        e.matchId,
+        cameraLabel: e.cameraLabel,
+        cameraNumber: e.cameraNumber,
+        isPrimary: e.isPrimary,
+      );
+    } catch (err) {
+      emit(
+        s.copyWith(
+          notice: 'Failed to create camera: ${err.toString().replaceFirst('Exception: ', '')}',
+        ),
+      );
+      return;
+    }
 
     emit(
       s.copyWith(
-        notice: created != null
-            ? 'Camera ${created.cameraNumber} created — share the RTMP key with the camera operator.'
-            : 'Failed to create camera stream.',
+        notice: 'Camera ${created.cameraNumber} created — share the RTMP key with the camera operator.',
       ),
     );
     add(LoadCameras(e.matchId));

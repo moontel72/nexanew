@@ -148,6 +148,7 @@ class _CameraSwitcherPageState extends State<CameraSwitcherPage> {
 
   Future<void> _showAddCameraDialog(BuildContext context) async {
     final labelController = TextEditingController();
+    String label = '';
     int cameraNumber = 1;
     bool isPrimary = false;
 
@@ -172,7 +173,22 @@ class _CameraSwitcherPageState extends State<CameraSwitcherPage> {
                   filled: true,
                   fillColor: Color(0xFF0F2936),
                 ),
+                onChanged: (v) =>
+                    setDialogState(() => label = v.trim()),
               ),
+              if (label.isEmpty) ...[
+                const SizedBox(height: 6),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Enter a camera label to enable Create Camera',
+                    style: TextStyle(
+                      color: CricketColors.roleAllRounder,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               DropdownButtonFormField<int>(
                 value: cameraNumber,
@@ -212,21 +228,28 @@ class _CameraSwitcherPageState extends State<CameraSwitcherPage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.secondary,
+                // Explicit dark foreground on the mint background — never
+                // inherit a scheme color that could blend into the button.
+                foregroundColor: Colors.black87,
+                disabledBackgroundColor:
+                    AppColors.secondary.withOpacity(0.35),
+                disabledForegroundColor: Colors.black38,
               ),
-              onPressed: () {
-                final label = labelController.text.trim();
-                if (label.isEmpty) return;
-                context.read<CameraSwitcherBloc>().add(
-                  CreateCamera(
-                    matchId: widget.matchId,
-                    cameraLabel: label,
-                    cameraNumber: cameraNumber,
-                    isPrimary: isPrimary,
-                  ),
-                );
-                Navigator.pop(ctx);
-              },
-              child: const Text('Create'),
+              // Disabled (dimmed) until a label is typed — no silent no-op.
+              onPressed: label.isEmpty
+                  ? null
+                  : () {
+                      context.read<CameraSwitcherBloc>().add(
+                        CreateCamera(
+                          matchId: widget.matchId,
+                          cameraLabel: label,
+                          cameraNumber: cameraNumber,
+                          isPrimary: isPrimary,
+                        ),
+                      );
+                      Navigator.pop(ctx);
+                    },
+              child: const Text('Create Camera'),
             ),
           ],
         ),

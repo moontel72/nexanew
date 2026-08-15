@@ -542,6 +542,7 @@ class CricketRepository {
   /// Create a new camera stream row for a match. The backend generates the
   /// RTMP stream key when one is not supplied — the returned model carries
   /// the ingest URL + stream key for the mobile camera operator.
+  /// Throws with the server message when creation fails.
   Future<StreamModel?> createStream(
     String matchId, {
     required String cameraLabel,
@@ -549,25 +550,25 @@ class CricketRepository {
     String? rtmpIngestUrl,
     bool isPrimary = false,
   }) async {
-    try {
-      final res = await _http.post(
-        Uri.parse(
-          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams',
-        ),
-        headers: await _authHeaders(),
-        body: jsonEncode({
-          'camera_label': cameraLabel,
-          'camera_number': cameraNumber,
-          if (rtmpIngestUrl != null && rtmpIngestUrl.isNotEmpty)
-            'rtmp_ingest_url': rtmpIngestUrl,
-          'is_primary': isPrimary,
-        }),
-      );
-      if (res.statusCode != 201) return null;
-      return StreamModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
-    } catch (_) {
-      return null;
+    final res = await _http.post(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/streams',
+      ),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'camera_label': cameraLabel,
+        'camera_number': cameraNumber,
+        if (rtmpIngestUrl != null && rtmpIngestUrl.isNotEmpty)
+          'rtmp_ingest_url': rtmpIngestUrl,
+        'is_primary': isPrimary,
+      }),
+    );
+    if (res.statusCode != 201) {
+      throw Exception(_apiError(res));
     }
+    return StreamModel.fromJson(
+      jsonDecode(res.body) as Map<String, dynamic>,
+    );
   }
 
   Future<bool> updateStream(
