@@ -642,11 +642,7 @@ class CricketRepository {
         body: jsonEncode(ball),
       );
       if (res.statusCode != 200) return null;
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
-      final score = data['score'];
-      return score is Map
-          ? LiveScoreSnapshot.fromJson(Map<String, dynamic>.from(score))
-          : null;
+      return _snapshotFromBody(res.body);
     } catch (_) {
       return null;
     }
@@ -662,14 +658,88 @@ class CricketRepository {
         headers: await _authHeaders(),
       );
       if (res.statusCode != 200) return null;
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
-      final score = data['score'];
-      return score is Map
-          ? LiveScoreSnapshot.fromJson(Map<String, dynamic>.from(score))
-          : null;
+      return _snapshotFromBody(res.body);
     } catch (_) {
       return null;
     }
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Phase 2 — Ball-by-ball correction interface
+  // ────────────────────────────────────────────────────────────
+
+  /// Recent deliveries of the current innings (newest first), each with
+  /// its unique ball_id for the correction interface.
+  Future<List<DeliveryModel>> listDeliveries(
+    String matchId, {
+    int limit = 50,
+  }) async {
+    try {
+      final uri = Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/deliveries',
+      ).replace(queryParameters: {'limit': '$limit'});
+      final res = await _http.get(uri, headers: await _authHeaders());
+      if (res.statusCode != 200) return const [];
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final rows = data['deliveries'];
+      if (rows is! List) return const [];
+      return rows
+          .whereType<Map>()
+          .map((d) => DeliveryModel.fromJson(Map<String, dynamic>.from(d)))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Edit a past delivery by ball_id. The backend recomputes everything
+  /// forward and returns the fresh snapshot (also pushed via WebSocket).
+  Future<LiveScoreSnapshot?> editDelivery(
+    String matchId,
+    String ballId,
+    Map<String, dynamic> changes,
+  ) async {
+    try {
+      final res = await _http.put(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/deliveries/$ballId',
+        ),
+        headers: await _authHeaders(),
+        body: jsonEncode(changes),
+      );
+      if (res.statusCode != 200) return null;
+      return _snapshotFromBody(res.body);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Delete a past delivery by ball_id and recompute everything forward.
+  Future<LiveScoreSnapshot?> deleteDelivery(
+    String matchId,
+    String ballId,
+  ) async {
+    try {
+      final res = await _http.delete(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/deliveries/$ballId',
+        ),
+        headers: await _authHeaders(),
+      );
+      if (res.statusCode != 200) return null;
+      return _snapshotFromBody(res.body);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Shared parse of the backend's `{message, score}` scoring responses.
+  LiveScoreSnapshot? _snapshotFromBody(String body) {
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    final score = data['score'];
+    return score is Map
+        ? LiveScoreSnapshot.fromJson(Map<String, dynamic>.from(score))
+        : null;
   }
 
   /// Fetch a single match via the manager endpoint (includes team ids).

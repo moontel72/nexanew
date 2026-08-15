@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
+use Symfony\Component\Process\Process;
 
 /**
  * LiveScoreService — Core scoring engine for cricket matches.
@@ -161,6 +162,311 @@ class LiveScoreService
 
             return $liveScore;
         });
+    }
+
+    // ────────────────────────────────────────────────────────────
+    // Phase 2 — Ball-by-ball correction interface
+    // ────────────────────────────────────────────────────────────
+
+    /**
+     * Recent deliveries of the current innings (newest first) — the
+     * tappable correction history. Every entry carries its unique ball_id.
+     */
+    public function listDeliveries(string $matchId, int $limit = 50): array
+    {
+        $innings = Innings::where('match_id', $matchId)
+            ->where('status', 'in_progress')
+            ->first();
+
+        $deliveries = array_reverse($innings?->deliveries ?? []);
+
+        return array_values(array_slice($deliveries, 0, max(1, min(100, $limit))));
+    }
+
+    /**
+     * Edit a past delivery by its unique ball_id, then recompute every
+     * aggregate forward from the delivery log (totals, scorecards, fall of
+     * wickets, current players, partnership) and regenerate commentary.
+     *
+     * Only the current (in-progress) innings may be corrected.
+     */
+    public function editDelivery(
+        string $matchId,
+        string $ballId,
+        array $changes,
+        string $managerId
+    ): LiveScore {
+        $liveScore = DB::transaction(function () use ($matchId, $ballId, $changes, $managerId) {
+            $match = MatchModel::with([
+                'innings',
+                'innings.battingTeam',
+                'innings.bowlingTeam',
+                'liveScore',
+            ])->findOrFail($matchId);
+
+            if ($match->status !== 'in_progress') {
+                throw new \RuntimeException('Match is not in progress.');
+            }
+
+            $innings = $match->innings->where('status', 'in_progress')->first();
+            if (!$innings) {
+                throw new \RuntimeException('No active innings found.');
+            }
+
+            $deliveries = $innings->deliveries ?? [];
+            $index = null;
+            foreach ($deliveries as $i => $ball) {
+                if (($ball['ball_id'] ?? null) === $ballId) {
+                    $index = $i;
+                    break;
+                }
+            }
+            if ($index === null) {
+                throw new \RuntimeException('Ball not found in the current innings.');
+            }
+
+            $original = $deliveries[$index];
+            $players = $this->loadPlayers($innings);
+
+            // Player overrides must belong to the correct teams.
+            $this->assertPlayerOnTeam(
+                $changes['batsman_id'] ?? ($original['batter_id'] ?? null),
+                $innings->batting_team_id,
+                $players,
+                'Striker'
+            );
+            $this->assertPlayerOnTeam(
+                $changes['non_striker_id'] ?? ($original['non_striker_id'] ?? null),
+                $innings->batting_team_id,
+                $players,
+                'Non-striker'
+            );
+            $this->assertPlayerOnTeam(
+                $changes['bowler_id'] ?? ($original['bowler_id'] ?? null),
+                $innings->bowling_team_id,
+                $players,
+                'Bowler'
+            );
+            $this->assertPlayerOnTeam(
+                $changes['dismissed_player_id'] ?? ($original['dismissed_player_id'] ?? null),
+                $innings->batting_team_id,
+                $players,
+                'Dismissed batter'
+            );
+            $this->assertPlayerOnTeam(
+                $changes['next_batter_id'] ?? ($original['next_batter_id'] ?? null),
+                $innings->batting_team_id,
+                $players,
+                'Next batter'
+            );
+
+            $runs = array_key_exists('runs', $changes)
+                ? (int) $changes['runs']
+                : (int) ($original['runs'] ?? 0);
+            $extras = array_key_exists('extras_type', $changes)
+                ? $changes['extras_type']
+                : ($original['extras_type'] ?? null);
+            $isWicket = array_key_exists('is_wicket', $changes)
+                ? (bool) $changes['is_wicket']
+                : !empty($original['is_wicket']);
+            $wicketType = $isWicket
+                ? ($changes['wicket_type'] ?? ($original['wicket_type'] ?? 'bowled'))
+                : null;
+            $dismissedId = $isWicket
+                ? ($changes['dismissed_player_id'] ?? ($original['dismissed_player_id'] ?? null))
+                : null;
+            $nextBatterId = $isWicket
+                ? ($changes['next_batter_id'] ?? ($original['next_batter_id'] ?? null))
+                : null;
+
+            // Rebuild the delivery entry. Derived values (is_legal,
+            // batter_runs) are intentionally NOT stored — the rebuild path
+            // derives them, so an extras change cannot leave stale data.
+            $deliveries[$index] = [
+                'ball_id' => $original['ball_id'] ?? (string) Str::orderedUuid(),
+                'over_number' => $original['over_number'] ?? intdiv($index, self::BALLS_PER_OVER),
+                'ball_number' => $original['ball_number'] ?? 1,
+                'batter_id' => $changes['batsman_id'] ?? ($original['batter_id'] ?? null),
+                'non_striker_id' => $changes['non_striker_id'] ?? ($original['non_striker_id'] ?? null),
+                'bowler_id' => $changes['bowler_id'] ?? ($original['bowler_id'] ?? null),
+                'runs' => $runs,
+                'extras_type' => $extras,
+                'is_wicket' => $isWicket,
+                'wicket_type' => $wicketType,
+                'dismissed_player_id' => $dismissedId,
+                'fielder_id' => $changes['fielder_id'] ?? ($original['fielder_id'] ?? null),
+                'next_batter_id' => $nextBatterId,
+                'timestamp' => $original['timestamp'] ?? null,
+                'edited_at' => now()->toIso8601String(),
+                'edited_by_cricket_manager_id' => $managerId,
+            ];
+            $innings->deliveries = array_values($deliveries);
+
+            $squads = $this->loadSquads($matchId);
+            $this->rebuildInningsAggregates($innings, $players, $squads);
+            $innings->save();
+
+            // Commentary embeds the running score — regenerate all rows.
+            $this->regenerateCommentary($match, $managerId, $players);
+
+            $lastDelivery = end($innings->deliveries);
+            $liveScore = $this->updateLiveScore($match, $innings, $lastDelivery, $managerId, $players);
+            $this->cacheScore($matchId, $liveScore);
+            $this->broadcastScore($matchId, $liveScore);
+
+            return $liveScore;
+        });
+
+        // Cross-check the recomputed aggregates against the Rust engine.
+        $this->verifyWithRust($matchId);
+
+        return $liveScore;
+    }
+
+    /**
+     * Delete a past delivery by its unique ball_id, then recompute
+     * everything forward from the remaining delivery log.
+     */
+    public function deleteDelivery(
+        string $matchId,
+        string $ballId,
+        string $managerId
+    ): LiveScore {
+        $liveScore = DB::transaction(function () use ($matchId, $ballId, $managerId) {
+            $match = MatchModel::with([
+                'innings',
+                'innings.battingTeam',
+                'innings.bowlingTeam',
+                'liveScore',
+            ])->findOrFail($matchId);
+
+            if ($match->status !== 'in_progress') {
+                throw new \RuntimeException('Match is not in progress.');
+            }
+
+            $innings = $match->innings->where('status', 'in_progress')->first();
+            if (!$innings) {
+                throw new \RuntimeException('No active innings found.');
+            }
+
+            $deliveries = $innings->deliveries ?? [];
+            $found = false;
+            $remaining = [];
+            foreach ($deliveries as $ball) {
+                if (($ball['ball_id'] ?? null) === $ballId) {
+                    $found = true;
+                    continue;
+                }
+                $remaining[] = $ball;
+            }
+            if (!$found) {
+                throw new \RuntimeException('Ball not found in the current innings.');
+            }
+
+            $innings->deliveries = array_values($remaining);
+
+            $players = $this->loadPlayers($innings);
+            $squads = $this->loadSquads($matchId);
+            $this->rebuildInningsAggregates($innings, $players, $squads);
+            $innings->save();
+
+            $this->regenerateCommentary($match, $managerId, $players);
+
+            $lastDelivery = !empty($remaining) ? end($remaining) : null;
+            $liveScore = $this->updateLiveScore($match, $innings, $lastDelivery, $managerId, $players);
+            $this->cacheScore($matchId, $liveScore);
+            $this->broadcastScore($matchId, $liveScore);
+
+            return $liveScore;
+        });
+
+        $this->verifyWithRust($matchId);
+
+        return $liveScore;
+    }
+
+    /**
+     * Independent drift check: run the Rust recompute engine over the same
+     * delivery log and compare aggregates. Non-blocking — mismatches are
+     * logged for engineering follow-up, never thrown at the scorer.
+     */
+    private function verifyWithRust(string $matchId): void
+    {
+        try {
+            $binary = (string) config('cricket.rust_binary_path', '');
+            if ($binary === '' || !is_file($binary) || !is_executable($binary)) {
+                return;
+            }
+
+            $match = MatchModel::with(['innings'])->find($matchId);
+            if (!$match) {
+                return;
+            }
+            $innings = $match->innings->where('status', 'in_progress')->first();
+            if (!$innings) {
+                return;
+            }
+
+            $playerNames = Player::whereIn('team_id', [
+                $innings->batting_team_id,
+                $innings->bowling_team_id,
+            ])->pluck('name', 'id')->all();
+
+            $process = new Process([$binary, 'cricket', '--recompute']);
+            $process->setInput(json_encode([
+                'overs_per_side' => (int) $match->overs_per_side,
+                'player_names' => $playerNames,
+                'deliveries' => $innings->deliveries ?? [],
+            ]));
+            $process->setTimeout(10);
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                Log::warning('Cricket: Rust recompute check failed', [
+                    'match_id' => $matchId,
+                    'error' => trim($process->getErrorOutput()),
+                ]);
+                return;
+            }
+
+            $rust = json_decode($process->getOutput(), true);
+            if (!is_array($rust)) {
+                return;
+            }
+
+            $diffs = [];
+            $this->compareRustInt($diffs, 'total_runs', $innings->total_runs, $rust['total_runs'] ?? null);
+            $this->compareRustInt($diffs, 'total_wickets', $innings->total_wickets, $rust['total_wickets'] ?? null);
+            $this->compareRustInt($diffs, 'total_balls', $innings->total_balls, $rust['total_balls'] ?? null);
+            $this->compareRustInt($diffs, 'extras_wides', $innings->extras_wides, $rust['extras']['wides'] ?? null);
+            $this->compareRustInt($diffs, 'extras_no_balls', $innings->extras_no_balls, $rust['extras']['no_balls'] ?? null);
+            $this->compareRustInt($diffs, 'extras_byes', $innings->extras_byes, $rust['extras']['byes'] ?? null);
+            $this->compareRustInt($diffs, 'extras_leg_byes', $innings->extras_leg_byes, $rust['extras']['leg_byes'] ?? null);
+            $this->compareRustInt($diffs, 'partnership_runs', $this->partnershipFromDeliveries($innings->deliveries ?? [])['runs'], $rust['partnership']['runs'] ?? null);
+
+            if ($diffs !== []) {
+                Log::warning('Cricket: PHP/Rust recompute drift detected', [
+                    'match_id' => $matchId,
+                    'diffs' => $diffs,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Cricket: Rust recompute check unavailable', [
+                'match_id' => $matchId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function compareRustInt(array &$diffs, string $key, int $php, mixed $rust): void
+    {
+        if (!is_int($rust)) {
+            $diffs[$key] = ['php' => $php, 'rust' => $rust];
+            return;
+        }
+        if ($php !== $rust) {
+            $diffs[$key] = ['php' => $php, 'rust' => $rust];
+        }
     }
 
     // ────────────────────────────────────────────────────────────
@@ -885,39 +1191,106 @@ class LiveScoreService
         $overNumber = (int) ($ballData['over_number'] ?? intdiv($innings->total_balls, self::BALLS_PER_OVER));
         $ballInOver = (int) ($ballData['ball_number'] ?? (($innings->total_balls % self::BALLS_PER_OVER) + 1));
 
-        $text = $this->buildCommentaryText($innings, $ballData, $overNumber, $ballInOver, $players);
-
-        $eventType = 'ball';
-        if (!empty($ballData['is_wicket'])) {
-            $eventType = 'wicket';
-        } elseif (($ballData['runs'] ?? 0) >= 6 && empty($ballData['extras_type'])) {
-            $eventType = 'boundary_six';
-        } elseif (($ballData['runs'] ?? 0) >= 4 && empty($ballData['extras_type'])) {
-            $eventType = 'boundary_four';
-        } elseif (in_array($ballData['extras_type'] ?? null, ['wide', 'no_ball'])) {
-            $eventType = $ballData['extras_type'];
-        }
+        $text = $this->buildCommentaryText(
+            $ballData,
+            $innings->total_runs,
+            $innings->total_wickets,
+            $innings->total_overs,
+            $overNumber,
+            $ballInOver,
+            $players
+        );
 
         Commentary::create([
             'match_id' => $matchId,
             'ball_number' => $innings->total_balls,
             'over_number' => $overNumber,
             'commentary_text' => $text,
-            'event_type' => $eventType,
+            'event_type' => $this->eventTypeFor($ballData),
             'cricket_manager_id' => $managerId,
         ]);
     }
 
+    /**
+     * Rebuild every commentary row for the match from the delivery log.
+     * Used after corrections — commentary text embeds the running score,
+     * so every row after an edited/deleted ball must be regenerated.
+     */
+    private function regenerateCommentary(
+        MatchModel $match,
+        string $managerId,
+        \Illuminate\Support\Collection $players
+    ): void {
+        Commentary::where('match_id', $match->id)->delete();
+
+        foreach ($match->innings->sortBy('innings_number') as $innings) {
+            $runningRuns = 0;
+            $runningWickets = 0;
+            $legalBalls = 0;
+
+            foreach ($innings->deliveries ?? [] as $ball) {
+                $runningRuns += (int) ($ball['runs'] ?? 0);
+                if ($this->isWicketDelivery($ball)) {
+                    $runningWickets++;
+                }
+
+                $over = (int) ($ball['over_number'] ?? intdiv($legalBalls, self::BALLS_PER_OVER));
+                $ballInOver = (int) ($ball['ball_number'] ?? (($legalBalls % self::BALLS_PER_OVER) + 1));
+
+                if ($this->isLegalDelivery($ball)) {
+                    $legalBalls++;
+                }
+
+                Commentary::create([
+                    'match_id' => $match->id,
+                    'ball_number' => $legalBalls,
+                    'over_number' => $over,
+                    'commentary_text' => $this->buildCommentaryText(
+                        $ball,
+                        $runningRuns,
+                        $runningWickets,
+                        $this->oversForBalls($legalBalls),
+                        $over,
+                        $ballInOver,
+                        $players
+                    ),
+                    'event_type' => $this->eventTypeFor($ball),
+                    'cricket_manager_id' => $managerId,
+                ]);
+            }
+        }
+    }
+
+    private function eventTypeFor(array $ballData): string
+    {
+        if (!empty($ballData['is_wicket'])) {
+            return 'wicket';
+        }
+        if (($ballData['runs'] ?? 0) >= 6 && empty($ballData['extras_type'])) {
+            return 'boundary_six';
+        }
+        if (($ballData['runs'] ?? 0) >= 4 && empty($ballData['extras_type'])) {
+            return 'boundary_four';
+        }
+        if (in_array($ballData['extras_type'] ?? null, ['wide', 'no_ball'])) {
+            return $ballData['extras_type'];
+        }
+
+        return 'ball';
+    }
+
     private function buildCommentaryText(
-        Innings $innings,
         array $ballData,
+        int $runningRuns,
+        int $runningWickets,
+        float $runningOvers,
         int $over,
         int $ballInOver,
         \Illuminate\Support\Collection $players
     ): string {
         $runs = $ballData['runs'] ?? 0;
         $extras = $ballData['extras_type'] ?? null;
-        $score = "{$innings->total_runs}/{$innings->total_wickets}";
+        $score = "{$runningRuns}/{$runningWickets}";
         $bowlerName = !empty($ballData['bowler_id'])
             ? ($players->get($ballData['bowler_id'])?->name ?? null)
             : null;
@@ -932,7 +1305,7 @@ class LiveScoreService
             $detail = ' ' . ($outName ?? $batterName ?? 'Batter') . " {$type}"
                 . ($bowlerName ? " off {$bowlerName}" : '');
 
-            return "Over {$over}.{$ballInOver}: WICKET!{$detail}. {$score} in {$innings->total_overs} overs.";
+            return "Over {$over}.{$ballInOver}: WICKET!{$detail}. {$score} in {$runningOvers} overs.";
         }
 
         $event = match ($extras) {
@@ -951,7 +1324,7 @@ class LiveScoreService
         $detail = ($batterName ? " by {$batterName}" : '')
             . ($bowlerName ? " off {$bowlerName}" : '');
 
-        return "Over {$over}.{$ballInOver}: {$event}{$detail}. {$score} in {$innings->total_overs} overs.";
+        return "Over {$over}.{$ballInOver}: {$event}{$detail}. {$score} in {$runningOvers} overs.";
     }
 
     // ────────────────────────────────────────────────────────────

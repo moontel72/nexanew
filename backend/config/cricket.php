@@ -29,4 +29,16 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Rust recompute binary (Phase 2)
+    |--------------------------------------------------------------------------
+    |
+    | Path to the `trace_odd_rust` binary used by the scoring engine to
+    | cross-check forward recomputations after ball corrections. Set to an
+    | empty string to disable the drift check.
+    |
+    */
+    'rust_binary_path' => env('CRICKET_RUST_BINARY', '/opt/nexatrace/trace_odd_rust'),
+
 ];

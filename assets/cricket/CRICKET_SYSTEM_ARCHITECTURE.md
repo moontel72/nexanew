@@ -541,6 +541,28 @@ Sleep mode guarantees: 0% CPU, 0% RAM, 0 DB connections consumed by cricket modu
 - [x] Backward compatible: legacy balls without player attribution keep
       scoring unchanged; new features activate as attribution arrives
 
+### Phase 2 — Ball-by-Ball Correction Interface (2026-08-15)
+- [x] Tappable delivery history on the scoring console (unique `ball_id`
+      per delivery, newest first, `GET matches/{id}/deliveries`)
+- [x] Edit flow: `PUT matches/{id}/deliveries/{ballId}` — runs, extras,
+      wicket info, batter/bowler overrides; the engine recomputes every
+      aggregate forward from the delivery log (totals, scorecards, FOW,
+      current players, partnership) and regenerates all commentary rows
+- [x] Delete flow: `DELETE matches/{id}/deliveries/{ballId}` — same
+      forward recomputation from the remaining log
+- [x] Rust cross-check: after every correction the engine pipes the
+      delivery log through `trace_odd_rust cricket --recompute` and logs
+      any PHP/Rust aggregate drift (config: `config/cricket.php`,
+      env `CRICKET_RUST_BINARY`)
+- [x] Audit trail: corrections logged in `cricket_manager_session_logs`
+      (`edit_ball` / `delete_ball` metadata) + per-ball `edited_at` /
+      `edited_by_cricket_manager_id` stamps
+- [x] Flutter: `CorrectionBloc` (history + BLoC-driven edit form),
+      `DeliveryHistoryCard` + `CorrectionSheet`, shared `BallBadge`
+      extracted for reuse by the ticker and the history list
+- [x] Guardrails: current innings only, match must be in progress,
+      server-side validation mirrors the scoring endpoint
+
 ---
 
 ## 8. REMAINING TASKS & FUTURE ROADMAP

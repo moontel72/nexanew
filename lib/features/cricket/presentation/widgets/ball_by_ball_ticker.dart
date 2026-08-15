@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import '../../data/models/cricket_models.dart';
+import 'ball_badge.dart';
 
 /// Ball-by-ball recent-over ticker with visual run/wicket indicators.
 class BallByBallTicker extends StatelessWidget {
@@ -45,7 +46,7 @@ class BallByBallTicker extends StatelessWidget {
             spacing: 6,
             runSpacing: 6,
             children: balls.reversed.take(36).map((ball) {
-              return _BallIndicator(ball: ball);
+              return BallBadge(ball: ball);
             }).toList(),
           ),
           const SizedBox(height: 12),
@@ -66,59 +67,6 @@ class BallByBallTicker extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _BallIndicator extends StatelessWidget {
-  final RecentBall ball;
-  const _BallIndicator({required this.ball});
-
-  @override
-  Widget build(BuildContext context) {
-    Color bgColor;
-    Color textColor = CricketColors.textPrimary;
-
-    if (ball.isWicket) {
-      bgColor = CricketColors.wicket;
-    } else {
-      switch (ball.runs) {
-        case 0:
-          bgColor = CricketColors.textTertiary.withOpacity(0.3);
-          break;
-        case 4:
-          bgColor = CricketColors.runFour;
-          break;
-        case 6:
-          bgColor = CricketColors.teamA;
-          break;
-        default:
-          bgColor = CricketColors.textSecondary;
-      }
-    }
-
-    if (ball.extrasType == 'wide') {
-      bgColor = CricketColors.roleAllRounder;
-    } else if (ball.extrasType == 'no_ball') {
-      bgColor = CricketColors.roleAllRounder;
-    }
-
-    return Container(
-      width: 36,
-      height: 36,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        ball.display,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-        ),
       ),
     );
   }

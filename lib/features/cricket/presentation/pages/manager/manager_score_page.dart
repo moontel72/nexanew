@@ -5,7 +5,9 @@ import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import '../../blocs/live_score/live_score_bloc.dart';
 import '../../blocs/scoring_control/scoring_control_bloc.dart';
 import '../../blocs/squad_setup/squad_setup_bloc.dart';
+import '../../blocs/correction/correction_bloc.dart';
 import '../../widgets/ball_by_ball_ticker.dart';
+import '../../widgets/delivery_history_card.dart';
 import '../../widgets/scoring_control_panel.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../../data/repositories/cricket_repository.dart';
@@ -35,12 +37,14 @@ class _ManagerScorePageState extends State<ManagerScorePage> {
     super.initState();
     context.read<LiveScoreBloc>().add(ConnectToMatch(widget.matchId));
     context.read<ScoringControlBloc>().add(LoadControlData(widget.matchId));
+    context.read<CorrectionBloc>().add(LoadCorrections(widget.matchId));
   }
 
   @override
   void dispose() {
     context.read<LiveScoreBloc>().add(DisconnectFromMatch());
     context.read<ScoringControlBloc>().add(ResetControl());
+    context.read<CorrectionBloc>().add(ResetCorrections());
     super.dispose();
   }
 
@@ -95,9 +99,9 @@ class _ManagerScorePageState extends State<ManagerScorePage> {
             ),
             LiveScoreError(:final message) => _LoadError(
               message: message,
-              onRetry: () => context
-                  .read<LiveScoreBloc>()
-                  .add(ConnectToMatch(widget.matchId)),
+              onRetry: () => context.read<LiveScoreBloc>().add(
+                ConnectToMatch(widget.matchId),
+              ),
             ),
             LiveScoreUpdating(:final score, :final match) => _SplitLayout(
               matchId: widget.matchId,
@@ -231,6 +235,8 @@ class _ScoreOverview extends StatelessWidget {
         _ScoreHeader(score: score, match: match),
         const SizedBox(height: 16),
         BallByBallTicker(score: score),
+        const SizedBox(height: 12),
+        const DeliveryHistoryCard(),
       ],
     );
   }

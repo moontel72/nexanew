@@ -400,6 +400,71 @@ class RecentBall {
   }
 }
 
+/// Phase 2 — one delivery in the correction history (unique ball_id).
+class DeliveryModel {
+  final String ballId;
+  final int? overNumber;
+  final int? ballNumber;
+  final String? batterId;
+  final String? nonStrikerId;
+  final String? bowlerId;
+  final int runs;
+  final String? extrasType;
+  final bool isWicket;
+  final String? wicketType;
+  final String? dismissedPlayerId;
+  final String? fielderId;
+  final String? nextBatterId;
+
+  const DeliveryModel({
+    required this.ballId,
+    this.overNumber,
+    this.ballNumber,
+    this.batterId,
+    this.nonStrikerId,
+    this.bowlerId,
+    this.runs = 0,
+    this.extrasType,
+    this.isWicket = false,
+    this.wicketType,
+    this.dismissedPlayerId,
+    this.fielderId,
+    this.nextBatterId,
+  });
+
+  factory DeliveryModel.fromJson(Map<String, dynamic> json) => DeliveryModel(
+    ballId: json['ball_id'] as String? ?? '',
+    overNumber: json['over_number'] as int?,
+    ballNumber: json['ball_number'] as int?,
+    batterId: json['batter_id'] as String?,
+    nonStrikerId: json['non_striker_id'] as String?,
+    bowlerId: json['bowler_id'] as String?,
+    runs: json['runs'] as int? ?? 0,
+    extrasType: json['extras_type'] as String?,
+    isWicket: json['is_wicket'] as bool? ?? false,
+    wicketType: json['wicket_type'] as String?,
+    dismissedPlayerId: json['dismissed_player_id'] as String?,
+    fielderId: json['fielder_id'] as String?,
+    nextBatterId: json['next_batter_id'] as String?,
+  );
+
+  /// Compact over.ball label, e.g. `3.2`.
+  String get label => '${overNumber ?? 0}.${ballNumber ?? 1}';
+
+  /// Display context for the shared ball badge.
+  RecentBall get recentBall => RecentBall(
+    runs: runs,
+    isWicket: isWicket,
+    wicketType: wicketType,
+    extrasType: extrasType,
+    ballId: ballId,
+    overNumber: overNumber,
+    ballNumber: ballNumber,
+    batterId: batterId,
+    bowlerId: bowlerId,
+  );
+}
+
 class StreamModel {
   final String id;
   final String cameraLabel;

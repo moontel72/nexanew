@@ -111,6 +111,11 @@ Route::prefix('api/v1/cricket/manager')
         Route::post('matches/{matchId}/score/undo', [LiveScoreController::class, 'undoLastBall']);
         Route::get('matches/{matchId}/scorecard', [LiveScoreController::class, 'fullScorecard']);
 
+        // Phase 2 — Ball-by-ball correction interface (unique ball_ids)
+        Route::get('matches/{matchId}/deliveries', [LiveScoreController::class, 'deliveries']);
+        Route::put('matches/{matchId}/deliveries/{ballId}', [LiveScoreController::class, 'editDelivery']);
+        Route::delete('matches/{matchId}/deliveries/{ballId}', [LiveScoreController::class, 'deleteDelivery']);
+
         // Match lifecycle — toss & start (unlocks the scoring flow end-to-end)
         Route::post('matches/{id}/toss', [MatchController::class, 'updateToss']);
         Route::post('matches/{id}/start', [MatchController::class, 'startMatch']);
