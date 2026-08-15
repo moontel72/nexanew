@@ -148,7 +148,7 @@ class CameraSwitcherBloc
     final s = state;
     if (s is! CameraSwitcherLoaded) return;
 
-    StreamModel? created;
+    StreamModel created;
     try {
       created = await _repo.createStream(
         e.matchId,

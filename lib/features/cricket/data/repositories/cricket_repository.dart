@@ -543,7 +543,7 @@ class CricketRepository {
   /// RTMP stream key when one is not supplied — the returned model carries
   /// the ingest URL + stream key for the mobile camera operator.
   /// Throws with the server message when creation fails.
-  Future<StreamModel?> createStream(
+  Future<StreamModel> createStream(
     String matchId, {
     required String cameraLabel,
     required int cameraNumber,
