@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 import '../../blocs/scorecard/scorecard_bloc.dart';
+import '../../widgets/worm_chart.dart';
 import '../../../data/models/cricket_models.dart';
 
 /// Phase 4 — full scorecard page for public fans. Shows both innings with
@@ -72,11 +73,58 @@ class ScorecardPage extends StatelessWidget {
       children: [
         _MatchHeaderCard(scorecard: s),
         const SizedBox(height: 16),
+        // Phase 5 — worm chart comparing the two innings' run progression.
+        if (s.innings.length >= 2 &&
+            s.innings[0].runProgression.isNotEmpty &&
+            s.innings[1].runProgression.isNotEmpty) ...[
+          _WormSection(innings1: s.innings[0], innings2: s.innings[1]),
+          const SizedBox(height: 16),
+        ],
         for (final innings in s.innings) ...[
           _InningsCard(innings: innings),
           const SizedBox(height: 16),
         ],
       ],
+    );
+  }
+}
+
+class _WormSection extends StatelessWidget {
+  final ScorecardInnings innings1;
+  final ScorecardInnings innings2;
+
+  const _WormSection({required this.innings1, required this.innings2});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: CricketColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CricketColors.textTertiary),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'RUN PROGRESSION',
+            style: TextStyle(
+              color: CricketColors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          WormChart(
+            innings1: innings1.runProgression,
+            innings2: innings2.runProgression,
+            innings1Label: innings1.battingTeam,
+            innings2Label: innings2.battingTeam,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -257,7 +305,11 @@ class _BattingTable extends StatelessWidget {
         cells: ['Batter', 'R', 'B', '4s', '6s', 'SR'],
       ),
       children: batting.map((b) {
-        final dismissal = b.dismissed ? 'c ${b.dismissal ?? 'out'}' : 'not out';
+        final dismissal = b.retiredHurt
+            ? 'retired hurt'
+            : b.dismissed
+            ? 'c ${b.dismissal ?? 'out'}'
+            : 'not out';
         return _TableRow(
           cells: [
             '${b.name} · $dismissal',

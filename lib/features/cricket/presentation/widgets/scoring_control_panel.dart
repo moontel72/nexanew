@@ -7,6 +7,7 @@ import '../blocs/live_score/live_score_bloc.dart';
 import '../blocs/scoring_control/scoring_control_bloc.dart';
 import '../../data/models/cricket_models.dart';
 import 'player_picker_sheet.dart';
+import 'shot_direction_sheet.dart';
 
 /// Left panel of the split-screen scoring console: player selection,
 /// toss/start flow, ball input, wicket flow, and undo.
@@ -993,6 +994,7 @@ class _BallInputGrid extends StatelessWidget {
               runs: 4,
               color: CricketColors.runFour,
               busy: busy,
+              onBoundary: () => _openBoundarySheet(context, 4),
               onBall: (ball) =>
                   context.read<LiveScoreBloc>().add(SubmitBall(ball)),
             ),
@@ -1001,6 +1003,7 @@ class _BallInputGrid extends StatelessWidget {
               runs: 6,
               color: CricketColors.runSix,
               busy: busy,
+              onBoundary: () => _openBoundarySheet(context, 6),
               onBall: (ball) =>
                   context.read<LiveScoreBloc>().add(SubmitBall(ball)),
             ),
@@ -1062,6 +1065,26 @@ class _BallInputGrid extends StatelessWidget {
     };
   }
 
+  void _openBoundarySheet(BuildContext context, int runs) {
+    final controlBloc = context.read<ScoringControlBloc>();
+    final scoreBloc = context.read<LiveScoreBloc>();
+
+    controlBloc.add(BoundaryTapped(runs));
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: controlBloc),
+          BlocProvider.value(value: scoreBloc),
+        ],
+        child: const ShotDirectionSheet(),
+      ),
+    ).whenComplete(() {
+      if (!controlBloc.isClosed) controlBloc.add(CloseBoundary());
+    });
+  }
+
   void _openWicketSheet(BuildContext context) {
     final controlBloc = context.read<ScoringControlBloc>();
     final scoreBloc = context.read<LiveScoreBloc>();
@@ -1093,12 +1116,17 @@ class _RunButton extends StatelessWidget {
   final bool busy;
   final void Function(Map<String, dynamic> ball) onBall;
 
+  /// Phase 5 — when set, the tap opens the shot-direction flow instead
+  /// of submitting the ball directly.
+  final VoidCallback? onBoundary;
+
   const _RunButton({
     required this.label,
     required this.runs,
     required this.color,
     required this.busy,
     required this.onBall,
+    this.onBoundary,
   });
 
   @override
@@ -1109,7 +1137,7 @@ class _RunButton extends StatelessWidget {
         : <String, dynamic>{'runs': runs};
 
     return GestureDetector(
-      onTap: busy ? null : () => onBall(ball),
+      onTap: busy ? null : (onBoundary ?? () => onBall(ball)),
       child: Container(
         width: 64,
         height: 64,
@@ -1282,10 +1310,45 @@ class WicketSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+                // Phase 5 — dismissal mode: wicket vs retired hurt.
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text(
+                        'Wicket',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      selected: c.wicketMode != 'retired_hurt',
+                      backgroundColor: CricketColors.inputFill,
+                      selectedColor: CricketColors.wicket,
+                      labelStyle: const TextStyle(color: Colors.white),
+                      onSelected: (_) => context.read<ScoringControlBloc>().add(
+                        const WicketSelectMode('wicket'),
+                      ),
+                    ),
+                    ChoiceChip(
+                      label: const Text(
+                        'Retired hurt',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      selected: c.wicketMode == 'retired_hurt',
+                      backgroundColor: CricketColors.inputFill,
+                      selectedColor: const Color(0xFFF59E0B),
+                      labelStyle: const TextStyle(color: Colors.white),
+                      onSelected: (_) => context.read<ScoringControlBloc>().add(
+                        const WicketSelectMode('retired_hurt'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 if (dismissedOptions.isNotEmpty) ...[
-                  const Text(
-                    'DISMISSED BATTER',
-                    style: TextStyle(
+                  Text(
+                    c.wicketMode == 'retired_hurt'
+                        ? 'RETIRING BATTER'
+                        : 'DISMISSED BATTER',
+                    style: const TextStyle(
                       color: CricketColors.textSecondary,
                       fontSize: 10,
                       letterSpacing: 1.1,
@@ -1312,35 +1375,48 @@ class WicketSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                 ],
-                const Text(
-                  'WICKET TYPE',
-                  style: TextStyle(
-                    color: CricketColors.textSecondary,
-                    fontSize: 10,
-                    letterSpacing: 1.1,
+                if (c.wicketMode == 'retired_hurt') ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Retired hurt is not a dismissal — no wicket is credited.',
+                    style: TextStyle(
+                      color: CricketColors.textSecondary,
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: wicketTypes.map((t) {
-                    return ChoiceChip(
-                      label: Text(
-                        t.replaceAll('_', ' ').toUpperCase(),
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      selected: c.wicketType == t,
-                      backgroundColor: CricketColors.inputFill,
-                      selectedColor: CricketColors.wicket,
-                      labelStyle: const TextStyle(color: Colors.white),
-                      onSelected: (_) => context.read<ScoringControlBloc>().add(
-                        WicketSelectType(t),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
+                ],
+                if (c.wicketMode != 'retired_hurt') ...[
+                  const Text(
+                    'WICKET TYPE',
+                    style: TextStyle(
+                      color: CricketColors.textSecondary,
+                      fontSize: 10,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: wicketTypes.map((t) {
+                      return ChoiceChip(
+                        label: Text(
+                          t.replaceAll('_', ' ').toUpperCase(),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        selected: c.wicketType == t,
+                        backgroundColor: CricketColors.inputFill,
+                        selectedColor: CricketColors.wicket,
+                        labelStyle: const TextStyle(color: Colors.white),
+                        onSelected: (_) => context
+                            .read<ScoringControlBloc>()
+                            .add(WicketSelectType(t)),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 const Text(
                   'NEXT BATTER',
                   style: TextStyle(
@@ -1413,12 +1489,20 @@ class WicketSheet extends StatelessWidget {
   }
 
   void _submit(BuildContext context, ScoringControlLoaded c) {
+    final isRetiredHurt = c.wicketMode == 'retired_hurt';
+
     final ball = <String, dynamic>{
       'runs': 0,
-      'is_wicket': true,
-      'wicket_type': c.wicketType,
-      if (c.wicketDismissedId != null)
-        'dismissed_player_id': c.wicketDismissedId!,
+      if (isRetiredHurt) ...{
+        'is_wicket': false,
+        if (c.wicketDismissedId != null)
+          'retired_player_id': c.wicketDismissedId!,
+      } else ...{
+        'is_wicket': true,
+        'wicket_type': c.wicketType,
+        if (c.wicketDismissedId != null)
+          'dismissed_player_id': c.wicketDismissedId!,
+      },
       if (c.wicketNextBatterId != null && c.wicketNextBatterId!.isNotEmpty)
         'next_batter_id': c.wicketNextBatterId!,
       if (!c.playerTrackingDisabled) ...{

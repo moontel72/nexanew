@@ -14,6 +14,7 @@ import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../blocs/team/team_bloc.dart';
 import '../../blocs/fixture/fixture_bloc.dart';
 import '../../blocs/tournament_setup/tournament_setup_bloc.dart';
+import '../../blocs/dls_calculator/dls_calculator_bloc.dart';
 import '../../../data/models/cricket_models.dart';
 import '../../../data/repositories/cricket_repository.dart';
 import 'manager_login_page.dart';
@@ -27,6 +28,7 @@ import 'player_register_page.dart';
 import 'players_list_page.dart';
 import 'fixture_scheduler_page.dart';
 import 'tournament_setup_page.dart';
+import 'dls_calculator_page.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 
 /// Manager Dashboard — 3D Pencil Sidebar layout.
@@ -931,6 +933,21 @@ class _TournamentTab extends StatelessWidget {
         color: const Color(0xFFCA8A04),
         subtitle: 'View net run rate for all teams',
         onTap: () => _showNRRCalculator(context),
+      ),
+      Missile3DButton(
+        label: 'DLS Calculator',
+        icon: Icons.umbrella,
+        color: const Color(0xFF3B82F6),
+        subtitle: 'Rain-adjusted target (simplified DLS)',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BlocProvider(
+              create: (_) => DlsCalculatorBloc(),
+              child: const DlsCalculatorPage(),
+            ),
+          ),
+        ),
       ),
       Missile3DButton(
         label: 'Top Performers',

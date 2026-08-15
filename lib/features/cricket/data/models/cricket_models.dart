@@ -660,6 +660,7 @@ class PlayerStats {
   final double strikeRate;
   final bool dismissed;
   final String? dismissal;
+  final bool retiredHurt;
   final int? battingOrder;
 
   const PlayerStats({
@@ -672,6 +673,7 @@ class PlayerStats {
     this.strikeRate = 0,
     this.dismissed = false,
     this.dismissal,
+    this.retiredHurt = false,
     this.battingOrder,
   });
 
@@ -685,6 +687,7 @@ class PlayerStats {
     strikeRate: (json['strike_rate'] as num?)?.toDouble() ?? 0,
     dismissed: json['dismissed'] as bool? ?? false,
     dismissal: json['dismissal'] as String?,
+    retiredHurt: json['retired_hurt'] as bool? ?? false,
     battingOrder: json['batting_order'] as int?,
   );
 }
@@ -1409,6 +1412,26 @@ class PlayerModel {
 // Phase 4 — Full scorecard models
 // ═══════════════════════════════════════════════════════════════
 
+/// One point on the over-by-over run progression (worm chart).
+class ProgressionPoint {
+  final int over;
+  final int runs;
+  final int wickets;
+
+  const ProgressionPoint({
+    required this.over,
+    required this.runs,
+    required this.wickets,
+  });
+
+  factory ProgressionPoint.fromJson(Map<String, dynamic> json) =>
+      ProgressionPoint(
+        over: json['over'] as int? ?? 0,
+        runs: json['runs'] as int? ?? 0,
+        wickets: json['wickets'] as int? ?? 0,
+      );
+}
+
 /// One innings of the full scorecard — reuses `PlayerStats` and
 /// `BowlerStats` for the per-player rows (single model source).
 class ScorecardInnings {
@@ -1419,10 +1442,13 @@ class ScorecardInnings {
   final int totalWickets;
   final double totalOvers;
   final String? status;
+  final bool isSuperOver;
+  final int? oversLimit;
   final Map<String, dynamic>? extras;
   final List<PlayerStats> batting;
   final List<BowlerStats> bowling;
   final List<Map<String, dynamic>> fallOfWickets;
+  final List<ProgressionPoint> runProgression;
 
   const ScorecardInnings({
     required this.inningsNumber,
@@ -1432,10 +1458,13 @@ class ScorecardInnings {
     this.totalWickets = 0,
     this.totalOvers = 0,
     this.status,
+    this.isSuperOver = false,
+    this.oversLimit,
     this.extras,
     this.batting = const [],
     this.bowling = const [],
     this.fallOfWickets = const [],
+    this.runProgression = const [],
   });
 
   factory ScorecardInnings.fromJson(Map<String, dynamic> json) =>
@@ -1447,6 +1476,8 @@ class ScorecardInnings {
         totalWickets: json['total_wickets'] as int? ?? 0,
         totalOvers: (json['total_overs'] as num?)?.toDouble() ?? 0,
         status: json['status'] as String?,
+        isSuperOver: json['is_super_over'] as bool? ?? false,
+        oversLimit: json['overs_limit'] as int?,
         extras: json['extras'] is Map
             ? Map<String, dynamic>.from(json['extras'] as Map)
             : null,
@@ -1469,6 +1500,15 @@ class ScorecardInnings {
         fallOfWickets:
             (json['fall_of_wickets'] as List<dynamic>?)
                 ?.map((f) => Map<String, dynamic>.from(f as Map))
+                .toList() ??
+            const [],
+        runProgression:
+            (json['run_progression'] as List<dynamic>?)
+                ?.map(
+                  (p) => ProgressionPoint.fromJson(
+                    Map<String, dynamic>.from(p as Map),
+                  ),
+                )
                 .toList() ??
             const [],
       );

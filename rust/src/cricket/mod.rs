@@ -48,6 +48,7 @@ pub struct Delivery {
     pub is_wicket: bool,
     pub wicket_type: Option<String>,
     pub dismissed_player_id: Option<String>,
+    pub retired_player_id: Option<String>,
     pub fielder_id: Option<String>,
     pub next_batter_id: Option<String>,
 }
@@ -211,6 +212,9 @@ pub fn recompute(req: &RecomputeRequest) -> RecomputeResult {
     let mut non_striker: Option<String> = None;
     let mut bowler: Option<String> = None;
 
+    // Phase 5 — free-hit tracking: the legal ball after a no-ball.
+    let mut prev_was_no_ball = false;
+
     let name_of = |id: &str| {
         req.player_names
             .get(id)
@@ -220,9 +224,12 @@ pub fn recompute(req: &RecomputeRequest) -> RecomputeResult {
 
     for d in &req.deliveries {
         let legal = is_legal(d);
-        let wicket = is_wicket(d);
+        let free_hit = prev_was_no_ball && legal;
+        // On a free hit only a run out can dismiss the batter.
+        let wicket = is_wicket(d) && !(free_hit && d.wicket_type.as_deref() != Some("run_out"));
         let br = batter_runs(d.runs, d.extras_type.as_deref());
         let (w, nb, b, lb) = extras_increments(d);
+        prev_was_no_ball = d.extras_type.as_deref() == Some("no_ball");
 
         runs += d.runs;
         if wicket {
@@ -325,8 +332,11 @@ pub fn recompute(req: &RecomputeRequest) -> RecomputeResult {
             bowler = Some(id.clone());
         }
 
-        if wicket {
-            let out_id = d.dismissed_player_id.clone();
+        if wicket || d.retired_player_id.is_some() {
+            let out_id = d
+                .dismissed_player_id
+                .clone()
+                .or_else(|| d.retired_player_id.clone());
             if let Some(out) = out_id {
                 if striker.as_deref() == Some(out.as_str()) {
                     striker = d.next_batter_id.clone();
@@ -668,6 +678,52 @@ mod tests {
         assert_eq!(result.current.striker_id, None);
         assert_eq!(result.batting_scorecard.len(), 0);
         assert_eq!(result.bowling_scorecard.len(), 0);
+    }
+
+    #[test]
+    fn free_hit_only_allows_run_outs() {
+        // No-ball, then a legal delivery that is the free hit.
+        let deliveries = vec![
+            extras_ball(1, "no_ball", Some("a"), Some("b"), Some("x")),
+            ball(Some("a"), Some("b"), Some("x")).with_wicket("bowled", Some("a"), Some("c")),
+        ];
+        let result = recompute_with(deliveries.clone());
+
+        // Bowled on a free hit does not stand.
+        assert_eq!(result.total_wickets, 0);
+        assert_eq!(result.fall_of_wickets.len(), 0);
+
+        // Run out on a free hit DOES stand.
+        let deliveries = vec![
+            extras_ball(1, "no_ball", Some("a"), Some("b"), Some("x")),
+            ball(Some("a"), Some("b"), Some("x")).with_wicket("run_out", Some("a"), Some("c")),
+        ];
+        let result = recompute_with(deliveries);
+        assert_eq!(result.total_wickets, 1);
+        assert_eq!(result.current.striker_id.as_deref(), Some("c"));
+    }
+
+    #[test]
+    fn retired_hurt_replaces_batter_without_a_wicket() {
+        let deliveries = vec![
+            ball(Some("a"), Some("b"), Some("x")).with_runs(2),
+            Delivery {
+                batter_id: Some("a".into()),
+                non_striker_id: Some("b".into()),
+                bowler_id: Some("x".into()),
+                retired_player_id: Some("a".into()),
+                next_batter_id: Some("c".into()),
+                ..Default::default()
+            },
+            ball(Some("c"), Some("b"), Some("x")).with_runs(1),
+        ];
+        let result = recompute_with(deliveries);
+
+        assert_eq!(result.total_wickets, 0);
+        assert_eq!(result.fall_of_wickets.len(), 0);
+        // Odd run crossed after the replacement.
+        assert_eq!(result.current.striker_id.as_deref(), Some("b"));
+        assert_eq!(result.current.non_striker_id.as_deref(), Some("c"));
     }
 
     // Test builders

@@ -59,6 +59,12 @@ final class ScoringControlLoaded extends ScoringControlState {
   final String? wicketDismissedId;
   final String? wicketNextBatterId;
 
+  /// Wicket sheet mode: normal dismissal or retired hurt.
+  final String wicketMode;
+
+  /// Phase 5 — boundary waiting for a shot-direction pick.
+  final int? pendingBoundaryRuns;
+
   const ScoringControlLoaded({
     required this.matchId,
     this.match,
@@ -82,6 +88,8 @@ final class ScoringControlLoaded extends ScoringControlState {
     this.wicketType = 'bowled',
     this.wicketDismissedId,
     this.wicketNextBatterId,
+    this.wicketMode = 'wicket',
+    this.pendingBoundaryRuns,
   });
 
   ScoringControlLoaded copyWith({
@@ -106,6 +114,8 @@ final class ScoringControlLoaded extends ScoringControlState {
     String? wicketType,
     String? wicketDismissedId,
     String? wicketNextBatterId,
+    String? wicketMode,
+    int? pendingBoundaryRuns,
   }) => ScoringControlLoaded(
     matchId: matchId,
     match: match ?? this.match,
@@ -130,6 +140,8 @@ final class ScoringControlLoaded extends ScoringControlState {
     wicketType: wicketType ?? this.wicketType,
     wicketDismissedId: wicketDismissedId ?? this.wicketDismissedId,
     wicketNextBatterId: wicketNextBatterId ?? this.wicketNextBatterId,
+    wicketMode: wicketMode ?? this.wicketMode,
+    pendingBoundaryRuns: pendingBoundaryRuns ?? this.pendingBoundaryRuns,
   );
 
   // ── Derived data for the scoring panel ─────────────────
@@ -297,6 +309,19 @@ final class WicketSelectNextBatter extends ScoringControlEvent {
 
 final class WicketClose extends ScoringControlEvent {}
 
+final class WicketSelectMode extends ScoringControlEvent {
+  final String mode;
+  const WicketSelectMode(this.mode);
+}
+
+/// Phase 5 — a FOUR/SIX was tapped and is waiting for a shot direction.
+final class BoundaryTapped extends ScoringControlEvent {
+  final int runs;
+  const BoundaryTapped(this.runs);
+}
+
+final class CloseBoundary extends ScoringControlEvent {}
+
 final class ResetControl extends ScoringControlEvent {}
 
 // ─── BLoC ────────────────────────────────────────────────
@@ -325,6 +350,9 @@ class ScoringControlBloc
     on<WicketSelectDismissed>(_onWicketSelectDismissed);
     on<WicketSelectNextBatter>(_onWicketSelectNextBatter);
     on<WicketClose>(_onWicketClose);
+    on<WicketSelectMode>(_onWicketSelectMode);
+    on<BoundaryTapped>(_onBoundaryTapped);
+    on<CloseBoundary>(_onCloseBoundary);
     on<ResetControl>(_onReset);
   }
 
@@ -500,6 +528,7 @@ class ScoringControlBloc
       s.copyWith(
         showWicketForm: true,
         wicketType: 'bowled',
+        wicketMode: 'wicket',
         wicketDismissedId: s.strikerId ?? s.nonStrikerId,
         wicketNextBatterId: s.nextBatterSuggestion?.id,
       ),
@@ -537,6 +566,27 @@ class ScoringControlBloc
     final s = state;
     if (s is! ScoringControlLoaded) return;
     emit(s.copyWith(showWicketForm: false));
+  }
+
+  void _onWicketSelectMode(
+    WicketSelectMode e,
+    Emitter<ScoringControlState> emit,
+  ) {
+    final s = state;
+    if (s is! ScoringControlLoaded) return;
+    emit(s.copyWith(wicketMode: e.mode));
+  }
+
+  void _onBoundaryTapped(BoundaryTapped e, Emitter<ScoringControlState> emit) {
+    final s = state;
+    if (s is! ScoringControlLoaded) return;
+    emit(s.copyWith(pendingBoundaryRuns: e.runs));
+  }
+
+  void _onCloseBoundary(CloseBoundary e, Emitter<ScoringControlState> emit) {
+    final s = state;
+    if (s is! ScoringControlLoaded) return;
+    emit(s.copyWith(pendingBoundaryRuns: null));
   }
 
   void _onReset(ResetControl e, Emitter<ScoringControlState> emit) {

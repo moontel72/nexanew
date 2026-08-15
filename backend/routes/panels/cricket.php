@@ -120,6 +120,8 @@ Route::prefix('api/v1/cricket/manager')
         // Match lifecycle — toss & start (unlocks the scoring flow end-to-end)
         Route::post('matches/{id}/toss', [MatchController::class, 'updateToss']);
         Route::post('matches/{id}/start', [MatchController::class, 'startMatch']);
+        // Phase 5 — start a new innings (second innings / super over)
+        Route::post('matches/{id}/innings', [MatchController::class, 'startInnings']);
 
         // Squad / Lineup management — playing XI & batting order (Phase 0)
         Route::get('matches/{matchId}/squads', [SquadController::class, 'index']);

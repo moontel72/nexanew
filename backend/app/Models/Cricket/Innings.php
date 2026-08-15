@@ -35,6 +35,8 @@ class Innings extends Model
         'current_striker_id',
         'current_non_striker_id',
         'current_bowler_id',
+        'is_super_over',
+        'overs_limit',
     ];
 
     protected $casts = [
@@ -52,6 +54,8 @@ class Innings extends Model
         'batting_scorecard' => 'array',
         'bowling_scorecard' => 'array',
         'fall_of_wickets' => 'array',
+        'is_super_over' => 'boolean',
+        'overs_limit' => 'integer',
     ];
 
     protected static function boot(): void

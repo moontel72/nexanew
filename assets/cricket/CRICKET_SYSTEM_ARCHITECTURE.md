@@ -595,6 +595,29 @@ Sleep mode guarantees: 0% CPU, 0% RAM, 0 DB connections consumed by cricket modu
       `ScorecardBloc` + `ScorecardPage` with per-innings batting/bowling
       tables (reusing PlayerStats/BowlerStats), extras and FOW
 
+### Phase 5 — Advanced Features (2026-08-15)
+- [x] DLS calculator: `data/services/dls_math.dart` (simplified exponential
+      resource-curve model, advisory only) + `DlsCalculatorBloc` +
+      `DlsCalculatorPage` linked from the Tournament tab
+- [x] Worm chart: `run_progression` per innings in the scorecard payload;
+      `WormChart` CustomPainter compares both innings on the scorecard page
+- [x] Wagon wheel data: optional `shot_direction` capture at scoring time
+      (FOUR/SIX opens the `ShotDirectionSheet` with 8 field sectors); the
+      existing analytics wagon wheel now renders real directions
+- [x] Free-hit rule: on the delivery following a no-ball only run outs
+      stand — enforced in the PHP engine rebuild path AND the Rust
+      recompute module (kept in sync; drift checker would flag any
+      divergence)
+- [x] Retired hurt: `retired_player_id` payload, engine rotation without
+      a wicket, `retired_hurt` scorecard flag, and a Wicket/Retired-hurt
+      mode toggle in the wicket sheet
+- [x] Super over: `is_super_over` + `overs_limit` innings columns;
+      `POST matches/{id}/innings` starts a new innings (2nd innings or
+      super over) with per-innings over limit respected by RRR and
+      bowler-over-limit rules
+- [x] Rust: free-hit + retired-hurt rules mirrored with unit tests
+      (`free_hit_only_allows_run_outs`, `retired_hurt_replaces_batter_...`)
+
 ---
 
 ## 8. REMAINING TASKS & FUTURE ROADMAP

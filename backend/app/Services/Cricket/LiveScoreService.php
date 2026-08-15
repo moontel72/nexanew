@@ -500,8 +500,12 @@ class LiveScoreService
             'is_wicket' => !empty($ballData['is_wicket']),
             'wicket_type' => $ballData['wicket_type'] ?? null,
             'dismissed_player_id' => $ballData['dismissed_player_id'] ?? null,
+            'retired_player_id' => $ballData['retired_player_id'] ?? null,
             'fielder_id' => $ballData['fielder_id'] ?? null,
             'next_batter_id' => $ballData['next_batter_id'] ?? null,
+            'shot_direction' => $ballData['shot_direction'] ?? null,
+            'shot_x' => $ballData['shot_x'] ?? null,
+            'shot_y' => $ballData['shot_y'] ?? null,
             'timestamp' => now()->toIso8601String(),
         ];
     }
@@ -585,6 +589,30 @@ class LiveScoreService
         return true;
     }
 
+    /**
+     * Phase 5 — context-aware wicket check for delivery-log iteration.
+     *
+     * On a free hit (the legal delivery following a no-ball) the only
+     * possible dismissal is a run out.
+     */
+    private function wicketStandsInContext(array $deliveries, int $index, array $ball): bool
+    {
+        if (!$this->isWicketDelivery($ball)) {
+            return false;
+        }
+
+        if ($index > 0) {
+            $previous = $deliveries[$index - 1];
+            if (($previous['extras_type'] ?? null) === 'no_ball'
+                && $this->isLegalDelivery($ball)
+                && ($ball['wicket_type'] ?? null) !== 'run_out') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private function oversForBalls(int $balls): float
     {
         return floor($balls / self::BALLS_PER_OVER) + (($balls % self::BALLS_PER_OVER) / 10);
@@ -592,11 +620,12 @@ class LiveScoreService
 
     /**
      * Maximum overs a single bowler may bowl: 20% of the innings overs,
-     * rounded up (T20 = 4, ODI = 10, T10 = 2).
+     * rounded up (T20 = 4, ODI = 10, T10 = 2). A super over allows each
+     * bowler the whole over.
      */
-    private function maxOversPerBowler(MatchModel $match): int
+    private function maxOversPerBowler(MatchModel $match, ?int $oversLimit = null): int
     {
-        $overs = max(1, (int) $match->overs_per_side);
+        $overs = max(1, $oversLimit ?? (int) $match->overs_per_side);
 
         return max(1, (int) ceil($overs / 5));
     }
@@ -622,7 +651,7 @@ class LiveScoreService
         }
 
         // Over-limit check for the innings.
-        $maxOvers = $this->maxOversPerBowler($match);
+        $maxOvers = $this->maxOversPerBowler($match, $innings->overs_limit);
         $legalBallsBowled = collect($deliveries)
             ->where('bowler_id', $bowlerId)
             ->filter(fn (array $ball) => $this->isLegalDelivery($ball))
@@ -674,9 +703,9 @@ class LiveScoreService
         $legByes = 0;
         $fow = [];
 
-        foreach ($deliveries as $ball) {
+        foreach ($deliveries as $i => $ball) {
             $isLegal = $this->isLegalDelivery($ball);
-            $isWicket = $this->isWicketDelivery($ball);
+            $isWicket = $this->wicketStandsInContext($deliveries, $i, $ball);
 
             $runs += (int) ($ball['runs'] ?? 0);
             if ($isWicket) {
@@ -731,16 +760,17 @@ class LiveScoreService
     ): array {
         $scorecard = [];
 
-        foreach ($deliveries as $ball) {
+        foreach ($deliveries as $i => $ball) {
             $batterId = $ball['batter_id'] ?? null;
             $outId = $ball['dismissed_player_id'] ?? null;
+            $retiredId = $ball['retired_player_id'] ?? null;
             $isLegal = $this->isLegalDelivery($ball);
-            $isWicket = $this->isWicketDelivery($ball);
+            $isWicket = $this->wicketStandsInContext($deliveries, $i, $ball);
             $batterRuns = $this->batterRunsForBall($ball);
 
-            // Ensure a row exists for the striker AND the dismissed batter
-            // (a run-out victim may never have faced a ball).
-            foreach (array_unique(array_filter([$batterId, $outId])) as $playerId) {
+            // Ensure a row exists for the striker, the dismissed batter,
+            // and a batter who retired hurt.
+            foreach (array_unique(array_filter([$batterId, $outId, $retiredId])) as $playerId) {
                 if (!isset($scorecard[$playerId])) {
                     $scorecard[$playerId] = [
                         'player_id' => $playerId,
@@ -753,6 +783,7 @@ class LiveScoreService
                         'strike_rate' => 0.0,
                         'dismissed' => false,
                         'dismissal' => null,
+                        'retired_hurt' => false,
                     ];
                 }
             }
@@ -773,6 +804,11 @@ class LiveScoreService
             if ($isWicket && $outId && isset($scorecard[$outId])) {
                 $scorecard[$outId]['dismissed'] = true;
                 $scorecard[$outId]['dismissal'] = $ball['wicket_type'] ?? 'out';
+            }
+
+            // Retired hurt — leaves the crease but is not out.
+            if ($retiredId && isset($scorecard[$retiredId])) {
+                $scorecard[$retiredId]['retired_hurt'] = true;
             }
         }
 
@@ -800,7 +836,7 @@ class LiveScoreService
     ): array {
         $scorecard = [];
 
-        foreach ($deliveries as $ball) {
+        foreach ($deliveries as $i => $ball) {
             $bowlerId = $ball['bowler_id'] ?? null;
             if (!$bowlerId) {
                 continue;
@@ -831,7 +867,8 @@ class LiveScoreService
             $scorecard[$bowlerId]['runs'] += $charged;
 
             // Bowlers are not credited for run outs.
-            if ($this->isWicketDelivery($ball) && ($ball['wicket_type'] ?? null) !== 'run_out') {
+            if ($this->wicketStandsInContext($deliveries, $i, $ball)
+                && ($ball['wicket_type'] ?? null) !== 'run_out') {
                 $scorecard[$bowlerId]['wickets']++;
             }
         }
@@ -868,7 +905,7 @@ class LiveScoreService
         $bowler = null;
         $legalBalls = 0;
 
-        foreach ($deliveries as $ball) {
+        foreach ($deliveries as $i => $ball) {
             if (!empty($ball['batter_id'])) {
                 $striker = $ball['batter_id'];
             }
@@ -880,15 +917,17 @@ class LiveScoreService
             }
 
             $isLegal = $this->isLegalDelivery($ball);
-            $isWicket = $this->isWicketDelivery($ball);
+            $isWicket = $this->wicketStandsInContext($deliveries, $i, $ball);
             $batterRuns = $this->batterRunsForBall($ball);
 
             if ($isLegal) {
                 $legalBalls++;
             }
 
-            if ($isWicket) {
-                $outId = $ball['dismissed_player_id'] ?? null;
+            // Wicket or retired hurt → the batter leaves the crease. Their
+            // replacement comes from next_batter_id or a later delivery.
+            $outId = $ball['dismissed_player_id'] ?? $ball['retired_player_id'] ?? null;
+            if ($isWicket || !empty($ball['retired_player_id'])) {
                 if ($outId && $outId === $striker) {
                     $striker = $ball['next_batter_id'] ?? null;
                 } elseif ($outId && $outId === $nonStriker) {
@@ -913,8 +952,8 @@ class LiveScoreService
         $balls = 0;
         $active = false;
 
-        foreach ($deliveries as $ball) {
-            if ($this->isWicketDelivery($ball)) {
+        foreach ($deliveries as $i => $ball) {
+            if ($this->wicketStandsInContext($deliveries, $i, $ball)) {
                 $active = true;
                 $runs = 0;
                 $balls = 0;
@@ -972,9 +1011,10 @@ class LiveScoreService
             $firstInnings = $match->innings->where('innings_number', 1)->first();
             if ($firstInnings) {
                 $target = $firstInnings->total_runs + 1;
+                $oversLimit = $innings->overs_limit ?? $match->overs_per_side;
                 $remainingOvers = max(
                     0,
-                    $match->overs_per_side * self::BALLS_PER_OVER - $innings->total_balls
+                    $oversLimit * self::BALLS_PER_OVER - $innings->total_balls
                 ) / self::BALLS_PER_OVER;
                 $rrr = $remainingOvers > 0
                     ? round(($target - $innings->total_runs) / $remainingOvers, 2)
@@ -1073,6 +1113,7 @@ class LiveScoreService
             'strike_rate' => 0.0,
             'dismissed' => false,
             'dismissal' => null,
+            'retired_hurt' => false,
         ];
     }
 
@@ -1155,7 +1196,7 @@ class LiveScoreService
             ],
             'partnership_runs' => $partnership['runs'],
             'partnership_balls' => $partnership['balls'],
-            'max_overs_per_bowler' => $this->maxOversPerBowler($match),
+            'max_overs_per_bowler' => $this->maxOversPerBowler($match, $innings->overs_limit),
             'commentary' => $this->latestCommentary($match->id, 20),
             'last_ball_result' => $ballData ? $this->describeBall($ballData) : null,
             'last_wicket_info' => $lastWicketInfo,
@@ -1236,9 +1277,9 @@ class LiveScoreService
             $runningWickets = 0;
             $legalBalls = 0;
 
-            foreach ($innings->deliveries ?? [] as $ball) {
+            foreach ($innings->deliveries ?? [] as $i => $ball) {
                 $runningRuns += (int) ($ball['runs'] ?? 0);
-                if ($this->isWicketDelivery($ball)) {
+                if ($this->wicketStandsInContext($innings->deliveries, $i, $ball)) {
                     $runningWickets++;
                 }
 
@@ -1392,6 +1433,37 @@ class LiveScoreService
     // ────────────────────────────────────────────────────────────
 
     /**
+     * Phase 5 — over-by-over run progression for the worm chart:
+     * cumulative runs/wickets at the end of each completed over.
+     */
+    private function runProgression(array $deliveries): array
+    {
+        $points = [];
+        $runs = 0;
+        $wickets = 0;
+        $legalBalls = 0;
+
+        foreach ($deliveries as $i => $ball) {
+            $runs += (int) ($ball['runs'] ?? 0);
+            if ($this->wicketStandsInContext($deliveries, $i, $ball)) {
+                $wickets++;
+            }
+            if ($this->isLegalDelivery($ball)) {
+                $legalBalls++;
+                if ($legalBalls % self::BALLS_PER_OVER === 0) {
+                    $points[] = [
+                        'over' => intdiv($legalBalls, self::BALLS_PER_OVER),
+                        'runs' => $runs,
+                        'wickets' => $wickets,
+                    ];
+                }
+            }
+        }
+
+        return $points;
+    }
+
+    /**
      * Latest commentary rows (newest first) embedded in every live
      * snapshot so the public fan feed updates in realtime.
      */
@@ -1449,6 +1521,8 @@ class LiveScoreService
                     'total_wickets' => $i->total_wickets,
                     'total_overs' => $i->total_overs,
                     'status' => $i->status,
+                    'is_super_over' => (bool) $i->is_super_over,
+                    'overs_limit' => $i->overs_limit,
                     'extras' => [
                         'wides' => $i->extras_wides,
                         'no_balls' => $i->extras_no_balls,
@@ -1462,6 +1536,7 @@ class LiveScoreService
                     'batting_scorecard' => $i->batting_scorecard ?? [],
                     'bowling_scorecard' => $i->bowling_scorecard ?? [],
                     'fall_of_wickets' => $i->fall_of_wickets ?? [],
+                    'run_progression' => $this->runProgression($i->deliveries ?? []),
                 ];
             })->values()->all(),
             'live_score' => $match->liveScore?->full_snapshot,

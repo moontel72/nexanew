@@ -660,4 +660,72 @@ class MatchController extends Controller
         MatchModel::findOrFail($id)->delete();
         return response()->json(['message' => 'Match deleted.']);
     }
+
+    /**
+     * Phase 5 — start a new innings (second innings, or a super over
+     * flagged with is_super_over and a custom overs_limit).
+     */
+    public function startInnings(Request $request, string $id): \Illuminate\Http\JsonResponse
+    {
+        $match = MatchModel::with('innings')->findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'batting_team_id' => 'required|uuid|exists:cricket_teams,id',
+            'bowling_team_id' => 'required|uuid|exists:cricket_teams,id|different:batting_team_id',
+            'is_super_over' => 'boolean',
+            'overs_limit' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $matchTeams = [$match->team_a_id, $match->team_b_id];
+        if (!in_array($request->batting_team_id, $matchTeams, true)
+            || !in_array($request->bowling_team_id, $matchTeams, true)) {
+            return response()->json([
+                'message' => 'Batting and bowling teams must be the two match teams.',
+            ], 422);
+        }
+
+        $isSuperOver = (bool) $request->is_super_over;
+        if ($isSuperOver && !$request->filled('overs_limit')) {
+            return response()->json([
+                'message' => 'A super over requires an overs_limit (e.g. 1).',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($match, $request, $isSuperOver) {
+            // Close any innings still in progress.
+            $match->innings
+                ->where('status', 'in_progress')
+                ->each(fn ($innings) => $innings->update(['status' => 'completed']));
+
+            $nextNumber = $match->innings->max('innings_number') + 1;
+
+            \App\Models\Cricket\Innings::create([
+                'match_id' => $match->id,
+                'innings_number' => $nextNumber,
+                'batting_team_id' => $request->batting_team_id,
+                'bowling_team_id' => $request->bowling_team_id,
+                'status' => 'in_progress',
+                'is_super_over' => $isSuperOver,
+                'overs_limit' => $request->overs_limit,
+            ]);
+
+            $match->update([
+                'status' => 'in_progress',
+                'current_innings_number' => $nextNumber,
+                'current_batting_team_id' => $request->batting_team_id,
+                'current_bowling_team_id' => $request->bowling_team_id,
+            ]);
+        });
+
+        return response()->json([
+            'message' => $isSuperOver
+                ? 'Super over innings started.'
+                : "Innings {$match->current_innings_number} started.",
+            'match' => $match->fresh()->load('innings'),
+        ]);
+    }
 }

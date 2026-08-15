@@ -68,6 +68,10 @@ class LiveScoreController extends Controller
             'batsman_id' => 'nullable|uuid|exists:cricket_players,id',
             'non_striker_id' => 'nullable|uuid|exists:cricket_players,id',
             'next_batter_id' => 'nullable|uuid|exists:cricket_players,id',
+            'retired_player_id' => 'nullable|uuid|exists:cricket_players,id',
+            'shot_direction' => 'nullable|integer|between:0,359',
+            'shot_x' => 'nullable|numeric|between:-1,1',
+            'shot_y' => 'nullable|numeric|between:-1,1',
         ]);
 
         if ($validator->fails()) {

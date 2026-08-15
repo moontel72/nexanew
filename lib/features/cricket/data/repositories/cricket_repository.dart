@@ -776,6 +776,32 @@ class CricketRepository {
     }
   }
 
+  /// Phase 5 — start a new innings (second innings / super over).
+  /// Throws so the caller can surface the server's validation message.
+  Future<void> startInnings(
+    String matchId, {
+    required String battingTeamId,
+    required String bowlingTeamId,
+    bool isSuperOver = false,
+    int? oversLimit,
+  }) async {
+    final res = await _http.post(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/innings',
+      ),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        'batting_team_id': battingTeamId,
+        'bowling_team_id': bowlingTeamId,
+        'is_super_over': isSuperOver,
+        if (oversLimit != null) 'overs_limit': oversLimit,
+      }),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_apiError(res));
+    }
+  }
+
   /// Record the toss result (moves the match to `toss_done`).
   Future<MatchModel?> recordToss(
     String matchId, {
