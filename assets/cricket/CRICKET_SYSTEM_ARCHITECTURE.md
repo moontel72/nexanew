@@ -563,6 +563,21 @@ Sleep mode guarantees: 0% CPU, 0% RAM, 0 DB connections consumed by cricket modu
 - [x] Guardrails: current innings only, match must be in progress,
       server-side validation mirrors the scoring endpoint
 
+### Phase 3 — Public Fan Portal 3-Partition Layout (2026-08-15)
+- [x] `MatchThreeColumnLayout` widget replaces the old vertical stack
+      below the video player
+- [x] LEFT — Bowlers column: the two most recent bowlers with overs,
+      runs conceded, wickets, economy + live `NOW` highlight on the
+      active bowler
+- [x] CENTER — Batters column: striker & non-striker with runs, balls,
+      fours, sixes, strike rate — auto-increments on every realtime
+      snapshot push (plus OUT badge when dismissed)
+- [x] RIGHT — Match summary: shared `CricketScoreboard` (score, wickets,
+      overs, CRR/RRR, partnership) + shared `BallByBallTicker` timeline
+- [x] Responsive: side-by-side at >= 900px, stacked summary-first on
+      narrow/mobile screens; zero new BLoCs — the existing LiveScoreBloc
+      snapshot drives all three columns (pure functions of state)
+
 ---
 
 ## 8. REMAINING TASKS & FUTURE ROADMAP

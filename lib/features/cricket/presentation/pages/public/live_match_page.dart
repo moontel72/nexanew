@@ -6,12 +6,16 @@ import '../../blocs/live_score/live_score_bloc.dart';
 import '../../blocs/stream_player/stream_player_bloc.dart';
 import '../../blocs/sponsor/sponsor_bloc.dart';
 import '../../../data/models/cricket_models.dart';
-import '../../widgets/scoreboard_header.dart';
+import '../../widgets/match_three_column_layout.dart';
 import '../../widgets/video_player_widget.dart';
-import '../../widgets/ball_by_ball_ticker.dart';
 import '../../widgets/sponsor_banner.dart';
 
-/// Full match experience: live stream + scoreboard + ball-by-ball.
+/// Full match experience (Phase 3): live stream on top, then the
+/// 3-partition fan layout — Bowlers | Batters | Match Summary —
+/// collapsing to a stacked summary-first layout on narrow screens.
+///
+/// Fully BLoC-driven: LiveScoreBloc pushes every realtime snapshot and
+/// the columns re-render automatically (no setState anywhere).
 class LiveMatchPage extends StatefulWidget {
   final MatchModel match;
 
@@ -141,33 +145,26 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
             },
           ),
 
-          // Scoreboard
-          BlocBuilder<LiveScoreBloc, LiveScoreState>(
-            builder: (context, state) => switch (state) {
-              LiveScoreConnected(:final score) => CricketScoreboard(
-                score: score,
-              ),
-              LiveScoreLoading() => const Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(color: CricketColors.complete),
-              ),
-              LiveScoreError(:final message) => Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  message,
-                  style: const TextStyle(color: CricketColors.wicket),
-                ),
-              ),
-              _ => const SizedBox.shrink(),
-            },
-          ),
-
-          // Ball-by-ball ticker
+          // 3-partition fan layout: Bowlers | Batters | Match Summary
           Expanded(
             child: BlocBuilder<LiveScoreBloc, LiveScoreState>(
               builder: (context, state) => switch (state) {
-                LiveScoreConnected(:final score) => BallByBallTicker(
+                LiveScoreConnected(:final score) => MatchThreeColumnLayout(
                   score: score,
+                ),
+                LiveScoreLoading() => const Center(
+                  child: CircularProgressIndicator(
+                    color: CricketColors.complete,
+                  ),
+                ),
+                LiveScoreError(:final message) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      message,
+                      style: const TextStyle(color: CricketColors.wicket),
+                    ),
+                  ),
                 ),
                 _ => const Center(
                   child: Text(
