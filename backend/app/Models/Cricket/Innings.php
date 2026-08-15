@@ -32,6 +32,9 @@ class Innings extends Model
         'bowling_scorecard',
         'status',
         'fall_of_wickets',
+        'current_striker_id',
+        'current_non_striker_id',
+        'current_bowler_id',
     ];
 
     protected $casts = [

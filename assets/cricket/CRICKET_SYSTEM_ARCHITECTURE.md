@@ -273,6 +273,7 @@ cricket_players
 cricket_match_officials
 cricket_matches
 cricket_match_managers     ← Pivot: match ↔ manager (HA/failover)
+cricket_match_squads       ← Phase 0: playing XI / batting order per team
 cricket_innings           ← JSONB deliveries + aggregate stats
 cricket_live_scores       ← Denormalized snapshot (1 row per match)
 cricket_commentary        ← Ball-by-ball text
@@ -518,6 +519,27 @@ Sleep mode guarantees: 0% CPU, 0% RAM, 0 DB connections consumed by cricket modu
 - [x] Cricket Manager Bearer tokens stored under `cricket_manager_token` key
 - [x] No conflict with shared `ApiClient` singleton or sanctum tokens
 - [x] Middleware uses Laravel-standard `$request->attributes` (not `setUserResolver`)
+
+### Phase 0 — Scoring Foundation (2026-08-15)
+- [x] `cricket_match_squads` table (playing XI, batting order, bench, partial unique indexes)
+- [x] `cricket_innings` current striker / non-striker / bowler columns
+- [x] `cricket_live_scores` striker_id / non_striker_id / bowler_id columns
+- [x] Session-log enum extended with `update_squad` audit action
+- [x] `LiveScoreService` rebuilt: unique `ball_id` per delivery, over/ball
+      sequence numbers, batter/bowler attribution, strike rotation replay,
+      per-batter & per-bowler scorecards (previously dormant columns),
+      partnership tracking, bowler over-limit + no-consecutive-over rules
+- [x] Full aggregate rebuild from the delivery log on every write — append,
+      undo, and future edit/delete share one source of truth
+- [x] `SquadController` + routes: GET / PUT `matches/{id}/squads[/{teamId}]`
+- [x] Rust: `trace_odd_rust cricket --recompute` pure scoring-math module
+      (mirrors the PHP engine rule-for-rule) with unit tests — the Phase 2
+      correction/recompute engine
+- [x] Flutter: `LiveScoreSnapshot` extended with `batters`, `bowlers`,
+      `current` players, `max_overs_per_bowler`; squad models + repository
+      methods (`getMatchSquads`, `saveMatchSquad`)
+- [x] Backward compatible: legacy balls without player attribution keep
+      scoring unchanged; new features activate as attribution arrives
 
 ---
 

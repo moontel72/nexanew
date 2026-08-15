@@ -102,4 +102,9 @@ class MatchModel extends Model
     {
         return $this->hasMany(MatchSponsor::class, 'match_id');
     }
+
+    public function squads()
+    {
+        return $this->hasMany(MatchSquad::class, 'match_id');
+    }
 }

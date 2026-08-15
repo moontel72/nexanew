@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
 import '../../blocs/live_score/live_score_bloc.dart';
+import '../../blocs/scoring_control/scoring_control_bloc.dart';
 import '../../blocs/match_list/match_list_bloc.dart';
 import '../../blocs/tournament_hub/tournament_hub_bloc.dart';
 import '../../blocs/camera_switcher/camera_switcher_bloc.dart';
@@ -474,12 +475,23 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                         value: RepositoryProvider.of<CricketRepository>(
                           context,
                         ),
-                        child: BlocProvider(
-                          create: (_) => LiveScoreBloc(
-                            repo: RepositoryProvider.of<CricketRepository>(
-                              context,
+                        child: MultiBlocProvider(
+                          providers: [
+                            BlocProvider(
+                              create: (_) => LiveScoreBloc(
+                                repo: RepositoryProvider.of<CricketRepository>(
+                                  context,
+                                ),
+                              ),
                             ),
-                          ),
+                            BlocProvider(
+                              create: (_) => ScoringControlBloc(
+                                repo: RepositoryProvider.of<CricketRepository>(
+                                  context,
+                                ),
+                              ),
+                            ),
+                          ],
                           child: ManagerScorePage(matchId: _selectedMatchId!),
                         ),
                       ),

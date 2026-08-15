@@ -1198,6 +1198,57 @@ class CricketRepository {
     }
   }
 
+  // ────────────────────────────────────────────────────────────
+  // Squad & Lineup Management (Phase 0)
+  // ────────────────────────────────────────────────────────────
+
+  /// Fetch both teams' squads (playing XI + bench) for a match.
+  Future<List<MatchSquadModel>> getMatchSquads(String matchId) async {
+    try {
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/squads',
+        ),
+        headers: await _authHeaders(),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final rows = data['squads'];
+        if (rows is List) {
+          return rows
+              .whereType<Map>()
+              .map(
+                (s) => MatchSquadModel.fromJson(Map<String, dynamic>.from(s)),
+              )
+              .toList();
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Replace a team's squad with a new batting order for the match.
+  /// [players] entries: `{ 'player_id': ..., 'batting_order': ... }`.
+  /// Throws so the caller can surface the server's validation message.
+  Future<void> saveMatchSquad(
+    String matchId,
+    String teamId,
+    List<Map<String, dynamic>> players,
+  ) async {
+    final res = await _http.put(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/squads/$teamId',
+      ),
+      headers: await _authHeaders(),
+      body: jsonEncode({'players': players}),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_apiError(res));
+    }
+  }
+
   Future<PlayerModel> createPlayer({
     required String teamId,
     required String name,

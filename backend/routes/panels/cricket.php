@@ -14,6 +14,7 @@ use App\Http\Controllers\Cricket\PointsTableController;
 use App\Http\Controllers\Cricket\PublicMatchController;
 use App\Http\Controllers\Cricket\ReplayController;
 use App\Http\Controllers\Cricket\SponsorController;
+use App\Http\Controllers\Cricket\SquadController;
 use App\Http\Controllers\Cricket\StreamController;
 use App\Http\Controllers\Cricket\TeamController;
 use App\Http\Controllers\Cricket\TournamentSetupController;
@@ -113,6 +114,10 @@ Route::prefix('api/v1/cricket/manager')
         // Match lifecycle — toss & start (unlocks the scoring flow end-to-end)
         Route::post('matches/{id}/toss', [MatchController::class, 'updateToss']);
         Route::post('matches/{id}/start', [MatchController::class, 'startMatch']);
+
+        // Squad / Lineup management — playing XI & batting order (Phase 0)
+        Route::get('matches/{matchId}/squads', [SquadController::class, 'index']);
+        Route::put('matches/{matchId}/squads/{teamId}', [SquadController::class, 'upsert']);
 
         // Stream Management
         Route::get('matches/{matchId}/streams', [StreamController::class, 'index']);

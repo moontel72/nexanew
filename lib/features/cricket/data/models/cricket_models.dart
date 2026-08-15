@@ -228,8 +228,10 @@ class GroundModel {
 }
 
 class LiveScoreSnapshot {
+  final String? matchId;
   final String? battingTeam;
   final String? bowlingTeam;
+  final String? battingTeamId;
   final String? score;
   final double overs;
   final int? target;
@@ -243,9 +245,17 @@ class LiveScoreSnapshot {
   final Map<String, dynamic>? extras;
   final List<Map<String, dynamic>>? fallOfWickets;
 
+  /// Phase 0 — batter/bowler attribution payloads.
+  final List<PlayerStats> batters;
+  final List<BowlerStats> bowlers;
+  final CurrentPlayersModel? currentPlayers;
+  final int? maxOversPerBowler;
+
   const LiveScoreSnapshot({
+    this.matchId,
     this.battingTeam,
     this.bowlingTeam,
+    this.battingTeamId,
     this.score,
     this.overs = 0,
     this.target,
@@ -258,12 +268,18 @@ class LiveScoreSnapshot {
     this.recentBalls = const [],
     this.extras,
     this.fallOfWickets,
+    this.batters = const [],
+    this.bowlers = const [],
+    this.currentPlayers,
+    this.maxOversPerBowler,
   });
 
   factory LiveScoreSnapshot.fromJson(Map<String, dynamic> json) =>
       LiveScoreSnapshot(
+        matchId: json['match_id'] as String?,
         battingTeam: json['batting_team_name'] as String?,
         bowlingTeam: json['bowling_team_name'] as String?,
+        battingTeamId: json['batting_team'] as String?,
         score: json['score'] as String?,
         overs: (json['overs'] as num?)?.toDouble() ?? 0,
         target: json['target'] as int?,
@@ -282,6 +298,50 @@ class LiveScoreSnapshot {
         fallOfWickets: (json['fall_of_wickets'] as List<dynamic>?)
             ?.map((f) => Map<String, dynamic>.from(f as Map))
             .toList(),
+        batters:
+            (json['batters'] as List<dynamic>?)
+                ?.map((b) => PlayerStats.fromJson(b as Map<String, dynamic>))
+                .toList() ??
+            const [],
+        bowlers:
+            (json['bowlers'] as List<dynamic>?)
+                ?.map((b) => BowlerStats.fromJson(b as Map<String, dynamic>))
+                .toList() ??
+            const [],
+        currentPlayers: json['current'] is Map
+            ? CurrentPlayersModel.fromJson(
+                Map<String, dynamic>.from(json['current'] as Map),
+              )
+            : null,
+        maxOversPerBowler: json['max_overs_per_bowler'] as int?,
+      );
+}
+
+/// The two batters at the crease and the active bowler (Phase 0 payload).
+class CurrentPlayersModel {
+  final PlayerStats? striker;
+  final PlayerStats? nonStriker;
+  final BowlerStats? bowler;
+
+  const CurrentPlayersModel({this.striker, this.nonStriker, this.bowler});
+
+  factory CurrentPlayersModel.fromJson(Map<String, dynamic> json) =>
+      CurrentPlayersModel(
+        striker: json['striker'] is Map
+            ? PlayerStats.fromJson(
+                Map<String, dynamic>.from(json['striker'] as Map),
+              )
+            : null,
+        nonStriker: json['non_striker'] is Map
+            ? PlayerStats.fromJson(
+                Map<String, dynamic>.from(json['non_striker'] as Map),
+              )
+            : null,
+        bowler: json['bowler'] is Map
+            ? BowlerStats.fromJson(
+                Map<String, dynamic>.from(json['bowler'] as Map),
+              )
+            : null,
       );
 }
 
@@ -291,11 +351,23 @@ class RecentBall {
   final String? wicketType;
   final String? extrasType;
 
+  /// Phase 0/1 — delivery identity & attribution (correction UI groundwork).
+  final String? ballId;
+  final int? overNumber;
+  final int? ballNumber;
+  final String? batterId;
+  final String? bowlerId;
+
   const RecentBall({
     this.runs = 0,
     this.isWicket = false,
     this.wicketType,
     this.extrasType,
+    this.ballId,
+    this.overNumber,
+    this.ballNumber,
+    this.batterId,
+    this.bowlerId,
   });
 
   factory RecentBall.fromJson(Map<String, dynamic> json) => RecentBall(
@@ -303,6 +375,11 @@ class RecentBall {
     isWicket: json['is_wicket'] as bool? ?? false,
     wicketType: json['wicket_type'] as String?,
     extrasType: json['extras_type'] as String?,
+    ballId: json['ball_id'] as String?,
+    overNumber: json['over_number'] as int?,
+    ballNumber: json['ball_number'] as int?,
+    batterId: json['batter_id'] as String?,
+    bowlerId: json['bowler_id'] as String?,
   );
 
   String get display {
@@ -493,60 +570,151 @@ class CommentaryModel {
 }
 
 class PlayerStats {
+  final String? playerId;
   final String name;
   final int runs;
   final int balls;
   final int fours;
   final int sixes;
   final double strikeRate;
+  final bool dismissed;
   final String? dismissal;
+  final int? battingOrder;
 
   const PlayerStats({
+    this.playerId,
     required this.name,
     this.runs = 0,
     this.balls = 0,
     this.fours = 0,
     this.sixes = 0,
     this.strikeRate = 0,
+    this.dismissed = false,
     this.dismissal,
+    this.battingOrder,
   });
 
   factory PlayerStats.fromJson(Map<String, dynamic> json) => PlayerStats(
+    playerId: json['player_id'] as String?,
     name: json['name'] as String? ?? '',
     runs: json['runs'] as int? ?? 0,
     balls: json['balls'] as int? ?? 0,
     fours: json['fours'] as int? ?? 0,
     sixes: json['sixes'] as int? ?? 0,
     strikeRate: (json['strike_rate'] as num?)?.toDouble() ?? 0,
+    dismissed: json['dismissed'] as bool? ?? false,
     dismissal: json['dismissal'] as String?,
+    battingOrder: json['batting_order'] as int?,
   );
 }
 
 class BowlerStats {
+  final String? playerId;
   final String name;
   final double overs;
   final int maidens;
   final int runs;
   final int wickets;
   final double economy;
+  final int balls;
 
   const BowlerStats({
+    this.playerId,
     required this.name,
     this.overs = 0,
     this.maidens = 0,
     this.runs = 0,
     this.wickets = 0,
     this.economy = 0,
+    this.balls = 0,
   });
 
   factory BowlerStats.fromJson(Map<String, dynamic> json) => BowlerStats(
+    playerId: json['player_id'] as String?,
     name: json['name'] as String? ?? '',
     overs: (json['overs'] as num?)?.toDouble() ?? 0,
     maidens: json['maidens'] as int? ?? 0,
     runs: json['runs'] as int? ?? 0,
     wickets: json['wickets'] as int? ?? 0,
     economy: (json['economy'] as num?)?.toDouble() ?? 0,
+    balls: json['balls'] as int? ?? 0,
   );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Phase 0 — Squad / lineup models
+// ═══════════════════════════════════════════════════════════
+
+/// One player entry inside a match squad (batting order, status).
+class SquadPlayerModel {
+  final String playerId;
+  final String name;
+  final String? jerseyNumber;
+  final String? role;
+  final String? battingStyle;
+  final String? bowlingStyle;
+  final bool isCaptain;
+  final bool isWicketKeeper;
+  final int? battingOrder;
+  final String? status;
+
+  const SquadPlayerModel({
+    required this.playerId,
+    required this.name,
+    this.jerseyNumber,
+    this.role,
+    this.battingStyle,
+    this.bowlingStyle,
+    this.isCaptain = false,
+    this.isWicketKeeper = false,
+    this.battingOrder,
+    this.status,
+  });
+
+  factory SquadPlayerModel.fromJson(Map<String, dynamic> json) =>
+      SquadPlayerModel(
+        playerId: json['player_id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        jerseyNumber: json['jersey_number'] as String?,
+        role: json['role'] as String?,
+        battingStyle: json['batting_style'] as String?,
+        bowlingStyle: json['bowling_style'] as String?,
+        isCaptain: json['is_captain'] as bool? ?? false,
+        isWicketKeeper: json['is_wicket_keeper'] as bool? ?? false,
+        battingOrder: json['batting_order'] as int?,
+        status: json['status'] as String?,
+      );
+}
+
+/// A team's squad (XI + bench) for one match.
+class MatchSquadModel {
+  final String teamId;
+  final String? teamName;
+  final String? teamShort;
+  final List<SquadPlayerModel> players;
+
+  const MatchSquadModel({
+    required this.teamId,
+    this.teamName,
+    this.teamShort,
+    this.players = const [],
+  });
+
+  factory MatchSquadModel.fromJson(Map<String, dynamic> json) =>
+      MatchSquadModel(
+        teamId: json['team_id'] as String? ?? '',
+        teamName: json['team_name'] as String?,
+        teamShort: json['team_short'] as String?,
+        players:
+            (json['players'] as List<dynamic>?)
+                ?.map(
+                  (p) => SquadPlayerModel.fromJson(
+                    Map<String, dynamic>.from(p as Map),
+                  ),
+                )
+                .toList() ??
+            const [],
+      );
 }
 
 // ═══════════════════════════════════════════════════════════════

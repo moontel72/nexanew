@@ -97,6 +97,8 @@ class LiveScoreController extends Controller
             'extras_type' => 'nullable|string|in:wide,no_ball,bye,leg_bye',
             'bowler_id' => 'nullable|uuid|exists:cricket_players,id',
             'batsman_id' => 'nullable|uuid|exists:cricket_players,id',
+            'non_striker_id' => 'nullable|uuid|exists:cricket_players,id',
+            'next_batter_id' => 'nullable|uuid|exists:cricket_players,id',
         ]);
 
         if ($validator->fails()) {
