@@ -18,6 +18,12 @@ DIR="${1:-build/web}"
 STAMP=$(date -u +%Y%m%d%H%M%S)
 
 if [ -f "$DIR/main.dart.js" ]; then
+  # CI builds several targets sequentially into the same build/web.
+  # flutter build only overwrites main.dart.js, so stamped bundles from
+  # earlier targets linger and leak into every rsync destination.
+  # Drop stale stamps before creating the new one (bootstrap is
+  # re-patched below to point at the fresh bundle).
+  rm -f "$DIR"/main.dart.20*.js
   mv "$DIR/main.dart.js" "$DIR/main.dart.$STAMP.js"
   sed -i "s|mainJsPath\":\"main.dart.js\"|mainJsPath\":\"main.dart.$STAMP.js\"|" "$DIR/flutter_bootstrap.js"
   echo "✅ Versioned bundle: main.dart.$STAMP.js"
