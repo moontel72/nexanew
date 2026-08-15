@@ -129,8 +129,12 @@ jobs:
 
       - name: Deploy Cricket Manager Panel to /cricket-manager-web/
         run: |
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /var/www/traceodd/cricket-manager-web"
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/cricket-manager-web/
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "echo \"deployed=\$(date -u +%s)\" > /var/www/traceodd/cricket-manager-web/version.txt"
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
+            test -f /var/www/traceodd/cricket-manager-web/index.html && echo '✅ Manager index.html present' || { echo '❌ Manager index.html MISSING after rsync'; exit 1; }
+            echo \"deployed=\$(date -u +%s)\" > /var/www/traceodd/cricket-manager-web/version.txt
+          "
 
       # ──────────────────────────────────────────────────────────────
       # STEP E: Build & Deploy Reseller App (main_reseller.dart)
@@ -207,6 +211,19 @@ jobs:
             rm -f /etc/nginx/sites-enabled/cricket
             rm -f /etc/nginx/sites-available/cricket.disabled
             nginx -t && systemctl reload nginx
+
+            MANAGER_CC=\$(curl -sI -H 'Host: cricket-manager.traceodd.com' http://127.0.0.1/ | tr -d '\r' | grep -i '^cache-control' || true)
+            PUBLIC_CC=\$(curl -sI -H 'Host: cricket.traceodd.com' http://127.0.0.1/ | tr -d '\r' | grep -i '^cache-control' || true)
+            echo \"manager cache-control: \$MANAGER_CC\"
+            echo \"public  cache-control: \$PUBLIC_CC\"
+            case \"\$MANAGER_CC\" in
+              *no-cache*) echo '✅ Cricket manager block live' ;;
+              *) echo '❌ cricket-manager.traceodd.com NOT matched by its server block'; exit 1 ;;
+            esac
+            case \"\$PUBLIC_CC\" in
+              *no-cache*) echo '✅ Cricket public block live' ;;
+              *) echo '❌ cricket.traceodd.com NOT matched by its server block'; exit 1 ;;
+            esac
           "
 
       # ──────────────────────────────────────────────────────────────
