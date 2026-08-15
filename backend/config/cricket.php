@@ -16,7 +16,12 @@ return [
 
         // RTMP ingest endpoint pushed to by mobile camera apps
         // (Larix / Streamlabs / prism).
-        'rtmp_ingest_url' => env('CRICKET_RTMP_INGEST_URL', 'rtmp://cricket.traceodd.com:1935/live'),
+        //
+        // IMPORTANT: This MUST point at the origin server IP, not the
+        // public domain — Cloudflare does not proxy RTMP traffic on
+        // port 1935, so rtmp://cricket.traceodd.com would fail to
+        // connect for OBS. HLS delivery (below) stays on the domain.
+        'rtmp_ingest_url' => env('CRICKET_RTMP_INGEST_URL', 'rtmp://135.181.46.27:1935/live'),
 
         // Base URL where SRS publishes HLS playlists. The stream key and
         // `.m3u8` suffix are appended by StreamController.

@@ -167,7 +167,7 @@ Since smartphones stream over local WiFi to the OBS laptop, you need a lightweig
 
 ```
 # Phone Larix → directly to Hetzner SRS (bypass local RTMP server):
-URL: rtmp://cricket.traceodd.com:1935/live/cam3_midwicket
+URL: rtmp://135.181.46.27:1935/live/cam3_midwicket
 # Then in OBS: Add → Media Source →
 # Input: https://cricket.traceodd.com/hls/live/cam3_midwicket.m3u8
 # (This pulls the HLS from SRS back into OBS — slight delay but simpler)
@@ -257,19 +257,19 @@ Each phone pushes directly to Hetzner SRS using its own stream key. No local ser
 
 ```
 Phone 1 (Main Wide):
-  URL: rtmp://cricket.traceodd.com:1935/live/mobile_cam1_main
+  URL: rtmp://135.181.46.27:1935/live/mobile_cam1_main
 
 Phone 2 (Long-Off):
-  URL: rtmp://cricket.traceodd.com:1935/live/mobile_cam2_longoff
+  URL: rtmp://135.181.46.27:1935/live/mobile_cam2_longoff
 
 Phone 3 (Mid-Wicket):
-  URL: rtmp://cricket.traceodd.com:1935/live/mobile_cam3_midwicket
+  URL: rtmp://135.181.46.27:1935/live/mobile_cam3_midwicket
 
 Phone 4 (Square Leg):
-  URL: rtmp://cricket.traceodd.com:1935/live/mobile_cam4_square
+  URL: rtmp://135.181.46.27:1935/live/mobile_cam4_square
 
 Phone 5 (Boundary):
-  URL: rtmp://cricket.traceodd.com:1935/live/mobile_cam5_boundary
+  URL: rtmp://135.181.46.27:1935/live/mobile_cam5_boundary
 ```
 
 **Larix Settings (each phone):**
@@ -1023,7 +1023,7 @@ If primary equipment fails mid-match, degrade to the next available mode without
 |---------|-----------------|--------|
 | **ATEM Switcher dies** | Mode C → Mode A | Disconnect ATEM USB. Plug HDMI dongles directly into laptop USB ports. Camera 1-5 sources switch from "Blackmagic Device" to individual "Video Capture Device" sources in OBS. |
 | **DSLR battery dies** | Mode A → degraded Mode A | Switch to smartphone backup camera for that position. Activate Larix stream on phone → add as Media Source in OBS → hotkey to that scene. |
-| **WiFi router fails** | Mode A → Mode B (direct-to-SRS) | Reconfigure Larix on all phones from `rtmp://192.168.1.XXX:1935/live/...` to `rtmp://cricket.traceodd.com:1935/live/...`. In OBS, swap Media Source inputs from local RTMP to SRS HLS URLs. |
+| **WiFi router fails** | Mode A → Mode B (direct-to-SRS) | Reconfigure Larix on all phones from `rtmp://192.168.1.XXX:1935/live/...` to `rtmp://135.181.46.27:1935/live/...`. In OBS, swap Media Source inputs from local RTMP to SRS HLS URLs. |
 | **Internet down** | All modes → Local recording | OBS: Start Recording (not streaming). Archive MP4 file locally. Upload to SRS after connection restores using `ffmpeg -re -i recording.mp4 -c copy rtmp://cricket.traceodd.com/live/stream_main`. |
 | **All wired cameras fail** | Mode A/C → Mode B | Switch entirely to smartphone network. All 5 phones streaming via Larix direct-to-SRS. Replace all OBS sources with HLS Media Sources. |
 

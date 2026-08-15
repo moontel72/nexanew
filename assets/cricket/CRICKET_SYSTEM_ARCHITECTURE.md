@@ -79,7 +79,7 @@
 | **Super Admin** | Sanctum token (Laravel) | All 5 verticals | `/login` |
 | **Cricket Sub-Admin** | Sanctum token (Laravel) | cricket_ops vertical only | `/sub-admin/login` → `/sub-admin/dashboard` |
 | **Cricket Manager** | Bearer token (SHA256, custom) | Tournament + match operations | `/cricket-manager/login` → manager dashboard |
-| **Field Camera Crew** | RTMP stream key | Per-camera ingest only | OBS/Larix → `rtmp://cricket.traceodd.com:1935/live/{key}` |
+| **Field Camera Crew** | RTMP stream key | Per-camera ingest only | OBS/Larix → `rtmp://135.181.46.27:1935/live/{key}` |
 
 ### 1.2 Cricket Manager Permissions (Granular)
 
@@ -624,7 +624,7 @@ These rules MUST be followed by any AI agent or developer working on this system
 | Cricket Manager Login | `http://135.181.46.27/cricket-manager/login` |
 | Add Manager (Sub-Admin) | `http://135.181.46.27/sub-admin/cricket/managers/add` |
 | View Managers (Sub-Admin) | `http://135.181.46.27/sub-admin/cricket/managers` |
-| RTMP Ingest | `rtmp://cricket.traceodd.com:1935/live/{stream_key}` |
+| RTMP Ingest | `rtmp://135.181.46.27:1935/live/{stream_key}` |
 | HLS Playlist | `https://cricket.traceodd.com/hls/live/{stream_key}.m3u8` |
 | SRS HTTP API | `http://135.181.46.27:1985/api/v1/` |
 
