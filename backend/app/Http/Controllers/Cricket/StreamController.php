@@ -60,6 +60,12 @@ class StreamController extends Controller
             ?? rtrim((string) config('cricket.streaming.hls_base_url'), '/')
                 . '/' . $data['rtmp_stream_key'] . '.m3u8';
 
+        // Explicit in-memory defaults — Eloquent does not hydrate DB column
+        // defaults into the instance after insert, and the client parses
+        // these fields as non-null strings/ints.
+        $data['stream_status'] = 'offline';
+        $data['failover_priority'] = $data['failover_priority'] ?? 0;
+
         $stream = StreamEndpoint::create(array_merge($data, ['match_id' => $matchId]));
 
         return response()->json($stream, 201);

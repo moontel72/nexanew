@@ -347,15 +347,15 @@ class StreamModel {
   });
 
   factory StreamModel.fromJson(Map<String, dynamic> json) => StreamModel(
-    id: json['id'] as String,
-    cameraLabel: json['camera_label'] as String,
-    cameraNumber: json['camera_number'] as int,
-    rtmpIngestUrl: json['rtmp_ingest_url'] as String?,
-    rtmpStreamKey: json['rtmp_stream_key'] as String?,
-    hlsPlaylistUrl: json['hls_playlist_url'] as String?,
-    streamStatus: json['stream_status'] as String,
+    id: json['id']?.toString() ?? '',
+    cameraLabel: json['camera_label']?.toString() ?? '',
+    cameraNumber: (json['camera_number'] as num?)?.toInt() ?? 0,
+    rtmpIngestUrl: json['rtmp_ingest_url']?.toString(),
+    rtmpStreamKey: json['rtmp_stream_key']?.toString(),
+    hlsPlaylistUrl: json['hls_playlist_url']?.toString(),
+    streamStatus: json['stream_status']?.toString() ?? 'offline',
     isPrimary: json['is_primary'] as bool? ?? false,
-    failoverPriority: json['failover_priority'] as int? ?? 0,
+    failoverPriority: (json['failover_priority'] as num?)?.toInt() ?? 0,
   );
 
   bool get isLive => streamStatus == 'live';
