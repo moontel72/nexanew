@@ -3,6 +3,7 @@ import 'package:trace_odd/shared/theme/cricket_colors.dart';
 
 import '../../data/models/cricket_models.dart';
 import 'ball_by_ball_ticker.dart';
+import 'fan_info_widgets.dart';
 import 'scoreboard_header.dart';
 
 /// Phase 3 — public fan portal 3-partition layout below the video player:
@@ -298,7 +299,8 @@ class _BatterTile extends StatelessWidget {
   }
 }
 
-/// Right column — match summary + recent-ball timeline.
+/// Right column — match summary + recent-ball timeline, extras,
+/// fall of wickets, and the live commentary feed.
 class MatchSummaryColumn extends StatelessWidget {
   final LiveScoreSnapshot score;
 
@@ -315,8 +317,16 @@ class MatchSummaryColumn extends StatelessWidget {
           // Shared scoreboard: score, wickets, overs, CRR/RRR, partnership.
           CricketScoreboard(score: score),
           const SizedBox(height: 8),
+          // Phase 4 — extras + fall of wickets.
+          ExtrasBreakdown(score: score),
+          const SizedBox(height: 8),
+          FallOfWicketsStrip(score: score),
+          const SizedBox(height: 8),
           // Shared recent-ball timeline.
           BallByBallTicker(score: score),
+          const SizedBox(height: 8),
+          // Phase 4 — live commentary feed (newest first).
+          CommentaryFeed(score: score),
         ],
       ),
     );

@@ -5,10 +5,14 @@ import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import '../../blocs/live_score/live_score_bloc.dart';
 import '../../blocs/stream_player/stream_player_bloc.dart';
 import '../../blocs/sponsor/sponsor_bloc.dart';
+import '../../blocs/scorecard/scorecard_bloc.dart';
 import '../../../data/models/cricket_models.dart';
+import '../../../data/repositories/cricket_repository.dart';
+import '../../widgets/boundary_celebration.dart';
 import '../../widgets/match_three_column_layout.dart';
 import '../../widgets/video_player_widget.dart';
 import '../../widgets/sponsor_banner.dart';
+import 'scorecard_page.dart';
 
 /// Full match experience (Phase 3): live stream on top, then the
 /// 3-partition fan layout — Bowlers | Batters | Match Summary —
@@ -44,6 +48,20 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
     super.dispose();
   }
 
+  void _openScorecard(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (ctx) => ScorecardBloc(
+            repo: RepositoryProvider.of<CricketRepository>(ctx),
+          ),
+          child: ScorecardPage(matchId: widget.match.id),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,83 +73,109 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
         ),
         backgroundColor: CricketColors.inputFill,
         foregroundColor: CricketColors.textPrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.table_chart, color: CricketColors.complete),
+            tooltip: 'Full Scorecard',
+            onPressed: () => _openScorecard(context),
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // Video player (HLS)
+          // Video player (HLS) with the boundary/wicket celebration
+          // overlay driven by the realtime score stream.
           SizedBox(
             height: 220,
-            child: BlocBuilder<StreamPlayerBloc, StreamPlayerState>(
-              builder: (context, state) => switch (state) {
-                StreamPlayerReady(
-                  :final activeStreamUrl,
-                  :final streams,
-                  :final activeCameraIndex,
-                ) =>
-                  Column(
-                    children: [
-                      Expanded(
-                        child:
-                            activeStreamUrl != null &&
-                                activeStreamUrl.isNotEmpty
-                            ? CricketVideoPlayer(
-                                hlsUrl: activeStreamUrl,
-                                autoPlay: true,
-                              )
-                            : const Center(
-                                child: Text(
-                                  'Stream starting soon...',
-                                  style: TextStyle(
-                                    color: CricketColors.textSecondary,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: BlocBuilder<StreamPlayerBloc, StreamPlayerState>(
+                    builder: (context, state) => switch (state) {
+                      StreamPlayerReady(
+                        :final activeStreamUrl,
+                        :final streams,
+                        :final activeCameraIndex,
+                      ) =>
+                        Column(
+                          children: [
+                            Expanded(
+                              child:
+                                  activeStreamUrl != null &&
+                                      activeStreamUrl.isNotEmpty
+                                  ? CricketVideoPlayer(
+                                      hlsUrl: activeStreamUrl,
+                                      autoPlay: true,
+                                    )
+                                  : const Center(
+                                      child: Text(
+                                        'Stream starting soon...',
+                                        style: TextStyle(
+                                          color: CricketColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                            // Multi-camera selector (3-mobile test)
+                            if (streams.length > 1)
+                              SizedBox(
+                                height: 36,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
                                   ),
+                                  itemCount: streams.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(width: 8),
+                                  itemBuilder: (context, index) {
+                                    final s = streams[index];
+                                    final selected = index == activeCameraIndex;
+                                    return ChoiceChip(
+                                      label: Text(s.cameraLabel),
+                                      selected: selected,
+                                      backgroundColor: CricketColors.inputFill,
+                                      selectedColor: CricketColors.complete,
+                                      labelStyle: TextStyle(
+                                        color: selected
+                                            ? Colors.white
+                                            : CricketColors.textSecondary,
+                                        fontSize: 11,
+                                      ),
+                                      onSelected: (_) => context
+                                          .read<StreamPlayerBloc>()
+                                          .add(SwitchCamera(index)),
+                                    );
+                                  },
                                 ),
                               ),
-                      ),
-                      // Multi-camera selector (3-mobile test)
-                      if (streams.length > 1)
-                        SizedBox(
-                          height: 36,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            itemCount: streams.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 8),
-                            itemBuilder: (context, index) {
-                              final s = streams[index];
-                              final selected = index == activeCameraIndex;
-                              return ChoiceChip(
-                                label: Text(s.cameraLabel),
-                                selected: selected,
-                                backgroundColor: CricketColors.inputFill,
-                                selectedColor: CricketColors.complete,
-                                labelStyle: TextStyle(
-                                  color: selected
-                                      ? Colors.white
-                                      : CricketColors.textSecondary,
-                                  fontSize: 11,
-                                ),
-                                onSelected: (_) => context
-                                    .read<StreamPlayerBloc>()
-                                    .add(SwitchCamera(index)),
-                              );
-                            },
+                          ],
+                        ),
+                      StreamPlayerOffline(:final message) => Center(
+                        child: Text(
+                          message,
+                          style: const TextStyle(
+                            color: CricketColors.textSecondary,
                           ),
                         ),
-                    ],
-                  ),
-                StreamPlayerOffline(:final message) => Center(
-                  child: Text(
-                    message,
-                    style: const TextStyle(color: CricketColors.textSecondary),
-                  ),
-                ),
-                _ => const Center(
-                  child: CircularProgressIndicator(
-                    color: CricketColors.complete,
+                      ),
+                      _ => const Center(
+                        child: CircularProgressIndicator(
+                          color: CricketColors.complete,
+                        ),
+                      ),
+                    },
                   ),
                 ),
-              },
+                // Phase 4 — boundary / wicket celebration overlay.
+                Positioned.fill(
+                  child: BlocBuilder<LiveScoreBloc, LiveScoreState>(
+                    builder: (context, state) => BoundaryCelebration(
+                      score: state is LiveScoreConnected ? state.score : null,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 

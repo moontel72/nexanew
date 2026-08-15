@@ -41,43 +41,12 @@ class LiveScoreController extends Controller
     }
 
     /**
-     * Get full scorecard (innings + commentary + live score).
+     * Get full scorecard (innings + batting/bowling scorecards + live
+     * score). Shared assembly lives in LiveScoreService.
      */
     public function fullScorecard(Request $request, string $matchId): \Illuminate\Http\JsonResponse
     {
-        $match = \App\Models\Cricket\MatchModel::with([
-            'teamA', 'teamB',
-            'innings.battingTeam', 'innings.bowlingTeam',
-            'liveScore',
-            'commentary' => fn($q) => $q->latest('ball_number')->limit(50),
-        ])->findOrFail($matchId);
-
-        return response()->json([
-            'match' => [
-                'id' => $match->id,
-                'status' => $match->status,
-                'team_a' => $match->teamA?->name,
-                'team_b' => $match->teamB?->name,
-                'venue' => $match->venue,
-                'match_type' => $match->match_type,
-                'overs_per_side' => $match->overs_per_side,
-            ],
-            'innings' => $match->innings->map(fn($i) => [
-                'innings_number' => $i->innings_number,
-                'batting_team' => $i->battingTeam->name ?? '',
-                'bowling_team' => $i->bowlingTeam->name ?? '',
-                'total_runs' => $i->total_runs,
-                'total_wickets' => $i->total_wickets,
-                'total_overs' => $i->total_overs,
-                'status' => $i->status,
-            ]),
-            'live_score' => $match->liveScore?->full_snapshot,
-            'recent_commentary' => $match->commentary->take(20)->map(fn($c) => [
-                'over' => $c->over_number,
-                'text' => $c->commentary_text,
-                'event' => $c->event_type,
-            ]),
-        ]);
+        return response()->json($this->scoreService->fullScorecard($matchId));
     }
 
     /**

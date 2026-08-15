@@ -244,6 +244,22 @@ class CricketRepository {
     }
   }
 
+  /// Phase 4 — full scorecard for both innings (public endpoint).
+  Future<ScorecardModel?> getScorecard(String matchId) async {
+    try {
+      final res = await _http.get(
+        Uri.parse(
+          '${ApiConfig.apiBaseUrl}/cricket/public/matches/$matchId/scorecard',
+        ),
+      );
+      if (res.statusCode != 200) return null;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      return ScorecardModel.fromJson(data);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<StreamModel>> getStreams(String matchId) async {
     try {
       final res = await _http.get(

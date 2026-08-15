@@ -18,6 +18,19 @@ use Illuminate\Http\Request;
  */
 class PublicMatchController extends Controller
 {
+    public function __construct(private readonly LiveScoreService $scoreService)
+    {
+    }
+
+    /**
+     * Phase 4 — full scorecard for public fans (both innings with
+     * batting/bowling scorecards, extras, fall of wickets).
+     */
+    public function scorecard(Request $request, string $matchId): \Illuminate\Http\JsonResponse
+    {
+        return response()->json($this->scoreService->fullScorecard($matchId));
+    }
+
     /**
      * Realtime (WebSocket) connection details for live score streaming.
      *

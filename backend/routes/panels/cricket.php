@@ -49,6 +49,7 @@ Route::prefix('api/v1/cricket/public')->group(function (): void {
     Route::get('matches/live', [PublicMatchController::class, 'liveMatches']);
     Route::get('matches', [PublicMatchController::class, 'allMatches']);
     Route::get('matches/{matchId}/score', [PublicMatchController::class, 'score']);
+    Route::get('matches/{matchId}/scorecard', [PublicMatchController::class, 'scorecard']);
     Route::get('matches/{matchId}/stream', [PublicMatchController::class, 'streamUrl']);
     Route::get('matches/{matchId}/sponsors', [PublicMatchController::class, 'matchSponsors']);
     Route::get('teams', [PublicMatchController::class, 'teams']);

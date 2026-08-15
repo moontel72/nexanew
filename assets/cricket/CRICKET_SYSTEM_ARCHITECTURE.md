@@ -578,6 +578,23 @@ Sleep mode guarantees: 0% CPU, 0% RAM, 0 DB connections consumed by cricket modu
       narrow/mobile screens; zero new BLoCs — the existing LiveScoreBloc
       snapshot drives all three columns (pure functions of state)
 
+### Phase 4 — Fan Enhancements (2026-08-15)
+- [x] Commentary feed: latest 20 rows embedded in every live snapshot
+      (`full_snapshot.commentary`) — the public fan feed updates in
+      realtime with zero extra HTTP calls; `CommentaryFeed` widget in
+      the summary column
+- [x] Fall of wickets: entries enriched with `player_out_name`;
+      `FallOfWicketsStrip` (public page) + full FOW list on the scorecard
+- [x] Extras breakdown: `ExtrasBreakdown` widget (wides, no-balls,
+      byes, leg-byes, total) fed by the existing snapshot extras payload
+- [x] Boundary celebrations: `BoundaryCelebration` overlay on the video
+      player for FOUR / SIX / WICKET events — AnimationController-driven
+      (AnimatedBuilder), no setState
+- [x] Full scorecard: `LiveScoreService::fullScorecard()` shared by the
+      manager and new public `GET matches/{id}/scorecard` endpoint;
+      `ScorecardBloc` + `ScorecardPage` with per-innings batting/bowling
+      tables (reusing PlayerStats/BowlerStats), extras and FOW
+
 ---
 
 ## 8. REMAINING TASKS & FUTURE ROADMAP

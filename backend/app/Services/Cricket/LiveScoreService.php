@@ -104,9 +104,12 @@ class LiveScoreService
             $this->rebuildInningsAggregates($innings, $players, $squads);
             $innings->save();
 
+            // Commentary first — the snapshot embeds the latest rows for
+            // the public fan feed.
+            $this->generateCommentary($matchId, $innings, $delivery, $managerId, $players);
+
             $liveScore = $this->updateLiveScore($match, $innings, $delivery, $managerId, $players);
 
-            $this->generateCommentary($matchId, $innings, $delivery, $managerId, $players);
             $this->cacheScore($matchId, $liveScore);
             $this->broadcastScore($matchId, $liveScore);
 
@@ -690,11 +693,15 @@ class LiveScoreService
             $legByes += $increments['leg_byes'];
 
             if ($isWicket) {
+                $outId = $ball['dismissed_player_id'] ?? null;
                 $fow[] = [
                     'wicket_number' => $wickets,
                     'runs' => $runs,
                     'overs' => $this->oversForBalls($balls),
-                    'player_out_id' => $ball['dismissed_player_id'] ?? null,
+                    'player_out_id' => $outId,
+                    'player_out_name' => $outId
+                        ? ($players->get($outId)?->name ?? null)
+                        : null,
                 ];
             }
         }
@@ -1149,6 +1156,7 @@ class LiveScoreService
             'partnership_runs' => $partnership['runs'],
             'partnership_balls' => $partnership['balls'],
             'max_overs_per_bowler' => $this->maxOversPerBowler($match),
+            'commentary' => $this->latestCommentary($match->id, 20),
             'last_ball_result' => $ballData ? $this->describeBall($ballData) : null,
             'last_wicket_info' => $lastWicketInfo,
             'last_updated' => now()->toIso8601String(),
@@ -1377,6 +1385,87 @@ class LiveScoreService
             ->get()
             ->mapWithKeys(fn (MatchSquad $squad) => [$squad->player_id => (int) $squad->batting_order])
             ->all();
+    }
+
+    // ────────────────────────────────────────────────────────────
+    // Phase 4 — Fan payloads (commentary feed + full scorecard)
+    // ────────────────────────────────────────────────────────────
+
+    /**
+     * Latest commentary rows (newest first) embedded in every live
+     * snapshot so the public fan feed updates in realtime.
+     */
+    private function latestCommentary(string $matchId, int $limit = 20): array
+    {
+        return Commentary::where('match_id', $matchId)
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get()
+            ->map(function (Commentary $c) {
+                return [
+                    'over' => round($c->over_number + ($c->ball_number / 10), 1),
+                    'ball_number' => $c->ball_number,
+                    'text' => $c->commentary_text,
+                    'event' => $c->event_type,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Full scorecard for both innings — batting & bowling scorecards,
+     * extras, fall of wickets, and the live snapshot. Shared by the
+     * manager and public scorecard endpoints.
+     */
+    public function fullScorecard(string $matchId): array
+    {
+        $match = MatchModel::with([
+            'teamA',
+            'teamB',
+            'innings.battingTeam',
+            'innings.bowlingTeam',
+            'liveScore',
+        ])->findOrFail($matchId);
+
+        return [
+            'match' => [
+                'id' => $match->id,
+                'status' => $match->status,
+                'team_a' => $match->teamA?->name,
+                'team_b' => $match->teamB?->name,
+                'team_a_short' => $match->teamA?->short_code,
+                'team_b_short' => $match->teamB?->short_code,
+                'venue' => $match->venue,
+                'match_type' => $match->match_type,
+                'overs_per_side' => $match->overs_per_side,
+            ],
+            'innings' => $match->innings->map(function (Innings $i) {
+                return [
+                    'innings_number' => $i->innings_number,
+                    'batting_team' => $i->battingTeam->name ?? '',
+                    'bowling_team' => $i->bowlingTeam->name ?? '',
+                    'total_runs' => $i->total_runs,
+                    'total_wickets' => $i->total_wickets,
+                    'total_overs' => $i->total_overs,
+                    'status' => $i->status,
+                    'extras' => [
+                        'wides' => $i->extras_wides,
+                        'no_balls' => $i->extras_no_balls,
+                        'byes' => $i->extras_byes,
+                        'leg_byes' => $i->extras_leg_byes,
+                        'total' => $i->extras_wides
+                            + $i->extras_no_balls
+                            + $i->extras_byes
+                            + $i->extras_leg_byes,
+                    ],
+                    'batting_scorecard' => $i->batting_scorecard ?? [],
+                    'bowling_scorecard' => $i->bowling_scorecard ?? [],
+                    'fall_of_wickets' => $i->fall_of_wickets ?? [],
+                ];
+            })->values()->all(),
+            'live_score' => $match->liveScore?->full_snapshot,
+        ];
     }
 
     /**
