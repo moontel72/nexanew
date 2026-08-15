@@ -9,6 +9,7 @@ use App\Models\Cricket\Team;
 use App\Models\Cricket\Tournament;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -210,15 +211,18 @@ class MatchController extends Controller
     }
 
     /**
-     * Cancel a scheduled fixture or re-open a cancelled one.
+     * Match lifecycle status changes.
      *
-     * Live-state transitions are owned by the scoring flow
-     * (LiveScoreController) and are intentionally not allowed here.
+     * Live-state transitions (GO LIVE) are accepted here alongside the
+     * fixture cancel/re-open flow. `live` is an API alias for the stored
+     * `in_progress` status, so the public live list picks the match up
+     * immediately. Every change broadcasts `match.updated` on Reverb so
+     * public viewers update instantly.
      */
     public function updateStatus(Request $request, string $id): \Illuminate\Http\JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'status' => 'required|in:cancelled,scheduled',
+            'status' => 'required|in:cancelled,scheduled,live,in_progress,innings_break,completed',
         ]);
 
         if ($validator->fails()) {
@@ -227,21 +231,77 @@ class MatchController extends Controller
 
         $match = MatchModel::findOrFail($id);
 
+        // API alias: `live` maps to the stored `in_progress` status.
+        $newStatus = $request->status === 'live' ? 'in_progress' : $request->status;
+
         $allowedTransitions = [
-            'scheduled' => ['cancelled'],
-            'cancelled' => ['scheduled'],
+            'scheduled'     => ['cancelled'],
+            'cancelled'     => ['scheduled'],
+            'toss_done'     => ['in_progress'],
+            'in_progress'   => ['in_progress', 'innings_break', 'completed'],
+            'innings_break' => ['in_progress', 'completed'],
         ];
 
-        if (!in_array($request->status, $allowedTransitions[$match->status] ?? [], true)) {
+        if (!in_array($newStatus, $allowedTransitions[$match->status] ?? [], true)) {
+            $hint = $newStatus === 'in_progress'
+                ? 'Record the toss first (Scoring Console → Record Toss).'
+                : null;
             return response()->json([
                 'message' => "Fixture status cannot change from {$match->status} to {$request->status}.",
+                'hint' => $hint,
             ], 422);
         }
 
-        $match->status = $request->status;
+        // Going live from a completed toss opens innings 1 when missing
+        // (mirrors startMatch so the GO LIVE shortcut is self-sufficient).
+        if ($newStatus === 'in_progress' && $match->status === 'toss_done') {
+            $firstInnings = \App\Models\Cricket\Innings::where('match_id', $match->id)
+                ->where('innings_number', 1)
+                ->first();
+            if (!$firstInnings) {
+                \App\Models\Cricket\Innings::create([
+                    'match_id' => $match->id,
+                    'innings_number' => 1,
+                    'batting_team_id' => $match->current_batting_team_id,
+                    'bowling_team_id' => $match->current_bowling_team_id,
+                    'status' => 'in_progress',
+                ]);
+            }
+        }
+
+        // Ending the match closes any open innings.
+        if ($newStatus === 'completed') {
+            \App\Models\Cricket\Innings::where('match_id', $match->id)
+                ->where('status', 'in_progress')
+                ->update(['status' => 'completed']);
+        }
+
+        $match->status = $newStatus;
         $match->save();
 
-        return response()->json($match->fresh()->load(['teamA', 'teamB', 'ground']));
+        $fresh = $match->fresh()->load(['teamA', 'teamB', 'ground']);
+
+        // Realtime fan-out — non-critical, never blocks the response.
+        try {
+            \App\Events\Cricket\CricketMatchUpdated::dispatch(
+                $match->id,
+                (string) $match->tournament_id,
+                [
+                    'id' => $match->id,
+                    'status' => $match->status,
+                    'tournament_id' => $match->tournament_id,
+                    'team_a_short' => $fresh->teamA?->short_code ?? $fresh->teamA?->name,
+                    'team_b_short' => $fresh->teamB?->short_code ?? $fresh->teamB?->name,
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Cricket: match broadcast failed (non-critical)', [
+                'match_id' => $match->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return response()->json($fresh);
     }
 
     /**

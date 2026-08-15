@@ -27,6 +27,10 @@ class CricketRepository {
   final _streamController = StreamController<CricketStreamUpdate>.broadcast();
   Stream<CricketStreamUpdate> get streamUpdates => _streamController.stream;
 
+  // Match lifecycle updates (GO LIVE / breaks / completed).
+  final _matchController = StreamController<MatchUpdate>.broadcast();
+  Stream<MatchUpdate> get matchUpdates => _matchController.stream;
+
   // Realtime (Reverb) client — lazily created from the backend's
   // `realtime-config` endpoint so the app key is never hardcoded.
   CricketRealtimeClient? _realtime;
@@ -449,6 +453,17 @@ class CricketRepository {
     } catch (_) {}
   }
 
+  /// Subscribe to match lifecycle pushes for a whole tournament
+  /// (`match.updated` events on cricket.tournament.{id}). The public
+  /// tournament home uses this to refresh instantly when a match goes
+  /// live or completes. Silent no-op when Reverb is unavailable.
+  Future<void> subscribeToTournament(String tournamentId) async {
+    try {
+      _realtime ??= await _createRealtimeClient();
+      _realtime?.subscribe('cricket.tournament.$tournamentId');
+    } catch (_) {}
+  }
+
   Future<CricketRealtimeClient?> _createRealtimeClient() async {
     try {
       final res = await _http.get(
@@ -478,6 +493,8 @@ class CricketRepository {
               }
             case 'stream.updated':
               _streamController.add(CricketStreamUpdate.fromJson(e.data));
+            case 'match.updated':
+              _matchController.add(MatchUpdate.fromJson(e.data));
             default:
               break;
           }
@@ -566,9 +583,7 @@ class CricketRepository {
     if (res.statusCode != 201) {
       throw Exception(_apiError(res));
     }
-    return StreamModel.fromJson(
-      jsonDecode(res.body) as Map<String, dynamic>,
-    );
+    return StreamModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   Future<bool> updateStream(
@@ -975,6 +990,7 @@ class CricketRepository {
     _realtime = null;
     _scoreController.close();
     _streamController.close();
+    _matchController.close();
     _http.close();
   }
 

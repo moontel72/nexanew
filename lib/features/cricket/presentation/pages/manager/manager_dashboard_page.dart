@@ -393,158 +393,355 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
         final matches = state is MatchListLoaded
             ? [...state.liveMatches, ...state.allMatches]
             : <MatchModel>[];
-        return ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            _GradientHeader(
-              icon: Icons.live_tv,
-              title: 'Live Console',
-              subtitle:
-                  'Manage live scoring, camera feeds, voice input, and sponsor banners.',
-              colors: const [Color(0xFF10B981), Color(0xFF059669)],
-            ),
-            const SizedBox(height: 20),
-            DropdownButtonFormField<String>(
-              value: _selectedMatchId,
-              dropdownColor: const Color(0xFF0F2936),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Select Match',
-                labelStyle: TextStyle(color: Color(0xFFBDD8DB)),
-                filled: true,
-                fillColor: Color(0xFF0F2936),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0x20FFFFFF)),
+        final selectedMatch = _selectedMatchId == null
+            ? null
+            : matches.where((m) => m.id == _selectedMatchId).firstOrNull;
+        return BlocListener<MatchListBloc, MatchListState>(
+          listener: (context, state) {
+            final notice = state is MatchListLoaded ? state.notice : null;
+            if (notice == null || notice.isEmpty) return;
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                  content: Text(notice),
+                  backgroundColor: notice.contains('LIVE')
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFEF4444),
                 ),
+              );
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              _GradientHeader(
+                icon: Icons.live_tv,
+                title: 'Live Console',
+                subtitle:
+                    'Manage live scoring, camera feeds, voice input, and sponsor banners.',
+                colors: const [Color(0xFF10B981), Color(0xFF059669)],
               ),
-              hint: const Text(
-                'Choose a match to manage',
-                style: TextStyle(color: Color(0xFFBDD8DB)),
+              const SizedBox(height: 20),
+              DropdownButtonFormField<String>(
+                value: _selectedMatchId,
+                dropdownColor: const Color(0xFF0F2936),
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Select Match',
+                  labelStyle: TextStyle(color: Color(0xFFBDD8DB)),
+                  filled: true,
+                  fillColor: Color(0xFF0F2936),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0x20FFFFFF)),
+                  ),
+                ),
+                hint: const Text(
+                  'Choose a match to manage',
+                  style: TextStyle(color: Color(0xFFBDD8DB)),
+                ),
+                items: matches.map((m) {
+                  final ta = m.teamAShort ?? m.teamAName ?? 'T1';
+                  final tb = m.teamBShort ?? m.teamBName ?? 'T2';
+                  return DropdownMenuItem(
+                    value: m.id,
+                    child: Text(
+                      '$ta vs $tb (${m.status})',
+                      style: TextStyle(
+                        color: m.isLive
+                            ? const Color(0xFFEF4444)
+                            : Colors.white,
+                      ),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() => _selectedMatchId = v),
               ),
-              items: matches.map((m) {
-                final ta = m.teamAShort ?? m.teamAName ?? 'T1';
-                final tb = m.teamBShort ?? m.teamBName ?? 'T2';
-                return DropdownMenuItem(
-                  value: m.id,
-                  child: Text(
-                    '$ta vs $tb (${m.status})',
-                    style: TextStyle(
-                      color: m.isLive ? const Color(0xFFEF4444) : Colors.white,
+              if (_selectedMatchId != null) ...[
+                const SizedBox(height: 20),
+                if (selectedMatch != null) ...[
+                  _GoLivePanel(match: selectedMatch),
+                  const SizedBox(height: 16),
+                ],
+                Missile3DButton(
+                  label: 'Scoring Console',
+                  icon: Icons.scoreboard,
+                  color: const Color(0xFF10B981),
+                  subtitle: 'Ball-by-ball run & wicket input',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RepositoryProvider.value(
+                        value: RepositoryProvider.of<CricketRepository>(
+                          context,
+                        ),
+                        child: BlocProvider(
+                          create: (_) => LiveScoreBloc(
+                            repo: RepositoryProvider.of<CricketRepository>(
+                              context,
+                            ),
+                          ),
+                          child: ManagerScorePage(matchId: _selectedMatchId!),
+                        ),
+                      ),
                     ),
                   ),
-                );
-              }).toList(),
-              onChanged: (v) => setState(() => _selectedMatchId = v),
-            ),
-            if (_selectedMatchId != null) ...[
-              const SizedBox(height: 20),
-              Missile3DButton(
-                label: 'Scoring Console',
-                icon: Icons.scoreboard,
-                color: const Color(0xFF10B981),
-                subtitle: 'Ball-by-ball run & wicket input',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => RepositoryProvider.value(
-                      value: RepositoryProvider.of<CricketRepository>(context),
-                      child: BlocProvider(
-                        create: (_) => LiveScoreBloc(
+                ),
+                Missile3DButton(
+                  label: 'Camera Switcher',
+                  icon: Icons.videocam,
+                  color: const Color(0xFF2563EB),
+                  subtitle: 'Toggle & manage camera feeds',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider(
+                        create: (_) => CameraSwitcherBloc(
                           repo: RepositoryProvider.of<CricketRepository>(
                             context,
                           ),
                         ),
-                        child: ManagerScorePage(matchId: _selectedMatchId!),
+                        child: CameraSwitcherPage(matchId: _selectedMatchId!),
                       ),
                     ),
                   ),
                 ),
-              ),
-              Missile3DButton(
-                label: 'Camera Switcher',
-                icon: Icons.videocam,
-                color: const Color(0xFF2563EB),
-                subtitle: 'Toggle & manage camera feeds',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider(
-                      create: (_) => CameraSwitcherBloc(
-                        repo: RepositoryProvider.of<CricketRepository>(context),
-                      ),
-                      child: CameraSwitcherPage(matchId: _selectedMatchId!),
-                    ),
-                  ),
-                ),
-              ),
-              Missile3DButton(
-                label: 'Voice-to-Score',
-                icon: Icons.mic,
-                color: const Color(0xFFF59E0B),
-                subtitle: 'Speak or type score updates',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider(
-                      create: (_) => VoiceScoreBloc(
-                        repo: RepositoryProvider.of<CricketRepository>(context),
-                      ),
-                      child: VoiceScorePage(matchId: _selectedMatchId!),
-                    ),
-                  ),
-                ),
-              ),
-              Missile3DButton(
-                label: 'Sponsor Management',
-                icon: Icons.campaign,
-                color: const Color(0xFF8B5CF6),
-                subtitle: 'Sponsor library & match banners',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider(
-                      create: (_) => SponsorBloc(
-                        repo: RepositoryProvider.of<CricketRepository>(context),
-                      ),
-                      child: SponsorManagePage(matchId: _selectedMatchId!),
-                    ),
-                  ),
-                ),
-              ),
-            ] else
-              Padding(
-                padding: const EdgeInsets.all(40),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.sports_cricket,
-                        size: 64,
-                        color: Colors.white.withOpacity(0.2),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Select a match to begin',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
-                          fontSize: 16,
+                Missile3DButton(
+                  label: 'Voice-to-Score',
+                  icon: Icons.mic,
+                  color: const Color(0xFFF59E0B),
+                  subtitle: 'Speak or type score updates',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider(
+                        create: (_) => VoiceScoreBloc(
+                          repo: RepositoryProvider.of<CricketRepository>(
+                            context,
+                          ),
                         ),
+                        child: VoiceScorePage(matchId: _selectedMatchId!),
                       ),
-                      Text(
-                        'Manage scoring, cameras, voice input, and sponsors',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.3),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-          ],
+                Missile3DButton(
+                  label: 'Sponsor Management',
+                  icon: Icons.campaign,
+                  color: const Color(0xFF8B5CF6),
+                  subtitle: 'Sponsor library & match banners',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider(
+                        create: (_) => SponsorBloc(
+                          repo: RepositoryProvider.of<CricketRepository>(
+                            context,
+                          ),
+                        ),
+                        child: SponsorManagePage(matchId: _selectedMatchId!),
+                      ),
+                    ),
+                  ),
+                ),
+              ] else
+                Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.sports_cricket,
+                          size: 64,
+                          color: Colors.white.withOpacity(0.2),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Select a match to begin',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.5),
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          'Manage scoring, cameras, voice input, and sponsors',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.3),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         );
       },
     );
+  }
+}
+
+/// Prominent GO LIVE / END MATCH control for the selected match.
+class _GoLivePanel extends StatelessWidget {
+  final MatchModel match;
+  const _GoLivePanel({required this.match});
+
+  @override
+  Widget build(BuildContext context) {
+    final live = match.isLive;
+    final readyForLive = match.status == 'toss_done';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: live
+              ? const [Color(0xFF065F46), Color(0xFF047857)]
+              : const [Color(0xFF7F1D1D), Color(0xFFB91C1C)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                live ? Icons.sensors : Icons.radio_button_checked,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                live ? 'MATCH IS LIVE' : 'MATCH NOT LIVE',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            live
+                ? 'Public viewers on cricket.traceodd.com are receiving this match.'
+                : readyForLive
+                ? 'Toss recorded — activate the public live stream now.'
+                : 'Toss not recorded yet. Record it in the Scoring Console, then GO LIVE.',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.85),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (!live)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.live_tv, color: Colors.white),
+                label: const Text(
+                  'GO LIVE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () => context.read<MatchListBloc>().add(
+                  UpdateMatchStatus(match.id, 'live'),
+                ),
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(
+                      Icons.pause_circle_outline,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'BREAK',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.white.withOpacity(0.5)),
+                    ),
+                    onPressed: () => context.read<MatchListBloc>().add(
+                      UpdateMatchStatus(match.id, 'innings_break'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(
+                      Icons.stop_circle_outlined,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'END MATCH',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.white.withOpacity(0.5)),
+                    ),
+                    onPressed: () => _confirmEndMatch(context),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmEndMatch(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F2936),
+        title: const Text('End match?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'This marks the match as completed and stops the public live stream.',
+          style: TextStyle(color: Color(0xFFBDD8DB)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'CANCEL',
+              style: TextStyle(color: Color(0xFFBDD8DB)),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('END MATCH'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    context.read<MatchListBloc>().add(UpdateMatchStatus(match.id, 'completed'));
   }
 }
 

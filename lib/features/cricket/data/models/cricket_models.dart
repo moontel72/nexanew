@@ -396,6 +396,22 @@ class CricketStreamUpdate {
   }
 }
 
+/// Match lifecycle change pushed by the backend (`match.updated` event)
+/// when the manager toggles GO LIVE, breaks, or completion.
+class MatchUpdate {
+  final String? matchId;
+  final String? tournamentId;
+  final String? status;
+
+  const MatchUpdate({this.matchId, this.tournamentId, this.status});
+
+  factory MatchUpdate.fromJson(Map<String, dynamic> json) => MatchUpdate(
+    matchId: json['match_id']?.toString(),
+    tournamentId: json['tournament_id']?.toString(),
+    status: json['status']?.toString(),
+  );
+}
+
 class SponsorModel {
   final String id;
   final String name;

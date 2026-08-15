@@ -103,6 +103,12 @@ Broadcast::channel('cricket.match.{matchId}', function ($user, string $matchId) 
     return true;
 });
 
+Broadcast::channel('cricket.tournament.{tournamentId}', function ($user, string $tournamentId) {
+    // Public cricket match lifecycle updates (GO LIVE / completed) —
+    // any viewer can subscribe to refresh the tournament home instantly.
+    return true;
+});
+
 // ─── STORE KEEPER CHANNELS ────────────────────────────
 
 Broadcast::channel('store_keeper.{storeKeeperId}', function ($user, string $storeKeeperId) {

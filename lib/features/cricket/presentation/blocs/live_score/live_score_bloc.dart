@@ -109,6 +109,7 @@ final class DisconnectFromMatch extends LiveScoreEvent {}
 class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
   final CricketRepository _repo;
   StreamSubscription? _wsSubscription;
+  StreamSubscription<MatchUpdate>? _matchSub;
   Timer? _pollTimer;
   String? _currentMatchId;
 
@@ -172,6 +173,27 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
     await _repo.subscribeToScore(e.matchId);
     _wsSubscription = _repo.scoreStream.listen((score) {
       if (!isClosed) add(_ScoreUpdated(score));
+    });
+
+    // Match lifecycle pushes (GO LIVE / break / completed) — the manager's
+    // status toggle instantly updates an open public live page.
+    _matchSub?.cancel();
+    _matchSub = _repo.matchUpdates.listen((update) async {
+      if (update.matchId != e.matchId) return;
+      try {
+        final refreshed = await _repo.getMatch(e.matchId);
+        if (refreshed != null && !isClosed) {
+          emit(
+            LiveScoreConnected(
+              score: _lastScore,
+              isWebSocket:
+                  state is LiveScoreConnected &&
+                  (state as LiveScoreConnected).isWebSocket,
+              match: refreshed,
+            ),
+          );
+        }
+      } catch (_) {}
     });
 
     // Lightweight REST polling as a fallback whenever the realtime
@@ -312,6 +334,8 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
   void _onDisconnect(DisconnectFromMatch e, Emitter<LiveScoreState> emit) {
     _wsSubscription?.cancel();
     _wsSubscription = null;
+    _matchSub?.cancel();
+    _matchSub = null;
     _pollTimer?.cancel();
     _pollTimer = null;
     _repo.unsubscribeFromScore(_currentMatchId ?? '');
@@ -322,6 +346,7 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
   @override
   Future<void> close() {
     _wsSubscription?.cancel();
+    _matchSub?.cancel();
     _pollTimer?.cancel();
     return super.close();
   }
