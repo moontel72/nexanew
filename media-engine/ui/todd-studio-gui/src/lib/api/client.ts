@@ -112,10 +112,10 @@ export function whepWatchUrl(
   cameraId: string,
   rid?: string,
 ): string {
-  const base = `${env.apiBaseUrl}/api/v1/whep/watch/${roomId}/${cameraId}`;
+  const base = `${env.whepBaseUrl}/api/v1/whep/watch/${roomId}/${cameraId}`;
   return rid ? `${base}?rid=${encodeURIComponent(rid)}` : base;
 }
 
 export function replayWatchUrl(replayId: string, cameraId: string): string {
-  return `${env.apiBaseUrl}/api/v1/replay/watch/${replayId}/${cameraId}`;
+  return `${env.whepBaseUrl}/api/v1/replay/watch/${replayId}/${cameraId}`;
 }
