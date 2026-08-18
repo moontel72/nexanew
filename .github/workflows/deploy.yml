@@ -52,34 +52,34 @@ jobs:
       - name: Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts 2>/dev/null
-          echo 'Host 135.181.46.27' >> ~/.ssh/config
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          echo 'Host ${{ vars.VPS_HOST }}' >> ~/.ssh/config
           echo '  StrictHostKeyChecking no' >> ~/.ssh/config
           echo '  UserKnownHostsFile=/dev/null' >> ~/.ssh/config
 
       - name: Deploy backend via rsync
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --exclude='.env' --exclude='storage' --exclude='vendor' --exclude='bootstrap/cache' backend/ root@135.181.46.27:/var/www/traceodd/admin-panel/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --exclude='.env' --exclude='storage' --exclude='vendor' --exclude='bootstrap/cache' backend/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/admin-panel/
 
       - name: Deploy Rust directory to server
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" rust/ root@135.181.46.27:/var/www/traceodd/admin-panel/rust/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" rust/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/admin-panel/rust/
 
       - name: Deploy Rust binaries to /opt/nexatrace
         run: |
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /opt/nexatrace /var/replays /var/www/traceodd/cricket-hls && chown -R www-data:www-data /var/replays"
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" rust/target/release/trace_odd_rust root@135.181.46.27:/opt/nexatrace/trace_odd_rust
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "chmod +x /opt/nexatrace/trace_odd_rust && ln -sf /opt/nexatrace/trace_odd_rust /usr/local/bin/trace_odd_rust && echo 'Rust binaries installed'"
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "mkdir -p /opt/nexatrace /var/replays /var/www/traceodd/cricket-hls && chown -R www-data:www-data /var/replays"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" rust/target/release/trace_odd_rust ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/opt/nexatrace/trace_odd_rust
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "chmod +x /opt/nexatrace/trace_odd_rust && ln -sf /opt/nexatrace/trace_odd_rust /usr/local/bin/trace_odd_rust && echo 'Rust binaries installed'"
 
       - name: Deploy Rust shared libraries
         continue-on-error: true
         run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" --include='*.so' --include='*.rlib' --exclude='*' rust/target/release/ root@135.181.46.27:/var/www/traceodd/rust-lib/ 2>/dev/null || echo "No shared libs to deploy"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" --include='*.so' --include='*.rlib' --exclude='*' rust/target/release/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/rust-lib/ 2>/dev/null || echo "No shared libs to deploy"
 
       - name: Deploy Nginx configuration
         run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/traceodd.conf root@135.181.46.27:/etc/nginx/sites-available/traceodd
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/traceodd.conf ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/nginx/sites-available/traceodd
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "
             ln -sf /etc/nginx/sites-available/traceodd /etc/nginx/sites-enabled/traceodd
             rm -f /etc/nginx/sites-enabled/nexatrace 2>/dev/null || true
             nginx -t && systemctl reload nginx && echo 'Nginx OK'
@@ -87,20 +87,20 @@ jobs:
 
       - name: Deploy Reverb systemd unit
         run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/nexatrace-reverb.service root@135.181.46.27:/etc/systemd/system/nexatrace-reverb.service
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "systemctl daemon-reload && systemctl enable nexatrace-reverb"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/nexatrace-reverb.service ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/systemd/system/nexatrace-reverb.service
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "systemctl daemon-reload && systemctl enable nexatrace-reverb"
 
       - name: Deploy Queue Worker systemd unit
         run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/nexatrace-queue.service root@135.181.46.27:/etc/systemd/system/nexatrace-queue.service
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "systemctl daemon-reload && systemctl enable nexatrace-queue"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/nexatrace-queue.service ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/systemd/system/nexatrace-queue.service
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "systemctl daemon-reload && systemctl enable nexatrace-queue"
 
       # --- CRICKET MODULE: Dual-Subdomain Infrastructure ---
       - name: Deploy Cricket Nginx server blocks (public + manager)
         run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-public.conf root@135.181.46.27:/etc/nginx/sites-available/cricket-public
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-manager.conf root@135.181.46.27:/etc/nginx/sites-available/cricket-manager
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-public.conf ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/nginx/sites-available/cricket-public
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-manager.conf ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/nginx/sites-available/cricket-manager
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "
             ln -sf /etc/nginx/sites-available/cricket-public /etc/nginx/sites-enabled/cricket-public
             ln -sf /etc/nginx/sites-available/cricket-manager /etc/nginx/sites-enabled/cricket-manager
             rm -f /etc/nginx/sites-enabled/cricket
@@ -111,18 +111,18 @@ jobs:
 
       - name: Deploy Cricket SRS systemd unit
         run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-srs.service root@135.181.46.27:/etc/systemd/system/cricket-srs.service
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "systemctl daemon-reload"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-srs.service ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/systemd/system/cricket-srs.service
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "systemctl daemon-reload"
 
       - name: Deploy Cricket SRS configuration
         run: |
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /usr/local/srs/conf"
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/srs-cricket.conf root@135.181.46.27:/usr/local/srs/conf/cricket.conf
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "mkdir -p /usr/local/srs/conf"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/srs-cricket.conf ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/usr/local/srs/conf/cricket.conf
 
       - name: Server Post-Deployment Tasks
         timeout-minutes: 10
         run: |
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "
             set -e
             cd /var/www/traceodd/admin-panel
 
@@ -138,18 +138,18 @@ jobs:
 
             composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
-            grep -q '^QUEUE_CONNECTION=' .env 2>/dev/null || echo 'QUEUE_CONNECTION=redis' >> .env
-            grep -q '^CACHE_STORE=' .env 2>/dev/null || echo 'CACHE_STORE=redis' >> .env
-            grep -q '^RUST_CHUNKER_URL=' .env 2>/dev/null || echo 'RUST_CHUNKER_URL=http://127.0.0.1:9090' >> .env
-            grep -q '^BROADCAST_DRIVER=' .env 2>/dev/null || echo 'BROADCAST_DRIVER=reverb' >> .env
-            grep -q '^REVERB_APP_ID=' .env 2>/dev/null || echo 'REVERB_APP_ID=428540' >> .env
-            grep -q '^REVERB_APP_KEY=' .env 2>/dev/null || echo 'REVERB_APP_KEY=nxbrv_app_key_nexa_2026' >> .env
-            grep -q '^REVERB_APP_SECRET=' .env 2>/dev/null || echo 'REVERB_APP_SECRET=nxbrv_secret_hash_7x9k2m4p_nexa_2026' >> .env
-            grep -q '^REVERB_HOST=' .env 2>/dev/null || echo 'REVERB_HOST=127.0.0.1' >> .env
-            grep -q '^REVERB_PORT=' .env 2>/dev/null || echo 'REVERB_PORT=8080' >> .env
-            grep -q '^REVERB_SCHEME=' .env 2>/dev/null || echo 'REVERB_SCHEME=http' >> .env
-            grep -q '^REVERB_SERVER_HOST=' .env 2>/dev/null || echo 'REVERB_SERVER_HOST=0.0.0.0' >> .env
-            grep -q '^REVERB_SERVER_PORT=' .env 2>/dev/null || echo 'REVERB_SERVER_PORT=8080' >> .env
+            if [ -n '${{ vars.QUEUE_CONNECTION }}' ] && ! grep -q '^QUEUE_CONNECTION=' .env; then echo "QUEUE_CONNECTION=${{ vars.QUEUE_CONNECTION }}" >> .env; fi
+            if [ -n '${{ vars.CACHE_STORE }}' ] && ! grep -q '^CACHE_STORE=' .env; then echo "CACHE_STORE=${{ vars.CACHE_STORE }}" >> .env; fi
+            if [ -n '${{ vars.RUST_CHUNKER_URL }}' ] && ! grep -q '^RUST_CHUNKER_URL=' .env; then echo "RUST_CHUNKER_URL=${{ vars.RUST_CHUNKER_URL }}" >> .env; fi
+            if [ -n '${{ vars.BROADCAST_DRIVER }}' ] && ! grep -q '^BROADCAST_DRIVER=' .env; then echo "BROADCAST_DRIVER=${{ vars.BROADCAST_DRIVER }}" >> .env; fi
+            if [ -n '${{ vars.REVERB_APP_ID }}' ] && ! grep -q '^REVERB_APP_ID=' .env; then echo "REVERB_APP_ID=${{ vars.REVERB_APP_ID }}" >> .env; fi
+            if [ -n '${{ secrets.REVERB_APP_KEY }}' ] && ! grep -q '^REVERB_APP_KEY=' .env; then echo "REVERB_APP_KEY=${{ secrets.REVERB_APP_KEY }}" >> .env; fi
+            if [ -n '${{ secrets.REVERB_APP_SECRET }}' ] && ! grep -q '^REVERB_APP_SECRET=' .env; then echo "REVERB_APP_SECRET=${{ secrets.REVERB_APP_SECRET }}" >> .env; fi
+            if [ -n '${{ vars.REVERB_HOST }}' ] && ! grep -q '^REVERB_HOST=' .env; then echo "REVERB_HOST=${{ vars.REVERB_HOST }}" >> .env; fi
+            if [ -n '${{ vars.REVERB_PORT }}' ] && ! grep -q '^REVERB_PORT=' .env; then echo "REVERB_PORT=${{ vars.REVERB_PORT }}" >> .env; fi
+            if [ -n '${{ vars.REVERB_SCHEME }}' ] && ! grep -q '^REVERB_SCHEME=' .env; then echo "REVERB_SCHEME=${{ vars.REVERB_SCHEME }}" >> .env; fi
+            if [ -n '${{ vars.REVERB_SERVER_HOST }}' ] && ! grep -q '^REVERB_SERVER_HOST=' .env; then echo "REVERB_SERVER_HOST=${{ vars.REVERB_SERVER_HOST }}" >> .env; fi
+            if [ -n '${{ vars.REVERB_SERVER_PORT }}' ] && ! grep -q '^REVERB_SERVER_PORT=' .env; then echo "REVERB_SERVER_PORT=${{ vars.REVERB_SERVER_PORT }}" >> .env; fi
 
             php artisan migrate --force
             php artisan db:seed --class=CricketFeatureRegistrySeeder --force
@@ -176,7 +176,7 @@ jobs:
           python3 -c '
           import json, sys, urllib.request
           try:
-              req = urllib.request.urlopen("http://135.181.46.27/api/v1/cricket/public/teams", timeout=15)
+              req = urllib.request.urlopen("http://${{ vars.VPS_HOST }}/api/v1/cricket/public/teams", timeout=15)
               data = json.loads(req.read().decode())
               teams = data.get("data", data) if isinstance(data, dict) else data
               if not isinstance(teams, list):

@@ -57,23 +57,8 @@ function mapBallByBall(raw: BallByBallStateDto): BallByBallState {
   };
 }
 
-const MOCK: BallByBallState = {
-  matchId: "demo",
-  battingTeam: "Tigers",
-  bowlingTeam: "Falcons",
-  runs: 128,
-  wickets: 4,
-  overs: 14.2,
-  runRate: 8.98,
-  batterOnStrike: "R. Khan",
-  batterNonStrike: "A. Singh",
-  bowler: "M. Patel",
-  recentBalls: ["4", "1", "W", "0", "6", "2"],
-  updatedAt: 0,
-};
-
 export function useScoreboard(matchId: string | null, pollMs = 3000) {
-  const [state, setState] = useState<BallByBallState>(MOCK);
+  const [state, setState] = useState<BallByBallState | null>(null);
   const [live, setLive] = useState(false);
 
   useEffect(() => {

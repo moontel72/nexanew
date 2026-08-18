@@ -239,11 +239,8 @@ impl Settings {
                 .map(|v| v.trim().to_string())
                 .filter(|v| !v.is_empty()),
 
-            cricket_manager_url: env_or(
-                "CRICKET_MANAGER_URL",
-                "https://cricket-manager.traceodd.com",
-            ),
-            cricket_manager_match_ids: env_list("CRICKET_MANAGER_MATCH_IDS", "demo"),
+            cricket_manager_url: env_or("CRICKET_MANAGER_URL", ""),
+            cricket_manager_match_ids: env_list("CRICKET_MANAGER_MATCH_IDS", ""),
             cricket_manager_poll_ms: parse_u64("CRICKET_MANAGER_POLL_MS", 3000)?,
             cricket_manager_ws_url: env::var("CRICKET_MANAGER_WS_URL")
                 .ok()

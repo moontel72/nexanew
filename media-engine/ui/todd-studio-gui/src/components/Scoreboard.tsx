@@ -8,6 +8,14 @@ export interface ScoreboardProps {
 export function Scoreboard({ matchId }: ScoreboardProps) {
   const { score, live } = useScoreboard(matchId);
 
+  if (!score) {
+    return (
+      <section className="rounded-md border border-border bg-gradient-to-r from-slate-900 to-slate-800 p-3">
+        <div className="text-sm text-muted-foreground">Waiting for score…</div>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-md border border-border bg-gradient-to-r from-slate-900 to-slate-800 p-3">
       <div className="flex items-center justify-between gap-4">

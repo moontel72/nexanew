@@ -14,14 +14,20 @@ name: Media Engine — Deploy to VPS
 #   5. Health-checks the Studio API
 #
 # Required secrets:
-#   VPS_HOST   — VPS IP / hostname (e.g. 135.181.46.27)
-#   VPS_USER   — SSH user (e.g. root)
-#   VPS_KEY    — SSH private key (can reuse your existing Hetzner key)
-#   GHCR_USER  — GitHub username (same as the build workflow)
-#   GHCR_TOKEN — GitHub PAT with read:packages scope
+#   SSH_KYE_HATZNER — SSH private key (historical name, keep exactly)
+#   JWT_SECRET       — shared media-engine JWT secret
+#   GHCR_USER        — GitHub username (same as the build workflow)
+#   GHCR_TOKEN       — GitHub PAT with read:packages scope
 #
-# Phase 2 note: when the media engine moves to a dedicated media server,
-# only VPS_HOST/VPS_USER/VPS_KEY change — point them at the new box.
+# Required repository variables (Actions → Settings → Variables):
+#   VPS_HOST
+#   VPS_USER
+#   JWT_ISSUER
+#   MEDIA_PLANE
+#   STUDIO_HOST
+#   STUDIO_PORT
+#   CRICKET_MANAGER_URL
+#   CRICKET_MANAGER_MATCH_IDS
 # ============================================================================
 
 on:
@@ -63,9 +69,8 @@ jobs:
       - name: Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts 2>/dev/null
-          # Fallback: disable strict checking if keyscan fails
-          echo "Host 135.181.46.27" >> ~/.ssh/config
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          echo "Host ${{ vars.VPS_HOST }}" >> ~/.ssh/config
           echo "  StrictHostKeyChecking no" >> ~/.ssh/config
           echo "  UserKnownHostsFile=/dev/null" >> ~/.ssh/config
 
@@ -74,20 +79,52 @@ jobs:
       # ---------------------------------------------------------------- #
       - name: Install systemd units (docker mode)
         run: |
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /opt/todd-media-engine"
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "mkdir -p /opt/todd-media-engine"
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
             media-engine/deploy/systemd/todd-studio.service \
-            root@135.181.46.27:/etc/systemd/system/todd-studio.service
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/systemd/system/todd-studio.service
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
             media-engine/deploy/systemd/todd-broadcaster.service \
-            root@135.181.46.27:/etc/systemd/system/todd-broadcaster.service
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/systemd/system/todd-broadcaster.service
+
+      - name: Install Docker on VPS (if missing)
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "bash -s" <<'REMOTE'
+            set -e
+            if command -v docker >/dev/null 2>&1; then
+              echo 'docker already installed'
+              exit 0
+            fi
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -y
+            apt-get install -y ca-certificates curl gnupg lsb-release
+            curl -fsSL https://get.docker.com | sh
+            systemctl enable --now docker
+            echo '✅ docker installed'
+          REMOTE
+
+      - name: Ensure media engine env file
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "bash -s" <<'REMOTE'
+            set -e
+            mkdir -p /opt/todd-media-engine
+            printf 'JWT_SECRET=%s\n' '${{ secrets.JWT_SECRET }}' > /opt/todd-media-engine/.env
+            [ -n '${{ vars.JWT_ISSUER }}' ] && printf 'JWT_ISSUER=%s\n' '${{ vars.JWT_ISSUER }}' >> /opt/todd-media-engine/.env
+            [ -n '${{ vars.MEDIA_PLANE }}' ] && printf 'MEDIA_PLANE=%s\n' '${{ vars.MEDIA_PLANE }}' >> /opt/todd-media-engine/.env
+            [ -n '${{ vars.STUDIO_HOST }}' ] && printf 'STUDIO_HOST=%s\n' '${{ vars.STUDIO_HOST }}' >> /opt/todd-media-engine/.env
+            [ -n '${{ vars.STUDIO_PORT }}' ] && printf 'STUDIO_PORT=%s\n' '${{ vars.STUDIO_PORT }}' >> /opt/todd-media-engine/.env
+            [ -n '${{ vars.CRICKET_MANAGER_URL }}' ] && printf 'CRICKET_MANAGER_URL=%s\n' '${{ vars.CRICKET_MANAGER_URL }}' >> /opt/todd-media-engine/.env
+            [ -n '${{ vars.CRICKET_MANAGER_MATCH_IDS }}' ] && printf 'CRICKET_MANAGER_MATCH_IDS=%s\n' '${{ vars.CRICKET_MANAGER_MATCH_IDS }}' >> /opt/todd-media-engine/.env
+            chmod 600 /opt/todd-media-engine/.env
+            echo '✅ /opt/todd-media-engine/.env written'
+          REMOTE
 
       # ---------------------------------------------------------------- #
       # 2. Pull images, re-tag locally, restart both services
       # ---------------------------------------------------------------- #
       - name: Pull images and restart services
         run: |
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "
             set -e
             echo '--- docker login ---'
             echo '${{ secrets.GHCR_TOKEN }}' | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
@@ -112,7 +149,7 @@ jobs:
       # ---------------------------------------------------------------- #
       - name: Verify deployment (healthz)
         run: |
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "
             for i in 1 2 3 4 5 6; do
               if curl -fsS http://localhost:8080/healthz; then
                 echo '✅ healthz OK'
@@ -131,6 +168,6 @@ jobs:
       # ---------------------------------------------------------------- #
       - name: Deployment summary
         run: |
-          echo "✅ Deployed to 135.181.46.27:"
+          echo "✅ Deployed to ${{ vars.VPS_HOST }}:"
           echo "   ghcr.io/${{ github.repository_owner }}/media-engine:latest -> todd-studio"
           echo "   ghcr.io/${{ github.repository_owner }}/media-engine-broadcaster:latest -> todd-broadcaster"
