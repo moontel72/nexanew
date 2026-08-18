@@ -36,14 +36,13 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Rust binaries (CLI + video chunker)
+      - name: Build Rust binaries (CLI)
         timeout-minutes: 12
         run: |
           cd rust
           cargo build --release
           ls -la target/release/trace_odd_rust
-          ls -la target/release/video_chunker
-          chmod +x target/release/trace_odd_rust target/release/video_chunker
+          chmod +x target/release/trace_odd_rust
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
@@ -70,13 +69,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /opt/nexatrace /var/replays /var/www/traceodd/cricket-hls && chown -R www-data:www-data /var/replays"
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" rust/target/release/trace_odd_rust root@135.181.46.27:/opt/nexatrace/trace_odd_rust
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" rust/target/release/video_chunker root@135.181.46.27:/opt/nexatrace/video_chunker
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "chmod +x /opt/nexatrace/trace_odd_rust /opt/nexatrace/video_chunker && ln -sf /opt/nexatrace/trace_odd_rust /usr/local/bin/trace_odd_rust && echo 'Rust binaries installed'"
-
-      - name: Install Cricket Video Chunker systemd unit
-        run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/cricket-video-chunker.service root@135.181.46.27:/etc/systemd/system/cricket-video-chunker.service
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "systemctl daemon-reload && systemctl enable cricket-video-chunker && systemctl restart cricket-video-chunker && echo 'Video chunker unit active'"
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "chmod +x /opt/nexatrace/trace_odd_rust && ln -sf /opt/nexatrace/trace_odd_rust /usr/local/bin/trace_odd_rust && echo 'Rust binaries installed'"
 
       - name: Deploy Rust shared libraries
         continue-on-error: true
@@ -125,12 +118,6 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /usr/local/srs/conf"
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/srs-cricket.conf root@135.181.46.27:/usr/local/srs/conf/cricket.conf
-
-      - name: Deploy Cricket lifecycle scripts
-        run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .scripts/cricket-sleep.sh root@135.181.46.27:/usr/local/bin/cricket-sleep.sh
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .scripts/cricket-wake.sh root@135.181.46.27:/usr/local/bin/cricket-wake.sh
-          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "chmod +x /usr/local/bin/cricket-sleep.sh /usr/local/bin/cricket-wake.sh"
 
       - name: Server Post-Deployment Tasks
         timeout-minutes: 10

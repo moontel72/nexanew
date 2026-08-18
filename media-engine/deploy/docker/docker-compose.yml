@@ -18,7 +18,8 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       args:
-        SERVICE: todd-signaling
+        PACKAGE: todd-signaling
+        BIN: todd-studio
     image: traceodd/todd-studio:latest
     restart: unless-stopped
     # Phase 1: keep loopback-only; nginx on the host reaches it.
@@ -48,7 +49,8 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       args:
-        SERVICE: todd-sfu
+        PACKAGE: todd-sfu
+        BIN: todd-broadcaster
     image: traceodd/todd-broadcaster:latest
     restart: unless-stopped
     ports:

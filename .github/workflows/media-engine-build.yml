@@ -90,7 +90,8 @@ jobs:
           file: media-engine/deploy/docker/Dockerfile
           push: true
           build-args: |
-            SERVICE=todd-studio
+            PACKAGE=todd-signaling
+            BIN=todd-studio
             FEATURES=gst
           tags: |
             ghcr.io/${{ github.repository_owner }}/media-engine:latest
@@ -107,7 +108,8 @@ jobs:
           file: media-engine/deploy/docker/Dockerfile
           push: true
           build-args: |
-            SERVICE=todd-broadcaster
+            PACKAGE=todd-sfu
+            BIN=todd-broadcaster
             FEATURES=gst
           tags: |
             ghcr.io/${{ github.repository_owner }}/media-engine-broadcaster:latest
