@@ -13,7 +13,7 @@ import { OverlayController } from "./components/overlays/OverlayController";
 export default function App() {
   const { rooms } = useRooms(env.adminToken);
   const telemetry = useTelemetry();
-  const [matchId] = useState<string | null>("demo");
+  const [matchId] = useState<string | null>(() => env.cricketMatchIds.split(",")[0]?.trim() || null);
   const [overlayEvent, setOverlayEvent] = useState<string | null>(null);
 
   const feeds = useMemo(

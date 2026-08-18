@@ -13,6 +13,7 @@ export const env = {
   cricketManagerUrl:
     import.meta.env.VITE_CRICKET_MANAGER_URL ||
     "https://cricket-manager.traceodd.com",
+  cricketMatchIds: import.meta.env.VITE_CRICKET_MATCH_IDS || "",
   stunUrl: import.meta.env.VITE_STUN_URL || "stun:stun.l.google.com:19302",
   turnUrl: import.meta.env.VITE_TURN_URL || "",
   gfxAssetUrl: import.meta.env.VITE_GFX_ASSET_URL || "",
