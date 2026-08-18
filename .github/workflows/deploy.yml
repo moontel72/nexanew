@@ -85,6 +85,14 @@ jobs:
             nginx -t && systemctl reload nginx && echo 'Nginx OK'
           "
 
+      - name: Deploy Todd Studio Nginx config
+        run: |
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/todd-studio.conf ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/nginx/sites-available/todd-studio
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "
+            ln -sf /etc/nginx/sites-available/todd-studio /etc/nginx/sites-enabled/todd-studio
+            nginx -t && systemctl reload nginx && echo 'Todd Studio Nginx OK'
+          "
+
       - name: Deploy Reverb systemd unit
         run: |
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" .nginx/nexatrace-reverb.service ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/systemd/system/nexatrace-reverb.service
