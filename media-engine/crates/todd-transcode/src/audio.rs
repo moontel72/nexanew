@@ -23,7 +23,8 @@ pub fn gst_mixer_skeleton(cfg: &todd_common::media::AudioMixerConfig) -> String 
     for bus in todd_common::media::AudioBus::ALL {
         if cfg.bus(bus).enabled {
             branches.push(format!(
-                "audiotestsrc wave=silence is-live=true name=src_{bus} ! audiomixer name=mix"
+                "audiotestsrc wave=silence is-live=true name=src_{} ! audiomixer name=mix",
+                bus.as_str(),
             ));
         }
     }

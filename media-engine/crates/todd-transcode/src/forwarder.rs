@@ -18,6 +18,7 @@
 
 #![cfg(feature = "gst")]
 
+use gstreamer as gst;
 use gst::prelude::*;
 use gstreamer_app::AppSrc;
 use todd_common::{
@@ -217,10 +218,12 @@ fn build_description(
                 bus_cfg.volume_db
             };
             audio_branches.push(format!(
-                "appsrc name=audio_{bus} format=time is-live=true do-timestamp=true \
+                "appsrc name=audio_{} format=time is-live=true do-timestamp=true \
                  caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000\" \
                  ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
-                 ! volume name=vol_{bus} volume={volume} ! audiomixer name=mix"
+                 ! volume name=vol_{} volume={volume} ! audiomixer name=mix",
+                bus.as_str(),
+                bus.as_str(),
             ));
         }
     }
