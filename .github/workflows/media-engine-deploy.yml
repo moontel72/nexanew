@@ -28,7 +28,6 @@ name: Media Engine — Deploy to VPS
 #   STUDIO_PORT
 #   CRICKET_MANAGER_URL
 #   CRICKET_MANAGER_MATCH_IDS
-#   DEV_TEST_PAGE
 # ============================================================================
 
 on:
@@ -116,7 +115,6 @@ jobs:
             [ -n '${{ vars.STUDIO_PORT }}' ] && printf 'STUDIO_PORT=%s\n' '${{ vars.STUDIO_PORT }}' >> /opt/todd-media-engine/.env
             [ -n '${{ vars.CRICKET_MANAGER_URL }}' ] && printf 'CRICKET_MANAGER_URL=%s\n' '${{ vars.CRICKET_MANAGER_URL }}' >> /opt/todd-media-engine/.env
             [ -n '${{ vars.CRICKET_MANAGER_MATCH_IDS }}' ] && printf 'CRICKET_MANAGER_MATCH_IDS=%s\n' '${{ vars.CRICKET_MANAGER_MATCH_IDS }}' >> /opt/todd-media-engine/.env
-            [ -n '${{ vars.DEV_TEST_PAGE }}' ] && printf 'DEV_TEST_PAGE=%s\n' '${{ vars.DEV_TEST_PAGE }}' >> /opt/todd-media-engine/.env
             chmod 600 /opt/todd-media-engine/.env
             echo '✅ /opt/todd-media-engine/.env written'
           REMOTE

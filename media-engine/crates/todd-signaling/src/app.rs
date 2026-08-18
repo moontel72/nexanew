@@ -55,12 +55,6 @@ pub fn build(state: Arc<AppState>) -> Router {
     if let Some(cors) = build_cors(&state.settings.cors_allowed_origins) {
         router = router.layer(cors);
     }
-
-    // Dev-only browser test page (WHIP publisher + WHEP viewer in one
-    // page). Same-origin, so no CORS setup needed.
-    if state.settings.dev_test_page {
-        router = router.route("/whiptest", get(routes::devtest::whiptest_page));
-    }
     router
 }
 
@@ -115,10 +109,7 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
             "/whep/program/{room_id}",
             axum::routing::post(routes::program::watch),
         )
-        .route(
-            "/cricket/live/{match_id}",
-            get(routes::scoreboard::live),
-        )
+        .route("/cricket/live/{match_id}", get(routes::scoreboard::live))
         .route("/cricket/ws", get(routes::scoreboard::ws))
         .with_state(state)
 }

@@ -24,7 +24,6 @@ moving it to a dedicated media server later is an env-var change.
 
 cp .env.example .env
 # edit .env — at minimum set a real JWT_SECRET
-# (for the browser test page, also set DEV_TEST_PAGE=1)
 
 # Studio (with the SFU engine embedded — Phase 1 mode):
 cargo run -p todd-signaling
@@ -33,22 +32,11 @@ cargo run -p todd-signaling
 cargo run -p todd-sfu
 ```
 
-### Browser test — no OBS needed
+### Studio GUI (director control room)
 
-```bash
-# one command: creates a room and prints every URL + token you need
-.\scripts\test-room.ps1        # Windows
-./scripts/test-room.sh          # Linux/VPS
-```
-
-Then open `http://127.0.0.1:8080/whiptest` (with `DEV_TEST_PAGE=1`):
-
-1. paste the admin token → **Create room** (auto-fills the other fields)
-2. **Start camera** / **Start screen share** → publishes via WHIP
-3. open a second browser window, paste room + viewer token → **Start watching** → live WHEP video
-
-The browser publishes straight into the engine — OBS/Larix are only
-needed until the T-Odd Studio UI ships.
+The production Studio UI lives in `ui/todd-studio-gui`. Build and serve it
+with nginx (see `ui/todd-studio-gui/README.md`). It drives the same
+WHIP/WHEP/replay/scoreboard APIs documented below.
 
 Mint a dev admin token to call the API:
 
@@ -105,7 +93,6 @@ Without the feature, WHIP ingestion and routing work fully; only
 | GET | `/metrics` | none* | Prometheus metrics (see `docs/06-ice-and-telemetry.md`) |
 | GET | `/api/v1/telemetry/ws` | none* | WebSocket diagnostics feed (JSON snapshots) |
 | GET | `/healthz`, `/readyz` | none | Liveness / readiness |
-| GET | `/whiptest` | none* | Browser test page (`DEV_TEST_PAGE=1` only) |
 
 *Metrics/telemetry endpoints carry aggregate diagnostics only (no
 media, no tokens). Protect them at the nginx layer if exposed publicly.

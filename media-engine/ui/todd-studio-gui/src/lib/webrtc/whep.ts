@@ -1,8 +1,7 @@
 // Minimal WHEP (WebRTC HTTP Egress Protocol) viewer helper.
 //
 // Post a recvonly SDP offer to the media engine, set the returned answer,
-// and attach the remote tracks to a <video> element. This is the same
-// flow the browser test page (`/whiptest`) uses.
+// and attach the remote tracks to a <video> element.
 
 import { env } from "../utils";
 

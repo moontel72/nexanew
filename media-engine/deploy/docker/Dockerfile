@@ -32,8 +32,6 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 WORKDIR /src
 COPY Cargo.toml ./
 COPY crates ./crates
-# web/ is embedded by todd-signaling at compile time (dev test page)
-COPY web ./web
 RUN cargo build --release -p ${PACKAGE} --features ${FEATURES}
 
 # ---- runtime stage ----------------------------------------------------------

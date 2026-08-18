@@ -88,8 +88,6 @@ pub struct Settings {
     pub laravel_introspection_url: Option<String>,
     pub room_store: RoomStoreMode,
     pub redis_url: String,
-    /// Serves the browser WHIP/WHEP test page at GET /whiptest.
-    pub dev_test_page: bool,
 
     // --- broadcaster ---
     pub broadcaster_listen: std::net::SocketAddr,
@@ -210,7 +208,6 @@ impl Settings {
                 .parse()
                 .map_err(|e: <RoomStoreMode as FromStr>::Err| e)?,
             redis_url: env_or("REDIS_URL", "redis://127.0.0.1:6379/0"),
-            dev_test_page: env_or("DEV_TEST_PAGE", "0") == "1",
 
             broadcaster_listen,
             stun_servers: env_list("STUN_SERVERS", "stun:stun.l.google.com:19302"),
