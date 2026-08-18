@@ -32,6 +32,14 @@ on:
       - main
       - mainnew
   workflow_dispatch:
+  # Allow a deploy-only change (e.g. fixing the deploy script or secret
+  # wiring) to run without triggering a full image rebuild.
+  push:
+    branches:
+      - main
+      - mainnew
+    paths:
+      - ".github/workflows/media-engine-deploy.yml"
 
 jobs:
   deploy:
