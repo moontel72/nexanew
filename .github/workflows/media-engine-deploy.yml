@@ -151,7 +151,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "
             for i in 1 2 3 4 5 6; do
-              if curl -fsS http://localhost:8080/healthz; then
+              if curl -fsS http://localhost:${{ vars.STUDIO_PORT }}/healthz; then
                 echo '✅ healthz OK'
                 exit 0
               fi
