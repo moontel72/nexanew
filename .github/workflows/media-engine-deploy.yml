@@ -57,6 +57,7 @@ jobs:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
+          # Historical secret name has the "KYE" typo — keep it exactly.
           ssh-private-key: ${{ secrets.SSH_KYE_HATZNER }}
 
       - name: Add server to known_hosts
