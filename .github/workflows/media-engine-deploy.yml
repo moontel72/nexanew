@@ -44,8 +44,8 @@ on:
 jobs:
   deploy:
     # Only deploy when the build actually succeeded (workflow_run fires on
-    # failure too). Manual dispatches always run.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # failure too). Manual dispatches and deploy-only pushes always run.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
