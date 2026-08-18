@@ -19,6 +19,7 @@
 #![cfg(feature = "gst")]
 
 use gst::prelude::*;
+use gstreamer_app::AppSrc;
 use todd_common::{
     error::AppError,
     media::{AudioBus, AudioMixerConfig, EncoderKind, EncoderSpec},
@@ -88,16 +89,20 @@ impl GstForwarder {
         let mut push_tasks = Vec::new();
 
         let video_src = pipeline
-            .property::<gst_app::AppSrc>("video_src")
-            .map_err(|e| AppError::Internal(format!("video appsrc lookup failed: {e}")))?;
+            .by_name("video_src")
+            .and_then(|element| element.downcast::<AppSrc>().ok())
+            .ok_or_else(|| AppError::Internal("video appsrc lookup failed".to_string()))?;
         push_tasks.push(spawn_push_task(video_src, video_rx, Some(first)));
 
         for (bus, rx) in audio_rx {
             let name = format!("audio_{}", bus.as_str());
-            match pipeline.property::<gst_app::AppSrc>(&name) {
-                Ok(appsrc) => push_tasks.push(spawn_push_task(appsrc, rx, None)),
-                Err(e) => {
-                    tracing::warn!(bus = %bus.as_str(), error = %e, "audio appsrc not in pipeline; dropping bus");
+            match pipeline
+                .by_name(&name)
+                .and_then(|element| element.downcast::<AppSrc>().ok())
+            {
+                Some(appsrc) => push_tasks.push(spawn_push_task(appsrc, rx, None)),
+                None => {
+                    tracing::warn!(bus = %bus.as_str(), "audio appsrc not in pipeline; dropping bus");
                 }
             }
         }
@@ -113,7 +118,7 @@ impl GstForwarder {
 /// Spawns a blocking task that pushes chunks into an appsrc until the
 /// channel closes or the pipeline errors.
 fn spawn_push_task(
-    appsrc: gst_app::AppSrc,
+    appsrc: AppSrc,
     mut rx: mpsc::Receiver<RtpChunk>,
     first: Option<RtpChunk>,
 ) -> JoinHandle<()> {
@@ -125,7 +130,16 @@ fn spawn_push_task(
                 None => rx.blocking_recv(),
             };
             let Some(chunk) = chunk else { break };
-            let buffer = gst::Buffer::from_slice(chunk.packet.to_vec());
+            let mut buffer = match gst::Buffer::with_size(chunk.packet.len()) {
+                Ok(buffer) => buffer,
+                Err(e) => {
+                    tracing::warn!(error = %e, "buffer allocation failed; stopping feed");
+                    break;
+                }
+            };
+            if let Some(map) = buffer.get_mut() {
+                map.copy_from_slice(0, &chunk.packet);
+            }
             if let Err(e) = appsrc.push_buffer(buffer) {
                 tracing::warn!(error = %e, "appsrc push failed; stopping feed");
                 break;

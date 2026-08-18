@@ -31,7 +31,34 @@ permissions:
   packages: write # required to push images to GHCR
 
 jobs:
+  # Fast gate for the GStreamer feature. The Docker build below compiles
+  # with `--features gst`; a failure there is expensive (image build), so
+  # surface compile errors here first with readable cargo output.
+  check-gst:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install GStreamer dev libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+
+      - name: Cache cargo artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: media-engine
+
+      - name: Cargo check with GStreamer feature
+        run: cargo check --manifest-path media-engine/Cargo.toml -p todd-signaling -p todd-sfu --features gst
+
   build-and-push:
+    needs: check-gst
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
