@@ -6,6 +6,10 @@ license.workspace = true
 authors.workspace = true
 description = "T-Odd SFU: WebRTC media plane — WHIP ingest, WHEP egress, simulcast routing, PLI forwarding"
 
+[[bin]]
+name = "todd-broadcaster"
+path = "src/main.rs"
+
 [dependencies]
 todd-common = { path = "../todd-common" }
 todd-replay = { path = "../todd-replay" }
