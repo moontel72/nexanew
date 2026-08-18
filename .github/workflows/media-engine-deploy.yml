@@ -49,14 +49,14 @@ jobs:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
-          ssh-private-key: ${{ secrets.VPS_KEY }}
+          ssh-private-key: ${{ secrets.SSH_KYE_HATZNER }}
 
       - name: Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H 135.181.46.27 >> ~/.ssh/known_hosts 2>/dev/null
           # Fallback: disable strict checking if keyscan fails
-          echo "Host ${{ secrets.VPS_HOST }}" >> ~/.ssh/config
+          echo "Host 135.181.46.27" >> ~/.ssh/config
           echo "  StrictHostKeyChecking no" >> ~/.ssh/config
           echo "  UserKnownHostsFile=/dev/null" >> ~/.ssh/config
 
@@ -65,20 +65,20 @@ jobs:
       # ---------------------------------------------------------------- #
       - name: Install systemd units (docker mode)
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "mkdir -p /opt/todd-media-engine"
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /opt/todd-media-engine"
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
             media-engine/deploy/systemd/todd-studio.service \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/etc/systemd/system/todd-studio.service
+            root@135.181.46.27:/etc/systemd/system/todd-studio.service
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
             media-engine/deploy/systemd/todd-broadcaster.service \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/etc/systemd/system/todd-broadcaster.service
+            root@135.181.46.27:/etc/systemd/system/todd-broadcaster.service
 
       # ---------------------------------------------------------------- #
       # 2. Pull images, re-tag locally, restart both services
       # ---------------------------------------------------------------- #
       - name: Pull images and restart services
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
             set -e
             echo '--- docker login ---'
             echo '${{ secrets.GHCR_TOKEN }}' | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
@@ -103,7 +103,7 @@ jobs:
       # ---------------------------------------------------------------- #
       - name: Verify deployment (healthz)
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
             for i in 1 2 3 4 5 6; do
               if curl -fsS http://localhost:8080/healthz; then
                 echo '✅ healthz OK'
@@ -122,6 +122,6 @@ jobs:
       # ---------------------------------------------------------------- #
       - name: Deployment summary
         run: |
-          echo "✅ Deployed to ${{ secrets.VPS_HOST }}:"
+          echo "✅ Deployed to 135.181.46.27:"
           echo "   ghcr.io/${{ github.repository_owner }}/media-engine:latest -> todd-studio"
           echo "   ghcr.io/${{ github.repository_owner }}/media-engine-broadcaster:latest -> todd-broadcaster"
