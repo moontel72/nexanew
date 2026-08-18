@@ -1,0 +1,19 @@
+# dependencies
+node_modules
+
+# vite / production build output
+dist
+dist-ssr
+
+# local env overrides
+.env
+.env.*
+!.env.example
+
+# tauri
+src-tauri/target
+src-tauri/gen
+
+# misc
+*.log
+.DS_Store

@@ -1,0 +1,8 @@
+# Pins a stable toolchain for the media-engine workspace.
+# rustup auto-installs missing components; rust-analyzer also reads this
+# file to pick the toolchain it analyzes with.
+
+[toolchain]
+channel = "stable"
+profile = "minimal"
+components = ["rustfmt", "clippy"]

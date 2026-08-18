@@ -1,0 +1,134 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 36.30s
+     Running unittests src\lib.rs (target\debug\deps\todd_common-014a38a40baae437.exe)
+
+running 3 tests
+test media::tests::muted_bus_has_negative_infinity_gain ... ok
+test media::tests::default_mixer_enables_commentary_and_ambient ... ok
+test media::tests::rid_routing_convention ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
+
+     Running unittests src\lib.rs (target\debug\deps\todd_cricket-0947314258078f7f.exe)
+
+running 11 tests
+test tests::bowler_is_not_charged_byes_or_credited_run_outs ... ok
+test tests::batter_runs_attribution_rules ... ok
+test tests::free_hit_only_allows_run_outs ... ok
+test tests::bowler_over_limits ... ok
+test tests::legacy_deliveries_without_attribution_recompute_cleanly ... ok
+test tests::full_over_swaps_ends_and_resets_bowler ... ok
+test tests::partnership_counts_since_last_wicket ... ok
+test tests::no_ball_hit_for_four_credits_batter_and_bowler ... ok
+test tests::wicket_replacement_and_fall_of_wickets ... ok
+test tests::retired_hurt_replaces_batter_without_a_wicket ... ok
+test tests::wide_and_no_ball_do_not_advance_the_over ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.85s
+
+     Running unittests src\main.rs (target\debug\deps\todd_cricket-c70604e891851b4a.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\todd_replay-cd8c25652cd51009.exe)
+
+running 12 tests
+test retime::tests::double_speed_drops_frames ... ok
+test retime::tests::empty_input_produces_nothing ... ok
+test retime::tests::fragmented_frames_stay_intact_per_copy ... ok
+test retime::tests::half_speed_duplicates_frames_with_stretched_timeline ... ok
+test retime::tests::speed_is_clamped ... ok
+test retime::tests::speed_one_is_passthrough ... ok
+test retime::tests::three_quarter_speed_alternates_duplication ... ok
+test ring::tests::cameras_are_scoped_per_room ... ok
+test ring::tests::unknown_camera_returns_empty ... ok
+test ring::tests::snapshot_returns_recent_frames_within_window ... ok
+test session::tests::trigger_rejects_lookback_beyond_retention ... ok
+test session::tests::trigger_creates_playable_session ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.27s
+
+     Running unittests src\lib.rs (target\debug\deps\todd_sfu-c8cf91667dc73385.exe)
+
+running 5 tests
+test net::tests::unroutable_addresses_are_filtered ... ok
+test whep_peer::tests::extracts_first_ssrc_from_sdp ... ok
+test whep_peer::tests::no_ssrc_returns_none ... ok
+test whip_peer::tests::no_simulcast_line_returns_none ... ok
+test whip_peer::tests::parses_simulcast_order ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+
+     Running unittests src\main.rs (target\debug\deps\todd_sfu-148f97ec12ec3367.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\todd_studio-e3ff23da5cf4e322.exe)
+
+running 2 tests
+test store::tests::redis_store_roundtrip ... ignored, requires a running Redis (CI runs it via a service container)
+test store::tests::memory_store_roundtrip ... ok
+
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running unittests src\lib.rs (target\debug\deps\todd_telemetry-9b8864189e07ca6c.exe)
+
+running 6 tests
+test registry::tests::counters_accumulate_and_gauges_hold_last_value ... ok
+test registry::tests::render_is_valid_prometheus_text ... ok
+test registry::tests::unknown_metrics_are_ignored_without_panicking ... ok
+test stream_stats::tests::bitrate_meter_accumulates_bytes ... ok
+test stream_stats::tests::jitter_grows_with_bursty_arrivals ... ok
+test stream_stats::tests::jitter_is_zero_for_steady_clock ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.90s
+
+     Running unittests src\lib.rs (target\debug\deps\todd_transcode-fab74c44f0ed9f74.exe)
+
+running 4 tests
+test hw::tests::auto_prefers_nvenc_then_qsv_then_amf ... ok
+test hw::tests::encode_plans_carry_encoder_specific_elements ... ok
+test hw::tests::h264_is_target_compatible ... ok
+test hw::tests::unavailable_backend_falls_back_to_x264 ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+   Doc-tests todd_common
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests todd_cricket
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests todd_replay
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests todd_sfu
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests todd_telemetry
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests todd_transcode
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,46 @@
+# T-Odd Studio (Axum control plane) — Docker mode unit.
+#
+# Runs the GHCR image as a container with host networking so the WebRTC
+# engine can bind UDP sockets directly (no per-port publishing). The
+# deploy workflow (media-engine-deploy.yml) pulls the image, re-tags it
+# to the local name below, and restarts this unit.
+#
+# Phase 1: STUDIO_HOST=127.0.0.1 in /opt/todd-media-engine/.env — only
+# nginx on the host reaches it.
+# Phase 2: set STUDIO_HOST=0.0.0.0 on a dedicated media server.
+#
+# Install: cp deploy/systemd/todd-studio.service /etc/systemd/system/
+#          systemctl daemon-reload && systemctl enable --now todd-studio
+
+[Unit]
+Description=T-Odd Studio (Axum control plane, Docker)
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+# Local tag the deploy workflow writes (keeps the unit repo-owner agnostic)
+Environment=IMAGE=traceodd/media-engine:latest
+EnvironmentFile=/opt/todd-media-engine/.env
+
+# -f: tolerate a previous crashed container; --rm keeps the system clean
+ExecStartPre=-/usr/bin/docker rm -f todd-studio
+ExecStart=/usr/bin/docker run --name todd-studio --rm --network host \
+  --env-file /opt/todd-media-engine/.env ${IMAGE}
+ExecStop=/usr/bin/docker stop -t 10 todd-studio
+ExecStopPost=/usr/bin/docker rm -f todd-studio
+
+# Restart policy
+Restart=always
+RestartSec=5
+
+# Resource guards (tune per VPS; same budget as the bare-metal unit)
+CPUQuota=200%
+MemoryMax=1G
+LimitNOFILE=65536
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

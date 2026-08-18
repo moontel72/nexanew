@@ -1,0 +1,121 @@
+// Typed REST client for the media engine (todd-signaling control plane).
+//
+// The director GUI only talks to the *control plane*: room management,
+// WHEP watch signaling, replay triggers and telemetry. Vision-switch and
+// scoreboard services build on top of this base.
+
+import { env } from "../utils";
+import type {
+  CreateRoomResponse,
+  ExportStatus,
+  ReplayInfo,
+  ReplayTriggerRequest,
+  Room,
+} from "./types";
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+async function request<T>(
+  path: string,
+  init: RequestInit & { token?: string },
+): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (init.token) {
+    headers.set("Authorization", `Bearer ${init.token}`);
+  }
+  const res = await fetch(`${env.apiBaseUrl}${path}`, { ...init, headers });
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // non-JSON error body
+    }
+    throw new ApiError(res.status, message);
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+export const api = {
+  async createRoom(name: string, cameraIds: string[], token: string) {
+    return request<CreateRoomResponse>("/api/v1/room/create", {
+      method: "POST",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, camera_ids: cameraIds, ttl_secs: 3600 }),
+    });
+  },
+
+  async listRooms(token: string) {
+    return request<Room[]>("/api/v1/room/list", { method: "GET", token });
+  },
+
+  async getRoom(roomId: string, token: string) {
+    return request<Room>(`/api/v1/room/${roomId}`, { method: "GET", token });
+  },
+
+  async triggerReplay(req: ReplayTriggerRequest, token: string) {
+    return request<ReplayInfo>("/api/v1/replay/trigger", {
+      method: "POST",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    });
+  },
+
+  async listReplays(token: string) {
+    return request<ReplayInfo[]>("/api/v1/replay/list", { method: "GET", token });
+  },
+
+  async closeReplay(replayId: string, token: string) {
+    return request<void>(`/api/v1/replay/${replayId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
+  async exportReplay(
+    replayId: string,
+    body: {
+      camera_id: string;
+      target: {
+        url: string;
+        encoder?: string;
+        bitrate_kbps?: number;
+        keyframe_interval?: number;
+        audio?: unknown;
+      };
+      speed?: number;
+    },
+    token: string,
+  ) {
+    return request<ExportStatus>(`/api/v1/replay/${replayId}/export`, {
+      method: "POST",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ replay_id: replayId, ...body }),
+    });
+  },
+};
+
+export function whepWatchUrl(
+  roomId: string,
+  cameraId: string,
+  rid?: string,
+): string {
+  const base = `${env.apiBaseUrl}/api/v1/whep/watch/${roomId}/${cameraId}`;
+  return rid ? `${base}?rid=${encodeURIComponent(rid)}` : base;
+}
+
+export function replayWatchUrl(replayId: string, cameraId: string): string {
+  return `${env.apiBaseUrl}/api/v1/replay/watch/${replayId}/${cameraId}`;
+}

@@ -1,0 +1,74 @@
+# ============================================================================
+# T-Odd Media Engine — Rust workspace
+#
+# Two microservices, one shared crate:
+#   - todd-studio      Axum control plane (rooms, tokens, routing)
+#   - todd-broadcaster WHIP/WebRTC ingest engine (webrtc-rs + GStreamer)
+#   - todd-common      shared auth / config / DTOs
+#
+# The `gst` feature of todd-broadcaster is OFF by default so the workspace
+# compiles anywhere. Enable it on hosts with libgstreamer >= 1.24
+# (Ubuntu 24.04 ships 1.24):  cargo build --release --features gst
+# ============================================================================
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/todd-common",
+    "crates/todd-cricket",
+    "crates/todd-telemetry",
+    "crates/todd-transcode",
+    "crates/todd-replay",
+    "crates/todd-sfu",
+    "crates/todd-signaling",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Trace Odd Team"]
+
+[workspace.dependencies]
+# --- async runtime & http ---
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+axum = "0.8"
+tower-http = { version = "0.6", features = ["cors", "trace", "request-id"] }
+
+# --- serialization ---
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# --- auth ---
+jsonwebtoken = "9"
+
+# --- webrtc (0.17: modern streaming track APIs; see docs/07-sfu-architecture.md) ---
+webrtc = "0.17"
+
+# --- redis (shared room state across Studio replicas) ---
+redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
+
+# --- gstreamer (feature-gated, requires system GStreamer >= 1.24) ---
+gstreamer = { version = "0.23", features = ["v1_24"] }
+gstreamer-app = "0.23"
+
+# --- utilities ---
+anyhow = "1"
+async-trait = "0.1"
+bytes = "1"
+chrono = { version = "0.4", features = ["serde"] }
+dashmap = "6"
+dotenvy = "0.15"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+url = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# --- release tuning: latency-bound, not size-bound ---
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

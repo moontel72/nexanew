@@ -1,0 +1,126 @@
+name: Media Engine — Build & Push Docker Image
+
+# ============================================================================
+# Build pipeline for the Rust media engine (media-engine/ workspace).
+#
+# On every push to main/mainnew touching media-engine/:
+#   1. Validate the workspace (check, test, release build)
+#   2. Build both service images from deploy/docker/Dockerfile
+#   3. Push them to GitHub Container Registry (ghcr.io)
+#
+# The deploy workflow (media-engine-deploy.yml) waits for this one and
+# then pulls + restarts on the VPS.
+#
+# Required secrets (repo → Settings → Secrets):
+#   GHCR_USER  — GitHub username (e.g. traceodd)
+#   GHCR_TOKEN — GitHub PAT with write:packages + read:packages scopes
+# ============================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - mainnew
+    paths:
+      - "media-engine/**"
+      - ".github/workflows/media-engine-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write # required to push images to GHCR
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      # ---------------------------------------------------------------- #
+      # 1. Rust validation (fast feedback before any Docker work)
+      # ---------------------------------------------------------------- #
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: media-engine
+
+      # Full workspace surface: libs, bins, tests, examples. No GStreamer
+      # needed (the `gst` feature is off by default).
+      - name: Cargo check (workspace + all targets)
+        run: cargo check --manifest-path media-engine/Cargo.toml --workspace --all-targets
+
+      - name: Cargo test (in-memory store roundtrip)
+        run: cargo test --manifest-path media-engine/Cargo.toml --workspace
+
+      # Sanity release build on the runner; the actual shipped binaries
+      # are compiled inside the Docker build below.
+      - name: Cargo release build
+        run: cargo build --manifest-path media-engine/Cargo.toml --release --workspace
+
+      # ---------------------------------------------------------------- #
+      # 2. Docker setup + GHCR login
+      # ---------------------------------------------------------------- #
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+      # ---------------------------------------------------------------- #
+      # 3. Build & push service images (one Dockerfile, two services)
+      #    The Dockerfile compiles the chosen binary with the `gst`
+      #    feature inside Ubuntu 24.04 (GStreamer 1.24), so the runtime
+      #    image contains the full forwarding pipelines.
+      # ---------------------------------------------------------------- #
+
+      # --- T-Odd Studio (control plane) ----------------------------------
+      # Tagged media-engine:latest — the primary image the VPS pulls.
+      - name: Build & push Todd Studio image
+        uses: docker/build-push-action@v6
+        with:
+          context: media-engine
+          file: media-engine/deploy/docker/Dockerfile
+          push: true
+          build-args: |
+            SERVICE=todd-studio
+            FEATURES=gst
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/media-engine:latest
+            ghcr.io/${{ github.repository_owner }}/media-engine:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # --- T-Odd Broadcaster (media plane) --------------------------------
+      # Separate image so Phase 2 can run it on a dedicated media server.
+      - name: Build & push Todd Broadcaster image
+        uses: docker/build-push-action@v6
+        with:
+          context: media-engine
+          file: media-engine/deploy/docker/Dockerfile
+          push: true
+          build-args: |
+            SERVICE=todd-broadcaster
+            FEATURES=gst
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/media-engine-broadcaster:latest
+            ghcr.io/${{ github.repository_owner }}/media-engine-broadcaster:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ---------------------------------------------------------------- #
+      # 4. Final artifact summary
+      # ---------------------------------------------------------------- #
+      - name: Summarize images
+        run: |
+          echo "✅ Pushed:"
+          echo "   ghcr.io/${{ github.repository_owner }}/media-engine:latest"
+          echo "   ghcr.io/${{ github.repository_owner }}/media-engine-broadcaster:latest"
+          echo "   (both also tagged ${{ github.sha }})"

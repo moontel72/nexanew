@@ -1,0 +1,100 @@
+name: Media Engine
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "media-engine/**"
+      - ".github/workflows/media-engine.yml"
+  pull_request:
+    paths:
+      - "media-engine/**"
+      - ".github/workflows/media-engine.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: media-engine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---- fast path: no GStreamer, no system deps ----------------------------
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: media-engine
+
+      - name: Format check
+        run: cargo fmt --manifest-path media-engine/Cargo.toml --all --check
+
+      - name: Clippy
+        run: cargo clippy --manifest-path media-engine/Cargo.toml --workspace --all-targets -- -D warnings
+
+      - name: Tests (in-memory store)
+        run: cargo test --manifest-path media-engine/Cargo.toml --workspace
+
+  # ---- redis-backed room store smoke test ---------------------------------
+  redis-smoke:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: media-engine
+
+      - name: Run Redis store roundtrip test
+        run: cargo test --manifest-path media-engine/Cargo.toml -p todd-signaling -- --ignored
+
+  # ---- full path: with GStreamer forwarding feature -----------------------
+  # ubuntu-24.04 ships GStreamer 1.24, which the `gst` feature links against.
+  check-gst:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install GStreamer dev libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+
+      - name: Cache cargo artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: media-engine
+
+      - name: Check with GStreamer feature
+        run: cargo check --manifest-path media-engine/Cargo.toml --workspace --features gst

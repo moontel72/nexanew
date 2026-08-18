@@ -1,0 +1,38 @@
+[package]
+name = "todd-sfu"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "T-Odd SFU: WebRTC media plane — WHIP ingest, WHEP egress, simulcast routing, PLI forwarding"
+
+[dependencies]
+todd-common = { path = "../todd-common" }
+todd-replay = { path = "../todd-replay" }
+todd-telemetry = { path = "../todd-telemetry" }
+todd-transcode = { path = "../todd-transcode" }
+
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+axum = { workspace = true, features = ["ws"] }
+bytes = { workspace = true }
+chrono = { workspace = true }
+dashmap = { workspace = true }
+dotenvy = { workspace = true }
+local-ip-address = "0.6"
+reqwest = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+webrtc = { workspace = true }
+webrtc-ice = "0.17"
+webrtc-util = "0.17"
+
+[features]
+default = []
+# Enables GStreamer output forwarding (via todd-transcode). Requires
+# libgstreamer1.0-dev >= 1.24 on the build host.
+gst = ["todd-transcode/gst"]

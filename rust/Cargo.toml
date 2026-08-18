@@ -16,10 +16,6 @@ name = "trace_odd_rust"
 name = "trace_odd_rust"
 path = "src/main.rs"
 
-[[bin]]
-name = "video_chunker"
-path = "src/bin/video_chunker.rs"
-
 [dependencies]
 rand = "0.8.5"
 uuid = { version = "1.6.0", features = ["v4", "serde"] }

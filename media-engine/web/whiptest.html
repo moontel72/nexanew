@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T-Odd Media Engine — Browser Test</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    background: #0d1117; color: #e6edf3;
+    font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  h1 span { color: #58a6ff; }
+  .sub { color: #8b949e; margin-bottom: 20px; font-size: 0.9rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+  .card {
+    background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+    padding: 16px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 1rem; color: #58a6ff; }
+  label { display: block; font-size: 0.78rem; color: #8b949e; margin: 10px 0 4px; }
+  input, button { font: inherit; }
+  input {
+    width: 100%; padding: 8px 10px; border-radius: 6px;
+    border: 1px solid #30363d; background: #0d1117; color: #e6edf3;
+  }
+  button {
+    padding: 8px 14px; margin: 12px 4px 0 0; border-radius: 6px;
+    border: 1px solid #30363d; background: #21262d; color: #e6edf3; cursor: pointer;
+  }
+  button.primary { background: #1f6feb; border-color: #1f6feb; }
+  button.danger { background: #b62324; border-color: #b62324; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  video {
+    width: 100%; background: #000; border-radius: 6px;
+    border: 1px solid #30363d; margin-top: 12px; min-height: 160px;
+  }
+  .status { font-size: 0.8rem; margin-top: 10px; min-height: 1.2em; white-space: pre-wrap; }
+  .ok { color: #3fb950; } .err { color: #f85149; } .dim { color: #8b949e; }
+  code { background: #21262d; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; }
+</style>
+</head>
+<body>
+
+<h1>T-Odd <span>Media Engine</span> — Browser Test</h1>
+<div class="sub">
+  Publish your camera / screen via <b>WHIP</b> and watch it live via <b>WHEP</b> —
+  no OBS, no extensions. Server: <code id="baseLabel">…</code>
+</div>
+
+<div class="grid">
+
+  <!-- ─────────────────────────── ADMIN / ROOM ─────────────────────────── -->
+  <div class="card">
+    <h2>1 · Create test room (admin)</h2>
+    <label>Admin token (mint: <code>cargo run -p todd-common --example mint_token -- admin</code>)</label>
+    <input id="adminToken" placeholder="eyJ… (admin JWT)">
+    <label>Cameras (comma separated)</label>
+    <input id="cameras" value="cam-1,cam-2">
+    <button id="btnCreateRoom" class="primary">Create room</button>
+    <div class="status dim" id="roomStatus">no room yet</div>
+  </div>
+
+  <!-- ─────────────────────────── PUBLISH (WHIP) ─────────────────────────── -->
+  <div class="card">
+    <h2>2 · Publish camera / screen (WHIP)</h2>
+    <label>Room id</label>
+    <input id="pubRoom" placeholder="room uuid">
+    <label>Camera id</label>
+    <input id="pubCamera" value="cam-1">
+    <label>Ingest token (publisher JWT for this camera)</label>
+    <input id="pubToken" placeholder="eyJ… (ingest token)">
+    <button id="btnCamera" class="primary">🎥 Start camera</button>
+    <button id="btnScreen">🖥 Start screen share</button>
+    <button id="btnStopPub" class="danger" disabled>Stop publishing</button>
+    <video id="localVideo" controls autoplay muted playsinline></video>
+    <div class="status dim" id="pubStatus">idle</div>
+  </div>
+
+  <!-- ─────────────────────────── WATCH (WHEP) ─────────────────────────── -->
+  <div class="card">
+    <h2>3 · Watch live (WHEP)</h2>
+    <label>Room id</label>
+    <input id="watchRoom" placeholder="room uuid">
+    <label>Camera id</label>
+    <input id="watchCamera" value="cam-1">
+    <label>Viewer token (room-scoped viewer JWT)</label>
+    <input id="watchToken" placeholder="eyJ… (viewer token)">
+    <button id="btnWatch" class="primary">▶ Start watching</button>
+    <button id="btnStopWatch" class="danger" disabled>Stop watching</button>
+    <button id="btnPlayVideo" disabled>🔊 Play / Unmute video</button>
+    <!--
+      controls + muted are REQUIRED: browsers block autoplay of streams
+      containing audio tracks unless the element starts muted. The
+      Play/Unmute button above enables audio after a user gesture.
+    -->
+    <video id="remoteVideo" controls autoplay playsinline muted></video>
+    <div class="status dim" id="watchStatus">idle</div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const base = window.location.origin;          // page is served by the Studio itself
+$("baseLabel").textContent = base;
+
+const ICE = [{ urls: "stun:stun.l.google.com:19302" }];
+
+let pubPc = null, pubLocation = null, pubStream = null;
+let watchPc = null, watchLocation = null;
+
+// ───────────────────────── helpers ─────────────────────────
+
+function waitIceComplete(pc) {
+  return new Promise((resolve) => {
+    if (pc.iceGatheringState === "complete") return resolve();
+    const timer = setTimeout(resolve, 3000);   // safety net
+    pc.addEventListener("icegatheringstatechange", () => {
+      if (pc.iceGatheringState === "complete") { clearTimeout(timer); resolve(); }
+    });
+  });
+}
+
+// Logs every local ICE candidate + full SDP to the console for debugging
+// candidate exchange between the browser and the engine.
+function attachCandidateLogging(pc, label) {
+  pc.addEventListener("icecandidate", (ev) => {
+    if (ev.candidate) {
+      console.debug(`[${label}] candidate: ${ev.candidate.candidate}`);
+    } else {
+      console.debug(`[${label}] ICE gathering complete (null candidate)`);
+    }
+  });
+}
+
+// WHIP / WHEP POST: SDP offer in, SDP answer out, Location header tracked.
+// Full offer/answer are dumped to the console so candidate exchange can be
+// inspected directly.
+async function whipPost(path, token, offerSdp) {
+  console.debug(`[whip-post] ${path}
+${offerSdp}`);
+  const res = await fetch(`${base}${path}?token=${encodeURIComponent(token)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/sdp" },
+    body: offerSdp,
+  });
+  const answerSdp = await res.text();
+  console.debug(
+    `[whip-post] ${path} -> HTTP ${res.status}\nLocation: ${res.headers.get("Location")}\n${answerSdp}`,
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${answerSdp}`);
+  return { sdp: answerSdp, location: res.headers.get("Location") };
+}
+
+// ───────────────────────── 1 · room creation ─────────────────────────
+
+$("btnCreateRoom").addEventListener("click", async () => {
+  const st = $("roomStatus");
+  st.className = "status dim"; st.textContent = "creating room…";
+  try {
+    const cams = $("cameras").value.split(",").map((s) => s.trim()).filter(Boolean);
+    const res = await fetch(`${base}/api/v1/room/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${$("adminToken").value.trim()}`,
+      },
+      body: JSON.stringify({ name: "browser-test", camera_ids: cams, ttl_secs: 3600 }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const room = await res.json();
+
+    $("pubRoom").value = room.room.id;
+    $("watchRoom").value = room.room.id;
+    $("watchToken").value = room.viewer_token;
+    // prefill the first camera's ingest token
+    const firstCam = cams[0] || "cam-1";
+    $("pubCamera").value = firstCam;
+    $("pubToken").value = room.ingest_tokens[firstCam] || "";
+
+    st.className = "status ok";
+    st.textContent = `room ${room.room.id}\ncameras: ${cams.join(", ")}\n` +
+      cams.map((c) => `  ingest token (${c}): ${room.ingest_tokens[c]}`).join("\n") +
+      `\nviewer token: ${room.viewer_token}`;
+  } catch (e) {
+    st.className = "status err"; st.textContent = String(e);
+  }
+});
+
+// ───────────────────────── 2 · publish (WHIP) ─────────────────────────
+
+async function startPublish(screen) {
+  const st = $("pubStatus");
+  try {
+    st.className = "status dim"; st.textContent = "requesting media…";
+    pubStream = screen
+      ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+      : await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true,
+        });
+
+    $("localVideo").srcObject = pubStream;          // self-preview (no server round-trip)
+    st.textContent = "negotiating WHIP…";
+
+    pubPc = new RTCPeerConnection({ iceServers: ICE });
+    attachCandidateLogging(pubPc, "whip-pub");
+    pubStream.getTracks().forEach((t) => pubPc.addTrack(t, pubStream));
+    const offer = await pubPc.createOffer();
+    await pubPc.setLocalDescription(offer);
+    await waitIceComplete(pubPc);
+
+    const room = $("pubRoom").value.trim();
+    const cam = $("pubCamera").value.trim();
+    const { sdp, location } = await whipPost(
+      `/api/v1/whip/ingest/${encodeURIComponent(room)}/${encodeURIComponent(cam)}`,
+      $("pubToken").value.trim(),
+      pubPc.localDescription.sdp,
+    );
+    await pubPc.setRemoteDescription({ type: "answer", sdp });
+    pubLocation = location;
+
+    $("btnCamera").disabled = $("btnScreen").disabled = true;
+    $("btnStopPub").disabled = false;
+    st.className = "status ok";
+    st.textContent = `✅ publishing as ${cam} — session ${location}\n(check section 3 to watch yourself)` + (screen ? "" : "\n(tip: open a second browser window for the viewer)");
+  } catch (e) {
+    st.className = "status err"; st.textContent = String(e);
+    stopPublishLocal();
+  }
+}
+
+$("btnCamera").addEventListener("click", () => startPublish(false));
+$("btnScreen").addEventListener("click", () => startPublish(true));
+
+function stopPublishLocal() {
+  pubStream?.getTracks().forEach((t) => t.stop());
+  pubStream = null; pubPc = null;
+  $("localVideo").srcObject = null;
+  $("btnCamera").disabled = $("btnScreen").disabled = false;
+  $("btnStopPub").disabled = true;
+}
+
+$("btnStopPub").addEventListener("click", async () => {
+  try {
+    if (pubLocation) {
+      await fetch(`${base}${pubLocation}?token=${encodeURIComponent($("pubToken").value.trim())}`, { method: "DELETE" });
+    }
+    $("pubStatus").className = "status dim"; $("pubStatus").textContent = "stopped";
+  } catch (e) {
+    $("pubStatus").className = "status err"; $("pubStatus").textContent = String(e);
+  }
+  stopPublishLocal();
+});
+
+// ───────────────────────── 3 · watch (WHEP) ─────────────────────────
+
+let watchRetries = 0;
+
+// Full ICE lifecycle in the status text: this shows whether the WHEP path
+// is gathering, connected, or needs an ICE restart.
+function attachWatchIceLogging(pc, st) {
+  const update = () => {
+    st.className = "status dim";
+    st.textContent =
+      `ice-gathering: ${pc.iceGatheringState} · ice: ${pc.iceConnectionState} · conn: ${pc.connectionState}` +
+      (watchLocation ? ` · session ${watchLocation}` : "");
+  };
+  pc.addEventListener("icegatheringstatechange", update);
+  pc.addEventListener("iceconnectionstatechange", () => {
+    update();
+    console.log(`[whep] iceConnectionState -> ${pc.iceConnectionState}`);
+    if (pc.iceConnectionState === "failed") {
+      if (watchRetries < 2) {
+        watchRetries++;
+        st.className = "status dim";
+        st.textContent = `ICE failed — restarting (attempt ${watchRetries}/2)…`;
+        setTimeout(() => {
+          restartWatch().catch((e) => {
+            st.className = "status err";
+            st.textContent = String(e);
+          });
+        }, 1500);
+      } else {
+        st.className = "status err";
+        st.textContent =
+          "ICE failed after 2 restarts — check TURN/network, then press Start watching again";
+      }
+    }
+  });
+  pc.addEventListener("connectionstatechange", () => {
+    update();
+    console.log(`[whep] connectionState -> ${pc.connectionState}`);
+  });
+  // WHEP renegotiation: log browser requests. A fresh WHEP POST (restart)
+  // is the ICE-restart mechanism on our side.
+  pc.addEventListener("negotiationneeded", () => {
+    console.log("[whep] negotiationneeded (browser requested renegotiation)");
+  });
+}
+
+async function startWatchFlow() {
+  const st = $("watchStatus");
+  st.className = "status dim";
+  st.textContent = "negotiating WHEP…";
+  watchRetries = 0;
+
+  watchPc = new RTCPeerConnection({ iceServers: ICE });
+  attachWatchIceLogging(watchPc, st);
+  attachCandidateLogging(watchPc, "whep-watch");
+
+  const video = $("remoteVideo");
+  watchPc.ontrack = (ev) => {
+    // Autoplay policy: start muted, then offer an explicit unmute control.
+    video.muted = true;
+    video.srcObject = ev.streams[0];
+    video
+      .play()
+      .then(() => {
+        st.className = "status ok";
+        st.textContent = "✅ receiving media (muted — press Play/Unmute for audio)";
+        $("btnPlayVideo").disabled = false;
+      })
+      .catch((e) => {
+        console.error("Play failed:", e);
+        st.className = "status dim";
+        st.textContent =
+          "✅ receiving media, but the browser blocked autoplay — press 'Play / Unmute video'";
+        $("btnPlayVideo").disabled = false;
+      });
+  };
+
+  watchPc.addTransceiver("video", { direction: "recvonly" });
+  watchPc.addTransceiver("audio", { direction: "recvonly" });
+  const offer = await watchPc.createOffer();
+  await watchPc.setLocalDescription(offer);
+  await waitIceComplete(watchPc);
+
+  const room = $("watchRoom").value.trim();
+  const cam = $("watchCamera").value.trim();
+  const { sdp, location } = await whipPost(
+    `/api/v1/whep/watch/${encodeURIComponent(room)}/${encodeURIComponent(cam)}`,
+    $("watchToken").value.trim(),
+    watchPc.localDescription.sdp,
+  );
+  await watchPc.setRemoteDescription({ type: "answer", sdp });
+  watchLocation = location;
+
+  $("btnWatch").disabled = true;
+  $("btnStopWatch").disabled = false;
+  st.className = "status dim";
+  st.textContent = `connected (${location}) — waiting for video… ice: ${watchPc.iceConnectionState}`;
+}
+
+$("btnWatch").addEventListener("click", () =>
+  startWatchFlow().catch((e) => {
+    $("watchStatus").className = "status err";
+    $("watchStatus").textContent = String(e);
+    stopWatchLocal();
+  }),
+);
+
+// ICE restart = close the old session server-side, then a fresh WHEP POST.
+async function restartWatch() {
+  try {
+    if (watchLocation) {
+      await fetch(
+        `${base}${watchLocation}?token=${encodeURIComponent($("watchToken").value.trim())}`,
+        { method: "DELETE" },
+      );
+    }
+  } catch {
+    /* old session may already be gone */
+  }
+  stopWatchLocal();
+  await startWatchFlow();
+}
+
+function stopWatchLocal() {
+  watchPc?.close();
+  watchPc = null;
+  watchLocation = null;
+  const video = $("remoteVideo");
+  video.srcObject = null;
+  $("btnPlayVideo").disabled = true;
+  $("btnWatch").disabled = false;
+  $("btnStopWatch").disabled = true;
+}
+
+$("btnStopWatch").addEventListener("click", async () => {
+  try {
+    if (watchLocation) {
+      await fetch(
+        `${base}${watchLocation}?token=${encodeURIComponent($("watchToken").value.trim())}`,
+        { method: "DELETE" },
+      );
+    }
+    $("watchStatus").className = "status dim";
+    $("watchStatus").textContent = "stopped";
+  } catch (e) {
+    $("watchStatus").className = "status err";
+    $("watchStatus").textContent = String(e);
+  }
+  stopWatchLocal();
+});
+
+// Manual play/unmute: browsers require a user gesture to enable audio.
+$("btnPlayVideo").addEventListener("click", async () => {
+  const video = $("remoteVideo");
+  video.muted = false;
+  try {
+    await video.play();
+    $("watchStatus").className = "status ok";
+    $("watchStatus").textContent = "✅ playing with audio";
+    $("btnPlayVideo").disabled = true;
+  } catch (e) {
+    console.error("Play failed:", e);
+  }
+});
+
+// ───────────────────────── room status poller ─────────────────────────
+// Resilient loop: transient errors like ERR_NETWORK_CHANGED (the browser
+// aborts in-flight fetches when the network interface changes) are retried
+// with exponential backoff instead of failing loudly.
+let pollDelay = 4000;
+
+async function pollRoom() {
+  const room = $("pubRoom").value.trim() || $("watchRoom").value.trim();
+  const token = $("watchToken").value.trim() || $("pubToken").value.trim();
+  if (!room || !token) {
+    pollDelay = 4000;
+    setTimeout(pollRoom, pollDelay);
+    return;
+  }
+  try {
+    const res = await fetch(`${base}/api/v1/room/${encodeURIComponent(room)}`, {
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const active = data.cameras.filter((c) => c.active).map((c) => c.id);
+      $("roomStatus").className = "status dim";
+      $("roomStatus").textContent = `room ${data.id} — active cameras: ${active.length ? active.join(", ") : "none"}`;
+      pollDelay = 4000;
+    } else {
+      pollDelay = Math.min(pollDelay * 2, 30000);
+    }
+  } catch (e) {
+    // ERR_NETWORK_CHANGED / offline / server restart: silent backoff retry.
+    console.debug(`[poll] ${e.name}: ${e.message} — retrying in ${pollDelay}ms`);
+    pollDelay = Math.min(pollDelay * 2, 30000);
+  }
+  setTimeout(pollRoom, pollDelay);
+}
+pollRoom();
+</script>
+</body>
+</html>

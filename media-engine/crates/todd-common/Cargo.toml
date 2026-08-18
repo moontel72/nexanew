@@ -1,0 +1,19 @@
+[package]
+name = "todd-common"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Shared auth, config, DTOs and error types for the T-Odd media engine"
+
+[dependencies]
+axum = { workspace = true }
+chrono = { workspace = true }
+jsonwebtoken = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }
+uuid = { workspace = true }

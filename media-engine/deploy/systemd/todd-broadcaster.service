@@ -1,0 +1,38 @@
+# T-Odd Broadcaster (WHIP/WebRTC engine) — Docker mode unit.
+#
+# Only needed in standalone mode (MEDIA_PLANE=remote, Phase 2). In
+# Phase 1 the engine runs embedded inside todd-studio; this unit can stay
+# disabled. The deploy workflow restarts it with `|| true` accordingly.
+#
+# Host networking is required for UDP media (SRTP/ICE) and TURN relay
+# ranges — container bridge networking would break WebRTC ingest.
+
+[Unit]
+Description=T-Odd Broadcaster (WHIP/WebRTC engine, Docker)
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+Environment=IMAGE=traceodd/media-engine-broadcaster:latest
+EnvironmentFile=/opt/todd-media-engine/.env
+
+ExecStartPre=-/usr/bin/docker rm -f todd-broadcaster
+ExecStart=/usr/bin/docker run --name todd-broadcaster --rm --network host \
+  --env-file /opt/todd-media-engine/.env ${IMAGE}
+ExecStop=/usr/bin/docker stop -t 10 todd-broadcaster
+ExecStopPost=/usr/bin/docker rm -f todd-broadcaster
+
+Restart=always
+RestartSec=5
+
+# Media processing is CPU-hungry; keep modest on a shared box
+CPUQuota=250%
+MemoryMax=2G
+LimitNOFILE=65536
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,93 @@
+# ============================================================================
+# T-Odd Media Engine — docker-compose (Phase 2 dedicated media server)
+#
+# Phase 1 note: on the shared VPS you can run the bare-metal systemd units
+# instead — the images are identical, so nothing changes when you move.
+#
+#   docker compose up -d                     # studio + broadcaster + redis
+#   docker compose --profile turn up -d      # + coturn TURN server
+#
+# ============================================================================
+
+name: todd-media-engine
+
+services:
+  # ---- control plane -------------------------------------------------------
+  studio:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        SERVICE: todd-signaling
+    image: traceodd/todd-studio:latest
+    restart: unless-stopped
+    # Phase 1: keep loopback-only; nginx on the host reaches it.
+    # Phase 2: publish 8080 publicly if nginx runs in another host/VM.
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - ../../.env
+    environment:
+      STUDIO_HOST: 0.0.0.0          # inside the container network
+      MEDIA_PLANE: remote           # broadcaster runs as its own service
+      BROADCASTER_URL: http://broadcaster:8081
+      ROOM_STORE: redis             # shared state across Studio replicas
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - broadcaster
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ---- media plane ----------------------------------------------------------
+  broadcaster:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        SERVICE: todd-sfu
+    image: traceodd/todd-broadcaster:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8081"
+    env_file:
+      - ../../.env
+    environment:
+      BROADCASTER_HOST: 0.0.0.0    # inside the container network
+      # In Phase 2 the media server needs its PUBLIC IP reachable for ICE
+      # candidate selection; a plain TURN server (below) covers carrier NATs.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ---- room-state store (reserved for HA/Phase 2 scale-out) ----------------
+  # The engine currently keeps room state in memory. Redis is wired here
+  # so the shared-state migration is a config change, not an architecture
+  # change.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ---- TURN server for carrier-NAT traversal ---------------------------------
+  # coturn needs host networking on Linux to expose the full UDP relay
+  # range (49160-49200) — hence the profile so it is opt-in.
+  coturn:
+    image: coturn/coturn:4.6
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./coturn.conf:/etc/coturn/turnserver.conf:ro
+    profiles: ["turn"]

@@ -5,14 +5,15 @@
 //!
 //! Usage:
 //!   echo '{"code_type":"unit","count":1000,...}' | trace_odd_rust generate
-//!   echo '{"overs_per_side":20,"deliveries":[...]}' | trace_odd_rust cricket --recompute
 //!   trace_odd_rust --version
+//!
+//! (Cricket score recomputation moved to the `todd-cricket` crate in
+//! `media-engine/` — run its binary with the same stdin-JSON contract.)
 
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
 
 mod algorithms;
-mod cricket;
 mod generators;
 mod international;
 mod models;
@@ -70,7 +71,7 @@ fn main() {
     }
 
     if args.len() < 2 {
-        eprintln!("Usage: trace_odd_rust <generate|cricket|--version>");
+        eprintln!("Usage: trace_odd_rust <generate|--version>");
         std::process::exit(1);
     }
 
@@ -86,30 +87,8 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        "cricket" => {
-            let sub = args.get(2).map(|s| s.as_str()).unwrap_or("");
-            match sub {
-                "--recompute" => {
-                    if let Err(e) = cricket::handle_recompute_command() {
-                        let err = serde_json::json!({
-                            "success": false,
-                            "error": e.to_string()
-                        });
-                        println!("{}", serde_json::to_string(&err).unwrap());
-                        std::process::exit(1);
-                    }
-                }
-                _ => {
-                    eprintln!("Usage: trace_odd_rust cricket --recompute (reads JSON from stdin)");
-                    std::process::exit(1);
-                }
-            }
-        }
         other => {
-            eprintln!(
-                "Unknown command: {}. Use 'generate', 'cricket' or '--version'",
-                other
-            );
+            eprintln!("Unknown command: {}. Use 'generate' or '--version'", other);
             std::process::exit(1);
         }
     }

@@ -1,0 +1,27 @@
+[package]
+name = "todd-replay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "T-Odd Replay: circular RAM ring buffer, slow-motion processor and clip exporter for cricket instant replay"
+
+[dependencies]
+todd-common = { path = "../todd-common" }
+todd-telemetry = { path = "../todd-telemetry" }
+todd-transcode = { path = "../todd-transcode" }
+
+bytes = { workspace = true }
+dashmap = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[features]
+default = []
+# Enables clip export via the todd-transcode GStreamer pipelines.
+gst = ["todd-transcode/gst"]
