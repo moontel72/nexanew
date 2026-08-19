@@ -14,13 +14,5 @@ export default defineConfig({
     target: "es2021",
     outDir: "dist",
     emptyOutDir: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          "react-vendor": ["react", "react-dom"],
-          "three-vendor": ["three", "@react-three/fiber", "@react-three/drei"],
-        },
-      },
-    },
   },
 });

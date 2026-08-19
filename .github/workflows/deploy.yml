@@ -10,6 +10,7 @@ on:
       - "lib/**"
       - "web/**"
       - "rust/**"
+      - "media-engine/ui/todd-studio-gui/**"
       - ".nginx/**"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
