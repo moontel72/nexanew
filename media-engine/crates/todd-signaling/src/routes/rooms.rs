@@ -176,9 +176,7 @@ pub async fn delete_room(
     }
     state.store.delete_room(&room_id).await?;
     tracing::info!(room = %room_id, "room deleted");
-    state
-        .control
-        .publish(ControlEvent::RoomDeleted { room_id });
+    state.control.publish(ControlEvent::RoomDeleted { room_id });
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -221,10 +219,7 @@ pub async fn add_camera(
         .signed_duration_since(chrono::Utc::now())
         .num_seconds()
         .max(1) as u64;
-    state
-        .store
-        .upsert_camera(&room_id, &camera, ttl)
-        .await?;
+    state.store.upsert_camera(&room_id, &camera, ttl).await?;
 
     tracing::info!(room = %room_id, camera = %camera.id, "camera added");
     state.control.publish(ControlEvent::CameraAdded {
@@ -260,7 +255,11 @@ pub async fn update_camera(
     let Some(mut room) = state.store.get_room(&room_id).await? else {
         return Err(AppError::NotFound(format!("room {room_id}")));
     };
-    let Some(existing) = room.cameras.iter_mut().find(|camera| camera.id == camera_id) else {
+    let Some(existing) = room
+        .cameras
+        .iter_mut()
+        .find(|camera| camera.id == camera_id)
+    else {
         return Err(AppError::NotFound(format!(
             "camera {camera_id} is not part of room {room_id}"
         )));
@@ -289,10 +288,7 @@ pub async fn update_camera(
         .signed_duration_since(chrono::Utc::now())
         .num_seconds()
         .max(1) as u64;
-    state
-        .store
-        .upsert_camera(&room_id, existing, ttl)
-        .await?;
+    state.store.upsert_camera(&room_id, existing, ttl).await?;
 
     let camera = existing.clone();
     tracing::info!(room = %room_id, camera = %camera_id, "camera updated");
@@ -336,10 +332,9 @@ pub async fn remove_camera(
 
     state.store.remove_camera(&room_id, &camera_id).await?;
     tracing::info!(room = %room_id, camera = %camera_id, "camera removed");
-    state.control.publish(ControlEvent::CameraRemoved {
-        room_id,
-        camera_id,
-    });
+    state
+        .control
+        .publish(ControlEvent::CameraRemoved { room_id, camera_id });
     Ok(StatusCode::NO_CONTENT)
 }
 

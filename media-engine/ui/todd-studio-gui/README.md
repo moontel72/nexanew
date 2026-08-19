@@ -74,6 +74,7 @@ into `react-vendor` and `three-vendor` chunks to keep the main entry small.
 | `/api/v1/program/{room}` | `GET` | Admin; current program state (reconcile after a lost control feed) |
 | `/api/v1/whep/program/{room}` | `POST` | Viewer; WHEP egress for the composite PGM (gst builds) |
 | `/api/v1/replay/trigger` | `POST` | Admin; instant replay / slow-motion |
+| `/api/v1/audio/mix/{room}` | `GET` / `PUT` | Admin; audio console config + metering |
 | `/api/v1/cricket/live/{match_id}` | `GET` | Admin; cached scoreboard lower-third |
 | `/api/v1/cricket/ws` | `WS` | Push feed of cached matches |
 | `/api/v1/telemetry/ws` | `WS` | Stream diagnostics feed |

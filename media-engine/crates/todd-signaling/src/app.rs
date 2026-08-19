@@ -120,6 +120,10 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
             "/cricket/config",
             get(routes::scoreboard::get_config).put(routes::scoreboard::put_config),
         )
+        .route(
+            "/audio/mix/{room_id}",
+            get(routes::audio::get_mix).put(routes::audio::put_mix),
+        )
         .route("/control/ws", get(routes::control_ws::ws_handler))
         .with_state(state)
 }

@@ -15,6 +15,7 @@ use std::time::Duration;
 
 use dashmap::DashMap;
 use todd_common::error::AppError;
+use todd_common::media::{AudioMixView, AudioMixerConfig};
 #[cfg(feature = "gst")]
 use todd_common::types::SourceRef;
 use todd_common::types::{
@@ -47,7 +48,7 @@ use todd_transcode::mixer::MixerOutputConfig;
 #[cfg(feature = "gst")]
 use todd_transcode::mixer::{plan_scene, source_key};
 #[cfg(feature = "gst")]
-use todd_transcode::mixer_gst::GstProgramMixer;
+use todd_transcode::mixer_gst::{audio_feed_key, GstProgramMixer};
 
 /// Per-host engine configuration. Clonable: the interface/IP filters are
 /// `Arc`d closures.
@@ -131,6 +132,8 @@ pub struct Engine {
     pub replay: Arc<ReplayManager>,
     /// Per-room program (PGM) source state. Keyed by room id.
     pub(crate) program: Arc<DashMap<String, ProgramState>>,
+    /// Per-room audio mixer configuration. Keyed by room id.
+    pub(crate) audio: Arc<DashMap<String, AudioMixerConfig>>,
     /// Per-room GStreamer program mixers (gst builds only; without the
     /// feature the program egress stays a passthrough of the PGM camera).
     #[cfg(feature = "gst")]
@@ -158,6 +161,7 @@ impl Engine {
             pli,
             replay: ReplayManager::new(replay_buffer_ms, replay_export_callback_url),
             program: Arc::new(DashMap::new()),
+            audio: Arc::new(DashMap::new()),
             #[cfg(feature = "gst")]
             mixers: Arc::new(DashMap::new()),
             #[cfg(feature = "gst")]
@@ -466,6 +470,43 @@ impl Engine {
         self.program.get(room_id).map(|entry| entry.value().clone())
     }
 
+    /// The room's audio mix: active config + the latest metering sampled
+    /// by the media plane (empty/floor levels without the gst feature).
+    pub fn get_audio_mix(&self, room_id: &str) -> AudioMixView {
+        let config = self
+            .audio
+            .get(room_id)
+            .map(|entry| entry.value().clone())
+            .unwrap_or_default();
+        let metering = self
+            .telemetry
+            .audio_levels_for(room_id)
+            .into_iter()
+            .map(|(bus, peak, rms)| todd_common::media::BusMetering {
+                bus,
+                peak_db: peak,
+                rms_db: rms,
+            })
+            .collect();
+        AudioMixView { config, metering }
+    }
+
+    /// Applies a new audio mix for a room. In gst builds the running
+    /// program mixer applies the faders/gain/delay immediately.
+    pub fn set_audio_mix(&self, room_id: &str, config: AudioMixerConfig) -> AudioMixView {
+        let config = config.clamped();
+        self.audio.insert(room_id.to_string(), config.clone());
+
+        #[cfg(feature = "gst")]
+        if let Some(mixer) = self.mixers.get(room_id) {
+            mixer.apply_audio_config(&config);
+        }
+
+        self.telemetry.registry.inc("todd_audio_mix_updates_total");
+        tracing::info!(room = room_id, "audio mix updated");
+        self.get_audio_mix(room_id)
+    }
+
     /// WHEP egress fed from the room's current program source. In gst
     /// builds the video comes from the room's composite mixer output
     /// (audio stays a router fan-out of the PGM camera); without gst the
@@ -524,6 +565,7 @@ impl Engine {
             self,
             whep_peer::TrackFeed::Program {
                 video: video_rx,
+                audio: Some(mixer.subscribe_audio()),
                 codec: MediaCodec::H264,
                 audio_room: state.room_id.clone(),
                 audio_camera: state.camera_id.clone(),
@@ -564,11 +606,14 @@ impl Engine {
     }
 
     /// Resolves the scene referenced by a program state and applies it to
-    /// the room's mixer. Scenes referencing non-H.264 (or not yet live)
-    /// sources keep the room on passthrough program egress.
+    /// the room's mixer, together with the room's audio feeds and audio
+    /// mix. Scenes referencing non-H.264 (or not yet live) sources keep
+    /// the room on passthrough program egress.
     #[cfg(feature = "gst")]
     fn apply_mixer_scene(&self, state: &ProgramState) {
         use std::collections::HashMap;
+        use std::sync::Arc;
+        use todd_common::media::AudioBus;
         use todd_transcode::media::MediaCodec;
 
         let fallback = SourceRef {
@@ -613,7 +658,15 @@ impl Engine {
         }
 
         if !self.mixers.contains_key(&state.room_id) {
-            match GstProgramMixer::build(&self.config.program_output) {
+            // Level samples from the mixer's `level` elements flow into
+            // the engine-wide telemetry feed.
+            let telemetry = self.telemetry.clone();
+            let metering_room = state.room_id.clone();
+            let on_metering: Arc<dyn Fn(String, f32, f32) + Send + Sync> =
+                Arc::new(move |bus, peak_db, rms_db| {
+                    telemetry.record_audio_level(&metering_room, &bus, peak_db, rms_db);
+                });
+            match GstProgramMixer::build(&self.config.program_output, on_metering) {
                 Ok(mixer) => {
                     self.mixers.insert(state.room_id.clone(), Arc::new(mixer));
                 }
@@ -642,6 +695,35 @@ impl Engine {
             state.duration_ms,
             stinger_asset,
         );
+
+        // Audio: bind every live Opus track of the room to its bus and
+        // apply the current mix.
+        let mut audio_feeds: HashMap<
+            AudioBus,
+            Vec<(
+                String,
+                tokio::sync::mpsc::Receiver<todd_transcode::media::RtpChunk>,
+            )>,
+        > = HashMap::new();
+        for (camera_id, rid) in self.router.audio_feeds(&state.room_id) {
+            let codec = self.router.codec_of(&state.room_id, &camera_id, &rid);
+            if !matches!(codec, Some(MediaCodec::Opus)) {
+                continue;
+            }
+            let bus = AudioBus::from_rid(Some(&rid));
+            let key = audio_feed_key(&camera_id, &rid);
+            audio_feeds
+                .entry(bus)
+                .or_default()
+                .push((key, self.router.subscribe(&state.room_id, &camera_id, &rid)));
+        }
+        mixer.apply_audio_feeds(audio_feeds);
+        let audio_config = self
+            .audio
+            .get(&state.room_id)
+            .map(|entry| entry.value().clone())
+            .unwrap_or_default();
+        mixer.apply_audio_config(&audio_config);
     }
 
     pub fn router(&self) -> Arc<TrackRouter> {

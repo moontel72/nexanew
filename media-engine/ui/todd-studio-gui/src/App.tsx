@@ -13,6 +13,7 @@ import { SegmentManager } from "./components/SegmentManager";
 import { InputPanel } from "./components/InputPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SceneComposer } from "./components/scenes/SceneComposer";
+import { AudioMixer } from "./components/AudioMixer";
 import { OverlayController } from "./components/overlays/OverlayController";
 
 export default function App() {
@@ -75,6 +76,7 @@ export default function App() {
           <VisionSwitcher />
           <TransitionBar />
           <SceneComposer />
+          <AudioMixer />
           <ReplayDirector
             roomId={feeds[0]?.roomId ?? ""}
             cameraIds={cameraIds}

@@ -95,6 +95,16 @@ WHEP viewers. Env configuration:
 Program mixing requires all referenced cameras to publish H.264; scenes
 referencing other codecs keep the room on passthrough program egress.
 
+### Audio mixer (gst builds)
+
+With the `gst` feature the program mixer also mixes the room's audio:
+per-bus Opus tracks (`commentary` / `ambient` / `sfx` / `music`, routed
+by track RID) go through `volume` (fader) → `audioamplify` (gain trim)
+→ `audiodelay` (lip-sync) branches into an `audiomixer`, whose Opus
+output feeds program WHEP viewers. Per-bus and master `level` elements
+post metering into the telemetry feed. The mix is controlled live via
+`PUT /api/v1/audio/mix/{room_id}`.
+
 ## Endpoints
 
 | Method | Path | Auth | Purpose |
@@ -123,7 +133,9 @@ referencing other codecs keep the room on passthrough program egress.
 | GET | `/api/v1/cricket/ws` | none* | Push feed of cached matches |
 | GET | `/api/v1/cricket/config` | admin | Current cricket sync configuration |
 | PUT | `/api/v1/cricket/config` | admin | Runtime sync config (match ids, API token, poll interval) |
-| GET | `/api/v1/control/ws` | admin | Control-plane WebSocket: rooms, cameras, PGM, cricket config |
+| GET | `/api/v1/audio/mix/{room_id}` | admin | Audio mix: bus config + live metering |
+| PUT | `/api/v1/audio/mix/{room_id}` | admin | Update faders (dB), mute/solo, gain trim, lip-sync delay |
+| GET | `/api/v1/control/ws` | admin | Control-plane WebSocket: rooms, cameras, PGM, audio mix, cricket config |
 | GET | `/metrics` | none* | Prometheus metrics (see `docs/06-ice-and-telemetry.md`) |
 | GET | `/api/v1/telemetry/ws` | none* | WebSocket diagnostics feed (JSON snapshots) |
 | GET | `/healthz`, `/readyz` | none | Liveness / readiness |

@@ -1,3 +1,4 @@
+pub mod audio;
 pub mod control_ws;
 pub mod health;
 pub mod program;

@@ -102,16 +102,36 @@ pub struct AudioBusSpec {
     pub bus: AudioBus,
     #[serde(default = "default_true")]
     pub enabled: bool,
-    /// Bus gain in dB (0.0 = unity).
+    /// Fader gain in dB (0.0 = unity). The Studio UI presents this as a
+    /// 0.0–2.0× multiplier derived from the dB value.
     #[serde(default)]
     pub volume_db: f32,
     #[serde(default)]
     pub muted: bool,
+    /// Solo: when any bus is soloed, only soloed buses are audible.
+    #[serde(default)]
+    pub solo: bool,
+    /// Trim gain in dB, clamped to [-24, +24].
+    #[serde(default)]
+    pub gain_db: f32,
+    /// Lip-sync correction delay in milliseconds, clamped to [0, 500].
+    #[serde(default)]
+    pub delay_ms: u64,
 }
 
 fn default_true() -> bool {
     true
 }
+
+/// Fader range: faders below this are effectively silence.
+pub const FADER_FLOOR_DB: f32 = -60.0;
+/// Fader ceiling.
+pub const FADER_CEILING_DB: f32 = 12.0;
+/// Gain trim range.
+pub const GAIN_MIN_DB: f32 = -24.0;
+pub const GAIN_MAX_DB: f32 = 24.0;
+/// Lip-sync delay range.
+pub const DELAY_MAX_MS: u64 = 500;
 
 impl Default for AudioBusSpec {
     fn default() -> Self {
@@ -120,7 +140,25 @@ impl Default for AudioBusSpec {
             enabled: true,
             volume_db: 0.0,
             muted: false,
+            solo: false,
+            gain_db: 0.0,
+            delay_ms: 0,
         }
+    }
+}
+
+impl AudioBusSpec {
+    /// Clamps every numeric field into its documented range.
+    pub fn clamped(mut self) -> Self {
+        self.volume_db = self.volume_db.clamp(FADER_FLOOR_DB, FADER_CEILING_DB);
+        self.gain_db = self.gain_db.clamp(GAIN_MIN_DB, GAIN_MAX_DB);
+        self.delay_ms = self.delay_ms.min(DELAY_MAX_MS);
+        self
+    }
+
+    /// True when another bus's solo makes this bus inaudible.
+    pub fn audible(&self, any_solo: bool) -> bool {
+        self.enabled && !self.muted && (!any_solo || self.solo)
     }
 }
 
@@ -140,8 +178,7 @@ fn default_buses() -> Vec<AudioBusSpec> {
         .map(|bus| AudioBusSpec {
             bus: *bus,
             enabled: *bus == AudioBus::Commentary || *bus == AudioBus::Ambient,
-            volume_db: 0.0,
-            muted: false,
+            ..AudioBusSpec::default()
         })
         .collect()
 }
@@ -170,20 +207,61 @@ impl AudioMixerConfig {
 
     /// True when at least one bus is unmuted and enabled.
     pub fn has_audible_input(&self) -> bool {
+        let any_solo = self.buses.iter().any(|spec| spec.solo);
         self.buses
             .iter()
-            .any(|spec| spec.enabled && !spec.muted && spec.volume_db > -60.0)
+            .any(|spec| spec.audible(any_solo) && spec.volume_db > -60.0)
     }
 
-    /// Effective gain (dB) for a bus: -inf when disabled/muted.
+    /// Effective gain (dB) for a bus: -inf when disabled/muted/soloed-out.
     pub fn effective_gain_db(&self, bus: AudioBus) -> f32 {
         let spec = self.bus(bus);
-        if !spec.enabled || spec.muted {
+        let any_solo = self.buses.iter().any(|spec| spec.solo);
+        if !spec.audible(any_solo) {
             f32::NEG_INFINITY
         } else {
             spec.volume_db
         }
     }
+
+    /// Clamps every bus and the master fader into their documented ranges.
+    pub fn clamped(mut self) -> Self {
+        self.master_volume_db = self
+            .master_volume_db
+            .clamp(FADER_FLOOR_DB, FADER_CEILING_DB);
+        self.buses = self.buses.into_iter().map(|spec| spec.clamped()).collect();
+        self
+    }
+}
+
+/// Real-time level metering of one bus (peak / RMS in dBFS). Produced by
+/// the media plane; `-inf`-like silence is reported as the floor.
+pub const METERING_FLOOR_DB: f32 = -60.0;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BusMetering {
+    /// Bus name (`commentary`/`ambient`/`sfx`/`music`/`master`).
+    pub bus: String,
+    pub peak_db: f32,
+    pub rms_db: f32,
+}
+
+impl BusMetering {
+    pub fn silent(bus: &str) -> Self {
+        Self {
+            bus: bus.to_string(),
+            peak_db: METERING_FLOOR_DB,
+            rms_db: METERING_FLOOR_DB,
+        }
+    }
+}
+
+/// Read model of `GET /api/v1/audio/mix/{room_id}`: the active mix plus
+/// the latest metering per bus.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AudioMixView {
+    pub config: AudioMixerConfig,
+    pub metering: Vec<BusMetering>,
 }
 
 #[cfg(test)]
@@ -218,6 +296,9 @@ mod tests {
                 enabled: true,
                 volume_db: 3.0,
                 muted: true,
+                solo: false,
+                gain_db: 0.0,
+                delay_ms: 0,
             }],
             master_volume_db: 0.0,
         };
@@ -225,5 +306,56 @@ mod tests {
             cfg.effective_gain_db(AudioBus::Commentary),
             f32::NEG_INFINITY
         );
+    }
+
+    #[test]
+    fn solo_silences_other_buses() {
+        let cfg = AudioMixerConfig {
+            buses: vec![
+                AudioBusSpec {
+                    bus: AudioBus::Commentary,
+                    enabled: true,
+                    solo: false,
+                    ..AudioBusSpec::default()
+                },
+                AudioBusSpec {
+                    bus: AudioBus::Ambient,
+                    enabled: true,
+                    solo: true,
+                    ..AudioBusSpec::default()
+                },
+            ],
+            master_volume_db: 0.0,
+        };
+        assert_eq!(
+            cfg.effective_gain_db(AudioBus::Commentary),
+            f32::NEG_INFINITY
+        );
+        assert_eq!(cfg.effective_gain_db(AudioBus::Ambient), 0.0);
+        assert!(cfg.has_audible_input());
+    }
+
+    #[test]
+    fn clamped_bounds_gain_and_delay() {
+        let spec = AudioBusSpec {
+            bus: AudioBus::Sfx,
+            enabled: true,
+            volume_db: 40.0,
+            muted: false,
+            solo: false,
+            gain_db: 99.0,
+            delay_ms: 10_000,
+        }
+        .clamped();
+        assert_eq!(spec.volume_db, FADER_CEILING_DB);
+        assert_eq!(spec.gain_db, GAIN_MAX_DB);
+        assert_eq!(spec.delay_ms, DELAY_MAX_MS);
+    }
+
+    #[test]
+    fn metering_silence_reports_floor() {
+        let meter = BusMetering::silent("master");
+        assert_eq!(meter.peak_db, METERING_FLOOR_DB);
+        assert_eq!(meter.rms_db, METERING_FLOOR_DB);
     }
 }

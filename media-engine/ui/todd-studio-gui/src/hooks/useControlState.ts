@@ -10,6 +10,7 @@ const EMPTY_STATE: ControlState = {
   error: null,
   rooms: [],
   programs: {},
+  audioMixes: {},
   cricket: null,
 };
 

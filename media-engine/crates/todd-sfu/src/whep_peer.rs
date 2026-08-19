@@ -49,12 +49,14 @@ pub(crate) enum TrackFeed {
         camera_id: String,
     },
     /// Composite program egress: video from the GStreamer mixer's encoded
-    /// output, audio from the PGM camera's live router stream. Constructed
+    /// output, audio from the mixer's mixed Opus output (falling back to
+    /// the PGM camera's live router stream when no mix exists). Constructed
     /// only in gst builds (without the feature the program egress stays a
     /// passthrough of the PGM camera).
     #[cfg_attr(not(feature = "gst"), allow(dead_code))]
     Program {
         video: tokio::sync::broadcast::Receiver<RtpChunk>,
+        audio: Option<tokio::sync::broadcast::Receiver<RtpChunk>>,
         codec: MediaCodec,
         audio_room: String,
         audio_camera: String,
@@ -199,6 +201,7 @@ pub(crate) async fn create_viewer(
             }
             TrackFeed::Program {
                 video,
+                audio,
                 audio_room,
                 audio_camera,
                 ..
@@ -223,7 +226,27 @@ pub(crate) async fn create_viewer(
                             }
                         }
                     });
+                } else if let Some(audio) = audio {
+                    // Mixed program audio from the mixer's Opus output.
+                    let mut rx = audio.resubscribe();
+                    tokio::spawn(async move {
+                        loop {
+                            tokio::select! {
+                                _ = pump_shutdown.cancelled() => break,
+                                chunk = rx.recv() => {
+                                    let Ok(chunk) = chunk else { break };
+                                    if chunk.codec != chosen {
+                                        continue;
+                                    }
+                                    if !write_chunk(&track, &chunk).await {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    });
                 } else {
+                    // Fallback: the PGM camera's live router audio.
                     let (router, room, camera) = (
                         engine.router.clone(),
                         audio_room.to_string(),

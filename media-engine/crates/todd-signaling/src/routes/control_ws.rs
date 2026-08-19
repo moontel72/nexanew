@@ -30,7 +30,7 @@ use futures_util::StreamExt;
 use serde::Serialize;
 use todd_common::{
     auth::{authenticate, TokenRole},
-    media::AudioMixerConfig,
+    media::{AudioMixView, AudioMixerConfig},
     types::{CameraInfo, ProgramState, Room},
 };
 use tokio::sync::broadcast;
@@ -81,6 +81,10 @@ pub enum ControlEvent {
     },
     ProgramChanged {
         program: ProgramState,
+    },
+    AudioMixerChanged {
+        room_id: String,
+        mix: AudioMixView,
     },
     CricketConfigChanged {
         config: CricketConfigView,

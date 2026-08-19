@@ -20,6 +20,7 @@ use todd_common::{
     auth::{authenticate, AuthConfig, TokenRole},
     error::AppError,
     http::{sdp_body, whep_response, whip_response},
+    media::{AudioMixView, AudioMixerConfig},
     types::{ForwardTarget, ProgramState, ProgramTransitionRequest},
 };
 use todd_replay::export::ClipExportRequest;
@@ -108,6 +109,10 @@ pub fn routes(engine: Arc<Engine>, auth: AuthConfig, telemetry: Arc<Telemetry>) 
         .route(
             "/api/v1/whep/program/{room_id}",
             axum::routing::post(watch_program),
+        )
+        .route(
+            "/api/v1/audio/mix/{room_id}",
+            get(get_audio_mix).put(put_audio_mix),
         )
         .with_state(state)
 }
@@ -285,6 +290,33 @@ async fn watch_replay(
         .start_replay_viewer(&replay_id, &camera_id, &offer)
         .await?;
     whep_response(StatusCode::CREATED, Some(&session_id), answer)
+}
+
+/// GET /api/v1/audio/mix/{room_id} — admin.
+async fn get_audio_mix(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(room_id): Path<String>,
+) -> Result<Json<AudioMixView>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    Ok(Json(state.engine.get_audio_mix(&room_id)))
+}
+
+/// PUT /api/v1/audio/mix/{room_id} — admin.
+async fn put_audio_mix(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(room_id): Path<String>,
+    Json(config): Json<AudioMixerConfig>,
+) -> Result<Json<AudioMixView>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    Ok(Json(state.engine.set_audio_mix(&room_id, config)))
 }
 
 // --------------------------------------------------------------------------

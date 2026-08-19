@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use axum::http::header::{CONTENT_TYPE, LOCATION};
+use todd_common::media::{AudioMixView, AudioMixerConfig};
 use todd_common::types::{ProgramState, ProgramTransitionRequest};
 use todd_common::{error::AppError, types::ForwardTarget};
 use todd_replay::export::{ClipExportRequest, ExportStatus};
@@ -82,6 +83,18 @@ pub trait MediaPlane: Send + Sync {
         room_id: &str,
         offer_sdp: &str,
     ) -> Result<(String, String), AppError>;
+
+    // ---- audio mixer ----
+
+    /// Current audio mix of a room: config + latest metering.
+    async fn get_audio_mix(&self, room_id: &str) -> Result<AudioMixView, AppError>;
+
+    /// Applies a new audio mix (faders, mute/solo, gain, delay).
+    async fn set_audio_mix(
+        &self,
+        room_id: &str,
+        config: AudioMixerConfig,
+    ) -> Result<AudioMixView, AppError>;
 }
 
 /// Phase 1 default: the Broadcaster engine runs in-process.
@@ -176,6 +189,18 @@ impl MediaPlane for EmbeddedMediaPlane {
         offer_sdp: &str,
     ) -> Result<(String, String), AppError> {
         self.engine.start_program_viewer(room_id, offer_sdp).await
+    }
+
+    async fn get_audio_mix(&self, room_id: &str) -> Result<AudioMixView, AppError> {
+        Ok(self.engine.get_audio_mix(room_id))
+    }
+
+    async fn set_audio_mix(
+        &self,
+        room_id: &str,
+        config: AudioMixerConfig,
+    ) -> Result<AudioMixView, AppError> {
+        Ok(self.engine.set_audio_mix(room_id, config))
     }
 }
 
@@ -474,5 +499,40 @@ impl MediaPlane for RemoteMediaPlane {
             .to_string();
         let answer = resp.text().await?;
         Ok((session_id, answer))
+    }
+
+    async fn get_audio_mix(&self, room_id: &str) -> Result<AudioMixView, AppError> {
+        let url = format!("{}/api/v1/audio/mix/{room_id}", self.base);
+        let resp = self
+            .client
+            .get(&url)
+            .bearer_auth(&self.internal_token)
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| AppError::Internal(format!("broadcaster rejected audio mix get: {e}")))?;
+        resp.json()
+            .await
+            .map_err(|e| AppError::Internal(format!("invalid audio mix response: {e}")))
+    }
+
+    async fn set_audio_mix(
+        &self,
+        room_id: &str,
+        config: AudioMixerConfig,
+    ) -> Result<AudioMixView, AppError> {
+        let url = format!("{}/api/v1/audio/mix/{room_id}", self.base);
+        let resp = self
+            .client
+            .put(&url)
+            .bearer_auth(&self.internal_token)
+            .json(&config)
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| AppError::Internal(format!("broadcaster rejected audio mix set: {e}")))?;
+        resp.json()
+            .await
+            .map_err(|e| AppError::Internal(format!("invalid audio mix response: {e}")))
     }
 }

@@ -116,6 +116,7 @@ export interface TelemetrySnapshot {
   metrics: [string, number][];
   streams: StreamFeedEntry[];
   ice_sessions: IceSessionInfo[];
+  audio_levels: AudioLevelEntry[];
 }
 
 // --------------------------------------------------------------------------
@@ -201,13 +202,40 @@ export type AudioBus = "commentary" | "ambient" | "sfx" | "music";
 export interface AudioBusSpec {
   bus: AudioBus;
   enabled: boolean;
+  /** Fader gain in dB (0 = unity); the UI presents a 0–2× multiplier. */
   volume_db: number;
   muted: boolean;
+  solo: boolean;
+  /** Trim gain in dB, clamped [-24, +24]. */
+  gain_db: number;
+  /** Lip-sync correction delay in ms, clamped [0, 500]. */
+  delay_ms: number;
 }
 
 export interface AudioMixerConfig {
   buses: AudioBusSpec[];
   master_volume_db: number;
+}
+
+/** Real-time level metering of one bus (dBFS). */
+export interface BusMetering {
+  bus: string;
+  peak_db: number;
+  rms_db: number;
+}
+
+/** Read model of GET/PUT /api/v1/audio/mix/{room_id}. */
+export interface AudioMixView {
+  config: AudioMixerConfig;
+  metering: BusMetering[];
+}
+
+/** Audio level entry in the telemetry WebSocket snapshot. */
+export interface AudioLevelEntry {
+  room_id: string;
+  bus: string;
+  peak_db: number;
+  rms_db: number;
 }
 
 // --------------------------------------------------------------------------
@@ -266,4 +294,5 @@ export type ControlEvent =
   | { type: "camera_updated"; room_id: string; camera: CameraInfo }
   | { type: "camera_removed"; room_id: string; camera_id: string }
   | { type: "program_changed"; program: ProgramState }
+  | { type: "audio_mixer_changed"; room_id: string; mix: AudioMixView }
   | { type: "cricket_config_changed"; config: CricketConfigView };

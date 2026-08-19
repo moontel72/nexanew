@@ -233,6 +233,20 @@ impl TrackRouter {
             .collect()
     }
 
+    /// All live audio feeds of a room as `(camera_id, rid)` pairs — the
+    /// inputs of the room's program audio mixer. Sorted and deduped.
+    pub fn audio_feeds(&self, room_id: &str) -> Vec<(String, String)> {
+        let mut feeds: Vec<(String, String)> = self
+            .streams
+            .iter()
+            .filter(|entry| entry.key().0.as_str() == room_id && entry.value().is_audio())
+            .map(|entry| (entry.key().1.clone(), entry.key().2.clone()))
+            .collect();
+        feeds.sort();
+        feeds.dedup();
+        feeds
+    }
+
     /// Tears down all state for one camera (streams + subscriber
     /// channels + telemetry stream stats + layer order).
     pub fn remove_camera(&self, room_id: &str, camera_id: &str) {

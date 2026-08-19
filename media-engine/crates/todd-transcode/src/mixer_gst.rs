@@ -9,6 +9,12 @@
 //! stinger:    uridecodebin (uri set at runtime) → videoconvert → videoscale
 //!             → alpha(stinger_alpha) → compositor.sink_stinger
 //! compositor → videoconvert → encode (h264) → rtph264pay → appsink → fan-out
+//!
+//! per bus b:  appsrc (Opus RTP) → rtpopusdepay → opusdec → audioconvert
+//!             → volume (fader) → audioamplify (gain) → audiodelay (delay)
+//!             → level (meter) → audiomixer
+//! audiomixer ← audiotestsrc silence (keeps a live pad)
+//! audiomixer → level (master meter) → opusenc → rtpopuspay → appsink → fan-out
 //! ```
 //!
 //! Transitions are rendered server-side by animating per-slot `alpha`
@@ -19,14 +25,18 @@
 //! - Stinger: animated overlay asset ramps 0→1→0 while the program source
 //!   swaps behind it.
 //!
-//! Program output is standardized on H.264 (decode → compose → re-encode);
-//! scenes referencing non-H.264 sources fall back to passthrough egress at
-//! the engine level.
+//! The audio mix is applied live via `volume` / `audioamplify` /
+//! `audiodelay` element properties; per-bus and master `level` elements
+//! post metering messages that are forwarded to the engine's telemetry.
+//!
+//! Program output is standardized on H.264 video + Opus audio (decode →
+//! compose → re-encode); scenes referencing non-H.264 sources fall back
+//! to passthrough egress at the engine level.
 
 #![cfg(feature = "gst")]
 
-use std::collections::HashMap;
-use std::sync::Mutex;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use bytes::Bytes;
@@ -34,6 +44,7 @@ use gst::prelude::*;
 use gstreamer as gst;
 use gstreamer_app::{AppSink, AppSrc};
 use todd_common::error::AppError;
+use todd_common::media::{AudioBus, AudioMixerConfig, FADER_FLOOR_DB};
 use todd_common::types::{SceneLayout, SourceRef, StingerSpec, TransitionKind};
 use tokio::sync::{broadcast, mpsc};
 use tokio::task::JoinHandle;
@@ -43,6 +54,11 @@ use crate::media::{MediaCodec, RtpChunk};
 use crate::mixer::{
     ease_progress, plan_scene, MixerOutputConfig, PixelRect, ScenePlan, SlotPlan, MAX_SLOTS,
 };
+
+/// Called with `(bus, peak_db, rms_db)` whenever a `level` element posts
+/// a metering message. `bus` is `commentary`/`ambient`/`sfx`/`music` or
+/// `master`.
+pub type MeteringCallback = Arc<dyn Fn(String, f32, f32) + Send + Sync>;
 
 /// Runtime state of one compositor slot.
 struct SlotRuntime {
@@ -59,22 +75,39 @@ pub struct GstProgramMixer {
     stinger_alpha: gst::Element,
     stinger_src: gst::Element,
     video_tx: broadcast::Sender<RtpChunk>,
+    audio_tx: broadcast::Sender<RtpChunk>,
     width: u32,
     height: u32,
     /// source key ("room/camera") → slot index bindings.
     bindings: Mutex<HashMap<String, usize>>,
+    /// bus name → bound audio feed keys (camera/rid).
+    audio_bindings: Mutex<HashMap<String, HashSet<String>>>,
+    /// bus name → (feed key, push task); aborted tasks are dropped.
+    audio_tasks: Mutex<HashMap<String, Vec<(String, JoinHandle<()>)>>>,
     /// Animation/transition tasks; aborted on drop.
     tasks: Mutex<Vec<JoinHandle<()>>>,
     /// The plan currently being rendered.
     current: Mutex<ScenePlan>,
+    /// Metering message pump; aborted on drop.
+    metering_task: Option<JoinHandle<()>>,
 }
 
 impl Drop for GstProgramMixer {
     fn drop(&mut self) {
         let _ = self.pipeline.set_state(gst::State::Null);
+        if let Some(task) = self.metering_task.take() {
+            task.abort();
+        }
         if let Ok(tasks) = self.tasks.lock() {
             for task in tasks.iter() {
                 task.abort();
+            }
+        }
+        if let Ok(buses) = self.audio_tasks.lock() {
+            for (_, tasks) in buses.iter() {
+                for (_, task) in tasks {
+                    task.abort();
+                }
             }
         }
         for slot in &mut self.slots {
@@ -90,9 +123,22 @@ pub fn source_key(source: &SourceRef) -> String {
     format!("{}/{}", source.room_id, source.camera_id)
 }
 
+/// Audio feed key: "camera/rid" — identifies one live audio track.
+pub fn audio_feed_key(camera_id: &str, rid: &str) -> String {
+    if rid.is_empty() {
+        camera_id.to_string()
+    } else {
+        format!("{camera_id}/{rid}")
+    }
+}
+
 impl GstProgramMixer {
-    /// Builds the pipeline and starts it.
-    pub fn build(config: &MixerOutputConfig) -> Result<Self, AppError> {
+    /// Builds the pipeline and starts it. `on_metering` receives level
+    /// samples from the per-bus and master `level` elements.
+    pub fn build(
+        config: &MixerOutputConfig,
+        on_metering: MeteringCallback,
+    ) -> Result<Self, AppError> {
         let description = build_description(config, MAX_SLOTS)?;
         let pipeline = gst::parse::launch(&description)
             .map_err(|e| AppError::Internal(format!("gst mixer parse failed: {e}")))?
@@ -138,6 +184,7 @@ impl GstProgramMixer {
             .ok_or_else(|| AppError::Internal("stinger_src lookup failed".to_string()))?;
 
         let (video_tx, _) = broadcast::channel::<RtpChunk>(256);
+        let (audio_tx, _) = broadcast::channel::<RtpChunk>(256);
 
         // Fan the encoded program video out to WHEP viewers.
         let out_sink = pipeline
@@ -164,6 +211,31 @@ impl GstProgramMixer {
                 .build(),
         );
 
+        // Fan the mixed program audio out to WHEP viewers.
+        let audio_out = pipeline
+            .by_name("audio_out")
+            .and_then(|element| element.downcast::<AppSink>().ok())
+            .ok_or_else(|| AppError::Internal("audio_out appsink lookup failed".to_string()))?;
+        let audio_sink_tx = audio_tx.clone();
+        audio_out.set_callbacks(
+            gstreamer_app::AppSinkCallbacks::builder()
+                .new_sample(move |sink| {
+                    let sample = sink.pull_sample()?;
+                    let buffer = sample.buffer().ok_or_else(|| gst::FlowError::Error)?;
+                    let map = buffer.map_readable().map_err(|_| gst::FlowError::Error)?;
+                    let chunk = RtpChunk {
+                        codec: MediaCodec::Opus,
+                        rid: None,
+                        packet: Bytes::copy_from_slice(&map),
+                    };
+                    let _ = audio_sink_tx.send(chunk);
+                    Ok(gst::FlowSuccess::Ok)
+                })
+                .build(),
+        );
+
+        let metering_task = Some(spawn_metering_task(pipeline.bus(), on_metering));
+
         tracing::info!(
             width = config.width,
             height = config.height,
@@ -177,11 +249,15 @@ impl GstProgramMixer {
             stinger_alpha,
             stinger_src,
             video_tx,
+            audio_tx,
             width: config.width,
             height: config.height,
             bindings: Mutex::new(HashMap::new()),
+            audio_bindings: Mutex::new(HashMap::new()),
+            audio_tasks: Mutex::new(HashMap::new()),
             tasks: Mutex::new(Vec::new()),
             current: Mutex::new(plan_scene(&SceneLayout::Fullscreen, &fallback_source(""))),
+            metering_task,
         })
     }
 
@@ -190,9 +266,114 @@ impl GstProgramMixer {
         self.video_tx.subscribe()
     }
 
+    /// Subscribes to the mixed program audio (Opus RTP chunks).
+    pub fn subscribe_audio(&self) -> broadcast::Receiver<RtpChunk> {
+        self.audio_tx.subscribe()
+    }
+
     /// The codec carried on the program video feed.
     pub fn output_codec(&self) -> MediaCodec {
         MediaCodec::H264
+    }
+
+    /// Applies the room's audio mix live: faders (`volume`), gain trims
+    /// (`audioamplify`), lip-sync delays (`audiodelay`) and solo/mute
+    /// semantics per bus.
+    pub fn apply_audio_config(&self, config: &AudioMixerConfig) {
+        let any_solo = config.buses.iter().any(|spec| spec.solo);
+        for bus in AudioBus::ALL {
+            let spec = config.bus(bus);
+            let audible = spec.audible(any_solo);
+
+            if let Some(volume) = self.pipeline.by_name(&format!("avol_{}", bus.as_str())) {
+                let db = if audible {
+                    spec.volume_db
+                } else {
+                    FADER_FLOOR_DB
+                };
+                let _ = volume.set_property_from_str("volume", &format!("{db:.2}"));
+            }
+            if let Some(amplify) = self.pipeline.by_name(&format!("again_{}", bus.as_str())) {
+                let linear = 10f32.powf(spec.gain_db / 20.0);
+                let _ = amplify.set_property_from_str("amplification", &format!("{linear:.4}"));
+            }
+            if let Some(delay) = self.pipeline.by_name(&format!("adelay_{}", bus.as_str())) {
+                let nanos = spec.delay_ms.saturating_mul(1_000_000);
+                let _ = delay.set_property_from_str("delay", &nanos.to_string());
+            }
+        }
+    }
+
+    /// (Re)binds audio feeds to their bus branches. Feeds whose key set
+    /// changed are re-pointed; unchanged bindings keep running.
+    ///
+    /// `feeds` maps bus → (feed key, live Opus RTP receiver). One bus
+    /// appsrc accepts pushes from multiple tasks, so several camera mics
+    /// can share a bus.
+    pub fn apply_audio_feeds(
+        &self,
+        feeds: HashMap<AudioBus, Vec<(String, mpsc::Receiver<RtpChunk>)>>,
+    ) {
+        let mut bindings = self.audio_bindings.lock().expect("audio bindings poisoned");
+        let mut tasks = self.audio_tasks.lock().expect("audio tasks poisoned");
+
+        for bus in AudioBus::ALL {
+            let bus_name = bus.as_str().to_string();
+            let appsrc = match self
+                .pipeline
+                .by_name(&format!("abus_{bus_name}"))
+                .and_then(|element| element.downcast::<AppSrc>().ok())
+            {
+                Some(appsrc) => appsrc,
+                None => {
+                    tracing::warn!(bus = %bus_name, "audio bus appsrc missing; skipping feeds");
+                    continue;
+                }
+            };
+
+            let incoming: Vec<(String, mpsc::Receiver<RtpChunk>)> =
+                feeds.get(&bus).cloned().unwrap_or_default();
+            let bound = bindings.entry(bus_name.clone()).or_default();
+            let existing = tasks.entry(bus_name.clone()).or_default();
+
+            // Drop tasks for feeds that are no longer present.
+            existing.retain(|(key, task)| {
+                let keep = incoming.iter().any(|(incoming_key, _)| incoming_key == key);
+                if !keep {
+                    task.abort();
+                }
+                keep
+            });
+            bound.retain(|key| incoming.iter().any(|(incoming_key, _)| incoming_key == key));
+
+            // Spawn push tasks for newly arrived feeds.
+            for (key, mut rx) in incoming {
+                if bound.contains(&key) {
+                    continue;
+                }
+                let appsrc = appsrc.clone();
+                let task = tokio::task::spawn_blocking(move || {
+                    while let Some(chunk) = rx.blocking_recv() {
+                        let mut buffer = match gst::Buffer::with_size(chunk.packet.len()) {
+                            Ok(buffer) => buffer,
+                            Err(e) => {
+                                tracing::warn!(error = %e, "audio buffer allocation failed");
+                                break;
+                            }
+                        };
+                        if let Some(map) = buffer.get_mut() {
+                            map.copy_from_slice(0, &chunk.packet);
+                        }
+                        if appsrc.push_buffer(buffer).is_err() {
+                            break;
+                        }
+                    }
+                    let _ = appsrc.end_of_stream();
+                });
+                bound.insert(key.clone());
+                existing.push((key, task));
+            }
+        }
     }
 
     /// Applies a scene: (re)binds slots to sources, sets slot rects and
@@ -310,15 +491,15 @@ impl GstProgramMixer {
                 for (index, slot_plan) in plan.slots.iter().enumerate() {
                     let slot = &self.slots[index];
                     let _ = slot.alpha.set_property_from_str("alpha", "1.0");
+                    let pixels = slot_plan.rect.to_pixels(self.width, self.height);
                     let from = PixelRect {
                         x: 0,
-                        y: slot_plan.rect.to_pixels(self.width, self.height).y,
+                        y: pixels.y,
                         width: 1,
-                        height: slot_plan.rect.to_pixels(self.width, self.height).height,
+                        height: pixels.height,
                     };
-                    let to = slot_plan.rect.to_pixels(self.width, self.height);
                     let pad = slot.pad.clone();
-                    let task = animate_rect(pad, from, to, duration);
+                    let task = animate_rect(pad, from, pixels, duration);
                     self.push_task(task);
                 }
             }
@@ -369,6 +550,48 @@ fn fallback_source(room: &str) -> SourceRef {
         room_id: room.to_string(),
         camera_id: String::new(),
     }
+}
+
+/// Spawns the pipeline-bus message pump that forwards `level` element
+/// messages to the metering callback.
+fn spawn_metering_task(bus: gst::Bus, on_metering: MeteringCallback) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        use futures_util::StreamExt;
+        let mut stream = bus.stream();
+        while let Some(message) = stream.next().await {
+            let gst::MessageView::Element(element) = message.view() else {
+                continue;
+            };
+            let Some(structure) = element.structure() else {
+                continue;
+            };
+            if structure.name() != "level" {
+                continue;
+            }
+            let src_name = element
+                .src()
+                .map(|src| src.name().to_string())
+                .unwrap_or_default();
+            // Element names: alevel_{bus} and alevel_master.
+            let bus_name = src_name
+                .strip_prefix("alevel_")
+                .unwrap_or("master")
+                .to_string();
+            let peak = match structure.get::<Vec<f64>>("peak") {
+                Ok(values) => values
+                    .iter()
+                    .fold(f32::NEG_INFINITY, |acc, v| acc.max(*v as f32)),
+                Err(_) => continue,
+            };
+            let rms = match structure.get::<Vec<f64>>("rms") {
+                Ok(values) => values
+                    .iter()
+                    .fold(f32::NEG_INFINITY, |acc, v| acc.max(*v as f32)),
+                Err(_) => continue,
+            };
+            on_metering(bus_name, peak, rms);
+        }
+    })
 }
 
 /// Applies a slot's target geometry to its compositor pad.
@@ -425,7 +648,7 @@ fn animate_rect(pad: gst::Pad, from: PixelRect, to: PixelRect, duration_ms: u64)
 /// Builds the pipeline description. Split out (like the forwarder's) so
 /// the structure can be inspected without running GStreamer.
 fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String, AppError> {
-    let mut branches = Vec::with_capacity(slots);
+    let mut branches = Vec::with_capacity(slots + AudioBus::ALL.len() + 3);
     for index in 0..slots {
         branches.push(format!(
             "appsrc name=src{index} format=time is-live=true do-timestamp=true \
@@ -441,6 +664,23 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
          ! alpha name=stinger_alpha alpha=0.0 ! comp."
             .to_string(),
     );
+
+    // ---- audio stage: one branch per bus + silence keep-alive pad -----
+    for bus in AudioBus::ALL {
+        branches.push(format!(
+            "appsrc name=abus_{bus} format=time is-live=true do-timestamp=true \
+             caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000\" \
+             ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
+             ! volume name=avol_{bus} \
+             ! audioamplify name=again_{bus} amplification=1.0 \
+             ! audiodelay name=adelay_{bus} delay=0 \
+             ! level name=alevel_{bus} interval=100000000 post-messages=true \
+             ! amix.",
+            bus = bus.as_str(),
+        ));
+    }
+    // A silence pad keeps the audiomixer live when every bus is idle.
+    branches.push("audiotestsrc wave=silence is-live=true ! amix.".to_string());
 
     let detected = crate::hw::detect_encoders();
     let kind = resolve_encoder(config.encoder, &detected);
@@ -462,7 +702,7 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
         format!("{} {}", plan.encoder, props.join(" "))
     };
 
-    let tail = format!(
+    let video_tail = format!(
         "compositor name=comp background=black \
          ! videoconvert ! videoscale ! videorate ! video/x-raw,framerate={fps}/1 \
          ! {encoder_stage} ! video/x-h264,profile=baseline \
@@ -470,8 +710,20 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
          ! appsink name=out_sink sync=false",
         fps = config.fps,
     );
+    let audio_tail = "audiomixer name=amix \
+         ! level name=alevel_master interval=100000000 post-messages=true \
+         ! audioconvert ! audioresample \
+         ! opusenc ! rtpopuspay pt=111 \
+         ! queue max-size-time=1000000000 \
+         ! appsink name=audio_out sync=false"
+        .to_string();
 
-    Ok(format!("{} {}", branches.join(" "), tail))
+    Ok(format!(
+        "{} {} {}",
+        branches.join(" "),
+        video_tail,
+        audio_tail
+    ))
 }
 
 #[cfg(test)]
@@ -503,12 +755,42 @@ mod tests {
     }
 
     #[test]
+    fn description_contains_audio_buses_and_metering() {
+        let config = MixerOutputConfig {
+            width: 1280,
+            height: 720,
+            fps: 30,
+            bitrate_kbps: 2500,
+            encoder: EncoderKind::X264,
+            stinger_asset_url: None,
+        };
+        let description = build_description(&config, 2).expect("description builds");
+        for bus in AudioBus::ALL {
+            assert!(description.contains(&format!("name=avol_{}", bus.as_str())));
+            assert!(description.contains(&format!("name=again_{}", bus.as_str())));
+            assert!(description.contains(&format!("name=adelay_{}", bus.as_str())));
+            assert!(description.contains(&format!("name=alevel_{}", bus.as_str())));
+        }
+        assert!(description.contains("audiomixer name=amix"));
+        assert!(description.contains("name=alevel_master"));
+        assert!(description.contains("audiotestsrc wave=silence"));
+        assert!(description.contains("rtpopuspay"));
+        assert!(description.contains("name=audio_out"));
+    }
+
+    #[test]
     fn source_keys_are_stable() {
         let source = SourceRef {
             room_id: "r-1".to_string(),
             camera_id: "cam-2".to_string(),
         };
         assert_eq!(source_key(&source), "r-1/cam-2");
+    }
+
+    #[test]
+    fn audio_feed_keys_encode_rid() {
+        assert_eq!(audio_feed_key("cam-1", ""), "cam-1");
+        assert_eq!(audio_feed_key("cam-1", "commentary"), "cam-1/commentary");
     }
 
     #[test]

@@ -7,6 +7,8 @@
 import { env } from "../utils";
 import type {
   AddCameraResponse,
+  AudioMixView,
+  AudioMixerConfig,
   CameraInfo,
   CameraSpec,
   CreateRoomResponse,
@@ -124,6 +126,22 @@ export const api = {
     return request<ProgramState>(`/api/v1/program/${encodeURIComponent(roomId)}`, {
       method: "GET",
       token,
+    });
+  },
+
+  async getAudioMix(roomId: string, token: string) {
+    return request<AudioMixView>(`/api/v1/audio/mix/${encodeURIComponent(roomId)}`, {
+      method: "GET",
+      token,
+    });
+  },
+
+  async updateAudioMix(roomId: string, config: AudioMixerConfig, token: string) {
+    return request<AudioMixView>(`/api/v1/audio/mix/${encodeURIComponent(roomId)}`, {
+      method: "PUT",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
     });
   },
 

@@ -7,6 +7,7 @@
 
 import { env } from "../utils";
 import type {
+  AudioMixView,
   ControlEvent,
   CricketConfigView,
   ProgramState,
@@ -21,6 +22,8 @@ export interface ControlState {
   rooms: Room[];
   /** Program (PGM) sources keyed by room id. */
   programs: Record<string, ProgramState>;
+  /** Audio mixes keyed by room id. */
+  audioMixes: Record<string, AudioMixView>;
   cricket: CricketConfigView | null;
 }
 
@@ -29,6 +32,7 @@ const EMPTY_STATE: ControlState = {
   error: null,
   rooms: [],
   programs: {},
+  audioMixes: {},
   cricket: null,
 };
 
@@ -126,6 +130,11 @@ function applyEvent(state: ControlState, event: ControlEvent): ControlState {
       return {
         ...state,
         programs: { ...state.programs, [event.program.room_id]: event.program },
+      };
+    case "audio_mixer_changed":
+      return {
+        ...state,
+        audioMixes: { ...state.audioMixes, [event.room_id]: event.mix },
       };
     case "cricket_config_changed":
       return { ...state, cricket: event.config };

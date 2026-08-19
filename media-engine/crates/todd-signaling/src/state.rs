@@ -128,7 +128,10 @@ pub fn build_room(
         name,
         created_at: now,
         expires_at: now + ChronoDuration::seconds(ttl_secs as i64),
-        cameras: camera_specs.into_iter().map(|spec| spec.into_info()).collect(),
+        cameras: camera_specs
+            .into_iter()
+            .map(|spec| spec.into_info())
+            .collect(),
     };
 
     let mut ingest_tokens = HashMap::new();
