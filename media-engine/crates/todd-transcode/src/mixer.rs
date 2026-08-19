@@ -243,6 +243,28 @@ pub fn ease_progress(t: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
+/// Computes `(peak_db, rms_db)` from little-endian interleaved S16LE PCM.
+/// Replaces GStreamer `level`-element message parsing: the mixer taps raw
+/// PCM with appsinks and meters it here, deterministically.
+pub fn compute_levels(pcm: &[u8]) -> (f32, f32) {
+    let mut peak = 0.0f32;
+    let mut sum_sq = 0.0f64;
+    let mut count = 0usize;
+    for chunk in pcm.chunks_exact(2) {
+        let sample = f32::from(i16::from_le_bytes([chunk[0], chunk[1]])) / 32768.0;
+        peak = peak.max(sample.abs());
+        sum_sq += f64::from(sample) * f64::from(sample);
+        count += 1;
+    }
+    let rms = if count > 0 {
+        ((sum_sq / count as f64).sqrt()) as f32
+    } else {
+        0.0
+    };
+    let to_db = |value: f32| 20.0 * value.max(1e-6).log10();
+    (to_db(peak), to_db(rms))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -359,5 +381,26 @@ mod tests {
             &source("cam-1"),
         );
         assert_eq!(plan.sources().len(), 1);
+    }
+
+    #[test]
+    fn levels_compute_from_s16le_pcm() {
+        // Silence: both meters at the floor.
+        let (peak, rms) = compute_levels(&[0u8; 64]);
+        assert!(peak < -100.0);
+        assert!(rms < -100.0);
+
+        // Half-scale constant signal: peak ≈ RMS ≈ -6.02 dB.
+        let half = 16384i16.to_le_bytes();
+        let buffer: Vec<u8> = half.iter().cycle().take(64).copied().collect();
+        let (peak, rms) = compute_levels(&buffer);
+        assert!((peak + 6.02).abs() < 0.05);
+        assert!((rms + 6.02).abs() < 0.05);
+
+        // Full-scale samples: peak at 0 dB.
+        let full = i16::MAX.to_le_bytes();
+        let buffer: Vec<u8> = full.iter().cycle().take(64).copied().collect();
+        let (peak, _) = compute_levels(&buffer);
+        assert!(peak.abs() < 0.01);
     }
 }

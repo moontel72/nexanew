@@ -8,13 +8,16 @@
 //!             → videoscale → videorate → queue → alpha(alpha_i) → compositor.sink_i
 //! stinger:    uridecodebin (uri set at runtime) → videoconvert → videoscale
 //!             → alpha(stinger_alpha) → compositor.sink_stinger
+//! overlays:   gdkpixbufoverlay (watermark) / textoverlay (lower-third,
+//!             popup) → alpha gates → compositor
 //! compositor → videoconvert → encode (h264) → rtph264pay → appsink → fan-out
 //!
 //! per bus b:  appsrc (Opus RTP) → rtpopusdepay → opusdec → audioconvert
 //!             → volume (fader) → audioamplify (gain) → audiodelay (delay)
-//!             → level (meter) → audiomixer
+//!             → tee: → amix + → S16LE appsink (metering tap)
 //! audiomixer ← audiotestsrc silence (keeps a live pad)
-//! audiomixer → level (master meter) → opusenc → rtpopuspay → appsink → fan-out
+//! audiomixer → tee: → S16LE appsink (master metering) + → opusenc →
+//!             rtpopuspay → appsink (fan-out)
 //! ```
 //!
 //! Transitions are rendered server-side by animating per-slot `alpha`
@@ -25,9 +28,9 @@
 //! - Stinger: animated overlay asset ramps 0→1→0 while the program source
 //!   swaps behind it.
 //!
-//! The audio mix is applied live via `volume` / `audioamplify` /
-//! `audiodelay` element properties; per-bus and master `level` elements
-//! post metering messages that are forwarded to the engine's telemetry.
+//! Audio metering taps raw S16LE PCM via appsinks and computes peak/RMS
+//! in Rust ([`crate::mixer::compute_levels`]) — no fragile `level`-element
+//! message parsing.
 //!
 //! Program output is standardized on H.264 video + Opus audio (decode →
 //! compose → re-encode); scenes referencing non-H.264 sources fall back
@@ -45,19 +48,19 @@ use gstreamer as gst;
 use gstreamer_app::{AppSink, AppSrc};
 use todd_common::error::AppError;
 use todd_common::media::{AudioBus, AudioMixerConfig, FADER_FLOOR_DB};
-use todd_common::types::{OverlayState, SceneLayout, SourceRef, StingerSpec, TransitionKind};
+use todd_common::types::{OverlayState, SceneLayout, SourceRef, TransitionKind};
 use tokio::sync::{broadcast, mpsc};
 use tokio::task::JoinHandle;
 
 use crate::hw::{h264_encode_plan, resolve_encoder};
 use crate::media::{MediaCodec, RtpChunk};
 use crate::mixer::{
-    ease_progress, plan_scene, MixerOutputConfig, PixelRect, ScenePlan, SlotPlan, MAX_SLOTS,
+    compute_levels, ease_progress, plan_scene, MixerOutputConfig, PixelRect, ScenePlan, SlotPlan,
+    MAX_SLOTS,
 };
 
-/// Called with `(bus, peak_db, rms_db)` whenever a `level` element posts
-/// a metering message. `bus` is `commentary`/`ambient`/`sfx`/`music` or
-/// `master`.
+/// Called with `(bus, peak_db, rms_db)` whenever a metering tap samples
+/// PCM. `bus` is `commentary`/`ambient`/`sfx`/`music` or `master`.
 pub type MeteringCallback = Arc<dyn Fn(String, f32, f32) + Send + Sync>;
 
 /// Runtime state of one compositor slot.
@@ -71,7 +74,7 @@ struct SlotRuntime {
 /// The live program compositor for one room.
 pub struct GstProgramMixer {
     pipeline: gst::Pipeline,
-    slots: Vec<SlotRuntime>,
+    slots: Mutex<Vec<SlotRuntime>>,
     stinger_alpha: gst::Element,
     stinger_src: gst::Element,
     /// Corner watermark overlay (gdkpixbufoverlay).
@@ -97,16 +100,11 @@ pub struct GstProgramMixer {
     tasks: Mutex<Vec<JoinHandle<()>>>,
     /// The plan currently being rendered.
     current: Mutex<ScenePlan>,
-    /// Metering message pump; aborted on drop.
-    metering_task: Option<JoinHandle<()>>,
 }
 
 impl Drop for GstProgramMixer {
     fn drop(&mut self) {
         let _ = self.pipeline.set_state(gst::State::Null);
-        if let Some(task) = self.metering_task.take() {
-            task.abort();
-        }
         if let Ok(tasks) = self.tasks.lock() {
             for task in tasks.iter() {
                 task.abort();
@@ -119,9 +117,11 @@ impl Drop for GstProgramMixer {
                 }
             }
         }
-        for slot in &mut self.slots {
-            if let Some(task) = slot.task.take() {
-                task.abort();
+        if let Ok(mut slots) = self.slots.lock() {
+            for slot in slots.iter_mut() {
+                if let Some(task) = slot.task.take() {
+                    task.abort();
+                }
             }
         }
     }
@@ -141,9 +141,27 @@ pub fn audio_feed_key(camera_id: &str, rid: &str) -> String {
     }
 }
 
+/// Installs an S16LE metering tap on an appsink: every PCM buffer is
+/// measured and forwarded to `on_metering`.
+fn attach_meter_sink(sink: &AppSink, bus_name: &'static str, on_metering: MeteringCallback) {
+    let callback = on_metering.clone();
+    sink.set_callbacks(
+        gstreamer_app::AppSinkCallbacks::builder()
+            .new_sample(move |sink| {
+                let sample = sink.pull_sample().map_err(|_| gst::FlowError::Error)?;
+                let buffer = sample.buffer().ok_or_else(|| gst::FlowError::Error)?;
+                let map = buffer.map_readable().map_err(|_| gst::FlowError::Error)?;
+                let (peak_db, rms_db) = compute_levels(&map);
+                callback(bus_name.to_string(), peak_db, rms_db);
+                Ok(gst::FlowSuccess::Ok)
+            })
+            .build(),
+    );
+}
+
 impl GstProgramMixer {
     /// Builds the pipeline and starts it. `on_metering` receives level
-    /// samples from the per-bus and master `level` elements.
+    /// samples from the per-bus and master metering taps.
     pub fn build(
         config: &MixerOutputConfig,
         on_metering: MeteringCallback,
@@ -173,7 +191,7 @@ impl GstProgramMixer {
                 .by_name(&format!("alpha{index}"))
                 .ok_or_else(|| AppError::Internal(format!("alpha{index} lookup failed")))?;
             let pad = compositor
-                .get_static_pad(&format!("sink_{index}"))
+                .static_pad(&format!("sink_{index}"))
                 .ok_or_else(|| {
                     AppError::Internal(format!("compositor sink_{index} lookup failed"))
                 })?;
@@ -219,7 +237,7 @@ impl GstProgramMixer {
         out_sink.set_callbacks(
             gstreamer_app::AppSinkCallbacks::builder()
                 .new_sample(move |sink| {
-                    let sample = sink.pull_sample()?;
+                    let sample = sink.pull_sample().map_err(|_| gst::FlowError::Error)?;
                     let buffer = sample.buffer().ok_or_else(|| gst::FlowError::Error)?;
                     let map = buffer.map_readable().map_err(|_| gst::FlowError::Error)?;
                     let chunk = RtpChunk {
@@ -244,7 +262,7 @@ impl GstProgramMixer {
         audio_out.set_callbacks(
             gstreamer_app::AppSinkCallbacks::builder()
                 .new_sample(move |sink| {
-                    let sample = sink.pull_sample()?;
+                    let sample = sink.pull_sample().map_err(|_| gst::FlowError::Error)?;
                     let buffer = sample.buffer().ok_or_else(|| gst::FlowError::Error)?;
                     let map = buffer.map_readable().map_err(|_| gst::FlowError::Error)?;
                     let chunk = RtpChunk {
@@ -258,7 +276,21 @@ impl GstProgramMixer {
                 .build(),
         );
 
-        let metering_task = Some(spawn_metering_task(pipeline.bus(), on_metering));
+        // Per-bus + master metering taps (S16LE PCM → Rust levels).
+        for bus in AudioBus::ALL {
+            if let Some(sink) = pipeline
+                .by_name(&format!("meter_{}", bus.as_str()))
+                .and_then(|element| element.downcast::<AppSink>().ok())
+            {
+                attach_meter_sink(&sink, bus.as_str(), on_metering.clone());
+            }
+        }
+        if let Some(sink) = pipeline
+            .by_name("meter_master")
+            .and_then(|element| element.downcast::<AppSink>().ok())
+        {
+            attach_meter_sink(&sink, "master", on_metering.clone());
+        }
 
         tracing::info!(
             width = config.width,
@@ -269,7 +301,7 @@ impl GstProgramMixer {
 
         Ok(Self {
             pipeline,
-            slots,
+            slots: Mutex::new(slots),
             stinger_alpha,
             stinger_src,
             watermark,
@@ -286,7 +318,6 @@ impl GstProgramMixer {
             audio_tasks: Mutex::new(HashMap::new()),
             tasks: Mutex::new(Vec::new()),
             current: Mutex::new(plan_scene(&SceneLayout::Fullscreen, &fallback_source(""))),
-            metering_task,
         })
     }
 
@@ -406,7 +437,7 @@ impl GstProgramMixer {
     /// can share a bus.
     pub fn apply_audio_feeds(
         &self,
-        feeds: HashMap<AudioBus, Vec<(String, mpsc::Receiver<RtpChunk>)>>,
+        mut feeds: HashMap<AudioBus, Vec<(String, mpsc::Receiver<RtpChunk>)>>,
     ) {
         let mut bindings = self.audio_bindings.lock().expect("audio bindings poisoned");
         let mut tasks = self.audio_tasks.lock().expect("audio tasks poisoned");
@@ -425,8 +456,10 @@ impl GstProgramMixer {
                 }
             };
 
+            // Take ownership of this bus's incoming feeds (receivers are
+            // not Clone).
             let incoming: Vec<(String, mpsc::Receiver<RtpChunk>)> =
-                feeds.get(&bus).cloned().unwrap_or_default();
+                feeds.remove(&bus).unwrap_or_default();
             let bound = bindings.entry(bus_name.clone()).or_default();
             let existing = tasks.entry(bus_name.clone()).or_default();
 
@@ -497,6 +530,7 @@ impl GstProgramMixer {
         }
 
         let mut bindings = self.bindings.lock().expect("mixer bindings poisoned");
+        let mut slots = self.slots.lock().expect("mixer slots poisoned");
 
         // Rebind slots: same source keeps its running task, everything
         // else is re-pointed.
@@ -506,7 +540,7 @@ impl GstProgramMixer {
             new_bindings.insert(key.clone(), index);
             let was_bound = bindings.get(&key) == Some(&index);
             if !was_bound {
-                let slot = &mut self.slots[index];
+                let slot = &mut slots[index];
                 if let Some(task) = slot.task.take() {
                     task.abort();
                 }
@@ -540,12 +574,12 @@ impl GstProgramMixer {
         // Slot rects: apply target geometry immediately; alpha changes
         // follow the transition.
         for (index, slot_plan) in plan.slots.iter().enumerate() {
-            let slot = &self.slots[index];
+            let slot = &slots[index];
             set_slot_rect(slot, slot_plan, self.width, self.height);
         }
 
         // Slots that are no longer used render nothing.
-        for (index, slot) in self.slots.iter().enumerate() {
+        for (index, slot) in slots.iter().enumerate() {
             if index >= plan.slots.len() {
                 let _ = slot.alpha.set_property_from_str("alpha", "0.0");
             }
@@ -555,7 +589,7 @@ impl GstProgramMixer {
         let duration = duration_ms.min(10_000);
         match transition {
             TransitionKind::Cut => {
-                for (index, slot) in self.slots.iter().enumerate() {
+                for (index, slot) in slots.iter().enumerate() {
                     let target = if index < plan.slots.len() {
                         format!("{:.4}", plan.slots[index].opacity)
                     } else {
@@ -567,7 +601,7 @@ impl GstProgramMixer {
             TransitionKind::Fade => {
                 // Crossfade: every slot ramps toward its target opacity;
                 // outgoing slots ramp to zero, incoming to their opacity.
-                for (index, slot) in self.slots.iter().enumerate() {
+                for (index, slot) in slots.iter().enumerate() {
                     let target = if index < plan.slots.len() {
                         plan.slots[index].opacity
                     } else {
@@ -583,7 +617,7 @@ impl GstProgramMixer {
                 // Geometric reveal: the incoming slot's window grows
                 // across the frame over the duration.
                 for (index, slot_plan) in plan.slots.iter().enumerate() {
-                    let slot = &self.slots[index];
+                    let slot = &slots[index];
                     let _ = slot.alpha.set_property_from_str("alpha", "1.0");
                     let pixels = slot_plan.rect.to_pixels(self.width, self.height);
                     let from = PixelRect {
@@ -600,7 +634,7 @@ impl GstProgramMixer {
             TransitionKind::Stinger => {
                 // Swap the program instantly and play the overlay over
                 // the swap.
-                for (index, slot) in self.slots.iter().enumerate() {
+                for (index, slot) in slots.iter().enumerate() {
                     let target = if index < plan.slots.len() {
                         format!("{:.4}", plan.slots[index].opacity)
                     } else {
@@ -644,48 +678,6 @@ fn fallback_source(room: &str) -> SourceRef {
         room_id: room.to_string(),
         camera_id: String::new(),
     }
-}
-
-/// Spawns the pipeline-bus message pump that forwards `level` element
-/// messages to the metering callback.
-fn spawn_metering_task(bus: gst::Bus, on_metering: MeteringCallback) -> JoinHandle<()> {
-    tokio::spawn(async move {
-        use futures_util::StreamExt;
-        let mut stream = bus.stream();
-        while let Some(message) = stream.next().await {
-            let gst::MessageView::Element(element) = message.view() else {
-                continue;
-            };
-            let Some(structure) = element.structure() else {
-                continue;
-            };
-            if structure.name() != "level" {
-                continue;
-            }
-            let src_name = element
-                .src()
-                .map(|src| src.name().to_string())
-                .unwrap_or_default();
-            // Element names: alevel_{bus} and alevel_master.
-            let bus_name = src_name
-                .strip_prefix("alevel_")
-                .unwrap_or("master")
-                .to_string();
-            let peak = match structure.get::<Vec<f64>>("peak") {
-                Ok(values) => values
-                    .iter()
-                    .fold(f32::NEG_INFINITY, |acc, v| acc.max(*v as f32)),
-                Err(_) => continue,
-            };
-            let rms = match structure.get::<Vec<f64>>("rms") {
-                Ok(values) => values
-                    .iter()
-                    .fold(f32::NEG_INFINITY, |acc, v| acc.max(*v as f32)),
-                Err(_) => continue,
-            };
-            on_metering(bus_name, peak, rms);
-        }
-    })
 }
 
 /// Applies a slot's target geometry to its compositor pad.
@@ -742,7 +734,7 @@ fn animate_rect(pad: gst::Pad, from: PixelRect, to: PixelRect, duration_ms: u64)
 /// Builds the pipeline description. Split out (like the forwarder's) so
 /// the structure can be inspected without running GStreamer.
 fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String, AppError> {
-    let mut branches = Vec::with_capacity(slots + AudioBus::ALL.len() + 3);
+    let mut branches = Vec::with_capacity(slots + AudioBus::ALL.len() * 2 + 6);
     for index in 0..slots {
         branches.push(format!(
             "appsrc name=src{index} format=time is-live=true do-timestamp=true \
@@ -789,8 +781,11 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
              ! volume name=avol_{bus} \
              ! audioamplify name=again_{bus} amplification=1.0 \
              ! audiodelay name=adelay_{bus} delay=0 \
-             ! level name=alevel_{bus} interval=100000000 post-messages=true \
-             ! amix.",
+             ! tee name=btee_{bus} \
+             btee_{bus}. ! queue ! audioconvert ! audioresample \
+             ! audio/x-raw,format=S16LE,rate=48000,channels=2 \
+             ! appsink name=meter_{bus} sync=false \
+             btee_{bus}. ! amix.",
             bus = bus.as_str(),
         ));
     }
@@ -826,8 +821,11 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
         fps = config.fps,
     );
     let audio_tail = "audiomixer name=amix \
-         ! level name=alevel_master interval=100000000 post-messages=true \
-         ! audioconvert ! audioresample \
+         ! tee name=audio_tee \
+         audio_tee. ! queue ! audioconvert ! audioresample \
+         ! audio/x-raw,format=S16LE,rate=48000,channels=2 \
+         ! appsink name=meter_master sync=false \
+         audio_tee. ! audioconvert ! audioresample \
          ! opusenc ! rtpopuspay pt=111 \
          ! queue max-size-time=1000000000 \
          ! appsink name=audio_out sync=false"
@@ -845,6 +843,7 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
 mod tests {
     use super::*;
     use todd_common::media::EncoderKind;
+    use todd_common::types::StingerSpec;
 
     #[test]
     fn description_contains_slots_compositor_and_encoder() {
@@ -870,7 +869,7 @@ mod tests {
     }
 
     #[test]
-    fn description_contains_audio_buses_and_metering() {
+    fn description_contains_audio_buses_and_metering_taps() {
         let config = MixerOutputConfig {
             width: 1280,
             height: 720,
@@ -884,10 +883,11 @@ mod tests {
             assert!(description.contains(&format!("name=avol_{}", bus.as_str())));
             assert!(description.contains(&format!("name=again_{}", bus.as_str())));
             assert!(description.contains(&format!("name=adelay_{}", bus.as_str())));
-            assert!(description.contains(&format!("name=alevel_{}", bus.as_str())));
+            assert!(description.contains(&format!("name=meter_{}", bus.as_str())));
         }
         assert!(description.contains("audiomixer name=amix"));
-        assert!(description.contains("name=alevel_master"));
+        assert!(description.contains("name=meter_master"));
+        assert!(description.contains("audio/x-raw,format=S16LE"));
         assert!(description.contains("audiotestsrc wave=silence"));
         assert!(description.contains("rtpopuspay"));
         assert!(description.contains("name=audio_out"));
