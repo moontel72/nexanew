@@ -18,6 +18,24 @@ pub enum EncoderKind {
     Passthrough,
 }
 
+impl std::str::FromStr for EncoderKind {
+    type Err = crate::error::AppError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "auto" => Ok(EncoderKind::Auto),
+            "nvenc" => Ok(EncoderKind::Nvenc),
+            "amf" => Ok(EncoderKind::Amf),
+            "qsv" => Ok(EncoderKind::Qsv),
+            "x264" => Ok(EncoderKind::X264),
+            "passthrough" => Ok(EncoderKind::Passthrough),
+            other => Err(crate::error::AppError::BadRequest(format!(
+                "invalid encoder '{other}' (expected auto|nvenc|amf|qsv|x264|passthrough)"
+            ))),
+        }
+    }
+}
+
 /// Encode parameters shared by every encoder backend.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

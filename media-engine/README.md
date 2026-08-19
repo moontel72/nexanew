@@ -70,17 +70,46 @@ sudo apt install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
 ```
 
 Without the feature, WHIP ingestion and routing work fully; only
-`POST /api/v1/room/{id}/forward` returns 501.
+`POST /api/v1/room/{id}/forward` returns 501, and the program (PGM)
+egress stays a passthrough of the selected camera instead of the
+composite scene.
+
+### Program mixer (gst builds)
+
+With the `gst` feature the engine composites the program bus in
+`todd-transcode` (see `docs/07-sfu-architecture.md`): scenes
+(fullscreen / PiP / split / side-by-side) are rendered by a GStreamer
+`compositor`, and cut / fade / luma-wipe / stinger transitions are
+animated server-side. Output is encoded to H.264 and fan-out to program
+WHEP viewers. Env configuration:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PROGRAM_WIDTH` | `1280` | Composite frame width |
+| `PROGRAM_HEIGHT` | `720` | Composite frame height |
+| `PROGRAM_FPS` | `30` | Composite frame rate |
+| `PROGRAM_BITRATE_KBPS` | `2500` | Encoder bitrate |
+| `PROGRAM_ENCODER` | `auto` | `auto`/`nvenc`/`qsv`/`amf`/`x264` |
+| `STINGER_ASSET_URL` | *(empty)* | Default stinger overlay asset (transparent WebM/MP4/PNG) |
+
+Program mixing requires all referenced cameras to publish H.264; scenes
+referencing other codecs keep the room on passthrough program egress.
 
 ## Endpoints
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | POST | `/api/v1/room/create` | admin | Create room + mint ingest/viewer tokens |
-| GET | `/api/v1/room/list` | admin | List rooms |
+| GET | `/api/v1/room/list` | admin | List rooms (live-camera flags computed) |
 | GET | `/api/v1/room/{id}` | room-scoped | Room status (active cameras) |
 | DELETE | `/api/v1/room/{id}` | admin | Tear down room + sessions |
+| POST | `/api/v1/room/{id}/camera` | admin | Add a camera to a live room + mint its ingest token |
+| PUT | `/api/v1/room/{id}/camera/{camera}` | admin | Update camera metadata (label, kind, group) |
+| DELETE | `/api/v1/room/{id}/camera/{camera}` | admin | Remove a camera + close its sessions |
 | POST | `/api/v1/room/{id}/forward` | admin | Attach RTMP/SRT/file forwarder to a camera |
+| POST | `/api/v1/program/transition` | admin | Vision switch: `transition` (cut/fade/luma_wipe/stinger), optional `duration_ms`, `layout` (scene), `stinger` asset |
+| GET | `/api/v1/program/{room_id}` | admin | Current program state (source + layout + transition) |
+| POST | `/api/v1/whep/program/{room_id}` | viewer | WHEP egress for the current PGM (composite mixer output in gst builds) |
 | POST | `/api/v1/whip/ingest/{room}/{camera}` | publisher | WHIP ingest (SDP offer → answer) |
 | DELETE | `/api/v1/whip/session/{id}` | publisher/admin | Close a WHIP session |
 | POST | `/api/v1/whep/watch/{room}/{camera}` | viewer | WHEP watch (SDP offer → answer) |
@@ -90,6 +119,11 @@ Without the feature, WHIP ingestion and routing work fully; only
 | DELETE | `/api/v1/replay/{id}` | admin | Close a replay session |
 | POST | `/api/v1/replay/{id}/export` | admin | Start an async clip export |
 | POST | `/api/v1/replay/watch/{id}/{camera}` | viewer | WHEP slow-motion preview egress |
+| GET | `/api/v1/cricket/live/{match_id}` | admin | Cached scoreboard lower-third |
+| GET | `/api/v1/cricket/ws` | none* | Push feed of cached matches |
+| GET | `/api/v1/cricket/config` | admin | Current cricket sync configuration |
+| PUT | `/api/v1/cricket/config` | admin | Runtime sync config (match ids, API token, poll interval) |
+| GET | `/api/v1/control/ws` | admin | Control-plane WebSocket: rooms, cameras, PGM, cricket config |
 | GET | `/metrics` | none* | Prometheus metrics (see `docs/06-ice-and-telemetry.md`) |
 | GET | `/api/v1/telemetry/ws` | none* | WebSocket diagnostics feed (JSON snapshots) |
 | GET | `/healthz`, `/readyz` | none | Liveness / readiness |

@@ -6,11 +6,19 @@
 
 import { env } from "../utils";
 import type {
+  AddCameraResponse,
+  CameraInfo,
+  CameraSpec,
   CreateRoomResponse,
+  CricketConfigUpdate,
+  CricketConfigView,
   ExportStatus,
+  ProgramState,
+  ProgramTransitionRequest,
   ReplayInfo,
   ReplayTriggerRequest,
   Room,
+  UpdateCameraRequest,
 } from "./types";
 
 export class ApiError extends Error {
@@ -61,6 +69,71 @@ export const api = {
 
   async getRoom(roomId: string, token: string) {
     return request<Room>(`/api/v1/room/${roomId}`, { method: "GET", token });
+  },
+
+  async addCamera(roomId: string, spec: CameraSpec, token: string) {
+    return request<AddCameraResponse>(`/api/v1/room/${roomId}/camera`, {
+      method: "POST",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(spec),
+    });
+  },
+
+  async updateCamera(
+    roomId: string,
+    cameraId: string,
+    update: UpdateCameraRequest,
+    token: string,
+  ) {
+    return request<CameraInfo>(
+      `/api/v1/room/${roomId}/camera/${encodeURIComponent(cameraId)}`,
+      {
+        method: "PUT",
+        token,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(update),
+      },
+    );
+  },
+
+  async removeCamera(roomId: string, cameraId: string, token: string) {
+    return request<void>(
+      `/api/v1/room/${roomId}/camera/${encodeURIComponent(cameraId)}`,
+      { method: "DELETE", token },
+    );
+  },
+
+  async getCricketConfig(token: string) {
+    return request<CricketConfigView>("/api/v1/cricket/config", {
+      method: "GET",
+      token,
+    });
+  },
+
+  async setProgramTransition(req: ProgramTransitionRequest, token: string) {
+    return request<ProgramState>("/api/v1/program/transition", {
+      method: "POST",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    });
+  },
+
+  async getProgram(roomId: string, token: string) {
+    return request<ProgramState>(`/api/v1/program/${encodeURIComponent(roomId)}`, {
+      method: "GET",
+      token,
+    });
+  },
+
+  async updateCricketConfig(config: CricketConfigUpdate, token: string) {
+    return request<CricketConfigView>("/api/v1/cricket/config", {
+      method: "PUT",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+    });
   },
 
   async triggerReplay(req: ReplayTriggerRequest, token: string) {

@@ -28,11 +28,11 @@ cp .env.example .env.local
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | `http://127.0.0.1:8080` | Signaling control plane base URL |
+| `VITE_API_BASE_URL` | *(empty → same-origin)* | Signaling control plane base URL |
 | `VITE_ADMIN_TOKEN` | *(empty)* | Admin JWT for director control calls |
 | `VITE_VIEWER_TOKEN` | *(empty)* | Viewer JWT for WHEP playback |
-| `VITE_CRICKET_MANAGER_URL` | `https://cricket-manager.traceodd.com` | External manager (used by the backend sync) |
-| `VITE_STUN_URL` | `stun:stun.l.google.com:19302` | STUN server for local WHEP viewers |
+| `VITE_CRICKET_MANAGER_URL` | *(empty)* | External manager origin (shown in the settings panel; the backend sync is configured at runtime via `PUT /api/v1/cricket/config`) |
+| `VITE_STUN_URL` | *(empty)* | STUN server for local WHEP viewers (ICE is host-only when unset) |
 | `VITE_TURN_URL` | *(empty)* | Optional TURN server |
 | `VITE_GFX_ASSET_URL` | *(empty)* | Optional transparent GLTF/WebM overlay asset |
 
@@ -64,10 +64,15 @@ into `react-vendor` and `three-vendor` chunks to keep the main entry small.
 
 | Contract | Method | Notes |
 | --- | --- | --- |
-| `/api/v1/room/list` | `GET` | Admin; populates the multiview grid |
+| `/api/v1/room/list` | `GET` | Admin; superseded by the control-plane WS for live updates |
+| `/api/v1/room/{id}/camera` | `POST` | Admin; add a camera to a live room |
+| `/api/v1/room/{id}/camera/{camera}` | `PUT` / `DELETE` | Admin; update metadata / remove a camera |
+| `/api/v1/control/ws` | `WS` | Admin; rooms + cameras + PGM + cricket config (push) |
+| `/api/v1/cricket/config` | `GET` / `PUT` | Admin; runtime match ids, API token, poll interval |
 | `/api/v1/whep/watch/{room}/{camera}` | `POST` | Viewer; WHEP egress per camera |
-| `/api/v1/program/transition` | `POST` | Admin; Cut/Fade/Stinger source switch |
-| `/api/v1/whep/program/{room}` | `POST` | Viewer; WHEP egress for current PGM |
+| `/api/v1/program/transition` | `POST` | Admin; Cut/Fade/LumaWipe/Stinger + optional `duration_ms`, scene `layout`, `stinger` asset |
+| `/api/v1/program/{room}` | `GET` | Admin; current program state (reconcile after a lost control feed) |
+| `/api/v1/whep/program/{room}` | `POST` | Viewer; WHEP egress for the composite PGM (gst builds) |
 | `/api/v1/replay/trigger` | `POST` | Admin; instant replay / slow-motion |
 | `/api/v1/cricket/live/{match_id}` | `GET` | Admin; cached scoreboard lower-third |
 | `/api/v1/cricket/ws` | `WS` | Push feed of cached matches |

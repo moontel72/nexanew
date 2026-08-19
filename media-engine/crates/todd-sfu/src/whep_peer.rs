@@ -35,7 +35,7 @@ use webrtc::{
 use webrtc_util::Unmarshal;
 
 use crate::{engine::Engine, router::TrackRouter};
-use todd_transcode::media::MediaCodec;
+use todd_transcode::media::{MediaCodec, RtpChunk};
 
 /// Which source feeds a viewer's tracks.
 pub(crate) enum TrackFeed {
@@ -47,6 +47,17 @@ pub(crate) enum TrackFeed {
     Replay {
         replay_id: String,
         camera_id: String,
+    },
+    /// Composite program egress: video from the GStreamer mixer's encoded
+    /// output, audio from the PGM camera's live router stream. Constructed
+    /// only in gst builds (without the feature the program egress stays a
+    /// passthrough of the PGM camera).
+    #[cfg_attr(not(feature = "gst"), allow(dead_code))]
+    Program {
+        video: tokio::sync::broadcast::Receiver<RtpChunk>,
+        codec: MediaCodec,
+        audio_room: String,
+        audio_camera: String,
     },
 }
 
@@ -113,6 +124,7 @@ pub(crate) async fn create_viewer(
             .and_then(|session| session.camera(camera_id))
             .map(|(codec, _)| codec)
             .unwrap_or(MediaCodec::Vp8),
+        TrackFeed::Program { codec, .. } => *codec,
     };
 
     // Replay sessions may carry audio (commentary etc.); only create the
@@ -128,7 +140,11 @@ pub(crate) async fn create_viewer(
     for transceiver in pc.get_transceivers().await {
         let chosen = match transceiver.kind() {
             RTPCodecType::Video => video_codec,
-            RTPCodecType::Audio if matches!(feed, TrackFeed::Live { .. }) => MediaCodec::Opus,
+            RTPCodecType::Audio
+                if matches!(feed, TrackFeed::Live { .. } | TrackFeed::Program { .. }) =>
+            {
+                MediaCodec::Opus
+            }
             RTPCodecType::Audio if replay_has_audio => MediaCodec::Opus,
             _ => continue,
         };
@@ -180,6 +196,52 @@ pub(crate) async fn create_viewer(
                 tokio::spawn(async move {
                     pump_replay_track(track, rx, chosen, pump_shutdown).await;
                 });
+            }
+            TrackFeed::Program {
+                video,
+                audio_room,
+                audio_camera,
+                ..
+            } => {
+                if transceiver.kind() == RTPCodecType::Video {
+                    // tokio's broadcast::Receiver has no Clone impl;
+                    // resubscribe() hands out a fresh tail reader.
+                    let mut rx = video.resubscribe();
+                    tokio::spawn(async move {
+                        loop {
+                            tokio::select! {
+                                _ = pump_shutdown.cancelled() => break,
+                                chunk = rx.recv() => {
+                                    let Ok(chunk) = chunk else { break };
+                                    if chunk.codec != chosen {
+                                        continue;
+                                    }
+                                    if !write_chunk(&track, &chunk).await {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    let (router, room, camera) = (
+                        engine.router.clone(),
+                        audio_room.to_string(),
+                        audio_camera.to_string(),
+                    );
+                    tokio::spawn(async move {
+                        pump_live_track(
+                            track,
+                            router,
+                            room,
+                            camera,
+                            String::new(),
+                            chosen,
+                            pump_shutdown,
+                        )
+                        .await;
+                    });
+                }
             }
         }
     }

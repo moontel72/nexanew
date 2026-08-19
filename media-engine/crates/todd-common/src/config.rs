@@ -7,6 +7,7 @@
 use std::{env, net::IpAddr, str::FromStr};
 
 use crate::error::AppError;
+use crate::media::EncoderKind;
 
 fn env_or(key: &str, default: &str) -> String {
     env::var(key).unwrap_or_else(|_| default.to_string())
@@ -134,6 +135,21 @@ pub struct Settings {
     pub cricket_manager_poll_ms: u64,
     /// Optional WebSocket feed URL (e.g. `wss://...`) for push updates.
     pub cricket_manager_ws_url: Option<String>,
+
+    // --- program (PGM) mixer output ---
+    /// Composite program frame width.
+    pub program_width: u32,
+    /// Composite program frame height.
+    pub program_height: u32,
+    /// Composite program frame rate.
+    pub program_fps: u32,
+    /// Composite program encoder bitrate.
+    pub program_bitrate_kbps: u32,
+    /// Composite program encoder preference (auto = NVENC → QSV → AMF → x264).
+    pub program_encoder: EncoderKind,
+    /// Default stinger asset URL used when a transition request does not
+    /// carry its own asset (transparent WebM/MP4 or PNG).
+    pub stinger_asset_url: Option<String>,
 }
 
 impl Settings {
@@ -240,6 +256,18 @@ impl Settings {
             cricket_manager_match_ids: env_list("CRICKET_MANAGER_MATCH_IDS", ""),
             cricket_manager_poll_ms: parse_u64("CRICKET_MANAGER_POLL_MS", 3000)?,
             cricket_manager_ws_url: env::var("CRICKET_MANAGER_WS_URL")
+                .ok()
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty()),
+
+            program_width: parse_u64("PROGRAM_WIDTH", 1280)? as u32,
+            program_height: parse_u64("PROGRAM_HEIGHT", 720)? as u32,
+            program_fps: parse_u64("PROGRAM_FPS", 30)? as u32,
+            program_bitrate_kbps: parse_u64("PROGRAM_BITRATE_KBPS", 2500)? as u32,
+            program_encoder: env_or("PROGRAM_ENCODER", "auto")
+                .parse()
+                .map_err(|e: <crate::media::EncoderKind as std::str::FromStr>::Err| e)?,
+            stinger_asset_url: env::var("STINGER_ASSET_URL")
                 .ok()
                 .map(|v| v.trim().to_string())
                 .filter(|v| !v.is_empty()),

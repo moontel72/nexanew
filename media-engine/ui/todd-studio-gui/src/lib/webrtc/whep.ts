@@ -31,7 +31,8 @@ export async function startWhepWatch(opts: {
   token: string;
   videoEl: HTMLVideoElement;
 }): Promise<WhepSession> {
-  const iceServers: RTCIceServer[] = [{ urls: env.stunUrl }];
+  const iceServers: RTCIceServer[] = [];
+  if (env.stunUrl) iceServers.push({ urls: env.stunUrl });
   if (env.turnUrl) iceServers.push({ urls: env.turnUrl });
 
   const pc = new RTCPeerConnection({ iceServers });

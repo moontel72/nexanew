@@ -14,6 +14,56 @@ pub const DEFAULT_ROOM_TTL_SECS: u64 = 3600;
 /// Hard cap so a misbehaving caller cannot mint near-immortal tokens.
 pub const MAX_ROOM_TTL_SECS: u64 = 86_400;
 
+/// How a camera's media reaches the engine.
+///
+/// `whip` is the fully implemented ingest path; `rtsp` (pull) and `rtmp`
+/// (push) mark cameras whose sources are attached by external adapters —
+/// the metadata flows through the control plane now so directors can
+/// configure the source up front.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CameraSourceKind {
+    /// WebRTC HTTP Ingestion Protocol (RFC draft-ietf-wish-whip).
+    #[default]
+    Whip,
+    /// RTSP pull source.
+    Rtsp,
+    /// RTMP push source.
+    Rtmp,
+}
+
+/// Camera metadata supplied by a caller when creating or adding a camera.
+/// `kind` and `group` are optional so existing plain-id payloads keep
+/// working unchanged.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CameraSpec {
+    /// Stable identifier, unique within the room (e.g. "cam-1").
+    pub id: String,
+    /// Director-facing label (e.g. "Cam 1 — Mid Wicket").
+    #[serde(default)]
+    pub label: Option<String>,
+    /// Source transport for this camera.
+    #[serde(default)]
+    pub kind: CameraSourceKind,
+    /// Logical grouping (e.g. "ground", "drone", "studio").
+    #[serde(default)]
+    pub group: Option<String>,
+}
+
+impl CameraSpec {
+    /// Converts a spec into stored camera metadata. Liveness (`active`) is
+    /// never stored — it is computed from live WHIP session state on read.
+    pub fn into_info(self) -> CameraInfo {
+        CameraInfo {
+            id: self.id,
+            label: self.label.filter(|label| !label.trim().is_empty()),
+            kind: self.kind,
+            group: self.group.filter(|group| !group.trim().is_empty()),
+            active: false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateRoomRequest {
     pub name: String,
@@ -21,6 +71,10 @@ pub struct CreateRoomRequest {
     /// Defaults to a single camera named "default".
     #[serde(default)]
     pub camera_ids: Vec<String>,
+    /// Full camera metadata. When non-empty it takes precedence over
+    /// `camera_ids` (which stays supported for the Laravel caller).
+    #[serde(default)]
+    pub camera_specs: Vec<CameraSpec>,
     /// Room lifetime in seconds (clamped to [60, 86400] by the server).
     #[serde(default = "default_room_ttl")]
     pub ttl_secs: u64,
@@ -30,12 +84,49 @@ fn default_room_ttl() -> u64 {
     DEFAULT_ROOM_TTL_SECS
 }
 
+/// Metadata of one camera inside a room. `label`, `kind` and `group` are
+/// director-facing configuration; `active` is computed from live session
+/// state when rooms are read.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CameraInfo {
     pub id: String,
+    /// Director-facing label; falls back to `id` in the UI.
+    #[serde(default)]
+    pub label: Option<String>,
+    /// Source transport for this camera.
+    #[serde(default)]
+    pub kind: CameraSourceKind,
+    /// Logical grouping of cameras.
+    #[serde(default)]
+    pub group: Option<String>,
     /// Populated from live session state when rooms are read.
     #[serde(default)]
     pub active: bool,
+}
+
+/// Partial camera metadata update. Every field is optional: omitted
+/// fields keep their current value; an explicit empty string clears a
+/// text field.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UpdateCameraRequest {
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(default)]
+    pub kind: Option<CameraSourceKind>,
+    #[serde(default)]
+    pub group: Option<String>,
+}
+
+/// Response of `POST /api/v1/room/{room_id}/camera`: the stored camera
+/// plus the short-lived publisher token the camera operator needs to
+/// start WHIP ingest.
+#[derive(Debug, Clone, Serialize)]
+pub struct AddCameraResponse {
+    pub camera: CameraInfo,
+    /// Publisher JWT scoped to exactly this (room, camera).
+    pub ingest_token: String,
+    /// Base URL cameras POST their WHIP offers to; append "/{camera_id}".
+    pub whip_base_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,15 +199,136 @@ fn default_keyframe_interval() -> u32 {
 
 /// Vision-switch transition type. The Studio director drives these through
 /// `POST /api/v1/program/transition`. Cut is an instant source swap; Fade
-/// and Stinger are recorded and surfaced to the Studio overlay, while the
-/// SFU switches the program egress source.
+/// cross-blends opacity; LumaWipe reveals the incoming source with a
+/// moving boundary; Stinger plays an animated overlay while the program
+/// source swaps behind it. The SFU mixer renders all of them into the
+/// program egress.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TransitionKind {
     #[default]
     Cut,
     Fade,
+    LumaWipe,
     Stinger,
+}
+
+/// Default transition duration when a caller does not specify one.
+pub const DEFAULT_TRANSITION_DURATION_MS: u64 = 600;
+
+/// Hard cap so a misbehaving caller cannot stall the program bus.
+pub const MAX_TRANSITION_DURATION_MS: u64 = 10_000;
+
+/// Animated overlay asset played during a stinger transition (e.g. the
+/// Wicket / Boundary / 6s stingers).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct StingerSpec {
+    /// Asset URL (transparent WebM/MP4 or PNG). When `None`, the mixer
+    /// falls back to the server's configured stinger asset.
+    #[serde(default)]
+    pub asset_url: Option<String>,
+}
+
+/// A camera source within a scene. Scenes reference cameras of the same
+/// room.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SourceRef {
+    pub room_id: String,
+    pub camera_id: String,
+}
+
+/// Picture-in-picture placement of an overlay source on top of a main
+/// source. Coordinates are normalized (0.0–1.0) to the program frame.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PiPConfig {
+    pub main: SourceRef,
+    pub overlay: SourceRef,
+    /// Left edge of the overlay window.
+    #[serde(default = "default_pip_x")]
+    pub overlay_x: f32,
+    /// Top edge of the overlay window.
+    #[serde(default = "default_pip_y")]
+    pub overlay_y: f32,
+    /// Overlay window width.
+    #[serde(default = "default_pip_width")]
+    pub overlay_width: f32,
+    /// Overlay window height.
+    #[serde(default = "default_pip_height")]
+    pub overlay_height: f32,
+    /// Overlay opacity (0.0 transparent – 1.0 opaque).
+    #[serde(default = "default_pip_opacity")]
+    pub overlay_opacity: f32,
+}
+
+fn default_pip_x() -> f32 {
+    0.72
+}
+fn default_pip_y() -> f32 {
+    0.05
+}
+fn default_pip_width() -> f32 {
+    0.26
+}
+fn default_pip_height() -> f32 {
+    0.26
+}
+fn default_pip_opacity() -> f32 {
+    1.0
+}
+
+/// How a split scene divides the frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SplitOrientation {
+    #[default]
+    Horizontal,
+    Vertical,
+}
+
+/// One region of a split scene.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SplitRegion {
+    pub source: SourceRef,
+    /// Relative size of the region; weights are normalized across the
+    /// split's regions.
+    #[serde(default = "default_split_weight")]
+    pub weight: f32,
+}
+
+fn default_split_weight() -> f32 {
+    1.0
+}
+
+/// Split scene: two or more regions laid out along one axis.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SplitScreenConfig {
+    pub orientation: SplitOrientation,
+    #[serde(default)]
+    pub regions: Vec<SplitRegion>,
+}
+
+/// Side-by-side comparison: two equally sized sources.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SideBySideConfig {
+    pub left: SourceRef,
+    pub right: SourceRef,
+}
+
+/// A program scene layout. Serde-tagged: the `kind` field discriminates
+/// the variant (mirrored 1:1 by the TypeScript union in the Studio GUI).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SceneLayout {
+    Fullscreen,
+    PictureInPicture(PiPConfig),
+    SplitScreen(SplitScreenConfig),
+    SideBySide(SideBySideConfig),
+}
+
+impl Default for SceneLayout {
+    fn default() -> Self {
+        SceneLayout::Fullscreen
+    }
 }
 
 /// Request body for the vision switcher control contract.
@@ -125,7 +337,19 @@ pub struct ProgramTransitionRequest {
     pub room_id: String,
     /// The camera to move onto Program (the current Preview bus).
     pub camera_id: String,
+    #[serde(default)]
     pub transition: TransitionKind,
+    /// Transition duration in milliseconds; only meaningful for
+    /// Fade / LumaWipe / Stinger (clamped server-side).
+    #[serde(default)]
+    pub duration_ms: Option<u64>,
+    /// Scene layout to render on the program bus. `None` keeps the
+    /// room's current layout.
+    #[serde(default)]
+    pub layout: Option<SceneLayout>,
+    /// Stinger asset override (only used for `transition: stinger`).
+    #[serde(default)]
+    pub stinger: Option<StingerSpec>,
 }
 
 /// Current program (PGM) state for one room. Exposed over HTTP and used
@@ -137,6 +361,134 @@ pub struct ProgramState {
     /// Simulcast layer resolved for the program source (empty = lowest).
     #[serde(default)]
     pub rid: String,
+    #[serde(default)]
     pub transition: TransitionKind,
+    /// Duration the last transition ran (or runs) for.
+    #[serde(default = "default_transition_duration")]
+    pub duration_ms: u64,
+    /// Scene layout currently applied to the program bus.
+    #[serde(default)]
+    pub layout: SceneLayout,
+    /// Stinger asset of the last stinger transition, when one ran.
+    #[serde(default)]
+    pub stinger: Option<StingerSpec>,
     pub updated_at_ms: i64,
+}
+
+fn default_transition_duration() -> u64 {
+    DEFAULT_TRANSITION_DURATION_MS
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn camera_source_kind_serializes_snake_case() {
+        assert_eq!(
+            serde_json::to_string(&CameraSourceKind::Whip).unwrap(),
+            "\"whip\""
+        );
+        assert_eq!(
+            serde_json::to_string(&CameraSourceKind::Rtsp).unwrap(),
+            "\"rtsp\""
+        );
+        assert_eq!(
+            serde_json::to_string(&CameraSourceKind::Rtmp).unwrap(),
+            "\"rtmp\""
+        );
+    }
+
+    #[test]
+    fn camera_info_tolerates_legacy_payloads() {
+        // Rooms persisted before the metadata fields existed must still
+        // deserialize: label/group default to None, kind to Whip.
+        let legacy = "{\"id\":\"cam-1\",\"active\":true}";
+        let info: CameraInfo = serde_json::from_str(legacy).unwrap();
+        assert_eq!(info.id, "cam-1");
+        assert!(info.label.is_none());
+        assert!(info.group.is_none());
+        assert_eq!(info.kind, CameraSourceKind::Whip);
+        assert!(info.active);
+    }
+
+    #[test]
+    fn camera_spec_blank_text_fields_become_none() {
+        let spec = CameraSpec {
+            id: "cam-2".to_string(),
+            label: Some("   ".to_string()),
+            kind: CameraSourceKind::Rtsp,
+            group: Some("".to_string()),
+        };
+        let info = spec.into_info();
+        assert_eq!(info.id, "cam-2");
+        assert!(info.label.is_none());
+        assert!(info.group.is_none());
+        assert_eq!(info.kind, CameraSourceKind::Rtsp);
+        assert!(!info.active);
+    }
+
+    #[test]
+    fn update_camera_request_defaults_to_all_none() {
+        let update: UpdateCameraRequest = serde_json::from_str("{}").unwrap();
+        assert!(update.label.is_none());
+        assert!(update.kind.is_none());
+        assert!(update.group.is_none());
+    }
+
+    #[test]
+    fn scene_layout_serializes_tagged_kind() {
+        let pip = SceneLayout::PictureInPicture(PiPConfig {
+            main: SourceRef {
+                room_id: "r".to_string(),
+                camera_id: "cam-1".to_string(),
+            },
+            overlay: SourceRef {
+                room_id: "r".to_string(),
+                camera_id: "cam-2".to_string(),
+            },
+            overlay_x: 0.7,
+            overlay_y: 0.1,
+            overlay_width: 0.25,
+            overlay_height: 0.25,
+            overlay_opacity: 1.0,
+        });
+        let json = serde_json::to_string(&pip).unwrap();
+        assert!(json.contains("\"kind\":\"picture_in_picture\""));
+        let roundtrip: SceneLayout = serde_json::from_str(&json).unwrap();
+        assert!(matches!(roundtrip, SceneLayout::PictureInPicture(_)));
+
+        assert_eq!(
+            serde_json::to_string(&SceneLayout::Fullscreen).unwrap(),
+            "{\"kind\":\"fullscreen\"}"
+        );
+    }
+
+    #[test]
+    fn luma_wipe_transition_kind_roundtrips() {
+        let json = serde_json::to_string(&TransitionKind::LumaWipe).unwrap();
+        assert_eq!(json, "\"luma_wipe\"");
+        let back: TransitionKind = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, TransitionKind::LumaWipe);
+    }
+
+    #[test]
+    fn program_transition_request_tolerates_legacy_payloads() {
+        // Legacy callers send only room/camera/transition.
+        let legacy = "{\"room_id\":\"r\",\"camera_id\":\"cam-1\",\"transition\":\"cut\"}";
+        let req: ProgramTransitionRequest = serde_json::from_str(legacy).unwrap();
+        assert_eq!(req.transition, TransitionKind::Cut);
+        assert!(req.duration_ms.is_none());
+        assert!(req.layout.is_none());
+        assert!(req.stinger.is_none());
+    }
+
+    #[test]
+    fn program_state_defaults_layout_to_fullscreen() {
+        let legacy = "{\"room_id\":\"r\",\"camera_id\":\"cam-1\",\"updated_at_ms\":1}";
+        let state: ProgramState = serde_json::from_str(legacy).unwrap();
+        assert!(matches!(state.layout, SceneLayout::Fullscreen));
+        assert_eq!(state.duration_ms, DEFAULT_TRANSITION_DURATION_MS);
+        assert_eq!(state.transition, TransitionKind::Cut);
+    }
 }

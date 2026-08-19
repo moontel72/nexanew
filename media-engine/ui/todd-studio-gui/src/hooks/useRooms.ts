@@ -1,35 +1,21 @@
-import { useEffect, useState } from "react";
-import { api } from "../lib/api/client";
+import { useControlState } from "./useControlState";
 import type { Room } from "../lib/api/types";
 
-/** Polls the active room list (admin token). */
-export function useRooms(token: string, pollMs = 5000) {
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [error, setError] = useState<string | null>(null);
+export interface RoomsFeed {
+  rooms: Room[];
+  error: string | null;
+}
 
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
+/**
+ * Live room list driven by the control-plane WebSocket (push), replacing
+ * the previous 5s REST polling. The server snapshot arrives on connect
+ * and camera/program mutations update the list incrementally.
+ */
+export function useRooms(token: string): RoomsFeed {
+  const state = useControlState(token);
 
-    const poll = async () => {
-      try {
-        const next = await api.listRooms(token);
-        if (!cancelled) {
-          setRooms(next);
-          setError(null);
-        }
-      } catch (e) {
-        if (!cancelled) setError((e as Error).message);
-      }
-    };
-
-    poll();
-    const id = setInterval(poll, pollMs);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, [token, pollMs]);
-
-  return { rooms, error };
+  return {
+    rooms: state.rooms,
+    error: state.connected ? null : state.error ?? (token ? "connecting…" : null),
+  };
 }

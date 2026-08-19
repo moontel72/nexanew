@@ -13,7 +13,11 @@ use async_trait::async_trait;
 use chrono::Utc;
 use dashmap::DashMap;
 use redis::AsyncCommands;
-use todd_common::{config::Settings, error::AppError, types::Room};
+use todd_common::{
+    config::Settings,
+    error::AppError,
+    types::{CameraInfo, Room},
+};
 
 #[async_trait]
 pub trait RoomStore: Send + Sync {
@@ -21,6 +25,21 @@ pub trait RoomStore: Send + Sync {
     async fn get_room(&self, room_id: &str) -> Result<Option<Room>, AppError>;
     async fn list_rooms(&self) -> Result<Vec<Room>, AppError>;
     async fn delete_room(&self, room_id: &str) -> Result<(), AppError>;
+
+    /// Inserts a camera into a room, or replaces its metadata when a
+    /// camera with the same id already exists. Errors with `NotFound`
+    /// when the room does not exist.
+    async fn upsert_camera(
+        &self,
+        room_id: &str,
+        camera: &CameraInfo,
+        ttl_secs: u64,
+    ) -> Result<(), AppError>;
+
+    /// Removes a camera from a room together with its session registry
+    /// entries. Errors with `NotFound` when the room does not exist; a
+    /// missing camera inside an existing room is a no-op.
+    async fn remove_camera(&self, room_id: &str, camera_id: &str) -> Result<(), AppError>;
 
     async fn add_session(
         &self,
@@ -102,6 +121,35 @@ impl RoomStore for InMemoryRoomStore {
 
     async fn delete_room(&self, room_id: &str) -> Result<(), AppError> {
         self.rooms.remove(room_id);
+        Ok(())
+    }
+
+    async fn upsert_camera(
+        &self,
+        room_id: &str,
+        camera: &CameraInfo,
+        _ttl_secs: u64,
+    ) -> Result<(), AppError> {
+        let Some(mut record) = self.rooms.get_mut(room_id) else {
+            return Err(AppError::NotFound(format!("room {room_id}")));
+        };
+        let cameras = &mut record.room.cameras;
+        match cameras.iter_mut().find(|existing| existing.id == camera.id) {
+            Some(existing) => *existing = camera.clone(),
+            None => cameras.push(camera.clone()),
+        }
+        Ok(())
+    }
+
+    async fn remove_camera(&self, room_id: &str, camera_id: &str) -> Result<(), AppError> {
+        let Some(mut record) = self.rooms.get_mut(room_id) else {
+            return Err(AppError::NotFound(format!("room {room_id}")));
+        };
+        record.room.cameras.retain(|camera| camera.id != camera_id);
+        record
+            .value_mut()
+            .sessions
+            .retain(|_, session_camera| session_camera != camera_id);
         Ok(())
     }
 
@@ -285,6 +333,85 @@ impl RoomStore for RedisRoomStore {
         Ok(())
     }
 
+    async fn upsert_camera(
+        &self,
+        room_id: &str,
+        camera: &CameraInfo,
+        ttl_secs: u64,
+    ) -> Result<(), AppError> {
+        let mut conn = self.conn.lock().await;
+        let room_key = self.room_key(room_id);
+        let raw: Option<String> = conn.get(&room_key).await.map_err(redis_err)?;
+        let Some(raw) = raw else {
+            return Err(AppError::NotFound(format!("room {room_id}")));
+        };
+
+        let mut room: Room = serde_json::from_str(&raw)
+            .map_err(|e| AppError::Internal(format!("room deserialization failed: {e}")))?;
+        match room
+            .cameras
+            .iter_mut()
+            .find(|existing| existing.id == camera.id)
+        {
+            Some(existing) => *existing = camera.clone(),
+            None => room.cameras.push(camera.clone()),
+        }
+
+        let json = serde_json::to_string(&room)
+            .map_err(|e| AppError::Internal(format!("room serialization failed: {e}")))?;
+        // `ttl_secs` is the room's remaining lifetime (computed by the
+        // caller) so camera edits never extend or drop the room expiry.
+        conn.set_ex::<_, _, ()>(&room_key, json, ttl_secs.max(1))
+            .await
+            .map_err(redis_err)?;
+        Ok(())
+    }
+
+    async fn remove_camera(&self, room_id: &str, camera_id: &str) -> Result<(), AppError> {
+        let mut conn = self.conn.lock().await;
+        let room_key = self.room_key(room_id);
+        let raw: Option<String> = conn.get(&room_key).await.map_err(redis_err)?;
+        let Some(raw) = raw else {
+            return Err(AppError::NotFound(format!("room {room_id}")));
+        };
+
+        let mut room: Room = serde_json::from_str(&raw)
+            .map_err(|e| AppError::Internal(format!("room deserialization failed: {e}")))?;
+        room.cameras.retain(|camera| camera.id != camera_id);
+
+        // Drop the session registry entries of the removed camera so no
+        // stale (session -> camera) mapping survives.
+        let sessions: Vec<(String, String)> = conn
+            .hgetall(self.sessions_key(room_id))
+            .await
+            .map_err(redis_err)?;
+        for (session_id, session_camera) in &sessions {
+            if session_camera == camera_id {
+                let _: Result<(), redis::RedisError> =
+                    conn.hdel(self.sessions_key(room_id), session_id).await;
+                let _: Result<(), redis::RedisError> = conn.del(self.session_key(session_id)).await;
+            }
+        }
+
+        let json = serde_json::to_string(&room)
+            .map_err(|e| AppError::Internal(format!("room serialization failed: {e}")))?;
+        // Preserve the room's existing expiry: camera edits must not
+        // extend (or, worse, drop) the room lifetime. Redis has no
+        // KEEPTTL option in this crate version, so read and re-apply the
+        // remaining TTL explicitly (`-1` = key has no expiry).
+        let remaining: i64 = conn.ttl(&room_key).await.map_err(redis_err)?;
+        if remaining < 0 {
+            conn.set::<_, _, ()>(&room_key, json)
+                .await
+                .map_err(redis_err)?;
+        } else {
+            conn.set_ex::<_, _, ()>(&room_key, json, remaining.max(1) as u64)
+                .await
+                .map_err(redis_err)?;
+        }
+        Ok(())
+    }
+
     async fn add_session(
         &self,
         room_id: &str,
@@ -369,8 +496,21 @@ mod tests {
             expires_at: now + ChronoDuration::seconds(3600),
             cameras: vec![CameraInfo {
                 id: "cam-1".to_string(),
+                label: None,
+                kind: todd_common::types::CameraSourceKind::Whip,
+                group: None,
                 active: false,
             }],
+        }
+    }
+
+    fn sample_camera(id: &str, kind: todd_common::types::CameraSourceKind) -> CameraInfo {
+        CameraInfo {
+            id: id.to_string(),
+            label: Some(format!("Camera {id}")),
+            kind,
+            group: Some("ground".to_string()),
+            active: false,
         }
     }
 
@@ -400,6 +540,59 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn memory_store_camera_crud() {
+        use todd_common::types::CameraSourceKind;
+
+        let store = InMemoryRoomStore::new();
+        store
+            .upsert_room(&sample_room("mem-cam"), 3600)
+            .await
+            .unwrap();
+
+        // Add: new camera appears with its metadata intact.
+        let cam2 = sample_camera("cam-2", CameraSourceKind::Rtsp);
+        store.upsert_camera("mem-cam", &cam2, 3600).await.unwrap();
+        let room = store.get_room("mem-cam").await.unwrap().unwrap();
+        assert_eq!(room.cameras.len(), 2);
+        let stored = room.cameras.iter().find(|c| c.id == "cam-2").unwrap();
+        assert_eq!(stored.kind, CameraSourceKind::Rtsp);
+        assert_eq!(stored.label.as_deref(), Some("Camera cam-2"));
+        assert_eq!(stored.group.as_deref(), Some("ground"));
+
+        // Update: same id replaces metadata instead of duplicating.
+        let updated = sample_camera("cam-2", CameraSourceKind::Whip);
+        store
+            .upsert_camera("mem-cam", &updated, 3600)
+            .await
+            .unwrap();
+        let room = store.get_room("mem-cam").await.unwrap().unwrap();
+        assert_eq!(room.cameras.len(), 2);
+        let stored = room.cameras.iter().find(|c| c.id == "cam-2").unwrap();
+        assert_eq!(stored.kind, CameraSourceKind::Whip);
+
+        // Remove: camera and its session registry entries are gone.
+        store
+            .add_session("mem-cam", "s-cam2", "cam-2", 600)
+            .await
+            .unwrap();
+        store.remove_camera("mem-cam", "cam-2").await.unwrap();
+        let room = store.get_room("mem-cam").await.unwrap().unwrap();
+        assert!(!room.cameras.iter().any(|c| c.id == "cam-2"));
+        assert!(store.list_sessions("mem-cam").await.unwrap().is_empty());
+
+        // Unknown room errors; missing camera inside an existing room is a no-op.
+        assert!(store
+            .upsert_camera(
+                "missing-room",
+                &sample_camera("x", CameraSourceKind::Whip),
+                60
+            )
+            .await
+            .is_err());
+        store.remove_camera("mem-cam", "ghost").await.unwrap();
+    }
+
+    #[tokio::test]
     #[ignore = "requires a running Redis (CI runs it via a service container)"]
     async fn redis_store_roundtrip() {
         let url =
@@ -422,6 +615,14 @@ mod tests {
 
         store.remove_session("red-1", "s1").await.unwrap();
         assert!(store.find_session("s1").await.unwrap().is_none());
+
+        let extra = sample_camera("cam-2", todd_common::types::CameraSourceKind::Rtsp);
+        store.upsert_camera("red-1", &extra, 3600).await.unwrap();
+        let room = store.get_room("red-1").await.unwrap().unwrap();
+        assert!(room.cameras.iter().any(|c| c.id == "cam-2"));
+        store.remove_camera("red-1", "cam-2").await.unwrap();
+        let room = store.get_room("red-1").await.unwrap().unwrap();
+        assert!(!room.cameras.iter().any(|c| c.id == "cam-2"));
 
         store.delete_room("red-1").await.unwrap();
         assert!(store.get_room("red-1").await.unwrap().is_none());

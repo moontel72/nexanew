@@ -15,7 +15,12 @@ use std::time::Duration;
 
 use dashmap::DashMap;
 use todd_common::error::AppError;
-use todd_common::types::{ProgramState, TransitionKind};
+#[cfg(feature = "gst")]
+use todd_common::types::SourceRef;
+use todd_common::types::{
+    ProgramState, ProgramTransitionRequest, DEFAULT_TRANSITION_DURATION_MS,
+    MAX_TRANSITION_DURATION_MS,
+};
 use todd_replay::export::ClipExportRequest;
 use todd_replay::session::{ReplayInfo, ReplayTrigger};
 use todd_replay::ReplayManager;
@@ -38,6 +43,12 @@ use crate::net::{self, IceNetworkPolicy};
 use crate::pli::PliBroker;
 use crate::{router::TrackRouter, whep_peer, whip_peer};
 
+use todd_transcode::mixer::MixerOutputConfig;
+#[cfg(feature = "gst")]
+use todd_transcode::mixer::{plan_scene, source_key};
+#[cfg(feature = "gst")]
+use todd_transcode::mixer_gst::GstProgramMixer;
+
 /// Per-host engine configuration. Clonable: the interface/IP filters are
 /// `Arc`d closures.
 #[derive(Clone)]
@@ -52,6 +63,8 @@ pub struct EngineConfig {
     pub replay_buffer_ms: u64,
     /// Cloud callback URL notified on clip-export completion.
     pub replay_export_callback_url: Option<String>,
+    /// Composite program (PGM) output of the GStreamer mixer.
+    pub program_output: MixerOutputConfig,
 }
 
 /// Parses a TURN entry of the form `user:password@host:port` (as used in
@@ -118,6 +131,10 @@ pub struct Engine {
     pub replay: Arc<ReplayManager>,
     /// Per-room program (PGM) source state. Keyed by room id.
     pub(crate) program: Arc<DashMap<String, ProgramState>>,
+    /// Per-room GStreamer program mixers (gst builds only; without the
+    /// feature the program egress stays a passthrough of the PGM camera).
+    #[cfg(feature = "gst")]
+    pub(crate) mixers: Arc<DashMap<String, Arc<GstProgramMixer>>>,
     #[cfg(feature = "gst")]
     pub(crate) forwarders: Arc<DashMap<String, todd_transcode::forwarder::GstForwarder>>,
 }
@@ -141,6 +158,8 @@ impl Engine {
             pli,
             replay: ReplayManager::new(replay_buffer_ms, replay_export_callback_url),
             program: Arc::new(DashMap::new()),
+            #[cfg(feature = "gst")]
+            mixers: Arc::new(DashMap::new()),
             #[cfg(feature = "gst")]
             forwarders: Arc::new(DashMap::new()),
         })
@@ -180,6 +199,14 @@ impl Engine {
             disconnected_grace: Duration::from_millis(settings.ice_disconnected_grace_ms),
             replay_buffer_ms: settings.replay_buffer_ms,
             replay_export_callback_url: settings.replay_export_callback_url.clone(),
+            program_output: MixerOutputConfig {
+                width: settings.program_width,
+                height: settings.program_height,
+                fps: settings.program_fps,
+                bitrate_kbps: settings.program_bitrate_kbps,
+                encoder: settings.program_encoder,
+                stinger_asset_url: settings.stinger_asset_url.clone(),
+            },
         })
     }
 
@@ -388,28 +415,49 @@ impl Engine {
         Ok(())
     }
 
-    /// Records the program (PGM) source for a room. The camera need not
-    /// be actively ingesting yet; egress resolution happens at watch time.
-    pub fn set_program(
-        &self,
-        room_id: &str,
-        camera_id: &str,
-        transition: TransitionKind,
-    ) -> ProgramState {
+    /// Records the program (PGM) source for a room and (in gst builds)
+    /// applies the scene to the room's GStreamer compositor. The camera
+    /// need not be actively ingesting yet; egress resolution happens at
+    /// watch time.
+    pub fn set_program(&self, req: &ProgramTransitionRequest) -> ProgramState {
         let rid = self
             .router
-            .lowest_rid(room_id, camera_id)
+            .lowest_rid(&req.room_id, &req.camera_id)
             .unwrap_or_default();
+        let duration_ms = req
+            .duration_ms
+            .unwrap_or(DEFAULT_TRANSITION_DURATION_MS)
+            .clamp(0, MAX_TRANSITION_DURATION_MS);
+        let layout = req.layout.clone().unwrap_or_else(|| {
+            self.program
+                .get(&req.room_id)
+                .map(|entry| entry.value().layout.clone())
+                .unwrap_or_default()
+        });
         let state = ProgramState {
-            room_id: room_id.to_string(),
-            camera_id: camera_id.to_string(),
+            room_id: req.room_id.clone(),
+            camera_id: req.camera_id.clone(),
             rid,
-            transition,
+            transition: req.transition,
+            duration_ms,
+            layout,
+            stinger: req.stinger.clone(),
             updated_at_ms: chrono::Utc::now().timestamp_millis(),
         };
-        self.program.insert(room_id.to_string(), state.clone());
-        self.telemetry.registry.inc("todd_program_transitions_total");
-        tracing::info!(room = room_id, camera = camera_id, ?transition, "program switched");
+        self.program.insert(req.room_id.clone(), state.clone());
+
+        #[cfg(feature = "gst")]
+        self.apply_mixer_scene(&state);
+
+        self.telemetry
+            .registry
+            .inc("todd_program_transitions_total");
+        tracing::info!(
+            room = %req.room_id,
+            camera = %req.camera_id,
+            transition = ?req.transition,
+            "program switched"
+        );
         state
     }
 
@@ -418,9 +466,12 @@ impl Engine {
         self.program.get(room_id).map(|entry| entry.value().clone())
     }
 
-    /// WHEP egress fed from the room's current program source. The source
-    /// is resolved at watch time, so new program watchers always join the
-    /// current PGM camera (existing viewers re-subscribe after a switch).
+    /// WHEP egress fed from the room's current program source. In gst
+    /// builds the video comes from the room's composite mixer output
+    /// (audio stays a router fan-out of the PGM camera); without gst the
+    /// whole egress is a passthrough of the PGM camera. The source is
+    /// resolved at watch time, so new program watchers always join the
+    /// current PGM.
     pub async fn start_program_viewer(
         &self,
         room_id: &str,
@@ -429,6 +480,13 @@ impl Engine {
         let state = self
             .get_program(room_id)
             .ok_or_else(|| AppError::NotFound(format!("no program set for room {room_id}")))?;
+
+        #[cfg(feature = "gst")]
+        if let Some(mixer) = self.mixers.get(room_id) {
+            return self
+                .create_program_mix_viewer(&state, mixer.value().clone(), offer_sdp)
+                .await;
+        }
 
         let rid = if state.rid.is_empty() {
             self.router
@@ -447,6 +505,143 @@ impl Engine {
 
         self.create_live_viewer(room_id, &state.camera_id, &rid, offer_sdp)
             .await
+    }
+
+    /// WHEP egress fed from the composite program mixer (gst builds):
+    /// video from the mixer's encoded output, audio from the PGM camera's
+    /// live router stream.
+    #[cfg(feature = "gst")]
+    async fn create_program_mix_viewer(
+        &self,
+        state: &ProgramState,
+        mixer: Arc<GstProgramMixer>,
+        offer_sdp: &str,
+    ) -> Result<(String, String), AppError> {
+        use todd_transcode::media::MediaCodec;
+
+        let video_rx = mixer.subscribe_video();
+        let viewer = whep_peer::create_viewer(
+            self,
+            whep_peer::TrackFeed::Program {
+                video: video_rx,
+                codec: MediaCodec::H264,
+                audio_room: state.room_id.clone(),
+                audio_camera: state.camera_id.clone(),
+            },
+            offer_sdp,
+        )
+        .await?;
+
+        let session_id = Uuid::new_v4().to_string();
+        self.viewers.insert(
+            session_id.clone(),
+            ViewerSession {
+                room_id: state.room_id.clone(),
+                camera_id: state.camera_id.clone(),
+                rid: String::new(),
+                viewer_ssrc: viewer.viewer_ssrc,
+                pc: viewer.pc,
+                shutdown: viewer.shutdown,
+            },
+        );
+        self.telemetry.registry.inc("todd_whep_watches_total");
+        self.telemetry
+            .registry
+            .set("todd_viewers_active", self.viewers.len() as u64);
+        self.telemetry.record_ice(
+            &session_id,
+            "whep",
+            &state.room_id,
+            &state.camera_id,
+            "connecting",
+        );
+        tracing::info!(
+            session = %session_id,
+            room = %state.room_id,
+            "program mix viewer started"
+        );
+        Ok((session_id, viewer.answer_sdp))
+    }
+
+    /// Resolves the scene referenced by a program state and applies it to
+    /// the room's mixer. Scenes referencing non-H.264 (or not yet live)
+    /// sources keep the room on passthrough program egress.
+    #[cfg(feature = "gst")]
+    fn apply_mixer_scene(&self, state: &ProgramState) {
+        use std::collections::HashMap;
+        use todd_transcode::media::MediaCodec;
+
+        let fallback = SourceRef {
+            room_id: state.room_id.clone(),
+            camera_id: state.camera_id.clone(),
+        };
+        let plan = plan_scene(&state.layout, &fallback);
+        if plan.slots.len() > todd_transcode::mixer::MAX_SLOTS {
+            tracing::warn!(
+                slots = plan.slots.len(),
+                "scene exceeds mixer slots; keeping passthrough program egress"
+            );
+            return;
+        }
+
+        let mut feeds: HashMap<
+            String,
+            tokio::sync::mpsc::Receiver<todd_transcode::media::RtpChunk>,
+        > = HashMap::new();
+        for source in plan.sources() {
+            let rid = self
+                .router
+                .lowest_rid(&source.room_id, &source.camera_id)
+                .unwrap_or_default();
+            let codec = self
+                .router
+                .codec_of(&source.room_id, &source.camera_id, &rid);
+            if !matches!(codec, Some(MediaCodec::H264)) {
+                tracing::warn!(
+                    room = %source.room_id,
+                    camera = %source.camera_id,
+                    ?codec,
+                    "program mixer requires H.264 sources; keeping passthrough program egress"
+                );
+                return;
+            }
+            feeds.insert(
+                source_key(&source),
+                self.router
+                    .subscribe(&source.room_id, &source.camera_id, &rid),
+            );
+        }
+
+        if !self.mixers.contains_key(&state.room_id) {
+            match GstProgramMixer::build(&self.config.program_output) {
+                Ok(mixer) => {
+                    self.mixers.insert(state.room_id.clone(), Arc::new(mixer));
+                }
+                Err(e) => {
+                    tracing::error!(room = %state.room_id, error = %e, "program mixer build failed; keeping passthrough program egress");
+                    return;
+                }
+            }
+        }
+        let mixer = self
+            .mixers
+            .get(&state.room_id)
+            .expect("mixer was just inserted")
+            .value()
+            .clone();
+
+        let stinger_asset = state
+            .stinger
+            .as_ref()
+            .and_then(|spec| spec.asset_url.clone())
+            .or_else(|| self.config.program_output.stinger_asset_url.clone());
+        mixer.apply_scene(
+            &plan,
+            feeds,
+            state.transition,
+            state.duration_ms,
+            stinger_asset,
+        );
     }
 
     pub fn router(&self) -> Arc<TrackRouter> {

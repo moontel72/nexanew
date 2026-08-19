@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use axum::http::header::{CONTENT_TYPE, LOCATION};
-use todd_common::{error::AppError, types::ForwardTarget};
 use todd_common::types::{ProgramState, ProgramTransitionRequest};
+use todd_common::{error::AppError, types::ForwardTarget};
 use todd_replay::export::{ClipExportRequest, ExportStatus};
 use todd_replay::session::{ReplayInfo, ReplayTrigger};
 use todd_sfu::engine::Engine;
@@ -163,7 +163,7 @@ impl MediaPlane for EmbeddedMediaPlane {
     }
 
     async fn set_program(&self, req: &ProgramTransitionRequest) -> Result<ProgramState, AppError> {
-        Ok(self.engine.set_program(&req.room_id, &req.camera_id, req.transition))
+        Ok(self.engine.set_program(req))
     }
 
     async fn get_program(&self, room_id: &str) -> Result<Option<ProgramState>, AppError> {
@@ -418,7 +418,9 @@ impl MediaPlane for RemoteMediaPlane {
             .send()
             .await?
             .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected program transition: {e}")))?;
+            .map_err(|e| {
+                AppError::Internal(format!("broadcaster rejected program transition: {e}"))
+            })?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid program transition response: {e}")))

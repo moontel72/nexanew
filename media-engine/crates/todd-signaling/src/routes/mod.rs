@@ -1,3 +1,4 @@
+pub mod control_ws;
 pub mod health;
 pub mod program;
 pub mod replay;

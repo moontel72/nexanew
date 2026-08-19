@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use axum::{
     http::{header, HeaderValue, Method},
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 use todd_telemetry::feed::HasTelemetry;
@@ -67,6 +67,11 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
             get(routes::rooms::get_room).delete(routes::rooms::delete_room),
         )
         .route("/room/{room_id}/forward", post(routes::rooms::add_forward))
+        .route("/room/{room_id}/camera", post(routes::rooms::add_camera))
+        .route(
+            "/room/{room_id}/camera/{camera_id}",
+            put(routes::rooms::update_camera).delete(routes::rooms::remove_camera),
+        )
         .route(
             "/whip/ingest/{room_id}/{camera_id}",
             post(routes::whip::ingest),
@@ -111,6 +116,11 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         )
         .route("/cricket/live/{match_id}", get(routes::scoreboard::live))
         .route("/cricket/ws", get(routes::scoreboard::ws))
+        .route(
+            "/cricket/config",
+            get(routes::scoreboard::get_config).put(routes::scoreboard::put_config),
+        )
+        .route("/control/ws", get(routes::control_ws::ws_handler))
         .with_state(state)
 }
 

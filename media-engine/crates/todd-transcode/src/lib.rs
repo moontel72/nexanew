@@ -9,14 +9,19 @@
 //!   SFX / music) with RID-based routing and mixer configuration.
 //! - [`media`] — shared RTP/codec types flowing between the SFU router
 //!   and the pipelines.
+//! - [`mixer`] — program (PGM) scene planning: layouts, slot rects and
+//!   transition easing. Pure Rust, unit-testable without GStreamer.
 //!
-//! [`forwarder`] is the GStreamer pipeline implementation, compiled only
-//! with the `gst` feature (requires libgstreamer >= 1.24 on the build
-//! host — Ubuntu 24.04 ships it).
+//! [`forwarder`] and [`mixer_gst`] are the GStreamer pipeline
+//! implementations, compiled only with the `gst` feature (requires
+//! libgstreamer >= 1.24 on the build host — Ubuntu 24.04 ships it).
 
 pub mod audio;
 pub mod hw;
 pub mod media;
+pub mod mixer;
 
 #[cfg(feature = "gst")]
 pub mod forwarder;
+#[cfg(feature = "gst")]
+pub mod mixer_gst;

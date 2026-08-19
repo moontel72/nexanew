@@ -7,13 +7,14 @@ use todd_common::{
     auth::{mint_token, AuthConfig, TokenRole},
     config::{MediaPlaneMode, Settings},
     error::AppError,
-    types::{CameraInfo, Room},
+    types::{CameraSpec, Room},
 };
 use todd_sfu::engine::Engine;
 use todd_telemetry::Telemetry;
 
 use crate::{
     media_plane::{EmbeddedMediaPlane, MediaPlane, RemoteMediaPlane},
+    routes::control_ws::ControlHub,
     scoreboard::{self, ScoreboardHub, ScoreboardSettings},
     store::{self, RoomStore},
 };
@@ -32,6 +33,8 @@ pub struct AppState {
     pub telemetry: Arc<Telemetry>,
     /// Live cricket scoreboard cache + poller.
     pub scoreboard: Arc<ScoreboardHub>,
+    /// Control-plane event bus for director WebSocket clients.
+    pub control: Arc<ControlHub>,
 }
 
 impl AppState {
@@ -100,6 +103,7 @@ impl AppState {
             plane,
             telemetry,
             scoreboard,
+            control: Arc::new(ControlHub::new()),
         })
     }
 }
@@ -108,13 +112,13 @@ impl AppState {
 pub fn build_room(
     state: &AppState,
     name: String,
-    camera_ids: Vec<String>,
+    camera_specs: Vec<CameraSpec>,
     ttl_secs: u64,
 ) -> Result<(Room, HashMap<String, String>, String), AppError> {
-    let cameras: Vec<String> = if camera_ids.is_empty() {
+    let cameras: Vec<String> = if camera_specs.is_empty() {
         vec!["default".to_string()]
     } else {
-        camera_ids
+        camera_specs.iter().map(|spec| spec.id.clone()).collect()
     };
 
     let now = Utc::now();
@@ -124,13 +128,7 @@ pub fn build_room(
         name,
         created_at: now,
         expires_at: now + ChronoDuration::seconds(ttl_secs as i64),
-        cameras: cameras
-            .iter()
-            .map(|id| CameraInfo {
-                id: id.clone(),
-                active: false,
-            })
-            .collect(),
+        cameras: camera_specs.into_iter().map(|spec| spec.into_info()).collect(),
     };
 
     let mut ingest_tokens = HashMap::new();
@@ -158,4 +156,21 @@ pub fn build_room(
     )?;
 
     Ok((room, ingest_tokens, viewer_token))
+}
+
+/// Mints the room-scoped publisher token for a newly added camera.
+pub fn mint_camera_ingest_token(
+    state: &AppState,
+    room_id: &str,
+    camera_id: &str,
+) -> Result<String, AppError> {
+    mint_token(
+        &state.settings.jwt_secret,
+        &state.settings.jwt_issuer,
+        camera_id,
+        TokenRole::Publisher,
+        Some(room_id),
+        Some(camera_id),
+        state.settings.ingest_token_ttl_secs,
+    )
 }

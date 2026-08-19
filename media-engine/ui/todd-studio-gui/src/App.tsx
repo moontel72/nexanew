@@ -2,19 +2,30 @@ import { useMemo, useState } from "react";
 import { DirectorProvider } from "./lib/director/directorService";
 import { useRooms } from "./hooks/useRooms";
 import { useTelemetry } from "./hooks/useTelemetry";
+import { useControlState } from "./hooks/useControlState";
 import { env } from "./lib/utils";
 import { MultiviewGrid } from "./components/MultiviewGrid";
 import { VisionSwitcher } from "./components/VisionSwitcher";
+import { TransitionBar } from "./components/TransitionBar";
 import { ReplayDirector } from "./components/ReplayDirector";
 import { Scoreboard } from "./components/Scoreboard";
 import { SegmentManager } from "./components/SegmentManager";
+import { InputPanel } from "./components/InputPanel";
+import { SettingsPanel } from "./components/SettingsPanel";
+import { SceneComposer } from "./components/scenes/SceneComposer";
 import { OverlayController } from "./components/overlays/OverlayController";
 
 export default function App() {
   const { rooms } = useRooms(env.adminToken);
   const telemetry = useTelemetry();
-  const [matchId] = useState<string | null>(() => env.cricketMatchIds.split(",")[0]?.trim() || null);
+  const control = useControlState(env.adminToken);
   const [overlayEvent, setOverlayEvent] = useState<string | null>(null);
+
+  // Active match: the runtime sync config wins; the build-time env value
+  // only bridges the gap until a director configures matches.
+  const matchId =
+    control.cricket?.match_configs[0]?.match_id ??
+    (env.cricketMatchIds.split(",")[0]?.trim() || null);
 
   const feeds = useMemo(
     () =>
@@ -52,24 +63,25 @@ export default function App() {
                 ? `${telemetry.streams.length} active streams · ${telemetry.ice_sessions.length} sessions`
                 : "connecting telemetry…"}
             </span>
-            <button
-              className="rounded border border-border px-2 py-1 hover:bg-muted"
-              onClick={() => setOverlayEvent("SIX")}
-            >
-              Test 3D SIX
-            </button>
+            <span className={control.connected ? "text-emerald-400" : "text-amber-400"}>
+              {control.connected ? "control plane live" : "control plane offline"}
+            </span>
           </footer>
         </main>
 
         {/* Director control sidebar */}
         <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto border-l border-border p-3">
+          <InputPanel />
           <VisionSwitcher />
+          <TransitionBar />
+          <SceneComposer />
           <ReplayDirector
             roomId={feeds[0]?.roomId ?? ""}
             cameraIds={cameraIds}
             adminToken={env.adminToken}
           />
           <SegmentManager onFire={() => setOverlayEvent("BREAK")} />
+          <SettingsPanel />
         </aside>
       </div>
     </DirectorProvider>

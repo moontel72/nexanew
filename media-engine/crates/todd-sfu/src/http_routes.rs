@@ -301,9 +301,7 @@ async fn program_transition(
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
 
-    let program = state
-        .engine
-        .set_program(&req.room_id, &req.camera_id, req.transition);
+    let program = state.engine.set_program(&req);
     Ok((StatusCode::OK, Json(program)))
 }
 
@@ -337,9 +335,6 @@ async fn watch_program(
     claims.require_room(&room_id, TokenRole::Viewer)?;
 
     let offer = sdp_body(&headers, body)?;
-    let (session_id, answer) = state
-        .engine
-        .start_program_viewer(&room_id, &offer)
-        .await?;
+    let (session_id, answer) = state.engine.start_program_viewer(&room_id, &offer).await?;
     whep_response(StatusCode::CREATED, Some(&session_id), answer)
 }
