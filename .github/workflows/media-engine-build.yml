@@ -36,7 +36,7 @@ jobs:
   # surface compile errors here first with readable cargo output.
   check-gst:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,22 +44,24 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # The stock ubuntu-24.04 runner hangs in apt: the Azure mirror is
-      # often unreachable (apt retries forever) and apt-daily holds the
-      # dpkg lock. Stop the background services, force the reachable
-      # mirror and bound every apt call with timeouts so a bad runner
-      # fails fast instead of burning an hour.
+      # The stock ubuntu-24.04 runner stalls in apt: the Azure mirror is
+      # often slow/unreachable (apt retries forever) and apt-daily holds
+      # the dpkg lock. Stop the background services, point URIs directly
+      # at the reachable archive mirror (the image resolves the host via
+      # /etc/apt/apt-mirrors.txt, so the sources file needs the URIs line
+      # rewritten, not just the hostname), and bound every apt call with
+      # generous timeouts — the runner's download throughput is slow.
       - name: Install GStreamer dev libraries
         run: |
           set -euo pipefail
           sudo systemctl stop apt-daily.service apt-daily.timer apt-daily-upgrade.service apt-daily-upgrade.timer unattended-upgrades.service 2>/dev/null || true
           sudo systemctl disable apt-daily.service apt-daily.timer apt-daily-upgrade.service apt-daily-upgrade.timer unattended-upgrades.service 2>/dev/null || true
           if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-            sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
+            sudo sed -i 's|^URIs:.*|URIs: https://archive.ubuntu.com/ubuntu/|' /etc/apt/sources.list.d/ubuntu.sources
           fi
           sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/sources.list 2>/dev/null || true
-          timeout 300 sudo apt-get update -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
-          timeout 300 sudo apt-get install -y --no-install-recommends -o DPkg::Lock::Timeout=300 \
+          timeout 600 sudo apt-get update -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
+          timeout 900 sudo apt-get install -y --no-install-recommends -o DPkg::Lock::Timeout=300 \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 
       - name: Cache cargo artifacts
