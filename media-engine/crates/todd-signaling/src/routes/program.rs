@@ -1,8 +1,11 @@
-//! Vision switcher control contract + program (PGM) WHEP egress.
+//! Vision switcher control contract + program (PGM) WHEP egress +
+//! program overlay burn-in control.
 //!
 //! POST   /api/v1/program/transition       body: ProgramTransitionRequest
 //! GET    /api/v1/program/{room_id}        current program source
 //! POST   /api/v1/whep/program/{room_id}   WHEP offer → program egress
+//! POST   /api/v1/program/overlay          body: OverlayRequest (burn-in)
+//! DELETE /api/v1/program/overlay/{room_id} clear all overlays
 
 use std::sync::Arc;
 
@@ -17,7 +20,10 @@ use todd_common::{
     auth::{authenticate, TokenRole},
     error::AppError,
     http::{sdp_body, whep_response},
-    types::{ProgramState, ProgramTransitionRequest, SceneLayout, SourceRef},
+    types::{
+        OverlayRequest, OverlayState, ProgramState, ProgramTransitionRequest, SceneLayout,
+        SourceRef,
+    },
 };
 
 use crate::{routes::control_ws::ControlEvent, state::AppState};
@@ -116,6 +122,78 @@ fn validate_layout(
             Ok(())
         }
     }
+}
+
+/// GET /api/v1/program/overlay/{room_id} — admin only.
+pub async fn get_overlays(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(room_id): Path<String>,
+) -> Result<Json<OverlayState>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    state
+        .store
+        .get_room(&room_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("room {room_id}")))?;
+
+    Ok(Json(state.plane.get_overlays(&room_id).await?))
+}
+
+/// POST /api/v1/program/overlay — admin only.
+///
+/// Applies one burn-in command (scoreboard lower-third, event popup or
+/// watermark) to the room's program bus. The resulting overlay state is
+/// broadcast as an `overlay_changed` control event.
+pub async fn overlay(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
+    Json(request): Json<OverlayRequest>,
+) -> Result<Json<OverlayState>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    let room_id = request.room_id.trim().to_string();
+    state
+        .store
+        .get_room(&room_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("room {room_id}")))?;
+
+    let overlays = state.plane.apply_overlay(&room_id, request.command).await?;
+    state.control.publish(ControlEvent::OverlayChanged {
+        room_id,
+        overlays: overlays.clone(),
+    });
+    Ok(Json(overlays))
+}
+
+/// DELETE /api/v1/program/overlay/{room_id} — admin only.
+pub async fn clear_overlays(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(room_id): Path<String>,
+) -> Result<Json<OverlayState>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    state
+        .store
+        .get_room(&room_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("room {room_id}")))?;
+
+    let overlays = state.plane.clear_overlays(&room_id).await?;
+    state.control.publish(ControlEvent::OverlayChanged {
+        room_id,
+        overlays: overlays.clone(),
+    });
+    Ok(Json(overlays))
 }
 
 /// GET /api/v1/program/{room_id} — admin only.

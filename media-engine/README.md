@@ -105,6 +105,17 @@ output feeds program WHEP viewers. Per-bus and master `level` elements
 post metering into the telemetry feed. The mix is controlled live via
 `PUT /api/v1/audio/mix/{room_id}`.
 
+### Overlay burn-in & broadcast distribution (gst builds)
+
+The program compositor burns graphics into the output: a `textoverlay`
+scoreboard lower-third, animated `textoverlay` event popups (fade
+in/hold/fade out) and a `gdkpixbufoverlay` corner watermark — controlled
+live via `POST /api/v1/program/overlay`. The mixed program composite
+(H.264 video + Opus audio) can be pushed to external RTMP/SRT/file
+destinations via `POST /api/v1/room/{id}/forward` with
+`source: "program"`; runtime statuses are tracked by the engine and
+pushed to the control-plane WebSocket.
+
 ## Endpoints
 
 | Method | Path | Auth | Purpose |
@@ -116,9 +127,14 @@ post metering into the telemetry feed. The mix is controlled live via
 | POST | `/api/v1/room/{id}/camera` | admin | Add a camera to a live room + mint its ingest token |
 | PUT | `/api/v1/room/{id}/camera/{camera}` | admin | Update camera metadata (label, kind, group) |
 | DELETE | `/api/v1/room/{id}/camera/{camera}` | admin | Remove a camera + close its sessions |
-| POST | `/api/v1/room/{id}/forward` | admin | Attach RTMP/SRT/file forwarder to a camera |
+| POST | `/api/v1/room/{id}/forward` | admin | Attach RTMP/SRT/file forwarder to a camera (`source: camera`) or the program composite (`source: program`) |
+| GET | `/api/v1/forward/list` | admin | Runtime statuses of every output forwarder |
+| DELETE | `/api/v1/forward/{key}` | admin | Stop one output forwarder |
 | POST | `/api/v1/program/transition` | admin | Vision switch: `transition` (cut/fade/luma_wipe/stinger), optional `duration_ms`, `layout` (scene), `stinger` asset |
 | GET | `/api/v1/program/{room_id}` | admin | Current program state (source + layout + transition) |
+| GET | `/api/v1/program/overlay/{room_id}` | admin | Current burn-in overlay state |
+| POST | `/api/v1/program/overlay` | admin | Burn-in command: scoreboard lower-third, event popup or watermark |
+| DELETE | `/api/v1/program/overlay/{room_id}` | admin | Clear all burn-in overlays |
 | POST | `/api/v1/whep/program/{room_id}` | viewer | WHEP egress for the current PGM (composite mixer output in gst builds) |
 | POST | `/api/v1/whip/ingest/{room}/{camera}` | publisher | WHIP ingest (SDP offer → answer) |
 | DELETE | `/api/v1/whip/session/{id}` | publisher/admin | Close a WHIP session |

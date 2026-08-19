@@ -14,6 +14,8 @@ import { InputPanel } from "./components/InputPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SceneComposer } from "./components/scenes/SceneComposer";
 import { AudioMixer } from "./components/AudioMixer";
+import { OverlayPanel } from "./components/OverlayPanel";
+import { BroadcastPanel } from "./components/BroadcastPanel";
 import { OverlayController } from "./components/overlays/OverlayController";
 
 export default function App() {
@@ -77,6 +79,8 @@ export default function App() {
           <TransitionBar />
           <SceneComposer />
           <AudioMixer />
+          <OverlayPanel onLocalEvent={setOverlayEvent} />
+          <BroadcastPanel />
           <ReplayDirector
             roomId={feeds[0]?.roomId ?? ""}
             cameraIds={cameraIds}

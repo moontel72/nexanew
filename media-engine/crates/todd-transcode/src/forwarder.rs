@@ -18,15 +18,16 @@
 
 #![cfg(feature = "gst")]
 
-use gstreamer as gst;
 use gst::prelude::*;
+use gstreamer as gst;
 use gstreamer_app::AppSrc;
 use todd_common::{
     error::AppError,
     media::{AudioBus, AudioMixerConfig, EncoderKind, EncoderSpec},
     types::{ForwardKind, ForwardTarget},
 };
-use tokio::{sync::mpsc, task::JoinHandle};
+use tokio::sync::{broadcast, mpsc};
+use tokio::task::JoinHandle;
 
 use crate::hw::{h264_encode_plan, resolve_encoder, EncodePlan};
 use crate::media::{MediaCodec, RtpChunk};
@@ -114,6 +115,71 @@ impl GstForwarder {
             push_tasks,
         })
     }
+
+    /// Builds a forwarder fed from the **mixed program output**: the
+    /// compositor's encoded H.264 video + mixed Opus audio. Video is a
+    /// zero-copy passthrough (the program bus is already H.264 baseline);
+    /// audio is decoded to PCM and re-encoded to AAC for the target mux.
+    pub async fn build_program(
+        target: &ForwardTarget,
+        encoder: EncoderKind,
+        spec: &EncoderSpec,
+        video: broadcast::Receiver<RtpChunk>,
+        audio: broadcast::Receiver<RtpChunk>,
+    ) -> Result<Self, AppError> {
+        let description = build_program_description(target, encoder, spec)?;
+        let pipeline = gst::parse::launch(&description)
+            .map_err(|e| AppError::Internal(format!("gst pipeline parse failed: {e}")))?
+            .downcast::<gst::Pipeline>()
+            .map_err(|_| AppError::Internal("expected a GStreamer pipeline".to_string()))?;
+        pipeline
+            .set_state(gst::State::Playing)
+            .map_err(|e| AppError::Internal(format!("pipeline start failed: {e}")))?;
+
+        let video_src = pipeline
+            .by_name("video_src")
+            .and_then(|element| element.downcast::<AppSrc>().ok())
+            .ok_or_else(|| AppError::Internal("video appsrc lookup failed".to_string()))?;
+        let audio_src = pipeline
+            .by_name("audio_src")
+            .and_then(|element| element.downcast::<AppSrc>().ok())
+            .ok_or_else(|| AppError::Internal("audio appsrc lookup failed".to_string()))?;
+
+        // Bridge the broadcast receivers (async) into blocking push
+        // tasks via bounded mpsc channels.
+        let video_rx = bridge_broadcast(video);
+        let audio_rx = bridge_broadcast(audio);
+
+        let mut push_tasks = Vec::new();
+        push_tasks.push(spawn_push_task(video_src, video_rx, None));
+        push_tasks.push(spawn_push_task(audio_src, audio_rx, None));
+
+        tracing::info!(kind = ?target.kind, url = %target.url, "program forwarder started");
+        Ok(GstForwarder {
+            pipeline,
+            push_tasks,
+        })
+    }
+}
+
+/// Bridges a broadcast receiver (async) into a bounded mpsc channel that
+/// a blocking appsrc push task can consume.
+fn bridge_broadcast(mut from: broadcast::Receiver<RtpChunk>) -> mpsc::Receiver<RtpChunk> {
+    let (tx, rx) = mpsc::channel(128);
+    tokio::spawn(async move {
+        loop {
+            match from.recv().await {
+                Ok(chunk) => {
+                    if tx.send(chunk).await.is_err() {
+                        break;
+                    }
+                }
+                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+    rx
 }
 
 /// Spawns a blocking task that pushes chunks into an appsrc until the
@@ -289,6 +355,56 @@ fn render_encode_stage(plan: &EncodePlan) -> String {
     }
 }
 
+/// Builds the pipeline description for a **program forwarder**: the
+/// compositor's H.264 output passes through zero-copy, the mixed Opus
+/// output is decoded and re-encoded to AAC for the target mux.
+fn build_program_description(
+    target: &ForwardTarget,
+    _encoder: EncoderKind,
+    _spec: &EncoderSpec,
+) -> Result<String, AppError> {
+    let mux_tail = match &target.kind {
+        ForwardKind::Rtmp => format!(
+            "flvmux streamable=true name=mux ! rtmpsink location=\"{}\" sync=false",
+            target.url
+        ),
+        ForwardKind::Srt => format!(
+            "mpegtsmux name=mux ! srtsink uri=\"{}\" sync=false",
+            target.url
+        ),
+        ForwardKind::File => {
+            let mux = if target.url.ends_with(".mp4") {
+                "mp4mux"
+            } else if target.url.ends_with(".webm") {
+                "webmmux"
+            } else {
+                "matroskamux"
+            };
+            format!(
+                "{mux} name=mux ! filesink location=\"{}\" sync=false",
+                target.url
+            )
+        }
+        ForwardKind::WebRtcViewer => {
+            return Err(AppError::Unsupported(
+                "WebRTC viewer output needs a signaling service + gst-plugins-rs webrtcsink; see docs/07-sfu-architecture.md".to_string(),
+            ))
+        }
+    };
+
+    Ok(format!(
+        "appsrc name=video_src format=time is-live=true do-timestamp=true \
+         caps=\"application/x-rtp,media=video,encoding-name=H264,clock-rate=90000\" \
+         ! rtph264depay ! h264parse ! queue name=vq max-size-time=1000000000 ! mux. \
+         appsrc name=audio_src format=time is-live=true do-timestamp=true \
+         caps=\"application/x-rtp,media=audio,encoding-name=OPUS,clock-rate=48000\" \
+         ! rtpopusdepay ! opusdec ! audioconvert ! audioresample \
+         ! voaacenc bitrate=128000 ! aacparse \
+         ! queue name=aq max-size-time=1000000000 ! mux. \
+         {mux_tail}"
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -365,5 +481,26 @@ mod tests {
         assert!(description.contains(&format!("name=audio_{}", AudioBus::Ambient.as_str())));
         assert!(description.contains("audiomixer name=mix"));
         assert!(description.contains("aacparse"));
+    }
+
+    #[test]
+    fn program_description_passthrough_video_and_reencodes_audio() {
+        let target = ForwardTarget {
+            camera_id: "ignored-for-program".to_string(),
+            kind: ForwardKind::Rtmp,
+            url: "rtmp://a.rtmp.youtube.com/live2/key".to_string(),
+        };
+        let description =
+            build_program_description(&target, EncoderKind::Auto, &EncoderSpec::default())
+                .expect("program description builds");
+        assert!(description.contains("name=video_src"));
+        assert!(description.contains("name=audio_src"));
+        assert!(description.contains("rtph264depay"));
+        // Video passthrough: no encoder element in the program path.
+        assert!(!description.contains("x264enc"));
+        assert!(description.contains("opusdec"));
+        assert!(description.contains("voaacenc"));
+        assert!(description.contains("flvmux"));
+        assert!(description.contains("rtmpsink"));
     }
 }

@@ -194,6 +194,69 @@ export interface ProgramState {
 }
 
 // --------------------------------------------------------------------------
+// Program overlays (server-side burn-in)
+// --------------------------------------------------------------------------
+
+export interface ScoreboardOverlay {
+  enabled: boolean;
+  title: string;
+  subtitle: string;
+}
+
+export interface EventPopupSpec {
+  text: string;
+  subtext?: string | null;
+  duration_ms: number;
+}
+
+export interface WatermarkSpec {
+  asset_url: string;
+  x: number;
+  y: number;
+}
+
+export interface OverlayState {
+  scoreboard?: ScoreboardOverlay | null;
+  popup?: EventPopupSpec | null;
+  watermark?: WatermarkSpec | null;
+}
+
+export type OverlayCommand =
+  | { kind: "scoreboard"; enabled: boolean; title: string; subtitle: string }
+  | { kind: "event_popup"; text: string; subtext?: string | null; duration_ms?: number }
+  | { kind: "watermark"; enabled: boolean; asset_url?: string | null; x: number; y: number };
+
+// --------------------------------------------------------------------------
+// Broadcast output distribution
+// --------------------------------------------------------------------------
+
+export type ForwardSource = "camera" | "program";
+export type ForwardState = "starting" | "running" | "stopped" | "failed";
+
+export interface ForwardingStatus {
+  key: string;
+  room_id: string;
+  source: ForwardSource;
+  kind: "rtmp" | "srt" | "file" | "webrtc_viewer";
+  url: string;
+  state: ForwardState;
+  started_at_ms: number;
+  error?: string | null;
+}
+
+export interface ForwardTargetRequest {
+  camera_id: string;
+  source: ForwardSource;
+  kind: "rtmp" | "srt" | "file" | "webrtc_viewer";
+  url: string;
+  encoder?: "auto" | "nvenc" | "amf" | "qsv" | "x264" | "passthrough";
+  bitrate_kbps?: number;
+  keyframe_interval?: number;
+  rid?: string | null;
+  audio?: AudioMixerConfig;
+}
+
+// --------------------------------------------------------------------------
 // Audio mix (per-room, carried by the control-plane snapshot)
 // --------------------------------------------------------------------------
 
@@ -295,4 +358,6 @@ export type ControlEvent =
   | { type: "camera_removed"; room_id: string; camera_id: string }
   | { type: "program_changed"; program: ProgramState }
   | { type: "audio_mixer_changed"; room_id: string; mix: AudioMixView }
+  | { type: "overlay_changed"; room_id: string; overlays: OverlayState }
+  | { type: "forwarding_changed"; status: ForwardingStatus }
   | { type: "cricket_config_changed"; config: CricketConfigView };

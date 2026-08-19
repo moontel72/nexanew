@@ -111,9 +111,22 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         )
         .route("/program/{room_id}", get(routes::program::get))
         .route(
+            "/program/overlay",
+            axum::routing::post(routes::program::overlay),
+        )
+        .route(
+            "/program/overlay/{room_id}",
+            get(routes::program::get_overlays).delete(routes::program::clear_overlays),
+        )
+        .route(
             "/whep/program/{room_id}",
             axum::routing::post(routes::program::watch),
         )
+        .route(
+            "/forward/{key}",
+            axum::routing::delete(routes::rooms::stop_forward),
+        )
+        .route("/forward/list", get(routes::rooms::list_forwarders))
         .route("/cricket/live/{match_id}", get(routes::scoreboard::live))
         .route("/cricket/ws", get(routes::scoreboard::ws))
         .route(

@@ -45,7 +45,7 @@ use gstreamer as gst;
 use gstreamer_app::{AppSink, AppSrc};
 use todd_common::error::AppError;
 use todd_common::media::{AudioBus, AudioMixerConfig, FADER_FLOOR_DB};
-use todd_common::types::{SceneLayout, SourceRef, StingerSpec, TransitionKind};
+use todd_common::types::{OverlayState, SceneLayout, SourceRef, StingerSpec, TransitionKind};
 use tokio::sync::{broadcast, mpsc};
 use tokio::task::JoinHandle;
 
@@ -74,6 +74,15 @@ pub struct GstProgramMixer {
     slots: Vec<SlotRuntime>,
     stinger_alpha: gst::Element,
     stinger_src: gst::Element,
+    /// Corner watermark overlay (gdkpixbufoverlay).
+    watermark: gst::Element,
+    /// Scoreboard lower-third (textoverlay).
+    lowerthird: gst::Element,
+    /// Animated event popup (textoverlay).
+    popup: gst::Element,
+    /// Alpha gates of the lower-third / popup branches.
+    lt_alpha: gst::Element,
+    pop_alpha: gst::Element,
     video_tx: broadcast::Sender<RtpChunk>,
     audio_tx: broadcast::Sender<RtpChunk>,
     width: u32,
@@ -182,6 +191,21 @@ impl GstProgramMixer {
         let stinger_src = pipeline
             .by_name("stinger_src")
             .ok_or_else(|| AppError::Internal("stinger_src lookup failed".to_string()))?;
+        let watermark = pipeline
+            .by_name("watermark")
+            .ok_or_else(|| AppError::Internal("watermark lookup failed".to_string()))?;
+        let lowerthird = pipeline
+            .by_name("lowerthird")
+            .ok_or_else(|| AppError::Internal("lowerthird lookup failed".to_string()))?;
+        let popup = pipeline
+            .by_name("popup")
+            .ok_or_else(|| AppError::Internal("popup lookup failed".to_string()))?;
+        let lt_alpha = pipeline
+            .by_name("lt_alpha")
+            .ok_or_else(|| AppError::Internal("lt_alpha lookup failed".to_string()))?;
+        let pop_alpha = pipeline
+            .by_name("pop_alpha")
+            .ok_or_else(|| AppError::Internal("pop_alpha lookup failed".to_string()))?;
 
         let (video_tx, _) = broadcast::channel::<RtpChunk>(256);
         let (audio_tx, _) = broadcast::channel::<RtpChunk>(256);
@@ -248,6 +272,11 @@ impl GstProgramMixer {
             slots,
             stinger_alpha,
             stinger_src,
+            watermark,
+            lowerthird,
+            popup,
+            lt_alpha,
+            pop_alpha,
             video_tx,
             audio_tx,
             width: config.width,
@@ -274,6 +303,71 @@ impl GstProgramMixer {
     /// The codec carried on the program video feed.
     pub fn output_codec(&self) -> MediaCodec {
         MediaCodec::H264
+    }
+
+    /// Applies the room's overlay state to the compositor: lower-third
+    /// scoreboard, animated event popup (fade in/out) and the corner
+    /// watermark.
+    pub fn apply_overlays(&self, overlays: &OverlayState) {
+        // Scoreboard lower-third.
+        let lowerthird_on = overlays
+            .scoreboard
+            .as_ref()
+            .map(|scoreboard| scoreboard.enabled)
+            .unwrap_or(false);
+        if lowerthird_on {
+            if let Some(scoreboard) = &overlays.scoreboard {
+                let text = if scoreboard.subtitle.trim().is_empty() {
+                    scoreboard.title.clone()
+                } else {
+                    format!("{}\n{}", scoreboard.title, scoreboard.subtitle)
+                };
+                let _ = self.lowerthird.set_property_from_str("text", &text);
+            }
+        }
+        let _ = self
+            .lt_alpha
+            .set_property_from_str("alpha", if lowerthird_on { "1.0" } else { "0.0" });
+
+        // Event popup: fade in, hold, fade out.
+        if let Some(popup) = &overlays.popup {
+            let text = match &popup.subtext {
+                Some(subtext) if !subtext.trim().is_empty() => {
+                    format!("{}\n{}", popup.text, subtext)
+                }
+                _ => popup.text.clone(),
+            };
+            let _ = self.popup.set_property_from_str("text", &text);
+            let duration = popup.duration_ms.clamp(500, 10_000);
+            let fade = (duration / 5).clamp(100, 1000);
+            let hold = duration.saturating_sub(2 * fade);
+            let alpha = self.pop_alpha.clone();
+            let task = tokio::spawn(async move {
+                animate_sync(&alpha, 0.0, 1.0, fade).await;
+                tokio::time::sleep(Duration::from_millis(hold)).await;
+                animate_sync(&alpha, 1.0, 0.0, fade).await;
+            });
+            self.push_task(task);
+        }
+
+        // Corner watermark / channel logo.
+        match &overlays.watermark {
+            Some(watermark) => {
+                let _ = self
+                    .watermark
+                    .set_property_from_str("location", &watermark.asset_url);
+                let _ = self
+                    .watermark
+                    .set_property_from_str("relative-x", &watermark.x.to_string());
+                let _ = self
+                    .watermark
+                    .set_property_from_str("relative-y", &watermark.y.to_string());
+                let _ = self.watermark.set_property_from_str("alpha", "1.0");
+            }
+            None => {
+                let _ = self.watermark.set_property_from_str("alpha", "0.0");
+            }
+        }
     }
 
     /// Applies the room's audio mix live: faders (`volume`), gain trims
@@ -665,6 +759,27 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
             .to_string(),
     );
 
+    // ---- program overlay burn-in branches (stack above the video) -----
+    // Corner watermark / channel logo (transparent PNG).
+    branches.push(
+        "gdkpixbufoverlay name=watermark relative-x=0.965 relative-y=0.02 alpha=0.0 ! comp."
+            .to_string(),
+    );
+    // Scoreboard lower-third.
+    branches.push(
+        "textoverlay name=lowerthird text=\"\" valignment=bottom halignment=center ypos=70 \
+         line-alignment=center shaded-background=true font-desc=\"Sans Bold 26\" \
+         ! alpha name=lt_alpha alpha=0.0 ! comp."
+            .to_string(),
+    );
+    // Animated event popup (SIX / FOUR / WICKET / milestone).
+    branches.push(
+        "textoverlay name=popup text=\"\" valignment=center halignment=center \
+         line-alignment=center shaded-background=true font-desc=\"Sans Bold 64\" \
+         ! alpha name=pop_alpha alpha=0.0 ! comp."
+            .to_string(),
+    );
+
     // ---- audio stage: one branch per bus + silence keep-alive pad -----
     for bus in AudioBus::ALL {
         branches.push(format!(
@@ -776,6 +891,24 @@ mod tests {
         assert!(description.contains("audiotestsrc wave=silence"));
         assert!(description.contains("rtpopuspay"));
         assert!(description.contains("name=audio_out"));
+    }
+
+    #[test]
+    fn description_contains_overlay_branches() {
+        let config = MixerOutputConfig {
+            width: 1280,
+            height: 720,
+            fps: 30,
+            bitrate_kbps: 2500,
+            encoder: EncoderKind::X264,
+            stinger_asset_url: None,
+        };
+        let description = build_description(&config, 2).expect("description builds");
+        assert!(description.contains("name=watermark"));
+        assert!(description.contains("name=lowerthird"));
+        assert!(description.contains("name=lt_alpha"));
+        assert!(description.contains("name=popup"));
+        assert!(description.contains("name=pop_alpha"));
     }
 
     #[test]

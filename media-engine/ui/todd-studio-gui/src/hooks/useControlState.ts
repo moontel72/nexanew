@@ -11,6 +11,8 @@ const EMPTY_STATE: ControlState = {
   rooms: [],
   programs: {},
   audioMixes: {},
+  overlays: {},
+  forwarders: {},
   cricket: null,
 };
 

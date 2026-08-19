@@ -19,8 +19,8 @@ use todd_common::media::{AudioMixView, AudioMixerConfig};
 #[cfg(feature = "gst")]
 use todd_common::types::SourceRef;
 use todd_common::types::{
-    ProgramState, ProgramTransitionRequest, DEFAULT_TRANSITION_DURATION_MS,
-    MAX_TRANSITION_DURATION_MS,
+    ForwardingStatus, OverlayCommand, OverlayState, ProgramState, ProgramTransitionRequest,
+    DEFAULT_TRANSITION_DURATION_MS, MAX_TRANSITION_DURATION_MS,
 };
 use todd_replay::export::ClipExportRequest;
 use todd_replay::session::{ReplayInfo, ReplayTrigger};
@@ -134,6 +134,10 @@ pub struct Engine {
     pub(crate) program: Arc<DashMap<String, ProgramState>>,
     /// Per-room audio mixer configuration. Keyed by room id.
     pub(crate) audio: Arc<DashMap<String, AudioMixerConfig>>,
+    /// Per-room program overlay state (lower-third / popup / watermark).
+    pub(crate) overlays: Arc<DashMap<String, OverlayState>>,
+    /// Runtime status of every output forwarder, keyed by forwarder key.
+    pub(crate) forwarder_status: Arc<DashMap<String, ForwardingStatus>>,
     /// Per-room GStreamer program mixers (gst builds only; without the
     /// feature the program egress stays a passthrough of the PGM camera).
     #[cfg(feature = "gst")]
@@ -162,6 +166,8 @@ impl Engine {
             replay: ReplayManager::new(replay_buffer_ms, replay_export_callback_url),
             program: Arc::new(DashMap::new()),
             audio: Arc::new(DashMap::new()),
+            overlays: Arc::new(DashMap::new()),
+            forwarder_status: Arc::new(DashMap::new()),
             #[cfg(feature = "gst")]
             mixers: Arc::new(DashMap::new()),
             #[cfg(feature = "gst")]
@@ -507,6 +513,244 @@ impl Engine {
         self.get_audio_mix(room_id)
     }
 
+    /// Current program overlays of a room.
+    pub fn get_overlays(&self, room_id: &str) -> OverlayState {
+        self.overlays
+            .get(room_id)
+            .map(|entry| entry.value().clone())
+            .unwrap_or_default()
+    }
+
+    /// Applies one overlay command to a room's program bus and returns
+    /// the resulting overlay state.
+    pub fn apply_overlay(&self, room_id: &str, command: OverlayCommand) -> OverlayState {
+        let mut overlays = self.get_overlays(room_id);
+        match command {
+            OverlayCommand::Scoreboard {
+                enabled,
+                title,
+                subtitle,
+            } => {
+                overlays.scoreboard = Some(todd_common::types::ScoreboardOverlay {
+                    enabled,
+                    title,
+                    subtitle,
+                });
+            }
+            OverlayCommand::EventPopup {
+                text,
+                subtext,
+                duration_ms,
+            } => {
+                overlays.popup = Some(todd_common::types::EventPopupSpec {
+                    text,
+                    subtext,
+                    duration_ms: duration_ms.unwrap_or(2500).clamp(500, 10_000),
+                });
+            }
+            OverlayCommand::Watermark {
+                enabled,
+                asset_url,
+                x,
+                y,
+            } => {
+                overlays.watermark = if enabled {
+                    asset_url
+                        .map(|url| url.trim().to_string())
+                        .filter(|url| !url.is_empty())
+                        .map(|url| todd_common::types::WatermarkSpec {
+                            asset_url: url,
+                            x,
+                            y,
+                        })
+                } else {
+                    None
+                };
+            }
+        }
+        self.overlays.insert(room_id.to_string(), overlays.clone());
+
+        #[cfg(feature = "gst")]
+        if let Some(mixer) = self.mixers.get(room_id) {
+            mixer.apply_overlays(&overlays);
+        }
+
+        self.telemetry.registry.inc("todd_overlay_updates_total");
+        tracing::info!(room = room_id, "overlay applied");
+        overlays
+    }
+
+    /// Clears every program overlay of a room.
+    pub fn clear_overlays(&self, room_id: &str) -> OverlayState {
+        let cleared = OverlayState::default();
+        self.overlays.insert(room_id.to_string(), cleared.clone());
+
+        #[cfg(feature = "gst")]
+        if let Some(mixer) = self.mixers.get(room_id) {
+            mixer.apply_overlays(&cleared);
+        }
+
+        tracing::info!(room = room_id, "overlays cleared");
+        cleared
+    }
+
+    /// Runtime statuses of every output forwarder.
+    pub fn list_forwarders(&self) -> Vec<ForwardingStatus> {
+        let mut statuses: Vec<ForwardingStatus> = self
+            .forwarder_status
+            .iter()
+            .map(|entry| entry.value().clone())
+            .collect();
+        statuses.sort_by(|a, b| a.key.cmp(&b.key));
+        statuses
+    }
+
+    /// Stops an output forwarder by key and marks it stopped.
+    #[cfg(feature = "gst")]
+    pub async fn stop_forwarder(&self, key: &str) -> Result<ForwardingStatus, AppError> {
+        let removed = self.forwarders.remove(key);
+        let status = self
+            .forwarder_status
+            .get(key)
+            .map(|entry| entry.value().clone());
+        match (removed, status) {
+            (Some(_), Some(mut status)) => {
+                status.state = todd_common::types::ForwardState::Stopped;
+                self.forwarder_status
+                    .insert(key.to_string(), status.clone());
+                tracing::info!(key, "forwarder stopped");
+                Ok(status)
+            }
+            (None, Some(mut status)) => {
+                // Already gone; surface the last known state.
+                status.state = todd_common::types::ForwardState::Stopped;
+                self.forwarder_status
+                    .insert(key.to_string(), status.clone());
+                Ok(status)
+            }
+            _ => Err(AppError::NotFound(format!("unknown forwarder {key}"))),
+        }
+    }
+
+    /// Stops an output forwarder by key (non-gst builds track only the
+    /// camera forwarder attempts, which never started).
+    #[cfg(not(feature = "gst"))]
+    pub async fn stop_forwarder(&self, key: &str) -> Result<ForwardingStatus, AppError> {
+        let status = self
+            .forwarder_status
+            .get(key)
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| AppError::NotFound(format!("unknown forwarder {key}")))?;
+        let mut stopped = status.clone();
+        stopped.state = todd_common::types::ForwardState::Stopped;
+        self.forwarder_status
+            .insert(key.to_string(), stopped.clone());
+        Ok(stopped)
+    }
+
+    /// Starts a forwarder fed from the room's mixed program output
+    /// (gst builds). Requires the room's program mixer to exist.
+    #[cfg(feature = "gst")]
+    pub async fn add_program_forwarder(
+        &self,
+        room_id: &str,
+        target: &todd_common::types::ForwardTarget,
+    ) -> Result<ForwardingStatus, AppError> {
+        use todd_common::types::ForwardState;
+
+        let key = format!("{room_id}/program/{}", target.url);
+        let failed = |message: String| {
+            let status = ForwardingStatus {
+                key: key.clone(),
+                room_id: room_id.to_string(),
+                source: todd_common::types::ForwardSource::Program,
+                kind: target.kind,
+                url: target.url.clone(),
+                state: ForwardState::Failed,
+                started_at_ms: chrono::Utc::now().timestamp_millis(),
+                error: Some(message),
+            };
+            self.forwarder_status.insert(key.clone(), status.clone());
+            Err(AppError::Conflict(status.error.clone().unwrap_or_default()))
+        };
+
+        if self.forwarders.contains_key(&key) {
+            return failed(format!("program forwarder {key} already exists"));
+        }
+        let Some(mixer) = self.mixers.get(room_id) else {
+            return failed(format!(
+                "no program mixer for room {room_id}; set a program source first"
+            ));
+        };
+
+        let spec = todd_common::media::EncoderSpec {
+            bitrate_kbps: target.bitrate_kbps,
+            keyframe_interval: target.keyframe_interval,
+        };
+        let forwarder = todd_transcode::forwarder::GstForwarder::build_program(
+            target,
+            target.encoder,
+            &spec,
+            mixer.value().subscribe_video(),
+            mixer.value().subscribe_audio(),
+        )
+        .await
+        .map_err(|e| {
+            let status = ForwardingStatus {
+                key: key.clone(),
+                room_id: room_id.to_string(),
+                source: todd_common::types::ForwardSource::Program,
+                kind: target.kind,
+                url: target.url.clone(),
+                state: ForwardState::Failed,
+                started_at_ms: chrono::Utc::now().timestamp_millis(),
+                error: Some(e.to_string()),
+            };
+            self.forwarder_status.insert(key.clone(), status);
+            e
+        })?;
+
+        self.forwarders.insert(key.clone(), forwarder);
+        let status = ForwardingStatus {
+            key,
+            room_id: room_id.to_string(),
+            source: todd_common::types::ForwardSource::Program,
+            kind: target.kind,
+            url: target.url.clone(),
+            state: ForwardState::Running,
+            started_at_ms: chrono::Utc::now().timestamp_millis(),
+            error: None,
+        };
+        self.forwarder_status
+            .insert(status.key.clone(), status.clone());
+        tracing::info!(key = %status.key, "program forwarder started");
+        Ok(status)
+    }
+
+    /// Starts a program forwarder in non-gst builds: impossible without
+    /// the pipeline, so the attempt is recorded as failed.
+    #[cfg(not(feature = "gst"))]
+    pub async fn add_program_forwarder(
+        &self,
+        room_id: &str,
+        target: &todd_common::types::ForwardTarget,
+    ) -> Result<ForwardingStatus, AppError> {
+        let key = format!("{room_id}/program/{}", target.url);
+        let message = "built without the `gst` feature — rebuild with --features gst".to_string();
+        let status = ForwardingStatus {
+            key: key.clone(),
+            room_id: room_id.to_string(),
+            source: todd_common::types::ForwardSource::Program,
+            kind: target.kind,
+            url: target.url.clone(),
+            state: todd_common::types::ForwardState::Failed,
+            started_at_ms: chrono::Utc::now().timestamp_millis(),
+            error: Some(message.clone()),
+        };
+        self.forwarder_status.insert(key, status);
+        Err(AppError::Unsupported(message))
+    }
+
     /// WHEP egress fed from the room's current program source. In gst
     /// builds the video comes from the room's composite mixer output
     /// (audio stays a router fan-out of the PGM camera); without gst the
@@ -724,6 +968,10 @@ impl Engine {
             .map(|entry| entry.value().clone())
             .unwrap_or_default();
         mixer.apply_audio_config(&audio_config);
+
+        // Burn in the room's current overlay state on the fresh mixer.
+        let overlays = self.get_overlays(&state.room_id);
+        mixer.apply_overlays(&overlays);
     }
 
     pub fn router(&self) -> Arc<TrackRouter> {
@@ -1040,20 +1288,43 @@ impl Engine {
         };
         let forwarder =
             GstForwarder::build(target, encoder, spec, &target.audio, video_rx, audio_rx).await?;
-        self.forwarders.insert(key, forwarder);
+        self.forwarders.insert(key.clone(), forwarder);
+        let status = ForwardingStatus {
+            key: key.clone(),
+            room_id: room_id.to_string(),
+            source: todd_common::types::ForwardSource::Camera,
+            kind: target.kind,
+            url: target.url.clone(),
+            state: todd_common::types::ForwardState::Running,
+            started_at_ms: chrono::Utc::now().timestamp_millis(),
+            error: None,
+        };
+        self.forwarder_status.insert(key, status);
         Ok(())
     }
 
     #[cfg(not(feature = "gst"))]
     pub async fn add_forwarder(
         &self,
-        _room_id: &str,
-        _camera_id: &str,
-        _target: &todd_common::types::ForwardTarget,
+        room_id: &str,
+        camera_id: &str,
+        target: &todd_common::types::ForwardTarget,
     ) -> Result<(), AppError> {
-        Err(AppError::Unsupported(
-            "built without the `gst` feature — rebuild with --features gst on a host with libgstreamer >= 1.24".to_string(),
-        ))
+        let key = format!("{room_id}/{camera_id}/{}", target.url);
+        let message =
+            "built without the `gst` feature — rebuild with --features gst on a host with libgstreamer >= 1.24".to_string();
+        let status = ForwardingStatus {
+            key,
+            room_id: room_id.to_string(),
+            source: todd_common::types::ForwardSource::Camera,
+            kind: target.kind,
+            url: target.url.clone(),
+            state: todd_common::types::ForwardState::Failed,
+            started_at_ms: chrono::Utc::now().timestamp_millis(),
+            error: Some(message.clone()),
+        };
+        self.forwarder_status.insert(status.key.clone(), status);
+        Err(AppError::Unsupported(message))
     }
 }
 

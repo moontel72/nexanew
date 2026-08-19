@@ -11,6 +11,7 @@ use std::sync::Arc;
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode, Uri},
+    response::{IntoResponse, Response},
     Json,
 };
 use todd_common::{
@@ -18,7 +19,8 @@ use todd_common::{
     error::AppError,
     types::{
         AddCameraResponse, CameraInfo, CameraSpec, CreateRoomRequest, CreateRoomResponse,
-        ForwardTarget, Room, UpdateCameraRequest, MAX_ROOM_TTL_SECS,
+        ForwardSource, ForwardTarget, ForwardingStatus, Room, UpdateCameraRequest,
+        MAX_ROOM_TTL_SECS,
     },
 };
 
@@ -339,34 +341,77 @@ pub async fn remove_camera(
 }
 
 /// POST /api/v1/room/{room_id}/forward — admin only.
-/// Attaches an output forwarder (RTMP/SRT/file) to one camera of the room.
+/// Attaches an output forwarder (RTMP/SRT/file) to one camera of the
+/// room, or (with `source: "program"`) to the room's mixed program
+/// composite.
 pub async fn add_forward(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     uri: Uri,
     Path(room_id): Path<String>,
     Json(target): Json<ForwardTarget>,
-) -> Result<StatusCode, AppError> {
+) -> Result<Response, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
 
     let Some(room) = state.store.get_room(&room_id).await? else {
         return Err(AppError::NotFound(format!("room {room_id}")));
     };
-    if !room
-        .cameras
-        .iter()
-        .any(|camera| camera.id == target.camera_id)
-    {
-        return Err(AppError::NotFound(format!(
-            "camera {} is not part of room {room_id}",
-            target.camera_id
-        )));
-    }
 
-    state
-        .plane
-        .add_forwarder(&room_id, &target.camera_id, &target)
-        .await?;
-    Ok(StatusCode::ACCEPTED)
+    match target.source {
+        ForwardSource::Camera => {
+            if !room
+                .cameras
+                .iter()
+                .any(|camera| camera.id == target.camera_id)
+            {
+                return Err(AppError::NotFound(format!(
+                    "camera {} is not part of room {room_id}",
+                    target.camera_id
+                )));
+            }
+            state
+                .plane
+                .add_forwarder(&room_id, &target.camera_id, &target)
+                .await?;
+            Ok(StatusCode::ACCEPTED.into_response())
+        }
+        ForwardSource::Program => {
+            let status = state.plane.add_program_forwarder(&room_id, &target).await?;
+            state.control.publish(ControlEvent::ForwardingChanged {
+                status: status.clone(),
+            });
+            Ok((StatusCode::ACCEPTED, Json(status)).into_response())
+        }
+    }
+}
+
+/// DELETE /api/v1/forward/{key} — admin only.
+/// Stops one output forwarder (camera or program source).
+pub async fn stop_forward(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(key): Path<String>,
+) -> Result<Json<ForwardingStatus>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    let status = state.plane.stop_forwarder(&key).await?;
+    state.control.publish(ControlEvent::ForwardingChanged {
+        status: status.clone(),
+    });
+    Ok(Json(status))
+}
+
+/// GET /api/v1/forward/list — admin only.
+pub async fn list_forwarders(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
+) -> Result<Json<Vec<ForwardingStatus>>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    Ok(Json(state.plane.list_forwarders().await?))
 }

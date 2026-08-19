@@ -166,9 +166,25 @@ pub enum ForwardKind {
     WebRtcViewer,
 }
 
+/// How a forwarder target is fed: straight from one camera, or from the
+/// room's mixed program (PGM) composite.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ForwardSource {
+    /// Fan out one camera's live stream (default, backward compatible).
+    #[default]
+    Camera,
+    /// Fan out the mixed program composite (video + mixed audio).
+    Program,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ForwardTarget {
     pub camera_id: String,
+    /// Which feed the target consumes. `camera_id` is ignored for
+    /// `program` sources.
+    #[serde(default)]
+    pub source: ForwardSource,
     pub kind: ForwardKind,
     pub url: String,
     /// Hardware encoder preference (default: auto-detect NVENC → QSV →
@@ -184,9 +200,37 @@ pub struct ForwardTarget {
     /// Simulcast layer to forward (`None` = lowest available).
     #[serde(default)]
     pub rid: Option<String>,
-    /// Multichannel audio mixer configuration.
+    /// Multichannel audio mixer configuration (camera sources only; the
+    /// program source already carries the mixed audio).
     #[serde(default)]
     pub audio: AudioMixerConfig,
+}
+
+/// Lifecycle state of one output forwarder.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ForwardState {
+    Starting,
+    Running,
+    Stopped,
+    Failed,
+}
+
+/// Runtime status of one output forwarder, exposed to the Studio
+/// broadcast panel.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ForwardingStatus {
+    /// Stable identifier: `{room}/{source}` or `{room}/{camera}/{url}`.
+    pub key: String,
+    pub room_id: String,
+    pub source: ForwardSource,
+    pub kind: ForwardKind,
+    pub url: String,
+    pub state: ForwardState,
+    pub started_at_ms: i64,
+    /// Last failure message, when `state == failed`.
+    #[serde(default)]
+    pub error: Option<String>,
 }
 
 fn default_bitrate_kbps() -> u32 {
@@ -379,6 +423,110 @@ fn default_transition_duration() -> u64 {
     DEFAULT_TRANSITION_DURATION_MS
 }
 
+// ---------------------------------------------------------------------------
+// Program overlays (server-side burn-in)
+// ---------------------------------------------------------------------------
+
+/// The scoreboard lower-third burned into the program video.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScoreboardOverlay {
+    pub enabled: bool,
+    /// Main line, e.g. "TIGERS 142/4 — 16.2 ov".
+    #[serde(default)]
+    pub title: String,
+    /// Second line, e.g. "Khan 45* · Patel 2/18 · CRR 8.7".
+    #[serde(default)]
+    pub subtitle: String,
+}
+
+/// Animated event popup (Boundary / SIX / Wicket / milestone).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventPopupSpec {
+    /// Main text, e.g. "SIX!".
+    pub text: String,
+    /// Optional second line.
+    #[serde(default)]
+    pub subtext: Option<String>,
+    /// How long the popup stays on air.
+    #[serde(default = "default_popup_duration_ms")]
+    pub duration_ms: u64,
+}
+
+fn default_popup_duration_ms() -> u64 {
+    2500
+}
+
+/// Corner watermark / channel logo burned into the program video.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatermarkSpec {
+    /// Transparent PNG URL or file path.
+    pub asset_url: String,
+    /// Normalized position (0.0–1.0) of the overlay's top-left corner.
+    #[serde(default = "default_watermark_x")]
+    pub x: f32,
+    #[serde(default = "default_watermark_y")]
+    pub y: f32,
+}
+
+fn default_watermark_x() -> f32 {
+    0.965
+}
+
+fn default_watermark_y() -> f32 {
+    0.02
+}
+
+/// The live overlay state of one room's program bus.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct OverlayState {
+    #[serde(default)]
+    pub scoreboard: Option<ScoreboardOverlay>,
+    #[serde(default)]
+    pub popup: Option<EventPopupSpec>,
+    #[serde(default)]
+    pub watermark: Option<WatermarkSpec>,
+}
+
+/// A burn-in command for `POST /api/v1/program/overlay`. Serde-tagged:
+/// the `kind` field discriminates the variant.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum OverlayCommand {
+    /// Enable/disable or restyle the scoreboard lower-third.
+    Scoreboard {
+        enabled: bool,
+        #[serde(default)]
+        title: String,
+        #[serde(default)]
+        subtitle: String,
+    },
+    /// Fire an event popup (Boundary / SIX / Wicket / milestone).
+    EventPopup {
+        text: String,
+        #[serde(default)]
+        subtext: Option<String>,
+        #[serde(default)]
+        duration_ms: Option<u64>,
+    },
+    /// Enable/disable or restyle the corner watermark.
+    Watermark {
+        enabled: bool,
+        #[serde(default)]
+        asset_url: Option<String>,
+        #[serde(default = "default_watermark_x")]
+        x: f32,
+        #[serde(default = "default_watermark_y")]
+        y: f32,
+    },
+}
+
+/// Wrapper carrying the room id for overlay commands.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OverlayRequest {
+    pub room_id: String,
+    pub command: OverlayCommand,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -490,5 +638,50 @@ mod tests {
         assert!(matches!(state.layout, SceneLayout::Fullscreen));
         assert_eq!(state.duration_ms, DEFAULT_TRANSITION_DURATION_MS);
         assert_eq!(state.transition, TransitionKind::Cut);
+    }
+
+    #[test]
+    fn overlay_commands_serialize_tagged_kind() {
+        let command = OverlayCommand::EventPopup {
+            text: "SIX!".to_string(),
+            subtext: Some("Khan".to_string()),
+            duration_ms: Some(3000),
+        };
+        let json = serde_json::to_string(&command).unwrap();
+        assert!(json.contains("\"kind\":\"event_popup\""));
+        let back: OverlayCommand = serde_json::from_str(&json).unwrap();
+        assert!(matches!(back, OverlayCommand::EventPopup { .. }));
+
+        let command = OverlayCommand::Scoreboard {
+            enabled: true,
+            title: "142/4".to_string(),
+            subtitle: String::new(),
+        };
+        let json = serde_json::to_string(&command).unwrap();
+        assert!(json.contains("\"kind\":\"scoreboard\""));
+    }
+
+    #[test]
+    fn forward_target_defaults_to_camera_source() {
+        let legacy = "{\"camera_id\":\"cam-1\",\"kind\":\"rtmp\",\"url\":\"rtmp://x/live/k\"}";
+        let target: ForwardTarget = serde_json::from_str(legacy).unwrap();
+        assert_eq!(target.source, ForwardSource::Camera);
+    }
+
+    #[test]
+    fn forwarding_status_serializes_snake_case() {
+        let status = ForwardingStatus {
+            key: "r-1/program".to_string(),
+            room_id: "r-1".to_string(),
+            source: ForwardSource::Program,
+            kind: ForwardKind::Rtmp,
+            url: "rtmp://x/live/k".to_string(),
+            state: ForwardState::Running,
+            started_at_ms: 1,
+            error: None,
+        };
+        let json = serde_json::to_string(&status).unwrap();
+        assert!(json.contains("\"state\":\"running\""));
+        assert!(json.contains("\"source\":\"program\""));
     }
 }

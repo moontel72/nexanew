@@ -10,6 +10,8 @@ import type {
   AudioMixView,
   ControlEvent,
   CricketConfigView,
+  ForwardingStatus,
+  OverlayState,
   ProgramState,
   Room,
 } from "../api/types";
@@ -24,6 +26,10 @@ export interface ControlState {
   programs: Record<string, ProgramState>;
   /** Audio mixes keyed by room id. */
   audioMixes: Record<string, AudioMixView>;
+  /** Program overlay states keyed by room id. */
+  overlays: Record<string, OverlayState>;
+  /** Output forwarders keyed by forwarder key. */
+  forwarders: Record<string, ForwardingStatus>;
   cricket: CricketConfigView | null;
 }
 
@@ -33,6 +39,8 @@ const EMPTY_STATE: ControlState = {
   rooms: [],
   programs: {},
   audioMixes: {},
+  overlays: {},
+  forwarders: {},
   cricket: null,
 };
 
@@ -135,6 +143,16 @@ function applyEvent(state: ControlState, event: ControlEvent): ControlState {
       return {
         ...state,
         audioMixes: { ...state.audioMixes, [event.room_id]: event.mix },
+      };
+    case "overlay_changed":
+      return {
+        ...state,
+        overlays: { ...state.overlays, [event.room_id]: event.overlays },
+      };
+    case "forwarding_changed":
+      return {
+        ...state,
+        forwarders: { ...state.forwarders, [event.status.key]: event.status },
       };
     case "cricket_config_changed":
       return { ...state, cricket: event.config };

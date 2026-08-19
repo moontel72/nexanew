@@ -7,7 +7,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use axum::http::header::{CONTENT_TYPE, LOCATION};
 use todd_common::media::{AudioMixView, AudioMixerConfig};
-use todd_common::types::{ProgramState, ProgramTransitionRequest};
+use todd_common::types::{
+    ForwardingStatus, OverlayCommand, OverlayState, ProgramState, ProgramTransitionRequest,
+};
 use todd_common::{error::AppError, types::ForwardTarget};
 use todd_replay::export::{ClipExportRequest, ExportStatus};
 use todd_replay::session::{ReplayInfo, ReplayTrigger};
@@ -95,6 +97,36 @@ pub trait MediaPlane: Send + Sync {
         room_id: &str,
         config: AudioMixerConfig,
     ) -> Result<AudioMixView, AppError>;
+
+    // ---- program overlays ----
+
+    /// Current program overlay state of a room.
+    async fn get_overlays(&self, room_id: &str) -> Result<OverlayState, AppError>;
+
+    /// Applies one overlay command to a room's program bus.
+    async fn apply_overlay(
+        &self,
+        room_id: &str,
+        command: OverlayCommand,
+    ) -> Result<OverlayState, AppError>;
+
+    /// Clears every program overlay of a room.
+    async fn clear_overlays(&self, room_id: &str) -> Result<OverlayState, AppError>;
+
+    // ---- broadcast output distribution ----
+
+    /// Starts a forwarder fed from the room's mixed program output.
+    async fn add_program_forwarder(
+        &self,
+        room_id: &str,
+        target: &ForwardTarget,
+    ) -> Result<ForwardingStatus, AppError>;
+
+    /// Stops an output forwarder by key.
+    async fn stop_forwarder(&self, key: &str) -> Result<ForwardingStatus, AppError>;
+
+    /// Runtime statuses of every output forwarder.
+    async fn list_forwarders(&self) -> Result<Vec<ForwardingStatus>, AppError>;
 }
 
 /// Phase 1 default: the Broadcaster engine runs in-process.
@@ -201,6 +233,38 @@ impl MediaPlane for EmbeddedMediaPlane {
         config: AudioMixerConfig,
     ) -> Result<AudioMixView, AppError> {
         Ok(self.engine.set_audio_mix(room_id, config))
+    }
+
+    async fn get_overlays(&self, room_id: &str) -> Result<OverlayState, AppError> {
+        Ok(self.engine.get_overlays(room_id))
+    }
+
+    async fn apply_overlay(
+        &self,
+        room_id: &str,
+        command: OverlayCommand,
+    ) -> Result<OverlayState, AppError> {
+        Ok(self.engine.apply_overlay(room_id, command))
+    }
+
+    async fn clear_overlays(&self, room_id: &str) -> Result<OverlayState, AppError> {
+        Ok(self.engine.clear_overlays(room_id))
+    }
+
+    async fn add_program_forwarder(
+        &self,
+        room_id: &str,
+        target: &ForwardTarget,
+    ) -> Result<ForwardingStatus, AppError> {
+        self.engine.add_program_forwarder(room_id, target).await
+    }
+
+    async fn stop_forwarder(&self, key: &str) -> Result<ForwardingStatus, AppError> {
+        self.engine.stop_forwarder(key).await
+    }
+
+    async fn list_forwarders(&self) -> Result<Vec<ForwardingStatus>, AppError> {
+        Ok(self.engine.list_forwarders())
     }
 }
 
@@ -534,5 +598,112 @@ impl MediaPlane for RemoteMediaPlane {
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid audio mix response: {e}")))
+    }
+
+    async fn get_overlays(&self, room_id: &str) -> Result<OverlayState, AppError> {
+        let url = format!("{}/api/v1/program/overlay/{room_id}", self.base);
+        let resp = self
+            .client
+            .get(&url)
+            .bearer_auth(&self.internal_token)
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| AppError::Internal(format!("broadcaster rejected overlay get: {e}")))?;
+        resp.json()
+            .await
+            .map_err(|e| AppError::Internal(format!("invalid overlay response: {e}")))
+    }
+
+    async fn apply_overlay(
+        &self,
+        room_id: &str,
+        command: OverlayCommand,
+    ) -> Result<OverlayState, AppError> {
+        let url = format!("{}/api/v1/program/overlay", self.base);
+        let resp = self
+            .client
+            .post(&url)
+            .bearer_auth(&self.internal_token)
+            .json(&todd_common::types::OverlayRequest {
+                room_id: room_id.to_string(),
+                command,
+            })
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| {
+                AppError::Internal(format!("broadcaster rejected overlay command: {e}"))
+            })?;
+        resp.json()
+            .await
+            .map_err(|e| AppError::Internal(format!("invalid overlay response: {e}")))
+    }
+
+    async fn clear_overlays(&self, room_id: &str) -> Result<OverlayState, AppError> {
+        let url = format!("{}/api/v1/program/overlay/{room_id}", self.base);
+        let resp = self
+            .client
+            .delete(&url)
+            .bearer_auth(&self.internal_token)
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| AppError::Internal(format!("broadcaster rejected overlay clear: {e}")))?;
+        resp.json()
+            .await
+            .map_err(|e| AppError::Internal(format!("invalid overlay response: {e}")))
+    }
+
+    async fn add_program_forwarder(
+        &self,
+        room_id: &str,
+        target: &ForwardTarget,
+    ) -> Result<ForwardingStatus, AppError> {
+        let url = format!("{}/api/v1/forward/program/{room_id}", self.base);
+        let resp = self
+            .client
+            .post(&url)
+            .bearer_auth(&self.internal_token)
+            .json(target)
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| {
+                AppError::Internal(format!("broadcaster rejected program forwarder: {e}"))
+            })?;
+        resp.json()
+            .await
+            .map_err(|e| AppError::Internal(format!("invalid forwarder status response: {e}")))
+    }
+
+    async fn stop_forwarder(&self, key: &str) -> Result<ForwardingStatus, AppError> {
+        let url = format!("{}/api/v1/forward/{}", self.base, key);
+        let resp = self
+            .client
+            .delete(&url)
+            .bearer_auth(&self.internal_token)
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| AppError::Internal(format!("broadcaster rejected forwarder stop: {e}")))?;
+        resp.json()
+            .await
+            .map_err(|e| AppError::Internal(format!("invalid forwarder status response: {e}")))
+    }
+
+    async fn list_forwarders(&self) -> Result<Vec<ForwardingStatus>, AppError> {
+        let url = format!("{}/api/v1/forward/list", self.base);
+        let resp = self
+            .client
+            .get(&url)
+            .bearer_auth(&self.internal_token)
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| AppError::Internal(format!("broadcaster rejected forwarder list: {e}")))?;
+        resp.json()
+            .await
+            .map_err(|e| AppError::Internal(format!("invalid forwarder list response: {e}")))
     }
 }

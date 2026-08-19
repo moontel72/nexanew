@@ -31,7 +31,7 @@ use serde::Serialize;
 use todd_common::{
     auth::{authenticate, TokenRole},
     media::{AudioMixView, AudioMixerConfig},
-    types::{CameraInfo, ProgramState, Room},
+    types::{CameraInfo, ForwardingStatus, OverlayState, ProgramState, Room},
 };
 use tokio::sync::broadcast;
 
@@ -85,6 +85,13 @@ pub enum ControlEvent {
     AudioMixerChanged {
         room_id: String,
         mix: AudioMixView,
+    },
+    OverlayChanged {
+        room_id: String,
+        overlays: OverlayState,
+    },
+    ForwardingChanged {
+        status: ForwardingStatus,
     },
     CricketConfigChanged {
         config: CricketConfigView,

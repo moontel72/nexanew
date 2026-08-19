@@ -21,7 +21,10 @@ use todd_common::{
     error::AppError,
     http::{sdp_body, whep_response, whip_response},
     media::{AudioMixView, AudioMixerConfig},
-    types::{ForwardTarget, ProgramState, ProgramTransitionRequest},
+    types::{
+        ForwardTarget, ForwardingStatus, OverlayRequest, OverlayState, ProgramState,
+        ProgramTransitionRequest,
+    },
 };
 use todd_replay::export::ClipExportRequest;
 use todd_replay::session::{ReplayInfo, ReplayTrigger};
@@ -114,6 +117,20 @@ pub fn routes(engine: Arc<Engine>, auth: AuthConfig, telemetry: Arc<Telemetry>) 
             "/api/v1/audio/mix/{room_id}",
             get(get_audio_mix).put(put_audio_mix),
         )
+        .route(
+            "/api/v1/program/overlay",
+            axum::routing::post(apply_overlay),
+        )
+        .route(
+            "/api/v1/program/overlay/{room_id}",
+            get(get_overlays).delete(clear_overlays),
+        )
+        .route(
+            "/api/v1/forward/program/{room_id}",
+            axum::routing::post(add_program_forward),
+        )
+        .route("/api/v1/forward/{key}", axum::routing::delete(stop_forward))
+        .route("/api/v1/forward/list", get(list_forwarders))
         .with_state(state)
 }
 
@@ -317,6 +334,100 @@ async fn put_audio_mix(
     claims.require_role(TokenRole::Admin)?;
 
     Ok(Json(state.engine.set_audio_mix(&room_id, config)))
+}
+
+// --------------------------------------------------------------------------
+// Program overlays
+// --------------------------------------------------------------------------
+
+/// GET /api/v1/program/overlay/{room_id} — admin.
+async fn get_overlays(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(room_id): Path<String>,
+) -> Result<Json<OverlayState>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    Ok(Json(state.engine.get_overlays(&room_id)))
+}
+
+/// POST /api/v1/program/overlay — admin.
+async fn apply_overlay(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+    Json(request): Json<OverlayRequest>,
+) -> Result<Json<OverlayState>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    Ok(Json(
+        state
+            .engine
+            .apply_overlay(&request.room_id, request.command),
+    ))
+}
+
+/// DELETE /api/v1/program/overlay/{room_id} — admin.
+async fn clear_overlays(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(room_id): Path<String>,
+) -> Result<Json<OverlayState>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    Ok(Json(state.engine.clear_overlays(&room_id)))
+}
+
+// --------------------------------------------------------------------------
+// Broadcast output distribution
+// --------------------------------------------------------------------------
+
+/// POST /api/v1/forward/program/{room_id} — admin.
+async fn add_program_forward(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(room_id): Path<String>,
+    Json(target): Json<ForwardTarget>,
+) -> Result<(StatusCode, Json<ForwardingStatus>), AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    let status = state
+        .engine
+        .add_program_forwarder(&room_id, &target)
+        .await?;
+    Ok((StatusCode::ACCEPTED, Json(status)))
+}
+
+/// DELETE /api/v1/forward/{key} — admin.
+async fn stop_forward(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(key): Path<String>,
+) -> Result<Json<ForwardingStatus>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    Ok(Json(state.engine.stop_forwarder(&key).await?))
+}
+
+/// GET /api/v1/forward/list — admin.
+async fn list_forwarders(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+) -> Result<Json<Vec<ForwardingStatus>>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    Ok(Json(state.engine.list_forwarders()))
 }
 
 // --------------------------------------------------------------------------

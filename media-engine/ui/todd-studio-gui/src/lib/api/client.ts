@@ -15,6 +15,10 @@ import type {
   CricketConfigUpdate,
   CricketConfigView,
   ExportStatus,
+  ForwardingStatus,
+  ForwardTargetRequest,
+  OverlayCommand,
+  OverlayState,
   ProgramState,
   ProgramTransitionRequest,
   ReplayInfo,
@@ -143,6 +147,49 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(config),
     });
+  },
+
+  async getOverlays(roomId: string, token: string) {
+    return request<OverlayState>(`/api/v1/program/overlay/${encodeURIComponent(roomId)}`, {
+      method: "GET",
+      token,
+    });
+  },
+
+  async applyOverlay(roomId: string, command: OverlayCommand, token: string) {
+    return request<OverlayState>("/api/v1/program/overlay", {
+      method: "POST",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room_id: roomId, command }),
+    });
+  },
+
+  async clearOverlays(roomId: string, token: string) {
+    return request<OverlayState>(`/api/v1/program/overlay/${encodeURIComponent(roomId)}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
+  async addProgramForward(roomId: string, target: ForwardTargetRequest, token: string) {
+    return request<ForwardingStatus>(`/api/v1/room/${encodeURIComponent(roomId)}/forward`, {
+      method: "POST",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(target),
+    });
+  },
+
+  async stopForward(key: string, token: string) {
+    return request<ForwardingStatus>(`/api/v1/forward/${encodeURIComponent(key)}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
+  async listForwards(token: string) {
+    return request<ForwardingStatus[]>("/api/v1/forward/list", { method: "GET", token });
   },
 
   async updateCricketConfig(config: CricketConfigUpdate, token: string) {
