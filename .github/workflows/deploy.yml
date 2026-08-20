@@ -170,7 +170,6 @@ jobs:
             if [ -n '${{ vars.REVERB_SCHEME }}' ] && ! grep -q '^REVERB_SCHEME=' .env; then echo "REVERB_SCHEME=${{ vars.REVERB_SCHEME }}" >> .env; fi
             if [ -n '${{ vars.REVERB_SERVER_HOST }}' ] && ! grep -q '^REVERB_SERVER_HOST=' .env; then echo "REVERB_SERVER_HOST=${{ vars.REVERB_SERVER_HOST }}" >> .env; fi
             if [ -n '${{ vars.REVERB_SERVER_PORT }}' ] && ! grep -q '^REVERB_SERVER_PORT=' .env; then echo "REVERB_SERVER_PORT=${{ vars.REVERB_SERVER_PORT }}" >> .env; fi
-            if [ -n '${{ secrets.JWT_SECRET }}' ] && ! grep -q '^MEDIA_ENGINE_JWT_SECRET=' .env; then echo "MEDIA_ENGINE_JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env; fi
 
             php artisan migrate --force
             php artisan db:seed --class=CricketFeatureRegistrySeeder --force
@@ -189,6 +188,14 @@ jobs:
             chmod -R 775 /var/www/traceodd/admin-panel/bootstrap/cache
             systemctl reload nginx
           "
+
+      - name: Inject media engine JWT secret into Laravel .env
+        env:
+          MEDIA_ENGINE_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          printf '%s' "$MEDIA_ENGINE_JWT_SECRET" | base64 -w0 | \
+            ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} \
+              "if ! grep -q '^MEDIA_ENGINE_JWT_SECRET=' /var/www/traceodd/admin-panel/.env; then { printf 'MEDIA_ENGINE_JWT_SECRET='; base64 -d; printf '\n'; } >> /var/www/traceodd/admin-panel/.env; fi"
 
       - name: Smoke test API for null/type regressions
         if: always()
