@@ -20,8 +20,9 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use futures_util::StreamExt;
+use serde::Deserialize;
 
-use crate::Telemetry;
+use crate::{DeviceTelemetryEntry, Telemetry};
 
 /// Implemented by the host application state (Studio `AppState`,
 /// Broadcaster `WhipState`) so the telemetry handlers stay host-agnostic.
@@ -81,6 +82,9 @@ async fn serve_feed<S: HasTelemetry>(mut socket: WebSocket, state: S) {
                             break;
                         }
                     }
+                    // Broadcasters push device health over this feed:
+                    // {"kind":"device_telemetry","room_id":...,"camera_id":...}
+                    Some(Ok(Message::Text(text))) => handle_inbound(&telemetry, &text),
                     Some(Ok(_)) => {}
                     Some(Err(_)) => break,
                 }
@@ -99,4 +103,47 @@ fn snapshot_json(telemetry: &Telemetry) -> Option<String> {
             None
         }
     }
+}
+
+/// Inbound broadcaster device health payload.
+#[derive(Debug, Deserialize)]
+struct InboundTelemetry {
+    kind: String,
+    #[serde(default)]
+    room_id: String,
+    #[serde(default)]
+    camera_id: String,
+    #[serde(default)]
+    battery_pct: Option<u8>,
+    #[serde(default)]
+    fps: Option<f32>,
+    #[serde(default)]
+    uplink_kbps: Option<f32>,
+    #[serde(default)]
+    dropped_frames: Option<u64>,
+    #[serde(default)]
+    quality: Option<String>,
+}
+
+/// Records an inbound device telemetry frame. Unknown payloads are
+/// ignored; the feed never errors on client traffic.
+fn handle_inbound(telemetry: &Telemetry, text: &str) {
+    let Ok(message) = serde_json::from_str::<InboundTelemetry>(text) else {
+        return;
+    };
+    if message.kind != "device_telemetry" {
+        return;
+    }
+    if message.room_id.is_empty() || message.camera_id.is_empty() {
+        return;
+    }
+    telemetry.record_device(DeviceTelemetryEntry {
+        room_id: message.room_id,
+        camera_id: message.camera_id,
+        battery_pct: message.battery_pct,
+        fps: message.fps,
+        uplink_kbps: message.uplink_kbps,
+        dropped_frames: message.dropped_frames,
+        quality: message.quality,
+    });
 }

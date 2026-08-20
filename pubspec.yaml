@@ -80,6 +80,10 @@ dependencies:
   flutter_rust_bridge: ^2.11.1
   ffi: ^2.1.0
 
+  # Todd Broadcaster (mobile ground camera app)
+  flutter_webrtc: ^0.12.9
+  battery_plus: ^6.1.0
+
   # Utilities
   uuid: ^4.3.0
   url_launcher: ^6.2.1

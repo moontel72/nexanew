@@ -45,6 +45,29 @@ pub struct AudioLevelEntry {
     pub rms_db: f32,
 }
 
+/// Latest device health snapshot of one broadcaster (mobile camera),
+/// pushed by the device over the telemetry WebSocket.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct DeviceTelemetryEntry {
+    pub room_id: String,
+    pub camera_id: String,
+    /// Battery percentage (0–100).
+    #[serde(default)]
+    pub battery_pct: Option<u8>,
+    /// Current capture/encode FPS.
+    #[serde(default)]
+    pub fps: Option<f32>,
+    /// Uplink bitrate in kbps.
+    #[serde(default)]
+    pub uplink_kbps: Option<f32>,
+    /// Cumulative dropped frames.
+    #[serde(default)]
+    pub dropped_frames: Option<u64>,
+    /// Network quality indicator: `good` / `fair` / `poor`.
+    #[serde(default)]
+    pub quality: Option<String>,
+}
+
 /// Serializable snapshot pushed over the diagnostics WebSocket.
 #[derive(Debug, Clone, Serialize)]
 pub struct TelemetrySnapshot {
@@ -56,6 +79,8 @@ pub struct TelemetrySnapshot {
     pub ice_sessions: Vec<IceSessionInfo>,
     /// Audio mixer metering per room/bus.
     pub audio_levels: Vec<AudioLevelEntry>,
+    /// Broadcaster device health per room/camera.
+    pub devices: Vec<DeviceTelemetryEntry>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -75,6 +100,8 @@ pub struct Telemetry {
     ice: Arc<DashMap<String, IceSessionInfo>>,
     /// (room_id, bus) → (peak_db, rms_db).
     audio_levels: Arc<DashMap<(String, String), (f32, f32)>>,
+    /// (room_id, camera_id) → device health snapshot.
+    devices: Arc<DashMap<(String, String), DeviceTelemetryEntry>>,
     /// Interval (ms) between WebSocket snapshot pushes.
     pub ws_interval_ms: u64,
     /// Interval (ms) between RTT/stats sampling passes.
@@ -94,6 +121,7 @@ impl Telemetry {
             streams: Arc::new(DashMap::new()),
             ice: Arc::new(DashMap::new()),
             audio_levels: Arc::new(DashMap::new()),
+            devices: Arc::new(DashMap::new()),
             ws_interval_ms: ws_interval_ms.max(100),
             sample_ms: sample_ms.max(500),
         }
@@ -164,6 +192,12 @@ impl Telemetry {
             .insert((room_id.to_string(), bus.to_string()), (peak_db, rms_db));
     }
 
+    /// Records (or replaces) a broadcaster's device health snapshot.
+    pub fn record_device(&self, entry: DeviceTelemetryEntry) {
+        self.devices
+            .insert((entry.room_id.clone(), entry.camera_id.clone()), entry);
+    }
+
     /// Latest audio metering for one room, sorted by bus name.
     pub fn audio_levels_for(&self, room_id: &str) -> Vec<(String, f32, f32)> {
         let mut levels: Vec<(String, f32, f32)> = self
@@ -212,11 +246,19 @@ impl Telemetry {
             .collect();
         audio_levels.sort_by(|a, b| (&a.room_id, &a.bus).cmp(&(&b.room_id, &b.bus)));
 
+        let mut devices: Vec<DeviceTelemetryEntry> = self
+            .devices
+            .iter()
+            .map(|entry| entry.value().clone())
+            .collect();
+        devices.sort_by(|a, b| (&a.room_id, &a.camera_id).cmp(&(&b.room_id, &b.camera_id)));
+
         TelemetrySnapshot {
             metrics,
             streams,
             ice_sessions,
             audio_levels,
+            devices,
         }
     }
 

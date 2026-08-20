@@ -22,7 +22,7 @@ use todd_common::{
     http::{sdp_body, whep_response, whip_response},
     media::{AudioMixView, AudioMixerConfig},
     types::{
-        ForwardTarget, ForwardingStatus, OverlayRequest, OverlayState, ProgramState,
+        CameraInfo, ForwardTarget, ForwardingStatus, OverlayRequest, OverlayState, ProgramState,
         ProgramTransitionRequest,
     },
 };
@@ -131,6 +131,11 @@ pub fn routes(engine: Arc<Engine>, auth: AuthConfig, telemetry: Arc<Telemetry>) 
         )
         .route("/api/v1/forward/{key}", axum::routing::delete(stop_forward))
         .route("/api/v1/forward/list", get(list_forwarders))
+        .route(
+            "/api/v1/ingest/{room_id}/{camera_id}",
+            axum::routing::post(start_ingest).delete(stop_ingest),
+        )
+        .route("/api/v1/ingest/list/{room_id}", get(list_ingests))
         .with_state(state)
 }
 
@@ -428,6 +433,53 @@ async fn list_forwarders(
     claims.require_role(TokenRole::Admin)?;
 
     Ok(Json(state.engine.list_forwarders()))
+}
+
+// --------------------------------------------------------------------------
+// RTSP/RTMP ingest adapters
+// --------------------------------------------------------------------------
+
+/// POST /api/v1/ingest/{room_id}/{camera_id} — admin.
+async fn start_ingest(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path((room_id, camera_id)): Path<(String, String)>,
+    Json(mut camera): Json<CameraInfo>,
+) -> Result<StatusCode, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    camera.id = camera_id;
+    state.engine.start_ingest(&room_id, &camera).await?;
+    Ok(StatusCode::ACCEPTED)
+}
+
+/// DELETE /api/v1/ingest/{room_id}/{camera_id} — admin.
+async fn stop_ingest(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path((room_id, camera_id)): Path<(String, String)>,
+) -> Result<StatusCode, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    state.engine.stop_ingest(&room_id, &camera_id).await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// GET /api/v1/ingest/list/{room_id} — admin.
+async fn list_ingests(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(room_id): Path<String>,
+) -> Result<Json<Vec<String>>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+
+    Ok(Json(state.engine.active_ingest_cameras(&room_id)))
 }
 
 // --------------------------------------------------------------------------

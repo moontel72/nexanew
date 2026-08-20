@@ -8,7 +8,8 @@ use async_trait::async_trait;
 use axum::http::header::{CONTENT_TYPE, LOCATION};
 use todd_common::media::{AudioMixView, AudioMixerConfig};
 use todd_common::types::{
-    ForwardingStatus, OverlayCommand, OverlayState, ProgramState, ProgramTransitionRequest,
+    CameraInfo, ForwardingStatus, OverlayCommand, OverlayState, ProgramState,
+    ProgramTransitionRequest,
 };
 use todd_common::{error::AppError, types::ForwardTarget};
 use todd_replay::export::{ClipExportRequest, ExportStatus};
@@ -127,6 +128,18 @@ pub trait MediaPlane: Send + Sync {
 
     /// Runtime statuses of every output forwarder.
     async fn list_forwarders(&self) -> Result<Vec<ForwardingStatus>, AppError>;
+
+    // ---- legacy ingest adapters (RTSP/RTMP) ----
+
+    /// Starts (or restarts) an RTSP/RTMP ingest adapter for a camera.
+    /// WHIP cameras are a no-op.
+    async fn start_ingest(&self, room_id: &str, camera: &CameraInfo) -> Result<(), AppError>;
+
+    /// Stops a camera's ingest adapter.
+    async fn stop_ingest(&self, room_id: &str, camera_id: &str) -> Result<(), AppError>;
+
+    /// Cameras of a room with a running ingest adapter.
+    async fn active_ingest_cameras(&self, room_id: &str) -> Result<Vec<String>, AppError>;
 }
 
 /// Phase 1 default: the Broadcaster engine runs in-process.
@@ -265,6 +278,19 @@ impl MediaPlane for EmbeddedMediaPlane {
 
     async fn list_forwarders(&self) -> Result<Vec<ForwardingStatus>, AppError> {
         Ok(self.engine.list_forwarders())
+    }
+
+    async fn start_ingest(&self, room_id: &str, camera: &CameraInfo) -> Result<(), AppError> {
+        self.engine.start_ingest(room_id, camera).await
+    }
+
+    async fn stop_ingest(&self, room_id: &str, camera_id: &str) -> Result<(), AppError> {
+        self.engine.stop_ingest(room_id, camera_id).await;
+        Ok(())
+    }
+
+    async fn active_ingest_cameras(&self, room_id: &str) -> Result<Vec<String>, AppError> {
+        Ok(self.engine.active_ingest_cameras(room_id))
     }
 }
 
@@ -705,5 +731,45 @@ impl MediaPlane for RemoteMediaPlane {
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid forwarder list response: {e}")))
+    }
+
+    async fn start_ingest(&self, room_id: &str, camera: &CameraInfo) -> Result<(), AppError> {
+        let url = format!("{}/api/v1/ingest/{room_id}/{}", self.base, camera.id);
+        self.client
+            .post(&url)
+            .bearer_auth(&self.internal_token)
+            .json(camera)
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| AppError::Internal(format!("broadcaster rejected ingest start: {e}")))?;
+        Ok(())
+    }
+
+    async fn stop_ingest(&self, room_id: &str, camera_id: &str) -> Result<(), AppError> {
+        let url = format!("{}/api/v1/ingest/{room_id}/{camera_id}", self.base);
+        self.client
+            .delete(&url)
+            .bearer_auth(&self.internal_token)
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| AppError::Internal(format!("broadcaster rejected ingest stop: {e}")))?;
+        Ok(())
+    }
+
+    async fn active_ingest_cameras(&self, room_id: &str) -> Result<Vec<String>, AppError> {
+        let url = format!("{}/api/v1/ingest/list/{room_id}", self.base);
+        let resp = self
+            .client
+            .get(&url)
+            .bearer_auth(&self.internal_token)
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| AppError::Internal(format!("broadcaster rejected ingest list: {e}")))?;
+        resp.json()
+            .await
+            .map_err(|e| AppError::Internal(format!("invalid ingest list response: {e}")))
     }
 }

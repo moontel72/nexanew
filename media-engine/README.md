@@ -116,6 +116,17 @@ destinations via `POST /api/v1/room/{id}/forward` with
 `source: "program"`; runtime statuses are tracked by the engine and
 pushed to the control-plane WebSocket.
 
+### RTSP/RTMP ingest (gst builds)
+
+With the `gst` feature, room cameras can pull legacy RTSP/RTMP
+sources (`rtspsrc` / `rtmpsrc` → `decodebin`) instead of WHIP. The
+engine re-packetizes the decoded H.264/Opus streams into WebRTC RTP and
+feeds them into the same `TrackRouter` as WHIP cameras, so studio
+switching, the program mixer and replay all treat them identically.
+Registrations are made through the camera metadata (`kind: "rtsp"` /
+`"rtmp"`, `url`) via `POST /api/v1/room/{id}/camera`, or started and
+stopped directly with `POST`/`DELETE /api/v1/ingest/{room}/{camera}`.
+
 ## Endpoints
 
 | Method | Path | Auth | Purpose |
@@ -127,6 +138,9 @@ pushed to the control-plane WebSocket.
 | POST | `/api/v1/room/{id}/camera` | admin | Add a camera to a live room + mint its ingest token |
 | PUT | `/api/v1/room/{id}/camera/{camera}` | admin | Update camera metadata (label, kind, group) |
 | DELETE | `/api/v1/room/{id}/camera/{camera}` | admin | Remove a camera + close its sessions |
+| POST | `/api/v1/ingest/{room}/{camera}` | admin | Pull an RTSP/RTMP source into a room camera (gst builds) |
+| DELETE | `/api/v1/ingest/{room}/{camera}` | admin | Stop an RTSP/RTMP ingest |
+| GET | `/api/v1/ingest/list/{room}` | admin | Active RTSP/RTMP ingests in a room |
 | POST | `/api/v1/room/{id}/forward` | admin | Attach RTMP/SRT/file forwarder to a camera (`source: camera`) or the program composite (`source: program`) |
 | GET | `/api/v1/forward/list` | admin | Runtime statuses of every output forwarder |
 | DELETE | `/api/v1/forward/{key}` | admin | Stop one output forwarder |
@@ -153,7 +167,7 @@ pushed to the control-plane WebSocket.
 | PUT | `/api/v1/audio/mix/{room_id}` | admin | Update faders (dB), mute/solo, gain trim, lip-sync delay |
 | GET | `/api/v1/control/ws` | admin | Control-plane WebSocket: rooms, cameras, PGM, audio mix, cricket config |
 | GET | `/metrics` | none* | Prometheus metrics (see `docs/06-ice-and-telemetry.md`) |
-| GET | `/api/v1/telemetry/ws` | none* | WebSocket diagnostics feed (JSON snapshots) |
+| GET | `/api/v1/telemetry/ws` | none* | WebSocket diagnostics feed (JSON snapshots, incl. broadcaster device health) |
 | GET | `/healthz`, `/readyz` | none | Liveness / readiness |
 
 *Metrics/telemetry endpoints carry aggregate diagnostics only (no

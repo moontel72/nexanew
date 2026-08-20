@@ -19,8 +19,8 @@ use todd_common::media::{AudioMixView, AudioMixerConfig};
 #[cfg(feature = "gst")]
 use todd_common::types::SourceRef;
 use todd_common::types::{
-    ForwardingStatus, OverlayCommand, OverlayState, ProgramState, ProgramTransitionRequest,
-    DEFAULT_TRANSITION_DURATION_MS, MAX_TRANSITION_DURATION_MS,
+    CameraInfo, ForwardingStatus, OverlayCommand, OverlayState, ProgramState,
+    ProgramTransitionRequest, DEFAULT_TRANSITION_DURATION_MS, MAX_TRANSITION_DURATION_MS,
 };
 use todd_replay::export::ClipExportRequest;
 use todd_replay::session::{ReplayInfo, ReplayTrigger};
@@ -138,6 +138,9 @@ pub struct Engine {
     pub(crate) overlays: Arc<DashMap<String, OverlayState>>,
     /// Runtime status of every output forwarder, keyed by forwarder key.
     pub(crate) forwarder_status: Arc<DashMap<String, ForwardingStatus>>,
+    /// Running RTSP/RTMP ingest adapters, keyed by "{room}/{camera}".
+    #[cfg(feature = "gst")]
+    pub(crate) ingests: Arc<DashMap<String, Arc<todd_transcode::ingest::GstIngest>>>,
     /// Per-room GStreamer program mixers (gst builds only; without the
     /// feature the program egress stays a passthrough of the PGM camera).
     #[cfg(feature = "gst")]
@@ -168,6 +171,8 @@ impl Engine {
             audio: Arc::new(DashMap::new()),
             overlays: Arc::new(DashMap::new()),
             forwarder_status: Arc::new(DashMap::new()),
+            #[cfg(feature = "gst")]
+            ingests: Arc::new(DashMap::new()),
             #[cfg(feature = "gst")]
             mixers: Arc::new(DashMap::new()),
             #[cfg(feature = "gst")]
@@ -603,6 +608,109 @@ impl Engine {
             .collect();
         statuses.sort_by(|a, b| a.key.cmp(&b.key));
         statuses
+    }
+
+    /// Deterministic synthetic SSRC for an ingest track, so the router
+    /// registration can be reversed on stop.
+    #[cfg(feature = "gst")]
+    fn ingest_ssrc(room_id: &str, camera_id: &str, media: &str) -> u32 {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        (room_id, camera_id, media).hash(&mut hasher);
+        (hasher.finish() & 0xFFFF_FFFE) as u32 | 1
+    }
+
+    /// Starts an RTSP/RTMP ingest adapter for a camera and pumps its
+    /// re-packetized RTP into the TrackRouter (gst builds only).
+    #[cfg(feature = "gst")]
+    pub async fn start_ingest(&self, room_id: &str, camera: &CameraInfo) -> Result<(), AppError> {
+        use todd_common::types::CameraSourceKind;
+        use todd_transcode::ingest::GstIngest;
+        use todd_transcode::media::MediaCodec;
+
+        if camera.kind == CameraSourceKind::Whip {
+            return Ok(());
+        }
+        let url = camera.url.as_deref().unwrap_or("").trim().to_string();
+        if url.is_empty() {
+            return Err(AppError::BadRequest(format!(
+                "camera {} requires a source URL for {:?} ingest",
+                camera.id, camera.kind
+            )));
+        }
+
+        let key = format!("{room_id}/{}", camera.id);
+        self.stop_ingest(room_id, &camera.id).await;
+        let ingest = Arc::new(GstIngest::build(&url, camera.kind)?);
+        self.ingests.insert(key, ingest.clone());
+
+        let (engine, room, cam) = (self.clone(), room_id.to_string(), camera.id.clone());
+        let video_ssrc = Self::ingest_ssrc(&room, &cam, "video");
+        let audio_ssrc = Self::ingest_ssrc(&room, &cam, "audio");
+        let video_rx = ingest.subscribe_video();
+        let audio_rx = ingest.subscribe_audio();
+        tokio::spawn(async move {
+            pump_ingest_feed(&engine, &room, &cam, MediaCodec::H264, video_ssrc, video_rx).await;
+        });
+        tokio::spawn(async move {
+            pump_ingest_feed(&engine, &room, &cam, MediaCodec::Opus, audio_ssrc, audio_rx).await;
+        });
+
+        tracing::info!(room = room_id, camera = %camera.id, ?camera.kind, "ingest started");
+        Ok(())
+    }
+
+    /// Starts an ingest adapter in non-gst builds: impossible without the
+    /// pipeline, so the attempt is rejected.
+    #[cfg(not(feature = "gst"))]
+    pub async fn start_ingest(&self, _room_id: &str, camera: &CameraInfo) -> Result<(), AppError> {
+        if camera.kind == todd_common::types::CameraSourceKind::Whip {
+            return Ok(());
+        }
+        Err(AppError::Unsupported(
+            "built without the `gst` feature — rebuild with --features gst to pull RTSP/RTMP sources"
+                .to_string(),
+        ))
+    }
+
+    /// Stops an ingest adapter and unregisters its router tracks.
+    #[cfg(feature = "gst")]
+    pub async fn stop_ingest(&self, room_id: &str, camera_id: &str) {
+        let key = format!("{room_id}/{camera_id}");
+        if self.ingests.remove(&key).is_some() {
+            let video_ssrc = Self::ingest_ssrc(room_id, camera_id, "video");
+            let audio_ssrc = Self::ingest_ssrc(room_id, camera_id, "audio");
+            self.router
+                .unregister_track(room_id, camera_id, None, video_ssrc);
+            self.router
+                .unregister_track(room_id, camera_id, None, audio_ssrc);
+            tracing::info!(room = room_id, camera = camera_id, "ingest stopped");
+        }
+    }
+
+    /// Stops an ingest adapter (no-op without the gst feature).
+    #[cfg(not(feature = "gst"))]
+    pub async fn stop_ingest(&self, _room_id: &str, _camera_id: &str) {}
+
+    /// Cameras of a room with a running ingest adapter.
+    #[cfg(feature = "gst")]
+    pub fn active_ingest_cameras(&self, room_id: &str) -> Vec<String> {
+        let prefix = format!("{room_id}/");
+        let mut cameras: Vec<String> = self
+            .ingests
+            .iter()
+            .filter(|entry| entry.key().starts_with(&prefix))
+            .map(|entry| entry.key().trim_start_matches(&prefix).to_string())
+            .collect();
+        cameras.sort();
+        cameras
+    }
+
+    /// Cameras of a room with a running ingest adapter (non-gst: none).
+    #[cfg(not(feature = "gst"))]
+    pub fn active_ingest_cameras(&self, _room_id: &str) -> Vec<String> {
+        Vec::new()
     }
 
     /// Stops an output forwarder by key and marks it stopped.
@@ -1326,6 +1434,50 @@ impl Engine {
         self.forwarder_status.insert(status.key.clone(), status);
         Err(AppError::Unsupported(message))
     }
+}
+
+/// Pumps one ingest feed (video or audio) into the TrackRouter and the
+/// replay ring, mirroring the WHIP track pump so RTSP/RTMP cameras
+/// behave identically downstream (gst builds only).
+#[cfg(feature = "gst")]
+async fn pump_ingest_feed(
+    engine: &Engine,
+    room_id: &str,
+    camera_id: &str,
+    codec: todd_transcode::media::MediaCodec,
+    ssrc: u32,
+    mut rx: tokio::sync::broadcast::Receiver<todd_transcode::media::RtpChunk>,
+) {
+    engine
+        .router
+        .register_track(room_id, camera_id, None, ssrc, codec);
+    tracing::info!(
+        room = room_id,
+        camera = camera_id,
+        ssrc,
+        ?codec,
+        "ingest track up"
+    );
+    loop {
+        match rx.recv().await {
+            Ok(chunk) => {
+                engine
+                    .router
+                    .record_ingress(room_id, camera_id, codec, 0, chunk.packet.len());
+                engine.router.forward(room_id, camera_id, &chunk);
+                engine.replay.capture(
+                    room_id,
+                    camera_id,
+                    Arc::new(todd_replay::Frame::now(chunk, 0)),
+                );
+            }
+            Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+            Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+        }
+    }
+    engine
+        .router
+        .unregister_track(room_id, camera_id, None, ssrc);
 }
 
 /// Builds a webrtc-rs API with the default interceptor set (NACK

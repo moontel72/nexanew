@@ -44,6 +44,35 @@ fn validate_camera_id(id: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+/// RTSP/RTMP cameras are pulled by the engine — they must carry a source
+/// URL. WHIP cameras ingest over HTTP and need none.
+fn validate_camera_source(camera: &CameraInfo) -> Result<(), AppError> {
+    use todd_common::types::CameraSourceKind;
+    if camera.kind == CameraSourceKind::Whip {
+        return Ok(());
+    }
+    match camera.url.as_deref().map(str::trim) {
+        Some(url) if !url.is_empty() => Ok(()),
+        _ => Err(AppError::BadRequest(format!(
+            "camera {} ({:?}) requires a source URL",
+            camera.id, camera.kind
+        ))),
+    }
+}
+
+/// Applies the ingest lifecycle for a camera's kind: RTSP/RTMP cameras
+/// are pulled by the media plane; WHIP cameras have no adapter.
+async fn sync_ingest_for_camera(state: &AppState, room_id: &str, camera: &CameraInfo) {
+    use todd_common::types::CameraSourceKind;
+    if camera.kind == CameraSourceKind::Whip {
+        let _ = state.plane.stop_ingest(room_id, &camera.id).await;
+        return;
+    }
+    if let Err(e) = state.plane.start_ingest(room_id, camera).await {
+        tracing::warn!(room = room_id, camera = %camera.id, error = %e, "ingest start failed; camera stays registered for a later retry");
+    }
+}
+
 /// Resolves the requested camera list of a create call into specs:
 /// `camera_specs` wins over the legacy plain `camera_ids`; an empty
 /// request falls back to a single camera named "default" (server-side,
@@ -59,21 +88,25 @@ fn specs_from_request(req: &CreateRoomRequest) -> Vec<CameraSpec> {
                 label: None,
                 kind: todd_common::types::CameraSourceKind::Whip,
                 group: None,
+                url: None,
             })
             .collect()
     }
 }
 
-/// Lists every room with live-camera flags computed from session state.
-/// Shared by `GET /room/list` and the control-plane WebSocket snapshot.
+/// Lists every room with live-camera flags computed from WHIP session
+/// state and running RTSP/RTMP ingest adapters. Shared by
+/// `GET /room/list` and the control-plane WebSocket snapshot.
 pub async fn rooms_with_liveness(state: &AppState) -> Result<Vec<Room>, AppError> {
     let mut rooms = state.store.list_rooms().await?;
     for room in &mut rooms {
         let sessions = state.store.list_sessions(&room.id).await?;
+        let ingests = state.plane.active_ingest_cameras(&room.id).await?;
         for camera in &mut room.cameras {
             camera.active = sessions
                 .iter()
-                .any(|(_, session_camera)| session_camera == &camera.id);
+                .any(|(_, session_camera)| session_camera == &camera.id)
+                || ingests.contains(&camera.id);
         }
     }
     rooms.sort_by(|a, b| a.name.cmp(&b.name).then_with(|| a.id.cmp(&b.id)));
@@ -197,6 +230,7 @@ pub async fn add_camera(
 
     validate_camera_id(&spec.id)?;
     let camera = spec.into_info();
+    validate_camera_source(&camera)?;
 
     let Some(room) = state.store.get_room(&room_id).await? else {
         return Err(AppError::NotFound(format!("room {room_id}")));
@@ -222,6 +256,7 @@ pub async fn add_camera(
         .num_seconds()
         .max(1) as u64;
     state.store.upsert_camera(&room_id, &camera, ttl).await?;
+    sync_ingest_for_camera(&state, &room_id, &camera).await;
 
     tracing::info!(room = %room_id, camera = %camera.id, "camera added");
     state.control.publish(ControlEvent::CameraAdded {
@@ -291,6 +326,7 @@ pub async fn update_camera(
         .num_seconds()
         .max(1) as u64;
     state.store.upsert_camera(&room_id, existing, ttl).await?;
+    sync_ingest_for_camera(&state, &room_id, existing).await;
 
     let camera = existing.clone();
     tracing::info!(room = %room_id, camera = %camera_id, "camera updated");
@@ -322,8 +358,8 @@ pub async fn remove_camera(
         )));
     }
 
-    // Close every live ingest session of the camera before dropping its
-    // registry entries, so the media plane and the store stay consistent.
+    // Close every live WHIP session of the camera and stop its ingest
+    // adapter (if any) before dropping the registry entries.
     let sessions = state.store.list_sessions(&room_id).await?;
     for (session_id, session_camera) in &sessions {
         if session_camera == &camera_id {
@@ -331,6 +367,7 @@ pub async fn remove_camera(
             let _ = state.store.remove_session(&room_id, session_id).await;
         }
     }
+    let _ = state.plane.stop_ingest(&room_id, &camera_id).await;
 
     state.store.remove_camera(&room_id, &camera_id).await?;
     tracing::info!(room = %room_id, camera = %camera_id, "camera removed");

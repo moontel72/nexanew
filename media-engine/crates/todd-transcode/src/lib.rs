@@ -24,4 +24,6 @@ pub mod mixer;
 #[cfg(feature = "gst")]
 pub mod forwarder;
 #[cfg(feature = "gst")]
+pub mod ingest;
+#[cfg(feature = "gst")]
 pub mod mixer_gst;

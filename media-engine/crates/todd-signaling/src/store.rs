@@ -499,6 +499,7 @@ mod tests {
                 label: None,
                 kind: todd_common::types::CameraSourceKind::Whip,
                 group: None,
+                url: None,
                 active: false,
             }],
         }
@@ -510,6 +511,7 @@ mod tests {
             label: Some(format!("Camera {id}")),
             kind,
             group: Some("ground".to_string()),
+            url: None,
             active: false,
         }
     }

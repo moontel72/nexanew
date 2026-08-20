@@ -48,6 +48,10 @@ pub struct CameraSpec {
     /// Logical grouping (e.g. "ground", "drone", "studio").
     #[serde(default)]
     pub group: Option<String>,
+    /// Source URL for `rtsp`/`rtmp` cameras (required by those kinds;
+    /// ignored for WHIP cameras).
+    #[serde(default)]
+    pub url: Option<String>,
 }
 
 impl CameraSpec {
@@ -59,6 +63,10 @@ impl CameraSpec {
             label: self.label.filter(|label| !label.trim().is_empty()),
             kind: self.kind,
             group: self.group.filter(|group| !group.trim().is_empty()),
+            url: self
+                .url
+                .map(|url| url.trim().to_string())
+                .filter(|url| !url.is_empty()),
             active: false,
         }
     }
@@ -99,6 +107,9 @@ pub struct CameraInfo {
     /// Logical grouping of cameras.
     #[serde(default)]
     pub group: Option<String>,
+    /// Source URL for `rtsp`/`rtmp` cameras (ignored for WHIP cameras).
+    #[serde(default)]
+    pub url: Option<String>,
     /// Populated from live session state when rooms are read.
     #[serde(default)]
     pub active: bool,
@@ -567,6 +578,7 @@ mod tests {
             label: Some("   ".to_string()),
             kind: CameraSourceKind::Rtsp,
             group: Some("".to_string()),
+            url: None,
         };
         let info = spec.into_info();
         assert_eq!(info.id, "cam-2");
