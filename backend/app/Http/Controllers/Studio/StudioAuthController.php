@@ -8,6 +8,7 @@ use App\Models\Cricket\ManagerSessionLog;
 use App\Services\MediaEngineTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -68,13 +69,17 @@ class StudioAuthController extends Controller
         $manager->last_login_ip = $request->ip();
         $manager->save();
 
-        ManagerSessionLog::create([
-            'cricket_manager_id' => $manager->id,
-            'action' => 'studio_login',
-            'metadata' => ['email' => $manager->email],
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
+        try {
+            ManagerSessionLog::create([
+                'cricket_manager_id' => $manager->id,
+                'action' => 'studio_login',
+                'metadata' => ['email' => $manager->email],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('studio_login audit log insert failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Studio login successful.',
