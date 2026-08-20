@@ -29,7 +29,7 @@ cp .env.example .env.local
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | *(empty → same-origin)* | Signaling control plane base URL |
-| `VITE_STUDIO_LOGIN_URL` | `https://admin.traceodd.com/api/v1/studio/login` | Phase-1 SSO identity provider (Laravel) login endpoint |
+| `VITE_STUDIO_LOGIN_URL` | `/api/v1/studio/login` | Phase-1 SSO identity provider (Laravel) login endpoint |
 | `VITE_CRICKET_MANAGER_URL` | *(empty)* | External manager origin (shown in the settings panel; the backend sync is configured at runtime via `PUT /api/v1/cricket/config`) |
 | `VITE_STUN_URL` | *(empty)* | STUN server for local WHEP viewers (ICE is host-only when unset) |
 | `VITE_TURN_URL` | *(empty)* | Optional TURN server |
@@ -38,13 +38,16 @@ cp .env.example .env.local
 ### Studio login (Phase 1 SSO)
 
 The director UI is gated behind a login screen. Credentials are posted to
-the external Laravel identity provider (`POST {VITE_STUDIO_LOGIN_URL}` with
+the Laravel identity provider (`POST {VITE_STUDIO_LOGIN_URL}` with
 `{email, password}`), which returns a JWT (`token`) carrying
 `role: "admin"` and `perms: ["studio_director"]`. The JWT is stored in
 `localStorage` (`todd_studio_jwt`) and attached as `Authorization: Bearer`
 on every engine request; a `401` from the engine clears the token and
 returns to the login screen. The endpoint is configurable via
-`VITE_STUDIO_LOGIN_URL` above.
+`VITE_STUDIO_LOGIN_URL` above — by default it is the relative
+`/api/v1/studio/login`, which the studio nginx proxies to the Laravel
+backend on the same server (`/api/v1/studio/*`), so no separate
+`admin.traceodd.com` DNS or CORS is needed.
 
 ## Develop
 

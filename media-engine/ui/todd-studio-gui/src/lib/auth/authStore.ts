@@ -8,9 +8,11 @@
 const STORAGE_KEY = "todd_studio_jwt";
 const EMAIL_KEY = "todd_studio_email";
 
-/** The Phase-1 login endpoint does not exist in this repo yet, so it is
- * configurable via `VITE_STUDIO_LOGIN_URL` with this production default. */
-const DEFAULT_LOGIN_URL = "https://admin.traceodd.com/api/v1/studio/login";
+/** Relative URL → same-origin: nginx on studio.traceodd.com proxies
+ * `/api/v1/studio/*` to the Laravel admin-panel PHP-FPM on the same server
+ * (no admin.traceodd.com DNS or CORS needed). The `VITE_STUDIO_LOGIN_URL`
+ * env var can still override this default. */
+const DEFAULT_LOGIN_URL = "/api/v1/studio/login";
 
 let cachedToken: string | null | undefined;
 let cachedEmail: string | null | undefined;
