@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api/client";
-import type { CricketConfigView, CricketMatchConfig, MatchSyncState } from "../lib/api/types";
+import type {
+  CricketConfigUpdate,
+  CricketConfigView,
+  CricketMatchConfig,
+  MatchSyncState,
+} from "../lib/api/types";
 import { useControlState } from "../hooks/useControlState";
 import { env, cn } from "../lib/utils";
 import { Button } from "./ui/Button";
@@ -131,16 +136,17 @@ export function SettingsPanel() {
       return;
     }
 
+    // Only send the token when the director typed one; a blank field must
+    // keep the stored server-side value instead of wiping it.
+    const payload: CricketConfigUpdate = {
+      match_configs: matches,
+      poll_ms: pollMs,
+    };
+    const token = form.token.trim();
+    if (token) payload.api_token = token;
+
     api
-      .updateCricketConfig(
-        {
-          match_configs: matches,
-          poll_ms: pollMs,
-          // Only send the token when the director typed one.
-          api_token: form.token,
-        },
-        env.adminToken,
-      )
+      .updateCricketConfig(payload, env.adminToken)
       .then(() => {
         setSaved(true);
         setDirty(false);

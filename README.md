@@ -816,3 +816,25 @@ Subscription & Billing Calculation: If the Super Admin subscription plan include
 - **Escrow Logic**: In all Bit transactions, the amount must first be "On Hold" and released upon scanning (receipt).
 - **API Centralization**: Control all third-party services from the Super Admin's "Integration Hub" to avoid repeatedly changing code.
 - **RAM Management**: Since your RAM is 8GB, avoid unnecessary `emit` in BloC while writing code to reduce state memory usage.
+
+---------
+
+## 📡 Todd Broadcaster
+
+A standalone Flutter entrypoint (`lib/main_broadcaster.dart`) that turns a
+phone into a WHIP camera source for the T-Odd media engine. It streams the
+device camera over WHIP ingest (`POST /api/v1/whip/ingest/{room}/{camera}`)
+and pushes device health (battery, encode FPS, uplink bitrate, dropped
+frames, network quality) over a telemetry WebSocket. The broadcaster is
+driven by `BroadcasterCubit` (Flutter Bloc only — no `setState`) with
+exponential-backoff auto-reconnect.
+
+Build commands:
+
+```bash
+flutter build apk -t lib/main_broadcaster.dart
+flutter build web --release -t lib/main_broadcaster.dart
+```
+
+The `Build Todd Broadcaster APK` job in `.github/workflows/android-build.yml`
+builds the same entrypoint in CI.

@@ -46,9 +46,9 @@ use crate::{router::TrackRouter, whep_peer, whip_peer};
 
 use todd_transcode::mixer::MixerOutputConfig;
 #[cfg(feature = "gst")]
-use todd_transcode::mixer::{plan_scene, source_key};
+use todd_transcode::mixer::plan_scene;
 #[cfg(feature = "gst")]
-use todd_transcode::mixer_gst::{audio_feed_key, GstProgramMixer};
+use todd_transcode::mixer_gst::{audio_feed_key, source_key, GstProgramMixer};
 
 /// Per-host engine configuration. Clonable: the interface/IP filters are
 /// `Arc`d closures.
@@ -650,8 +650,10 @@ impl Engine {
         let audio_ssrc = Self::ingest_ssrc(&room, &cam, "audio");
         let video_rx = ingest.subscribe_video();
         let audio_rx = ingest.subscribe_audio();
+
+        let (video_engine, video_room, video_cam) = (engine.clone(), room.clone(), cam.clone());
         tokio::spawn(async move {
-            pump_ingest_feed(&engine, &room, &cam, MediaCodec::H264, video_ssrc, video_rx).await;
+            pump_ingest_feed(&video_engine, &video_room, &video_cam, MediaCodec::H264, video_ssrc, video_rx).await;
         });
         tokio::spawn(async move {
             pump_ingest_feed(&engine, &room, &cam, MediaCodec::Opus, audio_ssrc, audio_rx).await;

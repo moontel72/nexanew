@@ -135,6 +135,12 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
         </span>
       </header>
 
+      {!activeRoomId && (
+        <div className="text-[11px] text-muted-foreground">
+          Select an active room before toggling overlays.
+        </div>
+      )}
+
       {/* Scoreboard lower-third */}
       <div className="flex flex-col gap-2">
         <label className="flex items-center justify-between text-xs">
@@ -172,6 +178,7 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
               key={event.id}
               variant="outline"
               className="px-2 py-1 text-[11px]"
+              disabled={!activeRoomId}
               onClick={() => firePopup(event.text, event.subtext, event.id)}
             >
               {event.text}
@@ -187,6 +194,7 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
           <input
             type="checkbox"
             checked={watermarkOn}
+            disabled={!activeRoomId}
             onChange={(event) => toggleWatermark(event.target.checked)}
           />
         </label>
@@ -194,6 +202,7 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
           className="rounded-md border border-input bg-background px-2 py-1 text-xs"
           placeholder="transparent PNG URL"
           value={watermarkUrl}
+          disabled={!activeRoomId}
           onChange={(event) => setWatermarkUrl(event.target.value)}
           onBlur={() => watermarkOn && void send({ kind: "watermark", enabled: true, asset_url: watermarkUrl, x: 0.965, y: 0.02 })}
         />

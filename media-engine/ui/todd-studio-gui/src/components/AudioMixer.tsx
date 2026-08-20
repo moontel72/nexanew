@@ -28,14 +28,20 @@ interface FaderStripProps {
   meterKey: string;
   spec: AudioBusSpec;
   onBus(patch: AudioBusPatch): void;
+  disabled: boolean;
 }
 
 /** One console strip: meter, vertical fader, M/S, gain and delay. */
-function FaderStrip({ label, meterKey, spec, onBus }: FaderStripProps) {
+function FaderStrip({ label, meterKey, spec, onBus, disabled }: FaderStripProps) {
   const mutedOut = spec.muted || spec.volume_db <= FADER_FLOOR_DB + 1;
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md border border-border bg-background/60 p-2">
+    <div
+      className={cn(
+        "flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md border border-border bg-background/60 p-2",
+        disabled && "pointer-events-none opacity-50",
+      )}
+    >
       <div className="flex w-full items-center justify-between gap-1">
         <span className="truncate text-[10px] font-semibold" title={label}>
           {label}
@@ -45,6 +51,7 @@ function FaderStrip({ label, meterKey, spec, onBus }: FaderStripProps) {
           <input
             type="checkbox"
             checked={spec.enabled}
+            disabled={disabled}
             onChange={(event) => onBus({ enabled: event.target.checked })}
           />
         </label>
@@ -61,6 +68,7 @@ function FaderStrip({ label, meterKey, spec, onBus }: FaderStripProps) {
         max={FADER_CEILING_DB}
         step={0.5}
         value={spec.volume_db}
+        disabled={disabled}
         onChange={(event) => onBus({ volume_db: clampDb(Number(event.target.value)) })}
         aria-label={`${label} fader`}
       />
@@ -74,6 +82,7 @@ function FaderStrip({ label, meterKey, spec, onBus }: FaderStripProps) {
       <div className="flex w-full justify-center gap-1">
         <button
           type="button"
+          disabled={disabled}
           className={cn(
             "rounded px-1.5 py-0.5 text-[9px] font-bold",
             spec.muted ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground",
@@ -85,6 +94,7 @@ function FaderStrip({ label, meterKey, spec, onBus }: FaderStripProps) {
         </button>
         <button
           type="button"
+          disabled={disabled}
           className={cn(
             "rounded px-1.5 py-0.5 text-[9px] font-bold",
             spec.solo ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground",
@@ -105,6 +115,7 @@ function FaderStrip({ label, meterKey, spec, onBus }: FaderStripProps) {
           step={1}
           className="min-w-0 flex-1"
           value={spec.gain_db}
+          disabled={disabled}
           onChange={(event) => onBus({ gain_db: clampGainDb(Number(event.target.value)) })}
         />
         <span className="w-7 text-right font-mono tabular-nums">
@@ -122,6 +133,7 @@ function FaderStrip({ label, meterKey, spec, onBus }: FaderStripProps) {
           step={10}
           className="w-14 rounded border border-input bg-background px-1 py-0.5 text-right font-mono text-[9px]"
           value={spec.delay_ms}
+          disabled={disabled}
           onChange={(event) =>
             onBus({ delay_ms: clampDelayMs(Number(event.target.value) || 0) })
           }
@@ -213,6 +225,12 @@ export function AudioMixer() {
         </span>
       </header>
 
+      {!activeRoomId && (
+        <div className="text-[11px] text-muted-foreground">
+          Select an active room to mix its audio buses.
+        </div>
+      )}
+
       <div ref={rootRef} className="flex gap-2">
         {AUDIO_BUSES.map((bus) => (
           <FaderStrip
@@ -221,11 +239,17 @@ export function AudioMixer() {
             meterKey={bus}
             spec={busSpec(bus)}
             onBus={(patch) => mix.setBus(bus, patch)}
+            disabled={!activeRoomId}
           />
         ))}
 
         {/* Master strip */}
-        <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md border border-accent/40 bg-background/60 p-2">
+        <div
+          className={cn(
+            "flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md border border-accent/40 bg-background/60 p-2",
+            !activeRoomId && "pointer-events-none opacity-50",
+          )}
+        >
           <span className="truncate text-[10px] font-semibold text-accent">Master</span>
           <div className="meter" data-meter="master">
             <div className="meter-fill" />
@@ -237,6 +261,7 @@ export function AudioMixer() {
             max={FADER_CEILING_DB}
             step={0.5}
             value={mix.config.master_volume_db}
+            disabled={!activeRoomId}
             onChange={(event) => mix.setMaster(Number(event.target.value))}
             aria-label="Master fader"
           />

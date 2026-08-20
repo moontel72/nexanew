@@ -3,7 +3,9 @@ import 'dart:convert';
 
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:trace_odd/core/services/ws_socket.dart';
+
+import '../../broadcaster_constants.dart';
 
 /// Derives the WebSocket origin from an HTTP(S) API base URL so the
 /// telemetry socket always matches the director-provided engine host.
@@ -32,8 +34,8 @@ class DeviceHealth {
 }
 
 /// Streams device health (battery, encode FPS, uplink bitrate, dropped
-/// frames, network quality) to `GET /api/v1/telemetry/ws` every two
-/// seconds.
+/// frames, network quality) to `GET /api/v1/telemetry/ws` every
+/// [BroadcasterConstants.telemetryInterval].
 class DeviceTelemetry {
   DeviceTelemetry({
     required this.wsBaseUrl,
@@ -46,8 +48,9 @@ class DeviceTelemetry {
   final String roomId;
   final String cameraId;
 
-  WebSocketChannel? _channel;
+  WsSocket? _channel;
   Timer? _timer;
+  int _generation = 0;
   final Battery _battery = Battery();
   int _lastBytesSent = 0;
   DateTime? _lastSampleAt;
@@ -67,10 +70,28 @@ class DeviceTelemetry {
 
   /// Opens the telemetry socket and starts the push interval.
   void start() {
-    _channel = WebSocketChannel.connect(
-      Uri.parse('$wsBaseUrl/api/v1/telemetry/ws'),
+    _generation++;
+    _channel = null;
+    unawaited(_connect(_generation));
+    _timer = Timer.periodic(
+      BroadcasterConstants.telemetryInterval,
+      (_) => _sample(),
     );
-    _timer = Timer.periodic(const Duration(seconds: 2), (_) => _sample());
+  }
+
+  Future<void> _connect(int generation) async {
+    try {
+      final socket = await connectWsSocket('$wsBaseUrl/api/v1/telemetry/ws');
+      if (generation == _generation) {
+        _channel = socket;
+      } else {
+        // stop()/start() raced this connect — drop the stale socket.
+        unawaited(socket.close());
+      }
+    } catch (_) {
+      // Engine unreachable — next start() reopens the socket.
+      _channel = null;
+    }
   }
 
   Future<void> _sample() async {
@@ -105,7 +126,11 @@ class DeviceTelemetry {
               values['state'] == 'succeeded') {
             final rtt =
                 (values['currentRoundTripTime'] as num?)?.toDouble() ?? 0;
-            quality = rtt < 0.15 ? 'good' : (rtt < 0.4 ? 'fair' : 'poor');
+            quality = rtt < BroadcasterConstants.rttGoodThresholdSeconds
+                ? 'good'
+                : (rtt < BroadcasterConstants.rttFairThresholdSeconds
+                      ? 'fair'
+                      : 'poor');
           }
         }
         if (_lastSampleAt != null && bytesSent >= _lastBytesSent) {
@@ -132,7 +157,7 @@ class DeviceTelemetry {
     onSample?.call(lastHealth);
 
     try {
-      channel.sink.add(
+      channel.add(
         jsonEncode(<String, dynamic>{
           'kind': 'device_telemetry',
           'room_id': roomId,
@@ -151,9 +176,14 @@ class DeviceTelemetry {
 
   /// Stops the push interval and closes the socket.
   void stop() {
+    _generation++;
     _timer?.cancel();
     _timer = null;
-    _channel?.sink.close();
+    final channel = _channel;
     _channel = null;
+    if (channel != null) {
+      // Close is asynchronous; the cubit never needs to await it.
+      unawaited(channel.close());
+    }
   }
 }

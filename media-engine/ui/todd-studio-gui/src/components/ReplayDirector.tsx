@@ -27,11 +27,14 @@ export function ReplayDirector({
 }: ReplayDirectorProps) {
   const [speed, setSpeed] = useState<number>(0.5);
   const [event, setEvent] = useState<ReplayEventKind>("wicket");
-  const [busy, setBusy] = useState(false);
+  const [triggering, setTriggering] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [lastReplayId, setLastReplayId] = useState<string | null>(null);
 
   const trigger = async () => {
-    setBusy(true);
+    setTriggering(true);
+    setError(null);
     try {
       const info = await replayService.trigger(
         {
@@ -45,8 +48,26 @@ export function ReplayDirector({
         adminToken,
       );
       setLastReplayId(info.replay_id);
+    } catch (triggerError) {
+      setError(
+        triggerError instanceof Error ? triggerError.message : String(triggerError),
+      );
     } finally {
-      setBusy(false);
+      setTriggering(false);
+    }
+  };
+
+  const stop = async () => {
+    if (!lastReplayId) return;
+    setClosing(true);
+    setError(null);
+    try {
+      await replayService.close(lastReplayId, adminToken);
+      setLastReplayId(null);
+    } catch (closeError) {
+      setError(closeError instanceof Error ? closeError.message : String(closeError));
+    } finally {
+      setClosing(false);
     }
   };
 
@@ -82,9 +103,29 @@ export function ReplayDirector({
         ))}
       </div>
 
-      <Button variant="destructive" onClick={trigger} disabled={busy || !roomId}>
-        {busy ? "Triggering…" : "Trigger Replay"}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="destructive"
+          className="flex-1"
+          onClick={trigger}
+          disabled={triggering || closing || !roomId}
+        >
+          {triggering ? "Triggering…" : "Trigger Replay"}
+        </Button>
+        <Button variant="outline" onClick={stop} disabled={triggering || closing || !lastReplayId}>
+          {closing ? "Closing…" : "Stop / Close"}
+        </Button>
+      </div>
+
+      {!roomId && (
+        <div className="text-[11px] text-muted-foreground">
+          Create or select a room to replay.
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-md bg-destructive/20 p-2 text-xs text-destructive">{error}</div>
+      )}
 
       {lastReplayId && (
         <div className="truncate font-mono text-xs text-muted-foreground">

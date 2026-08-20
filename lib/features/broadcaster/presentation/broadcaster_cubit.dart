@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../broadcaster_constants.dart';
 import '../data/services/device_telemetry.dart';
 import '../data/services/whip_client.dart';
 
@@ -29,27 +30,7 @@ class BroadcasterConfig {
 }
 
 /// Selectable camera profile (720p / 1080p).
-class CameraProfile {
-  const CameraProfile(this.label, this.width, this.height);
-
-  final String label;
-  final int width;
-  final int height;
-
-  @override
-  bool operator ==(Object other) =>
-      other is CameraProfile && other.width == width && other.height == height;
-
-  @override
-  int get hashCode => Object.hash(width, height);
-}
-
-/// Profiles offered in the control UI.
-const List<CameraProfile> kCameraProfiles = <CameraProfile>[
-  CameraProfile('720p', 1280, 720),
-  CameraProfile('1080p', 1920, 1080),
-];
-
+/// See `broadcaster_constants.dart` for profiles and tunables.
 enum BroadcasterPhase { idle, connecting, live, reconnecting, stopped }
 
 /// Immutable UI state for the broadcaster control plane.
@@ -59,8 +40,8 @@ class BroadcasterState {
     this.config,
     this.renderer,
     this.facingMode = 'environment',
-    this.profile = const CameraProfile('720p', 1280, 720),
-    this.targetFps = 30,
+    this.profile = kDefaultCameraProfile,
+    this.targetFps = BroadcasterConstants.defaultFps,
     this.torchOn = false,
     this.audioMuted = false,
     this.connectionState,
@@ -207,24 +188,21 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     on<_RetryConnect>(_onRetryConnect);
   }
 
-  /// Maximum reconnect attempts before the broadcast fails permanently.
-  static const int maxReconnectAttempts = 6;
-
-  /// Backoff ceiling: 1s, 2s, 4s, 8s, 16s, 30s, 30s…
-  static const int maxBackoffSeconds = 30;
-
   WhipClient? _client;
   WhipSession? _session;
   DeviceTelemetry? _telemetry;
   RTCVideoRenderer? _renderer;
   RTCPeerConnection? _pc;
   Timer? _reconnectTimer;
+  Timer? _rendererDisposeTimer;
   int _reconnectAttempt = 0;
   bool _started = false;
 
   @override
   Future<void> close() async {
-    _teardown();
+    // Dispose the renderer immediately so the delayed-dispose timer can
+    // never fire after the cubit is closed.
+    await _teardown(disposeRendererNow: true);
     await super.close();
   }
 
@@ -267,7 +245,7 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     try {
       await _renderer!.initialize();
     } catch (err) {
-      _teardown();
+      await _teardown(disposeRendererNow: true);
       emit(
         const BroadcasterState().copyWith(
           phase: BroadcasterPhase.stopped,
@@ -291,7 +269,7 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     BroadcastStop event,
     Emitter<BroadcasterState> emit,
   ) async {
-    _teardown();
+    await _teardown();
     emit(
       const BroadcasterState().copyWith(
         phase: BroadcasterPhase.stopped,
@@ -509,6 +487,13 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
       try {
         renderer.srcObject = stream;
       } catch (err) {
+        // The preview rejected the stream — release it so the camera is
+        // not left open with no owner.
+        try {
+          await stream.dispose();
+        } catch (_) {
+          // Already disposed.
+        }
         return _OpenFailed('Preview attach failed: $err');
       }
     }
@@ -530,6 +515,9 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     _session = session;
     _pc = session.pc;
     _telemetry!.attach(session.pc);
+    // A reconnect may leave the previous telemetry socket/timer running;
+    // stop it before opening a fresh one to avoid leaking both.
+    _telemetry!.stop();
     _telemetry!.start();
     session.pc.onConnectionState = (RTCPeerConnectionState st) {
       if (!isClosed) add(_ConnectionStateChanged(st));
@@ -558,8 +546,8 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
           ),
         );
       case _OpenFailed(:final message):
-        if (_reconnectAttempt >= maxReconnectAttempts) {
-          _teardown();
+        if (_reconnectAttempt >= BroadcasterConstants.maxReconnectAttempts) {
+          unawaited(_teardown());
           emit(
             const BroadcasterState().copyWith(
               phase: BroadcasterPhase.stopped,
@@ -587,8 +575,8 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     if (!_started) return;
 
     _reconnectAttempt += 1;
-    if (_reconnectAttempt > maxReconnectAttempts) {
-      _teardown();
+    if (_reconnectAttempt > BroadcasterConstants.maxReconnectAttempts) {
+      unawaited(_teardown());
       emit(
         const BroadcasterState().copyWith(
           phase: BroadcasterPhase.stopped,
@@ -599,7 +587,10 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
       return;
     }
 
-    final seconds = math.min(1 << (_reconnectAttempt - 1), maxBackoffSeconds);
+    final seconds = math.min(
+      1 << (_reconnectAttempt - 1),
+      BroadcasterConstants.maxBackoffSeconds,
+    );
     final delay = Duration(seconds: seconds);
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, () {
@@ -616,13 +607,20 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
 
   /// Releases all live resources: WHIP session, telemetry socket,
   /// reconnect timer, peer connection reference and the preview surface.
-  void _teardown() {
+  ///
+  /// When [disposeRendererNow] is false the renderer disposal is deferred
+  /// by [BroadcasterConstants.rendererDisposeDelay] so a still-mounted
+  /// RTCVideoView can detach first; the pending timer is cancelled by the
+  /// next teardown/close so it cannot outlive the cubit.
+  Future<void> _teardown({bool disposeRendererNow = false}) async {
     _started = false;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _rendererDisposeTimer?.cancel();
+    _rendererDisposeTimer = null;
     _telemetry?.stop();
     _telemetry = null;
-    _session?.close();
+    await _session?.close();
     _session = null;
     _pc = null;
 
@@ -634,8 +632,19 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
       } catch (_) {
         // Surface already released.
       }
-      // Delay disposal so a still-mounted RTCVideoView can detach first.
-      Future<void>.delayed(const Duration(seconds: 1), renderer.dispose);
+      if (disposeRendererNow) {
+        try {
+          await renderer.dispose();
+        } catch (_) {
+          // Already disposed.
+        }
+      } else {
+        // Delay disposal so a still-mounted RTCVideoView can detach first.
+        _rendererDisposeTimer = Timer(
+          BroadcasterConstants.rendererDisposeDelay,
+          () => unawaited(renderer.dispose()),
+        );
+      }
     }
   }
 

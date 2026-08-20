@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trace_odd/shared/theme/app_theme.dart';
 
 import 'features/broadcaster/presentation/broadcaster_page.dart';
 
@@ -21,14 +22,7 @@ class BroadcasterApp extends StatelessWidget {
     return MaterialApp(
       title: 'Todd Broadcaster',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0EA5E9),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.darkTheme(),
       home: const BroadcasterPage(),
     );
   }

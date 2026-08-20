@@ -179,11 +179,17 @@ export function SceneComposer() {
       )}
 
       <Button
-        disabled={!ready || !layout || director.state.transitioning}
+        disabled={!ready || !layout || director.state.transitioning || !director.state.pvw}
         onClick={() => layout && director.applyScene(layout)}
       >
         {director.state.transitioning ? "Applying…" : "Apply Scene"}
       </Button>
+
+      {!director.state.pvw && (
+        <div className="text-[11px] text-muted-foreground">
+          Select a Preview (PVW) source first to apply a scene.
+        </div>
+      )}
     </section>
   );
 }

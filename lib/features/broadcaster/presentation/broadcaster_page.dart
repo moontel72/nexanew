@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
 
+import '../broadcaster_constants.dart';
 import '../data/services/device_telemetry.dart';
 import 'broadcaster_cubit.dart';
 
@@ -75,6 +77,21 @@ class _ConfigFormState extends State<_ConfigForm> {
   }
 
   @override
+  void didUpdateWidget(covariant _ConfigForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-sync after a failed start resets the config while this State
+    // stays mounted; only touch fields whose incoming value differs.
+    final initial = widget.initial;
+    if (initial == null) return;
+    if (initial.baseUrl != _baseUrl.text) _baseUrl.text = initial.baseUrl;
+    if (initial.roomId != _roomId.text) _roomId.text = initial.roomId;
+    if (initial.cameraId != _cameraId.text) _cameraId.text = initial.cameraId;
+    if (initial.token != _token.text) _token.text = initial.token;
+    if (initial.stunUrl != _stunUrl.text) _stunUrl.text = initial.stunUrl;
+    if (initial.turnUrl != _turnUrl.text) _turnUrl.text = initial.turnUrl;
+  }
+
+  @override
   void dispose() {
     _baseUrl.dispose();
     _roomId.dispose();
@@ -126,7 +143,7 @@ class _ConfigFormState extends State<_ConfigForm> {
                 ),
                 const SizedBox(height: 20),
                 if (widget.error != null) ...[
-                  _ErrorCard(message: widget.error!),
+                  ListErrorState(message: widget.error!),
                   const SizedBox(height: 16),
                 ],
                 TextField(
@@ -134,7 +151,7 @@ class _ConfigFormState extends State<_ConfigForm> {
                   keyboardType: TextInputType.url,
                   decoration: const InputDecoration(
                     labelText: 'Engine base URL',
-                    hintText: 'https://studio.traceodd.com',
+                    hintText: BroadcasterConstants.engineUrlHint,
                     prefixIcon: Icon(Icons.link),
                     border: OutlineInputBorder(),
                   ),
@@ -201,41 +218,6 @@ class _ConfigFormState extends State<_ConfigForm> {
     );
   }
 }
-
-class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Theme.of(context).colorScheme.errorContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Icon(
-              Icons.error_outline,
-              color: Theme.of(context).colorScheme.onErrorContainer,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onErrorContainer,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Live view ────────────────────────────────────────────
 
 class _LiveView extends StatelessWidget {
   const _LiveView({required this.state});
@@ -572,9 +554,12 @@ class _ControlBar extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment<int>(value: 30, label: Text('30fps')),
-                      ButtonSegment<int>(value: 60, label: Text('60fps')),
+                    segments: <ButtonSegment<int>>[
+                      for (final fps in BroadcasterConstants.fpsOptions)
+                        ButtonSegment<int>(
+                          value: fps,
+                          label: Text('${fps}fps'),
+                        ),
                     ],
                     selected: <int>{state.targetFps},
                     onSelectionChanged: (selection) =>

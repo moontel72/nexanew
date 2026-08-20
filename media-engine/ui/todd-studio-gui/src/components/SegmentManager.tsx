@@ -15,6 +15,10 @@ export function SegmentManager({ onFire }: { onFire?: () => void }) {
         Segment / Ad Timer
       </header>
 
+      <div className="text-[11px] text-muted-foreground">
+        Local timer only — it does not cut or signal a server-side source yet.
+      </div>
+
       <div className="text-center font-mono text-3xl tabular-nums">
         {formatClock(seg.remainingSeconds)}
       </div>

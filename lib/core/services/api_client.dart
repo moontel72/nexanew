@@ -237,6 +237,19 @@ class ApiClient {
     );
   }
 
+  /// Sends a POST with a raw string body (e.g. a WHIP SDP offer) and
+  /// returns the raw [http.Response]. No auth injection, JSON encoding or
+  /// response parsing is applied — callers own status/body handling. Used
+  /// by the broadcaster's WHIP client, whose ingest endpoint answers with
+  /// a bare SDP body and expects `Content-Type: application/sdp`.
+  Future<http.Response> postRaw(
+    String url, {
+    Map<String, String>? headers,
+    String? body,
+  }) {
+    return _client.post(Uri.parse(url), headers: headers, body: body);
+  }
+
   // Make PUT request
   Future<dynamic> put(
     String endpoint, {

@@ -205,7 +205,7 @@ fn spawn_push_task(
                 }
             };
             if let Some(map) = buffer.get_mut() {
-                map.copy_from_slice(0, &chunk.packet);
+                let _ = map.copy_from_slice(0, &chunk.packet);
             }
             if let Err(e) = appsrc.push_buffer(buffer) {
                 tracing::warn!(error = %e, "appsrc push failed; stopping feed");

@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:http/http.dart' as http;
+import 'package:trace_odd/core/services/api_client.dart';
+
+import '../../broadcaster_constants.dart';
 
 /// Raised when a WHIP ingest is rejected by the media engine.
 class WhipException implements Exception {
@@ -40,7 +42,7 @@ class WhipSession {
 class WhipClient {
   WhipClient({required this.baseUrl});
 
-  /// Media engine base URL (e.g. `https://studio.traceodd.com`).
+  /// Media engine base URL (see [BroadcasterConstants.engineUrlHint]).
   final String baseUrl;
 
   /// Opens the device camera + microphone with the requested profile.
@@ -101,8 +103,8 @@ class WhipClient {
       throw WhipException('Could not produce a local SDP offer.');
     }
 
-    final response = await http.post(
-      uri,
+    final response = await ApiClient().postRaw(
+      uri.toString(),
       headers: <String, String>{'Content-Type': 'application/sdp'},
       body: local.sdp,
     );
@@ -120,17 +122,16 @@ class WhipClient {
     return WhipSession(pc: pc, stream: stream);
   }
 
-  /// Polls until ICE gathering completes (bounded at ~3 seconds).
+  /// Polls until ICE gathering completes (bounded by
+  /// [BroadcasterConstants.iceGatherMaxWait]).
   static Future<void> waitForIceGatheringComplete(RTCPeerConnection pc) async {
-    const maxWait = Duration(seconds: 3);
-    const step = Duration(milliseconds: 50);
-    final deadline = DateTime.now().add(maxWait);
+    final deadline = DateTime.now().add(BroadcasterConstants.iceGatherMaxWait);
     while (DateTime.now().isBefore(deadline)) {
       if (pc.iceGatheringState ==
           RTCIceGatheringState.RTCIceGatheringStateComplete) {
         return;
       }
-      await Future<void>.delayed(step);
+      await Future<void>.delayed(BroadcasterConstants.iceGatherPollStep);
     }
   }
 }
