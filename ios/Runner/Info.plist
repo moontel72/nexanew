@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Todd Broadcaster streams the camera feed to the match room.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Todd Broadcaster captures ambient audio for the match broadcast.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
