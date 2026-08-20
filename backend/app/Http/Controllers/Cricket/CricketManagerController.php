@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Cricket\CricketManager;
 use App\Models\Cricket\ManagerSessionLog;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -38,6 +37,7 @@ class CricketManagerController extends Controller
             'permissions.can_manage_scores' => 'boolean',
             'permissions.can_manage_streams' => 'boolean',
             'permissions.can_manage_sponsors' => 'boolean',
+            'permissions.can_access_studio' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -48,12 +48,8 @@ class CricketManagerController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
-            'password' => Hash::make($request->password),
-            'permissions' => $request->permissions ?? [
-                'can_manage_scores' => true,
-                'can_manage_streams' => false,
-                'can_manage_sponsors' => false,
-            ],
+            'password' => $request->password,
+            'permissions' => $this->whitelistedPermissions($request->input('permissions')),
             'provisioned_by_global_identity_id' => $request->user()?->global_identity_id,
             'status' => 'active',
         ]);
@@ -83,6 +79,7 @@ class CricketManagerController extends Controller
             'password' => 'sometimes|string|min:8',
             'status' => 'sometimes|in:active,suspended,inactive',
             'permissions' => 'nullable|array',
+            'permissions.can_access_studio' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -90,9 +87,17 @@ class CricketManagerController extends Controller
         }
 
         $data = $validator->validated();
-        if (isset($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
+
+        // Dotted validation rules can surface as flat keys in validated();
+        // drop them so the model only ever receives the nested array.
+        unset($data['permissions.can_access_studio']);
+
+        // `permissions` replaces the whole set when provided — whitelist its
+        // keys (incl. can_access_studio) so unknown keys never persist.
+        if (array_key_exists('permissions', $data) && is_array($data['permissions'])) {
+            $data['permissions'] = $this->whitelistedPermissions($data['permissions']);
         }
+
         $manager->update($data);
 
         return response()->json([
@@ -127,5 +132,33 @@ class CricketManagerController extends Controller
         $manager->delete();
 
         return response()->json(['message' => 'Cricket Manager deleted.']);
+    }
+
+    /**
+     * Whitelist the permission keys persisted on a manager account.
+     * Unknown keys are dropped; `can_access_studio` defaults to false.
+     */
+    private function whitelistedPermissions(?array $permissions): array
+    {
+        $whitelist = [
+            'can_manage_scores',
+            'can_manage_streams',
+            'can_manage_sponsors',
+            'can_access_studio',
+        ];
+
+        $permissions = $permissions ?? [
+            'can_manage_scores' => true,
+            'can_manage_streams' => false,
+            'can_manage_sponsors' => false,
+        ];
+
+        $permissions = array_intersect_key($permissions, array_flip($whitelist));
+
+        if (!array_key_exists('can_access_studio', $permissions)) {
+            $permissions['can_access_studio'] = false;
+        }
+
+        return $permissions;
     }
 }

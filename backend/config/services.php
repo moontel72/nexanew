@@ -39,4 +39,21 @@ return [
         'api_key' => env('DEEPSEEK_API_KEY'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Media Engine (Rust) — Todd Studio / Broadcaster
+    |--------------------------------------------------------------------------
+    |
+    | Shared HS256 JWT settings. The secret MUST match the Rust media
+    | engine's MEDIA_ENGINE_JWT_SECRET so tokens minted by
+    | MediaEngineTokenService verify locally in the engine.
+    |
+    */
+
+    'media_engine' => [
+        'url' => env('MEDIA_ENGINE_URL', 'http://127.0.0.1:8080'),
+        'secret' => env('MEDIA_ENGINE_JWT_SECRET', ''),
+        'issuer' => env('MEDIA_ENGINE_JWT_ISSUER', 'traceodd'),
+    ],
+
 ];
