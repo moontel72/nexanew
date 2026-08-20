@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/services/api_client.dart';
+import 'package:trace_odd/shared/widgets/status_badge.dart';
 
 /// Sub-Admin page: List all Cricket Operations Managers.
 class CricketManagerListPage extends StatefulWidget {
@@ -246,6 +247,10 @@ class _ManagerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isActive = manager['status'] == 'active';
+    final permissions = manager['permissions'] is Map
+        ? manager['permissions'] as Map
+        : const <String, dynamic>{};
+    final canAccessStudio = permissions['can_access_studio'] == true;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       color: const Color(0xFF1B3A4B),
@@ -268,9 +273,21 @@ class _ManagerCard extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        subtitle: Text(
-          manager['email'] ?? '',
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              manager['email'] ?? '',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            if (canAccessStudio) ...[
+              const Gap(4),
+              const StatusBadge(
+                label: 'Studio Access',
+                color: Color(0xFF8B5CF6),
+              ),
+            ],
+          ],
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

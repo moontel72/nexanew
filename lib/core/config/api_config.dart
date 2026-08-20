@@ -13,6 +13,9 @@ class ApiConfig {
   static const String apiVersion = 'v1';
   static String get apiBaseUrl => '$baseUrl/api/$apiVersion';
 
+  // External product URLs
+  static const String studioUrl = 'https://studio.traceodd.com';
+
   // Timeout settings
   static const int connectTimeout = 30000; // milliseconds
   static const int receiveTimeout = 30000; // milliseconds

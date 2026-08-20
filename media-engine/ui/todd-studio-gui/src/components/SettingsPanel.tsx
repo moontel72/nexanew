@@ -8,6 +8,7 @@ import type {
 } from "../lib/api/types";
 import { useControlState } from "../hooks/useControlState";
 import { env, cn } from "../lib/utils";
+import { getToken } from "../lib/auth/authStore";
 import { Button } from "./ui/Button";
 
 const SYNC_BADGE: Record<MatchSyncState, string> = {
@@ -40,7 +41,7 @@ function formattedTime(epochMs: number): string {
  * /api/v1/cricket/config`) and broadcast to every director panel.
  */
 export function SettingsPanel() {
-  const control = useControlState(env.adminToken);
+  const control = useControlState();
 
   const [form, setForm] = useState<SettingsForm>(() => ({
     pollMs: "",
@@ -63,10 +64,10 @@ export function SettingsPanel() {
       hydratedRef.current = true;
       return;
     }
-    if (hydratedRef.current || !env.adminToken) return;
+    if (hydratedRef.current || !getToken()) return;
     let cancelled = false;
     api
-      .getCricketConfig(env.adminToken)
+      .getCricketConfig(getToken())
       .then((fetched) => {
         if (!cancelled) {
           setForm(formFromConfig(fetched));
@@ -146,7 +147,7 @@ export function SettingsPanel() {
     if (token) payload.api_token = token;
 
     api
-      .updateCricketConfig(payload, env.adminToken)
+      .updateCricketConfig(payload, getToken())
       .then(() => {
         setSaved(true);
         setDirty(false);

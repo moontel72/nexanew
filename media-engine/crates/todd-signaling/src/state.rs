@@ -86,6 +86,7 @@ impl AppState {
                     TokenRole::Admin,
                     None,
                     None,
+                    &[],
                     3600,
                 )?;
                 Arc::new(RemoteMediaPlane {
@@ -143,6 +144,7 @@ pub fn build_room(
             TokenRole::Publisher,
             Some(&room_id),
             Some(camera),
+            &[],
             state.settings.ingest_token_ttl_secs,
         )?;
         ingest_tokens.insert(camera.clone(), token);
@@ -155,6 +157,7 @@ pub fn build_room(
         TokenRole::Viewer,
         Some(&room_id),
         None,
+        &[],
         ttl_secs as i64,
     )?;
 
@@ -174,6 +177,7 @@ pub fn mint_camera_ingest_token(
         TokenRole::Publisher,
         Some(room_id),
         Some(camera_id),
+        &[],
         state.settings.ingest_token_ttl_secs,
     )
 }

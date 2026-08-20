@@ -18,7 +18,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { env } from "../utils";
+import { getToken } from "../auth/authStore";
 import { api } from "../api/client";
 import { useControlState } from "../../hooks/useControlState";
 import type {
@@ -74,7 +74,7 @@ const DirectorContext = createContext<DirectorApi | null>(null);
 const CONFIRM_TIMEOUT_MS = 2500;
 
 export function DirectorProvider({ children }: { children: ReactNode }) {
-  const control = useControlState(env.adminToken);
+  const control = useControlState();
 
   const [state, setState] = useState<DirectorState>({
     pgm: null,
@@ -131,7 +131,7 @@ export function DirectorProvider({ children }: { children: ReactNode }) {
       const timer = setTimeout(() => {
         void (async () => {
           try {
-            const program = await api.getProgram(target.roomId, env.adminToken);
+            const program = await api.getProgram(target.roomId, getToken());
             pendingRef.current = null;
             confirm(program);
           } catch {
@@ -164,7 +164,7 @@ export function DirectorProvider({ children }: { children: ReactNode }) {
             ...(durationMs > 0 ? { duration_ms: durationMs } : {}),
             ...(layout ? { layout } : {}),
           },
-          env.adminToken,
+          getToken(),
         )
         .then((program) => {
           // Degraded mode: without a control feed the HTTP response is

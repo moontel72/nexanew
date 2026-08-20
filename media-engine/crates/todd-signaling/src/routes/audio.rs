@@ -31,6 +31,7 @@ pub async fn get_mix(
 ) -> Result<Json<AudioMixView>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     state
         .store
@@ -55,6 +56,7 @@ pub async fn put_mix(
 ) -> Result<Json<AudioMixView>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     state
         .store

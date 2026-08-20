@@ -40,6 +40,9 @@ class SubAdminState extends Equatable {
   final String? actionError;
   final String? actionSuccess;
 
+  // ── Sub-Admin Creation Form ──
+  final bool canAccessStudio;
+
   const SubAdminState({
     this.authStatus = SubAdminAuthStatus.initial,
     this.obscurePassword = true,
@@ -64,6 +67,7 @@ class SubAdminState extends Equatable {
     this.actionLoading = false,
     this.actionError,
     this.actionSuccess,
+    this.canAccessStudio = false,
   });
 
   SubAdminState copyWith({
@@ -90,6 +94,7 @@ class SubAdminState extends Equatable {
     bool? actionLoading,
     String? actionError,
     String? actionSuccess,
+    bool? canAccessStudio,
   }) => SubAdminState(
     authStatus: authStatus ?? this.authStatus,
     obscurePassword: obscurePassword ?? this.obscurePassword,
@@ -114,6 +119,7 @@ class SubAdminState extends Equatable {
     actionLoading: actionLoading ?? this.actionLoading,
     actionError: actionError,
     actionSuccess: actionSuccess,
+    canAccessStudio: canAccessStudio ?? this.canAccessStudio,
   );
 
   @override
@@ -124,5 +130,6 @@ class SubAdminState extends Equatable {
     busCompanies, busListLoading, busListError,
     subAdmins, subAdminListLoading, subAdminListError,
     actionLoading, actionError, actionSuccess,
+    canAccessStudio,
   ];
 }

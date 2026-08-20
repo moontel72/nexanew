@@ -8,19 +8,19 @@ export interface WhepPlayerState {
 }
 
 /** Manages one WHEP viewer stream bound to a <video> element. */
-export function useWhepPlayer(watchUrl: string | null, token: string): WhepPlayerState {
+export function useWhepPlayer(watchUrl: string | null): WhepPlayerState {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sessionRef = useRef<WhepSession | null>(null);
 
   useEffect(() => {
-    if (!watchUrl || !token || !videoRef.current) return;
+    if (!watchUrl || !videoRef.current) return;
 
     let cancelled = false;
     setError(null);
 
-    startWhepWatch({ watchUrl, token, videoEl: videoRef.current })
+    startWhepWatch({ watchUrl, videoEl: videoRef.current })
       .then((session) => {
         if (cancelled) {
           session.close();
@@ -39,7 +39,7 @@ export function useWhepPlayer(watchUrl: string | null, token: string): WhepPlaye
       sessionRef.current = null;
       setConnected(false);
     };
-  }, [watchUrl, token]);
+  }, [watchUrl]);
 
   return { ref: videoRef, connected, error };
 }

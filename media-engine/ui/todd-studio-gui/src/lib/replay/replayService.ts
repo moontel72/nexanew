@@ -16,7 +16,7 @@ export interface ReplayTriggerArgs {
 }
 
 export const replayService = {
-  trigger(args: ReplayTriggerArgs, token: string): Promise<ReplayInfo> {
+  trigger(args: ReplayTriggerArgs, token: string | null): Promise<ReplayInfo> {
     return api.triggerReplay(
       {
         room_id: args.roomId,
@@ -30,11 +30,11 @@ export const replayService = {
     );
   },
 
-  list(token: string): Promise<ReplayInfo[]> {
+  list(token: string | null): Promise<ReplayInfo[]> {
     return api.listReplays(token);
   },
 
-  close(replayId: string, token: string): Promise<void> {
+  close(replayId: string, token: string | null): Promise<void> {
     return api.closeReplay(replayId, token);
   },
 };

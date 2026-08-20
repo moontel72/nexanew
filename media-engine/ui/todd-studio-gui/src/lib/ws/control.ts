@@ -6,6 +6,7 @@
 // React panel reads one consistent, current view without polling.
 
 import { env } from "../utils";
+import { getToken } from "../auth/authStore";
 import type {
   AudioMixView,
   ControlEvent,
@@ -159,9 +160,10 @@ function applyEvent(state: ControlState, event: ControlEvent): ControlState {
   }
 }
 
-/** Connects to `GET /api/v1/control/ws` with the admin token and folds
- * events into a shared local state. One feed per app instance. */
-export function connectControl(token: string): ControlFeed {
+/** Connects to `GET /api/v1/control/ws` with the SSO JWT from the auth
+ * store and folds events into a shared local state. One feed per app
+ * instance. */
+export function connectControl(): ControlFeed {
   let state: ControlState = { ...EMPTY_STATE };
   const listeners = new Set<(state: ControlState) => void>();
   let socket: WebSocket | undefined;
@@ -177,6 +179,13 @@ export function connectControl(token: string): ControlFeed {
 
   function connect() {
     if (closed) return;
+    const token = getToken();
+    if (!token) {
+      // Signed out — retry once auth is restored (the hook also tears
+      // this feed down via close(), so this is just a safety net).
+      scheduleReconnect();
+      return;
+    }
     const url = `${wsBaseUrl()}/api/v1/control/ws?token=${encodeURIComponent(token)}`;
     socket = new WebSocket(url);
 

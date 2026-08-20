@@ -2,8 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;
-  readonly VITE_ADMIN_TOKEN?: string;
-  readonly VITE_VIEWER_TOKEN?: string;
+  readonly VITE_STUDIO_LOGIN_URL?: string;
   readonly VITE_CRICKET_MANAGER_URL?: string;
   readonly VITE_CRICKET_MATCH_IDS?: string;
   readonly VITE_WHEP_BASE_URL?: string;

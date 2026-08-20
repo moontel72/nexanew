@@ -8,14 +8,12 @@ export interface CameraFeed {
 
 export interface MultiviewGridProps {
   feeds: CameraFeed[];
-  viewerToken: string;
   columns?: 2 | 3 | 4;
 }
 
 /** Multiviewer grid: every active camera feed as a live WHEP player. */
 export function MultiviewGrid({
   feeds,
-  viewerToken,
   columns = 4,
 }: MultiviewGridProps) {
   const { state, preview } = useDirector();
@@ -43,7 +41,6 @@ export function MultiviewGrid({
             key={key}
             roomId={feed.roomId}
             cameraId={feed.cameraId}
-            token={viewerToken}
             active={active}
             onSelect={() => preview(feed)}
           />

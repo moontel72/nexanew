@@ -215,6 +215,17 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
                     TextInputType.text,
                     required: false,
                   ),
+                  const Gap(12),
+                  SwitchListTile(
+                    title: const Text('Studio Director Access'),
+                    subtitle: const Text(
+                      'Allow this sub-admin to open Todd Studio',
+                    ),
+                    value: state.canAccessStudio,
+                    activeThumbColor: AppColors.primary,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (v) => bloc.add(ToggleStudioAccess(v)),
+                  ),
                   const Gap(24),
                   const Text(
                     'Initial Credentials',
@@ -294,6 +305,7 @@ class _AddSubAdminViewState extends State<_AddSubAdminView> {
                                     cnic: _cnicCtrl.text.trim(),
                                     vertical: _selectedVertical,
                                     password: _passwordCtrl.text,
+                                    canAccessStudio: state.canAccessStudio,
                                   ),
                                 );
                               }

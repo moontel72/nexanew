@@ -626,6 +626,14 @@ class CricketManagerModel {
   bool canManageScores() => permissions?['can_manage_scores'] == true;
   bool canManageStreams() => permissions?['can_manage_streams'] == true;
   bool canManageSponsors() => permissions?['can_manage_sponsors'] == true;
+  bool canAccessStudio() => permissions?['can_access_studio'] == true;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'email': email,
+    if (permissions != null) 'permissions': permissions,
+  };
 }
 
 class CommentaryModel {

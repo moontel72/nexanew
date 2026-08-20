@@ -34,6 +34,7 @@ fn main() {
         role,
         room.as_deref(),
         camera.as_deref(),
+        &[],
         ttl,
     )
     .expect("token minting failed");

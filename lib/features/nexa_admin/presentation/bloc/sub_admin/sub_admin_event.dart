@@ -116,6 +116,7 @@ class FetchSubAdmins extends SubAdminEvent {
 
 class CreateSubAdmin extends SubAdminEvent {
   final String name, email, phone, cnic, vertical, password;
+  final bool canAccessStudio;
   const CreateSubAdmin({
     required this.name,
     required this.email,
@@ -123,9 +124,25 @@ class CreateSubAdmin extends SubAdminEvent {
     required this.cnic,
     required this.vertical,
     required this.password,
+    this.canAccessStudio = false,
   });
   @override
-  List<Object?> get props => [name, email, phone, cnic, vertical, password];
+  List<Object?> get props => [
+    name,
+    email,
+    phone,
+    cnic,
+    vertical,
+    password,
+    canAccessStudio,
+  ];
+}
+
+class ToggleStudioAccess extends SubAdminEvent {
+  final bool value;
+  const ToggleStudioAccess(this.value);
+  @override
+  List<Object?> get props => [value];
 }
 
 class ToggleSubAdminStatus extends SubAdminEvent {

@@ -34,6 +34,7 @@ pub async fn trigger_replay(
 ) -> Result<(StatusCode, Json<ReplayInfo>), AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     let info = state.plane.trigger_replay(&req).await?;
     Ok((StatusCode::CREATED, Json(info)))
@@ -46,6 +47,7 @@ pub async fn list_replays(
 ) -> Result<Json<Vec<ReplayInfo>>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     Ok(Json(state.plane.list_replays().await?))
 }
@@ -58,6 +60,7 @@ pub async fn close_replay(
 ) -> Result<StatusCode, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     state.plane.close_replay(&replay_id).await?;
     Ok(StatusCode::NO_CONTENT)
@@ -72,6 +75,7 @@ pub async fn export_replay(
 ) -> Result<(StatusCode, Json<ExportStatus>), AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     req.replay_id = replay_id;
     let status = state.plane.export_replay(&req).await?;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useDirector } from "../lib/director/directorService";
 import { useControlState } from "../hooks/useControlState";
-import { env } from "../lib/utils";
+import { getToken } from "../lib/auth/authStore";
 import { api } from "../lib/api/client";
 import type { OverlayState } from "../lib/api/types";
 import { Button } from "./ui/Button";
@@ -24,7 +24,7 @@ export interface OverlayPanelProps {
  * `POST /api/v1/program/overlay`; the resulting state arrives back over
  * the control-plane WebSocket. */
 export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
-  const control = useControlState(env.adminToken);
+  const control = useControlState();
   const director = useDirector();
   const activeRoomId = director.state.pgm?.roomId ?? control.rooms[0]?.id ?? "";
 
@@ -53,10 +53,10 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
       hydratedRef.current = true;
       return;
     }
-    if (hydratedRef.current || !activeRoomId || !env.adminToken) return;
+    if (hydratedRef.current || !activeRoomId || !getToken()) return;
     let cancelled = false;
     api
-      .getOverlays(activeRoomId, env.adminToken)
+      .getOverlays(activeRoomId, getToken())
       .then((state) => {
         if (cancelled) return;
         setScoreboardOn(state.scoreboard?.enabled ?? false);
@@ -76,11 +76,11 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
   }, [serverState, activeRoomId]);
 
   const send = (command: Parameters<typeof api.applyOverlay>[1]) => {
-    if (!activeRoomId || !env.adminToken) return;
+    if (!activeRoomId || !getToken()) return;
     setBusy(true);
     setError(null);
     api
-      .applyOverlay(activeRoomId, command, env.adminToken)
+      .applyOverlay(activeRoomId, command, getToken())
       .catch((sendError: Error) => setError(sendError.message))
       .finally(() => setBusy(false));
   };
@@ -117,7 +117,7 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
     setBusy(true);
     setError(null);
     api
-      .clearOverlays(activeRoomId, env.adminToken)
+      .clearOverlays(activeRoomId, getToken())
       .then(() => {
         setScoreboardOn(false);
         setWatermarkOn(false);

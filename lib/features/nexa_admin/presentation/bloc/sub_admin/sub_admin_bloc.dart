@@ -24,6 +24,7 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     on<RestoreBusCompany>(_onRestoreBusCo);
     on<FetchSubAdmins>(_onFetchAdmins);
     on<CreateSubAdmin>(_onCreateAdmin);
+    on<ToggleStudioAccess>(_onToggleStudio);
     on<ToggleSubAdminStatus>(_onToggleAdmin);
     on<EditSubAdmin>(_onEditAdmin);
     on<ChangeSubAdminVertical>(_onChangeVert);
@@ -387,6 +388,7 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
           'cnic': e.cnic,
           'vertical': e.vertical,
           'password': e.password,
+          'can_access_studio': e.canAccessStudio,
         },
       );
       emit(
@@ -398,6 +400,13 @@ class SubAdminBloc extends Bloc<SubAdminEvent, SubAdminState> {
     } catch (ex) {
       emit(state.copyWith(actionLoading: false, actionError: ex.toString()));
     }
+  }
+
+  void _onToggleStudio(
+    ToggleStudioAccess e,
+    Emitter<SubAdminState> emit,
+  ) {
+    emit(state.copyWith(canAccessStudio: e.value));
   }
 
   Future<void> _onToggleAdmin(

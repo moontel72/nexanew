@@ -42,6 +42,7 @@ pub async fn transition(
 ) -> Result<Json<ProgramState>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     req.room_id = req.room_id.trim().to_string();
     req.camera_id = req.camera_id.trim().to_string();
@@ -133,6 +134,7 @@ pub async fn get_overlays(
 ) -> Result<Json<OverlayState>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     state
         .store
@@ -156,6 +158,7 @@ pub async fn overlay(
 ) -> Result<Json<OverlayState>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     let room_id = request.room_id.trim().to_string();
     state
@@ -181,6 +184,7 @@ pub async fn clear_overlays(
 ) -> Result<Json<OverlayState>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     state
         .store
@@ -205,6 +209,7 @@ pub async fn get(
 ) -> Result<Json<ProgramState>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     let program = state
         .plane

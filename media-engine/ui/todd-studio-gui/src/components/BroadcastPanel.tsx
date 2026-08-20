@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useDirector } from "../lib/director/directorService";
 import { useControlState } from "../hooks/useControlState";
 import { useTelemetry } from "../hooks/useTelemetry";
-import { env, cn } from "../lib/utils";
+import { cn } from "../lib/utils";
+import { getToken } from "../lib/auth/authStore";
 import { api, ApiError } from "../lib/api/client";
 import type { ForwardingStatus, ForwardTargetRequest } from "../lib/api/types";
 import { Button } from "./ui/Button";
@@ -37,7 +38,7 @@ function formatDuration(startedAtMs: number, now: number): string {
 /** Broadcast output manager: pushes the mixed program composite to
  * external RTMP/SRT/file destinations with live health indicators. */
 export function BroadcastPanel() {
-  const control = useControlState(env.adminToken);
+  const control = useControlState();
   const telemetry = useTelemetry();
   const director = useDirector();
 
@@ -54,11 +55,11 @@ export function BroadcastPanel() {
 
   // Hydrate the forwarder list once when the control feed has none.
   useEffect(() => {
-    if (!env.adminToken) return;
+    if (!getToken()) return;
     if (Object.keys(control.forwarders).length > 0) return;
     let cancelled = false;
     api
-      .listForwards(env.adminToken)
+      .listForwards(getToken())
       .then((statuses) => {
         if (cancelled) return;
         for (const status of statuses) {
@@ -107,7 +108,7 @@ export function BroadcastPanel() {
       bitrate_kbps: bitrate,
     };
     api
-      .addProgramForward(activeRoomId, target, env.adminToken)
+      .addProgramForward(activeRoomId, target, getToken())
       .catch((startError: Error) =>
         setError(startError instanceof ApiError ? startError.message : startError.message),
       )
@@ -118,7 +119,7 @@ export function BroadcastPanel() {
     setBusy(true);
     setError(null);
     api
-      .stopForward(key, env.adminToken)
+      .stopForward(key, getToken())
       .catch((stopError: Error) => setError(stopError.message))
       .finally(() => setBusy(false));
   };

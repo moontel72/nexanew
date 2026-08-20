@@ -3,7 +3,8 @@ import { api, ApiError } from "../lib/api/client";
 import type { CameraInfo, CameraSourceKind, Room, UpdateCameraRequest } from "../lib/api/types";
 import { useControlState } from "../hooks/useControlState";
 import { useDirector } from "../lib/director/directorService";
-import { env, cn } from "../lib/utils";
+import { cn } from "../lib/utils";
+import { getToken } from "../lib/auth/authStore";
 import { Button } from "./ui/Button";
 
 const SOURCE_KINDS: Array<{ value: CameraSourceKind; label: string }> = [
@@ -43,7 +44,7 @@ function kindBadge(kind: CameraSourceKind): string {
  * director's preview bus.
  */
 export function InputPanel() {
-  const control = useControlState(env.adminToken);
+  const control = useControlState();
   const { state: director } = useDirector();
 
   const [form, setForm] = useState<CameraForm>(EMPTY_FORM);
@@ -92,7 +93,7 @@ export function InputPanel() {
           kind: form.kind,
           group: form.group.trim() || null,
         },
-        env.adminToken,
+        getToken(),
       );
       setLastAdded({
         cameraId,
@@ -107,7 +108,7 @@ export function InputPanel() {
     if (!window.confirm(`Remove camera "${camera.label ?? camera.id}" from ${room.name}?`)) {
       return;
     }
-    void runAction(() => api.removeCamera(room.id, camera.id, env.adminToken)).catch(
+    void runAction(() => api.removeCamera(room.id, camera.id, getToken())).catch(
       () => undefined,
     );
   };
@@ -123,7 +124,7 @@ export function InputPanel() {
 
   const handleSaveEdit = (room: Room, cameraId: string) => {
     void runAction(async () => {
-      await api.updateCamera(room.id, cameraId, editForm, env.adminToken);
+      await api.updateCamera(room.id, cameraId, editForm, getToken());
       setEditing(null);
       setEditForm({});
     }).catch(() => undefined);

@@ -4,6 +4,7 @@ import {
   REPLAY_SPEEDS,
   replayService,
 } from "../lib/replay/replayService";
+import { getToken } from "../lib/auth/authStore";
 import type { ReplayEventKind } from "../lib/api/types";
 
 const EVENTS: Array<{ id: ReplayEventKind; label: string }> = [
@@ -16,14 +17,12 @@ const EVENTS: Array<{ id: ReplayEventKind; label: string }> = [
 export interface ReplayDirectorProps {
   roomId: string;
   cameraIds: string[];
-  adminToken: string;
 }
 
 /** Director replay panel: event triggers + speed selection toggles. */
 export function ReplayDirector({
   roomId,
   cameraIds,
-  adminToken,
 }: ReplayDirectorProps) {
   const [speed, setSpeed] = useState<number>(0.5);
   const [event, setEvent] = useState<ReplayEventKind>("wicket");
@@ -45,7 +44,7 @@ export function ReplayDirector({
           speed,
           loop: false,
         },
-        adminToken,
+        getToken(),
       );
       setLastReplayId(info.replay_id);
     } catch (triggerError) {
@@ -62,7 +61,7 @@ export function ReplayDirector({
     setClosing(true);
     setError(null);
     try {
-      await replayService.close(lastReplayId, adminToken);
+      await replayService.close(lastReplayId, getToken());
       setLastReplayId(null);
     } catch (closeError) {
       setError(closeError instanceof Error ? closeError.message : String(closeError));

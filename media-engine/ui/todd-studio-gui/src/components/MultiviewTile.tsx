@@ -5,7 +5,6 @@ import { cn } from "../lib/utils";
 export interface MultiviewTileProps {
   roomId: string;
   cameraId: string;
-  token: string;
   label?: string;
   active?: "pgm" | "pvw" | null;
   onSelect?: () => void;
@@ -15,13 +14,12 @@ export interface MultiviewTileProps {
 export function MultiviewTile({
   roomId,
   cameraId,
-  token,
   label,
   active,
   onSelect,
 }: MultiviewTileProps) {
   const url = whepWatchUrl(roomId, cameraId);
-  const { ref, connected, error } = useWhepPlayer(url, token);
+  const { ref, connected, error } = useWhepPlayer(url);
 
   return (
     <button

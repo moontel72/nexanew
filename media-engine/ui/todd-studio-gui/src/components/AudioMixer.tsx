@@ -3,7 +3,7 @@ import { useDirector } from "../lib/director/directorService";
 import { useControlState } from "../hooks/useControlState";
 import { useTelemetry } from "../hooks/useTelemetry";
 import { useAudioMixer } from "../hooks/useAudioMixer";
-import { env, cn } from "../lib/utils";
+import { cn } from "../lib/utils";
 import type { AudioBus, AudioBusSpec } from "../lib/api/types";
 import {
   AUDIO_BUSES,
@@ -151,12 +151,12 @@ function FaderStrip({ label, meterKey, spec, onBus, disabled }: FaderStripProps)
  * without re-rendering React per frame.
  */
 export function AudioMixer() {
-  const control = useControlState(env.adminToken);
+  const control = useControlState();
   const telemetry = useTelemetry();
   const director = useDirector();
 
   const activeRoomId = director.state.pgm?.roomId ?? control.rooms[0]?.id ?? "";
-  const mix = useAudioMixer(activeRoomId, env.adminToken);
+  const mix = useAudioMixer(activeRoomId);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const targetsRef = useRef<Record<string, number>>({});

@@ -8,8 +8,6 @@ export function cn(...inputs: ClassValue[]) {
 
 export const env = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? "",
-  adminToken: import.meta.env.VITE_ADMIN_TOKEN || "",
-  viewerToken: import.meta.env.VITE_VIEWER_TOKEN || "",
   cricketManagerUrl: import.meta.env.VITE_CRICKET_MANAGER_URL ?? "",
   cricketMatchIds: import.meta.env.VITE_CRICKET_MATCH_IDS || "",
   whepBaseUrl:

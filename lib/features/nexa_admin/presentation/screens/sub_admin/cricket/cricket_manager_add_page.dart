@@ -21,6 +21,7 @@ class _CricketManagerAddPageState extends State<CricketManagerAddPage> {
   bool _canScore = true;
   bool _canStream = false;
   bool _canSponsor = false;
+  bool _canStudio = false;
 
   @override
   void dispose() {
@@ -47,6 +48,7 @@ class _CricketManagerAddPageState extends State<CricketManagerAddPage> {
             'can_manage_scores': _canScore,
             'can_manage_streams': _canStream,
             'can_manage_sponsors': _canSponsor,
+            'can_access_studio': _canStudio,
           },
         },
       );
@@ -222,6 +224,20 @@ class _CricketManagerAddPageState extends State<CricketManagerAddPage> {
                       value: _canSponsor,
                       activeColor: const Color(0xFF10B981),
                       onChanged: (v) => setState(() => _canSponsor = v),
+                    ),
+                    const Divider(height: 1, color: Color(0x20FFFFFF)),
+                    SwitchListTile(
+                      title: const Text(
+                        'Studio Director Access',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      subtitle: const Text(
+                        'Allows opening Todd Studio from the manager panel',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                      value: _canStudio,
+                      activeThumbColor: const Color(0xFF10B981),
+                      onChanged: (v) => setState(() => _canStudio = v),
                     ),
                   ],
                 ),

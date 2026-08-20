@@ -30,7 +30,7 @@ MEDIA_ENGINE_JWT_ISSUER=traceodd
 ## 2. Token minting service
 
 Must match `todd-common/src/auth.rs` claim-for-claim
-(iss/aud/sub/role/room_id/camera_id/iat/exp/jti, HS256).
+(iss/aud/sub/room_id/camera_id/role/perms/iat/exp/jti, HS256).
 
 ```php
 <?php
@@ -50,6 +50,7 @@ class MediaEngineTokenService
         ?string $cameraId = null,
         ?string $subject = null,
         int $ttlSeconds = 300,
+        array $perms = [],     // e.g. ['studio_director']
     ): string {
         $now = time();
 
@@ -60,6 +61,7 @@ class MediaEngineTokenService
             'room_id'   => $roomId,
             'camera_id' => $cameraId,
             'role'      => $role,
+            'perms'     => $perms ?? [],
             'iat'       => $now,
             'exp'       => $now + $ttlSeconds,
             'jti'       => (string) Str::uuid(),
@@ -67,6 +69,18 @@ class MediaEngineTokenService
     }
 }
 ```
+
+### Permissions
+
+Phase-1 SSO enforcement: every director-control route in the Studio
+(room create/list/delete, camera CRUD, forwarding, program
+transition/get/overlay, audio mix, replay trigger/list/close/export and
+the control-plane WebSocket) requires the `studio_director` permission
+in the token's `perms` array. Legacy compatibility rule: an admin token
+with an empty (or missing) `perms` claim — i.e. any token minted before
+the field existed — still passes, so existing server-to-server Laravel
+admin tokens keep working unchanged. Tokens minted with an explicit
+`perms` list must include `studio_director` explicitly.
 
 ## 3. HTTP client
 

@@ -146,6 +146,13 @@ pub async fn ws_handler(
                 )
                     .into_response();
             }
+            if let Err(e) = claims.require_perm("studio_director") {
+                return (
+                    e.status(),
+                    Json(serde_json::json!({ "error": e.to_string() })),
+                )
+                    .into_response();
+            }
             ws.on_upgrade(move |socket| serve(socket, state))
         }
         Err(e) => (

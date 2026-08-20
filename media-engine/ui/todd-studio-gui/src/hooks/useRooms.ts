@@ -1,4 +1,5 @@
 import { useControlState } from "./useControlState";
+import { getToken } from "../lib/auth/authStore";
 import type { Room } from "../lib/api/types";
 
 export interface RoomsFeed {
@@ -11,8 +12,9 @@ export interface RoomsFeed {
  * the previous 5s REST polling. The server snapshot arrives on connect
  * and camera/program mutations update the list incrementally.
  */
-export function useRooms(token: string): RoomsFeed {
-  const state = useControlState(token);
+export function useRooms(): RoomsFeed {
+  const state = useControlState();
+  const token = getToken();
 
   return {
     rooms: state.rooms,

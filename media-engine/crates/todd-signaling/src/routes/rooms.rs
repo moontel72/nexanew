@@ -125,6 +125,7 @@ pub async fn create_room(
 ) -> Result<(StatusCode, Json<CreateRoomResponse>), AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     let name = req.name.trim();
     if name.is_empty() {
@@ -162,6 +163,7 @@ pub async fn list_rooms(
 ) -> Result<Json<Vec<Room>>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     Ok(Json(rooms_with_liveness(&state).await?))
 }
@@ -204,6 +206,7 @@ pub async fn delete_room(
 ) -> Result<StatusCode, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     let sessions = state.store.list_sessions(&room_id).await?;
     for (session_id, _) in &sessions {
@@ -227,6 +230,7 @@ pub async fn add_camera(
 ) -> Result<(StatusCode, Json<AddCameraResponse>), AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     validate_camera_id(&spec.id)?;
     let camera = spec.into_info();
@@ -288,6 +292,7 @@ pub async fn update_camera(
 ) -> Result<Json<CameraInfo>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     let Some(mut room) = state.store.get_room(&room_id).await? else {
         return Err(AppError::NotFound(format!("room {room_id}")));
@@ -348,6 +353,7 @@ pub async fn remove_camera(
 ) -> Result<StatusCode, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     let Some(room) = state.store.get_room(&room_id).await? else {
         return Err(AppError::NotFound(format!("room {room_id}")));
@@ -390,6 +396,7 @@ pub async fn add_forward(
 ) -> Result<Response, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     let Some(room) = state.store.get_room(&room_id).await? else {
         return Err(AppError::NotFound(format!("room {room_id}")));
@@ -433,6 +440,7 @@ pub async fn stop_forward(
 ) -> Result<Json<ForwardingStatus>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     let status = state.plane.stop_forwarder(&key).await?;
     state.control.publish(ControlEvent::ForwardingChanged {
@@ -449,6 +457,7 @@ pub async fn list_forwarders(
 ) -> Result<Json<Vec<ForwardingStatus>>, AppError> {
     let claims = authenticate(&state.auth, &headers, &uri).await?;
     claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
 
     Ok(Json(state.plane.list_forwarders().await?))
 }

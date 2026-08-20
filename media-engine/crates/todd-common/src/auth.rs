@@ -47,12 +47,34 @@ pub struct TokenClaims {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub camera_id: Option<String>,
     pub role: TokenRole,
+    /// Fine-grained permissions (Phase-1 SSO). Tokens minted before this
+    /// field existed deserialize with an empty list — legacy Laravel admin
+    /// tokens keep passing `require_perm` via the empty-perms rule.
+    #[serde(default)]
+    pub perms: Vec<String>,
     pub iat: i64,
     pub exp: i64,
     pub jti: String,
 }
 
 impl TokenClaims {
+    /// Requires a specific permission. Legacy server-to-server Laravel
+    /// admin tokens (minted without a `perms` claim) keep working: an
+    /// admin token with an empty perms list passes any permission check.
+    /// Non-admin tokens (or admin tokens carrying an explicit perms list)
+    /// must list the permission explicitly.
+    pub fn require_perm(&self, perm: &str) -> Result<(), AppError> {
+        if self.role == TokenRole::Admin && self.perms.is_empty() {
+            return Ok(());
+        }
+        if self.perms.iter().any(|p| p.as_str() == perm) {
+            return Ok(());
+        }
+        Err(AppError::Forbidden(format!(
+            "token lacks required permission `{perm}`"
+        )))
+    }
+
     /// Requires `role` — admin tokens always pass (they outrank).
     pub fn require_role(&self, role: TokenRole) -> Result<(), AppError> {
         if self.role == role || self.role == TokenRole::Admin {
@@ -120,6 +142,7 @@ pub fn mint_token(
     role: TokenRole,
     room_id: Option<&str>,
     camera_id: Option<&str>,
+    perms: &[&str],
     ttl_secs: i64,
 ) -> Result<String, AppError> {
     let now = Utc::now();
@@ -130,6 +153,7 @@ pub fn mint_token(
         room_id: room_id.map(str::to_string),
         camera_id: camera_id.map(str::to_string),
         role,
+        perms: perms.iter().map(|p| p.to_string()).collect(),
         iat: now.timestamp(),
         exp: (now + Duration::seconds(ttl_secs)).timestamp(),
         jti: Uuid::new_v4().to_string(),
@@ -230,6 +254,8 @@ struct IntrospectionResponse {
     room_id: Option<String>,
     #[serde(default)]
     camera_id: Option<String>,
+    #[serde(default)]
+    perms: Option<Vec<String>>,
 }
 
 /// POST {token} to Laravel's introspection endpoint and map the response
@@ -272,8 +298,81 @@ async fn introspect(config: &AuthConfig, url: &str, token: &str) -> Result<Token
             Some("publisher") => TokenRole::Publisher,
             _ => TokenRole::Viewer,
         },
+        perms: body.perms.unwrap_or_default(),
         iat: now.timestamp(),
         exp: (now + Duration::seconds(60)).timestamp(),
         jti: Uuid::new_v4().to_string(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn claims(role: TokenRole, perms: Vec<String>) -> TokenClaims {
+        TokenClaims {
+            iss: "traceodd".to_string(),
+            aud: AUDIENCE.to_string(),
+            sub: "test".to_string(),
+            room_id: None,
+            camera_id: None,
+            role,
+            perms,
+            iat: 0,
+            exp: 0,
+            jti: "test-jti".to_string(),
+        }
+    }
+
+    #[test]
+    fn require_perm_passes_legacy_admin_with_empty_perms() {
+        // Server-to-server Laravel admin tokens minted before the perms
+        // claim existed must keep passing every permission check.
+        let claims = claims(TokenRole::Admin, vec![]);
+        assert!(claims.require_perm("studio_director").is_ok());
+    }
+
+    #[test]
+    fn require_perm_passes_when_permission_is_present() {
+        let claims = claims(TokenRole::Viewer, vec!["studio_director".to_string()]);
+        assert!(claims.require_perm("studio_director").is_ok());
+    }
+
+    #[test]
+    fn require_perm_rejects_when_permission_is_missing() {
+        // An admin token carrying an explicit perms list must still list
+        // the permission: the legacy bypass only applies to empty perms.
+        let claims = claims(TokenRole::Admin, vec!["other_perm".to_string()]);
+        let err = claims.require_perm("studio_director").unwrap_err();
+        assert!(matches!(err, AppError::Forbidden(_)));
+    }
+
+    #[test]
+    fn verify_token_accepts_claims_without_perms_field() {
+        // Simulates a token minted by the pre-SSO PHP service: no `perms`
+        // claim in the payload. `#[serde(default)]` must fill it in.
+        let secret = "test-secret";
+        let issuer = "traceodd";
+        let now = Utc::now().timestamp();
+        let payload = serde_json::json!({
+            "iss": issuer,
+            "aud": AUDIENCE,
+            "sub": "legacy-laravel",
+            "role": "admin",
+            "iat": now,
+            "exp": now + 3600,
+            "jti": "legacy-jti",
+        });
+        let token = encode(
+            &Header::new(Algorithm::HS256),
+            &payload,
+            &EncodingKey::from_secret(secret.as_bytes()),
+        )
+        .expect("legacy token encoding failed");
+
+        let claims = verify_token(&token, secret, issuer).expect("legacy token must verify");
+        assert_eq!(claims.role, TokenRole::Admin);
+        assert!(claims.perms.is_empty());
+        assert!(claims.require_perm("studio_director").is_ok());
+    }
 }

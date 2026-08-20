@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { env } from "../utils";
+import { getToken } from "../auth/authStore";
 
 export interface BallByBallState {
   matchId: string;
@@ -67,13 +68,14 @@ export function useScoreboard(matchId: string | null, pollMs = 3000) {
     let cancelled = false;
     const poll = async () => {
       try {
+        const token = getToken();
         const res = await fetch(
           `${env.apiBaseUrl}/api/v1/cricket/live/${encodeURIComponent(matchId)}`,
           {
             headers: {
               Accept: "application/json",
-              ...(env.adminToken
-                ? { Authorization: `Bearer ${env.adminToken}` }
+              ...(token
+                ? { Authorization: `Bearer ${token}` }
                 : {}),
             },
           },

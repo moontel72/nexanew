@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api/client";
 import { useControlState } from "./useControlState";
+import { getToken } from "../lib/auth/authStore";
 import { clampDb, defaultMix, withBus } from "../lib/audio/audioMixer";
 import type { AudioBus, AudioBusSpec, AudioMixerConfig } from "../lib/api/types";
 
@@ -28,8 +29,9 @@ const SYNC_DEBOUNCE_MS = 250;
  * the control-plane WebSocket (`audio_mixer_changed` events). Fader drags
  * update the draft immediately; a debounced PUT persists them.
  */
-export function useAudioMixer(roomId: string, token: string): AudioMixerApi {
-  const control = useControlState(token);
+export function useAudioMixer(roomId: string): AudioMixerApi {
+  const control = useControlState();
+  const token = getToken();
 
   const serverConfig: AudioMixerConfig | null =
     roomId && control.audioMixes[roomId] ? control.audioMixes[roomId].config : null;

@@ -4,6 +4,7 @@
 // and attach the remote tracks to a <video> element.
 
 import { env } from "../utils";
+import { getToken } from "../auth/authStore";
 
 export interface WhepSession {
   pc: RTCPeerConnection;
@@ -28,7 +29,6 @@ async function waitIceComplete(pc: RTCPeerConnection): Promise<void> {
 
 export async function startWhepWatch(opts: {
   watchUrl: string;
-  token: string;
   videoEl: HTMLVideoElement;
 }): Promise<WhepSession> {
   const iceServers: RTCIceServer[] = [];
@@ -43,11 +43,18 @@ export async function startWhepWatch(opts: {
   await pc.setLocalDescription(offer);
   await waitIceComplete(pc);
 
+  // The SSO JWT authenticates the viewer WHEP POST as well.
+  const token = getToken();
+  if (!token) {
+    pc.close();
+    throw new Error("WHEP watch failed: not authenticated");
+  }
+
   const res = await fetch(opts.watchUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/sdp",
-      Authorization: `Bearer ${opts.token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: pc.localDescription?.sdp ?? "",
   });

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
 import '../../blocs/live_score/live_score_bloc.dart';
@@ -80,6 +82,7 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                   children: [
                     _TopBar(
                       managerName: name,
+                      canAccessStudio: manager?.canAccessStudio() ?? false,
                       selectedTab: _selectedTab,
                       onLogout: () async {
                         await context.read<CricketRepository>().clearToken();
@@ -137,10 +140,12 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
 
 class _TopBar extends StatelessWidget {
   final String managerName;
+  final bool canAccessStudio;
   final int selectedTab;
   final VoidCallback onLogout;
   const _TopBar({
     required this.managerName,
+    required this.canAccessStudio,
     required this.selectedTab,
     required this.onLogout,
   });
@@ -178,6 +183,25 @@ class _TopBar extends StatelessWidget {
           style: const TextStyle(color: Color(0xFFBDD8DB), fontSize: 12),
         ),
         const SizedBox(width: 12),
+        if (canAccessStudio) ...[
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: _openStudio,
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: const Text(
+              'Open Todd Studio',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
         IconButton(
           icon: const Icon(Icons.logout, color: Color(0xFFBDD8DB), size: 20),
           tooltip: 'Logout',
@@ -186,6 +210,16 @@ class _TopBar extends StatelessWidget {
       ],
     ),
   );
+
+  Future<void> _openStudio() async {
+    final uri = Uri.tryParse(ApiConfig.studioUrl);
+    if (uri == null) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // External launching not available — ignore.
+    }
+  }
 }
 
 // ─── Mobile Tab Bar ───────────────────────────────────────────

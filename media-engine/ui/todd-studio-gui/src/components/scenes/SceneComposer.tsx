@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDirector } from "../../lib/director/directorService";
 import { useControlState } from "../../hooks/useControlState";
-import { env } from "../../lib/utils";
 import type {
   CameraInfo,
   PiPConfig,
@@ -60,7 +59,7 @@ function defaultSideBySide(roomId: string, cameras: CameraInfo[]): SideBySideCon
 /** Scene composer: builds PiP / split / side-by-side layouts and applies
  * them to the server-side program mixer. */
 export function SceneComposer() {
-  const control = useControlState(env.adminToken);
+  const control = useControlState();
   const director = useDirector();
 
   const activeRoomId = director.state.pgm?.roomId ?? control.rooms[0]?.id ?? "";
