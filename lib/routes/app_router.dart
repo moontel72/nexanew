@@ -49,6 +49,7 @@ import 'package:trace_odd/features/cricket/data/models/cricket_models.dart';
 import 'package:trace_odd/shared/theme/cricket_colors.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_list_page.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_add_page.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/sub_admin/cricket/cricket_manager_edit_page.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet_dashboard_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_owners_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/goods_fleet/goods_fleet_drivers_screen.dart';
@@ -358,6 +359,13 @@ class AppRouter {
       path: '/sub-admin/cricket/managers/add',
       name: 'cricket_managers_add',
       builder: (context, state) => const CricketManagerAddPage(),
+    ),
+    GoRoute(
+      path: '/sub-admin/cricket/managers/edit',
+      name: 'cricket_managers_edit',
+      builder: (context, state) => CricketManagerEditPage(
+        manager: state.extra as Map<String, dynamic>? ?? const {},
+      ),
     ),
     // ── Cricket Operations Manager Panel ──
     GoRoute(

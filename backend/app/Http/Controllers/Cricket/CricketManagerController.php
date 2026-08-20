@@ -75,6 +75,7 @@ class CricketManagerController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:200',
+            'email' => 'sometimes|email|unique:cricket_managers,email,' . $id,
             'phone' => 'nullable|string|max:50',
             'password' => 'sometimes|string|min:8',
             'status' => 'sometimes|in:active,suspended,inactive',

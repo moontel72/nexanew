@@ -212,6 +212,9 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
                 return _ManagerCard(
                   manager: m,
                   onToggle: () => _toggleStatus(m),
+                  onEdit: () =>
+                      context.go('/sub-admin/cricket/managers/edit', extra: m),
+                  onDelete: () => _confirmDelete(m),
                 );
               },
             ),
@@ -236,13 +239,75 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
       }
     }
   }
+
+  Future<void> _confirmDelete(Map<String, dynamic> manager) async {
+    final name = manager['name']?.toString() ?? 'this manager';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1B3A4B),
+        title: const Text(
+          'Delete this Cricket Manager?',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          '$name will be permanently removed and lose panel access.',
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final id = manager['id'];
+    try {
+      await _api.delete('/api/v1/cricket/admin/managers/$id');
+      _fetchManagers();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Manager deleted.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 }
 
 class _ManagerCard extends StatelessWidget {
   final Map<String, dynamic> manager;
   final VoidCallback onToggle;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
-  const _ManagerCard({required this.manager, required this.onToggle});
+  const _ManagerCard({
+    required this.manager,
+    required this.onToggle,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -292,6 +357,22 @@ class _ManagerCard extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.white70, size: 20),
+              onPressed: onEdit,
+              tooltip: 'Edit',
+              visualDensity: VisualDensity.compact,
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+                size: 20,
+              ),
+              onPressed: onDelete,
+              tooltip: 'Delete',
+              visualDensity: VisualDensity.compact,
+            ),
             Text(
               isActive ? 'ACTIVE' : 'SUSPENDED',
               style: TextStyle(
@@ -301,10 +382,13 @@ class _ManagerCard extends StatelessWidget {
               ),
             ),
             const Gap(8),
-            Switch(
-              value: isActive,
-              activeColor: const Color(0xFF10B981),
-              onChanged: (_) => onToggle(),
+            Tooltip(
+              message: 'Suspend / Activate',
+              child: Switch(
+                value: isActive,
+                activeColor: const Color(0xFF10B981),
+                onChanged: (_) => onToggle(),
+              ),
             ),
           ],
         ),
