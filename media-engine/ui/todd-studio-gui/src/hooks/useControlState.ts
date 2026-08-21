@@ -15,6 +15,7 @@ const EMPTY_STATE: ControlState = {
   overlays: {},
   forwarders: {},
   cricket: null,
+  scores: {},
 };
 
 /** One shared control-plane feed per app instance (and per SSO JWT),

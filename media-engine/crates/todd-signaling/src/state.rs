@@ -58,13 +58,20 @@ impl AppState {
             settings.telemetry_sample_ms,
         ));
 
+        // The control hub must exist before the scoreboard sync tasks so
+        // they can publish `score_updated` / config changes to director
+        // panels (Phase 1 push pipeline).
+        let control = Arc::new(ControlHub::new());
+
         let scoreboard = scoreboard::spawn_sync(
             ScoreboardSettings::new(
                 settings.cricket_manager_url.clone(),
                 settings.cricket_manager_match_ids.clone(),
                 settings.cricket_manager_poll_ms,
+                settings.cricket_manager_ws_url.clone(),
             ),
             client.clone(),
+            control.clone(),
         );
 
         let plane: Arc<dyn MediaPlane> = match settings.media_plane {
@@ -104,7 +111,7 @@ impl AppState {
             plane,
             telemetry,
             scoreboard,
-            control: Arc::new(ControlHub::new()),
+            control,
         })
     }
 }

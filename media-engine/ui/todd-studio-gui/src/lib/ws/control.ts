@@ -9,6 +9,7 @@ import { env } from "../utils";
 import { getToken } from "../auth/authStore";
 import type {
   AudioMixView,
+  BallByBallStateDto,
   ControlEvent,
   CricketConfigView,
   ForwardingStatus,
@@ -32,6 +33,8 @@ export interface ControlState {
   /** Output forwarders keyed by forwarder key. */
   forwarders: Record<string, ForwardingStatus>;
   cricket: CricketConfigView | null;
+  /** Push-delivered ball-by-ball states keyed by match id. */
+  scores: Record<string, BallByBallStateDto>;
 }
 
 const EMPTY_STATE: ControlState = {
@@ -43,6 +46,7 @@ const EMPTY_STATE: ControlState = {
   overlays: {},
   forwarders: {},
   cricket: null,
+  scores: {},
 };
 
 export interface ControlFeed {
@@ -102,6 +106,9 @@ function applyEvent(state: ControlState, event: ControlEvent): ControlState {
             .map((entry) => [entry.id, entry.program]),
         ),
         cricket: event.cricket,
+        scores: Object.fromEntries(
+          event.scores.map((score) => [score.match_id, score]),
+        ),
       };
     case "room_created":
       return { ...state, rooms: upsertRoom(state.rooms, event.room) };
@@ -157,6 +164,11 @@ function applyEvent(state: ControlState, event: ControlEvent): ControlState {
       };
     case "cricket_config_changed":
       return { ...state, cricket: event.config };
+    case "score_updated":
+      return {
+        ...state,
+        scores: { ...state.scores, [event.match_id]: event.score },
+      };
   }
 }
 

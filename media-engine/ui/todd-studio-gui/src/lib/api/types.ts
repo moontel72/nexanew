@@ -312,9 +312,13 @@ export interface CricketMatchConfig {
 
 export type MatchSyncState = "pending" | "synced" | "error";
 
+/** Which transport delivered the last successful sync. */
+export type SyncTransport = "pending" | "push" | "poll";
+
 export interface MatchSyncStatus {
   match_id: string;
   state: MatchSyncState;
+  transport: SyncTransport;
   last_ok_at_ms?: number | null;
   last_error?: string | null;
 }
@@ -325,12 +329,35 @@ export interface CricketConfigView {
   poll_ms: number;
   api_token_set: boolean;
   sync: MatchSyncStatus[];
+  /** Match the manager is currently operating (shared context). */
+  active_match_id: string | null;
+  /** True while the engine's Reverb push socket is connected. */
+  push_connected: boolean;
 }
 
 export interface CricketConfigUpdate {
   match_configs: CricketMatchConfig[];
   poll_ms?: number;
   api_token?: string;
+}
+
+// --------------------------------------------------------------------------
+// Ball-by-ball scoreboard state (mirrors Rust `BallByBallState`)
+// --------------------------------------------------------------------------
+
+export interface BallByBallStateDto {
+  match_id: string;
+  batting_team: string;
+  bowling_team: string;
+  runs: number;
+  wickets: number;
+  overs: number;
+  run_rate: number;
+  batter_on_strike: string;
+  batter_non_strike: string;
+  bowler: string;
+  recent_balls: string[];
+  updated_at_ms: number;
 }
 
 // --------------------------------------------------------------------------
@@ -344,7 +371,12 @@ export type ControlRoomSnapshot = Room & {
 };
 
 export type ControlEvent =
-  | { type: "snapshot"; rooms: ControlRoomSnapshot[]; cricket: CricketConfigView }
+  | {
+      type: "snapshot";
+      rooms: ControlRoomSnapshot[];
+      cricket: CricketConfigView;
+      scores: BallByBallStateDto[];
+    }
   | { type: "room_created"; room: Room }
   | { type: "room_deleted"; room_id: string }
   | {
@@ -360,4 +392,5 @@ export type ControlEvent =
   | { type: "audio_mixer_changed"; room_id: string; mix: AudioMixView }
   | { type: "overlay_changed"; room_id: string; overlays: OverlayState }
   | { type: "forwarding_changed"; status: ForwardingStatus }
-  | { type: "cricket_config_changed"; config: CricketConfigView };
+  | { type: "cricket_config_changed"; config: CricketConfigView }
+  | { type: "score_updated"; match_id: string; score: BallByBallStateDto };

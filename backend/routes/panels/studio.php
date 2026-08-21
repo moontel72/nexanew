@@ -17,4 +17,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('api/v1/studio')->group(function (): void {
     Route::post('login', [StudioAuthController::class, 'login']);
+    // Phase 1 unified SSO: manager bearer token → media-engine JWT.
+    Route::post('exchange', [StudioAuthController::class, 'exchange']);
 });

@@ -218,6 +218,7 @@ class LiveScoreController extends Controller
                     'ball_id' => $ballId,
                 ],
                 'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
             ]);
 
             return response()->json([
@@ -227,5 +228,126 @@ class LiveScoreController extends Controller
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    /**
+     * Canonical live-state feed consumed by the Rust media engine
+     * (`GET /api/v1/cricket/live/{matchId}`).
+     *
+     * The engine uses this as the *refresh* source: Reverb push events
+     * (`score.updated` etc.) act as the change signal, and the engine
+     * pulls the authoritative snapshot from here. Kept public on purpose —
+     * it exposes the same broadcast-grade state as the public score feed,
+     * just shaped for the engine's ball-by-ball contract.
+     *
+     * Returns 404 when no score exists yet (match never scored).
+     */
+    public function liveForEngine(Request $request, string $matchId): \Illuminate\Http\JsonResponse
+    {
+        $snapshot = LiveScoreService::getCachedScore($matchId);
+
+        if (!$snapshot) {
+            $snapshot = LiveScore::where('match_id', $matchId)
+                ->first()
+                ?->full_snapshot;
+        }
+
+        if (!$snapshot) {
+            return response()->json(
+                ['message' => 'No live score available for this match.'],
+                404
+            );
+        }
+
+        return response()->json($this->mapToEngineFeed($matchId, $snapshot));
+    }
+
+    /**
+     * Maps the full_snapshot into the media engine's `ManagerResponse`
+     * shape: `{ match_id, innings: { ... } }` (see Rust `ManagerInnings`).
+     */
+    private function mapToEngineFeed(string $matchId, array $snapshot): array
+    {
+        [$runs, $wickets] = $this->splitScoreString($snapshot['score'] ?? '0/0');
+        $balls = $this->ballsFromOvers((float) ($snapshot['overs'] ?? 0.0));
+
+        $striker = $this->playerName($snapshot['current']['striker'] ?? null);
+        $nonStriker = $this->playerName($snapshot['current']['non_striker'] ?? null);
+        $bowler = $this->playerName($snapshot['current']['bowler'] ?? null);
+
+        $recentBalls = collect($snapshot['recent_balls'] ?? [])
+            ->map(fn ($ball) => [
+                'result' => $this->describeBall((array) $ball),
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'match_id' => $matchId,
+            'innings' => [
+                'batting_team' => $snapshot['batting_team_name'] ?? null,
+                'bowling_team' => $snapshot['bowling_team_name'] ?? null,
+                'score' => $runs,
+                'wickets' => $wickets,
+                'balls' => $balls,
+                'batter_on_strike' => $striker,
+                'batter_non_strike' => $nonStriker,
+                'bowler' => $bowler,
+                'recent_balls' => $recentBalls,
+            ],
+        ];
+    }
+
+    /** "123/4" → [123, 4]. */
+    private function splitScoreString(string $score): array
+    {
+        $parts = explode('/', $score, 2);
+
+        return [(int) ($parts[0] ?? 0), (int) ($parts[1] ?? 0)];
+    }
+
+    /** Overs notation (12.3 = 12 overs + 3 balls) → total legal balls. */
+    private function ballsFromOvers(float $overs): int
+    {
+        $whole = (int) floor($overs);
+        $frac = (int) round(($overs - $whole) * 10);
+
+        return ($whole * 6) + min(max($frac, 0), 5);
+    }
+
+    private function playerName(mixed $entry): ?string
+    {
+        if (!is_array($entry)) {
+            return null;
+        }
+
+        return $entry['player_name']
+            ?? $entry['name']
+            ?? $entry['batter_name']
+            ?? $entry['bowler_name']
+            ?? null;
+    }
+
+    /** Ball → short display string, mirroring the service `describeBall`. */
+    private function describeBall(array $ball): string
+    {
+        if (!empty($ball['is_wicket'])) {
+            return 'W';
+        }
+        $extras = $ball['extras_type'] ?? null;
+        $runs = (int) ($ball['runs'] ?? 0);
+
+        return match ($extras) {
+            'wide' => $runs > 0 ? "WD+{$runs}" : 'WD',
+            'no_ball' => $runs > 0 ? "NB+{$runs}" : 'NB',
+            'bye' => "{$runs}B",
+            'leg_bye' => "{$runs}LB",
+            default => match ($runs) {
+                0 => '0',
+                4 => '4',
+                6 => '6',
+                default => (string) $runs,
+            },
+        };
     }
 }

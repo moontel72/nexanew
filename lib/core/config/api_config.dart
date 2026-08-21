@@ -13,8 +13,9 @@ class ApiConfig {
   static const String apiVersion = 'v1';
   static String get apiBaseUrl => '$baseUrl/api/$apiVersion';
 
-  // External product URLs
-  static const String studioUrl = 'https://studio.traceodd.com';
+  // External product URLs — runtime-resolved so environments are
+  // switchable via --dart-define without code changes.
+  static String get studioUrl => Environment.studioUrl;
 
   // Timeout settings
   static const int connectTimeout = 30000; // milliseconds

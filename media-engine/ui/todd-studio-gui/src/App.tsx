@@ -5,10 +5,12 @@ import { useTelemetry } from "./hooks/useTelemetry";
 import { useControlState } from "./hooks/useControlState";
 import { env } from "./lib/utils";
 import {
+  applySsoFromUrl,
   clearToken,
   getEmail,
   isAuthenticated,
   onAuthChange,
+  takeMatchHint,
 } from "./lib/auth/authStore";
 import { Login } from "./components/Login";
 import { Button } from "./components/ui/Button";
@@ -29,6 +31,13 @@ import { OverlayController } from "./components/overlays/OverlayController";
 export default function App() {
   const [authed, setAuthed] = useState(() => isAuthenticated());
 
+  // Phase 1 unified SSO + deep-link: adopt a `?sso=` ticket and/or a
+  // `?match=` hint BEFORE the first auth gate evaluation.
+  useEffect(() => {
+    applySsoFromUrl();
+    setAuthed(isAuthenticated());
+  }, []);
+
   // Follow login / logout / token expiry from the auth store.
   useEffect(() => onAuthChange(() => setAuthed(isAuthenticated())), []);
 
@@ -37,10 +46,17 @@ export default function App() {
   const control = useControlState();
   const [overlayEvent, setOverlayEvent] = useState<string | null>(null);
 
-  // Active match: the runtime sync config wins; the build-time env value
-  // only bridges the gap until a director configures matches.
+  // Deep-link match hint (stripped from the URL on first read).
+  const matchHint = useMemo(() => takeMatchHint(), []);
+
+  // Active match: the engine-pushed context (mirrored from the Cricket
+  // Manager's "active match" selection) wins; then the first configured
+  // match; then the build-time env value / deep-link hint bridges the gap
+  // until the engine delivers its config snapshot.
   const matchId =
+    control.cricket?.active_match_id ??
     control.cricket?.match_configs[0]?.match_id ??
+    matchHint ??
     (env.cricketMatchIds.split(",")[0]?.trim() || null);
 
   const feeds = useMemo(
@@ -82,9 +98,9 @@ export default function App() {
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_340px]">
+        <div className="director-grid min-h-0 flex-1">
           {/* Program / multiview area */}
-          <main className="relative flex min-w-0 flex-col gap-2 overflow-hidden p-2">
+          <main className="director-program relative flex min-w-0 flex-col gap-2 overflow-hidden p-2">
             <Scoreboard matchId={matchId} />
             <div className="relative min-h-0 flex-1">
               <MultiviewGrid
@@ -105,21 +121,32 @@ export default function App() {
             </footer>
           </main>
 
-          {/* Director control sidebar */}
-          <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto border-l border-border p-3">
-            <InputPanel />
-            <VisionSwitcher />
-            <TransitionBar />
-            <SceneComposer />
-            <AudioMixer />
-            <OverlayPanel onLocalEvent={setOverlayEvent} />
-            <BroadcastPanel />
-            <ReplayDirector
-              roomId={feeds[0]?.roomId ?? ""}
-              cameraIds={cameraIds}
-            />
-            <SegmentManager onFire={() => setOverlayEvent("BREAK")} />
-            <SettingsPanel />
+          {/* Director control panel — Phase 2 Option A layout (pure CSS
+              grid areas; see styles.css). Two zones:
+              · priority: high-frequency live controls, pinned top
+              · config:   one-time / static setup, collapsible accordion */}
+          <aside className="director-panel">
+            <section className="priority-zone" aria-label="Live controls">
+              <VisionSwitcher />
+              <TransitionBar />
+              <ReplayDirector
+                roomId={feeds[0]?.roomId ?? ""}
+                cameraIds={cameraIds}
+              />
+              <OverlayPanel onLocalEvent={setOverlayEvent} />
+              <AudioMixer />
+            </section>
+
+            <details className="config-zone" open>
+              <summary>Setup &amp; Configuration</summary>
+              <div className="config-zone-content">
+                <InputPanel />
+                <SceneComposer />
+                <SegmentManager onFire={() => setOverlayEvent("BREAK")} />
+                <BroadcastPanel />
+                <SettingsPanel />
+              </div>
+            </details>
           </aside>
         </div>
       </div>

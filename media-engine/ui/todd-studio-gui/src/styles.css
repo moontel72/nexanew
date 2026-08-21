@@ -74,3 +74,139 @@
 .meter-fill[data-color="red"] {
   background: #ef4444;
 }
+
+/* ================================================================
+   PHASE 2 — Director panel layout (Option A: vertical priority stacking)
+   ================================================================
+   Single-operator layout, implemented purely with CSS Grid areas,
+   Flexbox and sticky positioning. No JS, no React state, no changes to
+   any component logic / props / WebRTC or WebSocket handlers — App.tsx
+   only regroups the existing components into the zones below.
+
+   Zones:
+     .priority-zone  — high-frequency live controls (Vision, TAKE,
+                       replays, popups, audio master). Pinned at the top,
+                       sticky on short viewports, internally scrollable.
+     .config-zone    — one-time / static setup (camera room, scenes,
+                       segment timers, RTMP, sync config) in a native
+                       <details> accordion; zero React state required.
+   ================================================================ */
+
+/* Main two-column shell: program canvas + 340px director panel. */
+.director-grid {
+  display: grid;
+  grid-template-areas: "program panel";
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.director-program {
+  grid-area: program;
+}
+
+/* Director panel: priority row (auto, capped) + config row (rest). */
+.director-panel {
+  grid-area: panel;
+  display: grid;
+  grid-template-areas:
+    "priority"
+    "config";
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.75rem;
+  border-left: 1px solid hsl(var(--border));
+}
+
+/* High-frequency live controls — always immediately visible.
+   - Capped at 58vh so a 1080p viewport always keeps the config zone
+     on-screen too; the zone scrolls internally on short (720p) screens.
+   - `position: sticky; top: 0` pins the zone whenever an ancestor
+     scrolls (zoom, embedded view, small viewports). */
+.priority-zone {
+  grid-area: priority;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 58vh;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-bottom: 2px; /* keep focus rings / shadows visible */
+  background: hsl(var(--background));
+}
+
+/* Static / one-time configuration — native collapsible accordion.
+   Toggling is pure HTML (<details open>), no React state involved. */
+.config-zone {
+  grid-area: config;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--muted) / 0.35);
+}
+
+.config-zone > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.config-zone > summary::-webkit-details-marker {
+  display: none;
+}
+
+.config-zone > summary::after {
+  content: "▾";
+  font-size: 0.75rem;
+  transition: transform 150ms ease;
+}
+
+.config-zone:not([open]) > summary::after {
+  transform: rotate(-90deg);
+}
+
+/* Scrollable body of the collapsed-by-default-free config zone. */
+.config-zone-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Narrow layouts (tablet / split view): stack program above the panel.
+   The panel becomes a normal-flow block; the priority zone still pins. */
+@media (max-width: 1023px) {
+  .director-grid {
+    grid-template-areas:
+      "program"
+      "panel";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .director-panel {
+    border-left: none;
+    border-top: 1px solid hsl(var(--border));
+  }
+
+  .priority-zone {
+    max-height: 50vh;
+  }
+}

@@ -8,6 +8,7 @@ use App\Http\Controllers\Cricket\GroundController;
 use App\Http\Controllers\Cricket\LiveScoreController;
 use App\Http\Controllers\Cricket\MatchAnalyticsController;
 use App\Http\Controllers\Cricket\MatchController;
+use App\Http\Controllers\Cricket\MatchContextController;
 use App\Http\Controllers\Cricket\PlayerCareerController;
 use App\Http\Controllers\Cricket\PlayerController;
 use App\Http\Controllers\Cricket\PointsTableController;
@@ -89,6 +90,19 @@ Route::prefix('api/v1/cricket/public')->group(function (): void {
 });
 
 // ═══════════════════════════════════════════════════════════════
+// GROUP 1B: MEDIA ENGINE FEED (No Auth)
+//
+// Canonical live-state endpoint consumed by the Rust media engine
+// (Todd Studio scoreboard). Public on purpose — same broadcast-grade
+// state as the public score feed, shaped for the engine contract
+// `{ match_id, innings }`. The engine uses Reverb push events as the
+// change signal and this endpoint as the authoritative refresh source.
+// ═══════════════════════════════════════════════════════════════
+Route::prefix('api/v1/cricket')->group(function (): void {
+    Route::get('live/{matchId}', [LiveScoreController::class, 'liveForEngine']);
+});
+
+// ═══════════════════════════════════════════════════════════════
 // GROUP 2: CRICKET MANAGER ENDPOINTS (Bearer Token Auth)
 //
 // Authenticated via CricketManagerAuth middleware.
@@ -106,6 +120,12 @@ Route::prefix('api/v1/cricket/manager')
 
         // Match Management — Takeover / Failover
         Route::post('matches/{matchId}/take-over', [MatchController::class, 'takeOver']);
+
+        // Active Match Context — single source of truth shared with Todd
+        // Studio (Phase 1 unified state). Selection broadcasts on Reverb.
+        Route::get('active-match', [MatchContextController::class, 'show']);
+        Route::put('active-match', [MatchContextController::class, 'update']);
+        Route::delete('active-match', [MatchContextController::class, 'destroy']);
 
         // Live Scoring
         Route::post('matches/{matchId}/score', [LiveScoreController::class, 'update']);

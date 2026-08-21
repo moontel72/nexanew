@@ -156,3 +156,42 @@ export async function login(email: string, password: string): Promise<void> {
   }
   setToken(token, email);
 }
+
+/**
+ * Phase 1 unified SSO: consumes a `?sso=<media-engine JWT>` deep-link
+ * parameter (minted by the Cricket Manager panel via
+ * `POST /api/v1/studio/exchange`) and adopts it as the session token.
+ *
+ * The token is validated by shape only — the Rust engine re-verifies the
+ * signature/claims on every API and WebSocket request, so an invalid
+ * ticket simply fails downstream and the app falls back to the login
+ * screen. The query parameter is stripped so the token never lingers in
+ * the address bar / browser history.
+ */
+export function applySsoFromUrl(): void {
+  const url = new URL(window.location.href);
+  const sso = url.searchParams.get("sso");
+  if (!sso) return;
+
+  url.searchParams.delete("sso");
+  window.history.replaceState(null, "", url.toString());
+
+  // Compact JWS shape check: header.payload.signature.
+  if (sso.split(".").length !== 3) return;
+  setToken(sso);
+}
+
+/**
+ * Reads a `?match=<id>` deep-link parameter (set by "Open Todd Studio")
+ * so the director can land on the manager's active match even before the
+ * engine's push feed delivers the context. Stripped from the URL.
+ */
+export function takeMatchHint(): string | null {
+  const url = new URL(window.location.href);
+  const match = url.searchParams.get("match");
+  if (!match) return null;
+
+  url.searchParams.delete("match");
+  window.history.replaceState(null, "", url.toString());
+  return match;
+}

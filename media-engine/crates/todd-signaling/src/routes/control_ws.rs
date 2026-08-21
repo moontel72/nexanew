@@ -35,7 +35,11 @@ use todd_common::{
 };
 use tokio::sync::broadcast;
 
-use crate::{routes::rooms, scoreboard::CricketConfigView, state::AppState};
+use crate::{
+    routes::rooms,
+    scoreboard::{BallByBallState, CricketConfigView},
+    state::AppState,
+};
 
 /// Full state of one room as seen by the control plane.
 #[derive(Debug, Clone, Serialize)]
@@ -58,6 +62,9 @@ pub enum ControlEvent {
     Snapshot {
         rooms: Vec<ControlRoomSnapshot>,
         cricket: CricketConfigView,
+        /// Cached ball-by-ball states so a (re)connecting director gets
+        /// the scores immediately without extra REST round-trips.
+        scores: Vec<BallByBallState>,
     },
     RoomCreated {
         room: Room,
@@ -95,6 +102,11 @@ pub enum ControlEvent {
     },
     CricketConfigChanged {
         config: CricketConfigView,
+    },
+    /// Push delivery of a freshly synced ball-by-ball state.
+    ScoreUpdated {
+        match_id: String,
+        score: BallByBallState,
     },
 }
 
@@ -233,6 +245,7 @@ async fn send_snapshot(socket: &mut WebSocket, state: &AppState) -> Result<(), S
         ControlEvent::Snapshot {
             rooms: entries,
             cricket: state.scoreboard.config_view().await,
+            scores: state.scoreboard.all(),
         },
     )
     .await
@@ -269,10 +282,39 @@ mod tests {
                 poll_ms: 3000,
                 api_token_set: false,
                 sync: Vec::new(),
+                active_match_id: Some("m-1".to_string()),
+                push_connected: true,
             },
         };
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.starts_with("{\"type\":\"cricket_config_changed\""));
         assert!(json.contains("\"api_token_set\":false"));
+        assert!(json.contains("\"active_match_id\":\"m-1\""));
+        assert!(json.contains("\"push_connected\":true"));
+    }
+
+    #[test]
+    fn score_updated_event_serializes_for_ts_client() {
+        let event = ControlEvent::ScoreUpdated {
+            match_id: "m-1".to_string(),
+            score: crate::scoreboard::BallByBallState {
+                match_id: "m-1".to_string(),
+                batting_team: "Tigers".to_string(),
+                bowling_team: "Falcons".to_string(),
+                runs: 99,
+                wickets: 2,
+                overs: 12.0,
+                run_rate: 8.25,
+                batter_on_strike: "R. Khan".to_string(),
+                batter_non_strike: "A. Singh".to_string(),
+                bowler: "M. Patel".to_string(),
+                recent_balls: vec!["4".to_string()],
+                updated_at_ms: 1_700_000_000_000,
+            },
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.starts_with("{\"type\":\"score_updated\""));
+        assert!(json.contains("\"match_id\":\"m-1\""));
+        assert!(json.contains("\"runs\":99"));
     }
 }

@@ -165,7 +165,7 @@ stopped directly with `POST`/`DELETE /api/v1/ingest/{room}/{camera}`.
 | PUT | `/api/v1/cricket/config` | admin | Runtime sync config (match ids, API token, poll interval) |
 | GET | `/api/v1/audio/mix/{room_id}` | admin | Audio mix: bus config + live metering |
 | PUT | `/api/v1/audio/mix/{room_id}` | admin | Update faders (dB), mute/solo, gain trim, lip-sync delay |
-| GET | `/api/v1/control/ws` | admin | Control-plane WebSocket: rooms, cameras, PGM, audio mix, cricket config |
+| GET | `/api/v1/control/ws` | admin | Control-plane WebSocket: rooms, cameras, PGM, audio mix, cricket config + pushed scores |
 | GET | `/metrics` | none* | Prometheus metrics (see `docs/06-ice-and-telemetry.md`) |
 | GET | `/api/v1/telemetry/ws` | none* | WebSocket diagnostics feed (JSON snapshots, incl. broadcaster device health) |
 | GET | `/healthz`, `/readyz` | none | Liveness / readiness |
@@ -186,6 +186,30 @@ media, no tokens). Protect them at the nginx layer if exposed publicly.
   upgrade, simulcast/PLI/NACK, hardware-acceleration matrix, audio buses
 - `docs/08-replay-engine.md` — cricket instant replay: ring buffer,
   slow-motion retiming, replay WHEP egress, clip exporter
+
+## Cricket score sync (Phase 1 — push-first)
+
+The engine no longer depends on REST polling for the Studio scoreboard.
+It subscribes to the Cricket Manager's Laravel Reverb feed
+(`cricket.match.{id}` channels) and uses each `score.updated` /
+`match.updated` / `match.context.selected` event as a change signal, then
+pulls the authoritative state once from the manager's public
+`GET /api/v1/cricket/live/{id}` endpoint. The old timer loop remains as a
+watchdog fallback and only polls matches whose push feed has gone stale.
+
+The manager's active-match selection is mirrored automatically:
+`match.context.selected` flips the engine's `active_match_id`, registers
+previously unknown matches, and is broadcast to director panels via
+`cricket_config_changed` on the control WebSocket.
+
+Relevant env vars (all optional, resolved at runtime otherwise):
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `CRICKET_MANAGER_URL` | *(empty)* | Manager base URL; Reverb host/key/path are fetched from its `realtime-config` endpoint |
+| `CRICKET_MANAGER_MATCH_IDS` | *(empty)* | Comma-separated seed match ids |
+| `CRICKET_MANAGER_POLL_MS` | `3000` | Watchdog poll interval (only used when push is stale) |
+| `CRICKET_MANAGER_WS_URL` | *(derived)* | Explicit Reverb WS base override (`wss://host/app`) |
 
 ## Storage backends
 

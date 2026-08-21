@@ -7,6 +7,7 @@
 
 mod app;
 mod media_plane;
+mod reverb;
 mod routes;
 mod scoreboard;
 mod state;

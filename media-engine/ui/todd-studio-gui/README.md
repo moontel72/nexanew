@@ -49,6 +49,23 @@ returns to the login screen. The endpoint is configurable via
 backend on the same server (`/api/v1/studio/*`), so no separate
 `admin.traceodd.com` DNS or CORS is needed.
 
+### Unified realtime sync (Phase 1)
+
+Scoreboard data is **push-first**: the Rust media engine subscribes to the
+manager's Laravel Reverb feed (`cricket.match.{id}` channels) and forwards
+`score_updated` events to this GUI over the control-plane WebSocket — no
+browser-side polling of the manager. REST polling survives only as a
+watchdog fallback (and as a GUI fallback when the control feed is
+offline).
+
+Cross-panel deep links are supported out of the box:
+- `?sso=<media-engine JWT>` — adopted as the session token (minted by the
+  Cricket Manager via `POST /api/v1/studio/exchange`); one-click sign-in.
+- `?match=<id>` — initial scoreboard match until the engine's pushed
+  `active_match_id` (mirrored from the manager's match selection) arrives.
+
+Both query parameters are stripped from the URL after use.
+
 ## Develop
 
 ```bash
@@ -80,8 +97,8 @@ into `react-vendor` and `three-vendor` chunks to keep the main entry small.
 | `/api/v1/room/list` | `GET` | Admin; superseded by the control-plane WS for live updates |
 | `/api/v1/room/{id}/camera` | `POST` | Admin; add a camera to a live room |
 | `/api/v1/room/{id}/camera/{camera}` | `PUT` / `DELETE` | Admin; update metadata / remove a camera |
-| `/api/v1/control/ws` | `WS` | Admin; rooms + cameras + PGM + cricket config (push) |
-| `/api/v1/cricket/config` | `GET` / `PUT` | Admin; runtime match ids, API token, poll interval |
+| `/api/v1/control/ws` | `WS` | Admin; rooms + cameras + PGM + cricket config + pushed scores |
+| `/api/v1/cricket/config` | `GET` / `PUT` | Admin; runtime match ids, API token, poll interval (poll = fallback only) |
 | `/api/v1/whep/watch/{room}/{camera}` | `POST` | Viewer; WHEP egress per camera |
 | `/api/v1/program/transition` | `POST` | Admin; Cut/Fade/LumaWipe/Stinger + optional `duration_ms`, scene `layout`, `stinger` asset |
 | `/api/v1/program/{room}` | `GET` | Admin; current program state (reconcile after a lost control feed) |

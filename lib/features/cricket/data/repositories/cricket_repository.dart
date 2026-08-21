@@ -523,6 +523,81 @@ class CricketRepository {
   }
 
   // ────────────────────────────────────────────────────────────
+  // Unified State — Active Match Context + Studio SSO (Phase 1)
+  // ────────────────────────────────────────────────────────────
+
+  /// The manager's active match context (single source of truth stored
+  /// server-side, shared with Todd Studio).
+  Future<String?> getActiveMatch() async {
+    try {
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/active-match'),
+        headers: await _authHeaders(),
+      );
+      if (res.statusCode != 200) return null;
+      final body = _parseBody(res);
+      final id = body?['active_match_id']?.toString();
+      return (id == null || id.isEmpty) ? null : id;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Selects the active match. The backend persists the context and
+  /// broadcasts `match.context.selected` on Reverb, which the Rust media
+  /// engine consumes to switch Todd Studio in sub-100ms.
+  ///
+  /// Never throws: match selection in the manager UI must not be blocked
+  /// by sync-side failures.
+  Future<bool> selectActiveMatch(String matchId) async {
+    try {
+      final res = await _http.put(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/active-match'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'match_id': matchId}),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Mints a short-lived Todd Studio JWT from the current manager
+  /// session (single sign-on — no credential re-entry). Returns null
+  /// when the account lacks Studio access or the exchange fails.
+  Future<String?> requestStudioTicket() async {
+    try {
+      await _loadToken();
+      final res = await _http.post(
+        Uri.parse('${ApiConfig.apiBaseUrl}/studio/exchange'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'manager_token': _bearerToken ?? ''}),
+      );
+      if (res.statusCode != 200) return null;
+      final body = _parseBody(res);
+      final token = body?['token']?.toString();
+      return (token == null || token.isEmpty) ? null : token;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Deep-link URL for Todd Studio: carries the SSO ticket and the
+  /// active match so the director opens directly into the live context.
+  Future<Uri> buildStudioOpenUrl() async {
+    final base = Uri.tryParse(ApiConfig.studioUrl);
+    if (base == null) {
+      return Uri.parse(ApiConfig.studioUrl);
+    }
+    final params = <String, String>{};
+    final ticket = await requestStudioTicket();
+    if (ticket != null && ticket.isNotEmpty) params['sso'] = ticket;
+    final active = await getActiveMatch();
+    if (active != null && active.isNotEmpty) params['match'] = active;
+    return params.isEmpty ? base : base.replace(queryParameters: params);
+  }
+
+  // ────────────────────────────────────────────────────────────
   // Manager Auth endpoints
   // ────────────────────────────────────────────────────────────
 

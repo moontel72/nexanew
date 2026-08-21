@@ -92,4 +92,82 @@ class StudioAuthController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Phase 1 unified SSO: exchange an already-valid Cricket Manager
+     * bearer token for a media-engine JWT.
+     *
+     * This is the "Open Todd Studio" fast path — the Flutter Manager panel
+     * calls it with its own bearer token and receives the same HS256 JWT
+     * the interactive login mints, so the director never re-enters
+     * credentials (or a separate API token).
+     *
+     * The manager token is validated against the same hashed store the
+     * `cricket.manager` middleware uses; no session is created on the
+     * studio side.
+     */
+    public function exchange(Request $request, MediaEngineTokenService $tokens): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'manager_token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $hashed = hash('sha256', (string) $validator->validated()['manager_token']);
+        $manager = CricketManager::where('auth_token', $hashed)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$manager) {
+            return response()->json(['message' => 'Manager session is not valid.'], 401);
+        }
+
+        if ($manager->token_expires_at && $manager->token_expires_at->isPast()) {
+            $manager->revokeAuthToken();
+            return response()->json(['message' => 'Manager session expired. Please log in again.'], 401);
+        }
+
+        $permissions = $manager->permissions ?? [];
+
+        if (empty($permissions['can_access_studio'])) {
+            return response()->json(['message' => 'Studio Director Access is not enabled for this account.'], 403);
+        }
+
+        if ((string) config('services.media_engine.secret', '') === '') {
+            return response()->json(['message' => 'Media engine JWT secret is not configured.'], 500);
+        }
+
+        $token = $tokens->mint(
+            role: 'admin',
+            perms: ['studio_director'],
+            subject: (string) $manager->id,
+            ttlSeconds: self::TOKEN_TTL_SECONDS,
+        );
+
+        try {
+            ManagerSessionLog::create([
+                'cricket_manager_id' => $manager->id,
+                'action' => 'studio_exchange',
+                'metadata' => ['email' => $manager->email],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('studio_exchange audit log insert failed: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => 'Studio token issued.',
+            'token' => $token,
+            'expires_at' => now()->addSeconds(self::TOKEN_TTL_SECONDS)->toIso8601String(),
+            'manager' => [
+                'id' => $manager->id,
+                'name' => $manager->name,
+                'email' => $manager->email,
+            ],
+        ]);
+    }
 }

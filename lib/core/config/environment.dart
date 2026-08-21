@@ -17,6 +17,7 @@ class Environment {
   Environment._();
 
   static const String _defined = String.fromEnvironment('API_BASE_URL');
+  static const String _definedStudioUrl = String.fromEnvironment('STUDIO_URL');
 
   /// Base URL of the Laravel backend (no trailing slash).
   static String get apiBaseUrl {
@@ -35,5 +36,15 @@ class Environment {
   static bool get isDevelopment {
     const isProd = bool.fromEnvironment('dart.vm.product');
     return !isProd;
+  }
+
+  /// Base URL of the Todd Studio production switcher (no trailing slash).
+  ///
+  /// Overridable per build with `--dart-define=STUDIO_URL=...`; falls back
+  /// to the production host so the product URL is never duplicated across
+  /// panels (single adaptation point for the whole ecosystem).
+  static String get studioUrl {
+    if (_definedStudioUrl.isNotEmpty) return _definedStudioUrl;
+    return 'https://studio.traceodd.com';
   }
 }

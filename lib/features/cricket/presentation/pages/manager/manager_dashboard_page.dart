@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:trace_odd/core/config/api_config.dart';
 
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
 import '../../blocs/live_score/live_score_bloc.dart';
@@ -193,7 +192,7 @@ class _TopBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            onPressed: _openStudio,
+            onPressed: () => _openStudio(context),
             icon: const Icon(Icons.open_in_new, size: 16),
             label: const Text(
               'Open Todd Studio',
@@ -211,9 +210,13 @@ class _TopBar extends StatelessWidget {
     ),
   );
 
-  Future<void> _openStudio() async {
-    final uri = Uri.tryParse(ApiConfig.studioUrl);
-    if (uri == null) return;
+  /// Opens Todd Studio with a one-click SSO ticket and the active match
+  /// deep-link (Phase 1 unified state): the director lands directly in
+  /// the same match context selected here — no re-login, no manual match
+  /// ids, no API token entry.
+  Future<void> _openStudio(BuildContext context) async {
+    final repo = RepositoryProvider.of<CricketRepository>(context);
+    final uri = await repo.buildStudioOpenUrl();
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
@@ -492,7 +495,14 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                     ),
                   );
                 }).toList(),
-                onChanged: (v) => setState(() => _selectedMatchId = v),
+                onChanged: (v) {
+                  setState(() => _selectedMatchId = v);
+                  if (v != null && v.isNotEmpty) {
+                    // Phase 1 unified state: publish the active match
+                    // context so Todd Studio switches automatically.
+                    context.read<CricketRepository>().selectActiveMatch(v);
+                  }
+                },
               ),
               if (_selectedMatchId != null) ...[
                 const SizedBox(height: 20),

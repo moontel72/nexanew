@@ -17,6 +17,12 @@ const SYNC_BADGE: Record<MatchSyncState, string> = {
   pending: "bg-amber-500/20 text-amber-400",
 };
 
+const TRANSPORT_LABEL = {
+  push: "push",
+  poll: "poll",
+  pending: "—",
+} as const;
+
 interface SettingsForm {
   pollMs: string;
   token: string;
@@ -172,6 +178,33 @@ export function SettingsPanel() {
         <span className="truncate font-mono">{config?.base_url ?? env.cricketManagerUrl}</span>
       </div>
 
+      {/* Unified realtime state: push-first, poll as watchdog fallback. */}
+      <div className="flex flex-col gap-1 text-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Realtime transport</span>
+          <span
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[10px] font-semibold",
+              config?.push_connected
+                ? "bg-emerald-500/20 text-emerald-400"
+                : "bg-amber-500/20 text-amber-400",
+            )}
+          >
+            {config?.push_connected ? "push live" : "poll fallback"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Active match (manager)</span>
+          <span className="max-w-[55%] truncate font-mono">
+            {config?.active_match_id ?? "—"}
+          </span>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Selecting a match in the Cricket Manager switches this studio
+          automatically — no manual match ids or polling required.
+        </p>
+      </div>
+
       {/* Match list */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
@@ -220,11 +253,12 @@ export function SettingsPanel() {
                       status.state === "error"
                         ? `last error: ${status.last_error ?? "unknown"}`
                         : status.last_ok_at_ms
-                          ? `last synced ${formattedTime(status.last_ok_at_ms)}`
+                          ? `last synced ${formattedTime(status.last_ok_at_ms)} via ${status.transport}`
                           : undefined
                     }
                   >
                     {status.state}
+                    {status.transport !== "pending" ? ` · ${TRANSPORT_LABEL[status.transport]}` : ""}
                   </span>
                 ) : (
                   <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -257,6 +291,10 @@ export function SettingsPanel() {
             value={form.token}
             onChange={(event) => setField({ token: event.target.value })}
           />
+          <span className="text-[10px] text-muted-foreground">
+            Optional — only used by the fallback poll when the live feed is
+            a private endpoint.
+          </span>
         </label>
       </div>
 
