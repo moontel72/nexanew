@@ -210,3 +210,25 @@
     max-height: 50vh;
   }
 }
+
+/* WagonWheelMap — pulsing live-shot marker (Phase 3). */
+@keyframes wagon-pulse {
+  0% {
+    fill: hsl(var(--accent) / 0.15);
+    stroke-width: 1;
+  }
+  50% {
+    fill: hsl(var(--accent) / 0.55);
+    stroke-width: 2.5;
+  }
+  100% {
+    fill: hsl(var(--accent) / 0.15);
+    stroke-width: 1;
+  }
+}
+
+.wagon-marker {
+  fill: hsl(var(--accent) / 0.3);
+  stroke: hsl(var(--accent));
+  animation: wagon-pulse 1.4s ease-in-out infinite;
+}

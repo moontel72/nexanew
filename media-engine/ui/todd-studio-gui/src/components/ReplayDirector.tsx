@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "./ui/Button";
 import {
   REPLAY_SPEEDS,
   replayService,
 } from "../lib/replay/replayService";
 import { getToken } from "../lib/auth/authStore";
-import type { ReplayEventKind } from "../lib/api/types";
+import { useControlState } from "../hooks/useControlState";
+import type { ReplayEventKind, ReplayInfo } from "../lib/api/types";
 
 const EVENTS: Array<{ id: ReplayEventKind; label: string }> = [
   { id: "run_out", label: "Run Out" },
@@ -24,12 +25,23 @@ export function ReplayDirector({
   roomId,
   cameraIds,
 }: ReplayDirectorProps) {
+  const control = useControlState();
   const [speed, setSpeed] = useState<number>(0.5);
   const [event, setEvent] = useState<ReplayEventKind>("wicket");
   const [triggering, setTriggering] = useState(false);
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastReplayId, setLastReplayId] = useState<string | null>(null);
+
+  // Live replay sessions pushed by the engine (manual + auto-tagged),
+  // newest first. Auto-tagged clips appear here instantly.
+  const replays = useMemo(
+    () =>
+      Object.values(control.replays).sort(
+        (a, b) => b.created_at_ms - a.created_at_ms,
+      ),
+    [control.replays],
+  );
 
   const trigger = async () => {
     setTriggering(true);
@@ -56,13 +68,12 @@ export function ReplayDirector({
     }
   };
 
-  const stop = async () => {
-    if (!lastReplayId) return;
+  const stop = async (replayId: string) => {
     setClosing(true);
     setError(null);
     try {
-      await replayService.close(lastReplayId, getToken());
-      setLastReplayId(null);
+      await replayService.close(replayId, getToken());
+      setLastReplayId((current) => (current === replayId ? null : current));
     } catch (closeError) {
       setError(closeError instanceof Error ? closeError.message : String(closeError));
     } finally {
@@ -111,7 +122,7 @@ export function ReplayDirector({
         >
           {triggering ? "Triggering…" : "Trigger Replay"}
         </Button>
-        <Button variant="outline" onClick={stop} disabled={triggering || closing || !lastReplayId}>
+        <Button variant="outline" onClick={() => lastReplayId && stop(lastReplayId)} disabled={triggering || closing || !lastReplayId}>
           {closing ? "Closing…" : "Stop / Close"}
         </Button>
       </div>
@@ -129,6 +140,37 @@ export function ReplayDirector({
       {lastReplayId && (
         <div className="truncate font-mono text-xs text-muted-foreground">
           {lastReplayId}
+        </div>
+      )}
+
+      {/* Auto-tagged / live replay sessions (pushed by the engine) */}
+      {replays.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Replay sessions</span>
+          {replays.slice(0, 6).map((replay: ReplayInfo) => (
+            <div
+              key={replay.replay_id}
+              className="flex items-center justify-between gap-2 rounded-md border border-border bg-background/60 px-2 py-1"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[11px] font-medium">
+                  {replay.event} · {replay.speed}x
+                  {replay.status === "playing" ? " · playing" : " · done"}
+                </div>
+                <div className="truncate font-mono text-[10px] text-muted-foreground">
+                  {new Date(replay.created_at_ms).toLocaleTimeString()}
+                </div>
+              </div>
+              <Button
+                variant="destructive"
+                className="shrink-0 px-2 py-1 text-[10px]"
+                disabled={closing}
+                onClick={() => stop(replay.replay_id)}
+              >
+                Stop
+              </Button>
+            </div>
+          ))}
         </div>
       )}
     </section>

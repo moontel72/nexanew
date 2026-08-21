@@ -63,17 +63,8 @@ impl AppState {
         // panels (Phase 1 push pipeline).
         let control = Arc::new(ControlHub::new());
 
-        let scoreboard = scoreboard::spawn_sync(
-            ScoreboardSettings::new(
-                settings.cricket_manager_url.clone(),
-                settings.cricket_manager_match_ids.clone(),
-                settings.cricket_manager_poll_ms,
-                settings.cricket_manager_ws_url.clone(),
-            ),
-            client.clone(),
-            control.clone(),
-        );
-
+        // The media plane must exist BEFORE the scoreboard sync tasks:
+        // scoring events trigger auto-tagged replays on it (Phase 3).
         let plane: Arc<dyn MediaPlane> = match settings.media_plane {
             MediaPlaneMode::Embedded => {
                 let engine = Arc::new(Engine::new(
@@ -99,10 +90,23 @@ impl AppState {
                 Arc::new(RemoteMediaPlane {
                     base: settings.broadcaster_url.trim_end_matches('/').to_string(),
                     internal_token,
-                    client,
+                    client: client.clone(),
                 })
             }
         };
+
+        let scoreboard = scoreboard::spawn_sync(
+            ScoreboardSettings::new(
+                settings.cricket_manager_url.clone(),
+                settings.cricket_manager_match_ids.clone(),
+                settings.cricket_manager_poll_ms,
+                settings.cricket_manager_ws_url.clone(),
+            ),
+            client.clone(),
+            control.clone(),
+            plane.clone(),
+            store.clone(),
+        );
 
         Ok(Self {
             settings,

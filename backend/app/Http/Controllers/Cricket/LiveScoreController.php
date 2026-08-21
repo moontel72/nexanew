@@ -278,6 +278,8 @@ class LiveScoreController extends Controller
         $recentBalls = collect($snapshot['recent_balls'] ?? [])
             ->map(fn ($ball) => [
                 'result' => $this->describeBall((array) $ball),
+                'zone' => $ball['shot_zone'] ?? null,
+                'direction' => $ball['shot_direction'] ?? null,
             ])
             ->values()
             ->all();
@@ -294,6 +296,8 @@ class LiveScoreController extends Controller
                 'batter_non_strike' => $nonStriker,
                 'bowler' => $bowler,
                 'recent_balls' => $recentBalls,
+                'last_shot' => $snapshot['last_shot'] ?? null,
+                'milestone' => $snapshot['milestone'] ?? null,
             ],
         ];
     }

@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { env } from "../utils";
 import { getToken } from "../auth/authStore";
 import { useControlState } from "../../hooks/useControlState";
-import type { BallByBallStateDto } from "../api/types";
+import type { BallByBallStateDto, BallEventDto } from "../api/types";
 
 export interface BallByBallState {
   matchId: string;
@@ -26,6 +26,7 @@ export interface BallByBallState {
   bowler: string;
   recentBalls: string[];
   updatedAt: number;
+  lastEvent: BallEventDto | null;
 }
 
 export function mapBallByBall(raw: BallByBallStateDto): BallByBallState {
@@ -42,6 +43,7 @@ export function mapBallByBall(raw: BallByBallStateDto): BallByBallState {
     bowler: raw.bowler,
     recentBalls: raw.recent_balls,
     updatedAt: raw.updated_at_ms,
+    lastEvent: raw.last_event ?? null,
   };
 }
 

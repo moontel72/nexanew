@@ -41,6 +41,8 @@ class MatchAnalyticsService
                 $shots[] = [
                     'runs' => $runs,
                     'direction' => $direction ?? $this->estimateDirection($runs),
+                    'zone' => $ball['shot_zone'] ?? null,
+                    'side' => $ball['shot_side'] ?? null,
                     'x' => $ball['shot_x'] ?? null,
                     'y' => $ball['shot_y'] ?? null,
                     'is_boundary' => $runs >= 4,

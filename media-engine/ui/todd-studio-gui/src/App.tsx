@@ -25,6 +25,8 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { SceneComposer } from "./components/scenes/SceneComposer";
 import { AudioMixer } from "./components/AudioMixer";
 import { OverlayPanel } from "./components/OverlayPanel";
+import { WatermarkControl } from "./components/WatermarkControl";
+import { WagonWheelMap } from "./components/WagonWheelMap";
 import { BroadcastPanel } from "./components/BroadcastPanel";
 import { OverlayController } from "./components/overlays/OverlayController";
 
@@ -127,6 +129,7 @@ export default function App() {
               · config:   one-time / static setup, collapsible accordion */}
           <aside className="director-panel">
             <section className="priority-zone" aria-label="Live controls">
+              <WagonWheelMap />
               <VisionSwitcher />
               <TransitionBar />
               <ReplayDirector
@@ -141,6 +144,7 @@ export default function App() {
               <summary>Setup &amp; Configuration</summary>
               <div className="config-zone-content">
                 <InputPanel />
+                <WatermarkControl />
                 <SceneComposer />
                 <SegmentManager onFire={() => setOverlayEvent("BREAK")} />
                 <BroadcastPanel />

@@ -23,9 +23,12 @@ use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
+use crate::media_plane::MediaPlane;
 use crate::reverb::{ReverbClient, ReverbEvent};
 use crate::routes::control_ws::{ControlEvent, ControlHub};
+use crate::store::RoomStore;
 use todd_common::error::AppError;
+use todd_replay::session::{ReplayEvent, ReplayTrigger};
 
 /// Live ball-by-ball state for one match, as shown on the Studio
 /// lower-third.
@@ -43,6 +46,33 @@ pub struct BallByBallState {
     pub bowler: String,
     pub recent_balls: Vec<String>,
     pub updated_at_ms: i64,
+    /// Classified event of the most recent ball (drives auto-graphics,
+    /// auto-replay and the Studio mini-map). None while the scorer has
+    /// not recorded a directional/notable ball yet.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_event: Option<BallEvent>,
+}
+
+/// One notable scoring event, classified from the manager feed.
+#[derive(Debug, Clone, Serialize)]
+pub struct BallEvent {
+    /// "four" | "six" | "wicket" | "catch" | "milestone" | "other"
+    pub kind: String,
+    /// Ready-to-burn popup text, e.g. "SIX — Square Leg".
+    pub text: String,
+    pub runs: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zone: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub direction: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub y: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub milestone_runs: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub milestone_player: Option<String>,
 }
 
 /// Minimal view of the environment-driven settings used to seed the
@@ -191,20 +221,57 @@ pub struct ManagerInnings {
     pub bowler: Option<String>,
     #[serde(default)]
     pub recent_balls: Option<Vec<ManagerBall>>,
+    /// Directional summary of the last recorded ball.
+    #[serde(default)]
+    pub last_shot: Option<ShotInfo>,
+    /// Milestone crossed on the last ball (50/100/150/200).
+    #[serde(default)]
+    pub milestone: Option<MilestoneInfo>,
+}
+
+/// Directional shot data carried by the manager feed.
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct ShotInfo {
+    #[serde(default)]
+    pub direction: Option<f64>,
+    #[serde(default)]
+    pub zone: Option<String>,
+    #[serde(default)]
+    pub side: Option<String>,
+    #[serde(default)]
+    pub x: Option<f64>,
+    #[serde(default)]
+    pub y: Option<f64>,
+    #[serde(default)]
+    pub wicket_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct MilestoneInfo {
+    #[serde(default)]
+    pub runs: Option<u32>,
+    #[serde(default)]
+    pub player_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum ManagerBall {
     Str(String),
-    Object { result: Option<String> },
+    Object {
+        result: Option<String>,
+        #[serde(default)]
+        zone: Option<String>,
+        #[serde(default)]
+        direction: Option<f64>,
+    },
 }
 
 impl ManagerBall {
     fn result(&self) -> String {
         match self {
             ManagerBall::Str(s) => s.clone(),
-            ManagerBall::Object { result } => result.clone().unwrap_or_else(|| "·".to_string()),
+            ManagerBall::Object { result, .. } => result.clone().unwrap_or_else(|| "·".to_string()),
         }
     }
 }
@@ -213,6 +280,7 @@ fn map_ball_by_ball(raw: ManagerResponse) -> BallByBallState {
     let inn = raw.innings.unwrap_or_default();
     let balls = inn.balls.unwrap_or(0);
     let score = inn.score.unwrap_or(0);
+    let last_event = classify_last_event(&inn);
     BallByBallState {
         match_id: raw.match_id,
         batting_team: inn.batting_team.unwrap_or_else(|| "Batting".to_string()),
@@ -235,7 +303,80 @@ fn map_ball_by_ball(raw: ManagerResponse) -> BallByBallState {
             .map(ManagerBall::result)
             .collect(),
         updated_at_ms: Utc::now().timestamp_millis(),
+        last_event,
     }
+}
+
+/// Classifies the most recent ball into a popup/replay-ready event.
+/// Priority: milestone > wicket/catch > boundary (with zone text).
+fn classify_last_event(inn: &ManagerInnings) -> Option<BallEvent> {
+    if let Some(milestone) = &inn.milestone {
+        let runs = milestone.runs.unwrap_or(50);
+        let player = milestone.player_name.clone().unwrap_or_default();
+        return Some(BallEvent {
+            kind: "milestone".to_string(),
+            text: format!("MILESTONE — {runs} · {player}"),
+            runs,
+            zone: None,
+            direction: None,
+            x: None,
+            y: None,
+            milestone_runs: Some(runs),
+            milestone_player: Some(player),
+        });
+    }
+
+    let shot = inn.last_shot.clone().unwrap_or_default();
+    if let Some(wicket_type) = shot.wicket_type.as_deref() {
+        let kind = if wicket_type == "caught" {
+            "catch"
+        } else {
+            "wicket"
+        };
+        let text = if kind == "catch" { "CAUGHT!" } else { "OUT!" }.to_string();
+        return Some(BallEvent {
+            kind: kind.to_string(),
+            text,
+            runs: 0,
+            zone: shot.zone.clone(),
+            direction: shot.direction,
+            x: shot.x,
+            y: shot.y,
+            milestone_runs: None,
+            milestone_player: None,
+        });
+    }
+
+    let last_result = inn
+        .recent_balls
+        .as_deref()
+        .and_then(|balls| balls.last())
+        .map(ManagerBall::result)
+        .unwrap_or_default();
+    let (kind, runs, label) = if last_result == "6" {
+        ("six", 6, "SIX")
+    } else if last_result == "4" {
+        ("four", 4, "FOUR")
+    } else {
+        return None;
+    };
+
+    let zone = shot.zone.clone();
+    let text = match &zone {
+        Some(z) if !z.is_empty() => format!("{label} — {z}"),
+        _ => format!("{label}!"),
+    };
+    Some(BallEvent {
+        kind: kind.to_string(),
+        text,
+        runs,
+        zone,
+        direction: shot.direction,
+        x: shot.x,
+        y: shot.y,
+        milestone_runs: None,
+        milestone_player: None,
+    })
 }
 
 /// Lower bound the poll interval can be configured to. Anything faster
@@ -268,6 +409,9 @@ pub struct ScoreboardHub {
     sync: DashMap<String, MatchSyncStatus>,
     active_match: RwLock<Option<String>>,
     last_push_at: DashMap<String, i64>,
+    /// Last processed score timestamp per match — dedupes Reverb pushes
+    /// and REST polls so auto-replay fires exactly once per ball.
+    last_score_at: DashMap<String, i64>,
     push_connected: AtomicBool,
 }
 
@@ -279,6 +423,7 @@ impl ScoreboardHub {
             sync: DashMap::new(),
             active_match: RwLock::new(None),
             last_push_at: DashMap::new(),
+            last_score_at: DashMap::new(),
             push_connected: AtomicBool::new(false),
         }
     }
@@ -389,6 +534,19 @@ impl ScoreboardHub {
         self.push_connected.store(connected, Ordering::Relaxed);
     }
 
+    /// Returns true the first time a given score timestamp is seen for
+    /// a match — the dedupe gate for auto-replay/auto-graphics fan-out.
+    pub fn is_new_score(&self, match_id: &str, updated_at_ms: i64) -> bool {
+        if let Some(prev) = self.last_score_at.get(match_id) {
+            if *prev.value() == updated_at_ms {
+                return false;
+            }
+        }
+        self.last_score_at
+            .insert(match_id.to_string(), updated_at_ms);
+        true
+    }
+
     /// Read model for the config endpoints and the control-plane feed.
     pub async fn config_view(&self) -> CricketConfigView {
         let config = self.config.read().await.clone();
@@ -475,6 +633,8 @@ pub fn spawn_sync(
     settings: ScoreboardSettings,
     client: reqwest::Client,
     control: Arc<ControlHub>,
+    plane: Arc<dyn MediaPlane>,
+    store: Arc<dyn RoomStore>,
 ) -> Arc<ScoreboardHub> {
     let ws_url = settings.ws_url.clone();
     let hub = Arc::new(ScoreboardHub::new(settings.into_config()));
@@ -482,14 +642,24 @@ pub fn spawn_sync(
     let push_hub = Arc::clone(&hub);
     let push_client = client.clone();
     let push_control = Arc::clone(&control);
+    let push_plane = Arc::clone(&plane);
+    let push_store = Arc::clone(&store);
     tokio::spawn(async move {
-        push_loop(push_client, push_hub, push_control, ws_url).await;
+        push_loop(
+            push_client,
+            push_hub,
+            push_control,
+            ws_url,
+            push_plane,
+            push_store,
+        )
+        .await;
     });
 
     let poll_hub = Arc::clone(&hub);
     let poll_control = Arc::clone(&control);
     tokio::spawn(async move {
-        poll_loop(client, poll_hub, poll_control).await;
+        poll_loop(client, poll_hub, poll_control, plane, store).await;
     });
 
     hub
@@ -576,6 +746,8 @@ async fn push_loop(
     hub: Arc<ScoreboardHub>,
     control: Arc<ControlHub>,
     ws_url: Option<String>,
+    plane: Arc<dyn MediaPlane>,
+    store: Arc<dyn RoomStore>,
 ) {
     let mut backoff_secs: u64 = 1;
     const MAX_BACKOFF_SECS: u64 = 30;
@@ -595,7 +767,9 @@ async fn push_loop(
                         backoff_secs = 1;
                         hub.set_push_connected(true);
                         tracing::info!(url = %url, "cricket reverb push connected");
-                        match run_push_session(&mut socket, &client, &hub, &control).await {
+                        match run_push_session(&mut socket, &client, &hub, &control, &plane, &store)
+                            .await
+                        {
                             Ok(()) => tracing::info!("cricket reverb push session ended"),
                             Err(e) => {
                                 tracing::warn!(error = %e, "cricket reverb push session failed")
@@ -631,6 +805,8 @@ async fn run_push_session(
     client: &reqwest::Client,
     hub: &Arc<ScoreboardHub>,
     control: &Arc<ControlHub>,
+    plane: &Arc<dyn MediaPlane>,
+    store: &Arc<dyn RoomStore>,
 ) -> Result<(), String> {
     let mut subscribed: std::collections::HashSet<String> = std::collections::HashSet::new();
 
@@ -664,15 +840,18 @@ async fn run_push_session(
         else {
             continue;
         };
-        handle_push_event(client, hub, control, &match_id, event).await;
+        handle_push_event(client, hub, control, plane, store, &match_id, event).await;
     }
 }
 
 /// Routes one Reverb event to the right refresh action.
+#[allow(clippy::too_many_arguments)]
 async fn handle_push_event(
     client: &reqwest::Client,
     hub: &Arc<ScoreboardHub>,
     control: &Arc<ControlHub>,
+    plane: &Arc<dyn MediaPlane>,
+    store: &Arc<dyn RoomStore>,
     match_id: &str,
     event: ReverbEvent,
 ) {
@@ -686,21 +865,25 @@ async fn handle_push_event(
             // The context flip usually races the first score push —
             // refresh once so the lower-third never waits for the
             // next scoring event.
-            refresh_match(client, hub, control, match_id).await;
+            refresh_match(client, hub, control, plane, store, match_id).await;
         }
         "score.updated" | "match.updated" | "stream.updated" => {
-            refresh_match(client, hub, control, match_id).await;
+            refresh_match(client, hub, control, plane, store, match_id).await;
         }
         _ => {}
     }
 }
 
 /// Event-triggered canonical refresh: pull the authoritative state once
-/// and fan it out to director panels.
+/// and fan it out to director panels. Replay-worthy balls spawn an
+/// auto-tagged replay clip covering ~5s before and ~3s after the event.
+#[allow(clippy::too_many_arguments)]
 async fn refresh_match(
     client: &reqwest::Client,
     hub: &Arc<ScoreboardHub>,
     control: &Arc<ControlHub>,
+    plane: &Arc<dyn MediaPlane>,
+    store: &Arc<dyn RoomStore>,
     match_id: &str,
 ) {
     let config = hub.current_config().await;
@@ -710,8 +893,23 @@ async fn refresh_match(
 
     match fetch_match(client, &base_url, match_id, token.as_deref()).await {
         Ok(state) => {
+            let is_new = hub.is_new_score(match_id, state.updated_at_ms);
             hub.record_sync(match_id, Ok(()), SyncTransport::Push);
             hub.touch_push(match_id);
+
+            if is_new {
+                if let Some(event) = state.last_event.clone() {
+                    if is_replay_worthy(&event.kind) {
+                        spawn_auto_replay(
+                            Arc::clone(plane),
+                            Arc::clone(store),
+                            Arc::clone(control),
+                            event.kind.clone(),
+                        );
+                    }
+                }
+            }
+
             hub.upsert(state.clone());
             control.publish(ControlEvent::ScoreUpdated {
                 match_id: match_id.to_string(),
@@ -724,9 +922,77 @@ async fn refresh_match(
     }
 }
 
+fn is_replay_worthy(kind: &str) -> bool {
+    matches!(kind, "four" | "six" | "wicket" | "catch")
+}
+
+/// Auto-tag: waits PAUSE_MS so the clip covers the action after the
+/// event, then triggers a slow-motion replay for every live room. The
+/// clip spans `lookback_ms` = PRE_MS + PAUSE_MS (≈5s before + 3s after).
+/// Each created session is published on the control plane so the
+/// ReplayDirector lists it immediately.
+fn spawn_auto_replay(
+    plane: Arc<dyn MediaPlane>,
+    store: Arc<dyn RoomStore>,
+    control: Arc<ControlHub>,
+    kind: String,
+) {
+    const PRE_MS: u64 = 5_000;
+    const PAUSE_MS: u64 = 3_000;
+
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(PAUSE_MS)).await;
+
+        let rooms = match store.list_rooms().await {
+            Ok(rooms) => rooms,
+            Err(e) => {
+                tracing::warn!(error = %e, "auto-replay: room list failed");
+                return;
+            }
+        };
+
+        for room in rooms {
+            let trigger = ReplayTrigger {
+                room_id: room.id.clone(),
+                camera_ids: Vec::new(), // every buffered camera
+                event: match kind.as_str() {
+                    "four" | "six" => ReplayEvent::Boundary,
+                    "catch" => ReplayEvent::Catch,
+                    _ => ReplayEvent::Wicket,
+                },
+                lookback_ms: PRE_MS + PAUSE_MS,
+                speed: 0.5,
+                loop_playback: true,
+            };
+            match plane.trigger_replay(&trigger).await {
+                Ok(info) => {
+                    tracing::info!(
+                        room = %room.id,
+                        event = %kind,
+                        replay = %info.replay_id,
+                        "auto-tagged replay created"
+                    );
+                    control.publish(ControlEvent::ReplayCreated { replay: info });
+                }
+                Err(e) => tracing::warn!(
+                    room = %room.id,
+                    error = %e,
+                    "auto-replay trigger failed"
+                ),
+            }
+        }
+    });
+}
+
 /// Watchdog poller. Skips any match whose push feed is fresh; only polls
 /// matches the push path has not updated within the watchdog window.
-async fn poll_loop(client: reqwest::Client, hub: Arc<ScoreboardHub>, control: Arc<ControlHub>) {
+async fn poll_loop(
+    client: reqwest::Client,
+    hub: Arc<ScoreboardHub>,
+    control: Arc<ControlHub>,
+    plane: Arc<dyn MediaPlane>,
+    store: Arc<dyn RoomStore>,
+) {
     loop {
         // Read the config every round so runtime updates (match list,
         // poll interval, token) take effect without a restart.
@@ -752,7 +1018,20 @@ async fn poll_loop(client: reqwest::Client, hub: Arc<ScoreboardHub>, control: Ar
             .await
             {
                 Ok(state) => {
+                    let is_new = hub.is_new_score(&match_config.match_id, state.updated_at_ms);
                     hub.record_sync(&match_config.match_id, Ok(()), SyncTransport::Poll);
+                    if is_new {
+                        if let Some(event) = state.last_event.clone() {
+                            if is_replay_worthy(&event.kind) {
+                                spawn_auto_replay(
+                                    Arc::clone(&plane),
+                                    Arc::clone(&store),
+                                    Arc::clone(&control),
+                                    event.kind.clone(),
+                                );
+                            }
+                        }
+                    }
                     hub.upsert(state.clone());
                     control.publish(ControlEvent::ScoreUpdated {
                         match_id: match_config.match_id.clone(),
@@ -832,8 +1111,12 @@ mod tests {
                     ManagerBall::Str("4".to_string()),
                     ManagerBall::Object {
                         result: Some("W".to_string()),
+                        zone: None,
+                        direction: None,
                     },
                 ]),
+                last_shot: None,
+                milestone: None,
             }),
         });
         assert_eq!(state.runs, 128);

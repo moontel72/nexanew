@@ -3,7 +3,7 @@ import { useDirector } from "../lib/director/directorService";
 import { useControlState } from "../hooks/useControlState";
 import { getToken } from "../lib/auth/authStore";
 import { api } from "../lib/api/client";
-import type { OverlayState } from "../lib/api/types";
+import type { BallEventDto, OverlayState } from "../lib/api/types";
 import { Button } from "./ui/Button";
 
 const POPUP_EVENTS: Array<{ id: string; text: string; subtext?: string }> = [
@@ -13,16 +13,39 @@ const POPUP_EVENTS: Array<{ id: string; text: string; subtext?: string }> = [
   { id: "milestone", text: "MILESTONE" },
 ];
 
+/** Default on-air duration of an auto-triggered popup. */
+const DEFAULT_AUTO_DURATION_MS = 4000;
+
 export interface OverlayPanelProps {
   /** Fired for the director's local 3D preview alongside the server
    * burn-in command. */
   onLocalEvent?(event: string): void;
 }
 
-/** Server-side overlay burn-in control: scoreboard lower-third, event
- * popups and the corner watermark. Every toggle/trigger dispatches to
- * `POST /api/v1/program/overlay`; the resulting state arrives back over
- * the control-plane WebSocket. */
+/** Popup text for a classified scoring event (Phase 3 auto-graphics). */
+export function popupTextFor(event: BallEventDto): string {
+  switch (event.kind) {
+    case "four":
+      return event.zone ? `FOUR — ${event.zone}` : "FOUR!";
+    case "six":
+      return event.zone ? `SIX — ${event.zone}` : "SIX!";
+    case "wicket":
+      return "OUT!";
+    case "catch":
+      return "CAUGHT!";
+    case "milestone":
+      return event.milestone_runs
+        ? `MILESTONE — ${event.milestone_runs}${event.milestone_player ? ` · ${event.milestone_player}` : ""}`
+        : "MILESTONE";
+    default:
+      return "";
+  }
+}
+
+/** Live overlay control: scoreboard lower-third + event popups (manual
+ * and auto-triggered). Every command dispatches to
+ * `POST /api/v1/program/overlay`; state arrives back over the control
+ * WebSocket. The watermark lives in `WatermarkControl` (config zone). */
 export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
   const control = useControlState();
   const director = useDirector();
@@ -33,12 +56,23 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [scoreboardOn, setScoreboardOn] = useState(false);
-  const [watermarkUrl, setWatermarkUrl] = useState("");
-  const [watermarkOn, setWatermarkOn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Phase 3 auto-graphics: toggle + on-air duration.
+  const [autoEnabled, setAutoEnabled] = useState(true);
+  const [autoDurationMs, setAutoDurationMs] = useState(DEFAULT_AUTO_DURATION_MS);
+
   const hydratedRef = useRef(false);
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** `updated_at_ms` of the last score event already fired on-air. */
+  const lastFiredRef = useRef<number | null>(null);
+
+  const activeMatchId =
+    control.cricket?.active_match_id ??
+    control.cricket?.match_configs[0]?.match_id ??
+    null;
+  const activeScore = activeMatchId ? (control.scores[activeMatchId] ?? null) : null;
 
   // Hydrate from the control feed (or a one-off GET).
   useEffect(() => {
@@ -47,8 +81,6 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
         setScoreboardOn(serverState.scoreboard?.enabled ?? false);
         setTitle(serverState.scoreboard?.title ?? "");
         setSubtitle(serverState.scoreboard?.subtitle ?? "");
-        setWatermarkOn(!!serverState.watermark);
-        setWatermarkUrl(serverState.watermark?.asset_url ?? "");
       }
       hydratedRef.current = true;
       return;
@@ -62,8 +94,6 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
         setScoreboardOn(state.scoreboard?.enabled ?? false);
         setTitle(state.scoreboard?.title ?? "");
         setSubtitle(state.scoreboard?.subtitle ?? "");
-        setWatermarkOn(!!state.watermark);
-        setWatermarkUrl(state.watermark?.asset_url ?? "");
         hydratedRef.current = true;
       })
       .catch(() => {
@@ -102,15 +132,29 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
     }, 400);
   };
 
-  const firePopup = (text: string, subtext?: string, eventId?: string) => {
-    void send({ kind: "event_popup", text, subtext, duration_ms: 2500 });
+  const firePopup = (text: string, subtext?: string, eventId?: string, durationMs?: number) => {
+    void send({
+      kind: "event_popup",
+      text,
+      subtext,
+      duration_ms: durationMs ?? 2500,
+    });
     if (eventId) onLocalEvent?.(eventId.toUpperCase());
   };
 
-  const toggleWatermark = (enabled: boolean) => {
-    setWatermarkOn(enabled);
-    void send({ kind: "watermark", enabled, asset_url: watermarkUrl, x: 0.965, y: 0.02 });
-  };
+  // ── Phase 3 auto-graphics: scoring push → popup, no operator action ──
+  useEffect(() => {
+    if (!autoEnabled || !activeScore) return;
+    const event = activeScore.last_event;
+    if (!event) return;
+    if (lastFiredRef.current === activeScore.updated_at_ms) return;
+
+    const text = popupTextFor(event);
+    if (!text) return;
+    lastFiredRef.current = activeScore.updated_at_ms;
+    firePopup(text, undefined, event.kind, autoDurationMs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEnabled, activeScore?.updated_at_ms]);
 
   const clearAll = () => {
     if (!activeRoomId) return;
@@ -118,10 +162,7 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
     setError(null);
     api
       .clearOverlays(activeRoomId, getToken())
-      .then(() => {
-        setScoreboardOn(false);
-        setWatermarkOn(false);
-      })
+      .then(() => setScoreboardOn(false))
       .catch((clearError: Error) => setError(clearError.message))
       .finally(() => setBusy(false));
   };
@@ -140,6 +181,37 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
           Select an active room before toggling overlays.
         </div>
       )}
+
+      {/* Auto-graphics (Phase 3) */}
+      <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">Auto popups (scoring push)</span>
+          <input
+            type="checkbox"
+            checked={autoEnabled}
+            onChange={(event) => setAutoEnabled(event.target.checked)}
+          />
+        </div>
+        <label className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          Duration (ms)
+          <input
+            className="w-24 rounded-md border border-input bg-background px-2 py-1 font-mono text-xs text-foreground"
+            inputMode="numeric"
+            value={autoDurationMs}
+            disabled={!autoEnabled}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              if (Number.isInteger(value) && value >= 500) setAutoDurationMs(value);
+            }}
+          />
+        </label>
+        {!activeScore && (
+          <div className="text-[10px] text-muted-foreground">
+            No live score yet — popups fire automatically once the manager
+            records boundary/wicket events.
+          </div>
+        )}
+      </div>
 
       {/* Scoreboard lower-third */}
       <div className="flex flex-col gap-2">
@@ -169,9 +241,9 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
         )}
       </div>
 
-      {/* Event popups */}
+      {/* Event popups (manual overrides stay available anytime) */}
       <div className="flex flex-col gap-1">
-        <span className="text-xs text-muted-foreground">Event popups (burn-in)</span>
+        <span className="text-xs text-muted-foreground">Event popups (manual override)</span>
         <div className="grid grid-cols-2 gap-1">
           {POPUP_EVENTS.map((event) => (
             <Button
@@ -185,27 +257,6 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
             </Button>
           ))}
         </div>
-      </div>
-
-      {/* Watermark */}
-      <div className="flex flex-col gap-2">
-        <label className="flex items-center justify-between text-xs">
-          Watermark / logo
-          <input
-            type="checkbox"
-            checked={watermarkOn}
-            disabled={!activeRoomId}
-            onChange={(event) => toggleWatermark(event.target.checked)}
-          />
-        </label>
-        <input
-          className="rounded-md border border-input bg-background px-2 py-1 text-xs"
-          placeholder="transparent PNG URL"
-          value={watermarkUrl}
-          disabled={!activeRoomId}
-          onChange={(event) => setWatermarkUrl(event.target.value)}
-          onBlur={() => watermarkOn && void send({ kind: "watermark", enabled: true, asset_url: watermarkUrl, x: 0.965, y: 0.02 })}
-        />
       </div>
 
       <Button variant="destructive" disabled={busy} onClick={clearAll}>

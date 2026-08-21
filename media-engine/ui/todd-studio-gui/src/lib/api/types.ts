@@ -345,6 +345,21 @@ export interface CricketConfigUpdate {
 // Ball-by-ball scoreboard state (mirrors Rust `BallByBallState`)
 // --------------------------------------------------------------------------
 
+/** One classified scoring event (drives auto-graphics + auto-replay). */
+export interface BallEventDto {
+  /** "four" | "six" | "wicket" | "catch" | "milestone" | "other" */
+  kind: string;
+  /** Ready-to-burn popup text, e.g. "SIX — Square Leg". */
+  text: string;
+  runs: number;
+  zone?: string | null;
+  direction?: number | null;
+  x?: number | null;
+  y?: number | null;
+  milestone_runs?: number | null;
+  milestone_player?: string | null;
+}
+
 export interface BallByBallStateDto {
   match_id: string;
   batting_team: string;
@@ -358,6 +373,7 @@ export interface BallByBallStateDto {
   bowler: string;
   recent_balls: string[];
   updated_at_ms: number;
+  last_event?: BallEventDto | null;
 }
 
 // --------------------------------------------------------------------------
@@ -376,6 +392,7 @@ export type ControlEvent =
       rooms: ControlRoomSnapshot[];
       cricket: CricketConfigView;
       scores: BallByBallStateDto[];
+      replays: ReplayInfo[];
     }
   | { type: "room_created"; room: Room }
   | { type: "room_deleted"; room_id: string }
@@ -393,4 +410,5 @@ export type ControlEvent =
   | { type: "overlay_changed"; room_id: string; overlays: OverlayState }
   | { type: "forwarding_changed"; status: ForwardingStatus }
   | { type: "cricket_config_changed"; config: CricketConfigView }
-  | { type: "score_updated"; match_id: string; score: BallByBallStateDto };
+  | { type: "score_updated"; match_id: string; score: BallByBallStateDto }
+  | { type: "replay_created"; replay: ReplayInfo };

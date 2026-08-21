@@ -15,6 +15,7 @@ import type {
   ForwardingStatus,
   OverlayState,
   ProgramState,
+  ReplayInfo,
   Room,
 } from "../api/types";
 
@@ -35,6 +36,8 @@ export interface ControlState {
   cricket: CricketConfigView | null;
   /** Push-delivered ball-by-ball states keyed by match id. */
   scores: Record<string, BallByBallStateDto>;
+  /** Live replay sessions (manual + auto-tagged) keyed by replay id. */
+  replays: Record<string, ReplayInfo>;
 }
 
 const EMPTY_STATE: ControlState = {
@@ -47,6 +50,7 @@ const EMPTY_STATE: ControlState = {
   forwarders: {},
   cricket: null,
   scores: {},
+  replays: {},
 };
 
 export interface ControlFeed {
@@ -109,6 +113,9 @@ function applyEvent(state: ControlState, event: ControlEvent): ControlState {
         scores: Object.fromEntries(
           event.scores.map((score) => [score.match_id, score]),
         ),
+        replays: Object.fromEntries(
+          event.replays.map((replay) => [replay.replay_id, replay]),
+        ),
       };
     case "room_created":
       return { ...state, rooms: upsertRoom(state.rooms, event.room) };
@@ -168,6 +175,11 @@ function applyEvent(state: ControlState, event: ControlEvent): ControlState {
       return {
         ...state,
         scores: { ...state.scores, [event.match_id]: event.score },
+      };
+    case "replay_created":
+      return {
+        ...state,
+        replays: { ...state.replays, [event.replay.replay_id]: event.replay },
       };
   }
 }

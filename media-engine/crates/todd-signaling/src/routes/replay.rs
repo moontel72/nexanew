@@ -24,6 +24,7 @@ use todd_common::{
 use todd_replay::export::{ClipExportRequest, ExportStatus};
 use todd_replay::session::{ReplayInfo, ReplayTrigger};
 
+use crate::routes::control_ws::ControlEvent;
 use crate::state::AppState;
 
 pub async fn trigger_replay(
@@ -37,6 +38,11 @@ pub async fn trigger_replay(
     claims.require_perm("studio_director")?;
 
     let info = state.plane.trigger_replay(&req).await?;
+    // Fan out to every director panel so ReplayDirector lists the new
+    // session immediately (same event used by the auto-tag pipeline).
+    state.control.publish(ControlEvent::ReplayCreated {
+        replay: info.clone(),
+    });
     Ok((StatusCode::CREATED, Json(info)))
 }
 

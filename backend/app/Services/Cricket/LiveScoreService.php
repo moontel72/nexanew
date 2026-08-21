@@ -108,7 +108,14 @@ class LiveScoreService
             // the public fan feed.
             $this->generateCommentary($matchId, $innings, $delivery, $managerId, $players);
 
-            $liveScore = $this->updateLiveScore($match, $innings, $delivery, $managerId, $players);
+            $liveScore = $this->updateLiveScore(
+                $match,
+                $innings,
+                $delivery,
+                $managerId,
+                $players,
+                $this->milestoneCrossed($matchId, $innings, $delivery, $players)
+            );
 
             $this->cacheScore($matchId, $liveScore);
             $this->broadcastScore($matchId, $liveScore);
@@ -506,6 +513,8 @@ class LiveScoreService
             'shot_direction' => $ballData['shot_direction'] ?? null,
             'shot_x' => $ballData['shot_x'] ?? null,
             'shot_y' => $ballData['shot_y'] ?? null,
+            'shot_zone' => ShotZoneMapper::zone($ballData['shot_direction'] ?? null),
+            'shot_side' => ShotZoneMapper::side($ballData['shot_direction'] ?? null),
             'timestamp' => now()->toIso8601String(),
         ];
     }
@@ -979,7 +988,8 @@ class LiveScoreService
         Innings $innings,
         ?array $ballData,
         string $managerId,
-        \Illuminate\Support\Collection $players
+        \Illuminate\Support\Collection $players,
+        ?array $milestone = null
     ): LiveScore {
         $liveScore = $match->liveScore ?? new LiveScore(['match_id' => $match->id]);
 
@@ -1069,7 +1079,8 @@ class LiveScoreService
                 $strikerEntry,
                 $nonStrikerEntry,
                 $bowlerEntry,
-                $partnership
+                $partnership,
+                $milestone
             ),
         ]);
 
@@ -1160,7 +1171,8 @@ class LiveScoreService
         ?array $strikerEntry,
         ?array $nonStrikerEntry,
         ?array $bowlerEntry,
-        array $partnership
+        array $partnership,
+        ?array $milestone = null
     ): array {
         $latestDeliveries = collect($innings->deliveries ?? [])->take(-30)->values()->toArray();
 
@@ -1199,9 +1211,74 @@ class LiveScoreService
             'max_overs_per_bowler' => $this->maxOversPerBowler($match, $innings->overs_limit),
             'commentary' => $this->latestCommentary($match->id, 20),
             'last_ball_result' => $ballData ? $this->describeBall($ballData) : null,
+            'last_shot' => $this->shotSummary($ballData),
+            'milestone' => $milestone,
             'last_wicket_info' => $lastWicketInfo,
             'last_updated' => now()->toIso8601String(),
         ];
+    }
+
+    /**
+     * Directional summary of the just-recorded ball, consumed by the
+     * engine feed, Studio popups and both mini-maps. Null when the
+     * scorer recorded no direction.
+     */
+    private function shotSummary(?array $ballData): ?array
+    {
+        if (!$ballData) {
+            return null;
+        }
+
+        $summary = ShotZoneMapper::summary($ballData['shot_direction'] ?? null);
+        if ($summary === null) {
+            return null;
+        }
+
+        $summary['x'] = $ballData['shot_x'] ?? null;
+        $summary['y'] = $ballData['shot_y'] ?? null;
+        $summary['wicket_type'] = $ballData['wicket_type'] ?? null;
+
+        return $summary;
+    }
+
+    /**
+     * Milestone detection: the striker crossing 50 / 100 / 150 / 200
+     * runs on this exact ball. Returns null when no crossing happened.
+     */
+    private function milestoneCrossed(
+        string $matchId,
+        Innings $innings,
+        array $delivery,
+        \Illuminate\Support\Collection $players
+    ): ?array {
+        $strikerId = $delivery['batter_id'] ?? null;
+        $runsThisBall = (int) ($delivery['batter_runs'] ?? 0);
+        if ($strikerId === null || $runsThisBall <= 0) {
+            return null;
+        }
+
+        // The scorecard was rebuilt AFTER this ball — recover the
+        // prior runs by subtracting this ball's contribution.
+        $afterRuns = 0;
+        foreach ($innings->batting_scorecard ?? [] as $entry) {
+            if (($entry['player_id'] ?? null) === $strikerId) {
+                $afterRuns = (int) ($entry['runs'] ?? 0);
+                break;
+            }
+        }
+
+        $priorRuns = max(0, $afterRuns - $runsThisBall);
+        foreach ([50, 100, 150, 200] as $mark) {
+            if ($priorRuns < $mark && $afterRuns >= $mark) {
+                return [
+                    'player_id' => $strikerId,
+                    'player_name' => $players->get($strikerId)?->name ?? 'Batter',
+                    'runs' => $mark,
+                ];
+            }
+        }
+
+        return null;
     }
 
     private function describeBall(array $ballData): string

@@ -33,6 +33,7 @@ use todd_common::{
     media::{AudioMixView, AudioMixerConfig},
     types::{CameraInfo, ForwardingStatus, OverlayState, ProgramState, Room},
 };
+use todd_replay::session::ReplayInfo;
 use tokio::sync::broadcast;
 
 use crate::{
@@ -65,6 +66,8 @@ pub enum ControlEvent {
         /// Cached ball-by-ball states so a (re)connecting director gets
         /// the scores immediately without extra REST round-trips.
         scores: Vec<BallByBallState>,
+        /// Live replay sessions (manual + auto-tagged) at connect time.
+        replays: Vec<ReplayInfo>,
     },
     RoomCreated {
         room: Room,
@@ -107,6 +110,10 @@ pub enum ControlEvent {
     ScoreUpdated {
         match_id: String,
         score: BallByBallState,
+    },
+    /// A replay session was created (manual trigger or auto-tag).
+    ReplayCreated {
+        replay: ReplayInfo,
     },
 }
 
@@ -246,6 +253,7 @@ async fn send_snapshot(socket: &mut WebSocket, state: &AppState) -> Result<(), S
             rooms: entries,
             cricket: state.scoreboard.config_view().await,
             scores: state.scoreboard.all(),
+            replays: state.plane.list_replays().await.unwrap_or_default(),
         },
     )
     .await
@@ -310,6 +318,7 @@ mod tests {
                 bowler: "M. Patel".to_string(),
                 recent_balls: vec!["4".to_string()],
                 updated_at_ms: 1_700_000_000_000,
+                last_event: None,
             },
         };
         let json = serde_json::to_string(&event).unwrap();
