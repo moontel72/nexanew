@@ -1,7 +1,7 @@
 // WebSocket telemetry client — live stream diagnostics + replay/export
 // event notifications from the media engine.
 
-import { env } from "../utils";
+import { wsBaseUrl } from "../utils";
 import type { TelemetrySnapshot } from "../api/types";
 
 export interface TelemetryFeed {
@@ -23,7 +23,7 @@ export function connectTelemetry(): TelemetryFeed {
 
   function connect() {
     if (closed) return;
-    const url = env.apiBaseUrl.replace(/^http/, "ws") + "/api/v1/telemetry/ws";
+    const url = `${wsBaseUrl()}/api/v1/telemetry/ws`;
     socket = new WebSocket(url);
     socket.onmessage = (event) => {
       try {

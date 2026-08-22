@@ -5,7 +5,7 @@
 // afterwards; this client folds events into a local state object so every
 // React panel reads one consistent, current view without polling.
 
-import { env } from "../utils";
+import { wsBaseUrl } from "../utils";
 import { getToken } from "../auth/authStore";
 import type {
   AudioMixView,
@@ -65,14 +65,6 @@ export interface ControlFeed {
   close(): void;
   subscribe(listener: (state: ControlState) => void): () => void;
   getState(): ControlState;
-}
-
-/** Resolves the WebSocket base for same-origin deployments (empty
- * `VITE_API_BASE_URL`) and absolute API origins alike. */
-function wsBaseUrl(): string {
-  if (env.apiBaseUrl) return env.apiBaseUrl.replace(/^http/, "ws");
-  const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${scheme}//${window.location.host}`;
 }
 
 function upsertRoom(rooms: Room[], room: Room): Room[] {
