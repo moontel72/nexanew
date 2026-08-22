@@ -70,6 +70,29 @@ class CorsMiddleware
             return $origin;
         }
 
+        // Allow every traceodd.com subdomain (studio, cricket,
+        // cricket-manager, www) over http/https with any port.
+        if (
+            preg_match(
+                '#^https?://([a-z0-9-]+\.)*traceodd\.com(:\d+)?$#',
+                $origin,
+            ) === 1
+        ) {
+            return $origin;
+        }
+
+        // Allow the packaged desktop app (Todd Studio): Tauri's WebView2
+        // origin on Windows (http(s)://tauri.localhost) and its custom
+        // scheme on macOS/Linux (tauri://localhost).
+        if (
+            preg_match(
+                '#^(tauri://localhost|https?://tauri\.localhost)$#',
+                $origin,
+            ) === 1
+        ) {
+            return $origin;
+        }
+
         // Log rejected origins for debugging
         Log::warning("CORS Origin Rejected", [
             "origin" => $origin,

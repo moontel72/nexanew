@@ -174,7 +174,13 @@ fn build_cors(origins: &[String]) -> Option<CorsLayer> {
     Some(
         CorsLayer::new()
             .allow_origin(parsed)
-            .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::OPTIONS])
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::DELETE,
+                Method::OPTIONS,
+            ])
             .allow_headers([
                 header::AUTHORIZATION,
                 header::CONTENT_TYPE,

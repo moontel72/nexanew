@@ -28,6 +28,8 @@ name: Media Engine — Deploy to VPS
 #   STUDIO_PORT
 #   CRICKET_MANAGER_URL
 #   CRICKET_MANAGER_MATCH_IDS
+#   CORS_ALLOWED_ORIGINS (optional — defaults to the desktop shell +
+#                        traceodd.com subdomains below)
 # ============================================================================
 
 on:
@@ -115,6 +117,14 @@ jobs:
             [ -n '${{ vars.STUDIO_PORT }}' ] && printf 'STUDIO_PORT=%s\n' '${{ vars.STUDIO_PORT }}' >> /opt/todd-media-engine/.env
             [ -n '${{ vars.CRICKET_MANAGER_URL }}' ] && printf 'CRICKET_MANAGER_URL=%s\n' '${{ vars.CRICKET_MANAGER_URL }}' >> /opt/todd-media-engine/.env
             [ -n '${{ vars.CRICKET_MANAGER_MATCH_IDS }}' ] && printf 'CRICKET_MANAGER_MATCH_IDS=%s\n' '${{ vars.CRICKET_MANAGER_MATCH_IDS }}' >> /opt/todd-media-engine/.env
+            # CORS: the packaged desktop app (Tauri WebView2 / macOS custom
+            # scheme) and every traceodd.com subdomain. Overridable via the
+            # CORS_ALLOWED_ORIGINS repository variable.
+            if [ -n '${{ vars.CORS_ALLOWED_ORIGINS }}' ]; then
+              printf 'CORS_ALLOWED_ORIGINS=%s\n' '${{ vars.CORS_ALLOWED_ORIGINS }}' >> /opt/todd-media-engine/.env
+            else
+              printf 'CORS_ALLOWED_ORIGINS=%s\n' 'tauri://localhost,http://tauri.localhost,https://tauri.localhost,https://studio.traceodd.com,https://cricket-manager.traceodd.com,https://cricket.traceodd.com' >> /opt/todd-media-engine/.env
+            fi
             chmod 600 /opt/todd-media-engine/.env
             echo '✅ /opt/todd-media-engine/.env written'
           REMOTE
