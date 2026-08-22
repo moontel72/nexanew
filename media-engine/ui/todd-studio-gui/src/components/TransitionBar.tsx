@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { useDirector } from "../lib/director/directorService";
+import {
+  loadPersistedState,
+  savePersistedState,
+} from "../lib/persistence/persistState";
 import type { TransitionKind } from "../lib/api/types";
 import { Button } from "./ui/Button";
 
@@ -14,7 +18,11 @@ const TRANSITIONS: Array<{ value: TransitionKind; label: string }> = [
  * the take buttons. Every action dispatches to the server-side mixer. */
 export function TransitionBar() {
   const director = useDirector();
-  const [durationMs, setDurationMs] = useState(600);
+  // Phase 4: restore the pre-refresh transition duration synchronously
+  // at mount and persist every slider move.
+  const [durationMs, setDurationMs] = useState(
+    () => loadPersistedState().transitionDurationMs,
+  );
 
   const take = () => {
     switch (director.state.transition) {
@@ -61,7 +69,11 @@ export function TransitionBar() {
           step={100}
           className="min-w-0 flex-1"
           value={durationMs}
-          onChange={(event) => setDurationMs(Number(event.target.value))}
+          onChange={(event) => {
+            const value = Number(event.target.value);
+            setDurationMs(value);
+            savePersistedState({ transitionDurationMs: value });
+          }}
         />
         <span className="w-12 text-right font-mono tabular-nums">
           {durationMs} ms

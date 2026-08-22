@@ -3,6 +3,10 @@ import { api } from "../lib/api/client";
 import { useControlState } from "./useControlState";
 import { getToken } from "../lib/auth/authStore";
 import { clampDb, defaultMix, withBus } from "../lib/audio/audioMixer";
+import {
+  loadPersistedState,
+  savePersistedState,
+} from "../lib/persistence/persistState";
 import type { AudioBus, AudioBusSpec, AudioMixerConfig } from "../lib/api/types";
 
 export type AudioBusPatch = Partial<AudioBusSpec>;
@@ -36,7 +40,13 @@ export function useAudioMixer(roomId: string): AudioMixerApi {
   const serverConfig: AudioMixerConfig | null =
     roomId && control.audioMixes[roomId] ? control.audioMixes[roomId].config : null;
 
-  const [draft, setDraft] = useState<AudioMixerConfig | null>(null);
+  // Phase 4: restore the pre-refresh mix synchronously at mount; the
+  // control feed re-adopts the authoritative server state once it
+  // connects (and this draft is the recovery source if the engine
+  // restarted and lost its in-memory mix).
+  const [draft, setDraft] = useState<AudioMixerConfig | null>(() =>
+    roomId ? (loadPersistedState().audioByRoom[roomId] ?? null) : null,
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +85,10 @@ export function useAudioMixer(roomId: string): AudioMixerApi {
       editingRef.current = true;
       setDraft(next);
       setError(null);
+      // Phase 4: persist the console so a refresh restores the mix.
+      if (roomId) {
+        savePersistedState({ audioByRoom: { [roomId]: next } });
+      }
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {

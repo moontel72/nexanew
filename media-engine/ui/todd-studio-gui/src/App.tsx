@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DirectorProvider } from "./lib/director/directorService";
 import { useRooms } from "./hooks/useRooms";
-import { useTelemetry } from "./hooks/useTelemetry";
 import { useControlState } from "./hooks/useControlState";
 import { env } from "./lib/utils";
 import {
@@ -29,6 +28,7 @@ import { WatermarkControl } from "./components/WatermarkControl";
 import { WagonWheelMap } from "./components/WagonWheelMap";
 import { BroadcastPanel } from "./components/BroadcastPanel";
 import { OverlayController } from "./components/overlays/OverlayController";
+import { TelemetryDashboard } from "./components/TelemetryDashboard";
 
 export default function App() {
   const [authed, setAuthed] = useState(() => isAuthenticated());
@@ -44,7 +44,6 @@ export default function App() {
   useEffect(() => onAuthChange(() => setAuthed(isAuthenticated())), []);
 
   const { rooms } = useRooms();
-  const telemetry = useTelemetry();
   const control = useControlState();
   const [overlayEvent, setOverlayEvent] = useState<string | null>(null);
 
@@ -111,16 +110,7 @@ export default function App() {
               />
               <OverlayController event={overlayEvent} />
             </div>
-            <footer className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>
-                {telemetry
-                  ? `${telemetry.streams.length} active streams · ${telemetry.ice_sessions.length} sessions`
-                  : "connecting telemetry…"}
-              </span>
-              <span className={control.connected ? "text-emerald-400" : "text-amber-400"}>
-                {control.connected ? "control plane live" : "control plane offline"}
-              </span>
-            </footer>
+            <TelemetryDashboard />
           </main>
 
           {/* Director control panel — Phase 2 Option A layout (pure CSS

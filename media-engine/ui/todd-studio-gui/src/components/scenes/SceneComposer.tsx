@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDirector } from "../../lib/director/directorService";
 import { useControlState } from "../../hooks/useControlState";
+import {
+  loadPersistedState,
+  savePersistedState,
+  type PersistedScene,
+} from "../../lib/persistence/persistState";
 import type {
   CameraInfo,
   PiPConfig,
@@ -69,21 +74,44 @@ export function SceneComposer() {
   );
   const cameras = activeRoom?.cameras ?? [];
 
-  const [kind, setKind] = useState<LayoutKind>("fullscreen");
-  const [pip, setPip] = useState<PiPConfig>(() => defaultPip(activeRoomId, cameras));
-  const [split, setSplit] = useState<SplitScreenConfig>(() => defaultSplit(activeRoomId, cameras));
+  // Phase 4: restore the pre-refresh scene draft synchronously at mount
+  // (per room); the engine's program state still arrives via the control
+  // feed and remains authoritative for the on-air indicator.
+  const persisted = activeRoomId
+    ? (loadPersistedState().sceneByRoom[activeRoomId] ?? null)
+    : null;
+
+  const [kind, setKind] = useState<LayoutKind>(persisted?.kind ?? "fullscreen");
+  const [pip, setPip] = useState<PiPConfig>(() =>
+    persisted?.pip ?? defaultPip(activeRoomId, cameras),
+  );
+  const [split, setSplit] = useState<SplitScreenConfig>(() =>
+    persisted?.split ?? defaultSplit(activeRoomId, cameras),
+  );
   const [sideBySide, setSideBySide] = useState<SideBySideConfig>(() =>
-    defaultSideBySide(activeRoomId, cameras),
+    persisted?.sideBySide ?? defaultSideBySide(activeRoomId, cameras),
   );
 
   // Re-anchor the drafts when the director moves to another room.
   useEffect(() => {
     if (!activeRoomId) return;
-    setPip(defaultPip(activeRoomId, cameras));
-    setSplit(defaultSplit(activeRoomId, cameras));
-    setSideBySide(defaultSideBySide(activeRoomId, cameras));
+    const saved = loadPersistedState().sceneByRoom[activeRoomId];
+    setKind(saved?.kind ?? "fullscreen");
+    setPip(saved?.pip ?? defaultPip(activeRoomId, cameras));
+    setSplit(saved?.split ?? defaultSplit(activeRoomId, cameras));
+    setSideBySide(saved?.sideBySide ?? defaultSideBySide(activeRoomId, cameras));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeRoomId]);
+
+  // Phase 4: persist every draft change for the active room.
+  useEffect(() => {
+    if (!activeRoomId) return;
+    const scene: PersistedScene = { kind };
+    if (kind === "picture_in_picture") scene.pip = pip;
+    if (kind === "split_screen") scene.split = split;
+    if (kind === "side_by_side") scene.sideBySide = sideBySide;
+    savePersistedState({ sceneByRoom: { [activeRoomId]: scene } });
+  }, [activeRoomId, kind, pip, split, sideBySide]);
 
   const layout: SceneLayout | null = useMemo(() => {
     switch (kind) {

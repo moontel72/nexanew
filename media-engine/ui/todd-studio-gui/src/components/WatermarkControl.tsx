@@ -11,6 +11,10 @@ import { useDirector } from "../lib/director/directorService";
 import { useControlState } from "../hooks/useControlState";
 import { getToken } from "../lib/auth/authStore";
 import { api } from "../lib/api/client";
+import {
+  loadPersistedState,
+  savePersistedState,
+} from "../lib/persistence/persistState";
 
 export function WatermarkControl() {
   const control = useControlState();
@@ -19,8 +23,12 @@ export function WatermarkControl() {
 
   const serverState = control.overlays[activeRoomId] ?? null;
 
-  const [watermarkUrl, setWatermarkUrl] = useState("");
-  const [watermarkOn, setWatermarkOn] = useState(false);
+  // Phase 4: restore the pre-refresh watermark draft synchronously at
+  // mount; the control feed re-adopts server state after reconnect.
+  const persisted = loadPersistedState();
+
+  const [watermarkUrl, setWatermarkUrl] = useState(persisted.watermark.url);
+  const [watermarkOn, setWatermarkOn] = useState(persisted.watermark.enabled);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hydratedRef = useRef(false);
@@ -69,6 +77,7 @@ export function WatermarkControl() {
 
   const toggleWatermark = (enabled: boolean) => {
     setWatermarkOn(enabled);
+    savePersistedState({ watermark: { enabled, url: watermarkUrl } });
     void sendWatermark(enabled, watermarkUrl);
   };
 
@@ -96,7 +105,10 @@ export function WatermarkControl() {
         placeholder="transparent PNG URL"
         value={watermarkUrl}
         disabled={!activeRoomId}
-        onChange={(event) => setWatermarkUrl(event.target.value)}
+        onChange={(event) => {
+          setWatermarkUrl(event.target.value);
+          savePersistedState({ watermark: { enabled: watermarkOn, url: event.target.value } });
+        }}
         onBlur={() =>
           watermarkOn &&
           void sendWatermark(true, watermarkUrl)

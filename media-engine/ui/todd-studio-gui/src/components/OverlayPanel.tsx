@@ -3,6 +3,10 @@ import { useDirector } from "../lib/director/directorService";
 import { useControlState } from "../hooks/useControlState";
 import { getToken } from "../lib/auth/authStore";
 import { api } from "../lib/api/client";
+import {
+  loadPersistedState,
+  savePersistedState,
+} from "../lib/persistence/persistState";
 import type { BallEventDto, OverlayState } from "../lib/api/types";
 import { Button } from "./ui/Button";
 
@@ -12,9 +16,6 @@ const POPUP_EVENTS: Array<{ id: string; text: string; subtext?: string }> = [
   { id: "wicket", text: "OUT!" },
   { id: "milestone", text: "MILESTONE" },
 ];
-
-/** Default on-air duration of an auto-triggered popup. */
-const DEFAULT_AUTO_DURATION_MS = 4000;
 
 export interface OverlayPanelProps {
   /** Fired for the director's local 3D preview alongside the server
@@ -53,15 +54,20 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
 
   const serverState: OverlayState | null = control.overlays[activeRoomId] ?? null;
 
-  const [title, setTitle] = useState("");
-  const [subtitle, setSubtitle] = useState("");
-  const [scoreboardOn, setScoreboardOn] = useState(false);
+  // Phase 4: restore the pre-refresh lower-third / auto-popup settings
+  // synchronously at mount; the control feed re-adopts server state
+  // after reconnect (existing hydration below).
+  const persisted = loadPersistedState();
+
+  const [title, setTitle] = useState(persisted.scoreboard.title);
+  const [subtitle, setSubtitle] = useState(persisted.scoreboard.subtitle);
+  const [scoreboardOn, setScoreboardOn] = useState(persisted.scoreboard.enabled);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Phase 3 auto-graphics: toggle + on-air duration.
-  const [autoEnabled, setAutoEnabled] = useState(true);
-  const [autoDurationMs, setAutoDurationMs] = useState(DEFAULT_AUTO_DURATION_MS);
+  // Phase 3 auto-graphics: toggle + on-air duration (persisted).
+  const [autoEnabled, setAutoEnabled] = useState(persisted.autoGraphics.enabled);
+  const [autoDurationMs, setAutoDurationMs] = useState(persisted.autoGraphics.durationMs);
 
   const hydratedRef = useRef(false);
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,6 +127,9 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
     setScoreboardOn(enabled);
     setTitle(nextTitle);
     setSubtitle(nextSubtitle);
+    savePersistedState({
+      scoreboard: { enabled, title: nextTitle, subtitle: nextSubtitle },
+    });
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
     pushTimerRef.current = setTimeout(() => {
       void send({
@@ -189,7 +198,12 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
           <input
             type="checkbox"
             checked={autoEnabled}
-            onChange={(event) => setAutoEnabled(event.target.checked)}
+            onChange={(event) => {
+              setAutoEnabled(event.target.checked);
+              savePersistedState({
+                autoGraphics: { enabled: event.target.checked, durationMs: autoDurationMs },
+              });
+            }}
           />
         </div>
         <label className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
@@ -201,7 +215,12 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
             disabled={!autoEnabled}
             onChange={(event) => {
               const value = Number(event.target.value);
-              if (Number.isInteger(value) && value >= 500) setAutoDurationMs(value);
+              if (Number.isInteger(value) && value >= 500) {
+                setAutoDurationMs(value);
+                savePersistedState({
+                  autoGraphics: { enabled: autoEnabled, durationMs: value },
+                });
+              }
             }}
           />
         </label>

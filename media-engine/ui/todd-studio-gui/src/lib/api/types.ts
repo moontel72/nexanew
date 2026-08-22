@@ -112,11 +112,23 @@ export interface IceSessionInfo {
   state: string;
 }
 
+/** Broadcaster device health (pushed by the ground cameras). */
+export interface DeviceTelemetryEntryDto {
+  room_id: string;
+  camera_id: string;
+  battery_pct?: number | null;
+  fps?: number | null;
+  uplink_kbps?: number | null;
+  dropped_frames?: number | null;
+  quality?: "good" | "fair" | "poor" | string | null;
+}
+
 export interface TelemetrySnapshot {
   metrics: [string, number][];
   streams: StreamFeedEntry[];
   ice_sessions: IceSessionInfo[];
   audio_levels: AudioLevelEntry[];
+  devices: DeviceTelemetryEntryDto[];
 }
 
 // --------------------------------------------------------------------------
