@@ -1,0 +1,78 @@
+name: Desktop Build — Windows Installers
+
+# ============================================================================
+# Builds the Todd Studio desktop app (.exe + .msi) on Windows.
+#
+# Triggers:
+#   - Push of a version tag (v*) → build + attach installers to the
+#     GitHub Release for that tag.
+#   - Manual workflow_dispatch → build + upload artifacts only.
+#
+# The production traceodd.com endpoints are baked into the bundle:
+#   VITE_API_BASE_URL      https://studio.traceodd.com   (engine via /api/*)
+#   VITE_STUDIO_LOGIN_URL  https://studio.traceodd.com/api/v1/studio/login
+#   VITE_CRICKET_MANAGER_URL https://cricket-manager.traceodd.com
+# (The committed .env.desktop carries the same values; the explicit env
+#  block here keeps the production contract visible in one place.)
+# ============================================================================
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: media-engine/ui/todd-studio-gui/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build desktop installers (production traceodd.com)
+        working-directory: media-engine/ui/todd-studio-gui
+        env:
+          VITE_API_BASE_URL: https://studio.traceodd.com
+          VITE_WHEP_BASE_URL: ""
+          VITE_STUDIO_LOGIN_URL: https://studio.traceodd.com/api/v1/studio/login
+          VITE_CRICKET_MANAGER_URL: https://cricket-manager.traceodd.com
+          VITE_CRICKET_MATCH_IDS: ""
+          VITE_STUN_URL: stun:stun.l.google.com:19302
+          VITE_TURN_URL: ""
+          VITE_GFX_ASSET_URL: ""
+        run: |
+          npm ci
+          npm run build:desktop -- --bundles nsis,msi
+
+      - name: Upload installers (artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: todd-studio-windows-installers
+          if-no-files-found: error
+          path: |
+            media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/nsis/*.exe
+            media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/msi/*.msi
+
+      - name: Attach installers to the GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/nsis/*.exe
+            media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/msi/*.msi
