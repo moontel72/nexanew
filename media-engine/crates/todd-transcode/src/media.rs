@@ -58,3 +58,42 @@ pub struct RtpChunk {
     pub rid: Option<String>,
     pub packet: Bytes,
 }
+
+impl RtpChunk {
+    /// Parses the RTP timestamp from the 12-byte packet header
+    /// (bytes 4..8, big-endian). Returns `None` for buffers too short
+    /// to carry a header.
+    pub fn rtp_timestamp(&self) -> Option<u32> {
+        let header = self.packet.get(4..8)?;
+        Some(u32::from_be_bytes([
+            header[0], header[1], header[2], header[3],
+        ]))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rtp_timestamp_parses_big_endian_header() {
+        let mut packet = vec![0u8; 24];
+        packet[4..8].copy_from_slice(&123_456u32.to_be_bytes());
+        let chunk = RtpChunk {
+            codec: MediaCodec::H264,
+            rid: None,
+            packet: Bytes::from(packet),
+        };
+        assert_eq!(chunk.rtp_timestamp(), Some(123_456));
+    }
+
+    #[test]
+    fn rtp_timestamp_none_for_short_buffer() {
+        let chunk = RtpChunk {
+            codec: MediaCodec::Opus,
+            rid: None,
+            packet: Bytes::from_static(&[0u8; 4]),
+        };
+        assert_eq!(chunk.rtp_timestamp(), None);
+    }
+}

@@ -1463,14 +1463,23 @@ async fn pump_ingest_feed(
     loop {
         match rx.recv().await {
             Ok(chunk) => {
-                engine
-                    .router
-                    .record_ingress(room_id, camera_id, codec, 0, chunk.packet.len());
+                // The gst re-packetizers (`rtph264pay` / `rtpopuspay`)
+                // stamp every RTP header with the buffer PTS — parse it
+                // instead of passing 0, which collapsed the replay ring
+                // into one access unit and poisoned the jitter stats.
+                let rtp_timestamp = chunk.rtp_timestamp().unwrap_or(0);
+                engine.router.record_ingress(
+                    room_id,
+                    camera_id,
+                    codec,
+                    rtp_timestamp,
+                    chunk.packet.len(),
+                );
                 engine.router.forward(room_id, camera_id, &chunk);
                 engine.replay.capture(
                     room_id,
                     camera_id,
-                    Arc::new(todd_replay::Frame::now(chunk, 0)),
+                    Arc::new(todd_replay::Frame::now(chunk, rtp_timestamp)),
                 );
             }
             Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
