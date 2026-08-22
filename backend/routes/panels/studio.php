@@ -16,7 +16,11 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('api/v1/studio')->group(function (): void {
-    Route::post('login', [StudioAuthController::class, 'login']);
+    // Brute-force gate: 10 attempts/min per email+IP.
+    Route::post('login', [StudioAuthController::class, 'login'])
+        ->middleware('throttle:studio-login');
     // Phase 1 unified SSO: manager bearer token → media-engine JWT.
-    Route::post('exchange', [StudioAuthController::class, 'exchange']);
+    // Endpoint flood gate: 60 requests/min per IP.
+    Route::post('exchange', [StudioAuthController::class, 'exchange'])
+        ->middleware('throttle:studio-exchange');
 });
