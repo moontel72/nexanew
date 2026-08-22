@@ -20,7 +20,7 @@ export function MultiviewGrid({
 
   return (
     <div
-      className="grid gap-2 p-2"
+      className="grid h-full min-h-0 gap-2 overflow-y-auto p-2"
       style={{
         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
         gridAutoRows: "minmax(120px, 1fr)",
