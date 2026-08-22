@@ -13,7 +13,9 @@ use todd_sfu::engine::Engine;
 use todd_telemetry::Telemetry;
 
 use crate::{
+    highlights::Highlights,
     media_plane::{EmbeddedMediaPlane, MediaPlane, RemoteMediaPlane},
+    poll::PollHub,
     routes::control_ws::ControlHub,
     scoreboard::{self, ScoreboardHub, ScoreboardSettings},
     store::{self, RoomStore},
@@ -35,6 +37,10 @@ pub struct AppState {
     pub scoreboard: Arc<ScoreboardHub>,
     /// Control-plane event bus for director WebSocket clients.
     pub control: Arc<ControlHub>,
+    /// Spectator polls per room (Phase 5 fan engagement).
+    pub polls: Arc<PollHub>,
+    /// Innings highlight playlist (Phase 5).
+    pub highlights: Arc<Highlights>,
 }
 
 impl AppState {
@@ -62,6 +68,10 @@ impl AppState {
         // they can publish `score_updated` / config changes to director
         // panels (Phase 1 push pipeline).
         let control = Arc::new(ControlHub::new());
+
+        // Innings highlight playlist — recorded by the auto-replay
+        // pipeline (Phase 5) and exposed via API + control plane.
+        let highlights = Arc::new(Highlights::new());
 
         // The media plane must exist BEFORE the scoreboard sync tasks:
         // scoring events trigger auto-tagged replays on it (Phase 3).
@@ -106,6 +116,7 @@ impl AppState {
             control.clone(),
             plane.clone(),
             store.clone(),
+            highlights.clone(),
         );
 
         Ok(Self {
@@ -116,6 +127,8 @@ impl AppState {
             telemetry,
             scoreboard,
             control,
+            polls: Arc::new(PollHub::new()),
+            highlights: highlights.clone(),
         })
     }
 }

@@ -37,6 +37,8 @@ use todd_replay::session::ReplayInfo;
 use tokio::sync::broadcast;
 
 use crate::{
+    highlights::HighlightEntry,
+    poll::{snapshot_entries, PollSnapshot, PollState},
     routes::rooms,
     scoreboard::{BallByBallState, CricketConfigView},
     state::AppState,
@@ -68,6 +70,10 @@ pub enum ControlEvent {
         scores: Vec<BallByBallState>,
         /// Live replay sessions (manual + auto-tagged) at connect time.
         replays: Vec<ReplayInfo>,
+        /// Active spectator polls per room.
+        polls: Vec<PollSnapshot>,
+        /// Innings highlight playlist (auto-tagged clips).
+        highlights: Vec<HighlightEntry>,
     },
     RoomCreated {
         room: Room,
@@ -114,6 +120,19 @@ pub enum ControlEvent {
     /// A replay session was created (manual trigger or auto-tag).
     ReplayCreated {
         replay: ReplayInfo,
+    },
+    /// A spectator poll was created or its tally changed.
+    PollChanged {
+        room_id: String,
+        poll: PollState,
+    },
+    /// A room's poll was cleared.
+    PollCleared {
+        room_id: String,
+    },
+    /// An auto-tagged clip joined the innings highlight playlist.
+    HighlightAdded {
+        entry: HighlightEntry,
     },
 }
 
@@ -254,6 +273,8 @@ async fn send_snapshot(socket: &mut WebSocket, state: &AppState) -> Result<(), S
             cricket: state.scoreboard.config_view().await,
             scores: state.scoreboard.all(),
             replays: state.plane.list_replays().await.unwrap_or_default(),
+            polls: snapshot_entries(&state.polls),
+            highlights: state.highlights.list().await,
         },
     )
     .await

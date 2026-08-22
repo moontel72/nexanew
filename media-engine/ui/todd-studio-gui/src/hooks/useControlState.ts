@@ -17,6 +17,8 @@ const EMPTY_STATE: ControlState = {
   cricket: null,
   scores: {},
   replays: {},
+  polls: {},
+  highlights: [],
 };
 
 /** One shared control-plane feed per app instance (and per SSO JWT),

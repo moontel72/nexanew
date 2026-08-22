@@ -4,7 +4,8 @@
 //! its snapshot at the session speed and broadcasts paced packets; WHEP
 //! replay viewers and (unpaced) exporters consume them independently.
 
-use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use dashmap::DashMap;
@@ -76,12 +77,29 @@ pub struct ReplayCameraInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplayInfo {
     pub replay_id: String,
+    pub room_id: String,
     pub event: String,
     pub speed: f32,
     pub lookback_ms: u64,
     pub created_at_ms: u64,
     pub status: ReplayStatus,
     pub cameras: Vec<ReplayCameraInfo>,
+}
+
+/// Frame-accurate VAR review state of one replay session.
+#[derive(Debug, Clone, Serialize)]
+pub struct VarCamera {
+    pub camera_id: String,
+    pub frames: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ReplayVarState {
+    pub replay_id: String,
+    pub room_id: String,
+    pub current_frame: usize,
+    pub total_frames: usize,
+    pub cameras: Vec<VarCamera>,
 }
 
 /// One camera's playback stream inside a session.
@@ -93,10 +111,12 @@ pub struct CameraStream {
     pub frames: Arc<Vec<Arc<Frame>>>,
     /// Paced playback broadcast (the WHEP replay source).
     tx: broadcast::Sender<RtpChunk>,
-    done: watch::Sender<bool>,
-    /// Keeps the `done` watch channel open (a closed channel would make
-    /// the producer's `send` fail silently). Never read directly.
-    _done_rx: watch::Receiver<bool>,
+    /// Swappable completion signal — replaced on every VAR seek so the
+    /// session monitor follows the CURRENT producer generation.
+    done: RwLock<watch::Sender<bool>>,
+    /// Keep-alive receiver for `done` (a closed channel would make the
+    /// producer's `send` fail silently). Swapped together with `done`.
+    _done_rx: RwLock<watch::Receiver<bool>>,
 }
 
 impl CameraStream {
@@ -116,7 +136,11 @@ pub struct ReplaySession {
     pub loop_playback: bool,
     streams: DashMap<String, CameraStream>,
     status: watch::Sender<ReplayStatus>,
-    cancel: CancellationToken,
+    /// Current playback generation — replaced on every VAR seek so the
+    /// previous producers wind down.
+    cancel: RwLock<CancellationToken>,
+    /// VAR review cursor (frame index of the current generation).
+    current_frame: AtomicUsize,
 }
 
 impl ReplaySession {
@@ -159,8 +183,8 @@ impl ReplaySession {
                 clock_rate,
                 frames: Arc::clone(&frames),
                 tx,
-                done: done_tx.clone(),
-                _done_rx: done_rx,
+                done: RwLock::new(done_tx.clone()),
+                _done_rx: RwLock::new(done_rx),
             };
 
             // Paced playback producer.
@@ -171,6 +195,7 @@ impl ReplaySession {
                 produce(
                     producer_tx,
                     producer_frames,
+                    0,
                     codec,
                     speed,
                     loop_playback,
@@ -199,17 +224,17 @@ impl ReplaySession {
             loop_playback,
             streams,
             status: status_tx,
-            cancel,
+            cancel: RwLock::new(cancel),
+            current_frame: AtomicUsize::new(0),
         });
 
         // Watch all camera producers; finish the session when all are done.
         let monitor = Arc::clone(&session);
         tokio::spawn(async move {
             loop {
-                let all_done = monitor
-                    .streams
-                    .iter()
-                    .all(|entry| *entry.value().done.borrow());
+                let all_done = monitor.streams.iter().all(|entry| {
+                    *entry.value().done.read().expect("done lock").borrow()
+                });
                 if all_done {
                     let _ = monitor.status.send(ReplayStatus::Finished);
                     break;
@@ -255,6 +280,7 @@ impl ReplaySession {
         cameras.sort_by(|a, b| a.camera_id.cmp(&b.camera_id));
         ReplayInfo {
             replay_id: self.id.clone(),
+            room_id: self.room_id.clone(),
             event: self.event.as_str().to_string(),
             speed: self.speed,
             lookback_ms: self.lookback_ms,
@@ -266,7 +292,73 @@ impl ReplaySession {
 
     /// Closes the session (cancels all producers).
     pub fn close(&self) {
-        self.cancel.cancel();
+        self.cancel
+            .read()
+            .expect("cancel lock")
+            .cancel();
+    }
+
+    /// VAR review: restarts every camera's paced playback from the given
+    /// frame index. All streams are re-spawned from the same cursor, so
+    /// multi-camera playback stays frame-synchronized. Existing WHEP
+    /// subscribers keep their broadcast channels (no reconnect needed).
+    pub fn seek(&self, frame_index: usize) {
+        let new_cancel = CancellationToken::new();
+        *self.cancel.write().expect("cancel lock") = new_cancel.clone();
+        self.current_frame.store(frame_index, Ordering::Relaxed);
+        let _ = self.status.send(ReplayStatus::Playing);
+
+        for entry in self.streams.iter() {
+            let stream = entry.value();
+            let idx = frame_index.min(stream.frames.len().saturating_sub(1));
+            let (done_tx, done_rx) = watch::channel(false);
+            *stream.done.write().expect("done lock") = done_tx.clone();
+            *stream._done_rx.write().expect("done rx lock") = done_rx;
+
+            let tx = stream.tx.clone();
+            let frames = Arc::clone(&stream.frames);
+            let codec = stream.codec;
+            let speed = self.speed;
+            let loop_playback = self.loop_playback;
+            let cancel = new_cancel.clone();
+            tokio::spawn(async move {
+                produce(tx, frames, idx, codec, speed, loop_playback, done_tx, cancel).await;
+            });
+        }
+    }
+
+    /// Current VAR cursor (frame index of the active generation).
+    pub fn current_frame(&self) -> usize {
+        self.current_frame.load(Ordering::Relaxed)
+    }
+
+    /// Longest camera frame count — the session's reviewable range.
+    pub fn total_frames(&self) -> usize {
+        self.streams
+            .iter()
+            .map(|entry| entry.value().frames.len())
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Frame-accurate state for the VAR review UI.
+    pub fn var_state(&self) -> ReplayVarState {
+        let mut cameras: Vec<VarCamera> = self
+            .streams
+            .iter()
+            .map(|entry| VarCamera {
+                camera_id: entry.key().clone(),
+                frames: entry.value().frames.len(),
+            })
+            .collect();
+        cameras.sort_by(|a, b| a.camera_id.cmp(&b.camera_id));
+        ReplayVarState {
+            replay_id: self.id.clone(),
+            room_id: self.room_id.clone(),
+            current_frame: self.current_frame(),
+            total_frames: self.total_frames(),
+            cameras,
+        }
     }
 }
 
@@ -283,13 +375,15 @@ fn now_ms() -> u64 {
 async fn produce(
     tx: broadcast::Sender<RtpChunk>,
     frames: Arc<Vec<Arc<Frame>>>,
+    from: usize,
     codec: MediaCodec,
     speed: f32,
     loop_playback: bool,
     done: watch::Sender<bool>,
     cancel: CancellationToken,
 ) {
-    let packets = retime(&frames, speed);
+    let start = from.min(frames.len());
+    let packets = retime(&frames[start..], speed);
     if packets.is_empty() {
         let _ = done.send(true);
         return;

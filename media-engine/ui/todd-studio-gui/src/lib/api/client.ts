@@ -18,12 +18,15 @@ import type {
   ExportStatus,
   ForwardingStatus,
   ForwardTargetRequest,
+  HighlightEntryDto,
   OverlayCommand,
   OverlayState,
+  PollStateDto,
   ProgramState,
   ProgramTransitionRequest,
   ReplayInfo,
   ReplayTriggerRequest,
+  ReplayVarStateDto,
   Room,
   UpdateCameraRequest,
 } from "./types";
@@ -250,6 +253,71 @@ export const api = {
       token,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ replay_id: replayId, ...body }),
+    });
+  },
+
+  // ── VAR review (Phase 5) ──────────────────────────────────────
+
+  async getReplayVarState(replayId: string, token: string | null) {
+    return request<ReplayVarStateDto>(`/api/v1/replay/${replayId}/var/state`, {
+      method: "GET",
+      token,
+    });
+  },
+
+  async seekReplay(replayId: string, frame: number, token: string | null) {
+    return request<ReplayVarStateDto>(`/api/v1/replay/${replayId}/var/seek`, {
+      method: "POST",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ frame }),
+    });
+  },
+
+  // ── Spectator polls (Phase 5) ─────────────────────────────────
+
+  async createPoll(
+    roomId: string,
+    body: { question: string; options: string[] },
+    token: string | null,
+  ) {
+    return request<PollStateDto>(`/api/v1/poll/${encodeURIComponent(roomId)}`, {
+      method: "POST",
+      token,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  },
+
+  async votePoll(roomId: string, option: number) {
+    return request<PollStateDto>(`/api/v1/poll/${encodeURIComponent(roomId)}/vote`, {
+      method: "POST",
+      token: null,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option }),
+    });
+  },
+
+  async getPoll(roomId: string) {
+    return request<PollStateDto>(`/api/v1/poll/${encodeURIComponent(roomId)}`, {
+      method: "GET",
+      token: null,
+    });
+  },
+
+  async clearPoll(roomId: string, token: string | null) {
+    return request<void>(`/api/v1/poll/${encodeURIComponent(roomId)}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
+  // ── Innings highlights (Phase 5) ──────────────────────────────
+
+  async getHighlights(token: string | null) {
+    return request<HighlightEntryDto[]>("/api/v1/highlights", {
+      method: "GET",
+      token,
     });
   },
 };

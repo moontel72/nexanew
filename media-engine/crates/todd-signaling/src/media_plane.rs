@@ -13,7 +13,7 @@ use todd_common::types::{
 };
 use todd_common::{error::AppError, types::ForwardTarget};
 use todd_replay::export::{ClipExportRequest, ExportStatus};
-use todd_replay::session::{ReplayInfo, ReplayTrigger};
+use todd_replay::session::{ReplayInfo, ReplayTrigger, ReplayVarState};
 use todd_sfu::engine::Engine;
 
 #[async_trait]
@@ -60,6 +60,12 @@ pub trait MediaPlane: Send + Sync {
 
     /// Closes a replay session.
     async fn close_replay(&self, replay_id: &str) -> Result<(), AppError>;
+
+    /// VAR: frame-accurate review state of one replay session.
+    async fn replay_var_state(&self, replay_id: &str) -> Result<ReplayVarState, AppError>;
+
+    /// VAR: synchronized multi-camera seek to a frame index.
+    async fn replay_seek(&self, replay_id: &str, frame: usize) -> Result<ReplayVarState, AppError>;
 
     /// WHEP egress fed from a replay session's paced slow-motion stream.
     async fn create_replay_viewer(
@@ -203,6 +209,14 @@ impl MediaPlane for EmbeddedMediaPlane {
 
     async fn close_replay(&self, replay_id: &str) -> Result<(), AppError> {
         self.engine.close_replay(replay_id).await
+    }
+
+    async fn replay_var_state(&self, replay_id: &str) -> Result<ReplayVarState, AppError> {
+        self.engine.replay.var_state(replay_id)
+    }
+
+    async fn replay_seek(&self, replay_id: &str, frame: usize) -> Result<ReplayVarState, AppError> {
+        self.engine.replay.seek(replay_id, frame)
     }
 
     async fn create_replay_viewer(
@@ -474,6 +488,20 @@ impl MediaPlane for RemoteMediaPlane {
             .error_for_status()
             .map_err(|e| AppError::Internal(format!("broadcaster rejected replay close: {e}")))?;
         Ok(())
+    }
+
+    async fn replay_var_state(&self, _replay_id: &str) -> Result<ReplayVarState, AppError> {
+        Err(AppError::BadRequest(
+            "VAR frame stepping requires the embedded media plane (MEDIA_PLANE=embedded)"
+                .to_string(),
+        ))
+    }
+
+    async fn replay_seek(&self, _replay_id: &str, _frame: usize) -> Result<ReplayVarState, AppError> {
+        Err(AppError::BadRequest(
+            "VAR frame stepping requires the embedded media plane (MEDIA_PLANE=embedded)"
+                .to_string(),
+        ))
     }
 
     async fn create_replay_viewer(

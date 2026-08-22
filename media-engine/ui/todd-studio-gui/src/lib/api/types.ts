@@ -72,12 +72,27 @@ export interface ReplayCameraInfo {
 
 export interface ReplayInfo {
   replay_id: string;
+  room_id: string;
   event: string;
   speed: number;
   lookback_ms: number;
   created_at_ms: number;
   status: "playing" | "finished";
   cameras: ReplayCameraInfo[];
+}
+
+/** Frame-accurate VAR review state of one replay session. */
+export interface VarCameraDto {
+  camera_id: string;
+  frames: number;
+}
+
+export interface ReplayVarStateDto {
+  replay_id: string;
+  room_id: string;
+  current_frame: number;
+  total_frames: number;
+  cameras: VarCameraDto[];
 }
 
 export type ExportState = "pending" | "running" | "done" | "failed";
@@ -389,6 +404,33 @@ export interface BallByBallStateDto {
 }
 
 // --------------------------------------------------------------------------
+// Spectator polls (Phase 5 fan engagement)
+// --------------------------------------------------------------------------
+
+export interface PollOptionDto {
+  label: string;
+  votes: number;
+}
+
+export interface PollStateDto {
+  question: string;
+  options: PollOptionDto[];
+  active: boolean;
+  updated_at_ms: number;
+}
+
+// --------------------------------------------------------------------------
+// Innings highlight playlist (Phase 5)
+// --------------------------------------------------------------------------
+
+export interface HighlightEntryDto {
+  replay_id: string;
+  event: string;
+  match_id?: string | null;
+  created_at_ms: number;
+}
+
+// --------------------------------------------------------------------------
 // Control-plane WebSocket events
 // --------------------------------------------------------------------------
 
@@ -405,6 +447,8 @@ export type ControlEvent =
       cricket: CricketConfigView;
       scores: BallByBallStateDto[];
       replays: ReplayInfo[];
+      polls: Array<{ room_id: string } & PollStateDto>;
+      highlights: HighlightEntryDto[];
     }
   | { type: "room_created"; room: Room }
   | { type: "room_deleted"; room_id: string }
@@ -423,4 +467,7 @@ export type ControlEvent =
   | { type: "forwarding_changed"; status: ForwardingStatus }
   | { type: "cricket_config_changed"; config: CricketConfigView }
   | { type: "score_updated"; match_id: string; score: BallByBallStateDto }
-  | { type: "replay_created"; replay: ReplayInfo };
+  | { type: "replay_created"; replay: ReplayInfo }
+  | { type: "poll_changed"; room_id: string; poll: PollStateDto }
+  | { type: "poll_cleared"; room_id: string }
+  | { type: "highlight_added"; entry: HighlightEntryDto };

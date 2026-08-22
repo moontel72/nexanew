@@ -13,7 +13,9 @@ import type {
   ControlEvent,
   CricketConfigView,
   ForwardingStatus,
+  HighlightEntryDto,
   OverlayState,
+  PollStateDto,
   ProgramState,
   ReplayInfo,
   Room,
@@ -38,6 +40,10 @@ export interface ControlState {
   scores: Record<string, BallByBallStateDto>;
   /** Live replay sessions (manual + auto-tagged) keyed by replay id. */
   replays: Record<string, ReplayInfo>;
+  /** Active spectator polls keyed by room id. */
+  polls: Record<string, PollStateDto>;
+  /** Innings highlight playlist (newest first). */
+  highlights: HighlightEntryDto[];
 }
 
 const EMPTY_STATE: ControlState = {
@@ -51,6 +57,8 @@ const EMPTY_STATE: ControlState = {
   cricket: null,
   scores: {},
   replays: {},
+  polls: {},
+  highlights: [],
 };
 
 export interface ControlFeed {
@@ -116,6 +124,10 @@ function applyEvent(state: ControlState, event: ControlEvent): ControlState {
         replays: Object.fromEntries(
           event.replays.map((replay) => [replay.replay_id, replay]),
         ),
+        polls: Object.fromEntries(
+          event.polls.map((poll) => [poll.room_id, poll]),
+        ),
+        highlights: event.highlights,
       };
     case "room_created":
       return { ...state, rooms: upsertRoom(state.rooms, event.room) };
@@ -180,6 +192,24 @@ function applyEvent(state: ControlState, event: ControlEvent): ControlState {
       return {
         ...state,
         replays: { ...state.replays, [event.replay.replay_id]: event.replay },
+      };
+    case "poll_changed":
+      return {
+        ...state,
+        polls: { ...state.polls, [event.room_id]: event.poll },
+      };
+    case "poll_cleared": {
+      const polls = { ...state.polls };
+      delete polls[event.room_id];
+      return { ...state, polls };
+    }
+    case "highlight_added":
+      return {
+        ...state,
+        highlights: [
+          event.entry,
+          ...state.highlights.filter((e) => e.replay_id !== event.entry.replay_id),
+        ].slice(0, 200),
       };
   }
 }

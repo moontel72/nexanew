@@ -31,6 +31,7 @@ pub use retime::{clamp_speed, retime, RetimedPacket};
 pub use ring::{Frame, RingBuffer};
 pub use session::{
     CameraStream, ReplayEvent, ReplayInfo, ReplaySession, ReplayStatus, ReplayTrigger,
+    ReplayVarState, VarCamera,
 };
 
 use std::sync::Arc;
@@ -153,6 +154,23 @@ impl ReplayManager {
             .collect();
         infos.sort_by_key(|info| std::cmp::Reverse(info.created_at_ms));
         infos
+    }
+
+    /// VAR: frame-accurate review state of one session.
+    pub fn var_state(&self, replay_id: &str) -> Result<ReplayVarState, AppError> {
+        let session = self
+            .session(replay_id)
+            .ok_or_else(|| AppError::NotFound(format!("unknown replay {replay_id}")))?;
+        Ok(session.var_state())
+    }
+
+    /// VAR: restarts the session's synchronized playback at a frame index.
+    pub fn seek(&self, replay_id: &str, frame: usize) -> Result<ReplayVarState, AppError> {
+        let session = self
+            .session(replay_id)
+            .ok_or_else(|| AppError::NotFound(format!("unknown replay {replay_id}")))?;
+        session.seek(frame);
+        Ok(session.var_state())
     }
 
     /// Starts a clip export job (async; status tracked in `exports`).

@@ -106,6 +106,28 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
             axum::routing::post(routes::replay::watch_replay),
         )
         .route(
+            "/replay/{replay_id}/var/state",
+            axum::routing::get(routes::replay::var_state),
+        )
+        .route(
+            "/replay/{replay_id}/var/seek",
+            axum::routing::post(routes::replay::var_seek),
+        )
+        .route(
+            "/poll/{room_id}",
+            axum::routing::post(routes::poll::create_poll)
+                .get(routes::poll::get_poll)
+                .delete(routes::poll::clear_poll),
+        )
+        .route(
+            "/poll/{room_id}/vote",
+            axum::routing::post(routes::poll::vote),
+        )
+        .route(
+            "/highlights",
+            axum::routing::get(routes::highlights::list_highlights),
+        )
+        .route(
             "/program/transition",
             axum::routing::post(routes::program::transition),
         )

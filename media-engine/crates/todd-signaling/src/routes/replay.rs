@@ -22,7 +22,7 @@ use todd_common::{
     http::{sdp_body, whep_response},
 };
 use todd_replay::export::{ClipExportRequest, ExportStatus};
-use todd_replay::session::{ReplayInfo, ReplayTrigger};
+use todd_replay::session::{ReplayInfo, ReplayTrigger, ReplayVarState};
 
 use crate::routes::control_ws::ControlEvent;
 use crate::state::AppState;
@@ -108,4 +108,41 @@ pub async fn watch_replay(
 
     tracing::info!(replay = %replay_id, camera = %camera_id, session = %session_id, "replay watch accepted");
     whep_response(StatusCode::CREATED, Some(&session_id), answer)
+}
+
+/// VAR seek request body (frame-accurate review cursor).
+#[derive(Debug, serde::Deserialize)]
+pub struct VarSeekRequest {
+    pub frame: usize,
+}
+
+/// GET /api/v1/replay/{id}/var/state — frame-accurate review state.
+pub async fn var_state(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(replay_id): Path<String>,
+) -> Result<Json<ReplayVarState>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
+
+    Ok(Json(state.plane.replay_var_state(&replay_id).await?))
+}
+
+/// POST /api/v1/replay/{id}/var/seek — synchronized multi-camera seek.
+/// Every camera stream restarts from the same frame index, keeping the
+/// review timeline frame-synchronized for run-out / stumping decisions.
+pub async fn var_seek(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path(replay_id): Path<String>,
+    Json(req): Json<VarSeekRequest>,
+) -> Result<Json<ReplayVarState>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
+
+    Ok(Json(state.plane.replay_seek(&replay_id, req.frame).await?))
 }

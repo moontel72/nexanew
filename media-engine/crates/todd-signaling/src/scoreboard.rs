@@ -23,6 +23,7 @@ use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
+use crate::highlights::{HighlightEntry, Highlights};
 use crate::media_plane::MediaPlane;
 use crate::reverb::{ReverbClient, ReverbEvent};
 use crate::routes::control_ws::{ControlEvent, ControlHub};
@@ -635,6 +636,7 @@ pub fn spawn_sync(
     control: Arc<ControlHub>,
     plane: Arc<dyn MediaPlane>,
     store: Arc<dyn RoomStore>,
+    highlights: Arc<Highlights>,
 ) -> Arc<ScoreboardHub> {
     let ws_url = settings.ws_url.clone();
     let hub = Arc::new(ScoreboardHub::new(settings.into_config()));
@@ -644,6 +646,7 @@ pub fn spawn_sync(
     let push_control = Arc::clone(&control);
     let push_plane = Arc::clone(&plane);
     let push_store = Arc::clone(&store);
+    let push_highlights = Arc::clone(&highlights);
     tokio::spawn(async move {
         push_loop(
             push_client,
@@ -652,6 +655,7 @@ pub fn spawn_sync(
             ws_url,
             push_plane,
             push_store,
+            push_highlights,
         )
         .await;
     });
@@ -659,7 +663,7 @@ pub fn spawn_sync(
     let poll_hub = Arc::clone(&hub);
     let poll_control = Arc::clone(&control);
     tokio::spawn(async move {
-        poll_loop(client, poll_hub, poll_control, plane, store).await;
+        poll_loop(client, poll_hub, poll_control, plane, store, highlights).await;
     });
 
     hub
@@ -748,6 +752,7 @@ async fn push_loop(
     ws_url: Option<String>,
     plane: Arc<dyn MediaPlane>,
     store: Arc<dyn RoomStore>,
+    highlights: Arc<Highlights>,
 ) {
     let mut backoff_secs: u64 = 1;
     const MAX_BACKOFF_SECS: u64 = 30;
@@ -767,8 +772,16 @@ async fn push_loop(
                         backoff_secs = 1;
                         hub.set_push_connected(true);
                         tracing::info!(url = %url, "cricket reverb push connected");
-                        match run_push_session(&mut socket, &client, &hub, &control, &plane, &store)
-                            .await
+                        match run_push_session(
+                            &mut socket,
+                            &client,
+                            &hub,
+                            &control,
+                            &plane,
+                            &store,
+                            &highlights,
+                        )
+                        .await
                         {
                             Ok(()) => tracing::info!("cricket reverb push session ended"),
                             Err(e) => {
@@ -807,6 +820,7 @@ async fn run_push_session(
     control: &Arc<ControlHub>,
     plane: &Arc<dyn MediaPlane>,
     store: &Arc<dyn RoomStore>,
+    highlights: &Arc<Highlights>,
 ) -> Result<(), String> {
     let mut subscribed: std::collections::HashSet<String> = std::collections::HashSet::new();
 
@@ -840,7 +854,10 @@ async fn run_push_session(
         else {
             continue;
         };
-        handle_push_event(client, hub, control, plane, store, &match_id, event).await;
+        handle_push_event(
+            client, hub, control, plane, store, highlights, &match_id, event,
+        )
+        .await;
     }
 }
 
@@ -852,6 +869,7 @@ async fn handle_push_event(
     control: &Arc<ControlHub>,
     plane: &Arc<dyn MediaPlane>,
     store: &Arc<dyn RoomStore>,
+    highlights: &Arc<Highlights>,
     match_id: &str,
     event: ReverbEvent,
 ) {
@@ -865,10 +883,10 @@ async fn handle_push_event(
             // The context flip usually races the first score push —
             // refresh once so the lower-third never waits for the
             // next scoring event.
-            refresh_match(client, hub, control, plane, store, match_id).await;
+            refresh_match(client, hub, control, plane, store, highlights, match_id).await;
         }
         "score.updated" | "match.updated" | "stream.updated" => {
-            refresh_match(client, hub, control, plane, store, match_id).await;
+            refresh_match(client, hub, control, plane, store, highlights, match_id).await;
         }
         _ => {}
     }
@@ -884,6 +902,7 @@ async fn refresh_match(
     control: &Arc<ControlHub>,
     plane: &Arc<dyn MediaPlane>,
     store: &Arc<dyn RoomStore>,
+    highlights: &Arc<Highlights>,
     match_id: &str,
 ) {
     let config = hub.current_config().await;
@@ -904,6 +923,8 @@ async fn refresh_match(
                             Arc::clone(plane),
                             Arc::clone(store),
                             Arc::clone(control),
+                            Arc::clone(highlights),
+                            match_id.to_string(),
                             event.kind.clone(),
                         );
                     }
@@ -935,6 +956,8 @@ fn spawn_auto_replay(
     plane: Arc<dyn MediaPlane>,
     store: Arc<dyn RoomStore>,
     control: Arc<ControlHub>,
+    highlights: Arc<Highlights>,
+    match_id: String,
     kind: String,
 ) {
     const PRE_MS: u64 = 5_000;
@@ -972,7 +995,18 @@ fn spawn_auto_replay(
                         replay = %info.replay_id,
                         "auto-tagged replay created"
                     );
-                    control.publish(ControlEvent::ReplayCreated { replay: info });
+                    control.publish(ControlEvent::ReplayCreated { replay: info.clone() });
+                    // Phase 5: sequence the clip into the innings
+                    // highlight playlist (newest first, bounded).
+                    let entry = highlights
+                        .record(HighlightEntry {
+                            replay_id: info.replay_id.clone(),
+                            event: kind.clone(),
+                            match_id: Some(match_id.clone()),
+                            created_at_ms: info.created_at_ms,
+                        })
+                        .await;
+                    control.publish(ControlEvent::HighlightAdded { entry });
                 }
                 Err(e) => tracing::warn!(
                     room = %room.id,
@@ -992,6 +1026,7 @@ async fn poll_loop(
     control: Arc<ControlHub>,
     plane: Arc<dyn MediaPlane>,
     store: Arc<dyn RoomStore>,
+    highlights: Arc<Highlights>,
 ) {
     loop {
         // Read the config every round so runtime updates (match list,
@@ -1027,6 +1062,8 @@ async fn poll_loop(
                                     Arc::clone(&plane),
                                     Arc::clone(&store),
                                     Arc::clone(&control),
+                                    Arc::clone(&highlights),
+                                    match_config.match_id.clone(),
                                     event.kind.clone(),
                                 );
                             }

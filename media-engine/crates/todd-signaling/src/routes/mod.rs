@@ -1,6 +1,8 @@
 pub mod audio;
 pub mod control_ws;
 pub mod health;
+pub mod highlights;
+pub mod poll;
 pub mod program;
 pub mod replay;
 pub mod rooms;

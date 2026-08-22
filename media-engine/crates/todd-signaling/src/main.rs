@@ -6,7 +6,9 @@
 //! binary proxies WHIP/forwarding to the standalone Broadcaster.
 
 mod app;
+mod highlights;
 mod media_plane;
+mod poll;
 mod reverb;
 mod routes;
 mod scoreboard;

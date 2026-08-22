@@ -29,6 +29,9 @@ import { WagonWheelMap } from "./components/WagonWheelMap";
 import { BroadcastPanel } from "./components/BroadcastPanel";
 import { OverlayController } from "./components/overlays/OverlayController";
 import { TelemetryDashboard } from "./components/TelemetryDashboard";
+import { VarReviewPanel } from "./components/VarReviewPanel";
+import { PollOverlay, PollPanel } from "./components/PollOverlay";
+import { HighlightsPanel } from "./components/HighlightsPanel";
 
 export default function App() {
   const [authed, setAuthed] = useState(() => isAuthenticated());
@@ -109,6 +112,7 @@ export default function App() {
                 columns={feeds.length > 8 ? 4 : feeds.length > 2 ? 3 : 2}
               />
               <OverlayController event={overlayEvent} />
+              <PollOverlay />
             </div>
             <TelemetryDashboard />
           </main>
@@ -126,6 +130,7 @@ export default function App() {
                 roomId={feeds[0]?.roomId ?? ""}
                 cameraIds={cameraIds}
               />
+              <VarReviewPanel />
               <OverlayPanel onLocalEvent={setOverlayEvent} />
               <AudioMixer />
             </section>
@@ -135,9 +140,11 @@ export default function App() {
               <div className="config-zone-content">
                 <InputPanel />
                 <WatermarkControl />
+                <PollPanel />
                 <SceneComposer />
                 <SegmentManager onFire={() => setOverlayEvent("BREAK")} />
                 <BroadcastPanel />
+                <HighlightsPanel />
                 <SettingsPanel />
               </div>
             </details>
