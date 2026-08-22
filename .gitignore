@@ -13,6 +13,8 @@ coverage/
 
 **/.env
 **/.env.*
+!**/.env.example
+!**/.env.desktop
 
 backend/vendor/
 backend/storage/
