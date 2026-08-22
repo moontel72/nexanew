@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
@@ -410,9 +410,10 @@ pub struct ScoreboardHub {
     sync: DashMap<String, MatchSyncStatus>,
     active_match: RwLock<Option<String>>,
     last_push_at: DashMap<String, i64>,
-    /// Last processed score timestamp per match — dedupes Reverb pushes
-    /// and REST polls so auto-replay fires exactly once per ball.
-    last_score_at: DashMap<String, i64>,
+    /// Last processed ball identity per match — dedupes Reverb pushes
+    /// and REST polls so auto-replay/auto-graphics fire exactly once
+    /// per ball.
+    last_score_at: DashMap<String, String>,
     push_connected: AtomicBool,
 }
 
@@ -535,16 +536,16 @@ impl ScoreboardHub {
         self.push_connected.store(connected, Ordering::Relaxed);
     }
 
-    /// Returns true the first time a given score timestamp is seen for
-    /// a match — the dedupe gate for auto-replay/auto-graphics fan-out.
-    pub fn is_new_score(&self, match_id: &str, updated_at_ms: i64) -> bool {
+    /// Returns true the first time a given ball identity is seen for a
+    /// match — the dedupe gate for auto-replay/auto-graphics fan-out.
+    pub fn is_new_score(&self, match_id: &str, identity: &str) -> bool {
         if let Some(prev) = self.last_score_at.get(match_id) {
-            if *prev.value() == updated_at_ms {
+            if prev.value().as_str() == identity {
                 return false;
             }
         }
         self.last_score_at
-            .insert(match_id.to_string(), updated_at_ms);
+            .insert(match_id.to_string(), identity.to_string());
         true
     }
 
@@ -873,6 +874,7 @@ async fn handle_push_event(
     match_id: &str,
     event: ReverbEvent,
 ) {
+    let event_ts_ms = event_timestamp_ms(&event.data);
     match event.event.as_str() {
         "match.context.selected" => {
             // Manager flipped the active match: adopt it, register it if
@@ -883,10 +885,23 @@ async fn handle_push_event(
             // The context flip usually races the first score push —
             // refresh once so the lower-third never waits for the
             // next scoring event.
-            refresh_match(client, hub, control, plane, store, highlights, match_id).await;
+            refresh_match(
+                client, hub, control, plane, store, highlights, match_id, None,
+            )
+            .await;
         }
         "score.updated" | "match.updated" | "stream.updated" => {
-            refresh_match(client, hub, control, plane, store, highlights, match_id).await;
+            refresh_match(
+                client,
+                hub,
+                control,
+                plane,
+                store,
+                highlights,
+                match_id,
+                event_ts_ms,
+            )
+            .await;
         }
         _ => {}
     }
@@ -894,7 +909,9 @@ async fn handle_push_event(
 
 /// Event-triggered canonical refresh: pull the authoritative state once
 /// and fan it out to director panels. Replay-worthy balls spawn an
-/// auto-tagged replay clip covering ~5s before and ~3s after the event.
+/// auto-tagged replay clip covering ~5s before and ~3s after the event —
+/// exactly once per ball, deduped on the ball identity regardless of how
+/// many push/poll events re-deliver it.
 #[allow(clippy::too_many_arguments)]
 async fn refresh_match(
     client: &reqwest::Client,
@@ -904,6 +921,7 @@ async fn refresh_match(
     store: &Arc<dyn RoomStore>,
     highlights: &Arc<Highlights>,
     match_id: &str,
+    event_ts_ms: Option<i64>,
 ) {
     let config = hub.current_config().await;
     let base_url = config.base_url.clone();
@@ -912,30 +930,18 @@ async fn refresh_match(
 
     match fetch_match(client, &base_url, match_id, token.as_deref()).await {
         Ok(state) => {
-            let is_new = hub.is_new_score(match_id, state.updated_at_ms);
-            hub.record_sync(match_id, Ok(()), SyncTransport::Push);
-            hub.touch_push(match_id);
-
-            if is_new {
-                if let Some(event) = state.last_event.clone() {
-                    if is_replay_worthy(&event.kind) {
-                        spawn_auto_replay(
-                            Arc::clone(plane),
-                            Arc::clone(store),
-                            Arc::clone(control),
-                            Arc::clone(highlights),
-                            match_id.to_string(),
-                            event.kind.clone(),
-                        );
-                    }
-                }
-            }
-
-            hub.upsert(state.clone());
-            control.publish(ControlEvent::ScoreUpdated {
-                match_id: match_id.to_string(),
-                score: state,
-            });
+            apply_fetched_state(
+                hub,
+                control,
+                plane,
+                store,
+                highlights,
+                match_id,
+                SyncTransport::Push,
+                event_ts_ms,
+                state,
+            )
+            .await;
         }
         Err(message) => {
             hub.record_sync(match_id, Err(message), SyncTransport::Push);
@@ -943,8 +949,95 @@ async fn refresh_match(
     }
 }
 
-fn is_replay_worthy(kind: &str) -> bool {
-    matches!(kind, "four" | "six" | "wicket" | "catch")
+/// Stable identity of the current ball, derived from the manager's
+/// authoritative counters: every push/poll re-delivering the same ball
+/// yields the same key, and the next recorded ball a new one.
+fn ball_identity(state: &BallByBallState) -> String {
+    let kind = state
+        .last_event
+        .as_ref()
+        .map(|event| event.kind.as_str())
+        .unwrap_or("none");
+    format!("{}:{}:{kind}", state.runs, state.wickets)
+}
+
+/// The manager's broadcast timestamp (`score.updated` / `match.updated` /
+/// `stream.updated` payloads), parsed from ISO-8601.
+fn event_timestamp_ms(data: &serde_json::Value) -> Option<i64> {
+    let ts = data.get("timestamp")?.as_str()?;
+    DateTime::parse_from_rfc3339(ts)
+        .ok()
+        .map(|dt| dt.timestamp_millis())
+}
+
+/// The auto-replay tag for the last recorded ball — `None` when it is
+/// not replay-worthy. A milestone reached on a boundary is still a
+/// four/six: the milestone drives the popup, but the boundary must
+/// auto-replay too.
+fn replay_event_tag(state: &BallByBallState) -> Option<&'static str> {
+    match state.last_event.as_ref().map(|event| event.kind.as_str()) {
+        Some("four") => Some("four"),
+        Some("six") => Some("six"),
+        Some("wicket") => Some("wicket"),
+        Some("catch") => Some("catch"),
+        Some("milestone") => match state.recent_balls.last().map(String::as_str) {
+            Some("4") => Some("four"),
+            Some("6") => Some("six"),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Applies a freshly fetched score state: dedupes on the ball identity,
+/// stabilizes `updated_at_ms` (manager's broadcast time on first sight,
+/// preserved on re-deliveries), and fans out auto-replay plus the
+/// control event exactly once per ball.
+#[allow(clippy::too_many_arguments)]
+async fn apply_fetched_state(
+    hub: &Arc<ScoreboardHub>,
+    control: &Arc<ControlHub>,
+    plane: &Arc<dyn MediaPlane>,
+    store: &Arc<dyn RoomStore>,
+    highlights: &Arc<Highlights>,
+    match_id: &str,
+    transport: SyncTransport,
+    event_ts_ms: Option<i64>,
+    mut state: BallByBallState,
+) {
+    let identity = ball_identity(&state);
+    let is_new = hub.is_new_score(match_id, &identity);
+    if is_new {
+        // Sync the displayed timestamp with the manager's score-update
+        // event; keep the local receipt time when the event has none.
+        if let Some(ts) = event_ts_ms {
+            state.updated_at_ms = ts;
+        }
+    } else if let Some(prev) = hub.get(match_id) {
+        // Re-delivery of the same ball (striker swap, context flip,
+        // watchdog poll): preserve the first-seen timestamp so the
+        // director panels don't re-fire the popup or the replay.
+        state.updated_at_ms = prev.updated_at_ms;
+    }
+    hub.record_sync(match_id, Ok(()), transport);
+    hub.touch_push(match_id);
+    if is_new {
+        if let Some(tag) = replay_event_tag(&state) {
+            spawn_auto_replay(
+                Arc::clone(plane),
+                Arc::clone(store),
+                Arc::clone(control),
+                Arc::clone(highlights),
+                match_id.to_string(),
+                tag.to_string(),
+            );
+        }
+    }
+    hub.upsert(state.clone());
+    control.publish(ControlEvent::ScoreUpdated {
+        match_id: match_id.to_string(),
+        score: state,
+    });
 }
 
 /// Auto-tag: waits PAUSE_MS so the clip covers the action after the
@@ -995,7 +1088,9 @@ fn spawn_auto_replay(
                         replay = %info.replay_id,
                         "auto-tagged replay created"
                     );
-                    control.publish(ControlEvent::ReplayCreated { replay: info.clone() });
+                    control.publish(ControlEvent::ReplayCreated {
+                        replay: info.clone(),
+                    });
                     // Phase 5: sequence the clip into the innings
                     // highlight playlist (newest first, bounded).
                     let entry = highlights
@@ -1053,27 +1148,18 @@ async fn poll_loop(
             .await
             {
                 Ok(state) => {
-                    let is_new = hub.is_new_score(&match_config.match_id, state.updated_at_ms);
-                    hub.record_sync(&match_config.match_id, Ok(()), SyncTransport::Poll);
-                    if is_new {
-                        if let Some(event) = state.last_event.clone() {
-                            if is_replay_worthy(&event.kind) {
-                                spawn_auto_replay(
-                                    Arc::clone(&plane),
-                                    Arc::clone(&store),
-                                    Arc::clone(&control),
-                                    Arc::clone(&highlights),
-                                    match_config.match_id.clone(),
-                                    event.kind.clone(),
-                                );
-                            }
-                        }
-                    }
-                    hub.upsert(state.clone());
-                    control.publish(ControlEvent::ScoreUpdated {
-                        match_id: match_config.match_id.clone(),
-                        score: state,
-                    });
+                    apply_fetched_state(
+                        &hub,
+                        &control,
+                        &plane,
+                        &store,
+                        &highlights,
+                        &match_config.match_id,
+                        SyncTransport::Poll,
+                        None,
+                        state,
+                    )
+                    .await;
                 }
                 Err(message) => {
                     hub.record_sync(
@@ -1326,6 +1412,109 @@ mod tests {
         assert_eq!(
             override_url,
             "wss://reverb.internal/app/abc?protocol=7&client=traceodd-engine&version=1.0.0&flash=false"
+        );
+    }
+
+    fn state_with(
+        runs: u32,
+        wickets: u32,
+        kind: Option<&str>,
+        last_ball: Option<&str>,
+    ) -> BallByBallState {
+        BallByBallState {
+            match_id: "demo".to_string(),
+            batting_team: "A".to_string(),
+            bowling_team: "B".to_string(),
+            runs,
+            wickets,
+            overs: 0.0,
+            run_rate: 0.0,
+            batter_on_strike: "—".to_string(),
+            batter_non_strike: "—".to_string(),
+            bowler: "—".to_string(),
+            recent_balls: last_ball.into_iter().map(str::to_string).collect(),
+            updated_at_ms: 1_000,
+            last_event: kind.map(|k| BallEvent {
+                kind: k.to_string(),
+                text: String::new(),
+                runs: 0,
+                zone: None,
+                direction: None,
+                x: None,
+                y: None,
+                milestone_runs: None,
+                milestone_player: None,
+            }),
+        }
+    }
+
+    #[test]
+    fn ball_identity_is_stable_and_changes_per_ball() {
+        let four = state_with(104, 3, Some("four"), Some("4"));
+        let redelivered = state_with(104, 3, Some("four"), Some("4"));
+        let six = state_with(110, 3, Some("six"), Some("6"));
+        let wicket = state_with(110, 4, Some("catch"), Some("W"));
+        assert_eq!(ball_identity(&four), ball_identity(&redelivered));
+        assert_ne!(ball_identity(&four), ball_identity(&six));
+        assert_ne!(ball_identity(&six), ball_identity(&wicket));
+    }
+
+    #[tokio::test]
+    async fn is_new_score_dedupes_on_ball_identity() {
+        let hub = ScoreboardHub::new(
+            ScoreboardSettings::new("https://m.example".to_string(), vec![], 3000, None)
+                .into_config(),
+        );
+        assert!(hub.is_new_score("m-1", "104:3:four"));
+        assert!(!hub.is_new_score("m-1", "104:3:four"));
+        assert!(hub.is_new_score("m-1", "110:3:six"));
+        // The gate is per-match.
+        assert!(hub.is_new_score("m-2", "104:3:four"));
+    }
+
+    #[test]
+    fn replay_tag_maps_events_and_milestone_boundaries() {
+        assert_eq!(
+            replay_event_tag(&state_with(104, 3, Some("four"), Some("4"))),
+            Some("four")
+        );
+        assert_eq!(
+            replay_event_tag(&state_with(110, 3, Some("six"), Some("6"))),
+            Some("six")
+        );
+        assert_eq!(
+            replay_event_tag(&state_with(111, 4, Some("wicket"), Some("W"))),
+            Some("wicket")
+        );
+        assert_eq!(
+            replay_event_tag(&state_with(111, 4, Some("catch"), Some("W"))),
+            Some("catch")
+        );
+        // The milestone popup wins, but a boundary ball still auto-replays.
+        assert_eq!(
+            replay_event_tag(&state_with(150, 2, Some("milestone"), Some("4"))),
+            Some("four")
+        );
+        assert_eq!(
+            replay_event_tag(&state_with(150, 2, Some("milestone"), Some("6"))),
+            Some("six")
+        );
+        // A milestone reached on a single is not a boundary — no replay.
+        assert_eq!(
+            replay_event_tag(&state_with(150, 2, Some("milestone"), Some("1"))),
+            None
+        );
+        assert_eq!(replay_event_tag(&state_with(150, 2, None, Some("1"))), None);
+    }
+
+    #[test]
+    fn event_timestamp_parses_manager_iso8601() {
+        let data = serde_json::json!({ "timestamp": "2026-08-22T10:00:00.123+00:00" });
+        let ms = event_timestamp_ms(&data).expect("iso-8601 timestamp parses");
+        assert!(ms > 0);
+        assert_eq!(
+            event_timestamp_ms(&serde_json::json!({ "match_id": "m-1" })),
+            None
         );
     }
 }
