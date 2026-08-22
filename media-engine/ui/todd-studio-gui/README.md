@@ -90,6 +90,51 @@ Output goes to `dist/`. The build runs `tsc` (type-check) followed by
 `vite build` (bundling). Vite code-splitting separates React and Three.js
 into `react-vendor` and `three-vendor` chunks to keep the main entry small.
 
+`npm run build:web` is an explicit alias for the same web production
+bundle — the two scripts coexist so CI and local workflows never break.
+
+## Desktop build (Windows .exe installer)
+
+```bash
+npm run build:desktop            # NSIS + MSI installers (bundle.targets: "all")
+npm run build:desktop:nsis       # NSIS .exe setup only
+npm run build:desktop:msi        # MSI only
+npm run build:desktop:dry-run    # print the resolved build environment
+```
+
+The desktop launcher (`scripts/build-desktop.mjs`) bakes the committed
+`.env.desktop` template into the package: its `VITE_*` values are injected
+into the process environment before `tauri build`, so the inner Vite
+production build freezes them into `import.meta.env`. Override any value
+per build by pre-setting the same variable in the shell (process env wins):
+
+```powershell
+# PowerShell
+$env:VITE_API_BASE_URL="http://10.0.0.5:8080"; npm run build:desktop
+```
+
+```bash
+# bash
+VITE_API_BASE_URL=http://10.0.0.5:8080 npm run build:desktop
+```
+
+Output installers land in `src-tauri/target/release/bundle/`
+(`nsis/*-setup.exe`, `msi/*.msi`). The packaged app defaults to a **local**
+media engine (`http://127.0.0.1:8080`) — point it at a remote engine by
+overriding `VITE_API_BASE_URL` at build time.
+
+### Desktop-specific requirements
+
+- **CORS:** the packaged app origin is `tauri://localhost`. The media
+  engine must include it in `CORS_ALLOWED_ORIGINS` (the WHEP
+  `POST application/sdp` triggers a preflight), and the SSO login URL
+  must be absolute (`VITE_STUDIO_LOGIN_URL` in `.env.desktop`).
+- **GPU:** WebView2 (Chromium) enables hardware-accelerated video decode
+  by default — keep GPU acceleration on for multi-camera WHEP playback.
+- **Installer:** NSIS installs per-user (no admin prompt;
+  `bundle.windows.nsis.installMode: "currentUser"`). Unsigned builds show
+  the standard SmartScreen warning until code-signing is configured.
+
 ## Backend contracts used
 
 | Contract | Method | Notes |
