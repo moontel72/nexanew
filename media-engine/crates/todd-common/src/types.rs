@@ -479,6 +479,23 @@ pub struct WatermarkSpec {
     pub y: f32,
 }
 
+/// One answer option of a spectator poll, burned into the program video.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PollOptionSpec {
+    pub label: String,
+    #[serde(default)]
+    pub votes: u64,
+}
+
+/// Live spectator poll burned into the program composite (WHEP/RTMP
+/// viewers see the tally, not just director panels).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PollOverlaySpec {
+    pub question: String,
+    #[serde(default)]
+    pub options: Vec<PollOptionSpec>,
+}
+
 fn default_watermark_x() -> f32 {
     0.965
 }
@@ -496,6 +513,8 @@ pub struct OverlayState {
     pub popup: Option<EventPopupSpec>,
     #[serde(default)]
     pub watermark: Option<WatermarkSpec>,
+    #[serde(default)]
+    pub poll: Option<PollOverlaySpec>,
 }
 
 /// A burn-in command for `POST /api/v1/program/overlay`. Serde-tagged:
@@ -529,6 +548,14 @@ pub enum OverlayCommand {
         #[serde(default = "default_watermark_y")]
         y: f32,
     },
+    /// Show/update the live spectator poll burn-in.
+    Poll {
+        question: String,
+        #[serde(default)]
+        options: Vec<PollOptionSpec>,
+    },
+    /// Remove the poll burn-in (other overlays stay on air).
+    PollClear,
 }
 
 /// Wrapper carrying the room id for overlay commands.
@@ -671,6 +698,31 @@ mod tests {
         };
         let json = serde_json::to_string(&command).unwrap();
         assert!(json.contains("\"kind\":\"scoreboard\""));
+
+        let command = OverlayCommand::Poll {
+            question: "Player of the match?".to_string(),
+            options: vec![PollOptionSpec {
+                label: "Khan".to_string(),
+                votes: 12,
+            }],
+        };
+        let json = serde_json::to_string(&command).unwrap();
+        assert!(json.contains("\"kind\":\"poll\""));
+        let back: OverlayCommand = serde_json::from_str(&json).unwrap();
+        assert!(matches!(back, OverlayCommand::Poll { .. }));
+
+        let command = OverlayCommand::PollClear;
+        let json = serde_json::to_string(&command).unwrap();
+        assert!(json.contains("\"kind\":\"poll_clear\""));
+        let back: OverlayCommand = serde_json::from_str(&json).unwrap();
+        assert!(matches!(back, OverlayCommand::PollClear));
+
+        // OverlayState gains the poll slot alongside the existing ones.
+        let state: OverlayState = serde_json::from_str(
+            "{\"scoreboard\":null,\"popup\":null,\"watermark\":null,\"poll\":null}",
+        )
+        .unwrap();
+        assert!(state.poll.is_none());
     }
 
     #[test]

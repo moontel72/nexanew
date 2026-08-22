@@ -109,8 +109,10 @@ post metering into the telemetry feed. The mix is controlled live via
 
 The program compositor burns graphics into the output: a `textoverlay`
 scoreboard lower-third, animated `textoverlay` event popups (fade
-in/hold/fade out) and a `gdkpixbufoverlay` corner watermark — controlled
-live via `POST /api/v1/program/overlay`. The mixed program composite
+in/hold/fade out), a `gdkpixbufoverlay` corner watermark, and a
+persistent `textoverlay` spectator-poll lower-third (question + live
+vote bars, updated on every vote) — controlled live via
+`POST /api/v1/program/overlay`. The mixed program composite
 (H.264 video + Opus audio) can be pushed to external RTMP/SRT/file
 destinations via `POST /api/v1/room/{id}/forward` with
 `source: "program"`; runtime statuses are tracked by the engine and

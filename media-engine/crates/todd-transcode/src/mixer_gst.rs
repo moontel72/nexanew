@@ -9,7 +9,7 @@
 //! stinger:    uridecodebin (uri set at runtime) → videoconvert → videoscale
 //!             → alpha(stinger_alpha) → compositor.sink_stinger
 //! overlays:   gdkpixbufoverlay (watermark) / textoverlay (lower-third,
-//!             popup) → alpha gates → compositor
+//!             popup, spectator poll) → alpha gates → compositor
 //! compositor → videoconvert → encode (h264) → rtph264pay → appsink → fan-out
 //!
 //! per bus b:  appsrc (Opus RTP) → rtpopusdepay → opusdec → audioconvert
@@ -55,8 +55,8 @@ use tokio::task::JoinHandle;
 use crate::hw::{h264_encode_plan, resolve_encoder};
 use crate::media::{MediaCodec, RtpChunk};
 use crate::mixer::{
-    compute_levels, ease_progress, plan_scene, MixerOutputConfig, PixelRect, ScenePlan, SlotPlan,
-    MAX_SLOTS,
+    compute_levels, ease_progress, format_poll_text, plan_scene, MixerOutputConfig, PixelRect,
+    ScenePlan, SlotPlan, MAX_SLOTS,
 };
 
 /// Called with `(bus, peak_db, rms_db)` whenever a metering tap samples
@@ -83,9 +83,12 @@ pub struct GstProgramMixer {
     lowerthird: gst::Element,
     /// Animated event popup (textoverlay).
     popup: gst::Element,
-    /// Alpha gates of the lower-third / popup branches.
+    /// Live spectator poll burn-in (textoverlay, persistent while active).
+    poll: gst::Element,
+    /// Alpha gates of the lower-third / popup / poll branches.
     lt_alpha: gst::Element,
     pop_alpha: gst::Element,
+    poll_alpha: gst::Element,
     video_tx: broadcast::Sender<RtpChunk>,
     audio_tx: broadcast::Sender<RtpChunk>,
     width: u32,
@@ -224,6 +227,12 @@ impl GstProgramMixer {
         let pop_alpha = pipeline
             .by_name("pop_alpha")
             .ok_or_else(|| AppError::Internal("pop_alpha lookup failed".to_string()))?;
+        let poll = pipeline
+            .by_name("poll")
+            .ok_or_else(|| AppError::Internal("poll lookup failed".to_string()))?;
+        let poll_alpha = pipeline
+            .by_name("poll_alpha")
+            .ok_or_else(|| AppError::Internal("poll_alpha lookup failed".to_string()))?;
 
         let (video_tx, _) = broadcast::channel::<RtpChunk>(256);
         let (audio_tx, _) = broadcast::channel::<RtpChunk>(256);
@@ -307,8 +316,10 @@ impl GstProgramMixer {
             watermark,
             lowerthird,
             popup,
+            poll,
             lt_alpha,
             pop_alpha,
+            poll_alpha,
             video_tx,
             audio_tx,
             width: config.width,
@@ -397,6 +408,18 @@ impl GstProgramMixer {
             }
             None => {
                 let _ = self.watermark.set_property_from_str("alpha", "0.0");
+            }
+        }
+
+        // Live spectator poll: persistent while a poll is active, updated
+        // on every vote so WHEP/RTMP viewers follow the tally.
+        match &overlays.poll {
+            Some(poll) => {
+                let _ = self.poll.set_property_from_str("text", &format_poll_text(poll));
+                let _ = self.poll_alpha.set_property_from_str("alpha", "1.0");
+            }
+            None => {
+                let _ = self.poll_alpha.set_property_from_str("alpha", "0.0");
             }
         }
     }
@@ -771,6 +794,13 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
          ! alpha name=pop_alpha alpha=0.0 ! comp."
             .to_string(),
     );
+    // Live spectator poll (persistent while a poll is active).
+    branches.push(
+        "textoverlay name=poll text=\"\" valignment=top halignment=center ypos=28 \
+         line-alignment=center shaded-background=true font-desc=\"Sans Bold 22\" \
+         ! alpha name=poll_alpha alpha=0.0 ! comp."
+            .to_string(),
+    );
 
     // ---- audio stage: one branch per bus + silence keep-alive pad -----
     for bus in AudioBus::ALL {
@@ -909,6 +939,8 @@ mod tests {
         assert!(description.contains("name=lt_alpha"));
         assert!(description.contains("name=popup"));
         assert!(description.contains("name=pop_alpha"));
+        assert!(description.contains("name=poll"));
+        assert!(description.contains("name=poll_alpha"));
     }
 
     #[test]

@@ -243,6 +243,44 @@ pub fn ease_progress(t: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
+/// Escapes Pango markup metacharacters for `textoverlay` text.
+pub fn escape_markup(input: &str) -> String {
+    input
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+/// Renders a spectator poll as `textoverlay` text: the question line plus
+/// one line per option with a 10-block vote bar, percentage and tally.
+/// Pure string formatting — unit-testable without a GStreamer runtime.
+pub fn format_poll_text(poll: &todd_common::types::PollOverlaySpec) -> String {
+    const BAR_BLOCKS: usize = 10;
+    let total: u64 = poll.options.iter().map(|option| option.votes).sum();
+    let mut lines = Vec::with_capacity(poll.options.len() + 1);
+    lines.push(escape_markup(&poll.question));
+    for option in &poll.options {
+        let percent = if total == 0 {
+            0.0
+        } else {
+            (option.votes as f64 * 100.0) / total as f64
+        };
+        let filled = (percent / 100.0 * BAR_BLOCKS as f64).round() as usize;
+        let bar = format!(
+            "{}{}",
+            "█".repeat(filled),
+            "░".repeat(BAR_BLOCKS - filled)
+        );
+        lines.push(format!(
+            "{}  {}  {percent:.0}%  ({} votes)",
+            escape_markup(&option.label),
+            bar,
+            option.votes
+        ));
+    }
+    lines.join("\n")
+}
+
 /// Computes `(peak_db, rms_db)` from little-endian interleaved S16LE PCM.
 /// Replaces GStreamer `level`-element message parsing: the mixer taps raw
 /// PCM with appsinks and meters it here, deterministically.
@@ -381,6 +419,49 @@ mod tests {
             &source("cam-1"),
         );
         assert_eq!(plan.sources().len(), 1);
+    }
+
+    #[test]
+    fn poll_text_renders_bars_percentages_and_escapes_markup() {
+        use todd_common::types::{PollOptionSpec, PollOverlaySpec};
+        let poll = PollOverlaySpec {
+            question: "Who wins?".to_string(),
+            options: vec![
+                PollOptionSpec {
+                    label: "A & <B>".to_string(),
+                    votes: 3,
+                },
+                PollOptionSpec {
+                    label: "C".to_string(),
+                    votes: 1,
+                },
+            ],
+        };
+        let text = format_poll_text(&poll);
+        let mut lines = text.split('\n');
+        assert_eq!(lines.next(), Some("Who wins?"));
+        let first = lines.next().unwrap();
+        assert!(first.starts_with("A &amp; &lt;B&gt;"), "markup escaped: {first}");
+        assert!(first.contains("75%"));
+        assert!(first.contains("(3 votes)"));
+        let second = lines.next().unwrap();
+        assert!(second.contains("25%"));
+        assert!(second.contains("(1 votes)"));
+    }
+
+    #[test]
+    fn poll_text_handles_zero_votes() {
+        use todd_common::types::{PollOptionSpec, PollOverlaySpec};
+        let poll = PollOverlaySpec {
+            question: "Q".to_string(),
+            options: vec![PollOptionSpec {
+                label: "A".to_string(),
+                votes: 0,
+            }],
+        };
+        let text = format_poll_text(&poll);
+        assert!(text.contains("0%"));
+        assert!(text.contains("░░░░░░░░░░"));
     }
 
     #[test]

@@ -572,6 +572,15 @@ impl Engine {
                     None
                 };
             }
+            OverlayCommand::Poll { question, options } => {
+                overlays.poll = Some(todd_common::types::PollOverlaySpec {
+                    question,
+                    options,
+                });
+            }
+            OverlayCommand::PollClear => {
+                overlays.poll = None;
+            }
         }
         self.overlays.insert(room_id.to_string(), overlays.clone());
 
