@@ -119,9 +119,11 @@ VITE_API_BASE_URL=http://10.0.0.5:8080 npm run build:desktop
 ```
 
 Output installers land in `src-tauri/target/release/bundle/`
-(`nsis/*-setup.exe`, `msi/*.msi`). The packaged app defaults to a **local**
-media engine (`http://127.0.0.1:8080`) — point it at a remote engine by
-overriding `VITE_API_BASE_URL` at build time.
+(`nsis/*-setup.exe`, `msi/*.msi`). The committed `.env.desktop` template
+points at the **live production endpoints** (`https://studio.traceodd.com`
+engine + SSO, `https://cricket-manager.traceodd.com` manager). To drive a
+local engine or a different host, override `VITE_API_BASE_URL` at build
+time (process env wins).
 
 ### Desktop-specific requirements
 
