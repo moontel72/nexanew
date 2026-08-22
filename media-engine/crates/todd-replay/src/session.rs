@@ -136,8 +136,9 @@ pub struct ReplaySession {
     pub loop_playback: bool,
     streams: DashMap<String, CameraStream>,
     status: watch::Sender<ReplayStatus>,
-    /// Current playback generation — replaced on every VAR seek so the
-    /// previous producers wind down.
+    /// Current playback generation — replaced on every VAR seek. The
+    /// previous generation's token is cancelled before the swap so its
+    /// producers wind down instead of interleaving stale packets.
     cancel: RwLock<CancellationToken>,
     /// VAR review cursor (frame index of the current generation).
     current_frame: AtomicUsize,
@@ -232,9 +233,10 @@ impl ReplaySession {
         let monitor = Arc::clone(&session);
         tokio::spawn(async move {
             loop {
-                let all_done = monitor.streams.iter().all(|entry| {
-                    *entry.value().done.read().expect("done lock").borrow()
-                });
+                let all_done = monitor
+                    .streams
+                    .iter()
+                    .all(|entry| *entry.value().done.read().expect("done lock").borrow());
                 if all_done {
                     let _ = monitor.status.send(ReplayStatus::Finished);
                     break;
@@ -292,10 +294,7 @@ impl ReplaySession {
 
     /// Closes the session (cancels all producers).
     pub fn close(&self) {
-        self.cancel
-            .read()
-            .expect("cancel lock")
-            .cancel();
+        self.cancel.read().expect("cancel lock").cancel();
     }
 
     /// VAR review: restarts every camera's paced playback from the given
@@ -304,7 +303,15 @@ impl ReplaySession {
     /// subscribers keep their broadcast channels (no reconnect needed).
     pub fn seek(&self, frame_index: usize) {
         let new_cancel = CancellationToken::new();
-        *self.cancel.write().expect("cancel lock") = new_cancel.clone();
+        // Cancel the previous generation *before* swapping in the new
+        // token: its producers observe the cancellation and wind down,
+        // otherwise looped auto-replays would accumulate one producer
+        // task per seek and keep interleaving stale packets forever.
+        {
+            let mut cancel = self.cancel.write().expect("cancel lock");
+            cancel.cancel();
+            *cancel = new_cancel.clone();
+        }
         self.current_frame.store(frame_index, Ordering::Relaxed);
         let _ = self.status.send(ReplayStatus::Playing);
 
@@ -322,7 +329,17 @@ impl ReplaySession {
             let loop_playback = self.loop_playback;
             let cancel = new_cancel.clone();
             tokio::spawn(async move {
-                produce(tx, frames, idx, codec, speed, loop_playback, done_tx, cancel).await;
+                produce(
+                    tx,
+                    frames,
+                    idx,
+                    codec,
+                    speed,
+                    loop_playback,
+                    done_tx,
+                    cancel,
+                )
+                .await;
             });
         }
     }
@@ -404,7 +421,17 @@ async fn produce(
                 let _ = tx.send(chunk);
             }
             if packet.spacing > 0.0 {
-                tokio::time::sleep(Duration::from_secs_f64(packet.spacing)).await;
+                // Interruptible pause: a seek cancels this generation's
+                // token, so the producer winds down immediately instead
+                // of sleeping out the spacing and emitting one more stale
+                // packet after the cut.
+                tokio::select! {
+                    _ = tokio::time::sleep(Duration::from_secs_f64(packet.spacing)) => {}
+                    _ = cancel.cancelled() => {
+                        let _ = done.send(true);
+                        return;
+                    }
+                }
             }
         }
         if !loop_playback {
@@ -497,5 +524,92 @@ mod tests {
             loop_playback: false,
         };
         assert!(manager.trigger(&trigger).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn seek_cancels_previous_generation_token() {
+        let manager = ReplayManager::new(10_000, None);
+        for i in 0..30u32 {
+            manager.capture("room-a", "cam-1", video_frame(90 * i));
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let trigger = ReplayTrigger {
+            room_id: "room-a".to_string(),
+            camera_ids: vec!["cam-1".to_string()],
+            event: ReplayEvent::Wicket,
+            lookback_ms: 10_000,
+            speed: 1.0,
+            loop_playback: true,
+        };
+        let info = manager.trigger(&trigger).await.expect("trigger works");
+        let session = manager.session(&info.replay_id).expect("session exists");
+
+        // Hold the current (pre-seek) generation token.
+        let old_token = session.cancel.read().expect("cancel lock").clone();
+
+        session.seek(10);
+        assert!(
+            old_token.is_cancelled(),
+            "seeking must cancel the previous generation's token so its producers wind down"
+        );
+        // The stored token is the fresh live generation.
+        assert!(!session.cancel.read().expect("cancel lock").is_cancelled());
+
+        manager.close(&info.replay_id).await.ok();
+    }
+
+    #[tokio::test]
+    async fn seek_replaces_generation_without_stale_frames() {
+        let manager = ReplayManager::new(10_000, None);
+        for i in 0..30u32 {
+            manager.capture("room-a", "cam-1", video_frame(90 * i));
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let trigger = ReplayTrigger {
+            room_id: "room-a".to_string(),
+            camera_ids: vec!["cam-1".to_string()],
+            event: ReplayEvent::Boundary,
+            lookback_ms: 10_000,
+            speed: 1.0,
+            loop_playback: true,
+        };
+        let info = manager.trigger(&trigger).await.expect("trigger works");
+        let session = manager.session(&info.replay_id).expect("session exists");
+        let mut rx = session.subscribe("cam-1").expect("stream exists");
+
+        session.seek(10);
+        // Drain anything already queued (pre-seek packets plus the new
+        // generation's first burst).
+        while rx.try_recv().is_ok() {}
+
+        // Every subsequent packet must belong to the new generation
+        // (frames 10..29, looping): the previous producer was cancelled,
+        // so no frame from 0..9 may ever interleave again.
+        let seek_ts = 90u32 * 10;
+        let mut seen = 0usize;
+        let deadline = Duration::from_secs(3);
+        let start = Instant::now();
+        while seen < 60 && start.elapsed() < deadline {
+            match tokio::time::timeout(Duration::from_millis(500), rx.recv()).await {
+                Ok(Ok(chunk)) => {
+                    let ts = u32::from_be_bytes([
+                        chunk.packet[4],
+                        chunk.packet[5],
+                        chunk.packet[6],
+                        chunk.packet[7],
+                    ]);
+                    assert!(
+                        ts >= seek_ts,
+                        "stale packet from pre-seek generation (ts {ts}) after seek"
+                    );
+                    seen += 1;
+                }
+                _ => break,
+            }
+        }
+        assert!(seen > 0, "new generation produced packets after seek");
+        manager.close(&info.replay_id).await.ok();
     }
 }
