@@ -47,11 +47,23 @@ if (dryRun) {
 }
 
 // 3. Run the Tauri CLI (NSIS + MSI installers on Windows via
-//    `bundle.targets: "all"` in tauri.conf.json).
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+//    `bundle.targets: "all"` in tauri.conf.json). `shell: true` on
+//    Windows so spawnSync resolves `npm` through the shell (npm.cmd).
+const npm = process.platform === "win32" ? "npm" : "npm";
 const result = spawnSync(npm, ["run", "tauri", "--", "build", ...passthrough], {
   cwd: guiRoot,
   stdio: "inherit",
   env: process.env,
+  shell: process.platform === "win32",
 });
+if (result.error) {
+  console.error(`[build-desktop] failed to launch ${npm}: ${result.error.message}`);
+  process.exit(1);
+}
+if (result.status !== 0) {
+  console.error(
+    `[build-desktop] tauri build exited with ${result.status}` +
+      (result.signal ? ` (signal ${result.signal})` : ""),
+  );
+}
 process.exit(result.status ?? 1);

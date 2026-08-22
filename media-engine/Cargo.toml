@@ -22,6 +22,10 @@ members = [
     "crates/todd-sfu",
     "crates/todd-signaling",
 ]
+# The Tauri desktop shell lives inside this repo but is a standalone
+# application with its own dependency set — keep it out of the engine
+# workspace so engine builds never pull in Tauri's platform deps.
+exclude = ["ui/todd-studio-gui/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
