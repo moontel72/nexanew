@@ -40,11 +40,13 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies & build the site
+      - name: Install dependencies
         working-directory: docs
-        run: |
-          npm install --no-audit --no-fund
-          npm run build
+        run: npm install --no-audit --no-fund
+
+      - name: Build the site
+        working-directory: docs
+        run: npm run build
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
