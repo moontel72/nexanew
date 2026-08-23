@@ -23,7 +23,11 @@ const config: Config = {
   projectName: 'nexanew',
 
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
 
   i18n: {
     defaultLocale: 'en',
@@ -37,7 +41,6 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/', // the manual IS the homepage
-          homePageId: 'overview',
           editUrl: undefined,
         },
         blog: false, // no blog in v1 — operator manual only
