@@ -1,31 +1,254 @@
 ---
 title: Book 3 — Broadcaster App & Ground Cameras
-description: Camera pairing, stream configuration and field setup for ground operators.
+description: Camera pairing, WHIP/RTSP stream configuration and field setup for ground operators.
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import ScreenshotSlot from '@site/src/components/ScreenshotSlot';
 
 # 📹 Book 3 — Broadcaster App & Ground Cameras
+
+> **Matlab:** Yeh ground crew ka manual hai — camera kaise pair karen,
+> OBS/mobile app ki settings kya hon, IP camera kaise lagayen aur field
+> mein kya check karen. Director (Book 2) aap ko **ingest token** dega —
+> yehi aap ki camera ki chabi hai.
+
+:::note Who gives you what
+The director creates the room and cameras in Todd Studio and shares each
+camera's **ingest URL + token** (or registers your IP camera's RTSP URL).
+This book covers what you do with it on your side.
+:::
+
+---
+
+## 3.1 — Camera pairing
 
 <Tabs>
 <TabItem value="en" label="English" default>
 
-📝 **Coming in Phase 2.** This book will cover the field-side workflow:
+1. Get from the director: the room name and your camera's **ingest
+   token** (and camera id, e.g. `cam-1`).
+2. The WHIP ingest URL has this shape:
 
-1. Camera pairing — ingest URLs/tokens shared from the Studio room
-2. OBS (WHIP) settings and recommended encoder profiles
-3. Mobile apps (Larix / IRL Pro) WHIP profiles
-4. IP cameras via RTSP/RTMP (engine pull)
-5. Field setup — positions, audio bus assignment, network/antenna checks
-6. Verification — LIVE badge and telemetry (bitrate/FPS) per camera
+```
+https://studio.traceodd.com/api/v1/whip/ingest/{room}/{camera}?token={ingest_token}
+```
+
+3. Paste it into your broadcaster app (sections 3.2 / 3.3). For IP
+   cameras, give the RTSP URL to the director instead (section 3.4).
+
+<ScreenshotSlot title="Example ingest URL as shared by the director">
+Show the ingest URL/token pair exactly as copied from the Studio Input Panel.
+</ScreenshotSlot>
 
 </TabItem>
 <TabItem value="ur" label="اردو (Roman Urdu)">
 
-📝 **Phase 2 mein aa raha hai.** Yeh book ground crew ka workflow cover
-karegi — camera pairing, OBS/mobile app ki settings, IP cameras, field
-setup aur LIVE verification tak.
+1. Director se len: room ka naam aur aap ke camera ka **ingest token**
+   (aur camera id, masalan `cam-1`).
+2. WHIP ingest URL ka yehi naqsha hai:
+
+```
+https://studio.traceodd.com/api/v1/whip/ingest/{room}/{camera}?token={ingest_token}
+```
+
+3. Isse apne broadcaster app mein paste karen (3.2 / 3.3). IP camera ho
+   to apna RTSP URL director ko den (3.4).
 
 </TabItem>
 </Tabs>
+
+---
+
+## 3.2 — OBS Studio (WHIP)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Open **Settings → Stream**.
+2. **Service: WHIP** — paste the ingest URL from section 3.1 into the
+   **Server** field (no separate key needed; the token is in the URL).
+3. Recommended encoder settings:
+
+| Setting | Main cameras | Action cameras |
+|---|---|---|
+| Resolution | 1920×1080 | 1280×720 |
+| FPS | 30 | 60 |
+| Codec | H.264 | H.264 |
+| Bitrate | 4500–6000 Kbps | 3500–5000 Kbps |
+| Keyframe interval | 2 s | 2 s |
+
+4. **Start Streaming** — within a few seconds the director's multiview
+   shows your camera with a **LIVE** badge.
+
+<ScreenshotSlot title="OBS Settings → Stream with WHIP service">
+Show the Stream settings with Service: WHIP and the ingest URL in the Server field.
+</ScreenshotSlot>
+
+:::tip H.264 only for program mixing
+Scenes mixing your camera into PGM require **H.264** — other codecs keep
+the program in passthrough mode. Stick to the table above.
+:::
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Settings → Stream** kholen.
+2. **Service: WHIP** — section 3.1 wala ingest URL **Server** field mein
+   paste karen (alag key nahi chahiye; token URL ke andar hai).
+3. Behtar encoder settings:
+
+| Setting | Main cameras | Action cameras |
+|---|---|---|
+| Resolution | 1920×1080 | 1280×720 |
+| FPS | 30 | 60 |
+| Codec | H.264 | H.264 |
+| Bitrate | 4500–6000 Kbps | 3500–5000 Kbps |
+| Keyframe interval | 2 s | 2 s |
+
+4. **Start Streaming** dabayen — chand secondon mein director ke
+   multiview par aap ka camera **LIVE** badge ke sath nazar aayega.
+
+:::tip Program mixing sirf H.264
+Aap ke camera ko PGM mein milane ke liye **H.264** zaroori hai — doosre
+codecs par program passthrough reh jata hai. Upar wali table par qayam
+rahen.
+:::
+
+</TabItem>
+</Tabs>
+
+---
+
+## 3.3 — Mobile broadcaster apps (Larix / IRL Pro)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Create a new connection/profile of type **WHIP**.
+2. Paste the ingest URL (section 3.1).
+3. Recommended: H.264, 1080p30 (or 720p60), 4–6 Mbps, audio AAC/Opus.
+4. Start the stream — check for the **LIVE** badge via the director.
+
+<ScreenshotSlot title="Larix Broadcaster WHIP connection screen">
+Show the WHIP connection form with the ingest URL filled in.
+</ScreenshotSlot>
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **WHIP** type ki nayi connection/profile banayen.
+2. Ingest URL paste karen (section 3.1).
+3. Behtar: H.264, 1080p30 (ya 720p60), 4–6 Mbps, audio AAC/Opus.
+4. Stream start karen — director se **LIVE** badge confirm karen.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 3.4 — IP cameras (RTSP / RTMP pull)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Configure the camera for H.264 output (main + sub stream).
+2. Note its RTSP URL, e.g. `rtsp://user:pass@10.0.0.20:554/stream1`.
+3. Give the URL to the director — they register it on the camera with
+   `kind: rtsp`, and the engine pulls the feed (no app needed on the
+   camera side).
+
+:::caution Camera must be reachable from the engine
+The RTSP URL must be accessible from the broadcast server/engine — open
+the port or use a VPN/tunnel for remote venues.
+:::
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Camera par H.264 output set karen (main + sub stream).
+2. Us ka RTSP URL note karen, masalan
+   `rtsp://user:pass@10.0.0.20:554/stream1`.
+3. URL director ko den — woh camera par `kind: rtsp` register karta hai
+   aur engine khud feed khench leta hai (camera side par koi app nahi
+   chahiye).
+
+:::caution Camera engine se reachable hona chahiye
+RTSP URL broadcast server/engine se khulna chahiye — remote venue ke
+liye port kholen ya VPN/tunnel lagayen.
+:::
+
+</TabItem>
+</Tabs>
+
+---
+
+## 3.5 — Field setup checklist
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+| # | Check |
+|---|---|
+| 1 | Camera positioned per the shot map (main, slip, action) |
+| 2 | Stable mount/tripod; spare batteries or power |
+| 3 | Uplink tested at the position (speed test ≥ 8 Mbps up) |
+| 4 | TURN credentials loaded if the venue network is strict (ask the director) |
+| 5 | Audio: which bus? (commentary / ambient — tell the director in advance) |
+| 6 | Ingest URL pasted & stream started — confirm LIVE badge over comms |
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+| # | Check |
+|---|---|
+| 1 | Camera shot map ke mutabiq position par (main, slip, action) |
+| 2 | Mazboot mount/tripod; extra batteries ya power |
+| 3 | Position par uplink test kiya ho (speed test ≥ 8 Mbps up) |
+| 4 | Venue ka network strict ho to TURN credentials load hon (director se len) |
+| 5 | Audio: kaunsa bus? (commentary / ambient — director ko pehle batayen) |
+| 6 | Ingest URL paste ho aur stream chalu — comms par LIVE badge confirm karen |
+
+</TabItem>
+</Tabs>
+
+---
+
+## 3.6 — Verification & troubleshooting
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+**Healthy:** LIVE badge + telemetry shows ~30 FPS, expected bitrate,
+near-zero dropped frames.
+
+| Symptom | Fix |
+|---|---|
+| No LIVE badge | Check the ingest URL (room/camera/token), restart the stream |
+| Video freezes | Uplink unstable — reduce bitrate/resolution, switch to wired/5G |
+| Dropped frames climbing | Lower FPS to 30, bitrate to ~4 Mbps, close other apps |
+| Can't connect at all | Venue network blocking WebRTC — ask for TURN credentials |
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+**Theek halat:** LIVE badge + telemetry par ~30 FPS, theek bitrate aur
+dropped frames lag bhag zero.
+
+| Masla | Hal |
+|---|---|
+| LIVE badge nahi aa raha | Ingest URL check karen (room/camera/token), stream dobara start karen |
+| Video ruk rahi hai | Uplink kamzor — bitrate/resolution ghatayen, wired/5G par ayen |
+| Dropped frames barh rahe hain | FPS 30, bitrate ~4 Mbps karen, baqi apps band karen |
+| Connection hi nahi ho rahi | Venue network WebRTC rok raha hai — director se TURN credentials len |
+
+</TabItem>
+</Tabs>
+
+---
+
+## Back to the control room
+
+Continue to **[Book 2 — Todd Studio](/cricket/book2-todd-studio)** or the
+**[Cricket Overview](/cricket/intro)**.

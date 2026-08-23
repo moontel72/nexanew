@@ -1,38 +1,428 @@
 ---
 title: Book 2 — Todd Studio (Director)
-description: Director controls, overlays, VAR frame stepping, poll triggers and PGM stream controls.
+description: Director controls — rooms, cameras, vision switching, scoreboard, auto-graphics, replay & VAR, polls, audio, broadcast targets and telemetry.
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import ScreenshotSlot from '@site/src/components/ScreenshotSlot';
 
 # 🎛️ Book 2 — Todd Studio (Director)
+
+> **Matlab:** Yeh director ka poora workflow hai — login se le kar cameras,
+> switching, scoreboard, replay/VAR, polls aur broadcast tak. Scorer ki
+> har entry par Studio khud update hota hai (Book 1); yahan director ke
+> **manual** kaam ka tareeqa hai.
+
+:::note Before you start
+Complete **Book 0** (accounts, cameras LIVE, active match selected) and
+make sure the scorer is running **Book 1** flows. Todd Studio works
+identically in the **browser** (`studio.traceodd.com`) and the
+**Windows desktop app**.
+:::
+
+---
+
+## 2.1 — Login & session bar
 
 <Tabs>
 <TabItem value="en" label="English" default>
 
-📝 **Coming in Phase 2.** This book will cover the full director
-workflow:
+1. Open Todd Studio (desktop app or `https://studio.traceodd.com`).
+2. Sign in with the director account — or click **"Open Todd Studio"** in
+   the Manager Panel to arrive already signed in with the active match.
+3. The top **session bar** shows your email and a **Sign out** button.
 
-1. Login & session bar (browser + desktop app)
-2. Rooms & cameras — Input Panel, ingest tokens
-3. Multiview — PVW/PGM selection
-4. Vision Switcher, Transition Bar (cut/fade/wipe/stinger), Scene
-   Composer (fullscreen/PiP/split/side-by-side)
-5. Scoreboard & auto-graphics (Overlay Panel, Wagon Wheel map)
-6. Replay Director — auto-replay on 4/6, manual triggers, exports
-7. VAR Review Panel — frame stepping and "Send to Air"
-8. Polls — create/vote/clear with live PGM burn-in
-9. Watermark, Audio Mixer, Broadcast Panel (RTMP/SRT), Segment Manager
-10. Telemetry Dashboard (bitrate/FPS/dropped) and shutdown checklist
+<ScreenshotSlot title="Login screen + session bar">
+Capture the login screen and the session bar with a signed-in director email.
+</ScreenshotSlot>
 
 </TabItem>
 <TabItem value="ur" label="اردو (Roman Urdu)">
 
-📝 **Phase 2 mein aa raha hai.** Yeh book director ka poora workflow
-cover karegi — login se le kar cameras, switching, scoreboard,
-auto-replay, VAR frame stepping, polls, broadcast targets aur shutdown
-checklist tak.
+1. Todd Studio kholen (desktop app ya `https://studio.traceodd.com`).
+2. Director account se sign in karen — ya Manager Panel mein
+   **"Open Todd Studio"** dabayen to pehle se signed-in pahunch jayen
+   (active match ke sath).
+3. Upar **session bar** mein aap ka email aur **Sign out** button hota
+   hai.
 
 </TabItem>
 </Tabs>
+
+---
+
+## 2.2 — Rooms & cameras (Input Panel)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Open **Setup & Configuration → Input Panel**.
+2. **Create room** — give it a name (e.g. `Final 2026`).
+3. **Add camera** per position — set a label and the source kind:
+   - `whip` — OBS / mobile broadcaster apps (Book 3)
+   - `rtsp` / `rtmp` — IP cameras or encoders (the engine pulls the feed)
+4. Copy each camera's **ingest token** and share it with the camera
+   operator (Book 3 shows where to paste it).
+5. Remove a camera with its **Delete** button (closes its sessions).
+
+<ScreenshotSlot title="Input Panel with a room and two cameras">
+Show the Input Panel listing a room, its cameras, and the ingest token copy buttons.
+</ScreenshotSlot>
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Setup & Configuration → Input Panel** kholen.
+2. **Create room** — naam den (masalan `Final 2026`).
+3. Har position ke liye **Add camera** — label aur source kind chunen:
+   - `whip` — OBS / mobile broadcaster apps (Book 3)
+   - `rtsp` / `rtmp` — IP cameras ya encoders (engine khud feed khench
+     leta hai)
+4. Har camera ka **ingest token** copy kar ke camera operator ko den
+   (Book 3 mein paste karne ki jagah likhi hai).
+5. Camera hatane ke liye us ka **Delete** button dabayen.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 2.3 — Multiview (PGM / PVW)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. The **multiview grid** shows every camera as a live WHEP tile with a
+   **LIVE** badge.
+2. Click a tile → it becomes **PVW (preview)** — the next shot.
+3. The tile badges show which camera is **PGM** (on air) and **PVW**
+   (next).
+
+<ScreenshotSlot title="Multiview grid with PGM and PVW badges">
+Show 2–4 tiles, one with the PGM badge and one with the PVW badge.
+</ScreenshotSlot>
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Multiview grid** mein har camera live tile ke roop mein hota hai,
+   **LIVE** badge ke sath.
+2. Kisi tile par click karen → woh **PVW (preview)** ban jata hai —
+   agla shot.
+3. Tile ke badges batate hain kaunsa camera **PGM** (on air) hai aur
+   kaunsa **PVW** (agla).
+
+</TabItem>
+</Tabs>
+
+---
+
+## 2.4 — Vision switching
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Vision Switcher** — click a camera to take it to **PGM** (instant
+   cut).
+2. **Transition Bar** — choose the transition style and duration:
+   - `cut` — instant
+   - `fade` — crossfade
+   - `luma_wipe` — geometric reveal
+   - `stinger` — animated asset (needs the stinger URL from Book 0)
+3. **Scene Composer** — layouts: `fullscreen`, `picture_in_picture`,
+   `split_screen`, `side_by_side` (multi-camera PGM).
+
+:::tip Two-man operation
+Set the next shot on **PVW**, then press the transition — the program
+switches smoothly instead of hard-cutting.
+:::
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Vision Switcher** — camera par click karen, woh seedha **PGM** par
+   chala jata hai (instant cut).
+2. **Transition Bar** — transition ka style aur duration chunen:
+   - `cut` — foran
+   - `fade` — crossfade
+   - `luma_wipe` — geometric reveal
+   - `stinger` — animated asset (Book 0 wala stinger URL chahiye)
+3. **Scene Composer** — layouts: `fullscreen`, `picture_in_picture`,
+   `split_screen`, `side_by_side` (multi-camera PGM).
+
+:::tip Do aadmi ka kaam
+Pehle agla shot **PVW** par lagayen, phir transition dabayen — program
+smoothly badalta hai, hard cut nahi hota.
+:::
+
+</TabItem>
+</Tabs>
+
+---
+
+## 2.5 — Scoreboard & Auto-Graphics
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Overlay Panel → Scoreboard** — enable the lower-third and set the
+   title/subtitle template.
+2. Toggle **Auto-Graphics** ON — from now on every scoring push fires
+   the popup automatically (FOUR / SIX / WICKET / milestone). Set the
+   popup duration to taste.
+3. Manual popup — use the fire button for custom moments.
+4. **Wagon Wheel Map** — updates itself from the scorer's shot
+   direction/zone (no action needed).
+
+<ScreenshotSlot title="Overlay Panel with auto-graphics enabled">
+Show the scoreboard toggle, auto-graphics switch and the duration field.
+</ScreenshotSlot>
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Overlay Panel → Scoreboard** — lower-third on karen aur
+   title/subtitle template set karen.
+2. **Auto-Graphics** ON karen — ab har score push par popup khud aayega
+   (FOUR / SIX / WICKET / milestone). Duration apni marzi se rakhen.
+3. Manual popup — khaas mauke ke liye fire button.
+4. **Wagon Wheel Map** — scorer ke shot direction/zone se khud update
+   hota hai (kuch nahi karna).
+
+</TabItem>
+</Tabs>
+
+---
+
+## 2.6 — Replay & VAR
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+**Auto-replay (zero clicks):** every **4 / 6** automatically creates a
+slow-motion clip — **5 seconds before + 3 seconds after** the ball, 0.5×
+speed, looping — plus auto-tagged wicket/catch replays. The **Replay
+Director** panel lists them as they appear.
+
+1. **Manual trigger** — Replay Director: pick an event (wicket / catch /
+   boundary / custom) and a camera set; lookback and speed are preset.
+2. **Close** a replay session to end its loop.
+3. **Export** a clip (async job — status shows in the panel).
+4. **VAR Review Panel:**
+   - Pick a replay from the list.
+   - Step frames: `|<<` first · `−5` · `−1` · `+1` · `+5` · `>>|` last.
+   - **Send to Air** — cuts the VAR view to PGM.
+5. **Highlights Panel** — the innings playlist (newest first).
+
+<ScreenshotSlot title="VAR Review Panel with frame stepping controls">
+Show the replay picker, the frame-step buttons and the Send to Air button.
+</ScreenshotSlot>
+
+:::caution Replays loop until closed
+Auto-replays are looping by design — close them from the Replay Director
+when the moment is done, or leave the last one running for slow-mo
+highlights.
+:::
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+**Auto-replay (kuch nahi karna):** har **4 / 6** par khud slow-motion
+clip banti hai — ball se **5 second pehle + 3 second baad**, 0.5× speed,
+looping — aur wicket/catch ke auto-tagged replays bhi. **Replay
+Director** panel mein sab nazar aate hain.
+
+1. **Manual trigger** — Replay Director: event chunen (wicket / catch /
+   boundary / custom) aur cameras; lookback aur speed pehle se set hain.
+2. Loop khatam karne ke liye replay session **Close** karen.
+3. Clip **Export** karen (async kaam — status panel mein dikhta hai).
+4. **VAR Review Panel:**
+   - List se replay chunen.
+   - Frames chalayen: `|<<` pehla · `−5` · `−1` · `+1` · `+5` · `>>|`
+     aakhri.
+   - **Send to Air** — VAR view PGM par chala jata hai.
+5. **Highlights Panel** — innings ki playlist (nayi pehle).
+
+:::caution Replay tab tak chalti hai jab tak band na karen
+Auto-replays jaan-boojh kar looping hoti hain — mauqa khatam hone par
+Replay Director se close kar den, ya aakhri wali slow-mo highlights ke
+liye chalti chhor den.
+:::
+
+</TabItem>
+</Tabs>
+
+---
+
+## 2.7 — Spectator polls
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Setup & Configuration → Poll Panel** — type a question and **at
+   least two options**, then create.
+2. The poll animates on your director canvas **and is burned into the
+   PGM composite** — WHEP/RTMP viewers see it with live vote bars.
+3. Votes update the tally live (percentage + vote count).
+4. **Clear poll** removes the burn-in; scoreboard and watermark stay.
+
+<ScreenshotSlot title="Poll Panel + poll burned into PGM">
+Show the create-poll form and a program frame with the poll lower-third.
+</ScreenshotSlot>
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Setup & Configuration → Poll Panel** — sawal likhen aur **kam az
+   kam do options** de kar create karen.
+2. Poll director ke canvas par animate hota hai **aur PGM composite mein
+   burn-in hota hai** — WHEP/RTMP viewers ko live vote bars ke sath
+   dikhta hai.
+3. Votes se tally live update hoti hai (percentage + vote count).
+4. **Clear poll** sirf poll hatata hai; scoreboard aur watermark barqarar
+   rehte hain.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 2.8 — Watermark & segments
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Watermark Control** — enable, paste the logo URL (transparent PNG),
+   set the corner position.
+2. **Segment Manager** — fire **BREAK** (and custom segment events) for
+   ad/lunch graphics between sessions.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Watermark Control** — on karen, logo ka URL (transparent PNG) den,
+   corner position set karen.
+2. **Segment Manager** — ad/lunch ke graphics ke liye **BREAK** (aur
+   custom segment events) fire karen.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 2.9 — Audio Mixer
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Audio Mixer** shows four buses: `commentary`, `ambient`, `sfx`,
+   `music`.
+2. Per bus: fader (dB), **mute**, **solo**, gain trim and **lip-sync
+   delay**.
+3. Metering bars show live levels; the master meter is the program
+   output.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Audio Mixer** mein chaar buses hain: `commentary`, `ambient`,
+   `sfx`, `music`.
+2. Har bus: fader (dB), **mute**, **solo**, gain trim aur **lip-sync
+   delay**.
+3. Metering bars live levels dikhati hain; master meter program ka
+   output hai.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 2.10 — Broadcast targets (RTMP / SRT / file)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Broadcast Panel → add forwarder** — paste the destination URL and
+   pick the source:
+   - `source: program` — the full composite (graphics, polls, replays)
+   - `source: camera` — a clean camera feed
+2. Each forwarder shows its runtime status (running / failed with error).
+3. **Stop** a forwarder after the stream ends.
+
+<ScreenshotSlot title="Broadcast Panel with a running RTMP forwarder">
+Show a forwarder row with target URL, source: program, and Running status.
+</ScreenshotSlot>
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Broadcast Panel → add forwarder** — destination URL paste karen aur
+   source chunen:
+   - `source: program` — poora composite (graphics, polls, replays)
+   - `source: camera` — saaf camera feed
+2. Har forwarder ka runtime status dikhta hai (running / failed with
+   error).
+3. Stream khatam hone par forwarder **Stop** karen.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 2.11 — Telemetry (health check)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. The **Telemetry Dashboard** under the multiview shows per camera:
+   **bitrate**, **FPS**, **dropped frames**, RTT and jitter.
+2. Quality badges: **GOOD / FAIR / POOR** (drop ratio >5%, RTT >800ms or
+   jitter >60ms degrade the badge).
+3. Watch it during the match — a POOR camera should be cut from PGM and
+   fixed.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Multiview ke neeche **Telemetry Dashboard** har camera ki **bitrate**,
+   **FPS**, **dropped frames**, RTT aur jitter dikhata hai.
+2. Quality badges: **GOOD / FAIR / POOR** (drop ratio >5%, RTT >800ms ya
+   jitter >60ms par badge girta hai).
+3. Match ke dauran nazar rakhen — POOR camera ko PGM se hata kar theek
+   karen.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 2.12 — Settings & shutdown
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Settings Panel** — runtime cricket config: manager URL, match IDs,
+   watchdog poll interval (the push feed is primary; the poll is a
+   fallback only).
+2. **Shutdown checklist:** stop forwarders → close replays → clear poll
+   → clear overlays → sign out.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Settings Panel** — runtime cricket config: manager URL, match IDs,
+   watchdog poll interval (push feed asal hai; poll sirf fallback).
+2. **Shutdown checklist:** forwarders band karen → replays close karen →
+   poll clear karen → overlays clear karen → sign out.
+
+</TabItem>
+</Tabs>
+
+---
+
+## Next: Book 3 (Ground Cameras)
+
+The director's job ends here. Continue to
+**[Book 3 — Ground Cameras](/cricket/book3-broadcaster)** for the field
+setup, or back to **[Book 1 — Manager Panel](/cricket/book1-manager-panel)**.

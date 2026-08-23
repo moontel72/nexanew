@@ -3,10 +3,11 @@
 Operator manuals for the NexaTrace platform, built with
 [Docusaurus](https://docusaurus.io/).
 
-- **Live:** Cricket System — Book 0 (Prerequisites) and Book 1 (Cricket
-  Manager Panel), written in **English + Roman Urdu** (tabbed sections).
-- **Planned:** Books 2–3 (Todd Studio, Ground Cameras) and the Bus Fleet,
-  Factory, Goods Company, B2B Ecommerce and Customer App modules.
+- **Live:** Cricket System — Books 0–3 (Prerequisites, Manager Panel,
+  Todd Studio, Ground Cameras), written in **English + Roman Urdu**
+  (tabbed sections) with structured screenshot slots.
+- **Planned:** the Bus Fleet, Factory, Goods Company, B2B Ecommerce and
+  Customer App modules.
 
 ## Develop
 
