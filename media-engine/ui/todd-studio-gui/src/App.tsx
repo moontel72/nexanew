@@ -13,6 +13,7 @@ import {
 } from "./lib/auth/authStore";
 import { Login } from "./components/Login";
 import { Button } from "./components/ui/Button";
+import { openManual } from "./lib/docs";
 import { MultiviewGrid } from "./components/MultiviewGrid";
 import { VisionSwitcher } from "./components/VisionSwitcher";
 import { TransitionBar } from "./components/TransitionBar";
@@ -92,6 +93,14 @@ export default function App() {
           <div className="text-sm font-semibold tracking-wide">Todd Studio</div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">{getEmail()}</span>
+            <Button
+              variant="outline"
+              className="px-2 py-1 text-xs"
+              title="Operator manual — opens docs.traceodd.com"
+              onClick={() => openManual("/cricket/book2-todd-studio")}
+            >
+              ? Manual
+            </Button>
             <Button
               variant="outline"
               className="px-2 py-1 text-xs"
