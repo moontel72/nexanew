@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { login, loginUrl } from "../lib/auth/authStore";
+import { openDownload } from "../lib/docs";
 import { Button } from "./ui/Button";
 
 export interface LoginProps {
@@ -85,6 +86,17 @@ export function Login({ onAuthenticated }: LoginProps) {
         <p className="mt-4 text-center text-[10px] text-muted-foreground">
           Identity provider: <span className="font-mono">{loginUrl()}</span>
         </p>
+
+        <div className="mt-4 border-t border-border pt-3 text-center">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full text-xs"
+            onClick={openDownload}
+          >
+            ⬇ Download the desktop app
+          </Button>
+        </div>
       </form>
     </div>
   );

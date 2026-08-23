@@ -5,9 +5,11 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "updater:default",
+    "process:allow-restart",
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "https://docs.traceodd.com/**" }]
+      "allow": [{ "url": "https://docs.traceodd.com/**" }, { "url": "https://traceodd.com/download/**" }]
     }
   ]
 }

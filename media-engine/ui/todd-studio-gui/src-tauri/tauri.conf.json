@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Todd Studio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "com.traceodd.toddstudio",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "windows": {
       "nsis": {
         "installMode": "currentUser"
@@ -40,5 +41,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFERjJDN0ZFNjUzODUyQzgKUldUSVVqaGwvc2Z5SGRMOTNIWlk4ZkIyN3lZbDNhaVd0ZUgxM1BBUU5neWxPN3pJenYzdWlMeVkK",
+      "endpoints": ["https://traceodd.com/api/desktop-update.json"]
+    }
   }
 }

@@ -13,7 +13,8 @@ import {
 } from "./lib/auth/authStore";
 import { Login } from "./components/Login";
 import { Button } from "./components/ui/Button";
-import { openManual } from "./lib/docs";
+import { UpdateManager } from "./components/UpdateManager";
+import { isDesktopShell, openManual } from "./lib/docs";
 import { MultiviewGrid } from "./components/MultiviewGrid";
 import { VisionSwitcher } from "./components/VisionSwitcher";
 import { TransitionBar } from "./components/TransitionBar";
@@ -93,6 +94,16 @@ export default function App() {
           <div className="text-sm font-semibold tracking-wide">Todd Studio</div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">{getEmail()}</span>
+            {isDesktopShell() && (
+              <Button
+                variant="outline"
+                className="px-2 py-1 text-xs"
+                title="Check for app updates"
+                onClick={() => window.dispatchEvent(new Event("todd:check-updates"))}
+              >
+                Check for Updates
+              </Button>
+            )}
             <Button
               variant="outline"
               className="px-2 py-1 text-xs"
@@ -110,6 +121,9 @@ export default function App() {
             </Button>
           </div>
         </header>
+
+        {/* Desktop-only: silent startup update check + update dialog. */}
+        <UpdateManager />
 
         <div className="director-grid min-h-0 flex-1">
           {/* Program / multiview area */}
