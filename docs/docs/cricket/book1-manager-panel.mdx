@@ -1,0 +1,337 @@
+---
+title: Book 1 — Cricket Manager Panel
+description: Step-by-step button flows for the scorer — teams, tournaments, live match control and the Todd Studio link.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 📱 Book 1 — Cricket Manager Panel
+
+> **Matlab:** Yeh scorer ka manual hai — Manager Panel mein kaunsa button
+> kab aur kis tarteeb se dabana hai. Yaad rakhen: **har ball ki entry ke
+> sath Todd Studio khud-ba-khud update hota hai** (scoreboard, popup aur
+> 4/6 par auto-replay) — director ko kuch nahi karna parta.
+
+:::note Before you start
+Complete **Book 0** first. The buttons below assume accounts, match data
+and cameras are already ready.
+:::
+
+---
+
+## 1.1 — Login & Dashboard
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Open `cricket-manager.traceodd.com`.
+2. Sign in with the scorer account.
+3. The **Dashboard** shows today's matches, tournaments and sync status.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. `cricket-manager.traceodd.com` kholen.
+2. Scorer account se sign in karen.
+3. **Dashboard** par aaj ke matches, tournaments aur sync status nazar
+   aayega.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 1.2 — Team Management
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Go to **Team Management**.
+2. Tap **Add New Team**.
+3. Fill: team name, short code (e.g. `KAR`), players list.
+4. Save. Repeat for the second team.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Team Management** mein jayen.
+2. **Add New Team** dabayen.
+3. Bhar den: team ka naam, short code (masalan `KAR`), players ki list.
+4. Save karen. Doosri team ke liye yehi dohrayen.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 1.3 — Create Tournament
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Open the **Tournament Hub** (public page) or the manager's tournament
+   section.
+2. Tap **Create Tournament**.
+3. Fill: tournament name, participating teams, format (league / knockout)
+   and dates.
+4. Save — the tournament now appears in the hub for fans.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Tournament Hub** (public page) ya manager ka tournament section
+   kholen.
+2. **Create Tournament** dabayen.
+3. Bhar den: tournament ka naam, teams, format (league / knockout) aur
+   dates.
+4. Save karen — tournament fans ke liye hub mein nazar aa jayega.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 1.4 — Create Match
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Inside the tournament (or the Dashboard), tap **Create Match**.
+2. Pick the two teams, venue and scheduled time.
+3. Save. The match is now listed under the tournament.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Tournament ke andar (ya Dashboard se) **Create Match** dabayen.
+2. Dono teams, venue aur scheduled time chunen.
+3. Save karen. Match ab tournament ke andar list ho jata hai.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 1.5 — Select Active Match
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. On the Dashboard, find the **Active Match** dropdown.
+2. Select today's match.
+3. This broadcasts `match.context.selected` — Todd Studio automatically
+   registers the match, mirrors the selection to every director panel,
+   and loads the scoreboard.
+
+:::tip Only one match at a time
+The active match is a single shared context: the Studio follows whatever
+is selected here. Change it only when the production team agrees.
+:::
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Dashboard par **Active Match** dropdown dhoonden.
+2. Aaj ka match select karen.
+3. Yeh `match.context.selected` broadcast karta hai — Todd Studio khud hi
+   match register kar leta hai, har director panel par selection mirror
+   hota hai aur scoreboard load ho jata hai.
+
+:::tip Ek waqt mein sirf ek match
+Active match ek hi shared context hota hai: Studio isi ko follow karta
+hai. Production team ke mashwaray ke baghair isse na badlen.
+:::
+
+</TabItem>
+</Tabs>
+
+---
+
+## 1.6 — GO LIVE (start the match)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Open the match's **Live Match Control**.
+2. Tap **GO LIVE**.
+3. The status change broadcasts `match.updated` — the public feed and
+   Studio reflect the live status immediately.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Match ka **Live Match Control** kholen.
+2. **GO LIVE** dabayen.
+3. Status change `match.updated` broadcast karta hai — public feed aur
+   Studio foran live status dikhate hain.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 1.7 — Score a ball
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. After each delivery, enter the result: **runs (0–6), 4, 6, W (wicket),
+   extras**.
+2. Optionally pick the **zone** and **direction** of the shot — this
+   powers the Studio Wagon Wheel map and the replay tags.
+3. Submit. The backend saves the ball and broadcasts `score.updated`.
+
+**What happens automatically in Todd Studio:**
+
+- Scoreboard lower-third updates (score, overs, run rate).
+- A popup fires for **FOUR / SIX / WICKET / milestone**.
+- **4/6 → auto-replay**: the engine creates a slow-motion clip of the
+  **last 5 seconds + next 3 seconds**, looped, for every live room — no
+  director action needed.
+- Wicket/catch → auto-tagged wicket replay.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Har delivery ke baad result dalen: **runs (0–6), 4, 6, W (wicket),
+   extras**.
+2. Chahen to shot ka **zone** aur **direction** bhi chunen — is se
+   Studio ka Wagon Wheel map aur replay tags chaltay hain.
+3. Submit karen. Backend ball save kar ke `score.updated` broadcast karta
+   hai.
+
+**Todd Studio mein khud-ba-khud kya hota hai:**
+
+- Scoreboard lower-third update hota hai (score, overs, run rate).
+- **FOUR / SIX / WICKET / milestone** par popup aata hai.
+- **4/6 par auto-replay**: engine **pichle 5 second + agle 3 second** ki
+  slow-motion clip banata hai, looping, har live room ke liye — director
+  ko kuch nahi karna parta.
+- Wicket/catch par auto-tagged wicket replay banta hai.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 1.8 — Correct a mistake (undo / edit / delete)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Undo Last Ball** — removes the last delivery and recomputes the
+   score.
+2. **Edit Delivery** — fix runs/result on a past ball (score recomputes,
+   a fresh `score.updated` goes out).
+3. **Delete Delivery** — remove a ball entirely.
+
+:::caution Replays follow the corrected score
+A corrected ball re-fires the popup/replay for the new result — that is
+expected behaviour, not a bug.
+:::
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Undo Last Ball** — aakhri delivery hatati hai aur score dobara
+   compute hota hai.
+2. **Edit Delivery** — purani ball ka result theek karen (score dobara
+   compute ho kar naya `score.updated` jata hai).
+3. **Delete Delivery** — ball poori tarah hata den.
+
+:::caution Replay corrected score ko follow karti hai
+Theek ki hui ball par popup/replay naye result ke sath dobara chalta hai
+— yeh expected behaviour hai, bug nahi.
+:::
+
+</TabItem>
+</Tabs>
+
+---
+
+## 1.9 — Voice Score (optional)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. In Live Match Control, enable **Voice Score**.
+2. Speak the result (e.g. "four", "wicket") — the app converts speech to
+   a scoring action (works where the device speech service is available;
+   the web build is the primary target).
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Live Match Control mein **Voice Score** on karen.
+2. Result bolen (masalan "four", "wicket") — app awaaz ko scoring action
+   mein badal deti hai (jahan device ki speech service available ho;
+   web build iska asal target hai).
+
+</TabItem>
+</Tabs>
+
+---
+
+## 1.10 — Send the director into Todd Studio (SSO)
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. On the Dashboard, tap **Open Todd Studio**.
+2. The Manager exchanges your login for a short-lived studio token and
+   opens the Studio deep link (`?sso=…&match=…`).
+3. The director lands **already signed in** with the active match
+   selected — no password typing.
+
+:::tip Also works the other way
+If the deep link fails, the director simply signs in at
+`studio.traceodd.com` and the active match arrives via the push feed.
+:::
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Dashboard par **Open Todd Studio** dabayen.
+2. Manager aap ke login ko chhota sa studio token bana kar Studio ka
+   deep link kholta hai (`?sso=…&match=…`).
+3. Director **pehle se signed in** pahunchta hai, active match selected
+   hota hai — password ki zaroorat nahi.
+
+:::tip Ulta rasta bhi kaam karta hai
+Agar deep link fail ho jaye to director seedha `studio.traceodd.com` par
+sign in kar le — active match push feed se khud aa jata hai.
+:::
+
+</TabItem>
+</Tabs>
+
+---
+
+## 1.11 — End innings / match
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. In Live Match Control, **End Innings** when the innings closes.
+2. **End Match** when the game finishes.
+3. Points table and match history update; the public feed shows the final
+   status.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Innings khatam hone par Live Match Control mein **End Innings** karen.
+2. Game mukammal hone par **End Match** karen.
+3. Points table aur match history update hoti hai; public feed final
+   status dikhata hai.
+
+</TabItem>
+</Tabs>
+
+---
+
+## Next: Book 2 (Todd Studio)
+
+The scorer's job ends here. Continue to **[Book 2 — Todd Studio](/cricket/book2-todd-studio)**
+(director controls) — currently being written (Phase 2).

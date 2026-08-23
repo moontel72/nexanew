@@ -1,0 +1,303 @@
+---
+title: Book 0 — Prerequisites & Preparation
+description: Everything that must be ready before match day — accounts, network, cameras, match data, graphics and broadcast targets.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 📋 Book 0 — Prerequisites & Preparation
+
+> **Matlab:** Yeh woh sab kuch hai jo **pehle se** tayyar hona chahiye —
+> buttons dabane se pehle. Agar koi item adhura hai to match ke waqt
+> rukawat aayegi. Har item ko check kar ke tick (✓) lagayen.
+
+Every item below must be **checked and ready before match day**. Use this
+page as the official pre-match checklist — print it (Ctrl+P → Save as
+PDF) and hand it to the ground crew.
+
+---
+
+## 0.1 — Accounts & roles
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Cricket Manager** login for the scorer (`cricket-manager.traceodd.com`).
+2. A **director account** with studio access (`studio_director`
+   permission) for Todd Studio — log in once before match day to confirm.
+3. The director's machine must have the **Todd Studio desktop app
+   installed** (from the `v0.1.0` release) *or* a browser ready for
+   `studio.traceodd.com`.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Scorer ke liye **Cricket Manager** ka login
+   (`cricket-manager.traceodd.com`).
+2. Director ke liye **studio access** wala account (`studio_director`
+   permission) — match se pehle ek baar login kar ke check karen.
+3. Director ki machine par **Todd Studio desktop app install** hona
+   chahiye (release `v0.1.0` se) *ya* browser mein
+   `studio.traceodd.com` khula hona chahiye.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 0.2 — Studio access & login path
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Open Todd Studio (desktop app or browser).
+2. Sign in with the director email/password on the login screen — or let
+   the scorer send you straight in via **"Open Todd Studio"** from the
+   Manager Panel (one-click SSO, auto-selects the active match).
+3. Confirm the top session bar shows your email and a working
+   **Sign out** button.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Todd Studio kholen (desktop app ya browser).
+2. Director ke email/password se login karen — ya scorer ke paas se
+   **"Open Todd Studio"** button daba kar seedha aa jayen (one-click
+   sign-in, active match khud select ho jata hai).
+3. Upar session bar mein apna email aur **Sign out** button nazar aana
+   chahiye.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 0.3 — Network checks
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Every camera location must reach `studio.traceodd.com` (HTTPS 443).
+2. **Remote ground cameras** need working WebRTC paths: open UDP for the
+   engine's ICE port range, and issue **TURN credentials** when the
+   camera network uses strict NAT/firewalls.
+3. Director machine: stable internet (the control WebSocket must stay
+   connected — see the green connection state in Studio).
+
+:::caution Network drops = frozen feeds
+If a camera's network is unstable, the video freezes and the telemetry
+panel shows dropped frames. Fix the uplink **before** going on air.
+:::
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Har camera ki jagah se `studio.traceodd.com` (HTTPS 443) tak raasta
+   khula hona chahiye.
+2. **Door (remote) cameras** ke liye WebRTC ka raasta zaroori hai: engine
+   ki ICE UDP range kholen, aur agar camera ka network strict
+   NAT/firewall wala hai to **TURN credentials** den.
+3. Director ki machine ka internet stable hona chahiye (Studio mein
+   connection green nazar aaye).
+
+:::caution Network kharab = tasveer ruk jati hai
+Camera ka network unstable ho to video freeze hoti hai aur telemetry
+panel dropped frames dikhata hai. **On air se pehle** uplink theek
+karen.
+:::
+
+</TabItem>
+</Tabs>
+
+---
+
+## 0.4 — Camera inventory
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Decide per position: **WHIP** (OBS / Larix / IRL Pro) or **RTSP/RTMP**
+   (IP camera / encoder).
+2. Create the **room** in Todd Studio and register every camera with a
+   label (e.g. `cam-1 Main`, `cam-2 Slip`).
+3. Copy each camera's **ingest token** and share it with the camera
+   operator (Book 3 covers the exact app settings).
+4. Confirm every camera shows a **LIVE** badge in the multiview grid
+   before the toss.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Har position ke liye decide karen: **WHIP** (OBS / Larix / IRL Pro) ya
+   **RTSP/RTMP** (IP camera / encoder).
+2. Todd Studio mein **room** banayen aur har camera ka **label** ke sath
+   registration karen (masalan `cam-1 Main`, `cam-2 Slip`).
+3. Har camera ka **ingest token** copy kar ke camera operator ko den
+   (Book 3 mein app ki settings ka pura tareeqa hai).
+4. Toss se pehle multiview grid mein har camera ka **LIVE** badge check
+   karen.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 0.5 — Match data in the Manager
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Teams** created with players and short codes.
+2. **Tournament** created (teams + format + dates).
+3. **Match** created for today (both teams + venue + scheduled time).
+4. The correct match selected from the **Active Match** dropdown — this
+   is what the Studio scoreboard and auto-replays will follow.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Teams** players aur short codes ke sath bani hon.
+2. **Tournament** bana ho (teams + format + dates).
+3. Aaj ka **Match** bana ho (dono teams + venue + time).
+4. **Active Match** dropdown mein sahi match selected ho — Studio ka
+   scoreboard aur auto-replay isi match ko follow karta hai.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 0.6 — Studio scoreboard sync
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. In Todd Studio → **Setup & Configuration → Settings Panel**.
+2. Confirm the **Cricket Manager URL** and the **match IDs** are listed.
+3. Confirm the engine shows the push feed as **connected** and the
+   **scoreboard lower-third** displays the correct match (score, overs,
+   batsmen).
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Todd Studio → **Setup & Configuration → Settings Panel** kholen.
+2. **Cricket Manager URL** aur **match IDs** ki list theek hon.
+3. Engine ka push feed **connected** dikhe aur **scoreboard lower-third**
+   mein sahi match (score, overs, batsmen) nazar aaye.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 0.7 — Replay & audio readiness
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Open the **Replay Director** panel — every camera must be listed (the
+   replay ring buffer records them all).
+2. **Audio Mixer**: assign each camera mic to a bus — `commentary` /
+   `ambient` / `sfx` / `music` — and check the metering bars move.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Replay Director** panel kholen — har camera list mein hona chahiye
+   (replay buffer sab ko record karta hai).
+2. **Audio Mixer**: har camera ki mic ka **bus** assign karen —
+   `commentary` / `ambient` / `sfx` / `music` — aur metering bars hilti
+   hon.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 0.8 — Graphics assets
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. **Watermark**: logo image URL ready (transparent PNG) — set it in
+   **Watermark Control**.
+2. Optional **stinger** transition asset (WebM/MP4) for special moments.
+3. Scoreboard **title/subtitle** template agreed with the production team.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. **Watermark**: logo ki image ka URL tayyar ho (transparent PNG) —
+   **Watermark Control** mein set karen.
+2. Optional **stinger** transition asset (WebM/MP4) khaas maukon ke liye.
+3. Scoreboard ka **title/subtitle** template production team se confirm
+   ho.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 0.9 — Broadcast targets
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+1. Get the **RTMP stream key + URL** for each destination (YouTube,
+   Facebook, etc.).
+2. Add them in **Broadcast Panel** (`source: program` so viewers see the
+   full composite with graphics).
+3. Start each forwarder **before the toss** and confirm the destination
+   preview is live; then stop them until air time.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+1. Har destination ka **RTMP stream key + URL** hasil karen (YouTube,
+   Facebook waghaira).
+2. **Broadcast Panel** mein add karen (`source: program` — taake viewers
+   ko graphics ke sath poora composite mile).
+3. Toss se pehle har forwarder **start kar ke check** karen ke preview
+   live hai; phir air time tak band kar den.
+
+</TabItem>
+</Tabs>
+
+---
+
+## 0.10 — Final pre-match checklist
+
+<Tabs>
+<TabItem value="en" label="English" default>
+
+| ✓ | Check |
+|---|---|
+| | Director + scorer logged in |
+| | All cameras LIVE in multiview |
+| | Active match selected & scoreboard correct |
+| | Audio buses assigned & metering alive |
+| | Watermark / scoreboard template set |
+| | Replay panel lists all cameras |
+| | Broadcast targets tested |
+
+All green? You are ready for **Book 1** — the Manager Panel.
+
+</TabItem>
+<TabItem value="ur" label="اردو (Roman Urdu)">
+
+| ✓ | Check |
+|---|---|
+| | Director aur scorer logged in |
+| | Sab cameras multiview mein LIVE |
+| | Active match selected aur scoreboard theek |
+| | Audio buses assign aur metering chal rahi |
+| | Watermark / scoreboard template set |
+| | Replay panel mein sab cameras |
+| | Broadcast targets test ho chuke |
+
+Sab green? Tayyar hain **Book 1** — Manager Panel ke liye.
+
+</TabItem>
+</Tabs>

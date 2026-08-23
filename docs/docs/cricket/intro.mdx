@@ -1,0 +1,61 @@
+---
+title: Cricket System — Overview
+description: How the Cricket Manager Panel, Todd Studio and the ground cameras connect into one live broadcast pipeline.
+---
+
+# 🏏 Cricket System — Overview
+
+The NexaTrace cricket pipeline has **three parts** that work together on
+match day:
+
+| Component | Where | Who uses it |
+|---|---|---|
+| **Cricket Manager Panel** | `https://cricket-manager.traceodd.com` (Flutter app) | Scorer / match manager |
+| **Todd Studio** | `https://studio.traceodd.com` (browser) **or** the Windows desktop app | Director / producer |
+| **Ground Cameras / Broadcaster** | WHIP apps (OBS, Larix, IRL Pro) or RTSP/RTMP cameras | Camera operators |
+
+## How they connect
+
+```text
+Scorer scores a ball in the Manager Panel
+        │  REST → Laravel backend
+        ▼
+Laravel broadcasts `score.updated` on Reverb (WebSocket)
+        │  push
+        ▼
+Rust Media Engine (behind studio.traceodd.com/api)
+        │  → scoreboard lower-third, event popups, auto-replay (4/6 = 5s before + 3s after)
+        ▼
+Todd Studio (director)  +  PGM stream → WHEP viewers / RTMP / SRS HLS
+```
+
+- **Ground cameras** publish video to the engine via **WHIP** (or the
+  engine pulls **RTSP/RTMP**).
+- The **director** switches cameras into the program (PGM) bus in Todd
+  Studio.
+- The **scorer** drives everything: every ball automatically updates the
+  lower-third, fires popups, and triggers slow-motion replays — the
+  director only steps in for manual moments (VAR, polls, broadcast
+  targets).
+
+## The Books
+
+| Book | Content | Status |
+|---|---|---|
+| [Book 0 — Prerequisites](/cricket/book0-prerequisites) | Accounts, network, cameras, match data, broadcast targets | ✅ Complete (EN + Roman Urdu) |
+| [Book 1 — Cricket Manager Panel](/cricket/book1-manager-panel) | Teams → Tournament → Match → Live scoring → Studio link | ✅ Complete (EN + Roman Urdu) |
+| Book 2 — Todd Studio | Director controls, overlays, VAR, polls, PGM | 📝 Phase 2 |
+| Book 3 — Ground Cameras | Camera pairing, stream config, field setup | 📝 Phase 2 |
+
+---
+
+> **اردو / Roman Urdu:** Cricket ka pipeline teen hisson par chalta hai:
+> **Manager Panel** (scorer), **Todd Studio** (director) aur **ground
+> cameras** (camera operator). Scorer ball dalta hai → Laravel Reverb ke
+> zariye engine tak push hota hai → engine khud scoreboard, popup aur
+> **4/6 par auto-replay** (5 second pehle + 3 second baad, slow motion)
+> chala deta hai. Director sirf khaas maukon par dakhil hota hai (VAR,
+> polls, broadcast).
+>
+> Shuru karne se pehle **Book 0** zaroor parhen — wahan ke checks pooray
+> hone ke baad hi operational buttons dabayen.

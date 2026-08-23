@@ -1,0 +1,82 @@
+name: Deploy Docs to Hetzner
+
+# ============================================================================
+# Builds the Docusaurus documentation site and ships it to the Hetzner VPS.
+#
+# Triggers: pushes to main/mainnew touching docs/**, the docs nginx block,
+# or this workflow itself; plus manual workflow_dispatch.
+#
+# Pipeline: checkout → npm install → docusaurus build → rsync build/ to
+# /var/www/docs → install the nginx server block → reload nginx.
+#
+# Required secrets (already used by the other deploy workflows):
+#   SSH_KYE_HATZNER — SSH private key (historical name, keep exactly)
+# Required repository variables:
+#   VPS_HOST, VPS_USER
+# ============================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - mainnew
+    paths:
+      - "docs/**"
+      - ".nginx/docs-traceodd.conf"
+      - ".github/workflows/docs-deploy.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies & build the site
+        working-directory: docs
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KYE_HATZNER }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          echo 'Host ${{ vars.VPS_HOST }}' >> ~/.ssh/config
+          echo '  StrictHostKeyChecking no' >> ~/.ssh/config
+          echo '  UserKnownHostsFile=/dev/null' >> ~/.ssh/config
+
+      - name: Deploy static site via rsync
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "mkdir -p /var/www/docs"
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" \
+            docs/build/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/docs/
+
+      - name: Deploy Nginx configuration
+        run: |
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            .nginx/docs-traceodd.conf ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/nginx/sites-available/docs-traceodd
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "
+            ln -sf /etc/nginx/sites-available/docs-traceodd /etc/nginx/sites-enabled/docs-traceodd
+            nginx -t && systemctl reload nginx && echo 'Docs Nginx OK'
+          "
+
+      - name: Smoke test the deployed site
+        run: |
+          sleep 3
+          curl -fsS -o /dev/null -w 'HTTP %{http_code}\n' \
+            -H 'Host: docs.traceodd.com' http://${{ vars.VPS_HOST }}/ \
+            || echo '(smoke test unavailable — check the site in a browser)'
