@@ -194,6 +194,27 @@ class CricketRepository {
     }
   }
 
+  /// Branding of the ACTIVE tournament (logo + name + location) — used by
+  /// the manager login page and the public app. Returns null when no
+  /// active tournament exists yet.
+  Future<Map<String, dynamic>?> getPublicBrand() async {
+    try {
+      final res = await _http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/cricket/public/brand'),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final brand = data['brand'];
+        if (brand != null && brand is Map) {
+          return Map<String, dynamic>.from(brand);
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<MatchModel>> getLiveMatches({String? tournamentId}) async {
     try {
       var url = '${ApiConfig.apiBaseUrl}/cricket/public/matches/live';
@@ -1653,6 +1674,27 @@ class CricketRepository {
     throw Exception(err?['message'] ?? 'Failed to upload logo');
   }
 
+  /// Upload the tournament brand logo (manager branding) — returns the
+  /// relative /storage/… URL to save on the tournament's logo_url.
+  Future<String?> uploadBrandLogo(Uint8List bytes, String fileName) async {
+    final uri = Uri.parse(
+      '${ApiConfig.apiBaseUrl}/cricket/manager/brand/logo',
+    );
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(await _authHeadersMultipart())
+      ..files.add(
+        http.MultipartFile.fromBytes('logo', bytes, filename: fileName),
+      );
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    if (res.statusCode == 201) {
+      final data = jsonDecode(res.body);
+      return data['data']?['url']?.toString();
+    }
+    final err = _parseBody(res);
+    throw Exception(err?['message'] ?? 'Failed to upload brand logo');
+  }
+
   // ────────────────────────────────────────────────────────────
   // Fixture Scheduling (manager endpoints)
   // ────────────────────────────────────────────────────────────
@@ -1864,6 +1906,7 @@ class CricketRepository {
     required DateTime endDate,
     String? location,
     String? description,
+    String? logoUrl,
   }) async {
     final res = await _http.post(
       Uri.parse('${ApiConfig.apiBaseUrl}/cricket/manager/tournaments'),
@@ -1875,6 +1918,7 @@ class CricketRepository {
         if (location != null && location.isNotEmpty) 'location': location,
         if (description != null && description.isNotEmpty)
           'description': description,
+        if (logoUrl != null && logoUrl.isNotEmpty) 'logo_url': logoUrl,
       }),
     );
     if (res.statusCode == 201) {
@@ -1895,6 +1939,7 @@ class CricketRepository {
     String? description,
     String? status,
     bool? isActive,
+    String? logoUrl,
   }) async {
     final res = await _http.put(
       Uri.parse(
@@ -1909,6 +1954,7 @@ class CricketRepository {
         if (description != null) 'description': description,
         if (status != null) 'status': status,
         if (isActive != null) 'is_active': isActive,
+        if (logoUrl != null) 'logo_url': logoUrl,
       }),
     );
     if (res.statusCode == 200) {
@@ -1934,6 +1980,19 @@ class CricketRepository {
       );
     }
     throw Exception(_apiError(res));
+  }
+
+  /// Delete a tournament (soft delete — including completed ones).
+  Future<void> deleteTournament(String tournamentId) async {
+    final res = await _http.delete(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/tournaments/$tournamentId',
+      ),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      throw Exception(_apiError(res));
+    }
   }
 
   static String _dateOnly(DateTime dt) =>

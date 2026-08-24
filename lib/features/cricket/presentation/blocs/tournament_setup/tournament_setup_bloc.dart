@@ -60,6 +60,7 @@ final class CreateTournamentRequested extends TournamentSetupEvent {
   final DateTime startDate;
   final DateTime endDate;
   final String? description;
+  final String? logoUrl;
 
   const CreateTournamentRequested({
     required this.name,
@@ -67,6 +68,7 @@ final class CreateTournamentRequested extends TournamentSetupEvent {
     required this.startDate,
     required this.endDate,
     this.description,
+    this.logoUrl,
   });
 }
 
@@ -79,6 +81,7 @@ final class UpdateTournamentRequested extends TournamentSetupEvent {
   final String? description;
   final String? status;
   final bool? isActive;
+  final String? logoUrl;
 
   const UpdateTournamentRequested({
     required this.tournamentId,
@@ -89,12 +92,18 @@ final class UpdateTournamentRequested extends TournamentSetupEvent {
     this.description,
     this.status,
     this.isActive,
+    this.logoUrl,
   });
 }
 
 final class ActivateTournamentRequested extends TournamentSetupEvent {
   final String tournamentId;
   const ActivateTournamentRequested(this.tournamentId);
+}
+
+final class DeleteTournamentRequested extends TournamentSetupEvent {
+  final String tournamentId;
+  const DeleteTournamentRequested(this.tournamentId);
 }
 
 // ─── BLoC ──────────────────────────────────────────────────────
@@ -111,6 +120,7 @@ class TournamentSetupBloc
     on<CreateTournamentRequested>(_onCreate);
     on<UpdateTournamentRequested>(_onUpdate);
     on<ActivateTournamentRequested>(_onActivate);
+    on<DeleteTournamentRequested>(_onDelete);
   }
 
   Future<void> _onLoad(
@@ -152,6 +162,7 @@ class TournamentSetupBloc
         startDate: e.startDate,
         endDate: e.endDate,
         description: e.description,
+        logoUrl: e.logoUrl,
       );
       emit(
         const TournamentSetupNotice(
@@ -186,6 +197,7 @@ class TournamentSetupBloc
         description: e.description,
         status: e.status,
         isActive: e.isActive,
+        logoUrl: e.logoUrl,
       );
       emit(
         const TournamentSetupNotice(
@@ -225,6 +237,31 @@ class TournamentSetupBloc
       emit(
         TournamentSetupNotice(
           action: 'activate',
+          success: false,
+          message: error.toString().replaceFirst('Exception: ', ''),
+        ),
+      );
+    }
+    add(const RefreshTournaments());
+  }
+
+  Future<void> _onDelete(
+    DeleteTournamentRequested e,
+    Emitter<TournamentSetupState> emit,
+  ) async {
+    try {
+      await _repo.deleteTournament(e.tournamentId);
+      emit(
+        const TournamentSetupNotice(
+          action: 'deleteTournament',
+          success: true,
+          message: 'Tournament deleted.',
+        ),
+      );
+    } catch (error) {
+      emit(
+        TournamentSetupNotice(
+          action: 'deleteTournament',
           success: false,
           message: error.toString().replaceFirst('Exception: ', ''),
         ),

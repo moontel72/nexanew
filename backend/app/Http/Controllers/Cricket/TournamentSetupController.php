@@ -97,6 +97,20 @@ class TournamentSetupController extends Controller
     }
 
     /**
+     * Delete a tournament (soft delete) — including completed ones.
+     */
+    public function destroy(string $id): \Illuminate\Http\JsonResponse
+    {
+        $tournament = Tournament::findOrFail($id);
+        $tournament->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tournament deleted.',
+        ]);
+    }
+
+    /**
      * Activate this tournament and deactivate all others so the public
      * portal and Fixture Scheduler always resolve a single active one.
      *

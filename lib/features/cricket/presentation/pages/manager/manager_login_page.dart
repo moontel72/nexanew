@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 
 import '../../blocs/cricket_auth/cricket_auth_bloc.dart';
 import '../../blocs/match_list/match_list_bloc.dart';
@@ -47,33 +49,56 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.sports_cricket,
-                    size: 80,
-                    color: AppColors.secondary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Cricket Manager',
-                    style: TextStyle(
-                      color: CricketColors.textPrimary,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  FutureBuilder<String>(
-                    future: CricketRepository()
-                        .getActiveTournament()
-                        .then((t) => t?.name ?? 'Cricket Tournament')
-                        .catchError((_) => 'Cricket Tournament'),
-                    builder: (ctx, snap) => Text(
-                      snap.data ?? 'Cricket Tournament',
-                      style: TextStyle(
-                        color: CricketColors.textSecondary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  FutureBuilder<Map<String, dynamic>?>(
+                    future: CricketRepository().getPublicBrand(),
+                    builder: (ctx, snap) {
+                      final brand = snap.data;
+                      final name = brand?['name']?.toString();
+                      final logoUrl = _resolveLogoUrl(
+                        brand?['logo_url']?.toString(),
+                      );
+                      return Column(
+                        children: [
+                          if (logoUrl != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                logoUrl,
+                                width: 84,
+                                height: 84,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) =>
+                                    const _FallbackBadge(),
+                              ),
+                            )
+                          else
+                            const _FallbackBadge(),
+                          const SizedBox(height: 16),
+                          Text(
+                            name != null && name.isNotEmpty
+                                ? name
+                                : 'Cricket Manager',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: CricketColors.textPrimary,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            name != null && name.isNotEmpty
+                                ? 'Cricket Manager Panel'
+                                : 'Cricket Tournament',
+                            style: TextStyle(
+                              color: CricketColors.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
@@ -226,4 +251,24 @@ class _ManagerLoginPageState extends State<ManagerLoginPage> {
       borderSide: BorderSide.none,
     ),
   );
+
+  String? _resolveLogoUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return '${ApiConfig.baseUrl}$url';
+  }
+}
+
+/// Trace Odd badge shown when the active tournament has no custom logo yet.
+class _FallbackBadge extends StatelessWidget {
+  const _FallbackBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      'assets/logo/traceodd_logo.svg',
+      width: 84,
+      height: 84,
+    );
+  }
 }

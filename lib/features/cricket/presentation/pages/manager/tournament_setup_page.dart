@@ -1,8 +1,11 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 
 import '../../blocs/tournament_setup/tournament_setup_bloc.dart';
 import '../../../data/models/cricket_models.dart';
+import '../../../data/repositories/cricket_repository.dart';
 import '../../widgets/cricket_lookups.dart';
 import '../../widgets/cricket_top_sheet.dart';
 import '../../widgets/match_card.dart';
@@ -23,6 +26,45 @@ class TournamentSetupPage extends StatelessWidget {
         child: TournamentFormSheet(existing: existing),
       ),
     );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    TournamentModel tournament,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F2936),
+        title: const Text(
+          'Delete tournament?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          '"${tournament.name}" aur is ke fixtures delete ho jayenge. '
+          'Yeh wapas nahi ho sakta.',
+          style: const TextStyle(color: Color(0xFFBDD8DB)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Color(0xFFEF4444)),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && context.mounted) {
+      context.read<TournamentSetupBloc>().add(
+        DeleteTournamentRequested(tournament.id),
+      );
+    }
   }
 
   @override
@@ -173,6 +215,8 @@ class TournamentSetupPage extends StatelessWidget {
                                         .add(ActivateTournamentRequested(t.id)),
                                     onEdit: () =>
                                         _showForm(context, existing: t),
+                                    onDelete: () =>
+                                        _confirmDelete(context, t),
                                   ),
                               ],
                             ),
@@ -193,11 +237,13 @@ class _TournamentCard extends StatelessWidget {
   final TournamentModel tournament;
   final VoidCallback onActivate;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const _TournamentCard({
     required this.tournament,
     required this.onActivate,
     required this.onEdit,
+    required this.onDelete,
   });
 
   @override
@@ -302,6 +348,14 @@ class _TournamentCard extends StatelessWidget {
                   ),
                   onPressed: onEdit,
                 ),
+                TextButton.icon(
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  label: const Text('Delete'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFEF4444),
+                  ),
+                  onPressed: onDelete,
+                ),
               ],
             ),
           ],
@@ -348,6 +402,8 @@ class _TournamentFormSheetState extends State<TournamentFormSheet> {
   late final TextEditingController _descCtrl;
   final _startDate = ValueNotifier<DateTime?>(null);
   final _endDate = ValueNotifier<DateTime?>(null);
+  String? _logoUrl;
+  bool _uploadingLogo = false;
 
   @override
   void initState() {
@@ -358,6 +414,7 @@ class _TournamentFormSheetState extends State<TournamentFormSheet> {
     _descCtrl = TextEditingController(text: e?.description ?? '');
     _startDate.value = e?.startDate;
     _endDate.value = e?.endDate;
+    _logoUrl = e?.logoUrl;
   }
 
   @override
@@ -380,6 +437,50 @@ class _TournamentFormSheetState extends State<TournamentFormSheet> {
     if (date != null) {
       target.value = date;
     }
+  }
+
+  /// Uploads the tournament's own brand logo and stores the returned URL.
+  Future<void> _uploadLogo() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null || file.bytes == null) return;
+
+    setState(() => _uploadingLogo = true);
+    try {
+      final url = await CricketRepository().uploadBrandLogo(
+        file.bytes!,
+        file.name,
+      );
+      if (!mounted) return;
+      setState(() {
+        _uploadingLogo = false;
+        _logoUrl = url;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Logo uploaded — save to apply.'),
+          backgroundColor: Color(0xFF10B981),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _uploadingLogo = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Upload failed: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+    }
+  }
+
+  String? _resolveLogoUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return '${ApiConfig.baseUrl}$url';
   }
 
   void _submit() {
@@ -418,6 +519,7 @@ class _TournamentFormSheetState extends State<TournamentFormSheet> {
           startDate: start,
           endDate: end,
           description: description.isEmpty ? null : description,
+          logoUrl: _logoUrl,
         ),
       );
     } else {
@@ -429,6 +531,7 @@ class _TournamentFormSheetState extends State<TournamentFormSheet> {
           startDate: start,
           endDate: end,
           description: description.isEmpty ? null : description,
+          logoUrl: _logoUrl,
         ),
       );
     }
@@ -468,6 +571,58 @@ class _TournamentFormSheetState extends State<TournamentFormSheet> {
                 style: const TextStyle(color: Colors.white),
                 decoration: cricketFieldDecoration('Tournament name *'),
               ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Brand logo',
+                      style: TextStyle(color: CricketColors.textSecondary),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    icon: _uploadingLogo
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF3B82F6),
+                            ),
+                          )
+                        : const Icon(Icons.cloud_upload_outlined, size: 16),
+                    label: Text(
+                      _uploadingLogo
+                          ? 'Uploading…'
+                          : (_logoUrl == null ? 'Upload logo' : 'Change logo'),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF3B82F6),
+                      side: const BorderSide(color: Color(0xFF3B82F6)),
+                    ),
+                    onPressed: _uploadingLogo ? null : _uploadLogo,
+                  ),
+                ],
+              ),
+              if (_logoUrl != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      _resolveLogoUrl(_logoUrl)!,
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Text(
+                        '(logo preview unavailable)',
+                        style: TextStyle(color: Color(0xFFBDD8DB)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               TextField(
                 controller: _locationCtrl,

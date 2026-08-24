@@ -106,16 +106,14 @@ class MatchCard extends StatelessWidget {
                     ),
                 ],
               ),
-              if (canEdit &&
-                  (onEdit != null ||
-                      onDelete != null ||
-                      onToggleStatus != null))
+              if (onDelete != null ||
+                  (canEdit && (onEdit != null || onToggleStatus != null)))
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      if (onEdit != null)
+                      if (canEdit && onEdit != null)
                         TextButton.icon(
                           icon: const Icon(Icons.edit, size: 16),
                           label: const Text('Edit'),
@@ -124,7 +122,7 @@ class MatchCard extends StatelessWidget {
                           ),
                           onPressed: onEdit,
                         ),
-                      if (onToggleStatus != null)
+                      if (canEdit && onToggleStatus != null)
                         TextButton.icon(
                           icon: Icon(
                             match.status == 'cancelled'

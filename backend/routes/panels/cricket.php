@@ -203,6 +203,7 @@ Route::prefix('api/v1/cricket/manager')
         Route::get('tournaments/{id}', [TournamentSetupController::class, 'show']);
         Route::put('tournaments/{id}', [TournamentSetupController::class, 'update']);
         Route::post('tournaments/{id}/activate', [TournamentSetupController::class, 'activate']);
+        Route::delete('tournaments/{id}', [TournamentSetupController::class, 'destroy']);
 
         // Fixture Scheduling — Round-Robin auto-generation
         Route::post('tournaments/{tournamentId}/fixtures/generate', [MatchController::class, 'generateFixtures']);
