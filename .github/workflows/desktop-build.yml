@@ -128,21 +128,22 @@ jobs:
       - name: Deploy installers, portal and manifest to the VPS
         shell: bash
         run: |
-          SSH="ssh -o StrictHostKeyChecking=no"
-          RSYNC="rsync -avz -e ssh -o StrictHostKeyChecking=no"
-          $SSH ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "mkdir -p /var/www/traceodd/download/windows /var/www/traceodd/updates"
-          $RSYNC media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/nsis/ \
-            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/windows/
-          $RSYNC media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/msi/*.msi \
-            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/windows/
-          $RSYNC /tmp/artifacts/ \
-            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/windows/
-          $RSYNC desktop-download/ \
-            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/
-          $RSYNC /tmp/desktop-update.json \
-            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/updates/desktop-update.json
+          # Host-key checking is already disabled via ~/.ssh/config in the
+          # previous step, so plain ssh/rsync are non-interactive here.
+          HOST="${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}"
+          ssh -o StrictHostKeyChecking=no "$HOST" "mkdir -p /var/www/traceodd/download/windows /var/www/traceodd/updates"
+          rsync -avz media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/nsis/ \
+            "$HOST":/var/www/traceodd/download/windows/
+          rsync -avz media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/msi/*.msi \
+            "$HOST":/var/www/traceodd/download/windows/
+          rsync -avz /tmp/artifacts/ \
+            "$HOST":/var/www/traceodd/download/windows/
+          rsync -avz desktop-download/ \
+            "$HOST":/var/www/traceodd/download/
+          rsync -avz /tmp/desktop-update.json \
+            "$HOST":/var/www/traceodd/updates/desktop-update.json
           echo "--- live manifest ---"
-          $SSH ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "cat /var/www/traceodd/updates/desktop-update.json"
+          ssh -o StrictHostKeyChecking=no "$HOST" "cat /var/www/traceodd/updates/desktop-update.json"
 
       - name: Smoke test the download endpoint
         shell: bash
