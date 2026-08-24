@@ -69,6 +69,8 @@ jobs:
           flutter build web --release
           rm -f build/web/flutter_service_worker.js
           bash .scripts/version-web-build.sh build/web
+          # Admin-branded PWA manifest (name/icons) for installs from this host
+          cp web/manifest-admin.json build/web/manifest.json
 
       - name: Verify Admin Panel build
         run: |

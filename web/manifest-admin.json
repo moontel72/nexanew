@@ -1,0 +1,40 @@
+{
+    "name": "Trace Odd Admin",
+    "short_name": "TO Admin",
+    "description": "Trace Odd Super Admin panel — platform management and dynamic website content.",
+    "start_url": ".",
+    "scope": ".",
+    "display": "standalone",
+    "background_color": "#0A0E21",
+    "theme_color": "#0A0E21",
+    "lang": "en-PK",
+    "categories": ["business", "productivity"],
+    "orientation": "any",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

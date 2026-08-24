@@ -72,6 +72,7 @@ import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/t
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/transport/drivers_admin_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/reseller_management/reseller_management_list_screen.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/reseller_management/register_reseller_screen.dart';
+import 'package:trace_odd/features/nexa_admin/presentation/screens/super_admin/site_content/site_content_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/factory_login_screen.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/factory_dashboard.dart';
 import 'package:trace_odd/features/factory/admin/presentation/screens/factory_shell.dart';
@@ -783,6 +784,11 @@ class AppRouter {
                   const AddSubAdminScreen(inShell: true),
             ),
           ],
+        ),
+        GoRoute(
+          path: '/site-content',
+          name: 'site_content',
+          builder: (context, state) => const SiteContentScreen(inShell: true),
         ),
       ],
     ),

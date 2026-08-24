@@ -216,6 +216,17 @@ class SuperAdminShell extends StatelessWidget {
           ),
         ],
       ),
+      AdminSidebarSection(
+        title: 'Website',
+        color: Color(0xFF896512),
+        items: [
+          AdminSidebarItem(
+            label: 'Site Content',
+            icon: Icons.edit_note,
+            route: '/site-content',
+          ),
+        ],
+      ),
     ];
   }
 
@@ -238,6 +249,7 @@ class SuperAdminShell extends StatelessWidget {
     }
     if (location.startsWith('/transport/drivers')) return 'Drivers';
     if (location.startsWith('/transport/fraud')) return 'Fraud Prevention';
+    if (location.startsWith('/site-content')) return 'Site Content';
     return 'Super Admin Dashboard';
   }
 
@@ -286,6 +298,9 @@ class SuperAdminShell extends StatelessWidget {
     }
     if (location.startsWith('/transport/fraud')) {
       return const ['Transport', 'Fraud Prevention'];
+    }
+    if (location.startsWith('/site-content')) {
+      return const ['Website', 'Site Content'];
     }
     return const ['Overview'];
   }
