@@ -58,7 +58,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'NexaTrace Docs',
+      title: '', // logo-only navbar — the lockup already carries the brand name
       logo: {
         alt: 'NexaTrace Docs',
         src: 'img/logo.svg',
