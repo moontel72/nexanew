@@ -79,6 +79,12 @@ pub struct GstProgramMixer {
     stinger_src: gst::Element,
     /// Corner watermark overlay (gdkpixbufoverlay).
     watermark: gst::Element,
+    /// Tournament brand logo overlay (gdkpixbufoverlay, left side).
+    brand_logo: gst::Element,
+    /// Tournament brand name (textoverlay).
+    brand_text: gst::Element,
+    /// Alpha gate for the brand name text.
+    brand_text_alpha: gst::Element,
     /// Scoreboard lower-third (textoverlay).
     lowerthird: gst::Element,
     /// Animated event popup (textoverlay).
@@ -215,6 +221,15 @@ impl GstProgramMixer {
         let watermark = pipeline
             .by_name("watermark")
             .ok_or_else(|| AppError::Internal("watermark lookup failed".to_string()))?;
+        let brand_logo = pipeline
+            .by_name("brand_logo")
+            .ok_or_else(|| AppError::Internal("brand_logo lookup failed".to_string()))?;
+        let brand_text = pipeline
+            .by_name("brand_text")
+            .ok_or_else(|| AppError::Internal("brand_text lookup failed".to_string()))?;
+        let brand_text_alpha = pipeline
+            .by_name("brand_text_alpha")
+            .ok_or_else(|| AppError::Internal("brand_text_alpha lookup failed".to_string()))?;
         let lowerthird = pipeline
             .by_name("lowerthird")
             .ok_or_else(|| AppError::Internal("lowerthird lookup failed".to_string()))?;
@@ -314,6 +329,9 @@ impl GstProgramMixer {
             stinger_alpha,
             stinger_src,
             watermark,
+            brand_logo,
+            brand_text,
+            brand_text_alpha,
             lowerthird,
             popup,
             poll,
@@ -408,6 +426,45 @@ impl GstProgramMixer {
             }
             None => {
                 let _ = self.watermark.set_property_from_str("alpha", "0.0");
+            }
+        }
+
+        // Tournament brand (left side): the manager's own logo + name,
+        // opposite the Trace Odd watermark.
+        match &overlays.brand {
+            Some(brand) => {
+                match brand
+                    .asset_url
+                    .as_deref()
+                    .filter(|url| !url.trim().is_empty())
+                {
+                    Some(url) => {
+                        let _ = self.brand_logo.set_property_from_str("location", url);
+                        let _ = self
+                            .brand_logo
+                            .set_property_from_str("relative-x", &brand.x.to_string());
+                        let _ = self
+                            .brand_logo
+                            .set_property_from_str("relative-y", &brand.y.to_string());
+                        let _ = self.brand_logo.set_property_from_str("alpha", "1.0");
+                    }
+                    None => {
+                        let _ = self.brand_logo.set_property_from_str("alpha", "0.0");
+                    }
+                }
+                match brand.text.as_deref().filter(|t| !t.trim().is_empty()) {
+                    Some(text) => {
+                        let _ = self.brand_text.set_property_from_str("text", text);
+                        let _ = self.brand_text_alpha.set_property_from_str("alpha", "1.0");
+                    }
+                    None => {
+                        let _ = self.brand_text_alpha.set_property_from_str("alpha", "0.0");
+                    }
+                }
+            }
+            None => {
+                let _ = self.brand_logo.set_property_from_str("alpha", "0.0");
+                let _ = self.brand_text_alpha.set_property_from_str("alpha", "0.0");
             }
         }
 
@@ -780,6 +837,17 @@ fn build_description(config: &MixerOutputConfig, slots: usize) -> Result<String,
         "gdkpixbufoverlay name=watermark relative-x=0.965 relative-y=0.02 alpha=0.0 ! comp."
             .to_string(),
     );
+    // Tournament brand (left side): the manager's own logo + name.
+    branches.push(
+        "gdkpixbufoverlay name=brand_logo relative-x=0.02 relative-y=0.02 alpha=0.0 ! comp."
+            .to_string(),
+    );
+    branches.push(
+        "textoverlay name=brand_text text=\"\" valignment=top halignment=left xpos=70 ypos=6 \
+         line-alignment=left shaded-background=true font-desc=\"Sans Bold 20\" \
+         ! alpha name=brand_text_alpha alpha=0.0 ! comp."
+            .to_string(),
+    );
     // Scoreboard lower-third.
     branches.push(
         "textoverlay name=lowerthird text=\"\" valignment=bottom halignment=center ypos=70 \
@@ -935,6 +1003,8 @@ mod tests {
         };
         let description = build_description(&config, 2).expect("description builds");
         assert!(description.contains("name=watermark"));
+        assert!(description.contains("name=brand_logo"));
+        assert!(description.contains("name=brand_text"));
         assert!(description.contains("name=lowerthird"));
         assert!(description.contains("name=lt_alpha"));
         assert!(description.contains("name=popup"));

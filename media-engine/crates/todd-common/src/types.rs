@@ -479,6 +479,31 @@ pub struct WatermarkSpec {
     pub y: f32,
 }
 
+/// Tournament brand burned into the program video — the subscription
+/// manager's OWN logo + name, opposite corner to the Trace Odd watermark.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BrandOverlaySpec {
+    /// Transparent PNG URL or file path (tournament logo). Empty = logo off.
+    #[serde(default)]
+    pub asset_url: Option<String>,
+    /// Brand name text (e.g. tournament name). Empty = text off.
+    #[serde(default)]
+    pub text: Option<String>,
+    /// Normalized position (0.0–1.0) of the overlay's top-left corner.
+    #[serde(default = "default_brand_x")]
+    pub x: f32,
+    #[serde(default = "default_brand_y")]
+    pub y: f32,
+}
+
+fn default_brand_x() -> f32 {
+    0.02
+}
+
+fn default_brand_y() -> f32 {
+    0.02
+}
+
 /// One answer option of a spectator poll, burned into the program video.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PollOptionSpec {
@@ -514,6 +539,8 @@ pub struct OverlayState {
     #[serde(default)]
     pub watermark: Option<WatermarkSpec>,
     #[serde(default)]
+    pub brand: Option<BrandOverlaySpec>,
+    #[serde(default)]
     pub poll: Option<PollOverlaySpec>,
 }
 
@@ -546,6 +573,19 @@ pub enum OverlayCommand {
         #[serde(default = "default_watermark_x")]
         x: f32,
         #[serde(default = "default_watermark_y")]
+        y: f32,
+    },
+    /// Enable/disable or restyle the tournament brand (logo + name, left
+    /// side — opposite the Trace Odd watermark).
+    Brand {
+        enabled: bool,
+        #[serde(default)]
+        asset_url: Option<String>,
+        #[serde(default)]
+        text: Option<String>,
+        #[serde(default = "default_brand_x")]
+        x: f32,
+        #[serde(default = "default_brand_y")]
         y: f32,
     },
     /// Show/update the live spectator poll burn-in.

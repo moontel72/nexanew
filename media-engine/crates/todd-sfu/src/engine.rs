@@ -572,6 +572,28 @@ impl Engine {
                     None
                 };
             }
+            OverlayCommand::Brand {
+                enabled,
+                asset_url,
+                text,
+                x,
+                y,
+            } => {
+                overlays.brand = if enabled {
+                    Some(todd_common::types::BrandOverlaySpec {
+                        asset_url: asset_url
+                            .map(|url| url.trim().to_string())
+                            .filter(|url| !url.is_empty()),
+                        text: text
+                            .map(|t| t.trim().to_string())
+                            .filter(|t| !t.is_empty()),
+                        x,
+                        y,
+                    })
+                } else {
+                    None
+                };
+            }
             OverlayCommand::Poll { question, options } => {
                 overlays.poll = Some(todd_common::types::PollOverlaySpec {
                     question,
