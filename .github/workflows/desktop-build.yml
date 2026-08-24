@@ -1,19 +1,33 @@
 name: Desktop Build — Windows Installers
 
 # ============================================================================
-# Builds the Todd Studio desktop app (.exe + .msi) on Windows.
+# Builds, signs and publishes the Todd Studio desktop app on version tags.
 #
 # Triggers:
-#   - Push of a version tag (v*) → build + attach installers to the
-#     GitHub Release for that tag.
-#   - Manual workflow_dispatch → build + upload artifacts only.
+#   - push of a version tag (v*) → full release pipeline
+#   - manual workflow_dispatch   → build + artifacts only (version "dev")
 #
-# The production traceodd.com endpoints are baked into the bundle:
-#   VITE_API_BASE_URL      https://studio.traceodd.com   (engine via /api/*)
-#   VITE_STUDIO_LOGIN_URL  https://studio.traceodd.com/api/v1/studio/login
-#   VITE_CRICKET_MANAGER_URL https://cricket-manager.traceodd.com
-# (The committed .env.desktop carries the same values; the explicit env
-#  block here keeps the production contract visible in one place.)
+# Pipeline per tag:
+#   1. Build NSIS + MSI installers with the production traceodd.com env,
+#      the tag version injected via TAURI_CONFIG, and the updater private
+#      key applied (artifacts get .sig signature files).
+#   2. Generate desktop-update.json (version, notes, signature, URL) for
+#      the Tauri in-app updater.
+#   3. Deploy to the VPS:
+#        - installers + signatures  → /var/www/traceodd/download/windows/
+#        - latest-setup.exe / latest-en-US.msi (stable names)
+#        - download portal page     → /var/www/traceodd/download/
+#        - update manifest          → /var/www/traceodd/updates/desktop-update.json
+#      (served at https://traceodd.com/download/ and
+#       https://traceodd.com/api/desktop-update.json — see .nginx/traceodd.conf)
+#   4. Attach installers to the GitHub Release for the tag (backup mirror).
+#
+# Required secrets:
+#   SSH_KYE_HATZNER                  — SSH private key (historical name)
+#   TAURI_SIGNING_PRIVATE_KEY        — base64 of the Tauri signer key file
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — optional (empty when the key has no password)
+# Required repository variables:
+#   VPS_HOST, VPS_USER
 # ============================================================================
 
 on:
@@ -28,7 +42,7 @@ permissions:
 jobs:
   build-windows:
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       - name: Checkout code
@@ -44,8 +58,23 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Resolve release version and notes
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=0.0.0-dev" >> "$GITHUB_ENV"
+          fi
+          {
+            echo 'NOTES<<EOF'
+            echo '${{ github.event.head_commit.message }}'
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+
       - name: Build desktop installers (production traceodd.com)
         working-directory: media-engine/ui/todd-studio-gui
+        shell: bash
         env:
           VITE_API_BASE_URL: https://studio.traceodd.com
           VITE_WHEP_BASE_URL: ""
@@ -55,9 +84,69 @@ jobs:
           VITE_STUN_URL: stun:stun.l.google.com:19302
           VITE_TURN_URL: ""
           VITE_GFX_ASSET_URL: ""
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_CONFIG: '{"version":"${{ env.VERSION }}"}'
         run: |
-          npm ci
+          npm ci --no-audit --no-fund
           npm run build:desktop -- --bundles nsis,msi
+
+      - name: Generate update manifest and stable download names
+        working-directory: media-engine/ui/todd-studio-gui
+        shell: bash
+        run: |
+          node scripts/make-update-manifest.mjs \
+            --version "$VERSION" \
+            --notes "$NOTES" \
+            --bundle-dir src-tauri/target/release/bundle \
+            --base-url https://traceodd.com/download/windows \
+            --out /tmp/desktop-update.json
+          mkdir -p /tmp/artifacts
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe /tmp/artifacts/latest-setup.exe
+          MSI=$(ls src-tauri/target/release/bundle/msi/*.msi | head -n 1)
+          cp "$MSI" /tmp/artifacts/latest-en-US.msi
+          cat /tmp/desktop-update.json
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KYE_HATZNER }}
+
+      - name: Add server to known_hosts
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          echo 'Host ${{ vars.VPS_HOST }}' >> ~/.ssh/config
+          echo '  StrictHostKeyChecking no' >> ~/.ssh/config
+          echo '  UserKnownHostsFile=/dev/null' >> ~/.ssh/config
+
+      - name: Deploy installers, portal and manifest to the VPS
+        shell: bash
+        run: |
+          SSH="ssh -o StrictHostKeyChecking=no"
+          RSYNC="rsync -avz -e ssh -o StrictHostKeyChecking=no"
+          $SSH ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "mkdir -p /var/www/traceodd/download/windows /var/www/traceodd/updates"
+          $RSYNC media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/nsis/ \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/windows/
+          $RSYNC media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/msi/*.msi \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/windows/
+          $RSYNC /tmp/artifacts/ \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/windows/
+          $RSYNC desktop-download/ \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/
+          $RSYNC /tmp/desktop-update.json \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/updates/desktop-update.json
+          echo "--- live manifest ---"
+          $SSH ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "cat /var/www/traceodd/updates/desktop-update.json"
+
+      - name: Smoke test the download endpoint
+        shell: bash
+        run: |
+          curl -fsS -o /dev/null -w 'portal: HTTP %{http_code}\n' \
+            -H 'Host: traceodd.com' http://${{ vars.VPS_HOST }}/download/ || true
+          curl -fsS -H 'Host: traceodd.com' \
+            http://${{ vars.VPS_HOST }}/api/desktop-update.json || true
 
       - name: Upload installers (artifacts)
         uses: actions/upload-artifact@v4
@@ -65,8 +154,8 @@ jobs:
           name: todd-studio-windows-installers
           if-no-files-found: error
           path: |
-            media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/nsis/*.exe
-            media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/msi/*.msi
+            media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/nsis/*.exe*
+            media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/msi/*.msi*
 
       - name: Attach installers to the GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
