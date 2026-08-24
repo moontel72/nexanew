@@ -149,6 +149,16 @@
   color: var(--ifm-color-emphasis-600);
 }
 
+.dynamic-block-text {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.dynamic-block-text p {
+  margin-bottom: 0.25rem;
+}
+
 /* ------------------------------------------------------------------ */
 /* Desktop app download banner (overview homepage)                     */
 /* ------------------------------------------------------------------ */

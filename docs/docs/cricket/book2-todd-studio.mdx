@@ -6,6 +6,7 @@ description: Director controls — rooms, cameras, vision switching, scoreboard,
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import ScreenshotSlot from '@site/src/components/ScreenshotSlot';
+import DynamicBlock from '@site/src/components/DynamicBlock';
 
 # 🎛️ Book 2 — Todd Studio (Director)
 
@@ -38,9 +39,15 @@ identically in the **browser** (`studio.traceodd.com`) and the
    the Manager Panel to arrive already signed in with the active match.
 3. The top **session bar** shows your email and a **Sign out** button.
 
-<ScreenshotSlot title="Login screen + session bar">
-Capture the login screen and the session bar with a signed-in director email.
-</ScreenshotSlot>
+<DynamicBlock
+  slug="book2-login"
+  title="Login screen + session bar"
+  placeholder={
+    <ScreenshotSlot title="Login screen + session bar">
+      Capture the login screen and the session bar with a signed-in director email.
+    </ScreenshotSlot>
+  }
+/>
 
 </TabItem>
 <TabItem value="ur" label="اردو (Roman Urdu)">
