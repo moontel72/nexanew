@@ -7,11 +7,11 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../shared/widgets/brand/traceodd_brand.dart';
 import '../../data/models/landing_content.dart';
 import '../landing_palette.dart';
 import 'countdown_chip.dart';
 import 'landing_anchors.dart';
-import 'landing_logo.dart';
 
 class HeroSection extends StatelessWidget {
   final LandingHero hero;
@@ -40,7 +40,12 @@ class HeroSection extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          LandingLogo(assetPath: logoAsset, width: 260),
+          TraceOddBrand(
+            assetPath: logoAsset,
+            badgeSize: 200,
+            nameSize: 34,
+            gap: 18,
+          ),
           const SizedBox(height: 28),
           _Badge(text: announcementBadge),
           const SizedBox(height: 28),
@@ -104,7 +109,10 @@ class HeroSection extends StatelessWidget {
                   onPressed: () async {
                     final uri = Uri.parse(hero.downloadUrl);
                     try {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
                     } catch (_) {
                       // Ignore — the footer link is the fallback.
                     }

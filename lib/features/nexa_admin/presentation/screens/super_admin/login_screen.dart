@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/constants/app_constants.dart';
@@ -14,6 +13,7 @@ import 'package:trace_odd/core/utils/auth_state.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
+import 'package:trace_odd/shared/widgets/brand/traceodd_brand.dart';
 
 /// Super Admin Login Screen
 /// Authentication screen for super administrators to access the admin panel
@@ -113,12 +113,8 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
   Widget _buildHeader() {
     return Column(
       children: [
-        // Combined Logo + Company Name SVG
-        SvgPicture.asset(
-          'assets/logo/traceodd_logo.svg',
-          width: 560.w,
-          height: 322.h,
-        ),
+        // Golden badge + company name lockup
+        TraceOddBrand(badgeSize: 200.w, nameSize: 40.sp, gap: 14.h),
         Gap(8.h),
 
         // Subtitle

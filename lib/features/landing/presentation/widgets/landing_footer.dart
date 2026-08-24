@@ -5,9 +5,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../shared/widgets/brand/traceodd_brand.dart';
 import '../../data/models/landing_content.dart' as models;
 import '../landing_palette.dart';
-import 'landing_logo.dart';
 
 class LandingFooterSection extends StatelessWidget {
   final models.LandingFooter footer;
@@ -27,7 +27,12 @@ class LandingFooterSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       child: Column(
         children: [
-          LandingLogo(assetPath: logoAsset, width: 150),
+          TraceOddBrand(
+            assetPath: logoAsset,
+            badgeSize: 120,
+            nameSize: 24,
+            gap: 14,
+          ),
           const SizedBox(height: 18),
           Text(
             footer.tagline,

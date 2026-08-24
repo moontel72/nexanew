@@ -58,10 +58,11 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: '', // logo-only navbar — the lockup already carries the brand name
+      title: 'TRACE ODD',
       logo: {
-        alt: 'NexaTrace Docs',
+        alt: 'Trace Odd',
         src: 'img/logo.svg',
+        style: {height: '44px'},
       },
       items: [
         {

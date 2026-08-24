@@ -1,9 +1,10 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/features/bus_operations/presentation/widgets/missile_3d_button.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/traceodd_brand_tokens.dart';
+import 'package:trace_odd/shared/widgets/brand/traceodd_brand.dart';
 
 class AdminSidebarSection {
   final String title;
@@ -62,7 +63,7 @@ class AdminSidebar extends StatelessWidget {
     final location = GoRouterState.of(context).uri.toString();
 
     return Material(
-      color: const Color(0xFF1A3A5C),
+      color: TraceOddBrandTokens.dark,
       child: SizedBox(
         width: width,
         child: SafeArea(
@@ -75,10 +76,13 @@ class AdminSidebar extends StatelessWidget {
                     horizontal: 12,
                     vertical: 16,
                   ),
-                  child: SvgPicture.asset(
-                    'assets/logo/traceodd_logo.svg',
-                    width: 160,
-                    height: 91,
+                  child: const TraceOddBrand(
+                    badgeSize: 52,
+                    nameSize: 22,
+                    nameColor: TraceOddBrandTokens.cream,
+                    direction: Axis.horizontal,
+                    gap: 12,
+                    nameSpacing: 4,
                   ),
                 ),
               if (collapsed)

@@ -11,10 +11,10 @@
 
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/brand/traceodd_brand.dart';
 import '../../data/models/landing_content.dart';
 import '../landing_palette.dart';
 import 'landing_anchors.dart';
-import 'landing_logo.dart';
 
 class LandingNavBar extends StatelessWidget {
   final LandingMeta meta;
@@ -33,9 +33,13 @@ class LandingNavBar extends StatelessWidget {
           final isCompact = constraints.maxWidth < 768;
           return Row(
             children: [
-              LandingLogo(
+              TraceOddBrand(
                 assetPath: meta.logoAsset,
-                width: isCompact ? 84 : 96,
+                badgeSize: isCompact ? 40 : 44,
+                nameSize: isCompact ? 16 : 18,
+                direction: Axis.horizontal,
+                gap: 10,
+                nameSpacing: 4,
               ),
               const Spacer(),
               if (isCompact)

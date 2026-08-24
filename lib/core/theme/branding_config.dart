@@ -13,6 +13,7 @@
 import 'package:flutter/material.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
 import 'package:trace_odd/shared/theme/colors.dart';
+import 'package:trace_odd/shared/theme/traceodd_brand_tokens.dart';
 
 /// Immutable brand profile for a single tenant context.
 class BrandProfile {
@@ -57,22 +58,20 @@ class BrandingConfig {
   BrandingConfig._();
 
   // ── Trace Odd brand palette (master identity colors) ─────
-  //   Navy Blue        #1e40af  → primary
-  //   Bright Blue      #2563eb  → secondary / accent
-  //   Light Fill Blue  #eff4ff  → background fills
-  //   Clean White      #ffffff  → surfaces
-  static const Color _traceOddNavy = Color(0xFF1E40AF);
-  static const Color _traceOddBright = Color(0xFF2563EB);
+  // All values come from TraceOddBrandTokens — the single source of truth
+  // for the brand (badge gold + cream). Never hardcode hex here.
+  static const Color _traceOddPrimary = TraceOddBrandTokens.gold;
+  static const Color _traceOddSecondary = TraceOddBrandTokens.goldLight;
 
   // ── Default Trace Odd brand (fallback for all panels) ─────
 
   static const BrandProfile _nexaTraceDefault = BrandProfile(
     enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'Enterprise Authentication Platform',
-    logoAssetPath: 'assets/logo/traceodd_logo.svg',
+    logoAssetPath: TraceOddBrandTokens.logoAsset,
     fallbackIcon: Icons.verified_user,
-    primaryColor: _traceOddNavy,
-    secondaryColor: _traceOddBright,
+    primaryColor: _traceOddPrimary,
+    secondaryColor: _traceOddSecondary,
   );
 
   // ── Panel-specific brand profiles ─────────────────────────
@@ -81,10 +80,10 @@ class BrandingConfig {
   static const BrandProfile _superAdminBrand = BrandProfile(
     enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'Super Admin Control Panel',
-    logoAssetPath: 'assets/logo/traceodd_logo.svg',
+    logoAssetPath: TraceOddBrandTokens.logoAsset,
     fallbackIcon: Icons.admin_panel_settings,
-    primaryColor: _traceOddNavy,
-    secondaryColor: _traceOddBright,
+    primaryColor: _traceOddPrimary,
+    secondaryColor: _traceOddSecondary,
   );
 
   /// Factory Admin panel — third-party factory brand.
@@ -111,10 +110,10 @@ class BrandingConfig {
   static const BrandProfile _resellerBrand = BrandProfile(
     enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'B2B Marketplace & Reseller Portal',
-    logoAssetPath: 'assets/logo/traceodd_logo.svg',
+    logoAssetPath: TraceOddBrandTokens.logoAsset,
     fallbackIcon: Icons.storefront,
-    primaryColor: _traceOddNavy,
-    secondaryColor: _traceOddBright,
+    primaryColor: _traceOddPrimary,
+    secondaryColor: _traceOddSecondary,
   );
 
   /// Driver Mobile Portal — inherits factory context brand.
@@ -130,10 +129,10 @@ class BrandingConfig {
   static const BrandProfile _customerBrand = BrandProfile(
     enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'Product Authentication & Transit',
-    logoAssetPath: 'assets/logo/traceodd_logo.svg',
+    logoAssetPath: TraceOddBrandTokens.logoAsset,
     fallbackIcon: Icons.qr_code_scanner,
-    primaryColor: _traceOddNavy,
-    secondaryColor: _traceOddBright,
+    primaryColor: _traceOddPrimary,
+    secondaryColor: _traceOddSecondary,
   );
 
   // ── Public API ────────────────────────────────────────────

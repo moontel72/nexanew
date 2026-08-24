@@ -90,6 +90,9 @@ jobs:
           TAURI_CONFIG: '{"version":"${{ env.VERSION }}"}'
         run: |
           npm ci --no-audit --no-fund
+          # Rebuild the Windows/macOS/Linux icon set from the canonical gold
+          # badge so every release ships the current brand mark.
+          npm run tauri icon ../../../assets/logo/traceodd_logo.svg
           npm run build:desktop -- --bundles nsis,msi
 
       - name: Generate update manifest and stable download names

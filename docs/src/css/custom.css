@@ -5,26 +5,41 @@
  */
 
 :root {
-  --ifm-color-primary: #2360e8;
-  --ifm-color-primary-dark: #1b4fc7;
-  --ifm-color-primary-darker: #1744ac;
-  --ifm-color-primary-darkest: #12358a;
-  --ifm-color-primary-light: #3d74ea;
-  --ifm-color-primary-lighter: #5685ee;
-  --ifm-color-primary-lightest: #7da1f2;
+  /* Trace Odd brand gold (matches the badge artwork: rgb(137,101,18)) */
+  --ifm-color-primary: #896512;
+  --ifm-color-primary-dark: #75550e;
+  --ifm-color-primary-darker: #6e500e;
+  --ifm-color-primary-darkest: #5b420b;
+  --ifm-color-primary-light: #9d751a;
+  --ifm-color-primary-lighter: #a87f22;
+  --ifm-color-primary-lightest: #c49a3d;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #7da1f2;
-  --ifm-color-primary-dark: #5e88ee;
-  --ifm-color-primary-darker: #4f7cec;
-  --ifm-color-primary-darkest: #2b5fd8;
-  --ifm-color-primary-light: #9cbaf5;
-  --ifm-color-primary-lighter: #abc4f7;
-  --ifm-color-primary-lightest: #d9e4fb;
+  --ifm-color-primary: #d9b767;
+  --ifm-color-primary-dark: #cba34d;
+  --ifm-color-primary-darker: #be953f;
+  --ifm-color-primary-darkest: #9c7a33;
+  --ifm-color-primary-light: #e0c27d;
+  --ifm-color-primary-lighter: #e6cc90;
+  --ifm-color-primary-lightest: #f1e3bc;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* ------------------------------------------------------------------ */
+/* Brand navbar lockup: golden badge + TRACE ODD wordmark              */
+/* ------------------------------------------------------------------ */
+.navbar__title {
+  color: #896512;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  font-size: 1.02rem;
+}
+
+[data-theme='dark'] .navbar__title {
+  color: #d9b767;
 }
 
 /* ------------------------------------------------------------------ */

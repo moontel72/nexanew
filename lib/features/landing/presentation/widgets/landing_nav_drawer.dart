@@ -6,10 +6,10 @@
 
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/brand/traceodd_brand.dart';
 import '../../data/models/landing_content.dart';
 import '../landing_palette.dart';
 import 'landing_anchors.dart';
-import 'landing_logo.dart';
 
 class LandingNavDrawer extends StatelessWidget {
   final LandingMeta meta;
@@ -41,7 +41,14 @@ class LandingNavDrawer extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
               child: Row(
                 children: [
-                  LandingLogo(assetPath: meta.logoAsset, width: 108),
+                  TraceOddBrand(
+                    assetPath: meta.logoAsset,
+                    badgeSize: 46,
+                    nameSize: 18,
+                    direction: Axis.horizontal,
+                    gap: 10,
+                    nameSpacing: 4,
+                  ),
                   const Spacer(),
                   IconButton(
                     tooltip: 'Close menu',

@@ -6,8 +6,9 @@
   <title>Download Todd Studio — NexaTrace Broadcast Director</title>
   <style>
     :root {
-      --brand: #2360e8;
-      --brand-dark: #1744ac;
+      --brand: #896512;
+      --brand-dark: #6a4d0e;
+      --brand-tint: #f7efdc;
       --ink: #0f172a;
       --muted: #475569;
       --bg: #f6f8fd;
@@ -34,12 +35,19 @@
       padding: 2.5rem 2rem;
       text-align: center;
     }
-    .logo { width: 64px; height: 64px; margin: 0 auto 1rem; display: block; }
+    .logo { width: 72px; height: 72px; margin: 0 auto 0.6rem; display: block; }
+    .brand-name {
+      color: var(--brand);
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+    }
     h1 { font-size: 1.5rem; margin-bottom: 0.35rem; }
     .sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
     .version {
       display: inline-block;
-      background: #eef3ff;
+      background: var(--brand-tint);
       color: var(--brand-dark);
       font-weight: 700;
       font-size: 0.8rem;
@@ -69,7 +77,8 @@
 </head>
 <body>
   <main class="card">
-    <img class="logo" src="/download/logo.svg" alt="NexaTrace" />
+    <img class="logo" src="/download/logo.svg" alt="Trace Odd" />
+    <p class="brand-name">TRACE ODD</p>
     <h1>Todd Studio — Desktop App</h1>
     <p class="sub">The broadcast director control room for Windows.</p>
     <span class="version" id="version-badge">Latest release</span>

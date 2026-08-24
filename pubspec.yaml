@@ -113,14 +113,14 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/logos/trace_odd_logo_1024.png"
-  adaptive_icon_background: "#eff4ff"
+  adaptive_icon_background: "#0A0E21"
   adaptive_icon_foreground: "assets/images/logos/trace_odd_adaptive_fg.png"
   remove_alpha_ios: true
   web:
     generate: true
     image_path: "assets/images/logos/trace_odd_logo_1024.png"
-    background_color: "#eff4ff"
-    theme_color: "#1e40af"
+    background_color: "#0A0E21"
+    theme_color: "#896512"
   windows:
     generate: true
     image_path: "assets/images/logos/trace_odd_logo_1024.png"
