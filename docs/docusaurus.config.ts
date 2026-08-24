@@ -65,18 +65,6 @@ const config: Config = {
         style: {height: '44px'},
       },
       items: [
-        {
-          type: 'dropdown',
-          label: '🏏 Cricket',
-          position: 'left',
-          items: [
-            {to: '/cricket/intro', label: 'Cricket Overview'},
-            {to: '/cricket/book0-prerequisites', label: 'Book 0 — Prerequisites'},
-            {to: '/cricket/book1-manager-panel', label: 'Book 1 — Manager Panel'},
-            {to: '/cricket/book2-todd-studio', label: 'Book 2 — Todd Studio'},
-            {to: '/cricket/book3-broadcaster', label: 'Book 3 — Ground Cameras'},
-          ],
-        },
         {to: '/bus-fleet', label: '🚌 Bus Fleet', position: 'left'},
         {to: '/factory', label: '🏭 Factory', position: 'left'},
         {to: '/goods-company', label: '🚛 Goods Company', position: 'left'},

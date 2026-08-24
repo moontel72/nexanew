@@ -1,11 +1,13 @@
 ﻿// File: lib/features/nexa_admin/presentation/screens/super_admin/login_screen.dart
+//
+// Super Admin Login — compact, professional card layout. Uses FIXED sizes
+// (no screenutil scaling) so it stays centered and clean on desktop
+// browsers, tablets and mobiles alike.
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:trace_odd/core/constants/app_constants.dart';
 import 'package:trace_odd/core/utils/string_utils.dart';
@@ -13,6 +15,7 @@ import 'package:trace_odd/core/utils/auth_state.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_bloc.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_event.dart';
 import 'package:trace_odd/features/nexa_admin/presentation/bloc/auth/admin_auth_state.dart';
+import 'package:trace_odd/shared/theme/traceodd_brand_tokens.dart';
 import 'package:trace_odd/shared/widgets/brand/traceodd_brand.dart';
 
 /// Super Admin Login Screen
@@ -35,7 +38,6 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Check for saved credentials
     _checkSavedCredentials();
   }
 
@@ -62,46 +64,49 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
     );
   }
 
-  /// Build the login screen layout
+  /// Brand-dark premium background with a centered white card.
   Widget _buildLoginScreen() {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            Colors.white,
+            TraceOddBrandTokens.dark,
+            Color(0xFF141829),
+            TraceOddBrandTokens.dark,
           ],
         ),
       ),
       child: Center(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.all(24.w),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Logo and Title
-                _buildHeader(),
-                Gap(40.h),
-
-                // Login Form
-                _buildLoginForm(),
-                Gap(24.h),
-
-                // Login Button
-                _buildLoginButton(),
-                Gap(16.h),
-
-                // Forgot Password
-                _buildForgotPasswordLink(),
-                Gap(32.h),
-
-                // Security Notice
-                _buildSecurityNotice(),
-              ],
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Card(
+              elevation: 12,
+              shadowColor: Colors.black38,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(32, 36, 32, 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildHeader(),
+                    const SizedBox(height: 28),
+                    _buildLoginForm(),
+                    const SizedBox(height: 20),
+                    _buildLoginButton(),
+                    const SizedBox(height: 8),
+                    _buildForgotPasswordLink(),
+                    const SizedBox(height: 18),
+                    _buildSecurityNotice(),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -109,176 +114,141 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
     );
   }
 
-  /// Build header with logo and title
   Widget _buildHeader() {
     return Column(
       children: [
-        // Golden badge + company name lockup
-        TraceOddBrand(badgeSize: 200.w, nameSize: 40.sp, gap: 14.h),
-        Gap(8.h),
-
-        // Subtitle
+        const TraceOddBrand(badgeSize: 104, nameSize: 24, gap: 12),
+        const SizedBox(height: 10),
         Text(
           'Super Administrator Portal',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
         ),
-        Gap(4.h),
-
-        // Version
+        const SizedBox(height: 4),
         Text(
           'Version ${AppConstants.appVersion}',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
         ),
       ],
     );
   }
 
-  /// Build login form
   Widget _buildLoginForm() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-      child: Padding(
-        padding: EdgeInsets.all(24.w),
-        child: Form(
-          key: _formKey,
-          child: Column(
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: _emailController,
+            decoration: InputDecoration(
+              labelText: 'Admin Email',
+              prefixIcon: const Icon(Icons.email_outlined),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+            ),
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              final raw = value ?? '';
+              final sanitized = _sanitizeEmail(raw);
+              if (sanitized.isEmpty) {
+                return 'Please enter your email';
+              }
+              if (raw.contains(RegExp(r'\s'))) {
+                return 'Email cannot contain spaces';
+              }
+              if (!StringUtils.isValidEmail(sanitized)) {
+                return 'Please enter a valid email';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _passwordController,
+            decoration: InputDecoration(
+              labelText: 'Password',
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                ),
+                onPressed: () {
+                  setState(() => _obscurePassword = !_obscurePassword);
+                },
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+            ),
+            obscureText: _obscurePassword,
+            textInputAction: TextInputAction.done,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your password';
+              }
+              if (value.length < 8) {
+                return 'Password must be at least 8 characters';
+              }
+              return null;
+            },
+            onFieldSubmitted: (_) => _login(),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Email Field
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Admin Email',
-                  prefixIcon: const Icon(Icons.email),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                validator: (value) {
-                  final raw = value ?? '';
-                  final sanitized = _sanitizeEmail(raw);
-                  if (sanitized.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  if (raw.contains(RegExp(r'\s'))) {
-                    return 'Email cannot contain spaces';
-                  }
-                  if (!StringUtils.isValidEmail(sanitized)) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-              Gap(16.h),
-
-              // Password Field
-              TextFormField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: const Icon(Icons.lock),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
-                obscureText: _obscurePassword,
-                textInputAction: TextInputAction.done,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
-                  }
-                  if (value.length < 8) {
-                    return 'Password must be at least 8 characters';
-                  }
-                  return null;
-                },
-                onFieldSubmitted: (_) => _login(),
-              ),
-              Gap(16.h),
-
-              // Remember Me & Two-Factor
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Remember Me
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _rememberMe,
-                        onChanged: (value) {
-                          setState(() {
-                            _rememberMe = value ?? false;
-                          });
-                        },
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4.r),
-                        ),
-                      ),
-                      Text(
-                        'Remember me',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-
-                  // Two-Factor Status
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12.w,
-                      vertical: 6.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(20.r),
-                      border: Border.all(color: Colors.blue[100]!),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.security, size: 14.w, color: Colors.blue),
-                        Gap(4.w),
-                        Text(
-                          '2FA Required',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Colors.blue[700],
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                  Checkbox(
+                    value: _rememberMe,
+                    onChanged: (value) {
+                      setState(() => _rememberMe = value ?? false);
+                    },
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
+                  const Text('Remember me', style: TextStyle(fontSize: 13)),
                 ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.blue.shade100),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.security, size: 14, color: Colors.blue.shade700),
+                    const SizedBox(width: 4),
+                    Text(
+                      '2FA Required',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
-  /// Build login button
   Widget _buildLoginButton() {
     return BlocBuilder<AdminAuthBloc, AdminAuthState>(
       builder: (context, state) {
@@ -289,35 +259,33 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
           child: ElevatedButton(
             onPressed: isLoading ? null : _login,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: TraceOddBrandTokens.gold,
               foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 16.h),
+              disabledBackgroundColor: Colors.grey.shade400,
+              padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(12),
               ),
-              elevation: 4,
-              shadowColor: Theme.of(
-                context,
-              ).colorScheme.primary.withOpacity(0.3),
+              elevation: 3,
             ),
             child: isLoading
-                ? SizedBox(
-                    width: 20.w,
-                    height: 20.h,
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : Row(
+                : const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.login, size: 20.w),
-                      Gap(8.w),
+                      Icon(Icons.login, size: 20),
+                      SizedBox(width: 8),
                       Text(
                         'Login as Super Admin',
                         style: TextStyle(
-                          fontSize: 16.sp,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -329,83 +297,49 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
     );
   }
 
-  /// Build forgot password link
   Widget _buildForgotPasswordLink() {
     return TextButton(
       onPressed: _forgotPassword,
-      child: Text(
+      child: const Text(
         'Forgot Password?',
         style: TextStyle(
-          fontSize: 14.sp,
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.w500,
+          fontSize: 13,
+          color: TraceOddBrandTokens.gold,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
-  /// Build security notice
   Widget _buildSecurityNotice() {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.grey[200]!),
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(Icons.security, size: 16.w, color: Colors.green),
-              Gap(8.w),
-              Text(
-                'Security Notice',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green[700],
-                ),
-              ),
-            ],
-          ),
-          Gap(8.h),
-          Text(
-            'This portal is restricted to authorized super administrators only. '
-            'All activities are logged and monitored for security purposes.',
-            style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-          Gap(8.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.warning_amber, size: 12.w, color: Colors.orange),
-              Gap(4.w),
-              Text(
-                'Unauthorized access is prohibited',
-                style: TextStyle(
-                  fontSize: 11.sp,
-                  color: Colors.orange[700],
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          Icon(Icons.shield_outlined, size: 16, color: Colors.green.shade700),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Restricted portal — all activities are logged and monitored.',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Check for saved credentials
   Future<void> _checkSavedCredentials() async {
     // TODO: Implement credential checking from secure storage
-    // For now, we'll just clear the fields
     _emailController.clear();
     _passwordController.clear();
   }
 
-  /// Perform login
   void _login() {
     if (_formKey.currentState?.validate() ?? false) {
       final email = _sanitizeEmail(_emailController.text);
@@ -425,7 +359,6 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
     return value.replaceAll(RegExp(r'\s+'), '').trim().toLowerCase();
   }
 
-  /// Handle forgot password
   void _forgotPassword() {
     // TODO: Implement forgot password flow
     showDialog(
@@ -453,7 +386,6 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
     final buffer = StringBuffer();
     buffer.writeln(state.message);
 
-    // Append validation details if present (safe, structured format)
     if (state.isInvalidCredentials) {
       buffer.writeln();
       buffer.writeln('Please check your email and password.');
@@ -492,22 +424,15 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
     _isErrorDialogVisible = false;
   }
 
-  /// Navigate to dashboard after successful login
   void _navigateToDashboard() {
     if (!mounted) return;
     if (kDebugMode) {
       debugPrint('NAV_DASHBOARD: Login successful, navigating to dashboard');
     }
 
-    // CRITICAL: Update global auth state so router redirect allows navigation
     setIsAuthenticatedCache(true);
     setAuthCheckCompleted(true);
 
-    if (kDebugMode) {
-      debugPrint('NAV_DASHBOARD: Auth state updated, navigating now');
-    }
-
-    // Navigate to dashboard
     context.go('/dashboard');
   }
 }
