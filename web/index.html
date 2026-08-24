@@ -18,7 +18,11 @@
 
         <meta charset="UTF-8" />
         <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
-        <meta name="description" content="A new Flutter project." />
+        <meta
+            name="description"
+            content="Trace Odd — live sports broadcasting, fleet, factory and commerce operations on one platform."
+        />
+        <meta name="theme-color" content="#0A0E21" />
 
         <!-- iOS meta tags & icons -->
         <meta name="mobile-web-app-capable" content="yes" />
@@ -32,19 +36,18 @@
         <title>Trace Odd</title>
         <link rel="manifest" href="manifest.json" />
 
-        <!-- BUILD v1.0.0+2 — Force cache-bust: unregister old service worker -->
+        <!-- PWA: register the minimal service worker (network-first) so the
+             site is installable and gets an offline shell. The version query
+             is bumped on every deploy so browsers pick up SW changes. -->
         <script>
             if ("serviceWorker" in navigator) {
-                navigator.serviceWorker
-                    .getRegistrations()
-                    .then(function (registrations) {
-                        for (let reg of registrations) {
-                            reg.unregister();
-                        }
-                        console.log(
-                            "Service workers unregistered for fresh deploy.",
-                        );
-                    });
+                window.addEventListener("load", function () {
+                    navigator.serviceWorker
+                        .register("sw.js?v=1")
+                        .catch(function (err) {
+                            console.warn("SW registration skipped:", err);
+                        });
+                });
             }
         </script>
     </head>

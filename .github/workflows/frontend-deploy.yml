@@ -130,6 +130,8 @@ jobs:
             --pwa-strategy none
           rm -f build/web/flutter_service_worker.js
           bash .scripts/version-web-build.sh build/web
+          # Cricket-branded PWA manifest (name/icons) for installs from this host
+          cp web/manifest-cricket.json build/web/manifest.json
 
       - name: Deploy Cricket Public Portal to /cricket-public-web/
         run: |
@@ -148,6 +150,8 @@ jobs:
             --pwa-strategy none
           rm -f build/web/flutter_service_worker.js
           bash .scripts/version-web-build.sh build/web
+          # Manager-branded PWA manifest (name/icons) for installs from this host
+          cp web/manifest-cricket-manager.json build/web/manifest.json
 
       - name: Deploy Cricket Manager Panel to /cricket-manager-web/
         run: |

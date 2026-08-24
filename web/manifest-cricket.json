@@ -1,14 +1,14 @@
 {
-    "name": "Trace Odd",
-    "short_name": "TraceOdd",
-    "description": "Trace Odd — live sports broadcasting, fleet, factory and commerce operations on one platform.",
+    "name": "Valley Soon Cricket Tournament",
+    "short_name": "VS Cricket",
+    "description": "Live cricket streaming, ball-by-ball scores and tournament updates — Trace Odd Cricket.",
     "start_url": ".",
     "scope": ".",
     "display": "standalone",
     "background_color": "#0A0E21",
     "theme_color": "#0A0E21",
     "lang": "en-PK",
-    "categories": ["business", "sports", "productivity"],
+    "categories": ["sports", "entertainment"],
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [

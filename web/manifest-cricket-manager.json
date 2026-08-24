@@ -1,14 +1,14 @@
 {
-    "name": "Trace Odd",
-    "short_name": "TraceOdd",
-    "description": "Trace Odd — live sports broadcasting, fleet, factory and commerce operations on one platform.",
+    "name": "Cricket Manager",
+    "short_name": "Cricket Mgr",
+    "description": "Cricket tournament control panel — teams, matches, live scoring and streaming management.",
     "start_url": ".",
     "scope": ".",
     "display": "standalone",
     "background_color": "#0A0E21",
     "theme_color": "#0A0E21",
     "lang": "en-PK",
-    "categories": ["business", "sports", "productivity"],
+    "categories": ["business", "sports"],
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
