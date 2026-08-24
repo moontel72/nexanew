@@ -242,6 +242,13 @@ export interface WatermarkSpec {
   y: number;
 }
 
+export interface BrandOverlaySpec {
+  asset_url?: string | null;
+  text?: string | null;
+  x: number;
+  y: number;
+}
+
 export interface PollOptionSpec {
   label: string;
   votes: number;
@@ -256,6 +263,7 @@ export interface OverlayState {
   scoreboard?: ScoreboardOverlay | null;
   popup?: EventPopupSpec | null;
   watermark?: WatermarkSpec | null;
+  brand?: BrandOverlaySpec | null;
   poll?: PollOverlaySpec | null;
 }
 
@@ -263,6 +271,7 @@ export type OverlayCommand =
   | { kind: "scoreboard"; enabled: boolean; title: string; subtitle: string }
   | { kind: "event_popup"; text: string; subtext?: string | null; duration_ms?: number }
   | { kind: "watermark"; enabled: boolean; asset_url?: string | null; x: number; y: number }
+  | { kind: "brand"; enabled: boolean; asset_url?: string | null; text?: string | null; x: number; y: number }
   | { kind: "poll"; question: string; options: PollOptionSpec[] }
   | { kind: "poll_clear" };
 

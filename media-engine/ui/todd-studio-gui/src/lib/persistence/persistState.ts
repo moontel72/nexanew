@@ -33,6 +33,7 @@ export interface PersistedDirectorState {
   scoreboard: { enabled: boolean; title: string; subtitle: string };
   autoGraphics: { enabled: boolean; durationMs: number };
   watermark: { enabled: boolean; url: string };
+  brand: { enabled: boolean; url: string; name: string };
   transitionDurationMs: number;
 }
 
@@ -46,6 +47,7 @@ const EMPTY_STATE: PersistedDirectorState = {
   scoreboard: { enabled: false, title: "", subtitle: "" },
   autoGraphics: { enabled: true, durationMs: 4000 },
   watermark: { enabled: false, url: "" },
+  brand: { enabled: false, url: "", name: "" },
   transitionDurationMs: 600,
 };
 
@@ -82,6 +84,7 @@ export function loadPersistedState(): PersistedDirectorState {
       scoreboard: { ...EMPTY_STATE.scoreboard, ...(parsed.scoreboard ?? {}) },
       autoGraphics: { ...EMPTY_STATE.autoGraphics, ...(parsed.autoGraphics ?? {}) },
       watermark: { ...EMPTY_STATE.watermark, ...(parsed.watermark ?? {}) },
+      brand: { ...EMPTY_STATE.brand, ...(parsed.brand ?? {}) },
     };
   } catch {
     return { ...EMPTY_STATE };

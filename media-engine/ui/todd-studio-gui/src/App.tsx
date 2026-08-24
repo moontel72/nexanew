@@ -25,6 +25,7 @@ import { InputPanel } from "./components/InputPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SceneComposer } from "./components/scenes/SceneComposer";
 import { AudioMixer } from "./components/AudioMixer";
+import { BrandControl } from "./components/BrandControl";
 import { OverlayPanel } from "./components/OverlayPanel";
 import { WatermarkControl } from "./components/WatermarkControl";
 import { WagonWheelMap } from "./components/WagonWheelMap";
@@ -163,6 +164,7 @@ export default function App() {
               <div className="config-zone-content">
                 <InputPanel />
                 <WatermarkControl />
+                <BrandControl />
                 <PollPanel />
                 <SceneComposer />
                 <SegmentManager onFire={() => setOverlayEvent("BREAK")} />
