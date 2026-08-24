@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:trace_odd/core/config/api_config.dart';
 
 import '../../blocs/match_list/match_list_bloc.dart';
 import '../../../data/models/cricket_models.dart';
@@ -29,6 +30,34 @@ class _TournamentHomePageState extends State<TournamentHomePage> {
     return Scaffold(
       backgroundColor: CricketColors.background,
       appBar: AppBar(
+        leadingWidth: 64,
+        leading: BlocBuilder<MatchListBloc, MatchListState>(
+          builder: (context, state) {
+            final logo = state is MatchListLoaded
+                ? state.tournament?.logoUrl
+                : null;
+            final resolved = _resolveLogo(logo);
+            return Padding(
+              padding: const EdgeInsets.all(10),
+              child: resolved != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        resolved,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.sports_cricket,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                    )
+                  : const Icon(
+                      Icons.sports_cricket,
+                      color: AppColors.secondary,
+                    ),
+            );
+          },
+        ),
         title: BlocBuilder<MatchListBloc, MatchListState>(
           builder: (context, state) {
             final name = state is MatchListLoaded
@@ -126,6 +155,13 @@ class _TournamentHomePageState extends State<TournamentHomePage> {
       ],
     ),
   );
+
+  /// Resolves a relative /storage/… logo URL against the API origin.
+  String? _resolveLogo(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return '${ApiConfig.baseUrl}$url';
+  }
 }
 
 class _SectionHeader extends StatelessWidget {

@@ -577,7 +577,7 @@ class _TournamentFormSheetState extends State<TournamentFormSheet> {
                   Expanded(
                     child: Text(
                       'Brand logo',
-                      style: TextStyle(color: CricketColors.textSecondary),
+                      style: TextStyle(color: Color(0xFFBDD8DB)),
                     ),
                   ),
                   OutlinedButton.icon(
