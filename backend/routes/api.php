@@ -514,6 +514,26 @@ $registerRoutes = function (): void {
         });
 
     // ──────────────────────────────────────────────────────────────
+    // DYNAMIC SITE CONTENT (CMS-lite) — landing + docs runtime content
+    //   Public:   GET /api/v1/public/content/{slug}
+    //   Admin:    GET/PUT/DELETE /api/v1/admin/content… + screenshot upload
+    // ──────────────────────────────────────────────────────────────
+    Route::prefix("public/content")
+        ->middleware("throttle:120,1")
+        ->group(function (): void {
+            Route::get("{slug}", [\App\Http\Controllers\Admin\SiteContentController::class, "show"]);
+        });
+
+    Route::prefix("admin/content")
+        ->middleware(["auth:sanctum", "admin"])
+        ->group(function (): void {
+            Route::get("", [\App\Http\Controllers\Admin\SiteContentController::class, "index"]);
+            Route::put("{slug}", [\App\Http\Controllers\Admin\SiteContentController::class, "upsert"]);
+            Route::delete("{slug}", [\App\Http\Controllers\Admin\SiteContentController::class, "destroy"]);
+            Route::post("upload-image", [\App\Http\Controllers\Admin\SiteContentController::class, "uploadImage"]);
+        });
+
+    // ──────────────────────────────────────────────────────────────
     // FILE UPLOAD (generic)
     // ──────────────────────────────────────────────────────────────
     Route::prefix("files")->group(function (): void {
