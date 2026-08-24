@@ -128,19 +128,28 @@ jobs:
       - name: Deploy installers, portal and manifest to the VPS
         shell: bash
         run: |
+          # Windows runners ship scp (OpenSSH) but NOT rsync — use scp here.
           # Host-key checking is already disabled via ~/.ssh/config in the
-          # previous step, so plain ssh/rsync are non-interactive here.
+          # previous step, so plain ssh/scp are non-interactive.
           HOST="${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}"
           ssh -o StrictHostKeyChecking=no "$HOST" "mkdir -p /var/www/traceodd/download/windows /var/www/traceodd/updates"
-          rsync -avz media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/nsis/ \
+          scp -r -o StrictHostKeyChecking=no \
+            media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/nsis/. \
             "$HOST":/var/www/traceodd/download/windows/
-          rsync -avz media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/msi/*.msi \
+          scp -o StrictHostKeyChecking=no \
+            media-engine/ui/todd-studio-gui/src-tauri/target/release/bundle/msi/*.msi \
             "$HOST":/var/www/traceodd/download/windows/
-          rsync -avz /tmp/artifacts/ \
+          scp -o StrictHostKeyChecking=no \
+            /tmp/artifacts/latest-setup.exe \
             "$HOST":/var/www/traceodd/download/windows/
-          rsync -avz desktop-download/ \
+          scp -o StrictHostKeyChecking=no \
+            /tmp/artifacts/latest-en-US.msi \
+            "$HOST":/var/www/traceodd/download/windows/
+          scp -r -o StrictHostKeyChecking=no \
+            desktop-download/. \
             "$HOST":/var/www/traceodd/download/
-          rsync -avz /tmp/desktop-update.json \
+          scp -o StrictHostKeyChecking=no \
+            /tmp/desktop-update.json \
             "$HOST":/var/www/traceodd/updates/desktop-update.json
           echo "--- live manifest ---"
           ssh -o StrictHostKeyChecking=no "$HOST" "cat /var/www/traceodd/updates/desktop-update.json"
