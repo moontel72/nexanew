@@ -115,7 +115,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
       children: [
         // Combined Logo + Company Name SVG
         SvgPicture.asset(
-          'assets/logo/logo-company-name.svg',
+          'assets/logo/traceodd_logo.svg',
           width: 560.w,
           height: 322.h,
         ),
@@ -466,7 +466,9 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
       buffer.writeln('Check your internet connection and try again.');
     } else if (state.isServerError) {
       buffer.writeln();
-      buffer.writeln('The server is experiencing issues. Please try again later.');
+      buffer.writeln(
+        'The server is experiencing issues. Please try again later.',
+      );
     }
 
     if (!mounted) return;

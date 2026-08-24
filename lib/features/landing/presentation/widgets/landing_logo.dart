@@ -1,8 +1,8 @@
 // Landing Logo Widget
 //
-// Renders the Trace Odd golden brand lockup (logo + company name) — the
-// SAME asset the Super Admin panel login uses
-// (`assets/logo/logo-company-name.svg`). Falls back to a brand icon if
+// Renders the Trace Odd golden badge — the SINGLE canonical brand asset
+// (`assets/logo/traceodd_logo.svg`), shared by the Super Admin login,
+// the admin sidebar and the landing hero. Falls back to a brand icon if
 // the SVG asset is unavailable.
 
 import 'package:flutter/material.dart';
@@ -12,7 +12,7 @@ import '../landing_palette.dart';
 
 class LandingLogo extends StatelessWidget {
   /// Asset path from landing JSON meta
-  /// (e.g. assets/logo/logo-company-name.svg).
+  /// (e.g. assets/logo/traceodd_logo.svg).
   final String assetPath;
 
   /// Displayed width; height follows the asset's intrinsic aspect ratio.

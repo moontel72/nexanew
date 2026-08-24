@@ -76,7 +76,7 @@ class AdminSidebar extends StatelessWidget {
                     vertical: 16,
                   ),
                   child: SvgPicture.asset(
-                    'assets/logo/logo-company-name.svg',
+                    'assets/logo/traceodd_logo.svg',
                     width: 160,
                     height: 91,
                   ),

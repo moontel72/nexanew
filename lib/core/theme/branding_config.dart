@@ -8,7 +8,7 @@
 // or shell widget to receive the correct brand parameters.
 //
 // Asset fallback policy: if a panel-specific asset is missing, the
-// base Trace Odd asset tree under `assets/images/` is used instead.
+// canonical Trace Odd badge (`assets/logo/traceodd_logo.svg`) is used.
 
 import 'package:flutter/material.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
@@ -22,8 +22,8 @@ class BrandProfile {
   /// Subtitle shown beneath the logo (e.g. "Factory Admin Portal").
   final String workspaceBanner;
 
-  /// Path to the logo asset in `assets/images/logos/`.
-  /// Falls back to `assets/images/trace_odd_logo.png` if null / missing.
+  /// Path to the logo asset (canonical: `assets/logo/traceodd_logo.svg`).
+  /// Falls back to the panel's fallbackIcon if null / missing.
   final String? logoAssetPath;
 
   /// Icon shown when no logo asset is available.
@@ -69,7 +69,7 @@ class BrandingConfig {
   static const BrandProfile _nexaTraceDefault = BrandProfile(
     enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'Enterprise Authentication Platform',
-    logoAssetPath: 'assets/images/logos/trace_odd_logo.png',
+    logoAssetPath: 'assets/logo/traceodd_logo.svg',
     fallbackIcon: Icons.verified_user,
     primaryColor: _traceOddNavy,
     secondaryColor: _traceOddBright,
@@ -81,7 +81,7 @@ class BrandingConfig {
   static const BrandProfile _superAdminBrand = BrandProfile(
     enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'Super Admin Control Panel',
-    logoAssetPath: 'assets/images/logos/trace_odd_logo.png',
+    logoAssetPath: 'assets/logo/traceodd_logo.svg',
     fallbackIcon: Icons.admin_panel_settings,
     primaryColor: _traceOddNavy,
     secondaryColor: _traceOddBright,
@@ -111,7 +111,7 @@ class BrandingConfig {
   static const BrandProfile _resellerBrand = BrandProfile(
     enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'B2B Marketplace & Reseller Portal',
-    logoAssetPath: 'assets/images/logos/trace_odd_logo.png',
+    logoAssetPath: 'assets/logo/traceodd_logo.svg',
     fallbackIcon: Icons.storefront,
     primaryColor: _traceOddNavy,
     secondaryColor: _traceOddBright,
@@ -130,7 +130,7 @@ class BrandingConfig {
   static const BrandProfile _customerBrand = BrandProfile(
     enterpriseTitle: 'Trace Odd',
     workspaceBanner: 'Product Authentication & Transit',
-    logoAssetPath: 'assets/images/logos/trace_odd_logo.png',
+    logoAssetPath: 'assets/logo/traceodd_logo.svg',
     fallbackIcon: Icons.qr_code_scanner,
     primaryColor: _traceOddNavy,
     secondaryColor: _traceOddBright,
