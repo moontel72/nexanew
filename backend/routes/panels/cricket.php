@@ -19,6 +19,7 @@ use App\Http\Controllers\Cricket\SquadController;
 use App\Http\Controllers\Cricket\StreamController;
 use App\Http\Controllers\Cricket\TeamController;
 use App\Http\Controllers\Cricket\TournamentSetupController;
+use App\Http\Controllers\Cricket\TournamentBrandController;
 use App\Http\Controllers\Cricket\VoiceScoreController;
 use Illuminate\Support\Facades\Route;
 
@@ -87,6 +88,10 @@ Route::prefix('api/v1/cricket/public')->group(function (): void {
     // Public replays
     Route::get('matches/{matchId}/replays', [ReplayController::class, 'publicReplays']);
     Route::get('replays/{clipId}/stream', [ReplayController::class, 'publicStream']);
+
+    // Tournament branding — the active tournament's own logo + name
+    // (manager login page + public app identity).
+    Route::get('brand', [TournamentBrandController::class, 'active']);
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -216,6 +221,11 @@ Route::prefix('api/v1/cricket/manager')
         Route::post('grounds', [GroundController::class, 'store']);
         Route::put('grounds/{id}', [GroundController::class, 'update']);
         Route::delete('grounds/{id}', [GroundController::class, 'destroy']);
+
+        // Tournament branding — manager uploads the tournament logo;
+        // the name/logo_url are saved on the tournament itself via
+        // PUT tournaments/{id}.
+        Route::post('brand/logo', [TournamentBrandController::class, 'uploadLogo']);
 
         // Instant Replay / VAR
         Route::post('matches/{matchId}/replay/event', [ReplayController::class, 'markEvent']);
