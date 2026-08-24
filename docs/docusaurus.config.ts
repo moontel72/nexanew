@@ -82,6 +82,11 @@ const config: Config = {
         {to: '/b2b-ecommerce', label: '🛒 B2B Ecommerce', position: 'left'},
         {to: '/customer-app', label: '📱 Customer App', position: 'left'},
         {
+          href: 'https://traceodd.com/download/',
+          label: '⬇ Download App',
+          position: 'right',
+        },
+        {
           href: 'https://studio.traceodd.com',
           label: 'Open Todd Studio ↗',
           position: 'right',

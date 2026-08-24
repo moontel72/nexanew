@@ -1,9 +1,11 @@
 // Landing Hero Section
 //
 // Full-viewport brand hero: announcement badge, headline, subheadline,
-// countdown, and dual CTAs. All copy from LandingHero in the JSON.
+// countdown, and CTAs — including the desktop app download button when a
+// download URL is configured. All copy from LandingHero in the JSON.
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models/landing_content.dart';
 import '../landing_palette.dart';
@@ -85,6 +87,31 @@ class HeroSection extends StatelessWidget {
             spacing: 14,
             runSpacing: 14,
             children: [
+              if (hero.downloadUrl.isNotEmpty)
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: LandingPalette.heroGradient.last,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 26,
+                      vertical: 16,
+                    ),
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                  onPressed: () async {
+                    final uri = Uri.parse(hero.downloadUrl);
+                    try {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } catch (_) {
+                      // Ignore — the footer link is the fallback.
+                    }
+                  },
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text(hero.downloadCta),
+                ),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: LandingPalette.accent,

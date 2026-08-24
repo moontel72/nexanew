@@ -20,7 +20,9 @@
     "subheadline": "From the factory floor to the cricket ground, from your bus seat to your bike's ignition — Trace Odd is building Pakistan's first fully integrated digital infrastructure for transport, commerce, industry, and entertainment.",
     "primaryCta": "Notify Me on Launch",
     "secondaryCta": "Explore the Ecosystem",
-    "countdownLabel": "Launching in"
+    "countdownLabel": "Launching in",
+    "downloadCta": "Download Todd Studio — Desktop App",
+    "downloadUrl": "https://traceodd.com/download/"
   },
   "stats": [
     { "value": "7", "label": "Core Verticals" },
@@ -231,6 +233,7 @@
     "contactLabel": "Contact Us",
     "copyright": "© 2026 Trace Odd. All rights reserved.",
     "links": [
+      { "label": "Download Todd Studio", "url": "https://traceodd.com/download/" },
       { "label": "Live Sports", "url": "https://cricket.traceodd.com" },
       { "label": "Privacy Policy", "url": "#" },
       { "label": "Terms of Service", "url": "#" }

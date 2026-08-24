@@ -114,6 +114,43 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Desktop app download banner (overview homepage)                     */
+/* ------------------------------------------------------------------ */
+.download-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border-radius: var(--ifm-card-border-radius);
+  background: var(--ifm-color-primary);
+  color: #fff;
+}
+
+.download-banner-text p {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  opacity: 0.9;
+}
+
+.download-banner-button {
+  display: inline-block;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ifm-color-primary-darkest) !important;
+  font-weight: 700;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+
+.download-banner-button:hover {
+  background: var(--ifm-color-emphasis-100);
+}
+
+/* ------------------------------------------------------------------ */
 /* Print / PDF export for field operators                              */
 /*                                                                     */
 /* Usage: open any page → Ctrl+P (browser) → "Save as PDF". The print  */

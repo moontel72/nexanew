@@ -9,6 +9,7 @@ on:
       - "lib/**"
       - "web/**"
       - "assets/**"
+      - "desktop-download/**"
       - "pubspec.yaml"
       - "pubspec.lock"
       - "rust/**"
@@ -95,6 +96,27 @@ jobs:
       - name: Deploy Landing Page to /landing/
         run: |
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/landing/
+
+      # ──────────────────────────────────────────────────────────────
+      # STEP B2: Desktop App Download Portal (traceodd.com/download)
+      # Page + logo ship on every deploy; the installers are seeded from
+      # the last GitHub Release and replaced by the signed desktop
+      # pipeline on each version tag (desktop-build.yml).
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Deploy Desktop Download Portal
+        run: |
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /var/www/traceodd/download/windows /var/www/traceodd/updates"
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" --progress desktop-download/ root@135.181.46.27:/var/www/traceodd/download/
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
+            test -f /var/www/traceodd/download/windows/latest-setup.exe || \
+              curl -fsSL -o /var/www/traceodd/download/windows/latest-setup.exe \
+                https://github.com/moontel72/nexanew/releases/download/v0.1.0/Todd.Studio_0.1.0_x64-setup.exe || true
+            test -f /var/www/traceodd/download/windows/latest-en-US.msi || \
+              curl -fsSL -o /var/www/traceodd/download/windows/latest-en-US.msi \
+                https://github.com/moontel72/nexanew/releases/download/v0.1.0/Todd.Studio_0.1.0_x64_en-US.msi || true
+            ls -la /var/www/traceodd/download/ /var/www/traceodd/download/windows/
+          "
 
       # ──────────────────────────────────────────────────────────────
       # STEP C: Build & Deploy Cricket Public Portal

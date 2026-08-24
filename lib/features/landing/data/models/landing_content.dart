@@ -107,6 +107,8 @@ class LandingHero {
   final String primaryCta;
   final String secondaryCta;
   final String countdownLabel;
+  final String downloadCta;
+  final String downloadUrl;
 
   const LandingHero({
     required this.eyebrow,
@@ -115,6 +117,8 @@ class LandingHero {
     required this.primaryCta,
     required this.secondaryCta,
     required this.countdownLabel,
+    this.downloadCta = '',
+    this.downloadUrl = '',
   });
 
   factory LandingHero.fromJson(Map<String, dynamic> json) => LandingHero(
@@ -124,6 +128,8 @@ class LandingHero {
     primaryCta: _s(json, 'primaryCta'),
     secondaryCta: _s(json, 'secondaryCta'),
     countdownLabel: _s(json, 'countdownLabel'),
+    downloadCta: _s(json, 'downloadCta'),
+    downloadUrl: _s(json, 'downloadUrl'),
   );
 }
 
