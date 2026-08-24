@@ -13,7 +13,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: 'NexaTrace Docs',
   tagline: 'Platform operator manuals — Cricket, Fleet, Factory & more',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/favicon.png',
 
   // docs.traceodd.com serves from the domain root.
   url: 'https://docs.traceodd.com',
