@@ -128,16 +128,18 @@
 .director-topbar {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr) 480px;
-  grid-template-rows: 210px;
+  /* Slim control strip — ~40% shorter than the original 210px so the
+     program monitor gets more vertical space. */
+  grid-template-rows: 126px;
   gap: 0.75rem;
-  padding: 0.75rem;
+  padding: 0.5rem;
   border-bottom: 1px solid hsl(var(--border));
   align-items: stretch;
 }
 
 .director-topbar > * {
   min-height: 0;
-  max-height: 210px;
+  max-height: 126px;
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
