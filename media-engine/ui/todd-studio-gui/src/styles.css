@@ -37,18 +37,19 @@
   box-shadow: 0 0 0 3px hsl(var(--accent));
 }
 
-/* Audio console: vertical faders + level meters (OBS-style). */
+/* Audio console: vertical faders + level meters (OBS-style).
+   Compact 34px throw — the console lives in the fixed-height top bar. */
 .fader-vertical {
   writing-mode: vertical-lr;
   direction: rtl;
   width: 16px;
-  height: 100px;
+  height: 34px;
 }
 
 .meter {
   position: relative;
   width: 10px;
-  height: 100px;
+  height: 34px;
   border-radius: 3px;
   background: hsl(var(--muted));
   overflow: hidden;
@@ -121,14 +122,24 @@
   white-space: nowrap;
 }
 
-/* 2 ── TOP BAR: Transition | VisionSwitcher | AudioMixer ──── */
+/* 2 ── TOP BAR: Transition | VisionSwitcher | AudioMixer ────
+   FIXED height: the row never grows — any cell that overflows
+   scrolls internally instead of pushing the center canvas down. */
 .director-topbar {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr) 480px;
+  grid-template-rows: 210px;
   gap: 0.75rem;
   padding: 0.75rem;
   border-bottom: 1px solid hsl(var(--border));
   align-items: stretch;
+}
+
+.director-topbar > * {
+  min-height: 0;
+  max-height: 210px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 /* 3+4+5 ── WORKSPACE: left | center | right ───────────────── */
@@ -181,6 +192,13 @@
 @media (max-width: 1279px) {
   .director-topbar {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+
+  .director-topbar > * {
+    max-height: none;
   }
 
   .director-workspace {

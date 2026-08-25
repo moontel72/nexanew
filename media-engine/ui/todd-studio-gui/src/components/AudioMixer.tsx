@@ -38,7 +38,7 @@ function FaderStrip({ label, meterKey, spec, onBus, disabled }: FaderStripProps)
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md border border-border bg-background/60 p-2",
+        "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md border border-border bg-background/60 p-1.5",
         disabled && "pointer-events-none opacity-50",
       )}
     >
@@ -216,7 +216,7 @@ export function AudioMixer() {
     };
 
   return (
-    <section className="flex flex-col gap-3 rounded-md border border-border bg-muted/40 p-3">
+    <section className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-2">
       <header className="flex items-center justify-between text-sm font-semibold uppercase tracking-wider text-muted-foreground">
         Audio Mixer
         <span className="truncate font-mono text-[10px] normal-case">
@@ -246,7 +246,7 @@ export function AudioMixer() {
         {/* Master strip */}
         <div
           className={cn(
-            "flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md border border-accent/40 bg-background/60 p-2",
+            "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md border border-accent/40 bg-background/60 p-1.5",
             !activeRoomId && "pointer-events-none opacity-50",
           )}
         >
