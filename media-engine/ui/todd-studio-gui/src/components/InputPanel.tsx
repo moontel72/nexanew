@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { api, ApiError } from "../lib/api/client";
-import type { CameraInfo, CameraSourceKind, Room, UpdateCameraRequest } from "../lib/api/types";
+import type {
+  CameraInfo,
+  CameraSourceKind,
+  CreateRoomResponse,
+  Room,
+  UpdateCameraRequest,
+} from "../lib/api/types";
 import { useControlState } from "../hooks/useControlState";
 import { useDirector } from "../lib/director/directorService";
 import { cn } from "../lib/utils";
@@ -49,6 +55,9 @@ export function InputPanel() {
 
   const [form, setForm] = useState<CameraForm>(EMPTY_FORM);
   const [selectedRoomId, setSelectedRoomId] = useState<string>("");
+  const [roomName, setRoomName] = useState("");
+  const [roomCameraIds, setRoomCameraIds] = useState("");
+  const [roomResult, setRoomResult] = useState<CreateRoomResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [lastAdded, setLastAdded] = useState<AddResult | null>(null);
@@ -76,6 +85,25 @@ export function InputPanel() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleCreateRoom = () => {
+    const name = roomName.trim();
+    if (!name) {
+      setActionError("Enter a room name first");
+      return;
+    }
+    const cameraIds = roomCameraIds
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+    void runAction(async () => {
+      const result = await api.createRoom(name, cameraIds, getToken());
+      setRoomResult(result);
+      setRoomName("");
+      setRoomCameraIds("");
+      setSelectedRoomId(result.room.id);
+    }).catch(() => undefined);
   };
 
   const handleAdd = () => {
@@ -144,6 +172,72 @@ export function InputPanel() {
       <header className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
         Camera Inputs
       </header>
+
+      {/* Create room */}
+      <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-2">
+        <div className="text-[11px] font-medium text-muted-foreground">
+          New room
+        </div>
+        <div className="flex gap-2">
+          <input
+            className="min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs"
+            placeholder="room name (e.g. Main Ground)"
+            value={roomName}
+            onChange={(event) => setRoomName(event.target.value)}
+          />
+          <Button
+            variant="outline"
+            className="shrink-0 px-2 py-1 text-xs"
+            onClick={handleCreateRoom}
+            disabled={busy}
+          >
+            Create
+          </Button>
+        </div>
+        <input
+          className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+          placeholder="camera ids (optional, comma-separated: cam-1, cam-2)"
+          value={roomCameraIds}
+          onChange={(event) => setRoomCameraIds(event.target.value)}
+        />
+        {roomResult && (
+          <div className="flex flex-col gap-1">
+            <div className="text-[11px] text-accent">
+              Room "{roomResult.room.name}" created — id:
+            </div>
+            <div className="break-all font-mono text-[10px] text-muted-foreground">
+              {roomResult.room.id}
+            </div>
+            {Object.entries(roomResult.ingest_tokens).length > 0 && (
+              <div className="text-[11px] text-accent">Camera ingest tokens:</div>
+            )}
+            {Object.entries(roomResult.ingest_tokens).map(([cameraId, token]) => (
+              <div key={cameraId} className="flex items-center justify-between gap-2">
+                <span className="truncate font-mono text-[10px] text-muted-foreground">
+                  {cameraId}
+                </span>
+                <Button
+                  variant="ghost"
+                  className="px-1 py-0.5 text-[10px]"
+                  onClick={() => void copy(token)}
+                >
+                  Copy token
+                </Button>
+              </div>
+            ))}
+            <div className="text-[11px] text-muted-foreground">
+              WHIP base: <span className="font-mono">{roomResult.whip_base_url}</span>
+            </div>
+            <Button
+              variant="ghost"
+              className="self-end px-2 py-0.5 text-[10px]"
+              onClick={() => setRoomResult(null)}
+            >
+              Dismiss
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Add camera */}
       <div className="flex flex-col gap-2">
