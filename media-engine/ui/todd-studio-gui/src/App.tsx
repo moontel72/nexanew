@@ -161,13 +161,15 @@ export default function App() {
           {/* CENTER CANVAS — main video screen + scoreboard strip only */}
           <main className="director-center">
             <Scoreboard matchId={matchId} />
-            <div className="relative min-h-0 flex-1">
-              <MultiviewGrid
-                feeds={feeds}
-                columns={feeds.length > 8 ? 4 : feeds.length > 2 ? 3 : 2}
-              />
-              <OverlayController event={overlayEvent} />
-              <PollOverlay />
+            <div className="tv-frame min-h-0 flex-1">
+              <div className="relative h-full w-full">
+                <MultiviewGrid
+                  feeds={feeds}
+                  columns={feeds.length > 8 ? 4 : feeds.length > 2 ? 3 : 2}
+                />
+                <OverlayController event={overlayEvent} />
+                <PollOverlay />
+              </div>
             </div>
           </main>
 

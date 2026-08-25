@@ -142,6 +142,12 @@
   scrollbar-gutter: stable;
 }
 
+/* VisionSwitcher's content is shorter than the locked row — center it
+   vertically so all three equal-height panels look deliberate. */
+.director-topbar > :nth-child(2) {
+  justify-content: center;
+}
+
 /* 3+4+5 ── WORKSPACE: left | center | right ───────────────── */
 .director-workspace {
   display: grid;
@@ -186,6 +192,27 @@
   gap: 0.5rem;
   overflow: hidden;
   padding: 0.5rem;
+}
+
+/* ── TV-style video frame (zone 5) ───────────────────────────
+   A visible bezel on ALL four sides, like a broadcast monitor / video
+   player: dark bezel ring, black letterbox canvas and hard clipping so
+   the live feed always plays INSIDE the frame's dimensions. */
+.tv-frame {
+  position: relative;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: #000;
+  overflow: hidden;
+  padding: 8px;
+  box-shadow:
+    inset 0 0 0 4px hsl(var(--muted)),
+    inset 0 0 64px rgba(0, 0, 0, 0.9),
+    0 4px 18px rgba(0, 0, 0, 0.6);
+}
+
+.tv-frame > * {
+  height: 100%;
 }
 
 /* Narrow layouts (<1280px): stack top bar, then left/right/center. */
