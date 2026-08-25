@@ -126,9 +126,31 @@ export default function App() {
         {/* Desktop-only: silent startup update check + update dialog. */}
         <UpdateManager />
 
-        <div className="director-grid min-h-0 flex-1">
-          {/* Program / multiview area */}
-          <main className="director-program relative flex min-w-0 flex-col gap-2 overflow-hidden p-2">
+        <div className="director-workspace min-h-0 flex-1">
+          {/* TOP BAR — TAKE + transition tools, stream health strip */}
+          <div className="director-topbar">
+            <TransitionBar />
+            <div className="director-top-status">
+              <TelemetryDashboard />
+            </div>
+          </div>
+
+          {/* LEFT — sources & one-time setup (the only scrolling column) */}
+          <aside className="director-leftbar" aria-label="Sources and setup">
+            <InputPanel />
+            <SceneComposer />
+            <SegmentManager onFire={() => setOverlayEvent("BREAK")} />
+            <BrandControl />
+            <WatermarkControl />
+            <BroadcastPanel />
+            <PollPanel />
+            <HighlightsPanel />
+            <SettingsPanel />
+          </aside>
+
+          {/* CENTER — program canvas: PGM/PVW, scoreboard, multiview */}
+          <main className="director-center">
+            <VisionSwitcher />
             <Scoreboard matchId={matchId} />
             <div className="relative min-h-0 flex-1">
               <MultiviewGrid
@@ -137,42 +159,24 @@ export default function App() {
               />
               <OverlayController event={overlayEvent} />
               <PollOverlay />
+              {/* Always-visible mini ground map over the multiview. */}
+              <div className="wagon-float">
+                <WagonWheelMap />
+              </div>
             </div>
-            <TelemetryDashboard />
           </main>
 
-          {/* Director control panel — Phase 2 Option A layout (pure CSS
-              grid areas; see styles.css). Two zones:
-              · priority: high-frequency live controls, pinned top
-              · config:   one-time / static setup, collapsible accordion */}
-          <aside className="director-panel">
-            <section className="priority-zone" aria-label="Live controls">
-              <WagonWheelMap />
-              <VisionSwitcher />
-              <TransitionBar />
-              <ReplayDirector
-                roomId={feeds[0]?.roomId ?? ""}
-                cameraIds={cameraIds}
-              />
-              <VarReviewPanel />
-              <OverlayPanel onLocalEvent={setOverlayEvent} />
+          {/* RIGHT — live actions, 2-column grid: everything on-screen */}
+          <aside className="director-rightbar" aria-label="Live actions">
+            <OverlayPanel onLocalEvent={setOverlayEvent} />
+            <ReplayDirector
+              roomId={feeds[0]?.roomId ?? ""}
+              cameraIds={cameraIds}
+            />
+            <VarReviewPanel />
+            <div className="right-span-2">
               <AudioMixer />
-            </section>
-
-            <details className="config-zone" open>
-              <summary>Setup &amp; Configuration</summary>
-              <div className="config-zone-content">
-                <InputPanel />
-                <WatermarkControl />
-                <BrandControl />
-                <PollPanel />
-                <SceneComposer />
-                <SegmentManager onFire={() => setOverlayEvent("BREAK")} />
-                <BroadcastPanel />
-                <HighlightsPanel />
-                <SettingsPanel />
-              </div>
-            </details>
+            </div>
           </aside>
         </div>
       </div>
