@@ -12,9 +12,13 @@ use Illuminate\Queue\SerializesModels;
  * CricketMatchContextSelected — realtime broadcast when a manager picks
  * the "active match" in the Cricket Manager panel.
  *
- * Fired on the PUBLIC `cricket.match.{matchId}` channel so the Rust media
- * engine (Todd Studio scoreboard sync) and any other consumer can switch
- * their match context in sub-100ms without REST polling.
+ * Fired on TWO public channels:
+ *   - `cricket.context`          — global discovery channel. The Rust
+ *                                  media engine subscribes to it once at
+ *                                  startup, so ANY manager's selection is
+ *                                  auto-discovered with ZERO match ids
+ *                                  configured (no daily env updates).
+ *   - `cricket.match.{matchId}`  — per-match consumers (existing feeds).
  *
  * ShouldBroadcastNow = dispatched inline, no queue hop.
  */
@@ -31,6 +35,10 @@ class CricketMatchContextSelected implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
+            // Global discovery channel — lets consumers (the media engine)
+            // learn the active match without knowing any match id upfront.
+            new Channel('cricket.context'),
+            // Per-match channel — existing score/live consumers.
             new Channel('cricket.match.' . $this->matchId),
         ];
     }

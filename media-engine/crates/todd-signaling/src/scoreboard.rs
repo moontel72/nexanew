@@ -826,14 +826,19 @@ async fn run_push_session(
     let mut subscribed: std::collections::HashSet<String> = std::collections::HashSet::new();
 
     loop {
-        // (Re)subscribe to the current match set: every configured match
-        // plus the active-match context channel.
+        // (Re)subscribe to the current match set: every configured match,
+        // the global context channel (auto-discovery of the active match)
+        // plus the active-match channel.
         let config = hub.current_config().await;
         let mut wanted: std::collections::HashSet<String> = config
             .match_configs
             .iter()
             .map(|m| format!("cricket.match.{}", m.match_id))
             .collect();
+        // Global context channel — the manager broadcasts
+        // `match.context.selected` here, so the engine discovers ANY
+        // active match automatically without pre-configured match ids.
+        wanted.insert("cricket.context".to_string());
         if let Some(active) = hub.active_match_id().await {
             wanted.insert(format!("cricket.match.{active}"));
         }
@@ -848,11 +853,19 @@ async fn run_push_session(
         let Some(event) = socket.next_event().await? else {
             return Ok(());
         };
-        let Some(match_id) = event
-            .channel
-            .strip_prefix("cricket.match.")
-            .map(str::to_string)
-        else {
+        // Per-match channels embed the match id in the channel name; the
+        // global context channel carries it in the event payload.
+        let match_id = if let Some(rest) = event.channel.strip_prefix("cricket.match.") {
+            rest.to_string()
+        } else if event.channel == "cricket.context" {
+            match event.data.get("match_id").and_then(|value| value.as_str()) {
+                Some(id) => id.to_string(),
+                None => {
+                    tracing::warn!("cricket.context event without match_id — ignored");
+                    continue;
+                }
+            }
+        } else {
             continue;
         };
         handle_push_event(
