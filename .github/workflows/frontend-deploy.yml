@@ -165,6 +165,26 @@ jobs:
           "
 
       # ──────────────────────────────────────────────────────────────
+      # STEP D2: Build & Deploy Todd Broadcaster Web (main_broadcaster.dart)
+      # → broadcaster.traceodd.com (mobile ground-camera PWA)
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Build Todd Broadcaster Web (main_broadcaster.dart)
+        run: |
+          flutter build web --release \
+            --target=lib/main_broadcaster.dart \
+            --pwa-strategy none
+          rm -f build/web/flutter_service_worker.js
+          bash .scripts/version-web-build.sh build/web
+          # Broadcaster-branded PWA manifest (name/icons)
+          cp web/manifest-broadcaster.json build/web/manifest.json
+
+      - name: Deploy Broadcaster Web to /broadcaster-web/
+        run: |
+          ssh -o StrictHostKeyChecking=no root@135.181.46.27 "mkdir -p /var/www/traceodd/broadcaster-web"
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" --progress build/web/ root@135.181.46.27:/var/www/traceodd/broadcaster-web/
+
+      # ──────────────────────────────────────────────────────────────
       # STEP E: Build & Deploy Reseller App (main_reseller.dart)
       # ──────────────────────────────────────────────────────────────
 
@@ -233,9 +253,11 @@ jobs:
           scp -o StrictHostKeyChecking=no .nginx/traceodd.conf root@135.181.46.27:/etc/nginx/sites-available/traceodd
           scp -o StrictHostKeyChecking=no .nginx/cricket-public.conf root@135.181.46.27:/etc/nginx/sites-available/cricket-public
           scp -o StrictHostKeyChecking=no .nginx/cricket-manager.conf root@135.181.46.27:/etc/nginx/sites-available/cricket-manager
+          scp -o StrictHostKeyChecking=no .nginx/broadcaster.conf root@135.181.46.27:/etc/nginx/sites-available/broadcaster
           ssh -o StrictHostKeyChecking=no root@135.181.46.27 "
             ln -sf /etc/nginx/sites-available/cricket-public /etc/nginx/sites-enabled/cricket-public
             ln -sf /etc/nginx/sites-available/cricket-manager /etc/nginx/sites-enabled/cricket-manager
+            ln -sf /etc/nginx/sites-available/broadcaster /etc/nginx/sites-enabled/broadcaster
             rm -f /etc/nginx/sites-enabled/cricket
             rm -f /etc/nginx/sites-available/cricket.disabled
             nginx -t && systemctl reload nginx
@@ -270,6 +292,8 @@ jobs:
             chmod -R 755 /var/www/traceodd/cricket-public-web && \
             chown -R www-data:www-data /var/www/traceodd/cricket-manager-web && \
             chmod -R 755 /var/www/traceodd/cricket-manager-web && \
+            chown -R www-data:www-data /var/www/traceodd/broadcaster-web && \
+            chmod -R 755 /var/www/traceodd/broadcaster-web && \
             chown -R www-data:www-data /var/www/traceodd/reseller && \
             chmod -R 755 /var/www/traceodd/reseller && \
             chown -R www-data:www-data /var/www/traceodd/driver && \

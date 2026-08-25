@@ -64,4 +64,21 @@ jobs:
         with:
           name: todd-broadcaster-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 1
+          retention-days: 7
+
+      # ── Permanent website download link ──────────────────────────
+      # The APK is uploaded to the VPS so cameramen download it from
+      # https://traceodd.com/download/broadcaster/todd-broadcaster.apk
+      # (no GitHub account needed).
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KYE_HATZNER }}
+
+      - name: Deploy APK to download server
+        run: |
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "mkdir -p /var/www/traceodd/download/broadcaster"
+          scp -o StrictHostKeyChecking=no build/app/outputs/flutter-apk/app-release.apk \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/broadcaster/todd-broadcaster.apk
+          echo "✅ Broadcaster APK live at /download/broadcaster/todd-broadcaster.apk"
