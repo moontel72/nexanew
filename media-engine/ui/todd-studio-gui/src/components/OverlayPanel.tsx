@@ -7,7 +7,7 @@ import {
   loadPersistedState,
   savePersistedState,
 } from "../lib/persistence/persistState";
-import type { BallEventDto, OverlayState } from "../lib/api/types";
+import type { BallEventDto } from "../lib/api/types";
 import { Button } from "./ui/Button";
 
 const POPUP_EVENTS: Array<{ id: string; text: string; subtext?: string }> = [
@@ -43,34 +43,22 @@ export function popupTextFor(event: BallEventDto): string {
   }
 }
 
-/** Live overlay control: scoreboard lower-third + event popups (manual
- * and auto-triggered). Every command dispatches to
- * `POST /api/v1/program/overlay`; state arrives back over the control
- * WebSocket. The watermark lives in `WatermarkControl` (config zone). */
+/** Live overlay control: event popups (manual + auto-triggered from the
+ * scoring push). The scoreboard lower-third lives in ScoreboardControl
+ * and the watermark/brand in their own panels (5-zone layout). */
 export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
   const control = useControlState();
   const director = useDirector();
   const activeRoomId = director.state.pgm?.roomId ?? control.rooms[0]?.id ?? "";
 
-  const serverState: OverlayState | null = control.overlays[activeRoomId] ?? null;
-
-  // Phase 4: restore the pre-refresh lower-third / auto-popup settings
-  // synchronously at mount; the control feed re-adopts server state
-  // after reconnect (existing hydration below).
-  const persisted = loadPersistedState();
-
-  const [title, setTitle] = useState(persisted.scoreboard.title);
-  const [subtitle, setSubtitle] = useState(persisted.scoreboard.subtitle);
-  const [scoreboardOn, setScoreboardOn] = useState(persisted.scoreboard.enabled);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Phase 3 auto-graphics: toggle + on-air duration (persisted).
+  const persisted = loadPersistedState();
   const [autoEnabled, setAutoEnabled] = useState(persisted.autoGraphics.enabled);
   const [autoDurationMs, setAutoDurationMs] = useState(persisted.autoGraphics.durationMs);
 
-  const hydratedRef = useRef(false);
-  const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** `updated_at_ms` of the last score event already fired on-air. */
   const lastFiredRef = useRef<number | null>(null);
 
@@ -80,37 +68,6 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
     null;
   const activeScore = activeMatchId ? (control.scores[activeMatchId] ?? null) : null;
 
-  // Hydrate from the control feed (or a one-off GET).
-  useEffect(() => {
-    if (serverState) {
-      if (!hydratedRef.current || serverState.scoreboard?.title !== title) {
-        setScoreboardOn(serverState.scoreboard?.enabled ?? false);
-        setTitle(serverState.scoreboard?.title ?? "");
-        setSubtitle(serverState.scoreboard?.subtitle ?? "");
-      }
-      hydratedRef.current = true;
-      return;
-    }
-    if (hydratedRef.current || !activeRoomId || !getToken()) return;
-    let cancelled = false;
-    api
-      .getOverlays(activeRoomId, getToken())
-      .then((state) => {
-        if (cancelled) return;
-        setScoreboardOn(state.scoreboard?.enabled ?? false);
-        setTitle(state.scoreboard?.title ?? "");
-        setSubtitle(state.scoreboard?.subtitle ?? "");
-        hydratedRef.current = true;
-      })
-      .catch(() => {
-        // The control feed delivers the state once connected.
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverState, activeRoomId]);
-
   const send = (command: Parameters<typeof api.applyOverlay>[1]) => {
     if (!activeRoomId || !getToken()) return;
     setBusy(true);
@@ -119,26 +76,6 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
       .applyOverlay(activeRoomId, command, getToken())
       .catch((sendError: Error) => setError(sendError.message))
       .finally(() => setBusy(false));
-  };
-
-  // Debounced scoreboard edits: keep the server lower-third in sync while
-  // the director types.
-  const scheduleScoreboard = (enabled: boolean, nextTitle: string, nextSubtitle: string) => {
-    setScoreboardOn(enabled);
-    setTitle(nextTitle);
-    setSubtitle(nextSubtitle);
-    savePersistedState({
-      scoreboard: { enabled, title: nextTitle, subtitle: nextSubtitle },
-    });
-    if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
-    pushTimerRef.current = setTimeout(() => {
-      void send({
-        kind: "scoreboard",
-        enabled,
-        title: nextTitle,
-        subtitle: nextSubtitle,
-      });
-    }, 400);
   };
 
   const firePopup = (text: string, subtext?: string, eventId?: string, durationMs?: number) => {
@@ -171,7 +108,6 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
     setError(null);
     api
       .clearOverlays(activeRoomId, getToken())
-      .then(() => setScoreboardOn(false))
       .catch((clearError: Error) => setError(clearError.message))
       .finally(() => setBusy(false));
   };
@@ -224,40 +160,6 @@ export function OverlayPanel({ onLocalEvent }: OverlayPanelProps) {
             }}
           />
         </label>
-        {!activeScore && (
-          <div className="text-[10px] text-muted-foreground">
-            No live score yet — popups fire automatically once the manager
-            records boundary/wicket events.
-          </div>
-        )}
-      </div>
-
-      {/* Scoreboard lower-third */}
-      <div className="flex flex-col gap-2">
-        <label className="flex items-center justify-between text-xs">
-          Scoreboard lower-third
-          <input
-            type="checkbox"
-            checked={scoreboardOn}
-            onChange={(event) => scheduleScoreboard(event.target.checked, title, subtitle)}
-          />
-        </label>
-        {scoreboardOn && (
-          <>
-            <input
-              className="rounded-md border border-input bg-background px-2 py-1 text-xs"
-              placeholder="e.g. TIGERS 142/4 — 16.2 ov"
-              value={title}
-              onChange={(event) => scheduleScoreboard(true, event.target.value, subtitle)}
-            />
-            <input
-              className="rounded-md border border-input bg-background px-2 py-1 text-xs"
-              placeholder="e.g. Khan 45* · Patel 2/18"
-              value={subtitle}
-              onChange={(event) => scheduleScoreboard(true, title, event.target.value)}
-            />
-          </>
-        )}
       </div>
 
       {/* Event popups (manual overrides stay available anytime) */}

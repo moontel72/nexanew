@@ -27,11 +27,12 @@ import { SceneComposer } from "./components/scenes/SceneComposer";
 import { AudioMixer } from "./components/AudioMixer";
 import { BrandControl } from "./components/BrandControl";
 import { OverlayPanel } from "./components/OverlayPanel";
+import { ScoreboardControl } from "./components/ScoreboardControl";
 import { WatermarkControl } from "./components/WatermarkControl";
 import { WagonWheelMap } from "./components/WagonWheelMap";
 import { BroadcastPanel } from "./components/BroadcastPanel";
 import { OverlayController } from "./components/overlays/OverlayController";
-import { TelemetryDashboard } from "./components/TelemetryDashboard";
+import { StreamStats, SessionStatus } from "./components/TelemetryDashboard";
 import { VarReviewPanel } from "./components/VarReviewPanel";
 import { PollOverlay, PollPanel } from "./components/PollOverlay";
 import { HighlightsPanel } from "./components/HighlightsPanel";
@@ -90,10 +91,16 @@ export default function App() {
   return (
     <DirectorProvider>
       <div className="flex h-screen flex-col bg-background">
-        {/* Session bar: signed-in identity + sign out. */}
-        <header className="flex items-center justify-between border-b border-border px-4 py-2">
-          <div className="text-sm font-semibold tracking-wide">Todd Studio</div>
-          <div className="flex items-center gap-3">
+        {/* 1 ── TOP HEADER ─────────────────────────────────────────── */}
+        <header className="director-header">
+          <div className="director-title text-sm">Todd Studio</div>
+          <div className="director-stats">
+            <StreamStats />
+          </div>
+          <div className="director-sessions">
+            <SessionStatus />
+          </div>
+          <div className="director-actions">
             <span className="text-xs text-muted-foreground">{getEmail()}</span>
             {isDesktopShell() && (
               <Button
@@ -126,17 +133,20 @@ export default function App() {
         {/* Desktop-only: silent startup update check + update dialog. */}
         <UpdateManager />
 
-        <div className="director-workspace min-h-0 flex-1">
-          {/* TOP BAR — TAKE + transition tools, stream health strip */}
-          <div className="director-topbar">
-            <TransitionBar />
-            <div className="director-top-status">
-              <TelemetryDashboard />
-            </div>
-          </div>
+        {/* 2 ── TOP BAR: Transition | VisionSwitcher | AudioMixer ──── */}
+        <div className="director-topbar">
+          <TransitionBar />
+          <VisionSwitcher />
+          <AudioMixer />
+        </div>
 
-          {/* LEFT — sources & one-time setup (the only scrolling column) */}
-          <aside className="director-leftbar" aria-label="Sources and setup">
+        {/* 3+4+5 ── LEFT | CENTER | RIGHT ──────────────────────────── */}
+        <div className="director-workspace min-h-0 flex-1">
+          {/* LEFT SIDEBAR — strict top-to-bottom order */}
+          <aside className="director-leftbar" aria-label="Controls">
+            <OverlayPanel onLocalEvent={setOverlayEvent} />
+            <WagonWheelMap />
+            <ScoreboardControl />
             <InputPanel />
             <SceneComposer />
             <SegmentManager onFire={() => setOverlayEvent("BREAK")} />
@@ -148,9 +158,8 @@ export default function App() {
             <SettingsPanel />
           </aside>
 
-          {/* CENTER — program canvas: PGM/PVW, scoreboard, multiview */}
+          {/* CENTER CANVAS — main video screen + scoreboard strip only */}
           <main className="director-center">
-            <VisionSwitcher />
             <Scoreboard matchId={matchId} />
             <div className="relative min-h-0 flex-1">
               <MultiviewGrid
@@ -159,24 +168,16 @@ export default function App() {
               />
               <OverlayController event={overlayEvent} />
               <PollOverlay />
-              {/* Always-visible mini ground map over the multiview. */}
-              <div className="wagon-float">
-                <WagonWheelMap />
-              </div>
             </div>
           </main>
 
-          {/* RIGHT — live actions, 2-column grid: everything on-screen */}
-          <aside className="director-rightbar" aria-label="Live actions">
-            <OverlayPanel onLocalEvent={setOverlayEvent} />
+          {/* RIGHT SIDEBAR — Replay Director, then VAR Review */}
+          <aside className="director-rightbar" aria-label="Review tools">
             <ReplayDirector
               roomId={feeds[0]?.roomId ?? ""}
               cameraIds={cameraIds}
             />
             <VarReviewPanel />
-            <div className="right-span-2">
-              <AudioMixer />
-            </div>
           </aside>
         </div>
       </div>

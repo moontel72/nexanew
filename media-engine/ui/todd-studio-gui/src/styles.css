@@ -76,52 +76,70 @@
 }
 
 /* ================================================================
-   PHASE 2 REVISED — Option B tri-panel layout (user-approved revision)
+   TODD STUDIO — 5-zone structural layout (user-defined spec)
    ================================================================
-   Left sidebar (sources/setup) · center canvas (PGM/PVW + program) ·
-   right action bar (real-time triggers) · top bar (TAKE + telemetry).
-
-   Guarantee: every LIVE control is on-screen without scrolling at
-   1080p — the right action bar is a 2-column grid that fits within the
-   viewport; only the LEFT setup column scrolls. Pure CSS grid areas —
-   no component logic / WebRTC / WebSocket changes.
+   1. Top header  — title · stream stats · session status · actions
+   2. Top bar     — Transition | VisionSwitcher | AudioMixer
+   3. Left bar    — 12 setup/live panels, scrollable, strict order
+   4. Right bar   — ReplayDirector + VarReview (no scroll at 1080p)
+   5. Center      — main video canvas + scoreboard strip only
    ================================================================ */
 
-/* Top bar + three columns under the session header. */
-.director-workspace {
-  display: grid;
-  grid-template-areas:
-    "top top top"
-    "left center right";
-  grid-template-columns: 280px minmax(0, 1fr) 460px;
-  grid-template-rows: auto minmax(0, 1fr);
-}
-
-/* ── Top bar: TAKE + transition tools, stream health strip ── */
-.director-topbar {
-  grid-area: top;
+/* 1 ── TOP HEADER ─────────────────────────────────────────── */
+.director-header {
   display: flex;
-  align-items: stretch;
-  gap: 0.75rem;
-  padding: 0.75rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid hsl(var(--border));
 }
 
-.director-topbar > :first-child {
-  flex: 0 0 340px;
+.director-header .director-title {
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
 }
 
-.director-topbar > .director-top-status {
+/* Center-left: stream stats. */
+.director-header .director-stats {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.director-top-status footer {
-  border-top: none;
-  height: 100%;
+/* Center-right: session/control-plane status. */
+.director-header .director-sessions {
+  white-space: nowrap;
 }
 
-/* ── Left: sources + one-time setup (the ONLY scrolling column) ── */
+.director-header .director-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+/* 2 ── TOP BAR: Transition | VisionSwitcher | AudioMixer ──── */
+.director-topbar {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr) 480px;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid hsl(var(--border));
+  align-items: stretch;
+}
+
+/* 3+4+5 ── WORKSPACE: left | center | right ───────────────── */
+.director-workspace {
+  display: grid;
+  grid-template-areas: "left center right";
+  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+/* Left sidebar — scrollable, strict top-to-bottom order. */
 .director-leftbar {
   grid-area: left;
   min-height: 0;
@@ -134,7 +152,20 @@
   scrollbar-gutter: stable;
 }
 
-/* ── Center: program canvas (PGM/PVW, scoreboard, multiview) ── */
+/* Right sidebar — Replay Director + VAR Review. */
+.director-rightbar {
+  grid-area: right;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-left: 1px solid hsl(var(--border));
+  scrollbar-gutter: stable;
+}
+
+/* Center canvas — video + scoreboard strip only. */
 .director-center {
   grid-area: center;
   min-width: 0;
@@ -146,54 +177,25 @@
   padding: 0.5rem;
 }
 
-/* Small always-visible wagon-wheel map over the multiview. */
-.wagon-float {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 220px;
-  z-index: 15;
-}
-
-/* ── Right: live actions, 2-column grid — everything visible ── */
-.director-rightbar {
-  grid-area: right;
-  min-height: 0;
-  overflow-y: auto; /* safety for very short screens only */
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-auto-rows: min-content;
-  align-content: start;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-left: 1px solid hsl(var(--border));
-  scrollbar-gutter: stable;
-}
-
-.right-span-2 {
-  grid-column: 1 / -1;
-}
-
-/* Narrow layouts (<1280px): stack top → center → right → left. */
+/* Narrow layouts (<1280px): stack top bar, then left/right/center. */
 @media (max-width: 1279px) {
+  .director-topbar {
+    grid-template-columns: 1fr;
+  }
+
   .director-workspace {
     grid-template-areas:
-      "top"
       "center"
       "right"
       "left";
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 55vh) auto auto;
+    grid-template-rows: minmax(0, 55vh) auto auto;
   }
 
-  .director-rightbar {
-    max-height: 70vh;
-    border-left: none;
-    border-top: 1px solid hsl(var(--border));
-  }
-
+  .director-rightbar,
   .director-leftbar {
     max-height: 60vh;
+    border-left: none;
     border-right: none;
     border-top: 1px solid hsl(var(--border));
   }
