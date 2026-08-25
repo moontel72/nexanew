@@ -142,19 +142,21 @@ export default function App() {
 
         {/* 3+4+5 ── LEFT | CENTER | RIGHT ──────────────────────────── */}
         <div className="director-workspace min-h-0 flex-1">
-          {/* LEFT SIDEBAR — strict top-to-bottom order */}
+          {/* LEFT SIDEBAR — usage-frequency order (top = most used
+              during a live match): overlays → scoreboard → segments →
+              polls → scenes → analysis → one-time setups. */}
           <aside className="director-leftbar" aria-label="Controls">
             <OverlayPanel onLocalEvent={setOverlayEvent} />
-            <WagonWheelMap />
             <ScoreboardControl />
-            <InputPanel />
-            <SceneComposer />
             <SegmentManager onFire={() => setOverlayEvent("BREAK")} />
+            <PollPanel />
+            <SceneComposer />
+            <WagonWheelMap />
+            <HighlightsPanel />
+            <BroadcastPanel />
+            <InputPanel />
             <BrandControl />
             <WatermarkControl />
-            <BroadcastPanel />
-            <PollPanel />
-            <HighlightsPanel />
             <SettingsPanel />
           </aside>
 
