@@ -45,6 +45,51 @@ function kindBadge(kind: CameraSourceKind): string {
 }
 
 /**
+ * "Hand this to the camera operator" card. The primary copy target is a
+ * single WHIP URL that already carries `?token=…`, so the operator pastes
+ * one string into the Broadcaster app and every field auto-fills.
+ */
+function LastAddedCard({
+  added,
+  copy,
+  onDismiss,
+}: {
+  added: AddResult;
+  copy: (text: string) => void;
+  onDismiss: () => void;
+}) {
+  const whipUrl = `${added.whipBaseUrl}/${added.cameraId}?token=${encodeURIComponent(added.ingestToken)}`;
+  return (
+    <div className="rounded-md border border-accent/40 bg-accent/10 p-2 text-xs">
+      <div className="mb-1 font-medium text-accent">
+        {added.cameraId} added — paste this in the Broadcaster app:
+      </div>
+      <div className="mb-1 break-all font-mono">WHIP URL: {whipUrl}</div>
+      <div className="break-all font-mono">ingest token: {added.ingestToken}</div>
+      <div className="mt-2 flex gap-2">
+        <Button
+          variant="outline"
+          className="px-2 py-1 text-xs"
+          onClick={() => void copy(whipUrl)}
+        >
+          Copy WHIP URL
+        </Button>
+        <Button
+          variant="outline"
+          className="px-2 py-1 text-xs"
+          onClick={() => void copy(added.ingestToken)}
+        >
+          Copy token
+        </Button>
+        <Button variant="ghost" className="px-2 py-1 text-xs" onClick={onDismiss}>
+          Dismiss
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Dynamic camera input management: add/remove/reconfigure camera sources
  * of every live room. PGM comes from the control plane; PVW from the
  * director's preview bus.
@@ -294,32 +339,11 @@ export function InputPanel() {
       </div>
 
       {lastAdded && (
-        <div className="rounded-md border border-accent/40 bg-accent/10 p-2 text-xs">
-          <div className="mb-1 font-medium text-accent">
-            {lastAdded.cameraId} added — hand this to the camera operator:
-          </div>
-          <div className="mb-1 break-all font-mono">WHEP/WHIP URL: {lastAdded.whipBaseUrl}/{lastAdded.cameraId}</div>
-          <div className="break-all font-mono">ingest token: {lastAdded.ingestToken}</div>
-          <div className="mt-2 flex gap-2">
-            <Button
-              variant="outline"
-              className="px-2 py-1 text-xs"
-              onClick={() => void copy(`${lastAdded.whipBaseUrl}/${lastAdded.cameraId}`)}
-            >
-              Copy URL
-            </Button>
-            <Button
-              variant="outline"
-              className="px-2 py-1 text-xs"
-              onClick={() => void copy(lastAdded.ingestToken)}
-            >
-              Copy token
-            </Button>
-            <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setLastAdded(null)}>
-              Dismiss
-            </Button>
-          </div>
-        </div>
+        <LastAddedCard
+          added={lastAdded}
+          copy={copy}
+          onDismiss={() => setLastAdded(null)}
+        />
       )}
 
       {actionError && (

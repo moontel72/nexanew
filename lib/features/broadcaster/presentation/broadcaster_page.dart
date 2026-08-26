@@ -57,6 +57,7 @@ class _ConfigForm extends StatefulWidget {
 }
 
 class _ConfigFormState extends State<_ConfigForm> {
+  late final TextEditingController _whipUrl;
   late final TextEditingController _baseUrl;
   late final TextEditingController _roomId;
   late final TextEditingController _cameraId;
@@ -68,12 +69,30 @@ class _ConfigFormState extends State<_ConfigForm> {
   void initState() {
     super.initState();
     final initial = widget.initial;
+    _whipUrl = TextEditingController();
     _baseUrl = TextEditingController(text: initial?.baseUrl ?? '');
     _roomId = TextEditingController(text: initial?.roomId ?? '');
     _cameraId = TextEditingController(text: initial?.cameraId ?? '');
     _token = TextEditingController(text: initial?.token ?? '');
     _stunUrl = TextEditingController(text: initial?.stunUrl ?? '');
     _turnUrl = TextEditingController(text: initial?.turnUrl ?? '');
+  }
+
+  /// Fills the connection fields from a single pasted WHIP ingest URL
+  /// (`https://host/api/v1/whip/ingest/{room}/{camera}?token=…`).
+  void _applyWhipUrl(String input) {
+    final parts = WhipClient.parseWhipUrl(input);
+    if (parts == null) {
+      return;
+    }
+    setState(() {
+      _baseUrl.text = parts.baseUrl;
+      _roomId.text = parts.roomId;
+      _cameraId.text = parts.cameraId;
+      if (parts.token.isNotEmpty) {
+        _token.text = parts.token;
+      }
+    });
   }
 
   @override
@@ -93,6 +112,7 @@ class _ConfigFormState extends State<_ConfigForm> {
 
   @override
   void dispose() {
+    _whipUrl.dispose();
     _baseUrl.dispose();
     _roomId.dispose();
     _cameraId.dispose();
@@ -146,6 +166,27 @@ class _ConfigFormState extends State<_ConfigForm> {
                   ListErrorState(message: widget.error!),
                   const SizedBox(height: 16),
                 ],
+                TextField(
+                  controller: _whipUrl,
+                  keyboardType: TextInputType.url,
+                  decoration: const InputDecoration(
+                    labelText: 'Paste WHIP URL (auto-fills below)',
+                    hintText: 'https://studio.traceodd.com/api/v1/whip/ingest/…',
+                    prefixIcon: Icon(Icons.content_paste),
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: _applyWhipUrl,
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _applyWhipUrl(_whipUrl.text),
+                    icon: const Icon(Icons.auto_fix_high, size: 16),
+                    label: const Text('Fill connection fields'),
+                  ),
+                ),
+                const SizedBox(height: 4),
                 TextField(
                   controller: _baseUrl,
                   keyboardType: TextInputType.url,

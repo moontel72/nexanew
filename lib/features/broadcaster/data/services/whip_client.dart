@@ -14,6 +14,27 @@ class WhipException implements Exception {
   String toString() => message;
 }
 
+/// Parsed parts of a complete WHIP ingest URL.
+///
+/// Matches `https://host/api/v1/whip/ingest/{room}[/{camera}]?token=…` —
+/// the exact format the Studio's "hand this to the camera operator" card
+/// and Book 3 publish. An operator can paste that single URL and every
+/// connection field fills itself, eliminating manual room/camera/token
+/// splitting.
+class WhipUrlParts {
+  const WhipUrlParts({
+    required this.baseUrl,
+    required this.roomId,
+    required this.cameraId,
+    required this.token,
+  });
+
+  final String baseUrl;
+  final String roomId;
+  final String cameraId;
+  final String token;
+}
+
 /// A live WHIP ingest session: PeerConnection + captured MediaStream.
 class WhipSession {
   WhipSession({required this.pc, required this.stream});
@@ -65,6 +86,66 @@ class WhipClient {
     return navigator.mediaDevices.getUserMedia(constraints);
   }
 
+  /// Parses a complete WHIP ingest URL into its connection fields.
+  ///
+  /// Accepts both forms the Studio hands out:
+  /// `…/api/v1/whip/ingest/{room}/{camera}?token=…` (with token) and
+  /// `…/api/v1/whip/ingest/{room}/{camera}` (token pasted separately).
+  /// Returns null when [input] is not a valid WHIP ingest URL.
+  static WhipUrlParts? parseWhipUrl(String input) {
+    final uri = Uri.tryParse(input.trim());
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      return null;
+    }
+    final segments =
+        uri.pathSegments.where((s) => s.isNotEmpty).toList(growable: false);
+    if (segments.length < 5 ||
+        segments[0] != 'api' ||
+        segments[1] != 'v1' ||
+        segments[2] != 'whip' ||
+        segments[3] != 'ingest') {
+      return null;
+    }
+    return WhipUrlParts(
+      baseUrl: '${uri.scheme}://${uri.authority}',
+      roomId: segments[4],
+      cameraId: segments.length >= 6 ? segments[5] : '',
+      token: uri.queryParameters['token'] ?? '',
+    );
+  }
+
+  /// Guards against the two most common paste mistakes:
+  /// 1. A trailing slash on the origin (`https://host/`) producing a
+  ///    `//api/…` path that never matches an engine route (empty 404).
+  /// 2. The full `…/api/v1/whip/ingest/{room}/{camera}` URL pasted into the
+  ///    base-URL field, producing a doubled path (also an empty 404).
+  static String _normalizeBaseUrl(String baseUrl) {
+    var url = baseUrl.trim();
+    const marker = '/api/v1/whip/ingest/';
+    final markerIndex = url.indexOf(marker);
+    if (markerIndex != -1) {
+      url = url.substring(0, markerIndex);
+    }
+    while (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
+  }
+
+  /// Maps a rejected ingest to an actionable hint for the operator.
+  static String _hintFor(int statusCode) {
+    return switch (statusCode) {
+      401 =>
+        'ingest token expired or invalid — generate a fresh one in the Studio',
+      403 =>
+        'token is scoped to a different room/camera — use the exact URL the Studio generated',
+      404 =>
+        'room or camera not found — verify the WHIP URL; rooms are cleared when the engine restarts',
+      429 => 'too many attempts — wait a moment and retry',
+      _ => 'check the engine base URL and that the engine is reachable',
+    };
+  }
+
   /// Posts a WHIP offer for `stream` and returns the live session.
   Future<WhipSession> connect({
     required String roomId,
@@ -95,7 +176,7 @@ class WhipClient {
     await waitForIceGatheringComplete(pc);
 
     final uri = Uri.parse(
-      '$baseUrl/api/v1/whip/ingest/$roomId/$cameraId',
+      '${_normalizeBaseUrl(baseUrl)}/api/v1/whip/ingest/$roomId/$cameraId',
     ).replace(queryParameters: <String, String>{'token': token});
     final local = await pc.getLocalDescription();
     if (local == null) {
@@ -111,8 +192,11 @@ class WhipClient {
 
     if (response.statusCode != 201) {
       await pc.close();
+      final body = response.body.trim();
       throw WhipException(
-        'WHIP ingest rejected (${response.statusCode}): ${response.body}',
+        'WHIP ingest rejected (${response.statusCode}): '
+        '${_hintFor(response.statusCode)}'
+        '${body.isEmpty ? '' : ' — $body'}',
       );
     }
 
