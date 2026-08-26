@@ -139,7 +139,8 @@ jobs:
             # Room store: `auto` — Redis when reachable (rooms/cameras
             # survive deploys and restarts), in-memory fallback otherwise,
             # so the engine never fails to boot. REDIS_URL targets the
-            # loopback-bound redis container shipped alongside the engine.
+            # engine's own loopback-bound redis on port 6380 (6379 is the
+            # Laravel backend's Redis).
             if [ -n '${{ vars.ROOM_STORE }}' ]; then
               printf 'ROOM_STORE=%s\n' '${{ vars.ROOM_STORE }}' >> /opt/todd-media-engine/.env
             else
@@ -148,7 +149,7 @@ jobs:
             if [ -n '${{ vars.REDIS_URL }}' ]; then
               printf 'REDIS_URL=%s\n' '${{ vars.REDIS_URL }}' >> /opt/todd-media-engine/.env
             else
-              printf 'REDIS_URL=%s\n' 'redis://127.0.0.1:6379/0' >> /opt/todd-media-engine/.env
+              printf 'REDIS_URL=%s\n' 'redis://127.0.0.1:6380/0' >> /opt/todd-media-engine/.env
             fi
             chmod 600 /opt/todd-media-engine/.env
             echo '✅ /opt/todd-media-engine/.env written'
@@ -167,7 +168,7 @@ jobs:
             systemctl enable --now todd-redis
             systemctl restart todd-redis
             sleep 2
-            if [ "$(docker exec todd-redis redis-cli ping)" = "PONG" ]; then
+            if [ "$(docker exec todd-redis redis-cli -p 6380 ping)" = "PONG" ]; then
               echo '✅ redis alive (PONG)'
             else
               echo '❌ redis ping failed'
