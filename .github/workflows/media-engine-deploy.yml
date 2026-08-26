@@ -88,6 +88,9 @@ jobs:
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
             media-engine/deploy/systemd/todd-broadcaster.service \
             ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/systemd/system/todd-broadcaster.service
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            media-engine/deploy/systemd/todd-redis.service \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/systemd/system/todd-redis.service
 
       - name: Install Docker on VPS (if missing)
         run: |
@@ -133,8 +136,44 @@ jobs:
             else
               printf 'CORS_ALLOWED_ORIGINS=%s\n' 'tauri://localhost,http://tauri.localhost,https://tauri.localhost,https://studio.traceodd.com,https://cricket-manager.traceodd.com,https://cricket.traceodd.com,https://broadcaster.traceodd.com' >> /opt/todd-media-engine/.env
             fi
+            # Room store: `auto` — Redis when reachable (rooms/cameras
+            # survive deploys and restarts), in-memory fallback otherwise,
+            # so the engine never fails to boot. REDIS_URL targets the
+            # loopback-bound redis container shipped alongside the engine.
+            if [ -n '${{ vars.ROOM_STORE }}' ]; then
+              printf 'ROOM_STORE=%s\n' '${{ vars.ROOM_STORE }}' >> /opt/todd-media-engine/.env
+            else
+              printf 'ROOM_STORE=%s\n' 'auto' >> /opt/todd-media-engine/.env
+            fi
+            if [ -n '${{ vars.REDIS_URL }}' ]; then
+              printf 'REDIS_URL=%s\n' '${{ vars.REDIS_URL }}' >> /opt/todd-media-engine/.env
+            else
+              printf 'REDIS_URL=%s\n' 'redis://127.0.0.1:6379/0' >> /opt/todd-media-engine/.env
+            fi
             chmod 600 /opt/todd-media-engine/.env
             echo '✅ /opt/todd-media-engine/.env written'
+          REMOTE
+
+      # ---------------------------------------------------------------- #
+      # 1.5 Start Redis BEFORE the engine restarts so `ROOM_STORE=auto`
+      #     picks the persistent backend (rooms survive deploys).
+      # ---------------------------------------------------------------- #
+      - name: Start Redis (room/session persistence)
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "bash -s" <<'REMOTE'
+            set -e
+            docker pull redis:7-alpine
+            systemctl daemon-reload
+            systemctl enable --now todd-redis
+            systemctl restart todd-redis
+            sleep 2
+            if [ "$(docker exec todd-redis redis-cli ping)" = "PONG" ]; then
+              echo '✅ redis alive (PONG)'
+            else
+              echo '❌ redis ping failed'
+              journalctl -u todd-redis --no-pager -n 30 || true
+              exit 1
+            fi
           REMOTE
 
       # ---------------------------------------------------------------- #

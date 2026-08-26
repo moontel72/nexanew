@@ -1,0 +1,35 @@
+# T-Odd Redis — room/session persistence for the Studio control plane.
+#
+# Runs Redis 7 in a container with host networking, bound to loopback
+# ONLY (never exposed to the network). Data survives container restarts
+# via the named volume `todd-redis-data` (AOF persistence).
+#
+# The engine reaches it at redis://127.0.0.1:6379/0 because the engine
+# container also runs with `--network host` (see todd-studio.service).
+#
+# Install: cp deploy/systemd/todd-redis.service /etc/systemd/system/
+#          systemctl daemon-reload && systemctl enable --now todd-redis
+
+[Unit]
+Description=T-Odd Redis (room/session persistence)
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+# -f: tolerate a previous crashed container; --rm keeps the system clean
+ExecStartPre=-/usr/bin/docker rm -f todd-redis
+ExecStart=/usr/bin/docker run --name todd-redis --rm --network host \
+  -v todd-redis-data:/data \
+  redis:7-alpine --bind 127.0.0.1 --appendonly yes
+ExecStop=/usr/bin/docker stop -t 10 todd-redis
+ExecStopPost=/usr/bin/docker rm -f todd-redis
+
+# Restart policy
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

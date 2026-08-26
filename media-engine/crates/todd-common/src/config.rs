@@ -55,6 +55,10 @@ pub enum RoomStoreMode {
     Memory,
     /// Redis — shared across Studio replicas / hosts (Phase 2.5).
     Redis,
+    /// Try Redis first, fall back to in-memory when it is unreachable at
+    /// startup — production default so a missing Redis never bricks the
+    /// engine and rooms persist across restarts whenever it is present.
+    Auto,
 }
 
 impl FromStr for RoomStoreMode {
@@ -64,8 +68,9 @@ impl FromStr for RoomStoreMode {
         match s.trim().to_ascii_lowercase().as_str() {
             "memory" | "inmemory" => Ok(RoomStoreMode::Memory),
             "redis" => Ok(RoomStoreMode::Redis),
+            "auto" => Ok(RoomStoreMode::Auto),
             other => Err(AppError::BadRequest(format!(
-                "invalid ROOM_STORE value '{other}' (expected memory|redis)"
+                "invalid ROOM_STORE value '{other}' (expected memory|redis|auto)"
             ))),
         }
     }

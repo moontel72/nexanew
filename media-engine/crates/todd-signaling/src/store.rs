@@ -1,11 +1,13 @@
 //! Room/session state storage.
 //!
-//! Two backends behind one trait:
+//! Three backends behind one trait:
 //! - `memory` (default): in-process DashMaps — Phase 1, single Studio.
 //! - `redis`: shared keys — multiple Studio replicas behind one nginx
 //!   upstream, or Studio and Broadcaster split across hosts (Phase 2.5).
+//! - `auto` (production): Redis when reachable, in-memory fallback so a
+//!   missing Redis never bricks the engine.
 //!
-//! Selected with `ROOM_STORE=memory|redis` (+ `REDIS_URL`).
+//! Selected with `ROOM_STORE=memory|redis|auto` (+ `REDIS_URL`).
 
 use std::sync::Arc;
 
@@ -61,6 +63,21 @@ pub async fn build(settings: &Settings) -> Result<Arc<dyn RoomStore>, AppError> 
         todd_common::config::RoomStoreMode::Memory => Ok(Arc::new(InMemoryRoomStore::new())),
         todd_common::config::RoomStoreMode::Redis => {
             Ok(Arc::new(RedisRoomStore::new(&settings.redis_url).await?))
+        }
+        todd_common::config::RoomStoreMode::Auto => {
+            match RedisRoomStore::new(&settings.redis_url).await {
+                Ok(store) => {
+                    tracing::info!(url = %settings.redis_url, "room store: redis (auto)");
+                    Ok(Arc::new(store))
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        error = %error,
+                        "redis unreachable at startup — falling back to in-memory room store"
+                    );
+                    Ok(Arc::new(InMemoryRoomStore::new()))
+                }
+            }
         }
     }
 }

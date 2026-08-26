@@ -85,6 +85,13 @@ export const api = {
     return request<Room[]>("/api/v1/room/list", { method: "GET", token });
   },
 
+  async deleteRoom(roomId: string, token: string | null) {
+    return request<void>(`/api/v1/room/${encodeURIComponent(roomId)}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
   async getRoom(roomId: string, token: string | null) {
     return request<Room>(`/api/v1/room/${roomId}`, { method: "GET", token });
   },

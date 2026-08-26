@@ -186,6 +186,17 @@ export function InputPanel() {
     );
   };
 
+  const handleDeleteRoom = (room: Room) => {
+    if (
+      !window.confirm(
+        `Delete room "${room.name}" and ALL its cameras and sessions? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    void runAction(() => api.deleteRoom(room.id, getToken())).catch(() => undefined);
+  };
+
   const startEdit = (camera: CameraInfo) => {
     setEditing(camera.id);
     setEditForm({
@@ -361,11 +372,24 @@ export function InputPanel() {
           const program = control.programs[room.id];
           return (
             <div key={room.id} className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-xs font-semibold text-foreground">
                   {room.name}
                 </span>
-                <span className="font-mono text-[10px] text-muted-foreground">{room.id}</span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {room.id}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    className="px-1.5 py-0.5 text-[10px] text-destructive hover:text-destructive"
+                    title={`Delete room "${room.name}" and all its cameras`}
+                    disabled={busy}
+                    onClick={() => void handleDeleteRoom(room)}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
 
               {room.cameras.map((camera) => {
