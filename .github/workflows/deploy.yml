@@ -64,7 +64,11 @@ jobs:
 
       - name: Deploy Rust directory to server
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" rust/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/admin-panel/rust/
+          # Exclude target/ — cargo's build artifacts (~500MB) are platform
+          # specific, useless on the server, and were flooding the VPS disk
+          # until rsync failed with code 23. The release binary ships
+          # separately in the next step.
+          rsync -avz --delete --exclude 'target/' -e "ssh -o StrictHostKeyChecking=no" rust/ ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/admin-panel/rust/
 
       - name: Deploy Rust binaries to /opt/nexatrace
         run: |
@@ -146,12 +150,16 @@ jobs:
             set -e
             cd /var/www/traceodd/admin-panel
 
-            if [ -f rust/target/release/trace_odd_rust ]; then
-              chmod +x rust/target/release/trace_odd_rust
-              echo 'Rust binary OK: ' \$(rust/target/release/trace_odd_rust --version)
+            if [ -f /opt/nexatrace/trace_odd_rust ]; then
+              chmod +x /opt/nexatrace/trace_odd_rust
+              echo 'Rust binary OK: ' \$(/opt/nexatrace/trace_odd_rust --version)
             else
               echo 'WARNING: Rust binary not found'
             fi
+            # The source tree is synced without cargo's target/ (see the
+            # rsync exclude above). Drop any stale artifact copy left by
+            # earlier deploys to reclaim the disk space it holds.
+            rm -rf /var/www/traceodd/admin-panel/rust/target
             chmod 755 /var/www/traceodd/rust-lib/*.so 2>/dev/null || true
             chown -R www-data:www-data /var/www/traceodd/rust-lib
             chown -R www-data:www-data /var/www/traceodd/admin-panel/rust
