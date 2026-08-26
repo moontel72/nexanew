@@ -11,6 +11,27 @@ export interface WhepSession {
   close(): void;
 }
 
+/** WHEP POST failure carrying the HTTP status so callers can decide
+ * whether to retry (409 = camera not live yet, 5xx = engine hiccup) or
+ * surface a permanent error (401/403/404). */
+export class WhepWatchError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "WhepWatchError";
+  }
+}
+
+/** True when a failed watch may succeed after a short retry. */
+export function isRetryableWatchError(error: unknown): boolean {
+  if (error instanceof WhepWatchError) {
+    return error.status === 409 || error.status === 0 || error.status >= 500;
+  }
+  return error instanceof TypeError; // fetch network failure
+}
+
 async function waitIceComplete(pc: RTCPeerConnection): Promise<void> {
   if (pc.iceGatheringState === "complete") return;
   await new Promise<void>((resolve) => {
@@ -57,10 +78,13 @@ export async function startWhepWatch(opts: {
       Authorization: `Bearer ${token}`,
     },
     body: pc.localDescription?.sdp ?? "",
+  }).catch(() => {
+    pc.close();
+    throw new WhepWatchError("WHEP watch failed: network error", 0);
   });
   if (!res.ok) {
     pc.close();
-    throw new Error(`WHEP watch failed (${res.status})`);
+    throw new WhepWatchError(`WHEP watch failed (${res.status})`, res.status);
   }
   const answerSdp = await res.text();
   await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });

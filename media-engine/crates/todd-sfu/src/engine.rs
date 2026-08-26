@@ -44,9 +44,9 @@ use crate::net::{self, IceNetworkPolicy};
 use crate::pli::PliBroker;
 use crate::{router::TrackRouter, whep_peer, whip_peer};
 
-use todd_transcode::mixer::MixerOutputConfig;
 #[cfg(feature = "gst")]
 use todd_transcode::mixer::plan_scene;
+use todd_transcode::mixer::MixerOutputConfig;
 #[cfg(feature = "gst")]
 use todd_transcode::mixer_gst::{audio_feed_key, source_key, GstProgramMixer};
 
@@ -352,10 +352,20 @@ impl Engine {
                 }
                 r
             }
-            _ => self
-                .router
-                .lowest_rid(room_id, camera_id)
-                .unwrap_or_default(),
+            _ => match self.router.lowest_rid(room_id, camera_id) {
+                // Watching a camera that is not ingesting yet would pin the
+                // viewer to the VP8 fallback codec and silently drop the
+                // publisher's packets once it starts with a different codec
+                // (e.g. H.264) — a tile that never shows video. Refuse with
+                // a retryable conflict instead; clients retry and are built
+                // with the publisher's real codec once ingest starts.
+                Some(rid) => rid,
+                None => {
+                    return Err(AppError::Conflict(format!(
+                        "camera {camera_id} is not live in room {room_id}"
+                    )))
+                }
+            },
         };
 
         self.create_live_viewer(room_id, camera_id, &rid, offer_sdp)
@@ -584,9 +594,7 @@ impl Engine {
                         asset_url: asset_url
                             .map(|url| url.trim().to_string())
                             .filter(|url| !url.is_empty()),
-                        text: text
-                            .map(|t| t.trim().to_string())
-                            .filter(|t| !t.is_empty()),
+                        text: text.map(|t| t.trim().to_string()).filter(|t| !t.is_empty()),
                         x,
                         y,
                     })
@@ -595,10 +603,7 @@ impl Engine {
                 };
             }
             OverlayCommand::Poll { question, options } => {
-                overlays.poll = Some(todd_common::types::PollOverlaySpec {
-                    question,
-                    options,
-                });
+                overlays.poll = Some(todd_common::types::PollOverlaySpec { question, options });
             }
             OverlayCommand::PollClear => {
                 overlays.poll = None;
@@ -684,7 +689,15 @@ impl Engine {
 
         let (video_engine, video_room, video_cam) = (engine.clone(), room.clone(), cam.clone());
         tokio::spawn(async move {
-            pump_ingest_feed(&video_engine, &video_room, &video_cam, MediaCodec::H264, video_ssrc, video_rx).await;
+            pump_ingest_feed(
+                &video_engine,
+                &video_room,
+                &video_cam,
+                MediaCodec::H264,
+                video_ssrc,
+                video_rx,
+            )
+            .await;
         });
         tokio::spawn(async move {
             pump_ingest_feed(&engine, &room, &cam, MediaCodec::Opus, audio_ssrc, audio_rx).await;
