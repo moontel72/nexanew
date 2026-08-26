@@ -49,6 +49,11 @@ on:
     paths:
       - ".github/workflows/media-engine-deploy.yml"
 
+# Serialize every VPS deploy (see deploy.yml for why).
+concurrency:
+  group: media-engine-deploy-hetzner
+  cancel-in-progress: false
+
 jobs:
   deploy:
     # Only deploy when the build actually succeeded (workflow_run fires on

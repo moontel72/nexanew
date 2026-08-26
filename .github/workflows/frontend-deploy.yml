@@ -18,6 +18,11 @@ on:
       - ".github/workflows/frontend-deploy.yml"
   workflow_dispatch:
 
+# Serialize every VPS deploy (see deploy.yml for why).
+concurrency:
+  group: frontend-deploy-hetzner
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest

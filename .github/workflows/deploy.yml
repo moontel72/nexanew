@@ -15,6 +15,14 @@ on:
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
+# Serialize every VPS deploy. A single push updates both `main` and
+# `mainnew`, which schedules one run per branch — two concurrent rsyncs
+# into the same server directories (with --delete) corrupt each other's
+# transfers (`mkstemp ... No such file or directory` / rsync code 23).
+concurrency:
+  group: deploy-hetzner
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
