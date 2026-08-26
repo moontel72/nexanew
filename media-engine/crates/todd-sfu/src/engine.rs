@@ -256,7 +256,7 @@ impl Engine {
             self.telemetry
                 .registry
                 .inc("todd_whip_sessions_replaced_total");
-            let _ = self.stop_session(&id).await;
+            self.close_session_preserve_subscribers(&id).await;
         }
 
         let (pc, shutdown, answer) = whip_peer::create(self, room_id, camera_id, offer_sdp).await?;
@@ -279,6 +279,29 @@ impl Engine {
             .record_ice(&session_id, "whip", room_id, camera_id, "connecting");
         tracing::info!(session = %session_id, room = room_id, camera = camera_id, "whip session started");
         Ok((session_id, answer))
+    }
+
+    /// Closes a publisher session without touching the router's
+    /// subscriber channels — used by reconnect paths (takeover and the
+    /// disconnected-grace watchdog). Live WHEP viewers of the camera keep
+    /// their subscription and resume receiving RTP the moment the camera
+    /// re-ingests; a full `stop_session` would sever them via
+    /// `router.remove_camera`, freezing every Studio tile on a network
+    /// blip.
+    pub async fn close_session_preserve_subscribers(&self, session_id: &str) {
+        let Some((_, session)) = self.sessions.remove(session_id) else {
+            return;
+        };
+        session.shutdown.cancel();
+        let _ = session.pc.close().await;
+        self.telemetry.remove_ice(session_id);
+        self.telemetry
+            .registry
+            .set("todd_sessions_active", self.sessions.len() as u64);
+        tracing::info!(
+            session = session_id,
+            "whip session closed (subscribers preserved)"
+        );
     }
 
     /// Closes the PeerConnection, cancels the track pumps and removes the
@@ -1277,7 +1300,10 @@ impl Engine {
                         .telemetry
                         .registry
                         .inc("todd_ice_disconnected_closures_total");
-                    let _ = engine.stop_session(&id).await;
+                    // Preserve subscribers: the camera's app reconnects
+                    // (WHIP takeover) after such blips — Studio tiles must
+                    // keep their subscription and resume seamlessly.
+                    engine.close_session_preserve_subscribers(&id).await;
                 } else if let Some(id) = engine.viewer_id_for_pc(&pc) {
                     tracing::warn!(
                         session = %id,

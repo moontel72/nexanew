@@ -16,21 +16,41 @@ export interface WhepPlayerState {
  * and connects automatically the moment the camera starts ingesting. */
 const RETRY_DELAY_MS = 2000;
 
-/** Manages one WHEP viewer stream bound to a <video> element. Retries
- * retryable failures (409 not-live-yet, 5xx, network) until the watch
- * succeeds; permanent failures (401/403/404) surface as an error. */
-export function useWhepPlayer(watchUrl: string | null): WhepPlayerState {
+/**
+ * Manages one WHEP viewer stream bound to a <video> element.
+ *
+ * `live` gates the watch: when it is false no WHEP POST is sent at all —
+ * the session (if any) is closed and the tile returns to the waiting
+ * state. Liveness is driven by the telemetry feed (the camera's WHIP ICE
+ * state), so a camera that connects, drops and reconnects (WHIP takeover)
+ * is watched deterministically without 409 polling. While `live` is true,
+ * retryable failures (409 not-live-yet, 5xx, network) are retried until
+ * the watch succeeds; permanent failures (401/403/404) surface as an
+ * error.
+ */
+export function useWhepPlayer(
+  watchUrl: string | null,
+  live = true,
+): WhepPlayerState {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sessionRef = useRef<WhepSession | null>(null);
 
   useEffect(() => {
-    if (!watchUrl || !videoRef.current) return;
-
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
-    setError(null);
+
+    // Not live (or no surface): drop any active session and idle.
+    if (!watchUrl || !videoRef.current || !live) {
+      sessionRef.current?.close();
+      sessionRef.current = null;
+      setConnected(false);
+      setError(null);
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const attempt = async () => {
       if (cancelled) return;
@@ -68,7 +88,7 @@ export function useWhepPlayer(watchUrl: string | null): WhepPlayerState {
       sessionRef.current = null;
       setConnected(false);
     };
-  }, [watchUrl]);
+  }, [watchUrl, live]);
 
   return { ref: videoRef, connected, error };
 }

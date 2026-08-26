@@ -6,6 +6,8 @@ export interface MultiviewTileProps {
   roomId: string;
   cameraId: string;
   label?: string;
+  /** Whether the camera is actively ingesting (telemetry-driven). */
+  live?: boolean;
   active?: "pgm" | "pvw" | null;
   onSelect?: () => void;
 }
@@ -15,11 +17,12 @@ export function MultiviewTile({
   roomId,
   cameraId,
   label,
+  live = true,
   active,
   onSelect,
 }: MultiviewTileProps) {
   const url = whepWatchUrl(roomId, cameraId);
-  const { ref, connected, error } = useWhepPlayer(url);
+  const { ref, connected, error } = useWhepPlayer(url, live);
 
   return (
     <button
@@ -43,7 +46,7 @@ export function MultiviewTile({
           {label ?? `${roomId}/${cameraId}`}
         </span>
         <span className={cn(connected ? "text-emerald-400" : "text-amber-400")}>
-          {connected ? "LIVE" : "…"}
+          {!live ? "OFF" : connected ? "LIVE" : "…"}
         </span>
       </div>
       {error && (

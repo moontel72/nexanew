@@ -1,4 +1,5 @@
 import { useDirector } from "../lib/director/directorService";
+import { useTelemetry } from "../hooks/useTelemetry";
 import { MultiviewTile } from "./MultiviewTile";
 
 export interface CameraFeed {
@@ -17,6 +18,22 @@ export function MultiviewGrid({
   columns = 4,
 }: MultiviewGridProps) {
   const { state, preview } = useDirector();
+  const telemetry = useTelemetry();
+
+  // Liveness comes from the engine's telemetry feed: a camera is live
+  // when it has a WHIP ICE session in the `connected` state. Tiles only
+  // start their WHEP watch for live cameras, so reconnect churn (WHIP
+  // takeover) never produces 409 polling — the tile simply waits until
+  // the camera is back. Before the first snapshot arrives (`telemetry`
+  // null) we treat every camera as live to keep the old blind-watch
+  // behaviour as a fallback.
+  const liveKeys = new Set<string>();
+  for (const session of telemetry?.ice_sessions ?? []) {
+    if (session.kind === "whip" && session.state === "connected") {
+      liveKeys.add(`${session.room_id}/${session.camera_id}`);
+    }
+  }
+  const livenessKnown = telemetry !== null;
 
   return (
     <div
@@ -41,6 +58,7 @@ export function MultiviewGrid({
             key={key}
             roomId={feed.roomId}
             cameraId={feed.cameraId}
+            live={!livenessKnown || liveKeys.has(key)}
             active={active}
             onSelect={() => preview(feed)}
           />
