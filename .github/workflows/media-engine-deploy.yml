@@ -126,6 +126,14 @@ jobs:
             else
               printf 'PUBLIC_BASE_URL=%s\n' 'https://studio.traceodd.com' >> /opt/todd-media-engine/.env
             fi
+            # Ingest tokens must survive the email → configure → connect
+            # workflow (camera operators set up well before going live).
+            # 6h default; override via INGEST_TOKEN_TTL_SECS variable.
+            if [ -n '${{ vars.INGEST_TOKEN_TTL_SECS }}' ]; then
+              printf 'INGEST_TOKEN_TTL_SECS=%s\n' '${{ vars.INGEST_TOKEN_TTL_SECS }}' >> /opt/todd-media-engine/.env
+            else
+              printf 'INGEST_TOKEN_TTL_SECS=%s\n' '21600' >> /opt/todd-media-engine/.env
+            fi
             [ -n '${{ vars.CRICKET_MANAGER_URL }}' ] && printf 'CRICKET_MANAGER_URL=%s\n' '${{ vars.CRICKET_MANAGER_URL }}' >> /opt/todd-media-engine/.env
             [ -n '${{ vars.CRICKET_MANAGER_MATCH_IDS }}' ] && printf 'CRICKET_MANAGER_MATCH_IDS=%s\n' '${{ vars.CRICKET_MANAGER_MATCH_IDS }}' >> /opt/todd-media-engine/.env
             # CORS: the packaged desktop app (Tauri WebView2 / macOS custom

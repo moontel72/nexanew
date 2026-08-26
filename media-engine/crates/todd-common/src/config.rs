@@ -219,7 +219,7 @@ impl Settings {
             studio_listen,
             public_base_url: env_or("PUBLIC_BASE_URL", &format!("http://{studio_listen}")),
             room_ttl_secs: parse_u64("ROOM_TTL_SECS", 3600)?,
-            ingest_token_ttl_secs: parse_u64("INGEST_TOKEN_TTL_SECS", 300)? as i64,
+            ingest_token_ttl_secs: parse_u64("INGEST_TOKEN_TTL_SECS", 21600)? as i64,
             media_plane: env_or("MEDIA_PLANE", "embedded")
                 .parse()
                 .map_err(|e: <MediaPlaneMode as FromStr>::Err| e)?,

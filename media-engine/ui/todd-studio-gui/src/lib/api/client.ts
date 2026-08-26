@@ -77,7 +77,7 @@ export const api = {
       method: "POST",
       token,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, camera_ids: cameraIds, ttl_secs: 3600 }),
+      body: JSON.stringify({ name, camera_ids: cameraIds, ttl_secs: 86400 }),
     });
   },
 
