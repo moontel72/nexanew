@@ -175,7 +175,8 @@ final class _OpenFailed extends _OpenResult {
 /// controls, device telemetry, and auto-reconnect with exponential
 /// backoff.
 class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
-  BroadcasterCubit() : super(const BroadcasterState()) {
+  BroadcasterCubit({BroadcasterConfig? initialConfig})
+    : super(BroadcasterState(config: initialConfig)) {
     on<BroadcastStart>(_onStart);
     on<BroadcastStop>(_onStop);
     on<SwitchCameraRequested>(_onSwitchCamera);

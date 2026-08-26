@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -5,6 +7,7 @@ import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
 
 import '../broadcaster_constants.dart';
 import '../data/services/device_telemetry.dart';
+import '../data/services/whip_client.dart';
 import 'broadcaster_cubit.dart';
 
 /// Todd Broadcaster — mobile ground camera control plane.
@@ -12,12 +15,16 @@ import 'broadcaster_cubit.dart';
 /// Idle: director-supplied connection form. Live: camera preview with
 /// lens/torch/resolution/FPS/mute controls plus live device health.
 class BroadcasterPage extends StatelessWidget {
-  const BroadcasterPage({super.key});
+  const BroadcasterPage({super.key, this.initialConfig});
+
+  /// Connection config pre-filled from a deep link (e.g. the PWA opened
+  /// with `?url=<whip ingest url>`). Null when the app starts fresh.
+  final BroadcasterConfig? initialConfig;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => BroadcasterCubit(),
+      create: (_) => BroadcasterCubit(initialConfig: initialConfig),
       child: const _BroadcasterView(),
     );
   }
@@ -65,6 +72,9 @@ class _ConfigFormState extends State<_ConfigForm> {
   late final TextEditingController _stunUrl;
   late final TextEditingController _turnUrl;
 
+  Timer? _urlDebounce;
+  String? _urlError;
+
   @override
   void initState() {
     super.initState();
@@ -78,14 +88,37 @@ class _ConfigFormState extends State<_ConfigForm> {
     _turnUrl = TextEditingController(text: initial?.turnUrl ?? '');
   }
 
+  /// Auto-fills the connection fields as soon as a pasted WHIP URL is
+  /// recognizable — no Enter key or button press required. Debounced so
+  /// manual typing doesn't clobber fields mid-edit.
+  void _onWhipUrlChanged(String input) {
+    _urlDebounce?.cancel();
+    _urlDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) _applyWhipUrl(input);
+    });
+  }
+
   /// Fills the connection fields from a single pasted WHIP ingest URL
-  /// (`https://host/api/v1/whip/ingest/{room}/{camera}?token=…`).
+  /// (`https://host/api/v1/whip/ingest/{room}/{camera}?token=…`). A
+  /// non-empty value that fails to parse shows an inline error instead of
+  /// silently doing nothing.
   void _applyWhipUrl(String input) {
-    final parts = WhipClient.parseWhipUrl(input);
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) {
+      setState(() => _urlError = null);
+      return;
+    }
+    final parts = WhipClient.parseWhipUrl(trimmed);
     if (parts == null) {
+      setState(() {
+        _urlError =
+            'Not a WHIP ingest URL — expected '
+            'https://…/api/v1/whip/ingest/{room}/{camera}?token=…';
+      });
       return;
     }
     setState(() {
+      _urlError = null;
       _baseUrl.text = parts.baseUrl;
       _roomId.text = parts.roomId;
       _cameraId.text = parts.cameraId;
@@ -112,6 +145,7 @@ class _ConfigFormState extends State<_ConfigForm> {
 
   @override
   void dispose() {
+    _urlDebounce?.cancel();
     _whipUrl.dispose();
     _baseUrl.dispose();
     _roomId.dispose();
@@ -171,12 +205,24 @@ class _ConfigFormState extends State<_ConfigForm> {
                   keyboardType: TextInputType.url,
                   decoration: const InputDecoration(
                     labelText: 'Paste WHIP URL (auto-fills below)',
-                    hintText: 'https://studio.traceodd.com/api/v1/whip/ingest/…',
+                    hintText:
+                        'https://studio.traceodd.com/api/v1/whip/ingest/…',
                     prefixIcon: Icon(Icons.content_paste),
                     border: OutlineInputBorder(),
                   ),
+                  onChanged: _onWhipUrlChanged,
                   onSubmitted: _applyWhipUrl,
                 ),
+                if (_urlError != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _urlError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,

@@ -91,14 +91,55 @@ class WhipClient {
   /// Accepts both forms the Studio hands out:
   /// `…/api/v1/whip/ingest/{room}/{camera}?token=…` (with token) and
   /// `…/api/v1/whip/ingest/{room}/{camera}` (token pasted separately).
+  ///
+  /// Tolerant of real-world paste mistakes: surrounding `<…>`, `(…)` or
+  /// quotes, a stripped `https://` scheme, trailing sentence punctuation
+  /// (`.`/`,`/`;` added by chat and email clients), and share links that
+  /// wrap the ingest URL (`?url=<encoded url>`).
   /// Returns null when [input] is not a valid WHIP ingest URL.
   static WhipUrlParts? parseWhipUrl(String input) {
-    final uri = Uri.tryParse(input.trim());
+    var text = input.trim();
+
+    // Unwrap common share decorations: <url>, (url), "url" or 'url'.
+    if ((text.startsWith('<') && text.endsWith('>')) ||
+        (text.startsWith('(') && text.endsWith(')')) ||
+        (text.startsWith('"') && text.endsWith('"')) ||
+        (text.startsWith("'") && text.endsWith("'"))) {
+      text = text.substring(1, text.length - 1).trim();
+    }
+    if (text.isEmpty) return null;
+
+    // Chat/email clients often append punctuation to a pasted URL. It can
+    // never be part of a valid ingest token, so only strip when a query is
+    // present (the path may legally end with any of these characters).
+    if (text.contains('?') || text.contains('&')) {
+      while (text.endsWith('.') || text.endsWith(',') || text.endsWith(';')) {
+        text = text.substring(0, text.length - 1);
+      }
+    }
+
+    // Some clients strip the scheme when copying — restore it.
+    if (!text.contains('://')) {
+      text = 'https://$text';
+    }
+
+    final uri = Uri.tryParse(text);
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
       return null;
     }
-    final segments =
-        uri.pathSegments.where((s) => s.isNotEmpty).toList(growable: false);
+
+    // Share links that wrap the ingest URL (e.g. the broadcaster deep link
+    // `https://broadcaster.traceodd.com/?url=<encoded>`) — unwrap and
+    // re-parse the inner URL.
+    final wrapped =
+        uri.queryParameters['url'] ?? uri.queryParameters['whip_url'];
+    if (wrapped != null && wrapped.isNotEmpty) {
+      return parseWhipUrl(wrapped);
+    }
+
+    final segments = uri.pathSegments
+        .where((s) => s.isNotEmpty)
+        .toList(growable: false);
     if (segments.length < 5 ||
         segments[0] != 'api' ||
         segments[1] != 'v1' ||
@@ -110,7 +151,7 @@ class WhipClient {
       baseUrl: '${uri.scheme}://${uri.authority}',
       roomId: segments[4],
       cameraId: segments.length >= 6 ? segments[5] : '',
-      token: uri.queryParameters['token'] ?? '',
+      token: (uri.queryParameters['token'] ?? '').trim(),
     );
   }
 
@@ -186,7 +227,14 @@ class WhipClient {
 
     final response = await ApiClient().postRaw(
       uri.toString(),
-      headers: <String, String>{'Content-Type': 'application/sdp'},
+      headers: <String, String>{
+        'Content-Type': 'application/sdp',
+        // The engine prefers the RFC 6750 bearer header and falls back to
+        // the `?token=` query parameter. Sending both keeps the URL-based
+        // operator flow intact while surviving environments that truncate
+        // or strip long query strings.
+        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
       body: local.sdp,
     );
 
