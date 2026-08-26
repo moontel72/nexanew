@@ -115,6 +115,14 @@ jobs:
             [ -n '${{ vars.MEDIA_PLANE }}' ] && printf 'MEDIA_PLANE=%s\n' '${{ vars.MEDIA_PLANE }}' >> /opt/todd-media-engine/.env
             [ -n '${{ vars.STUDIO_HOST }}' ] && printf 'STUDIO_HOST=%s\n' '${{ vars.STUDIO_HOST }}' >> /opt/todd-media-engine/.env
             [ -n '${{ vars.STUDIO_PORT }}' ] && printf 'STUDIO_PORT=%s\n' '${{ vars.STUDIO_PORT }}' >> /opt/todd-media-engine/.env
+            # PUBLIC_BASE_URL drives the WHIP/WHEP URLs handed to camera
+            # operators — must be the public studio origin, never the
+            # internal listen address (127.0.0.1 is unreachable from phones).
+            if [ -n '${{ vars.PUBLIC_BASE_URL }}' ]; then
+              printf 'PUBLIC_BASE_URL=%s\n' '${{ vars.PUBLIC_BASE_URL }}' >> /opt/todd-media-engine/.env
+            else
+              printf 'PUBLIC_BASE_URL=%s\n' 'https://studio.traceodd.com' >> /opt/todd-media-engine/.env
+            fi
             [ -n '${{ vars.CRICKET_MANAGER_URL }}' ] && printf 'CRICKET_MANAGER_URL=%s\n' '${{ vars.CRICKET_MANAGER_URL }}' >> /opt/todd-media-engine/.env
             [ -n '${{ vars.CRICKET_MANAGER_MATCH_IDS }}' ] && printf 'CRICKET_MANAGER_MATCH_IDS=%s\n' '${{ vars.CRICKET_MANAGER_MATCH_IDS }}' >> /opt/todd-media-engine/.env
             # CORS: the packaged desktop app (Tauri WebView2 / macOS custom
