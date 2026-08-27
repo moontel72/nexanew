@@ -61,29 +61,40 @@ jobs:
           sed -i 's/android:label="Trace Odd Store"/android:label="Todd Broadcaster"/' android/app/src/main/AndroidManifest.xml
           grep -n 'android:label' android/app/src/main/AndroidManifest.xml
 
-      - name: Build Todd Broadcaster APK
-        run: flutter build apk --release --no-tree-shake-icons -t lib/main_broadcaster.dart
+      # --split-per-abi ships three small APKs instead of one ~100MB fat
+      # APK; cameramen download only the one their phone needs. Icons are
+      # tree-shaken (default) so the unused Material icon font is dropped.
+      - name: Build Todd Broadcaster APKs (split per ABI)
+        run: flutter build apk --release --split-per-abi -t lib/main_broadcaster.dart
 
-      - name: Upload APK artifact
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
           name: todd-broadcaster-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
           retention-days: 7
 
-      # ── Permanent download link ──────────────────────────────────
-      # The APK is uploaded to the VPS so cameramen download it from
-      # https://traceodd.com/download/broadcaster/todd-broadcaster.apk
-      # (no GitHub account needed).
+      # ── Permanent download links ────────────────────────────────
+      # The 64-bit ARM APK (every phone since ~2015) is the default
+      # download; the 32-bit build covers very old devices and x86_64 is
+      # for emulators. No GitHub account needed.
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_KYE_HATZNER }}
 
-      - name: Deploy APK to download server
+      - name: Deploy APKs to download server
         run: |
           ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
           ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "mkdir -p /var/www/traceodd/download/broadcaster"
-          scp -o StrictHostKeyChecking=no build/app/outputs/flutter-apk/app-release.apk \
+          scp -o StrictHostKeyChecking=no build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
             ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/broadcaster/todd-broadcaster.apk
-          echo "✅ Broadcaster APK live at https://traceodd.com/download/broadcaster/todd-broadcaster.apk"
+          scp -o StrictHostKeyChecking=no build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/broadcaster/todd-broadcaster-32bit.apk
+          scp -o StrictHostKeyChecking=no build/app/outputs/flutter-apk/app-x86_64-release.apk \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/broadcaster/todd-broadcaster-x86_64.apk
+          ls -la /var/www/traceodd/download/broadcaster/
+          echo "✅ Broadcaster APKs live at https://traceodd.com/download/broadcaster/"
