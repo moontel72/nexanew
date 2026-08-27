@@ -1,0 +1,84 @@
+name: Todd Broadcaster APK — Build & Publish
+
+# ============================================================================
+# Builds the Todd Broadcaster Android APK (lib/main_broadcaster.dart) and
+# publishes it to the download server:
+#
+#   https://traceodd.com/download/broadcaster/todd-broadcaster.apk
+#
+# Triggers:
+#   - push to main/mainnew touching android/**, lib/** or pubspec files
+#     (keeps the published APK in sync with app fixes automatically)
+#   - manual workflow_dispatch (build on demand)
+#
+# The StoreKeeper app has its own workflow (android-build.yml) — this one
+# is ONLY the ground-camera Broadcaster app.
+# ============================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - mainnew
+    paths:
+      - "android/**"
+      - "lib/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - ".github/workflows/broadcaster-apk.yml"
+  workflow_dispatch:
+
+# One build at a time; a newer push supersedes a queued one.
+concurrency:
+  group: broadcaster-apk
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Build Todd Broadcaster APK
+        run: flutter build apk --release --no-tree-shake-icons -t lib/main_broadcaster.dart
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: todd-broadcaster-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
+
+      # ── Permanent download link ──────────────────────────────────
+      # The APK is uploaded to the VPS so cameramen download it from
+      # https://traceodd.com/download/broadcaster/todd-broadcaster.apk
+      # (no GitHub account needed).
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KYE_HATZNER }}
+
+      - name: Deploy APK to download server
+        run: |
+          ssh-keyscan -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "mkdir -p /var/www/traceodd/download/broadcaster"
+          scp -o StrictHostKeyChecking=no build/app/outputs/flutter-apk/app-release.apk \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/broadcaster/todd-broadcaster.apk
+          echo "✅ Broadcaster APK live at https://traceodd.com/download/broadcaster/todd-broadcaster.apk"
