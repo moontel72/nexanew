@@ -428,19 +428,30 @@ async fn write_chunk(track: &TrackLocalStaticRTP, chunk: &todd_transcode::media:
 }
 
 fn codec_capability(codec: MediaCodec) -> RTCRtpCodecCapability {
-    let (mime, clock_rate, channels) = match codec {
-        MediaCodec::H264 => ("video/H264", 90_000, 0),
-        MediaCodec::Vp8 => ("video/VP8", 90_000, 0),
-        MediaCodec::Vp9 => ("video/VP9", 90_000, 0),
-        MediaCodec::Opus => ("audio/opus", 48_000, 2),
-        MediaCodec::Pcmu => ("audio/PCMU", 8_000, 1),
-        MediaCodec::Unknown => ("video/VP8", 90_000, 0),
+    let (mime, clock_rate, channels, fmtp) = match codec {
+        // H.264 in WebRTC must advertise packetization-mode=1 (STAP-A /
+        // FU-A) with an explicit profile-level-id — without the fmtp line
+        // the browser assumes mode 0 and every packet fails to decode:
+        // the classic "egress flows but the tile stays black" symptom.
+        // 42e01f = Constrained Baseline Level 3.1, what phone cameras
+        // actually encode.
+        MediaCodec::H264 => (
+            "video/H264",
+            90_000u32,
+            0u16,
+            "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f",
+        ),
+        MediaCodec::Vp8 => ("video/VP8", 90_000, 0, ""),
+        MediaCodec::Vp9 => ("video/VP9", 90_000, 0, ""),
+        MediaCodec::Opus => ("audio/opus", 48_000, 2, ""),
+        MediaCodec::Pcmu => ("audio/PCMU", 8_000, 1, ""),
+        MediaCodec::Unknown => ("video/VP8", 90_000, 0, ""),
     };
     RTCRtpCodecCapability {
         mime_type: mime.to_string(),
         clock_rate,
         channels,
-        sdp_fmtp_line: String::new(),
+        sdp_fmtp_line: fmtp.to_string(),
         rtcp_feedback: vec![],
     }
 }
