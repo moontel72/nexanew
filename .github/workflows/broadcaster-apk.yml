@@ -96,5 +96,7 @@ jobs:
             ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/broadcaster/todd-broadcaster-32bit.apk
           scp -o StrictHostKeyChecking=no build/app/outputs/flutter-apk/app-x86_64-release.apk \
             ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/var/www/traceodd/download/broadcaster/todd-broadcaster-x86_64.apk
-          ls -la /var/www/traceodd/download/broadcaster/
+          # Verify on the SERVER (ls on the runner would look in the
+          # wrong filesystem and fail the step after a successful upload).
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "ls -la /var/www/traceodd/download/broadcaster/"
           echo "✅ Broadcaster APKs live at https://traceodd.com/download/broadcaster/"
