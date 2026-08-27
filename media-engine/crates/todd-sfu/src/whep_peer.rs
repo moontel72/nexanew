@@ -23,6 +23,7 @@ use std::sync::Arc;
 use todd_common::error::AppError;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
+use webrtc::rtp::header::EXTENSION_PROFILE_ONE_BYTE;
 use webrtc::{
     peer_connection::{
         configuration::RTCConfiguration, peer_connection_state::RTCPeerConnectionState,
@@ -30,6 +31,7 @@ use webrtc::{
     },
     rtp::packet::Packet,
     rtp_transceiver::rtp_codec::{RTCRtpCodecCapability, RTPCodecType},
+    rtp_transceiver::RTCPFeedback,
     track::track_local::track_local_static_rtp::TrackLocalStaticRTP,
 };
 use webrtc_util::Unmarshal;
@@ -115,7 +117,7 @@ pub(crate) async fn create_viewer(
     let video_codec = match &feed {
         TrackFeed::Live { room, camera, rid } => engine
             .router
-            .codec_of(room, camera, rid)
+            .video_codec_of(room, camera, rid)
             .unwrap_or(MediaCodec::Vp8),
         TrackFeed::Replay {
             replay_id,
@@ -166,9 +168,32 @@ pub(crate) async fn create_viewer(
                 "todd".to_string(),
             )),
         };
-        pc.add_track(track.clone())
+        let sender = pc
+            .add_track(track.clone())
             .await
             .map_err(|e| AppError::Internal(format!("add_track failed: {e}")))?;
+
+        // Drain inbound RTCP on the video sender so the PLI reader
+        // interceptor sees the browser's keyframe requests and forwards
+        // them upstream. Nothing else in webrtc-rs reads this stream —
+        // without the loop the interceptor never fires and a stalled
+        // decoder can never ask for an IDR.
+        if transceiver.kind() == RTPCodecType::Video && matches!(feed, TrackFeed::Live { .. }) {
+            let rtcp_shutdown = shutdown.clone();
+            let video_sender = sender.clone();
+            tokio::spawn(async move {
+                loop {
+                    tokio::select! {
+                        _ = rtcp_shutdown.cancelled() => break,
+                        r = video_sender.read_rtcp() => {
+                            if r.is_err() {
+                                break;
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         // Pump the source into this viewer track until shutdown.
         let pump_shutdown = shutdown.clone();
@@ -334,7 +359,7 @@ pub(crate) async fn create_viewer(
     if let TrackFeed::Live { room, camera, rid } = &feed {
         if let (Some(viewer_ssrc), Some(publisher_ssrc)) = (
             outbound_video_ssrc,
-            engine.router.ssrc_of(room, camera, rid),
+            engine.router.video_ssrc_of(room, camera, rid),
         ) {
             engine.pli.register_viewer(viewer_ssrc, publisher_ssrc);
         }
@@ -413,13 +438,24 @@ async fn pump_replay_track(
 async fn write_chunk(track: &TrackLocalStaticRTP, chunk: &todd_transcode::media::RtpChunk) -> bool {
     // webrtc-util's Unmarshal drains the buffer: takes &mut Bytes.
     let mut buf = chunk.packet.clone();
-    let packet = match Packet::unmarshal(&mut buf) {
+    let mut packet = match Packet::unmarshal(&mut buf) {
         Ok(p) => p,
         Err(e) => {
             tracing::warn!(error = %e, "rtp unmarshal failed");
             return true;
         }
     };
+
+    // Drop the publisher's header extensions: their IDs were negotiated
+    // with the publisher, not with this viewer. A browser receiving an
+    // unknown extension ID rejects the packet — the classic symptom is a
+    // tile that stays black while egress bytes flow. The binding below
+    // re-adds only the viewer-negotiated mid/rid extensions.
+    packet.header.extension = true;
+    packet.header.extension_profile = EXTENSION_PROFILE_ONE_BYTE;
+    packet.header.extensions.clear();
+    packet.header.extensions_padding = 0;
+
     if let Err(e) = track.write_rtp_with_extensions(&packet, &[]).await {
         tracing::warn!(error = %e, "write_rtp failed; stopping viewer pump");
         return false;
@@ -428,7 +464,7 @@ async fn write_chunk(track: &TrackLocalStaticRTP, chunk: &todd_transcode::media:
 }
 
 fn codec_capability(codec: MediaCodec) -> RTCRtpCodecCapability {
-    let (mime, clock_rate, channels, fmtp) = match codec {
+    let (mime, clock_rate, channels, fmtp, feedback) = match codec {
         // H.264 in WebRTC must advertise packetization-mode=1 (STAP-A /
         // FU-A) with an explicit profile-level-id — without the fmtp line
         // the browser assumes mode 0 and every packet fails to decode:
@@ -440,19 +476,94 @@ fn codec_capability(codec: MediaCodec) -> RTCRtpCodecCapability {
             90_000u32,
             0u16,
             "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f",
+            vec![
+                RTCPFeedback {
+                    typ: "nack".to_string(),
+                    parameter: "".to_string(),
+                },
+                RTCPFeedback {
+                    typ: "nack".to_string(),
+                    parameter: "pli".to_string(),
+                },
+                RTCPFeedback {
+                    typ: "ccm".to_string(),
+                    parameter: "fir".to_string(),
+                },
+            ],
         ),
-        MediaCodec::Vp8 => ("video/VP8", 90_000, 0, ""),
-        MediaCodec::Vp9 => ("video/VP9", 90_000, 0, ""),
-        MediaCodec::Opus => ("audio/opus", 48_000, 2, ""),
-        MediaCodec::Pcmu => ("audio/PCMU", 8_000, 1, ""),
-        MediaCodec::Unknown => ("video/VP8", 90_000, 0, ""),
+        MediaCodec::Vp8 => (
+            "video/VP8",
+            90_000,
+            0,
+            "",
+            vec![
+                RTCPFeedback {
+                    typ: "nack".to_string(),
+                    parameter: "".to_string(),
+                },
+                RTCPFeedback {
+                    typ: "nack".to_string(),
+                    parameter: "pli".to_string(),
+                },
+                RTCPFeedback {
+                    typ: "ccm".to_string(),
+                    parameter: "fir".to_string(),
+                },
+            ],
+        ),
+        MediaCodec::Vp9 => (
+            "video/VP9",
+            90_000,
+            0,
+            "",
+            vec![
+                RTCPFeedback {
+                    typ: "nack".to_string(),
+                    parameter: "".to_string(),
+                },
+                RTCPFeedback {
+                    typ: "nack".to_string(),
+                    parameter: "pli".to_string(),
+                },
+            ],
+        ),
+        MediaCodec::Opus => (
+            "audio/opus",
+            48_000,
+            2,
+            "",
+            vec![RTCPFeedback {
+                typ: "transport-cc".to_string(),
+                parameter: "".to_string(),
+            }],
+        ),
+        MediaCodec::Pcmu => (
+            "audio/PCMU",
+            8_000,
+            1,
+            "",
+            vec![RTCPFeedback {
+                typ: "transport-cc".to_string(),
+                parameter: "".to_string(),
+            }],
+        ),
+        MediaCodec::Unknown => (
+            "video/VP8",
+            90_000,
+            0,
+            "",
+            vec![RTCPFeedback {
+                typ: "nack".to_string(),
+                parameter: "pli".to_string(),
+            }],
+        ),
     };
     RTCRtpCodecCapability {
         mime_type: mime.to_string(),
         clock_rate,
         channels,
         sdp_fmtp_line: fmtp.to_string(),
-        rtcp_feedback: vec![],
+        rtcp_feedback: feedback,
     }
 }
 

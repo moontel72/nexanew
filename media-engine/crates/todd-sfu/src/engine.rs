@@ -278,6 +278,37 @@ impl Engine {
         }
 
         let session_id = Uuid::new_v4().to_string();
+
+        // RTCP pump: the PLI broker queues keyframe requests, but nothing
+        // would ever transmit them — webrtc-rs only sends RTCP when the
+        // app calls `write_rtcp`. Without this loop the publisher never
+        // receives PLIs, so a viewer joining mid-GOP waits for the next
+        // natural IDR (black tile until then, or forever on encoders that
+        // only emit IDRs on demand).
+        {
+            let pump_pc = pc.clone();
+            let pump_shutdown = shutdown.clone();
+            let broker = self.pli.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(Duration::from_millis(500));
+                interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                loop {
+                    tokio::select! {
+                        _ = pump_shutdown.cancelled() => break,
+                        _ = interval.tick() => {
+                            let plis = broker.take_pending();
+                            if plis.is_empty() {
+                                continue;
+                            }
+                            if pump_pc.write_rtcp(&plis).await.is_err() {
+                                break;
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         self.sessions.insert(
             session_id.clone(),
             Session {
@@ -476,7 +507,7 @@ impl Engine {
             .record_ice(&session_id, "whep", room_id, camera_id, "connecting");
 
         // Fast-start: ask the publisher for a keyframe on this layer.
-        if let Some(ssrc) = self.router.ssrc_of(room_id, camera_id, rid) {
+        if let Some(ssrc) = self.router.video_ssrc_of(room_id, camera_id, rid) {
             self.pli.request_keyframe(ssrc);
         }
 
@@ -1103,7 +1134,7 @@ impl Engine {
                 .unwrap_or_default();
             let codec = self
                 .router
-                .codec_of(&source.room_id, &source.camera_id, &rid);
+                .video_codec_of(&source.room_id, &source.camera_id, &rid);
             if !matches!(codec, Some(MediaCodec::H264)) {
                 tracing::warn!(
                     room = %source.room_id,
@@ -1480,7 +1511,7 @@ impl Engine {
         // The forwarder requires a video stream.
         if self
             .router
-            .codec_of(room_id, camera_id, &rid)
+            .video_codec_of(room_id, camera_id, &rid)
             .map(|c| c.is_audio())
             .unwrap_or(true)
         {

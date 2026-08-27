@@ -63,14 +63,18 @@ impl PliBroker {
     }
 
     /// Drains pending requests into PLI packets (writer side).
-    fn take_pending(&self) -> Vec<Box<dyn webrtc::rtcp::packet::Packet + Send + Sync>> {
+    ///
+    /// `sender_ssrc` mirrors `media_ssrc`: libwebrtc ignores the sender
+    /// SSRC for PLI routing but rejects PLIs whose sender SSRC is 0, and
+    /// the SFU has no outbound SSRC on the publisher leg to use instead.
+    pub fn take_pending(&self) -> Vec<Box<dyn webrtc::rtcp::packet::Packet + Send + Sync>> {
         let mut out = Vec::new();
         for entry in self.pending.iter() {
             let ssrc = *entry.key();
             let count = entry.value().swap(0, Ordering::Relaxed);
             if count > 0 {
                 out.push(Box::new(PictureLossIndication {
-                    sender_ssrc: 0,
+                    sender_ssrc: ssrc,
                     media_ssrc: ssrc,
                 })
                     as Box<dyn webrtc::rtcp::packet::Packet + Send + Sync>);

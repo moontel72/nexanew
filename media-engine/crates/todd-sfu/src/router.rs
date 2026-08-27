@@ -207,6 +207,23 @@ impl TrackRouter {
             .map(|entry| *entry.value())
     }
 
+    /// First **video** codec of a camera layer. `codec_of` alone is racy:
+    /// audio and video share the same `(room, camera, rid)` key on
+    /// single-track phones, and DashMap iteration order is arbitrary — a
+    /// viewer built with the Opus entry as its "video codec" gets a
+    /// video m-line that can never carry the camera picture (black tile).
+    pub fn video_codec_of(&self, room_id: &str, camera_id: &str, rid: &str) -> Option<MediaCodec> {
+        self.streams
+            .iter()
+            .find(|entry| {
+                entry.key().0.as_str() == room_id
+                    && entry.key().1.as_str() == camera_id
+                    && entry.key().2.as_str() == rid
+                    && !entry.value().is_audio()
+            })
+            .map(|entry| *entry.value())
+    }
+
     /// First SSRC of a camera layer (publisher inbound SSRC).
     pub fn ssrc_of(&self, room_id: &str, camera_id: &str, rid: &str) -> Option<u32> {
         self.streams
@@ -215,6 +232,20 @@ impl TrackRouter {
                 entry.key().0.as_str() == room_id
                     && entry.key().1.as_str() == camera_id
                     && entry.key().2.as_str() == rid
+            })
+            .map(|entry| entry.key().3)
+    }
+
+    /// First **video** SSRC of a camera layer — keyframe requests must
+    /// target the video stream, never the Opus audio stream.
+    pub fn video_ssrc_of(&self, room_id: &str, camera_id: &str, rid: &str) -> Option<u32> {
+        self.streams
+            .iter()
+            .find(|entry| {
+                entry.key().0.as_str() == room_id
+                    && entry.key().1.as_str() == camera_id
+                    && entry.key().2.as_str() == rid
+                    && !entry.value().is_audio()
             })
             .map(|entry| entry.key().3)
     }
