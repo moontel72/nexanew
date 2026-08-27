@@ -6,6 +6,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
 
 import '../broadcaster_constants.dart';
+import '../data/services/broadcaster_config_store.dart';
 import '../data/services/device_telemetry.dart';
 import '../data/services/whip_client.dart';
 import 'broadcaster_cubit.dart';
@@ -76,6 +77,7 @@ class _ConfigFormState extends State<_ConfigForm> {
 
   Timer? _urlDebounce;
   String? _urlError;
+  bool _saved = false;
 
   @override
   void initState() {
@@ -95,6 +97,34 @@ class _ConfigFormState extends State<_ConfigForm> {
     _turnUrl = TextEditingController(text: initial?.turnUrl ?? '');
     _turnUsername = TextEditingController(text: initial?.turnUsername ?? '');
     _turnPassword = TextEditingController(text: initial?.turnPassword ?? '');
+    // A config carried in from cubit state (deep link or a stopped
+    // broadcast) is already the working config.
+    _saved = initial != null;
+
+    // Restore the last-saved config after a restart (unless a deep link
+    // already pre-filled the form). The saved data persists until the
+    // operator deletes it explicitly.
+    if (widget.initial == null) {
+      _restoreSavedConfig();
+    }
+  }
+
+  Future<void> _restoreSavedConfig() async {
+    final saved = await BroadcasterConfigStore.load();
+    if (!mounted || saved == null) return;
+    setState(() {
+      _baseUrl.text = saved.baseUrl;
+      _roomId.text = saved.roomId;
+      _cameraId.text = saved.cameraId;
+      _token.text = saved.token;
+      if (saved.stunUrl.isNotEmpty) {
+        _stunUrl.text = saved.stunUrl;
+      }
+      _turnUrl.text = saved.turnUrl;
+      _turnUsername.text = saved.turnUsername;
+      _turnPassword.text = saved.turnPassword;
+      _saved = true;
+    });
   }
 
   /// Auto-fills the connection fields as soon as a pasted WHIP URL is
@@ -178,20 +208,52 @@ class _ConfigFormState extends State<_ConfigForm> {
   }
 
   void _start(BuildContext context) {
-    context.read<BroadcasterCubit>().add(
-      BroadcastStart(
-        BroadcasterConfig(
-          baseUrl: _baseUrl.text,
-          roomId: _roomId.text,
-          cameraId: _cameraId.text,
-          token: _token.text,
-          stunUrl: _stunUrl.text,
-          turnUrl: _turnUrl.text,
-          turnUsername: _turnUsername.text,
-          turnPassword: _turnPassword.text,
-        ),
+    final config = BroadcasterConfig(
+      baseUrl: _baseUrl.text,
+      roomId: _roomId.text,
+      cameraId: _cameraId.text,
+      token: _token.text,
+      stunUrl: _stunUrl.text,
+      turnUrl: _turnUrl.text,
+      turnUsername: _turnUsername.text,
+      turnPassword: _turnPassword.text,
+    );
+    // Starting with these values makes them the last-known-good config —
+    // persist them so the next restart restores exactly what ran.
+    unawaited(BroadcasterConfigStore.save(config));
+    context.read<BroadcasterCubit>().add(BroadcastStart(config));
+  }
+
+  /// Saves the current form values without starting the broadcast.
+  Future<void> _save(BuildContext context) async {
+    await BroadcasterConfigStore.save(
+      BroadcasterConfig(
+        baseUrl: _baseUrl.text,
+        roomId: _roomId.text,
+        cameraId: _cameraId.text,
+        token: _token.text,
+        stunUrl: _stunUrl.text,
+        turnUrl: _turnUrl.text,
+        turnUsername: _turnUsername.text,
+        turnPassword: _turnPassword.text,
       ),
     );
+    if (!mounted) return;
+    setState(() => _saved = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Saved — config persists across restarts')),
+    );
+  }
+
+  /// Deletes the saved config so the next restart starts with a clean
+  /// form. The currently shown fields are left untouched.
+  Future<void> _deleteSaved(BuildContext context) async {
+    await BroadcasterConfigStore.delete();
+    if (!mounted) return;
+    setState(() => _saved = false);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Saved config deleted')));
   }
 
   @override
@@ -334,11 +396,44 @@ class _ConfigFormState extends State<_ConfigForm> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _save(context),
+                        icon: Icon(
+                          _saved ? Icons.check_circle : Icons.save_outlined,
+                        ),
+                        label: Text(_saved ? 'Saved' : 'Save'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _deleteSaved(context),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Theme.of(context).colorScheme.error,
+                        ),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Delete'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: () => _start(context),
                   icon: const Icon(Icons.cast),
                   label: const Text('Start Broadcast'),
                 ),
+                if (_saved) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Saved config restores automatically after restart.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
               ],
             ),
           ),
