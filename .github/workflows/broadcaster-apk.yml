@@ -56,6 +56,11 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
+      - name: Brand the APK as Todd Broadcaster
+        run: |
+          sed -i 's/android:label="Trace Odd Store"/android:label="Todd Broadcaster"/' android/app/src/main/AndroidManifest.xml
+          grep -n 'android:label' android/app/src/main/AndroidManifest.xml
+
       - name: Build Todd Broadcaster APK
         run: flutter build apk --release --no-tree-shake-icons -t lib/main_broadcaster.dart
 

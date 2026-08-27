@@ -1,4 +1,4 @@
-package com.example.nexatrace_system
+package com.traceodd.app
 
 import io.flutter.embedding.android.FlutterActivity
 
