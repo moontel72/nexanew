@@ -39,6 +39,14 @@ abstract final class BroadcasterConstants {
   static const Duration iceGatherMaxWait = Duration(seconds: 3);
   static const Duration iceGatherPollStep = Duration(milliseconds: 50);
 
+  /// STUN server used when the operator leaves the STUN field empty.
+  ///
+  /// Without it the phone only gathers host candidates (private IPs),
+  /// which the engine can never reach behind carrier NAT — ICE fails and
+  /// no media flows even though the WHIP signaling succeeds. A public
+  /// STUN server gives the phone a server-reflexive (srflx) candidate.
+  static const String defaultStunUrl = 'stun:stun.l.google.com:19302';
+
   /// Default capture frame rate.
   static const int defaultFps = 30;
 

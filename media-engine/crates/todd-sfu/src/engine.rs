@@ -261,6 +261,22 @@ impl Engine {
 
         let (pc, shutdown, answer) = whip_peer::create(self, room_id, camera_id, offer_sdp).await?;
 
+        // Diagnose the offer's ICE candidate mix up front: a publisher
+        // sending host candidates only (no srflx/relay) has no STUN/TURN
+        // and will usually fail ICE behind carrier NAT — log it loudly
+        // instead of letting the session die silently 20s later.
+        let (host, srflx, relay) = whip_peer::candidate_counts(offer_sdp);
+        if host > 0 && srflx == 0 && relay == 0 {
+            tracing::warn!(
+                room = room_id,
+                camera = camera_id,
+                host,
+                srflx,
+                relay,
+                "WHIP offer has host candidates only — publisher is missing STUN/TURN; media will likely never arrive"
+            );
+        }
+
         let session_id = Uuid::new_v4().to_string();
         self.sessions.insert(
             session_id.clone(),
@@ -278,6 +294,32 @@ impl Engine {
         self.telemetry
             .record_ice(&session_id, "whip", room_id, camera_id, "connecting");
         tracing::info!(session = %session_id, room = room_id, camera = camera_id, "whip session started");
+
+        // Media watchdog: a WHIP accept that never produces RTP usually
+        // means the publisher's media path is dead (ICE never connected —
+        // missing STUN/TURN behind NAT). Surface it instead of failing
+        // silently. The session must still exist (a replacement/takeover
+        // or an explicit close cancels the alarm).
+        {
+            let engine = self.clone();
+            let room = room_id.to_string();
+            let camera = camera_id.to_string();
+            let sid = session_id.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_secs(10)).await;
+                if engine.sessions.contains_key(&sid)
+                    && !engine.router.is_camera_active(&room, &camera)
+                {
+                    tracing::warn!(
+                        session = %sid,
+                        room = %room,
+                        camera = %camera,
+                        "whip session accepted but no RTP tracks registered after 10s — publisher media path blocked (check phone STUN/TURN)"
+                    );
+                    engine.telemetry.registry.inc("todd_whip_no_media_total");
+                }
+            });
+        }
         Ok((session_id, answer))
     }
 

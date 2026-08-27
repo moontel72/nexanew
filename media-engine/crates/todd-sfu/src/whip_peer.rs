@@ -156,6 +156,34 @@ pub(crate) async fn create(
     Ok((pc, shutdown, local.sdp))
 }
 
+/// Counts the ICE candidate types present in an SDP offer as
+/// `(host, srflx, relay)`. Offers that carry host candidates only mean
+/// the publisher gathered no public address (no STUN/TURN on the phone),
+/// which almost always fails ICE behind carrier NAT — surfacing this in
+/// the logs turns a silent 20-second ICE timeout into an actionable
+/// diagnosis.
+pub(crate) fn candidate_counts(sdp: &str) -> (usize, usize, usize) {
+    let (mut host, mut srflx, mut relay) = (0usize, 0usize, 0usize);
+    for line in sdp.lines() {
+        let line = line.trim();
+        if !line.starts_with("a=candidate:") {
+            continue;
+        }
+        let mut tokens = line.split_whitespace();
+        while let Some(token) = tokens.next() {
+            if token == "typ" {
+                match tokens.next() {
+                    Some("host") => host += 1,
+                    Some("srflx") => srflx += 1,
+                    Some("relay") => relay += 1,
+                    _ => {}
+                }
+            }
+        }
+    }
+    (host, srflx, relay)
+}
+
 /// Parses `a=simulcast:send rid=low;mid;high` (and `a=simulcast:send`
 /// without an explicit list) from an SDP offer, returning the layer order
 /// with the lowest layer first.
@@ -285,5 +313,25 @@ mod tests {
             parse_simulcast_order("v=0\r\no=- 1 1 IN IP4 0.0.0.0\r\n"),
             None
         );
+    }
+
+    #[test]
+    fn counts_candidate_types() {
+        let sdp = "v=0\r\n\
+a=candidate:1 1 udp 2122260223 192.168.1.5 54321 typ host\r\n\
+a=candidate:2 1 udp 1686052607 203.0.113.9 54322 typ srflx raddr 192.168.1.5 rport 54321\r\n\
+a=candidate:3 1 udp 41819935 198.51.100.1 3478 typ relay raddr 203.0.113.9 rport 54322\r\n";
+        assert_eq!(candidate_counts(sdp), (1, 1, 1));
+    }
+
+    #[test]
+    fn host_only_offer_has_no_reflexive_candidates() {
+        let sdp = "v=0\r\n\
+a=candidate:1 1 udp 2122260223 192.168.1.5 54321 typ host\r\n\
+a=candidate:2 1 tcp 1518280447 192.168.1.5 9 typ host tcptype active\r\n";
+        let (host, srflx, relay) = candidate_counts(sdp);
+        assert_eq!(host, 2);
+        assert_eq!(srflx, 0);
+        assert_eq!(relay, 0);
     }
 }

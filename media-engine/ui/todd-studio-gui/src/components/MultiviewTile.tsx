@@ -9,6 +9,8 @@ export interface MultiviewTileProps {
   /** Whether the camera is actively ingesting (telemetry-driven). */
   live?: boolean;
   active?: "pgm" | "pvw" | null;
+  /** Full-frame mode: no rounding/border so the tile fills the canvas. */
+  flush?: boolean;
   onSelect?: () => void;
 }
 
@@ -19,6 +21,7 @@ export function MultiviewTile({
   label,
   live = true,
   active,
+  flush = false,
   onSelect,
 }: MultiviewTileProps) {
   const url = whepWatchUrl(roomId, cameraId);
@@ -29,7 +32,8 @@ export function MultiviewTile({
       type="button"
       onClick={onSelect}
       className={cn(
-        "group relative overflow-hidden rounded-md border border-border bg-muted text-left",
+        "group relative overflow-hidden bg-muted text-left",
+        flush ? "border-0 rounded-none" : "rounded-md border border-border",
         active === "pgm" && "program-active",
         active === "pvw" && "preview-active",
       )}

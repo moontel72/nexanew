@@ -53,12 +53,22 @@ export async function startWhepWatch(opts: {
   videoEl: HTMLVideoElement;
 }): Promise<WhepSession> {
   const iceServers: RTCIceServer[] = [];
-  if (env.stunUrl) iceServers.push({ urls: env.stunUrl });
+  // Same fallback as the broadcaster app: an empty env STUN leaves the
+  // viewer with host-only candidates, which can fail behind strict NATs.
+  iceServers.push({ urls: env.stunUrl || "stun:stun.l.google.com:19302" });
   if (env.turnUrl) iceServers.push({ urls: env.turnUrl });
 
   const pc = new RTCPeerConnection({ iceServers });
   pc.addTransceiver("video", { direction: "recvonly" });
   pc.addTransceiver("audio", { direction: "recvonly" });
+
+  // Bind the track listener and the media element *before* the SDP
+  // exchange: the answer may arrive while ICE is still warming, and a
+  // track can fire as soon as the remote description is applied. Binding
+  // first guarantees the HTML5 <video> always receives the stream.
+  const stream = new MediaStream();
+  pc.ontrack = (event) => stream.addTrack(event.track);
+  opts.videoEl.srcObject = stream;
 
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
@@ -88,10 +98,6 @@ export async function startWhepWatch(opts: {
   }
   const answerSdp = await res.text();
   await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
-
-  const stream = new MediaStream();
-  pc.ontrack = (event) => stream.addTrack(event.track);
-  opts.videoEl.srcObject = stream;
   await opts.videoEl.play().catch(() => undefined);
 
   return {

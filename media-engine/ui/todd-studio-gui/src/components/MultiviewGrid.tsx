@@ -1,5 +1,6 @@
 import { useDirector } from "../lib/director/directorService";
 import { useTelemetry } from "../hooks/useTelemetry";
+import { cn } from "../lib/utils";
 import { MultiviewTile } from "./MultiviewTile";
 
 export interface CameraFeed {
@@ -9,38 +10,57 @@ export interface CameraFeed {
 
 export interface MultiviewGridProps {
   feeds: CameraFeed[];
-  columns?: 2 | 3 | 4;
 }
 
-/** Multiviewer grid: every active camera feed as a live WHEP player. */
-export function MultiviewGrid({
-  feeds,
-  columns = 4,
-}: MultiviewGridProps) {
+/** Multiviewer grid: every active camera feed as a live WHEP player.
+ * The grid divides the canvas dynamically from the feed count: one
+ * camera fills it, two/three/four run in a row, more wrap in rows. */
+export function MultiviewGrid({ feeds }: MultiviewGridProps) {
   const { state, preview } = useDirector();
   const telemetry = useTelemetry();
 
-  // Liveness comes from the engine's telemetry feed: a camera is live
-  // when it has a WHIP ICE session in the `connected` state. Tiles only
-  // start their WHEP watch for live cameras, so reconnect churn (WHIP
-  // takeover) never produces 409 polling — the tile simply waits until
-  // the camera is back. Before the first snapshot arrives (`telemetry`
-  // null) we treat every camera as live to keep the old blind-watch
-  // behaviour as a fallback.
+  // Liveness comes from the engine's telemetry feed. Primary signal: RTP
+  // ingress — a camera whose packets_in is growing is genuinely sending
+  // media (tracks registered, codec known), so a WHEP watch is guaranteed
+  // to work. The WHIP ICE sessions are a secondary signal covering the
+  // window between track registration and the first RTP sample. Tiles
+  // only start their WHEP watch for live cameras, so reconnect churn
+  // (WHIP takeover) never produces 409 polling — the tile simply waits
+  // until the camera is back. Before the first snapshot arrives
+  // (`telemetry` null) we treat every camera as live to keep the old
+  // blind-watch behaviour as a fallback.
   const liveKeys = new Set<string>();
+  for (const stream of telemetry?.streams ?? []) {
+    if (stream.packets_in > 0) {
+      liveKeys.add(`${stream.room_id}/${stream.camera_id}`);
+    }
+  }
   for (const session of telemetry?.ice_sessions ?? []) {
-    if (session.kind === "whip" && session.state === "connected") {
+    if (
+      session.kind === "whip" &&
+      (session.state === "connected" || session.state === "connecting")
+    ) {
       liveKeys.add(`${session.room_id}/${session.camera_id}`);
     }
   }
   const livenessKnown = telemetry !== null;
 
+  // One camera = full canvas: the tile stretches edge-to-edge (no gap,
+  // no padding) so the active player truly fills the frame. Otherwise one
+  // column per camera (capped at four) and the remaining cameras wrap
+  // onto new rows.
+  const single = feeds.length <= 1;
+  const columns = single ? 1 : Math.min(feeds.length, 4);
+
   return (
     <div
-      className="grid h-full min-h-0 gap-2 overflow-y-auto p-2"
+      className={cn(
+        "grid h-full min-h-0",
+        single ? "p-0 gap-0" : "gap-2 overflow-y-auto p-2",
+      )}
       style={{
         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-        gridAutoRows: "minmax(120px, 1fr)",
+        gridAutoRows: single ? "1fr" : "minmax(120px, 1fr)",
       }}
     >
       {feeds.map((feed) => {
@@ -60,6 +80,7 @@ export function MultiviewGrid({
             cameraId={feed.cameraId}
             live={!livenessKnown || liveKeys.has(key)}
             active={active}
+            flush={single}
             onSelect={() => preview(feed)}
           />
         );

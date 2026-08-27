@@ -536,9 +536,18 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
         _reconnectTimer?.cancel();
         _reconnectTimer = null;
         _reconnectAttempt = 0;
+        // WHIP 201 only means the engine accepted the offer — media
+        // flows only once ICE reaches `connected`. Keep the tile honest:
+        // stay in `connecting` until the peer-connection state callback
+        // promotes us (or reports failure, which schedules a reconnect).
+        final iceConnected =
+            _pc?.connectionState ==
+            RTCPeerConnectionState.RTCPeerConnectionStateConnected;
         emit(
           state.copyWith(
-            phase: BroadcasterPhase.live,
+            phase: iceConnected
+                ? BroadcasterPhase.live
+                : BroadcasterPhase.connecting,
             connectionState: _pc?.connectionState,
             reconnectAttempt: 0,
             reconnectDelay: null,

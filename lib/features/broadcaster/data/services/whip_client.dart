@@ -197,9 +197,13 @@ class WhipClient {
     String? turnUrl,
   }) async {
     final iceServers = <Map<String, dynamic>>[];
-    if (stunUrl.isNotEmpty) {
-      iceServers.add(<String, dynamic>{'urls': stunUrl});
-    }
+    // An empty STUN field silently produces host-only candidates, which
+    // fail behind carrier NAT. Fall back to the default public STUN so a
+    // blank form still yields a working media path.
+    final effectiveStun = stunUrl.trim().isEmpty
+        ? BroadcasterConstants.defaultStunUrl
+        : stunUrl.trim();
+    iceServers.add(<String, dynamic>{'urls': effectiveStun});
     if (turnUrl != null && turnUrl.isNotEmpty) {
       iceServers.add(<String, dynamic>{'urls': turnUrl});
     }

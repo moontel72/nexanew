@@ -165,10 +165,7 @@ export default function App() {
             <Scoreboard matchId={matchId} />
             <div className="tv-frame min-h-0 flex-1">
               <div className="relative h-full w-full">
-                <MultiviewGrid
-                  feeds={feeds}
-                  columns={feeds.length > 8 ? 4 : feeds.length > 2 ? 3 : 2}
-                />
+                <MultiviewGrid feeds={feeds} />
                 <OverlayController event={overlayEvent} />
                 <PollOverlay />
               </div>

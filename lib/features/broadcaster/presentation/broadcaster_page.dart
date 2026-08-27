@@ -84,7 +84,12 @@ class _ConfigFormState extends State<_ConfigForm> {
     _roomId = TextEditingController(text: initial?.roomId ?? '');
     _cameraId = TextEditingController(text: initial?.cameraId ?? '');
     _token = TextEditingController(text: initial?.token ?? '');
-    _stunUrl = TextEditingController(text: initial?.stunUrl ?? '');
+    final initialStun = initial?.stunUrl;
+    _stunUrl = TextEditingController(
+      text: (initialStun == null || initialStun.isEmpty)
+          ? BroadcasterConstants.defaultStunUrl
+          : initialStun,
+    );
     _turnUrl = TextEditingController(text: initial?.turnUrl ?? '');
   }
 
@@ -139,7 +144,11 @@ class _ConfigFormState extends State<_ConfigForm> {
     if (initial.roomId != _roomId.text) _roomId.text = initial.roomId;
     if (initial.cameraId != _cameraId.text) _cameraId.text = initial.cameraId;
     if (initial.token != _token.text) _token.text = initial.token;
-    if (initial.stunUrl != _stunUrl.text) _stunUrl.text = initial.stunUrl;
+    if (initial.stunUrl != _stunUrl.text &&
+        !(initial.stunUrl.isEmpty &&
+            _stunUrl.text == BroadcasterConstants.defaultStunUrl)) {
+      _stunUrl.text = initial.stunUrl;
+    }
     if (initial.turnUrl != _turnUrl.text) _turnUrl.text = initial.turnUrl;
   }
 
