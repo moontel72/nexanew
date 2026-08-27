@@ -58,7 +58,8 @@ dependencies:
   crypto: ^3.0.3
 
   # QR Code & Barcode
-  qr_code_scanner: ^1.0.1
+  # NOTE: qr_code_scanner removed — its Android plugin has no namespace
+  # and breaks AGP 8+ builds; mobile_scanner covers every scan flow.
   mobile_scanner: ^7.2.0
   qr_flutter: ^4.1.0
   barcode: ^2.2.0
