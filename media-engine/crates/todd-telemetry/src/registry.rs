@@ -101,6 +101,11 @@ const METRICS: &[(&str, &str, MetricKind)] = &[
         MetricKind::Counter,
     ),
     (
+        "todd_whip_no_media_total",
+        "WHIP sessions accepted but no RTP tracks registered within 10s.",
+        MetricKind::Counter,
+    ),
+    (
         "todd_rtt_ms",
         "Last sampled ICE round-trip time in milliseconds.",
         MetricKind::Gauge,

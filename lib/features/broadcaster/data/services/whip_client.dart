@@ -195,6 +195,8 @@ class WhipClient {
     required MediaStream stream,
     required String stunUrl,
     String? turnUrl,
+    String? turnUsername,
+    String? turnPassword,
   }) async {
     final iceServers = <Map<String, dynamic>>[];
     // An empty STUN field silently produces host-only candidates, which
@@ -205,7 +207,13 @@ class WhipClient {
         : stunUrl.trim();
     iceServers.add(<String, dynamic>{'urls': effectiveStun});
     if (turnUrl != null && turnUrl.isNotEmpty) {
-      iceServers.add(<String, dynamic>{'urls': turnUrl});
+      iceServers.add(<String, dynamic>{
+        'urls': turnUrl,
+        if (turnUsername != null && turnUsername.isNotEmpty)
+          'username': turnUsername,
+        if (turnPassword != null && turnPassword.isNotEmpty)
+          'credential': turnPassword,
+      });
     }
 
     final pc = await createPeerConnection(<String, dynamic>{
@@ -220,14 +228,26 @@ class WhipClient {
     // Non-trickle ICE: the engine answers only after gathering completes.
     await waitForIceGatheringComplete(pc);
 
-    final uri = Uri.parse(
-      '${_normalizeBaseUrl(baseUrl)}/api/v1/whip/ingest/$roomId/$cameraId',
-    ).replace(queryParameters: <String, String>{'token': token});
+    // Guard against a dead media path: if the network blocked STUN and no
+    // TURN relay is configured, the offer carries host candidates only and
+    // the engine can never reach us behind carrier NAT. Fail fast with a
+    // fixable message instead of a 20s "Connecting…" that ends in failure.
     final local = await pc.getLocalDescription();
     if (local == null) {
       await pc.close();
       throw WhipException('Could not produce a local SDP offer.');
     }
+    if (!_sdpHasPublicCandidate(local.sdp ?? '')) {
+      await pc.close();
+      throw WhipException(
+        'Network blocking STUN/TURN — Please check connection or provide '
+        'TURN credentials.',
+      );
+    }
+
+    final uri = Uri.parse(
+      '${_normalizeBaseUrl(baseUrl)}/api/v1/whip/ingest/$roomId/$cameraId',
+    ).replace(queryParameters: <String, String>{'token': token});
 
     final response = await ApiClient().postRaw(
       uri.toString(),
@@ -259,15 +279,31 @@ class WhipClient {
   }
 
   /// Polls until ICE gathering completes (bounded by
-  /// [BroadcasterConstants.iceGatherMaxWait]).
-  static Future<void> waitForIceGatheringComplete(RTCPeerConnection pc) async {
+  /// [BroadcasterConstants.iceGatherMaxWait]). Returns true when the
+  /// gathering state actually reached `complete`, false when the bound
+  /// elapsed first (a slow STUN lookup, not a failure by itself).
+  static Future<bool> waitForIceGatheringComplete(RTCPeerConnection pc) async {
     final deadline = DateTime.now().add(BroadcasterConstants.iceGatherMaxWait);
     while (DateTime.now().isBefore(deadline)) {
       if (pc.iceGatheringState ==
           RTCIceGatheringState.RTCIceGatheringStateComplete) {
-        return;
+        return true;
       }
       await Future<void>.delayed(BroadcasterConstants.iceGatherPollStep);
     }
+    return false;
+  }
+
+  /// True when the SDP offer carries at least one `srflx` (STUN) or
+  /// `relay` (TURN) candidate. Host-only offers cannot traverse carrier
+  /// NAT — the engine would have no routable address to reach.
+  static bool _sdpHasPublicCandidate(String sdp) {
+    for (final line in sdp.split('\r\n')) {
+      if (!line.startsWith('a=candidate:')) continue;
+      if (line.contains(' typ srflx ') || line.contains(' typ relay ')) {
+        return true;
+      }
+    }
+    return false;
   }
 }

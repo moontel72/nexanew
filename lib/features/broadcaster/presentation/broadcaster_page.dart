@@ -71,6 +71,8 @@ class _ConfigFormState extends State<_ConfigForm> {
   late final TextEditingController _token;
   late final TextEditingController _stunUrl;
   late final TextEditingController _turnUrl;
+  late final TextEditingController _turnUsername;
+  late final TextEditingController _turnPassword;
 
   Timer? _urlDebounce;
   String? _urlError;
@@ -91,6 +93,8 @@ class _ConfigFormState extends State<_ConfigForm> {
           : initialStun,
     );
     _turnUrl = TextEditingController(text: initial?.turnUrl ?? '');
+    _turnUsername = TextEditingController(text: initial?.turnUsername ?? '');
+    _turnPassword = TextEditingController(text: initial?.turnPassword ?? '');
   }
 
   /// Auto-fills the connection fields as soon as a pasted WHIP URL is
@@ -150,6 +154,12 @@ class _ConfigFormState extends State<_ConfigForm> {
       _stunUrl.text = initial.stunUrl;
     }
     if (initial.turnUrl != _turnUrl.text) _turnUrl.text = initial.turnUrl;
+    if (initial.turnUsername != _turnUsername.text) {
+      _turnUsername.text = initial.turnUsername;
+    }
+    if (initial.turnPassword != _turnPassword.text) {
+      _turnPassword.text = initial.turnPassword;
+    }
   }
 
   @override
@@ -162,6 +172,8 @@ class _ConfigFormState extends State<_ConfigForm> {
     _token.dispose();
     _stunUrl.dispose();
     _turnUrl.dispose();
+    _turnUsername.dispose();
+    _turnPassword.dispose();
     super.dispose();
   }
 
@@ -175,6 +187,8 @@ class _ConfigFormState extends State<_ConfigForm> {
           token: _token.text,
           stunUrl: _stunUrl.text,
           turnUrl: _turnUrl.text,
+          turnUsername: _turnUsername.text,
+          turnPassword: _turnPassword.text,
         ),
       ),
     );
@@ -297,6 +311,25 @@ class _ConfigFormState extends State<_ConfigForm> {
                   decoration: const InputDecoration(
                     labelText: 'TURN server (optional)',
                     prefixIcon: Icon(Icons.router),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _turnUsername,
+                  decoration: const InputDecoration(
+                    labelText: 'TURN username (optional)',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _turnPassword,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'TURN password (optional)',
+                    prefixIcon: Icon(Icons.lock_outline),
                     border: OutlineInputBorder(),
                   ),
                 ),

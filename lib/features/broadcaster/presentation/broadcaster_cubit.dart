@@ -19,6 +19,8 @@ class BroadcasterConfig {
     required this.token,
     this.stunUrl = '',
     this.turnUrl = '',
+    this.turnUsername = '',
+    this.turnPassword = '',
   });
 
   final String baseUrl;
@@ -27,6 +29,8 @@ class BroadcasterConfig {
   final String token;
   final String stunUrl;
   final String turnUrl;
+  final String turnUsername;
+  final String turnPassword;
 }
 
 /// Selectable camera profile (720p / 1080p).
@@ -508,6 +512,8 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
         stream: stream,
         stunUrl: config.stunUrl,
         turnUrl: config.turnUrl.isEmpty ? null : config.turnUrl,
+        turnUsername: config.turnUsername.isEmpty ? null : config.turnUsername,
+        turnPassword: config.turnPassword.isEmpty ? null : config.turnPassword,
       );
     } catch (err) {
       return _OpenFailed('WHIP ingest failed: $err');

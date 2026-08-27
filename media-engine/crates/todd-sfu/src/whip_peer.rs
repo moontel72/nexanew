@@ -141,17 +141,38 @@ pub(crate) async fn create(
         .create_answer(None)
         .await
         .map_err(|e| AppError::Internal(format!("create_answer failed: {e}")))?;
-    pc.set_local_description(answer)
-        .await
-        .map_err(|e| AppError::Internal(format!("set_local_description failed: {e}")))?;
 
     // Wait until ICE candidates are collected so the answer the camera
     // receives is complete (trickle ICE is off for WHIP simplicity).
-    let _ = pc.gathering_complete_promise().await;
+    // The gathering-complete receiver MUST be taken before
+    // SetLocalDescription and awaited afterwards (canonical webrtc-rs
+    // pattern): taking it after races the gather task, the receive is
+    // dropped early, and the answer SDP goes out with ZERO candidates —
+    // the phone then has no server candidate to reach, ICE times out
+    // (~20s) and the broadcaster hangs in "Connecting…" forever.
+    let mut gather_complete = pc.gathering_complete_promise().await;
+    pc.set_local_description(answer)
+        .await
+        .map_err(|e| AppError::Internal(format!("set_local_description failed: {e}")))?;
+    let _ = gather_complete.recv().await;
 
     let local = pc.local_description().await.ok_or_else(|| {
         AppError::Internal("no local description after ICE gathering".to_string())
     })?;
+
+    // The answer must carry server candidates or the publisher can never
+    // reach us — log the count loudly so a zero is visible immediately.
+    let candidate_count = local.sdp.matches("a=candidate").count();
+    if candidate_count == 0 {
+        tracing::error!(
+            "WHIP answer contains no ICE candidates — server-side gathering failed; publisher will hang in Connecting…"
+        );
+    } else {
+        tracing::info!(
+            candidates = candidate_count,
+            "WHIP answer gathered candidates"
+        );
+    }
 
     Ok((pc, shutdown, local.sdp))
 }

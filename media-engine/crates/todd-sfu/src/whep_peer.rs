@@ -303,19 +303,28 @@ pub(crate) async fn create_viewer(
         })
     }));
 
-    // Standard WHEP answer flow.
+    // Standard WHEP answer flow. Same gathering-complete ordering as the
+    // WHIP side: take the receiver BEFORE SetLocalDescription and await it
+    // afterwards, or the viewer answer can go out with zero candidates
+    // and the Studio tile never renders media.
     let answer = pc
         .create_answer(None)
         .await
         .map_err(|e| AppError::Internal(format!("create_answer failed: {e}")))?;
+    let mut gather_complete = pc.gathering_complete_promise().await;
     pc.set_local_description(answer)
         .await
         .map_err(|e| AppError::Internal(format!("set_local_description failed: {e}")))?;
-    let _ = pc.gathering_complete_promise().await;
+    let _ = gather_complete.recv().await;
 
     let local = pc.local_description().await.ok_or_else(|| {
         AppError::Internal("no local description after ICE gathering".to_string())
     })?;
+
+    let candidate_count = local.sdp.matches("a=candidate").count();
+    if candidate_count == 0 {
+        tracing::error!("WHEP answer contains no ICE candidates — viewer will never receive media");
+    }
 
     // Our outbound SSRCs are assigned during binding; parse the first one
     // from the answer (video m-section is listed first in practice). The

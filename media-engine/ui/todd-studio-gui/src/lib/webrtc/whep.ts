@@ -35,7 +35,10 @@ export function isRetryableWatchError(error: unknown): boolean {
 async function waitIceComplete(pc: RTCPeerConnection): Promise<void> {
   if (pc.iceGatheringState === "complete") return;
   await new Promise<void>((resolve) => {
-    const timeout = setTimeout(done, 2500);
+    // Same 10s bound as the broadcaster app: STUN discovery behind NAT
+    // can take a few seconds. A too-short cap sends the WHEP offer with
+    // host-only candidates and the engine's answer can never reach us.
+    const timeout = setTimeout(done, 10000);
     function done() {
       clearTimeout(timeout);
       pc.removeEventListener("icegatheringstatechange", onState);

@@ -36,8 +36,13 @@ abstract final class BroadcasterConstants {
   static const double rttFairThresholdSeconds = 0.4;
 
   /// ICE gathering poll bounds (max wait, poll step).
-  static const Duration iceGatherMaxWait = Duration(seconds: 3);
-  static const Duration iceGatherPollStep = Duration(milliseconds: 50);
+  ///
+  /// 10s bound: behind carrier NAT, STUN (srflx) discovery can take a few
+  /// seconds; posting the offer before it completes sends host-only
+  /// candidates that the engine can never reach. Gathering normally
+  /// completes well inside this window — the bound only prevents a hang.
+  static const Duration iceGatherMaxWait = Duration(seconds: 10);
+  static const Duration iceGatherPollStep = Duration(milliseconds: 100);
 
   /// STUN server used when the operator leaves the STUN field empty.
   ///

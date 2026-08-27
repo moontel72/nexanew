@@ -164,6 +164,18 @@ jobs:
             else
               printf 'REDIS_URL=%s\n' 'redis://127.0.0.1:6380/0' >> /opt/todd-media-engine/.env
             fi
+            # ICE: STUN servers give publishers/viewers server-reflexive
+            # candidates behind NAT; TURN relays media when the venue
+            # network blocks UDP entirely. Comma-separated lists;
+            # TURN entries use user:pass@host:port.
+            if [ -n '${{ vars.STUN_SERVERS }}' ]; then
+              printf 'STUN_SERVERS=%s\n' '${{ vars.STUN_SERVERS }}' >> /opt/todd-media-engine/.env
+            else
+              printf 'STUN_SERVERS=%s\n' 'stun:stun.l.google.com:19302' >> /opt/todd-media-engine/.env
+            fi
+            if [ -n '${{ vars.TURN_SERVERS }}' ]; then
+              printf 'TURN_SERVERS=%s\n' '${{ vars.TURN_SERVERS }}' >> /opt/todd-media-engine/.env
+            fi
             chmod 600 /opt/todd-media-engine/.env
             echo '✅ /opt/todd-media-engine/.env written'
           REMOTE
