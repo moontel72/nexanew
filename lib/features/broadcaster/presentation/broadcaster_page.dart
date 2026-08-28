@@ -8,6 +8,7 @@ import 'package:trace_odd/shared/widgets/error_state/error_state_widget.dart';
 import '../broadcaster_constants.dart';
 import '../data/services/broadcaster_config_store.dart';
 import '../data/services/device_telemetry.dart';
+import '../data/services/screen_wake.dart';
 import '../data/services/whip_client.dart';
 import 'broadcaster_cubit.dart';
 
@@ -443,14 +444,46 @@ class _ConfigFormState extends State<_ConfigForm> {
   }
 }
 
-class _LiveView extends StatelessWidget {
+class _LiveView extends StatefulWidget {
   const _LiveView({required this.state});
 
   final BroadcasterState state;
 
   @override
+  State<_LiveView> createState() => _LiveViewState();
+}
+
+class _LiveViewState extends State<_LiveView> with WidgetsBindingObserver {
+  final ScreenWake _wake = ScreenWake();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _wake.acquire();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _wake.release();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Backgrounded browsers stall the video encoder while audio keeps
+    // flowing — restart capture when the tab regains focus so the
+    // studio receives a fresh keyframe immediately.
+    if (state == AppLifecycleState.resumed && mounted) {
+      context.read<BroadcasterCubit>().add(const AppResumed());
+      _wake.acquire();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final renderer = state.renderer;
+    final renderer = widget.state.renderer;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -458,11 +491,11 @@ class _LiveView extends StatelessWidget {
           RTCVideoView(
             renderer,
             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
-            mirror: state.facingMode == 'user',
+            mirror: widget.state.facingMode == 'user',
           )
         else
           const Center(child: CircularProgressIndicator()),
-        _StatusOverlay(state: state),
+        _StatusOverlay(state: widget.state),
       ],
     );
   }

@@ -351,6 +351,38 @@ impl Engine {
                 }
             });
         }
+
+        // Video-start watchdog: phones often begin the audio track
+        // immediately while the video encoder stays idle (backgrounded
+        // browser, screen locked, lazy encoder start). The video SSRC is
+        // already declared in the offer, so PLI it directly — libwebrtc
+        // answers with an IDR and starts the video pipeline. This closes
+        // the "audio egress flows, tile 409s forever" failure mode.
+        if let Some(video_ssrc) = whip_peer::first_video_ssrc(offer_sdp) {
+            let engine = self.clone();
+            let room = room_id.to_string();
+            let camera = camera_id.to_string();
+            let sid = session_id.clone();
+            tokio::spawn(async move {
+                for delay in [4u64, 12, 20] {
+                    tokio::time::sleep(Duration::from_secs(delay)).await;
+                    if !engine.sessions.contains_key(&sid) {
+                        break;
+                    }
+                    if engine.router.video_codec_of(&room, &camera, "").is_some() {
+                        break;
+                    }
+                    tracing::warn!(
+                        session = %sid,
+                        room = %room,
+                        camera = %camera,
+                        ssrc = video_ssrc,
+                        "no video RTP yet — sending PLI to publisher"
+                    );
+                    engine.pli.request_keyframe(video_ssrc);
+                }
+            });
+        }
         Ok((session_id, answer))
     }
 

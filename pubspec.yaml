@@ -84,6 +84,7 @@ dependencies:
   # Todd Broadcaster (mobile ground camera app)
   flutter_webrtc: ^0.12.9
   battery_plus: ^6.1.0
+  web: ^1.1.1
 
   # Utilities
   uuid: ^4.3.0

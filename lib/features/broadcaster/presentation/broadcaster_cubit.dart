@@ -146,6 +146,13 @@ final class ToggleAudioMuteRequested extends BroadcasterEvent {
   const ToggleAudioMuteRequested();
 }
 
+/// The app returned to the foreground. Backgrounded browsers stall the
+/// video encoder (audio keeps flowing) — a fresh capture cycle restarts
+/// it and sends a new keyframe.
+final class AppResumed extends BroadcasterEvent {
+  const AppResumed();
+}
+
 final class _ConnectionStateChanged extends BroadcasterEvent {
   const _ConnectionStateChanged(this.state);
   final RTCPeerConnectionState state;
@@ -188,6 +195,7 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     on<ProfileChanged>(_onProfileChanged);
     on<FpsChanged>(_onFpsChanged);
     on<ToggleAudioMuteRequested>(_onToggleMute);
+    on<AppResumed>(_onAppResumed);
     on<_ConnectionStateChanged>(_onConnectionStateChanged);
     on<_HealthChanged>(_onHealthChanged);
     on<_RetryConnect>(_onRetryConnect);
@@ -407,6 +415,21 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     if (s.phase == BroadcasterPhase.live) {
       await _restartCapture(emit);
     }
+  }
+
+  Future<void> _onAppResumed(
+    AppResumed event,
+    Emitter<BroadcasterState> emit,
+  ) async {
+    final s = state;
+    final streaming = s.phase == BroadcasterPhase.live ||
+        s.phase == BroadcasterPhase.connecting ||
+        s.phase == BroadcasterPhase.reconnecting;
+    if (!streaming || s.config == null) return;
+
+    // Backgrounded browsers pause video encode while audio continues:
+    // reopen the camera + WHIP session so a fresh IDR flows immediately.
+    await _restartCapture(emit);
   }
 
   Future<void> _onToggleMute(

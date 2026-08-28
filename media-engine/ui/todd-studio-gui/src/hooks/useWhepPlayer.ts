@@ -19,7 +19,19 @@ export interface WhepPlayerState {
 /** Retry interval for retryable watch failures (camera not live yet,
  * transient engine/network errors). The tile stays in the "waiting" state
  * and connects automatically the moment the camera starts ingesting. */
-const RETRY_DELAY_MS = 2000;
+const RETRY_BASE_MS = 2000;
+const RETRY_MAX_MS = 15000;
+
+/**
+ * Backoff for retryable failures. 409 = "camera not live yet" is the
+ * normal state while a phone publishes audio-only (video encoder still
+ * starting) — exponential backoff stops the browser console from being
+ * spammed with 409 resource errors every two seconds while the tile
+ * still picks the feed up within a few seconds of real video RTP.
+ */
+function nextRetryDelay(attempts: number): number {
+  return Math.min(RETRY_BASE_MS * Math.pow(2, Math.min(attempts, 3)), RETRY_MAX_MS);
+}
 
 /** When a session is up but no frame has been decoded for this long, the
  * hook force-restarts the watch (fresh WHEP POST → fresh keyframe PLI
@@ -70,7 +82,7 @@ export function useWhepPlayer(
 
     const el = videoRef.current;
 
-    const attempt = async () => {
+    const attempt = async (attempts = 0) => {
       if (cancelled) return;
       try {
         const session = await startWhepWatch({
@@ -116,8 +128,11 @@ export function useWhepPlayer(
         setRendering(false);
         if (isRetryableWatchError(e)) {
           // Camera not live yet (409) or a transient failure — keep the
-          // tile in the "waiting" state and retry shortly.
-          retryTimer = setTimeout(attempt, RETRY_DELAY_MS);
+          // tile in the "waiting" state and retry with backoff.
+          retryTimer = setTimeout(
+            () => void attempt(attempts + 1),
+            nextRetryDelay(attempts),
+          );
         } else {
           setError(e instanceof Error ? e.message : String(e));
         }

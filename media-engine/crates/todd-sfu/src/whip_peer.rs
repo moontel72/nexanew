@@ -177,6 +177,43 @@ pub(crate) async fn create(
     Ok((pc, shutdown, local.sdp))
 }
 
+/// First declared SSRC of the video m-section in an offer, excluding RTX
+/// (`a=ssrc-group:FID`) repair streams. Used to PLI a publisher whose
+/// video encoder has not started producing RTP yet.
+pub(crate) fn first_video_ssrc(sdp: &str) -> Option<u32> {
+    let mut in_video = false;
+    let mut rtx_ssrcs: Vec<u32> = Vec::new();
+    let mut candidates: Vec<u32> = Vec::new();
+
+    for line in sdp.lines() {
+        let line = line.trim();
+        if line.starts_with("m=") {
+            in_video = line.starts_with("m=video");
+            continue;
+        }
+        if !in_video {
+            continue;
+        }
+        if line.starts_with("a=ssrc-group:FID") {
+            if let Some(second) = line.split_whitespace().nth(2) {
+                rtx_ssrcs.push(second.parse().unwrap_or(0));
+            }
+        } else if line.starts_with("a=ssrc:") {
+            if let Some(rest) = line.strip_prefix("a=ssrc:") {
+                if let Some(digits) = rest.split_whitespace().next() {
+                    if let Ok(ssrc) = digits.parse::<u32>() {
+                        candidates.push(ssrc);
+                    }
+                }
+            }
+        }
+    }
+
+    candidates
+        .into_iter()
+        .find(|ssrc| !rtx_ssrcs.contains(ssrc) && *ssrc != 0)
+}
+
 /// Counts the ICE candidate types present in an SDP offer as
 /// `(host, srflx, relay)`. Offers that carry host candidates only mean
 /// the publisher gathered no public address (no STUN/TURN on the phone),
@@ -354,5 +391,23 @@ a=candidate:2 1 tcp 1518280447 192.168.1.5 9 typ host tcptype active\r\n";
         assert_eq!(host, 2);
         assert_eq!(srflx, 0);
         assert_eq!(relay, 0);
+    }
+
+    #[test]
+    fn finds_video_ssrc_skipping_rtx() {
+        let sdp = "v=0\r\n\
+m=audio 9 UDP/TLS/RTP/SAVPF 111\r\n\
+a=ssrc:1111111111 cname:audio\r\n\
+m=video 9 UDP/TLS/RTP/SAVPF 96 97\r\n\
+a=ssrc-group:FID 2222222222 3333333333\r\n\
+a=ssrc:2222222222 cname:video\r\n\
+a=ssrc:3333333333 cname:video\r\n";
+        assert_eq!(first_video_ssrc(sdp), Some(2222222222));
+    }
+
+    #[test]
+    fn video_ssrc_none_without_video_section() {
+        let sdp = "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:1111111111 cname:audio\r\n";
+        assert_eq!(first_video_ssrc(sdp), None);
     }
 }
