@@ -89,4 +89,68 @@ class MediaEngineTokenService
     {
         return strtr(rtrim(base64_encode($data), '='), '+/', '-_');
     }
+
+    /**
+     * RFC 4648 §5 base64url decoding (padding-tolerant).
+     */
+    private static function base64UrlDecode(string $data): string
+    {
+        $remainder = strlen($data) % 4;
+        if ($remainder > 0) {
+            $data .= str_repeat('=', 4 - $remainder);
+        }
+        $decoded = base64_decode(strtr($data, '-_', '+/'), true);
+        if ($decoded === false) {
+            throw new \InvalidArgumentException('Invalid base64url payload.');
+        }
+        return $decoded;
+    }
+
+    /**
+     * Verifies an HS256 token minted by this service (or the Rust engine):
+     * signature, audience and issuer. `exp` is checked with a leeway so a
+     * just-expired director token can be exchanged for a fresh one without
+     * forcing a re-login.
+     *
+     * @return array The verified claim set.
+     *
+     * @throws \InvalidArgumentException when the token is malformed, badly
+     *                                    signed, mis-scoped or expired beyond
+     *                                    the leeway.
+     */
+    public function verify(string $token, int $leewaySeconds = 86400): array
+    {
+        $secret = (string) config('services.media_engine.secret', '');
+        if ($secret === '') {
+            throw new \InvalidArgumentException('Media engine JWT secret is not configured.');
+        }
+
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) {
+            throw new \InvalidArgumentException('Malformed token.');
+        }
+
+        $signingInput = $parts[0] . '.' . $parts[1];
+        $expected = self::base64UrlEncode(hash_hmac('sha256', $signingInput, $secret, true));
+        if (!hash_equals($expected, $parts[2])) {
+            throw new \InvalidArgumentException('Token signature mismatch.');
+        }
+
+        $payload = json_decode(self::base64UrlDecode($parts[1]), true);
+        if (!is_array($payload)) {
+            throw new \InvalidArgumentException('Malformed token payload.');
+        }
+
+        if (($payload['aud'] ?? null) !== self::AUDIENCE) {
+            throw new \InvalidArgumentException('Token audience mismatch.');
+        }
+        if (($payload['iss'] ?? null) !== (string) config('services.media_engine.issuer', 'traceodd')) {
+            throw new \InvalidArgumentException('Token issuer mismatch.');
+        }
+        if ((int) ($payload['exp'] ?? 0) + $leewaySeconds < time()) {
+            throw new \InvalidArgumentException('Token expired beyond refresh window.');
+        }
+
+        return $payload;
+    }
 }

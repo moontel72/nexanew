@@ -170,4 +170,56 @@ class StudioAuthController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Silent token refresh for Todd Studio: accepts the director's
+     * existing media-engine JWT (even one that expired a moment ago) and
+     * mints a fresh one, so WHEP watches and the control WebSocket never
+     * die with 401 mid-session. The token is verified locally (HMAC) — no
+     * Laravel session is required, matching the engine's own validation.
+     */
+    public function refresh(Request $request, MediaEngineTokenService $tokens): JsonResponse
+    {
+        $header = (string) $request->header('Authorization', '');
+        $token = str_starts_with($header, 'Bearer ')
+            ? substr($header, 7)
+            : (string) $request->input('token', '');
+
+        if ($token === '') {
+            return response()->json(['message' => 'Missing token.'], 401);
+        }
+
+        try {
+            $claims = $tokens->verify($token, leewaySeconds: 86400);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => 'Token refresh rejected: ' . $e->getMessage()], 401);
+        }
+
+        $manager = CricketManager::find($claims['sub'] ?? null);
+        if (!$manager || !$manager->isActive()) {
+            return response()->json(['message' => 'Account is not available.'], 403);
+        }
+
+        $permissions = $manager->permissions ?? [];
+        if (empty($permissions['can_access_studio'])) {
+            return response()->json(['message' => 'Studio Director Access is not enabled for this account.'], 403);
+        }
+
+        if ((string) config('services.media_engine.secret', '') === '') {
+            return response()->json(['message' => 'Media engine JWT secret is not configured.'], 500);
+        }
+
+        $fresh = $tokens->mint(
+            role: 'admin',
+            perms: ['studio_director'],
+            subject: (string) $manager->id,
+            ttlSeconds: self::TOKEN_TTL_SECONDS,
+        );
+
+        return response()->json([
+            'message' => 'Studio token refreshed.',
+            'token' => $fresh,
+            'expires_at' => now()->addSeconds(self::TOKEN_TTL_SECONDS)->toIso8601String(),
+        ]);
+    }
 }

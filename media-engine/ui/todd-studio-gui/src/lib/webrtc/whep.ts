@@ -4,7 +4,7 @@
 // and attach the remote tracks to a <video> element.
 
 import { env } from "../utils";
-import { getToken } from "../auth/authStore";
+import { getToken, refreshToken } from "../auth/authStore";
 
 export interface WhepSession {
   pc: RTCPeerConnection;
@@ -102,17 +102,16 @@ export async function startWhepWatch(opts: {
     throw new Error("WHEP watch failed: not authenticated");
   }
 
-  const res = await fetch(opts.watchUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/sdp",
-      Authorization: `Bearer ${token}`,
-    },
-    body: pc.localDescription?.sdp ?? "",
-  }).catch(() => {
-    pc.close();
-    throw new WhepWatchError("WHEP watch failed: network error", 0);
-  });
+  // 401 = the SSO JWT expired (15-min TTL). Refresh it once and retry —
+  // the tile must self-heal instead of pinning the error overlay until a
+  // manual reload.
+  let res = await postWatch(opts.watchUrl, token, pc);
+  if (res.status === 401) {
+    const fresh = await refreshToken();
+    if (fresh) {
+      res = await postWatch(opts.watchUrl, fresh, pc);
+    }
+  }
   if (!res.ok) {
     pc.close();
     throw new WhepWatchError(`WHEP watch failed (${res.status})`, res.status);
@@ -128,4 +127,25 @@ export async function startWhepWatch(opts: {
       opts.videoEl.srcObject = null;
     },
   };
+}
+
+/** Posts the WHEP offer with the given bearer token; network errors map
+ * to status 0. The PC is left open so a 401 refresh can retry with the
+ * same offer. */
+async function postWatch(
+  watchUrl: string,
+  token: string,
+  pc: RTCPeerConnection,
+): Promise<Response> {
+  return fetch(watchUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/sdp",
+      Authorization: `Bearer ${token}`,
+    },
+    body: pc.localDescription?.sdp ?? "",
+  }).catch(() => {
+    pc.close();
+    throw new WhepWatchError("WHEP watch failed: network error", 0);
+  });
 }

@@ -23,4 +23,9 @@ Route::prefix('api/v1/studio')->group(function (): void {
     // Endpoint flood gate: 60 requests/min per IP.
     Route::post('exchange', [StudioAuthController::class, 'exchange'])
         ->middleware('throttle:studio-exchange');
+    // Silent token refresh: existing (possibly just-expired) JWT → fresh
+    // JWT, so WHEP + control WebSocket sessions survive past the 15-min
+    // SSO token TTL.
+    Route::post('refresh', [StudioAuthController::class, 'refresh'])
+        ->middleware('throttle:studio-exchange');
 });

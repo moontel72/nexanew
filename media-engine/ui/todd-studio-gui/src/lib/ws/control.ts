@@ -6,7 +6,11 @@
 // React panel reads one consistent, current view without polling.
 
 import { wsBaseUrl } from "../utils";
-import { getToken } from "../auth/authStore";
+import {
+  getToken,
+  refreshToken,
+  tokenExpirySeconds,
+} from "../auth/authStore";
 import type {
   AudioMixView,
   BallByBallStateDto,
@@ -218,27 +222,41 @@ export function connectControl(): ControlFeed {
 
   const emit = () => listeners.forEach((listener) => listener(state));
 
+  // Guards against a refresh storm: when a handshake fails with 401 the
+  // socket closes and a reconnect is scheduled — every cycle would mint
+  // a fresh token otherwise.
+  let lastRefreshAt = 0;
+
   const scheduleReconnect = () => {
     if (closed) return;
-    retry = setTimeout(connect, 2000);
+    retry = setTimeout(() => void connect(), 2000);
   };
 
-  function connect() {
+  async function connect() {
     if (closed) return;
-    const token = getToken();
-    if (!token) {
-      // Signed out — retry once auth is restored (the hook also tears
-      // this feed down via close(), so this is just a safety net).
-      scheduleReconnect();
-      return;
-    }
-    const url = `${wsBaseUrl()}/api/v1/control/ws?token=${encodeURIComponent(token)}`;
-    socket = new WebSocket(url);
 
-    socket.onopen = () => {
+    // Proactive + reactive refresh: never dial with a token that is past
+    // (or within a minute of) its expiry — the engine rejects expired
+    // SSO JWTs during the WebSocket upgrade with a 401 that the browser
+    // can only observe as a bare close.
+    let token = getToken();
+    if (!token || (tokenExpirySeconds() ?? 0) < 60) {
+      token = await refreshToken();
+      if (!token) {
+        scheduleReconnect();
+        return;
+      }
+    }
+
+    const url = `${wsBaseUrl()}/api/v1/control/ws?token=${encodeURIComponent(token)}`;
+    const candidate = new WebSocket(url);
+    socket = candidate;
+
+    candidate.onopen = () => {
+      lastRefreshAt = 0;
       // The server sends the full snapshot immediately after upgrade.
     };
-    socket.onmessage = (message) => {
+    candidate.onmessage = (message) => {
       try {
         const event = JSON.parse(message.data as string) as ControlEvent;
         state = applyEvent(state, event);
@@ -247,17 +265,26 @@ export function connectControl(): ControlFeed {
         // Malformed frame — ignore, keep the feed alive.
       }
     };
-    socket.onclose = () => {
+    candidate.onclose = () => {
       if (!closed) {
         state = { ...state, connected: false, error: "control connection lost" };
         emit();
       }
-      scheduleReconnect();
+      // 401 upgrades close without ever opening; a fresh token fixes the
+      // next attempt. Rate-limit to one refresh per 10s so a misconfigured
+      // secret cannot hammer the issuer endpoint.
+      const now = Date.now();
+      if (!closed && now - lastRefreshAt > 10_000) {
+        lastRefreshAt = now;
+        void refreshToken().finally(() => scheduleReconnect());
+      } else {
+        scheduleReconnect();
+      }
     };
-    socket.onerror = () => socket?.close();
+    candidate.onerror = () => candidate?.close();
   }
 
-  connect();
+  void connect();
 
   return {
     close() {

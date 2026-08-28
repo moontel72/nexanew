@@ -69,6 +69,10 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route("/room/{room_id}/forward", post(routes::rooms::add_forward))
         .route("/room/{room_id}/camera", post(routes::rooms::add_camera))
         .route(
+            "/room/{room_id}/camera/{camera_id}/token",
+            post(routes::rooms::rotate_camera_token),
+        )
+        .route(
             "/room/{room_id}/camera/{camera_id}",
             put(routes::rooms::update_camera).delete(routes::rooms::remove_camera),
         )

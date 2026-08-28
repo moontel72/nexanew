@@ -155,6 +155,88 @@ export async function login(email: string, password: string): Promise<void> {
     throw new Error("Login failed: the sign-in endpoint returned no token");
   }
   setToken(token, email);
+  scheduleRefresh();
+}
+
+/** Resolves the Phase-1 token refresh endpoint (same Laravel module as
+ * the login URL, so `VITE_STUDIO_LOGIN_URL` overrides both). */
+export function refreshUrl(): string {
+  const base = loginUrl();
+  return base.replace(/\/login\/?$/, "") + "/refresh";
+}
+
+let refreshPromise: Promise<string | null> | null = null;
+let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Seconds of `exp` remaining for the stored token (negative = expired).
+ * Returns null when no token is present or it has no readable `exp`. */
+export function tokenExpirySeconds(): number | null {
+  const token = getToken();
+  if (!token) return null;
+  const payload = decodePayload(token);
+  if (!payload || typeof payload.exp !== "number") return null;
+  return payload.exp - Date.now() / 1000;
+}
+
+/**
+ * Exchanges the stored JWT for a fresh one via `POST /api/v1/studio/refresh`.
+ *
+ * Concurrent 401s (WHEP watch + REST + WebSocket) all await the same
+ * in-flight promise, so a single refresh serves every retry. Returns the
+ * new token, or null when there is nothing to refresh or the issuer
+ * rejected the request (the token is NOT cleared here — callers decide).
+ */
+export function refreshToken(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const current = getToken();
+    if (!current) return null;
+    try {
+      const res = await fetch(refreshUrl(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${current}`,
+        },
+      });
+      if (!res.ok) return null;
+      const data = (await res.json()) as { token?: string };
+      const fresh = data.token;
+      if (!fresh) return null;
+      setToken(fresh, getEmail());
+      scheduleRefresh();
+      return fresh;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+/** Refreshes the token when one is stored, silently ignoring failures.
+ * Used by callers that need *a* valid token without caring about errors. */
+export async function ensureFreshToken(): Promise<string | null> {
+  const remaining = tokenExpirySeconds();
+  if (remaining !== null && remaining > 60) return getToken();
+  return refreshToken();
+}
+
+/** Schedules a silent refresh ~60s before the token expires, so long
+ * broadcast sessions never hit a 401 from an expired SSO JWT. Safe to
+ * call after every setToken — it always replaces the previous timer. */
+export function scheduleRefresh(): void {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  const remaining = tokenExpirySeconds();
+  if (remaining === null) return;
+  // Refresh at 60s before expiry, or at half-life for very short tokens.
+  const delaySeconds = Math.max(30, remaining - 60);
+  refreshTimer = setTimeout(() => {
+    void refreshToken();
+  }, delaySeconds * 1000);
 }
 
 /**
@@ -179,6 +261,7 @@ export function applySsoFromUrl(): void {
   // Compact JWS shape check: header.payload.signature.
   if (sso.split(".").length !== 3) return;
   setToken(sso);
+  scheduleRefresh();
 }
 
 /**

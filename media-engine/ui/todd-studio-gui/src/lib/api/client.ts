@@ -5,7 +5,11 @@
 // scoreboard services build on top of this base.
 
 import { env } from "../utils";
-import { clearToken, getToken } from "../auth/authStore";
+import {
+  clearToken,
+  getToken,
+  refreshToken,
+} from "../auth/authStore";
 import type {
   AddCameraResponse,
   AudioMixView,
@@ -44,19 +48,31 @@ async function request<T>(
   path: string,
   init: RequestInit & { token?: string | null },
 ): Promise<T> {
-  const headers = new Headers(init.headers);
-  // The SSO JWT is read from the auth store at call time — never from a
-  // build-time env var.
-  const token = init.token || getToken();
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  const buildInit = (token: string | null) => {
+    const headers = new Headers(init.headers);
+    // The SSO JWT is read from the auth store at call time — never from a
+    // build-time env var.
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    return { ...init, headers };
+  };
+
+  const send = () =>
+    fetch(`${env.apiBaseUrl}${path}`, buildInit(init.token || getToken()));
+
+  let res = await send();
+
+  // 401 = the 15-min SSO JWT expired. Refresh it silently and retry the
+  // exact request once; only drop the session when the refresh itself is
+  // rejected (revoked account / misaligned secret).
+  if (res.status === 401 && init.token !== null) {
+    const fresh = await refreshToken();
+    if (fresh) {
+      res = await send();
+    } else {
+      clearToken();
+    }
   }
-  const res = await fetch(`${env.apiBaseUrl}${path}`, { ...init, headers });
-  if (res.status === 401) {
-    // The token expired or was revoked — drop it so the app falls back
-    // to the login screen.
-    clearToken();
-  }
+
   if (!res.ok) {
     let message = res.statusText;
     try {
@@ -103,6 +119,14 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(spec),
     });
+  },
+
+  /** Mints a fresh publisher ingest token for an existing camera. */
+  async rotateCameraToken(roomId: string, cameraId: string, token: string | null) {
+    return request<AddCameraResponse>(
+      `/api/v1/room/${encodeURIComponent(roomId)}/camera/${encodeURIComponent(cameraId)}/token`,
+      { method: "POST", token },
+    );
   },
 
   async updateCamera(

@@ -186,6 +186,20 @@ export function InputPanel() {
     );
   };
 
+  // Regenerate the camera's ingest token: ingest tokens expire (6h
+  // default) and the phone stores them for weeks — a fresh token gets
+  // the camera back online without deleting and re-adding it.
+  const handleRegenerateToken = (room: Room, camera: CameraInfo) => {
+    void runAction(async () => {
+      const result = await api.rotateCameraToken(room.id, camera.id, getToken());
+      setLastAdded({
+        cameraId: camera.id,
+        ingestToken: result.ingest_token,
+        whipBaseUrl: result.whip_base_url,
+      });
+    }).catch(() => undefined);
+  };
+
   const handleDeleteRoom = (room: Room) => {
     if (
       !window.confirm(
@@ -506,6 +520,15 @@ export function InputPanel() {
                             onClick={() => startEdit(camera)}
                           >
                             Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="px-2 py-1 text-xs"
+                            disabled={busy}
+                            title="Mint a fresh ingest token for this camera"
+                            onClick={() => void handleRegenerateToken(room, camera)}
+                          >
+                            Regenerate
                           </Button>
                           <Button
                             variant="destructive"

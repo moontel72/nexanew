@@ -9,6 +9,7 @@ import {
   getEmail,
   isAuthenticated,
   onAuthChange,
+  scheduleRefresh,
   takeMatchHint,
 } from "./lib/auth/authStore";
 import { Login } from "./components/Login";
@@ -45,6 +46,9 @@ export default function App() {
   useEffect(() => {
     applySsoFromUrl();
     setAuthed(isAuthenticated());
+    // Reload with a stored token: arm the silent-refresh timer so the
+    // session outlives the 15-min SSO JWT instead of dying with 401s.
+    scheduleRefresh();
   }, []);
 
   // Follow login / logout / token expiry from the auth store.

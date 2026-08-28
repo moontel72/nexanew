@@ -278,6 +278,46 @@ pub async fn add_camera(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
+/// POST /api/v1/room/{room_id}/camera/{camera_id}/token — admin only.
+///
+/// Mints a fresh publisher ingest token for an existing camera. Ingest
+/// tokens carry a finite TTL (6h by default); without this route a
+/// director whose token expired had to delete and re-add the camera
+/// (losing any live session).
+pub async fn rotate_camera_token(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
+    Path((room_id, camera_id)): Path<(String, String)>,
+) -> Result<Json<AddCameraResponse>, AppError> {
+    let claims = authenticate(&state.auth, &headers, &uri).await?;
+    claims.require_role(TokenRole::Admin)?;
+    claims.require_perm("studio_director")?;
+
+    let Some(room) = state.store.get_room(&room_id).await? else {
+        return Err(AppError::NotFound(format!("room {room_id}")));
+    };
+    let Some(camera) = room.cameras.iter().find(|camera| camera.id == camera_id) else {
+        return Err(AppError::NotFound(format!(
+            "camera {camera_id} is not part of room {room_id}"
+        )));
+    };
+
+    let ingest_token = mint_camera_ingest_token(&state, &room_id, &camera_id)?;
+    let whip_base_url = format!(
+        "{}/api/v1/whip/ingest/{}",
+        state.settings.public_base_url.trim_end_matches('/'),
+        room_id
+    );
+
+    tracing::info!(room = %room_id, camera = %camera_id, "camera ingest token rotated");
+    Ok(Json(AddCameraResponse {
+        camera: camera.clone(),
+        ingest_token,
+        whip_base_url,
+    }))
+}
+
 /// PUT /api/v1/room/{room_id}/camera/{camera_id} — admin only.
 ///
 /// Updates camera metadata (label, source kind, group). Omitted fields
