@@ -438,23 +438,29 @@ impl Engine {
         rid: Option<String>,
         offer_sdp: &str,
     ) -> Result<(String, String), AppError> {
-        // Resolve the layer: explicit rid, else the lowest live layer.
+        // Resolve the layer: explicit rid, else the lowest VIDEO layer.
+        // Audio registers under the same "" rid on single-track phones;
+        // resolving from audio alone would negotiate the viewer's video
+        // m-line against a fallback codec that never matches the real
+        // video packets — the classic "audio egress flows but the tile
+        // stays black" failure.
         let rid = match rid {
             Some(r) if !r.is_empty() => {
-                if !self.router.is_rid_active(room_id, camera_id, &r) {
+                if self.router.video_codec_of(room_id, camera_id, &r).is_none() {
                     return Err(AppError::BadRequest(format!(
                         "simulcast layer '{r}' is not live on camera {camera_id}"
                     )));
                 }
                 r
             }
-            _ => match self.router.lowest_rid(room_id, camera_id) {
-                // Watching a camera that is not ingesting yet would pin the
-                // viewer to the VP8 fallback codec and silently drop the
-                // publisher's packets once it starts with a different codec
-                // (e.g. H.264) — a tile that never shows video. Refuse with
-                // a retryable conflict instead; clients retry and are built
-                // with the publisher's real codec once ingest starts.
+            _ => match self.router.lowest_video_rid(room_id, camera_id) {
+                // Watching a camera that is not ingesting video yet would
+                // pin the viewer to the VP8 fallback codec and silently
+                // drop the publisher's packets once it starts with a
+                // different codec (e.g. H.264) — a tile that never shows
+                // video. Refuse with a retryable conflict instead; clients
+                // retry and are built with the publisher's real codec once
+                // ingest starts.
                 Some(rid) => rid,
                 None => {
                     return Err(AppError::Conflict(format!(

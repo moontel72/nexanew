@@ -107,6 +107,34 @@ impl TrackRouter {
         self.live_rids(room_id, camera_id).first().cloned()
     }
 
+    /// The lowest layer that actually carries a **video** stream, honoring
+    /// the publisher's simulcast order (first = lowest). Audio registers
+    /// under the same `""` rid on single-track phones; a viewer that
+    /// resolves its layer from audio alone negotiates a fallback codec
+    /// that never matches the real video packets (black tile with
+    /// audio-only egress).
+    pub fn lowest_video_rid(&self, room_id: &str, camera_id: &str) -> Option<String> {
+        let mut rids: Vec<String> = self
+            .streams
+            .iter()
+            .filter(|e| {
+                e.key().0.as_str() == room_id
+                    && e.key().1.as_str() == camera_id
+                    && !e.value().is_audio()
+            })
+            .map(|e| e.key().2.clone())
+            .collect();
+        rids.sort();
+        rids.dedup();
+        let order = self
+            .layer_order
+            .get(&(room_id.to_string(), camera_id.to_string()))
+            .map(|o| o.clone())
+            .unwrap_or_default();
+        rids.sort_by_key(|rid| order.iter().position(|o| o == rid).unwrap_or(usize::MAX));
+        rids.first().cloned()
+    }
+
     /// True when `rid` is a live layer of the camera (`""` = the
     /// lowest available layer — always resolves).
     pub fn is_rid_active(&self, room_id: &str, camera_id: &str, rid: &str) -> bool {

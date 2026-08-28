@@ -1,3 +1,9 @@
+// Direct-render WHEP tile: the video element is mounted as a bare DOM
+// node and `srcObject` is bound imperatively — React never touches the
+// element after mount, so no re-render, overlay, state-manager flag or
+// virtual-DOM reconciliation can detach the MediaStream and leave a
+// black tile while egress bytes flow.
+
 import { useWhepPlayer } from "../hooks/useWhepPlayer";
 import { whepWatchUrl } from "../lib/api/client";
 import { cn } from "../lib/utils";
@@ -25,30 +31,42 @@ export function MultiviewTile({
   onSelect,
 }: MultiviewTileProps) {
   const url = whepWatchUrl(roomId, cameraId);
-  const { ref, connected, error } = useWhepPlayer(url, live);
+  const { ref, connected, error, rendering } = useWhepPlayer(url, live);
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
       className={cn(
-        "group relative overflow-hidden bg-muted text-left",
+        "group relative h-full w-full overflow-hidden bg-black text-left",
         flush ? "border-0 rounded-none" : "rounded-md border border-border",
         active === "pgm" && "program-active",
         active === "pvw" && "preview-active",
       )}
     >
+      {/* Fail-safe direct mount: inline styles force visibility so no
+          stylesheet rule, wrapper transform or overlay can hide the
+          decoded frames. */}
       <video
         ref={ref}
         autoPlay
         playsInline
         muted
-        className="h-full w-full object-cover"
+        style={{
+          display: "block",
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          opacity: 1,
+          visibility: "visible",
+          background: "#000",
+        }}
       />
       <div className="absolute inset-x-0 top-0 flex items-center justify-between bg-black/60 px-2 py-1 text-xs">
-        <span className="font-mono">
-          {label ?? `${roomId}/${cameraId}`}
-        </span>
+        <span className="font-mono">{label ?? `${roomId}/${cameraId}`}</span>
         <span className={cn(connected ? "text-emerald-400" : "text-amber-400")}>
           {!live ? "OFF" : connected ? "LIVE" : "…"}
         </span>
@@ -58,6 +76,11 @@ export function MultiviewTile({
           {error}
         </div>
       )}
-    </button>
+      {connected && !rendering && (
+        <div className="absolute inset-x-0 bottom-0 flex justify-center bg-black/60 px-2 py-1 text-[10px] text-amber-400">
+          waiting for video frames…
+        </div>
+      )}
+    </div>
   );
 }
