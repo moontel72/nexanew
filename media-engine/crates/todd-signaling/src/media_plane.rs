@@ -5,7 +5,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use axum::http::header::{CONTENT_TYPE, LOCATION};
+use axum::http::{
+    header::{CONTENT_TYPE, LOCATION},
+    StatusCode,
+};
 use todd_common::media::{AudioMixView, AudioMixerConfig};
 use todd_common::types::{
     CameraInfo, ForwardingStatus, OverlayCommand, OverlayState, ProgramState,
@@ -315,6 +318,55 @@ pub struct RemoteMediaPlane {
     pub client: reqwest::Client,
 }
 
+impl RemoteMediaPlane {
+    /// Maps a non-success upstream response to the equivalent AppError so
+    /// Studio clients see the same status codes they would get from an
+    /// embedded media plane (409 when a camera is not live, 404 for
+    /// unknown sessions, ...) instead of a generic 500.
+    async fn status_error(resp: reqwest::Response) -> AppError {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        let mut message = serde_json::from_str::<serde_json::Value>(&body)
+            .ok()
+            .and_then(|v| v.get("error").and_then(|e| e.as_str()).map(str::to_string))
+            .unwrap_or(body);
+        // The upstream body is an AppError JSON whose `error` string is
+        // already prefixed with the variant name ("conflict: ...") —
+        // strip it so the re-wrapped error is not doubled.
+        let prefix = match status {
+            StatusCode::BAD_REQUEST => "bad request: ",
+            StatusCode::UNAUTHORIZED => "unauthorized: ",
+            StatusCode::FORBIDDEN => "forbidden: ",
+            StatusCode::NOT_FOUND => "not found: ",
+            StatusCode::CONFLICT => "conflict: ",
+            _ => "",
+        };
+        if !prefix.is_empty() {
+            if let Some(rest) = message.strip_prefix(prefix) {
+                message = rest.to_string();
+            }
+        }
+        match status {
+            StatusCode::BAD_REQUEST => AppError::BadRequest(message),
+            StatusCode::UNAUTHORIZED => AppError::Unauthorized(message),
+            StatusCode::FORBIDDEN => AppError::Forbidden(message),
+            StatusCode::NOT_FOUND => AppError::NotFound(message),
+            StatusCode::CONFLICT => AppError::Conflict(message),
+            other => AppError::Internal(format!("media plane status {other}: {message}")),
+        }
+    }
+
+    /// Sends a request to the remote media plane, returning the upstream
+    /// response or the mapped status error.
+    async fn send(&self, req: reqwest::RequestBuilder) -> Result<reqwest::Response, AppError> {
+        let resp = req.send().await?;
+        if resp.status().is_success() {
+            return Ok(resp);
+        }
+        Err(Self::status_error(resp).await)
+    }
+}
+
 #[async_trait]
 impl MediaPlane for RemoteMediaPlane {
     async fn ping(&self) -> Result<(), AppError> {
@@ -341,15 +393,14 @@ impl MediaPlane for RemoteMediaPlane {
     ) -> Result<(String, String), AppError> {
         let url = format!("{}/api/v1/whip/ingest/{room_id}/{camera_id}", self.base);
         let resp = self
-            .client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .header(CONTENT_TYPE, "application/sdp")
-            .body(offer_sdp.to_owned())
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected ingest: {e}")))?;
+            .send(
+                self.client
+                    .post(&url)
+                    .bearer_auth(&self.internal_token)
+                    .header(CONTENT_TYPE, "application/sdp")
+                    .body(offer_sdp.to_owned()),
+            )
+            .await?;
 
         // Read the Location header before consuming the body (reqwest's
         // `text()` takes ownership of the response).
@@ -368,13 +419,8 @@ impl MediaPlane for RemoteMediaPlane {
 
     async fn close_session(&self, session_id: &str) -> Result<(), AppError> {
         let url = format!("{}/api/v1/whip/session/{session_id}", self.base);
-        self.client
-            .delete(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected close: {e}")))?;
+        self.send(self.client.delete(&url).bearer_auth(&self.internal_token))
+            .await?;
         Ok(())
     }
 
@@ -392,15 +438,14 @@ impl MediaPlane for RemoteMediaPlane {
             }
         }
         let resp = self
-            .client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .header(CONTENT_TYPE, "application/sdp")
-            .body(offer_sdp.to_owned())
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected watch: {e}")))?;
+            .send(
+                self.client
+                    .post(&url)
+                    .bearer_auth(&self.internal_token)
+                    .header(CONTENT_TYPE, "application/sdp")
+                    .body(offer_sdp.to_owned()),
+            )
+            .await?;
 
         // Read the Location header before consuming the body (reqwest's
         // `text()` takes ownership of the response).
@@ -419,13 +464,8 @@ impl MediaPlane for RemoteMediaPlane {
 
     async fn close_viewer_session(&self, session_id: &str) -> Result<(), AppError> {
         let url = format!("{}/api/v1/whep/session/{session_id}", self.base);
-        self.client
-            .delete(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected close: {e}")))?;
+        self.send(self.client.delete(&url).bearer_auth(&self.internal_token))
+            .await?;
         Ok(())
     }
 
@@ -436,28 +476,26 @@ impl MediaPlane for RemoteMediaPlane {
         target: &ForwardTarget,
     ) -> Result<(), AppError> {
         let url = format!("{}/api/v1/forward/{room_id}/{camera_id}", self.base);
-        self.client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .json(target)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected forwarder: {e}")))?;
+        self.send(
+            self.client
+                .post(&url)
+                .bearer_auth(&self.internal_token)
+                .json(target),
+        )
+        .await?;
         Ok(())
     }
 
     async fn trigger_replay(&self, req: &ReplayTrigger) -> Result<ReplayInfo, AppError> {
         let url = format!("{}/api/v1/replay/trigger", self.base);
         let resp = self
-            .client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .json(req)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected replay trigger: {e}")))?;
+            .send(
+                self.client
+                    .post(&url)
+                    .bearer_auth(&self.internal_token)
+                    .json(req),
+            )
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid replay trigger response: {e}")))
@@ -466,13 +504,8 @@ impl MediaPlane for RemoteMediaPlane {
     async fn list_replays(&self) -> Result<Vec<ReplayInfo>, AppError> {
         let url = format!("{}/api/v1/replay/list", self.base);
         let resp = self
-            .client
-            .get(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected replay list: {e}")))?;
+            .send(self.client.get(&url).bearer_auth(&self.internal_token))
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid replay list response: {e}")))
@@ -480,13 +513,8 @@ impl MediaPlane for RemoteMediaPlane {
 
     async fn close_replay(&self, replay_id: &str) -> Result<(), AppError> {
         let url = format!("{}/api/v1/replay/{replay_id}", self.base);
-        self.client
-            .delete(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected replay close: {e}")))?;
+        self.send(self.client.delete(&url).bearer_auth(&self.internal_token))
+            .await?;
         Ok(())
     }
 
@@ -497,7 +525,11 @@ impl MediaPlane for RemoteMediaPlane {
         ))
     }
 
-    async fn replay_seek(&self, _replay_id: &str, _frame: usize) -> Result<ReplayVarState, AppError> {
+    async fn replay_seek(
+        &self,
+        _replay_id: &str,
+        _frame: usize,
+    ) -> Result<ReplayVarState, AppError> {
         Err(AppError::BadRequest(
             "VAR frame stepping requires the embedded media plane (MEDIA_PLANE=embedded)"
                 .to_string(),
@@ -512,15 +544,14 @@ impl MediaPlane for RemoteMediaPlane {
     ) -> Result<(String, String), AppError> {
         let url = format!("{}/api/v1/replay/watch/{replay_id}/{camera_id}", self.base);
         let resp = self
-            .client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .header(CONTENT_TYPE, "application/sdp")
-            .body(offer_sdp.to_owned())
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected replay watch: {e}")))?;
+            .send(
+                self.client
+                    .post(&url)
+                    .bearer_auth(&self.internal_token)
+                    .header(CONTENT_TYPE, "application/sdp")
+                    .body(offer_sdp.to_owned()),
+            )
+            .await?;
 
         let session_id = resp
             .headers()
@@ -538,14 +569,13 @@ impl MediaPlane for RemoteMediaPlane {
     async fn export_replay(&self, req: &ClipExportRequest) -> Result<ExportStatus, AppError> {
         let url = format!("{}/api/v1/replay/{}/export", self.base, req.replay_id);
         let resp = self
-            .client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .json(req)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected replay export: {e}")))?;
+            .send(
+                self.client
+                    .post(&url)
+                    .bearer_auth(&self.internal_token)
+                    .json(req),
+            )
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid replay export response: {e}")))
@@ -554,16 +584,13 @@ impl MediaPlane for RemoteMediaPlane {
     async fn set_program(&self, req: &ProgramTransitionRequest) -> Result<ProgramState, AppError> {
         let url = format!("{}/api/v1/program/transition", self.base);
         let resp = self
-            .client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .json(req)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| {
-                AppError::Internal(format!("broadcaster rejected program transition: {e}"))
-            })?;
+            .send(
+                self.client
+                    .post(&url)
+                    .bearer_auth(&self.internal_token)
+                    .json(req),
+            )
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid program transition response: {e}")))
@@ -577,12 +604,13 @@ impl MediaPlane for RemoteMediaPlane {
             .bearer_auth(&self.internal_token)
             .send()
             .await?;
-        if resp.status() == axum::http::StatusCode::NOT_FOUND {
+        if resp.status() == StatusCode::NOT_FOUND {
             return Ok(None);
         }
+        if !resp.status().is_success() {
+            return Err(Self::status_error(resp).await);
+        }
         let program = resp
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected program get: {e}")))?
             .json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid program response: {e}")))?;
@@ -596,15 +624,14 @@ impl MediaPlane for RemoteMediaPlane {
     ) -> Result<(String, String), AppError> {
         let url = format!("{}/api/v1/whep/program/{room_id}", self.base);
         let resp = self
-            .client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .header(CONTENT_TYPE, "application/sdp")
-            .body(offer_sdp.to_owned())
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected program watch: {e}")))?;
+            .send(
+                self.client
+                    .post(&url)
+                    .bearer_auth(&self.internal_token)
+                    .header(CONTENT_TYPE, "application/sdp")
+                    .body(offer_sdp.to_owned()),
+            )
+            .await?;
 
         let session_id = resp
             .headers()
@@ -622,13 +649,8 @@ impl MediaPlane for RemoteMediaPlane {
     async fn get_audio_mix(&self, room_id: &str) -> Result<AudioMixView, AppError> {
         let url = format!("{}/api/v1/audio/mix/{room_id}", self.base);
         let resp = self
-            .client
-            .get(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected audio mix get: {e}")))?;
+            .send(self.client.get(&url).bearer_auth(&self.internal_token))
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid audio mix response: {e}")))
@@ -641,14 +663,13 @@ impl MediaPlane for RemoteMediaPlane {
     ) -> Result<AudioMixView, AppError> {
         let url = format!("{}/api/v1/audio/mix/{room_id}", self.base);
         let resp = self
-            .client
-            .put(&url)
-            .bearer_auth(&self.internal_token)
-            .json(&config)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected audio mix set: {e}")))?;
+            .send(
+                self.client
+                    .put(&url)
+                    .bearer_auth(&self.internal_token)
+                    .json(&config),
+            )
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid audio mix response: {e}")))
@@ -657,13 +678,8 @@ impl MediaPlane for RemoteMediaPlane {
     async fn get_overlays(&self, room_id: &str) -> Result<OverlayState, AppError> {
         let url = format!("{}/api/v1/program/overlay/{room_id}", self.base);
         let resp = self
-            .client
-            .get(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected overlay get: {e}")))?;
+            .send(self.client.get(&url).bearer_auth(&self.internal_token))
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid overlay response: {e}")))
@@ -676,19 +692,16 @@ impl MediaPlane for RemoteMediaPlane {
     ) -> Result<OverlayState, AppError> {
         let url = format!("{}/api/v1/program/overlay", self.base);
         let resp = self
-            .client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .json(&todd_common::types::OverlayRequest {
-                room_id: room_id.to_string(),
-                command,
-            })
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| {
-                AppError::Internal(format!("broadcaster rejected overlay command: {e}"))
-            })?;
+            .send(
+                self.client
+                    .post(&url)
+                    .bearer_auth(&self.internal_token)
+                    .json(&todd_common::types::OverlayRequest {
+                        room_id: room_id.to_string(),
+                        command,
+                    }),
+            )
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid overlay response: {e}")))
@@ -697,13 +710,8 @@ impl MediaPlane for RemoteMediaPlane {
     async fn clear_overlays(&self, room_id: &str) -> Result<OverlayState, AppError> {
         let url = format!("{}/api/v1/program/overlay/{room_id}", self.base);
         let resp = self
-            .client
-            .delete(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected overlay clear: {e}")))?;
+            .send(self.client.delete(&url).bearer_auth(&self.internal_token))
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid overlay response: {e}")))
@@ -716,16 +724,13 @@ impl MediaPlane for RemoteMediaPlane {
     ) -> Result<ForwardingStatus, AppError> {
         let url = format!("{}/api/v1/forward/program/{room_id}", self.base);
         let resp = self
-            .client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .json(target)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| {
-                AppError::Internal(format!("broadcaster rejected program forwarder: {e}"))
-            })?;
+            .send(
+                self.client
+                    .post(&url)
+                    .bearer_auth(&self.internal_token)
+                    .json(target),
+            )
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid forwarder status response: {e}")))
@@ -734,13 +739,8 @@ impl MediaPlane for RemoteMediaPlane {
     async fn stop_forwarder(&self, key: &str) -> Result<ForwardingStatus, AppError> {
         let url = format!("{}/api/v1/forward/{}", self.base, key);
         let resp = self
-            .client
-            .delete(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected forwarder stop: {e}")))?;
+            .send(self.client.delete(&url).bearer_auth(&self.internal_token))
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid forwarder status response: {e}")))
@@ -749,13 +749,8 @@ impl MediaPlane for RemoteMediaPlane {
     async fn list_forwarders(&self) -> Result<Vec<ForwardingStatus>, AppError> {
         let url = format!("{}/api/v1/forward/list", self.base);
         let resp = self
-            .client
-            .get(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected forwarder list: {e}")))?;
+            .send(self.client.get(&url).bearer_auth(&self.internal_token))
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid forwarder list response: {e}")))
@@ -763,39 +758,28 @@ impl MediaPlane for RemoteMediaPlane {
 
     async fn start_ingest(&self, room_id: &str, camera: &CameraInfo) -> Result<(), AppError> {
         let url = format!("{}/api/v1/ingest/{room_id}/{}", self.base, camera.id);
-        self.client
-            .post(&url)
-            .bearer_auth(&self.internal_token)
-            .json(camera)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected ingest start: {e}")))?;
+        self.send(
+            self.client
+                .post(&url)
+                .bearer_auth(&self.internal_token)
+                .json(camera),
+        )
+        .await?;
         Ok(())
     }
 
     async fn stop_ingest(&self, room_id: &str, camera_id: &str) -> Result<(), AppError> {
         let url = format!("{}/api/v1/ingest/{room_id}/{camera_id}", self.base);
-        self.client
-            .delete(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected ingest stop: {e}")))?;
+        self.send(self.client.delete(&url).bearer_auth(&self.internal_token))
+            .await?;
         Ok(())
     }
 
     async fn active_ingest_cameras(&self, room_id: &str) -> Result<Vec<String>, AppError> {
         let url = format!("{}/api/v1/ingest/list/{room_id}", self.base);
         let resp = self
-            .client
-            .get(&url)
-            .bearer_auth(&self.internal_token)
-            .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| AppError::Internal(format!("broadcaster rejected ingest list: {e}")))?;
+            .send(self.client.get(&url).bearer_auth(&self.internal_token))
+            .await?;
         resp.json()
             .await
             .map_err(|e| AppError::Internal(format!("invalid ingest list response: {e}")))
