@@ -118,7 +118,19 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "bash -s" <<'REMOTE'
             set -e
             mkdir -p /opt/todd-media-engine
-            printf 'JWT_SECRET=%s\n' '${{ secrets.JWT_SECRET }}' > /opt/todd-media-engine/.env
+            # JWT_SECRET must match the Laravel backend's
+            # MEDIA_ENGINE_JWT_SECRET (tokens minted there verify here).
+            # Operators fix mismatches directly in this file with nano —
+            # a deploy must NEVER silently overwrite their fix with the
+            # GitHub secret. Preserve an existing line; only fall back to
+            # the GitHub secret when the line is missing entirely.
+            EXISTING_JWT_SECRET=$(grep -m1 '^JWT_SECRET=' /opt/todd-media-engine/.env 2>/dev/null | cut -d= -f2- || true)
+            if [ -n "$EXISTING_JWT_SECRET" ]; then
+              JWT_VALUE="$EXISTING_JWT_SECRET"
+            else
+              JWT_VALUE='${{ secrets.JWT_SECRET }}'
+            fi
+            printf 'JWT_SECRET=%s\n' "$JWT_VALUE" > /opt/todd-media-engine/.env
             [ -n '${{ vars.JWT_ISSUER }}' ] && printf 'JWT_ISSUER=%s\n' '${{ vars.JWT_ISSUER }}' >> /opt/todd-media-engine/.env
             [ -n '${{ vars.MEDIA_PLANE }}' ] && printf 'MEDIA_PLANE=%s\n' '${{ vars.MEDIA_PLANE }}' >> /opt/todd-media-engine/.env
             [ -n '${{ vars.STUDIO_HOST }}' ] && printf 'STUDIO_HOST=%s\n' '${{ vars.STUDIO_HOST }}' >> /opt/todd-media-engine/.env
