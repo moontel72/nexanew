@@ -740,40 +740,38 @@ class CricketRepository {
   }
 
   /// Submit a ball to the score. Returns the fresh score snapshot on
-  /// success (backend returns `{message, score}`), null on failure.
+  /// success (backend returns `{message, score}`). Throws with the
+  /// backend's own message on failure so the manager sees the real
+  /// reason (e.g. "Striker and non-striker must be different players.").
   Future<LiveScoreSnapshot?> updateScore(
     String matchId,
     Map<String, dynamic> ball,
   ) async {
-    try {
-      final res = await _http.post(
-        Uri.parse(
-          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/score',
-        ),
-        headers: await _authHeaders(),
-        body: jsonEncode(ball),
-      );
-      if (res.statusCode != 200) return null;
-      return _snapshotFromBody(res.body);
-    } catch (_) {
-      return null;
+    final res = await _http.post(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/score',
+      ),
+      headers: await _authHeaders(),
+      body: jsonEncode(ball),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_apiError(res));
     }
+    return _snapshotFromBody(res.body);
   }
 
   /// Undo the last ball. Returns the fresh score snapshot on success.
   Future<LiveScoreSnapshot?> undoLastBall(String matchId) async {
-    try {
-      final res = await _http.post(
-        Uri.parse(
-          '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/score/undo',
-        ),
-        headers: await _authHeaders(),
-      );
-      if (res.statusCode != 200) return null;
-      return _snapshotFromBody(res.body);
-    } catch (_) {
-      return null;
+    final res = await _http.post(
+      Uri.parse(
+        '${ApiConfig.apiBaseUrl}/cricket/manager/matches/$matchId/score/undo',
+      ),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_apiError(res));
     }
+    return _snapshotFromBody(res.body);
   }
 
   // ────────────────────────────────────────────────────────────

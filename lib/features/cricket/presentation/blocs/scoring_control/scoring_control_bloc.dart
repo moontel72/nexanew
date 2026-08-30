@@ -227,8 +227,14 @@ final class ScoringControlLoaded extends ScoringControlState {
   }
 
   // Phase flags for the panel.
+  // The openers card stays visible until striker, non-striker AND the
+  // opening bowler are all picked — leaving early hid the bowler row
+  // while the crease card disabled bowler selection until the first
+  // ball, locking scoring entirely.
   bool get needsOpeners =>
-      !playerTrackingDisabled && totalBalls == 0 && strikerId == null;
+      !playerTrackingDisabled &&
+      totalBalls == 0 &&
+      (strikerId == null || nonStrikerId == null || bowlerId == null);
 
   bool get awaitingBowler =>
       !playerTrackingDisabled && totalBalls > 0 && bowlerId == null;

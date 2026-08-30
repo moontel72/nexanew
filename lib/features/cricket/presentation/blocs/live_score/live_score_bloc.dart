@@ -276,7 +276,13 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
 
     emit(LiveScoreUpdating(score: previous, match: _lastMatch));
 
-    final updated = await _repo.updateScore(matchId, e.ball);
+    LiveScoreSnapshot? updated;
+    String? error;
+    try {
+      updated = await _repo.updateScore(matchId, e.ball);
+    } catch (err) {
+      error = err.toString().replaceFirst('Exception: ', '');
+    }
     if (updated != null) {
       emit(
         LiveScoreConnected(
@@ -291,7 +297,7 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
         LiveScoreConnected(
           score: previous,
           match: _lastMatch,
-          notice: 'Failed to record ball.',
+          notice: error ?? 'Failed to record ball.',
         ),
       );
     }
@@ -304,7 +310,13 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
 
     emit(LiveScoreUpdating(score: previous, match: _lastMatch));
 
-    final updated = await _repo.undoLastBall(matchId);
+    LiveScoreSnapshot? updated;
+    String? error;
+    try {
+      updated = await _repo.undoLastBall(matchId);
+    } catch (err) {
+      error = err.toString().replaceFirst('Exception: ', '');
+    }
     if (updated != null) {
       emit(
         LiveScoreConnected(
@@ -319,7 +331,7 @@ class LiveScoreBloc extends Bloc<LiveScoreEvent, LiveScoreState> {
         LiveScoreConnected(
           score: previous,
           match: _lastMatch,
-          notice: 'Failed to undo last ball.',
+          notice: error ?? 'Failed to undo last ball.',
         ),
       );
     }
