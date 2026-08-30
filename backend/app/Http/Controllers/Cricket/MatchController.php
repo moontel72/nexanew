@@ -44,8 +44,16 @@ class MatchController extends Controller
             $request->input('team_b_id'),
         ]);
         if (!empty($referencedTeamIds) && $request->filled('tournament_id')) {
+            // Self-heal covers both orphan teams (registered before any
+            // tournament existed) and teams left over from a previous
+            // tournament — reusing an existing team in a new tournament
+            // must not trip the "does not belong to the active
+            // tournament" validation.
             Team::whereIn('id', $referencedTeamIds)
-                ->whereNull('tournament_id')
+                ->where(function ($q) use ($request) {
+                    $q->whereNull('tournament_id')
+                        ->orWhere('tournament_id', '!=', $request->tournament_id);
+                })
                 ->update(['tournament_id' => $request->tournament_id]);
         }
 
@@ -134,7 +142,10 @@ class MatchController extends Controller
         ]);
         if (!empty($referencedTeamIds)) {
             Team::whereIn('id', $referencedTeamIds)
-                ->whereNull('tournament_id')
+                ->where(function ($q) use ($match) {
+                    $q->whereNull('tournament_id')
+                        ->orWhere('tournament_id', '!=', $match->tournament_id);
+                })
                 ->update(['tournament_id' => $match->tournament_id]);
         }
 
@@ -240,6 +251,10 @@ class MatchController extends Controller
             'toss_done'     => ['in_progress'],
             'in_progress'   => ['in_progress', 'innings_break', 'completed'],
             'innings_break' => ['in_progress', 'completed'],
+            // A finished fixture can be moved back to the schedule or
+            // cancelled, so a completed match is never stuck in the live
+            // console.
+            'completed'     => ['scheduled', 'cancelled'],
         ];
 
         if (!in_array($newStatus, $allowedTransitions[$match->status] ?? [], true)) {
