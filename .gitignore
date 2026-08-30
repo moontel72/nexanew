@@ -30,6 +30,9 @@ rust/target/
 rust/target_check/
 **/target_check/
 
+# cargo metadata dump (generated build artifact)
+media-engine/meta.json
+
 .trae/
 
 analysis_output.txt
