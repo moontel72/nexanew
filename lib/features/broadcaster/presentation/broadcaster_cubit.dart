@@ -208,6 +208,11 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
   RTCPeerConnection? _pc;
   Timer? _reconnectTimer;
   Timer? _rendererDisposeTimer;
+  /// Grace window after an ICE disconnect: when `restartIce` recovers the
+  /// session in time this timer is cancelled and the video track survives;
+  /// otherwise a full capture + WHIP reopen runs (costing the 20-30s video
+  /// encoder restart the Studio sees as 409 churn).
+  Timer? _iceRecoveryTimer;
   int _reconnectAttempt = 0;
   bool _started = false;
 
@@ -458,6 +463,8 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
       case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
         _reconnectTimer?.cancel();
         _reconnectTimer = null;
+        _iceRecoveryTimer?.cancel();
+        _iceRecoveryTimer = null;
         _reconnectAttempt = 0;
         emit(
           state.copyWith(
@@ -467,11 +474,30 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
             error: null,
           ),
         );
-      case RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
+      case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
+        // Hard failure — all candidate pairs died. Reopen the session.
         if (state.phase == BroadcasterPhase.live ||
             state.phase == BroadcasterPhase.connecting) {
           _scheduleReconnect(emit);
+        }
+      case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
+        if (state.phase == BroadcasterPhase.live ||
+            state.phase == BroadcasterPhase.connecting) {
+          // Transient flap (mobile networks drop ICE without killing the
+          // DTLS session). Try an ICE restart first: on success the
+          // session and its video track survive — no encoder restart, no
+          // Studio 409 churn. Only when the peer is still gone after the
+          // grace window do we tear down and reopen.
+          final pc = _pc;
+          if (pc != null) {
+            unawaited(pc.restartIce().catchError((Object _) {}));
+          }
+          _iceRecoveryTimer?.cancel();
+          _iceRecoveryTimer = Timer(const Duration(seconds: 6), () {
+            if (!isClosed && _started) {
+              add(const _RetryConnect());
+            }
+          });
         }
       case RTCPeerConnectionState.RTCPeerConnectionStateNew ||
           RTCPeerConnectionState.RTCPeerConnectionStateConnecting ||
@@ -656,6 +682,8 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     _started = false;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _iceRecoveryTimer?.cancel();
+    _iceRecoveryTimer = null;
     _rendererDisposeTimer?.cancel();
     _rendererDisposeTimer = null;
     _telemetry?.stop();
