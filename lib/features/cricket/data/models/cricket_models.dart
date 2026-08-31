@@ -125,6 +125,8 @@ class MatchModel {
   final String? teamBShort;
   final String? teamAId;
   final String? teamBId;
+  final String? currentBattingTeamId;
+  final String? currentBowlingTeamId;
   final String? venue;
   final String? matchType;
   final int oversPerSide;
@@ -144,6 +146,8 @@ class MatchModel {
     this.teamBShort,
     this.teamAId,
     this.teamBId,
+    this.currentBattingTeamId,
+    this.currentBowlingTeamId,
     this.venue,
     this.matchType,
     this.oversPerSide = 20,
@@ -180,6 +184,8 @@ class MatchModel {
             : null),
     teamAId: json['team_a_id']?.toString(),
     teamBId: json['team_b_id']?.toString(),
+    currentBattingTeamId: json['current_batting_team_id']?.toString(),
+    currentBowlingTeamId: json['current_bowling_team_id']?.toString(),
     venue: json['venue']?.toString(),
     matchType: json['match_type']?.toString(),
     oversPerSide: json['overs_per_side'] is int

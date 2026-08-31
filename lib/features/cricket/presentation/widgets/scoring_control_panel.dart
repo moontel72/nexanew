@@ -263,6 +263,12 @@ class _TossCard extends StatelessWidget {
                             ? winner
                             : (winner == teamAId ? teamBId : teamAId);
                         final bowling = batting == teamAId ? teamBId : teamAId;
+                        context.read<ScoringControlBloc>().add(
+                          SetInningsTeams(
+                            battingTeamId: batting,
+                            bowlingTeamId: bowling,
+                          ),
+                        );
                         context.read<LiveScoreBloc>().add(
                           StartMatch(
                             tossWinnerTeamId: winner,

@@ -279,6 +279,18 @@ final class SelectBowler extends ScoringControlEvent {
   const SelectBowler(this.playerId);
 }
 
+/// Innings team assignment from the toss — keeps the scorer's
+/// striker/bowler pickers on the correct team even before the first ball
+/// is recorded (the snapshot is still empty at that point).
+final class SetInningsTeams extends ScoringControlEvent {
+  final String battingTeamId;
+  final String bowlingTeamId;
+  const SetInningsTeams({
+    required this.battingTeamId,
+    required this.bowlingTeamId,
+  });
+}
+
 /// Manual strike swap (e.g. crossed on a run-out).
 final class SwapStrike extends ScoringControlEvent {}
 
@@ -346,6 +358,7 @@ class ScoringControlBloc
     on<SelectStriker>(_onSelectStriker);
     on<SelectNonStriker>(_onSelectNonStriker);
     on<SelectBowler>(_onSelectBowler);
+    on<SetInningsTeams>(_onSetInningsTeams);
     on<SwapStrike>(_onSwapStrike);
     on<TogglePlayerTracking>(_onTogglePlayerTracking);
     on<TossToggleForm>(_onTossToggleForm);
@@ -383,10 +396,15 @@ class ScoringControlBloc
       // Data is best-effort — the panel still renders with what we have.
     }
 
-    final battingTeamId = initialScore?.battingTeamId ?? match?.teamAId ?? '';
-    final bowlingTeamId = battingTeamId == match?.teamAId
-        ? match?.teamBId
-        : match?.teamAId;
+    final battingTeamId =
+        initialScore?.battingTeamId ??
+        match?.currentBattingTeamId ??
+        match?.teamAId ??
+        '';
+    final bowlingTeamId =
+        match?.currentBowlingTeamId ??
+        (battingTeamId == match?.teamAId ? match?.teamBId : match?.teamAId) ??
+        '';
 
     emit(
       ScoringControlLoaded(
@@ -481,6 +499,20 @@ class ScoringControlBloc
     final s = state;
     if (s is! ScoringControlLoaded) return;
     emit(s.copyWith(bowlerId: e.playerId));
+  }
+
+  void _onSetInningsTeams(
+    SetInningsTeams e,
+    Emitter<ScoringControlState> emit,
+  ) {
+    final s = state;
+    if (s is! ScoringControlLoaded) return;
+    emit(
+      s.copyWith(
+        battingTeamId: e.battingTeamId,
+        bowlingTeamId: e.bowlingTeamId,
+      ),
+    );
   }
 
   void _onSwapStrike(SwapStrike e, Emitter<ScoringControlState> emit) {
