@@ -277,7 +277,7 @@ class WhipClient {
       RTCSessionDescription(response.body, 'answer'),
     );
     if (videoBitrateKbps != null) {
-      await _capVideoBitrate(pc, videoBitrateKbps!);
+      await _capVideoBitrate(pc, videoBitrateKbps);
     }
     return WhipSession(pc: pc, stream: stream);
   }
@@ -285,19 +285,18 @@ class WhipClient {
   /// Caps the video encoder bitrate after negotiation. Best-effort: some
   /// backends reject `setParameters` once the answer is applied, so a
   /// failure here keeps the codec default instead of dropping the stream.
-  static Future<void> _capVideoBitrate(
-    RTCPeerConnection pc,
-    int kbps,
-  ) async {
+  static Future<void> _capVideoBitrate(RTCPeerConnection pc, int kbps) async {
     try {
       final senders = await pc.getSenders();
       for (final sender in senders) {
         if (sender.track?.kind != 'video') continue;
-        await sender.setParameters(<String, dynamic>{
-          'encodings': <Map<String, dynamic>>[
-            <String, dynamic>{'maxBitrate': kbps * 1000},
-          ],
-        });
+        await sender.setParameters(
+          RTCRtpParameters(
+            encodings: <RTCRtpEncoding>[
+              RTCRtpEncoding(maxBitrate: kbps * 1000),
+            ],
+          ),
+        );
       }
     } catch (_) {
       // Non-fatal — keep the codec default bitrate.
