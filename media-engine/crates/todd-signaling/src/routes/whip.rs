@@ -32,14 +32,25 @@ pub async fn ingest(
     Path((room_id, camera_id)): Path<(String, String)>,
     body: Bytes,
 ) -> Result<Response, AppError> {
-    let claims = authenticate(&state.auth, &headers, &uri).await?;
-    claims.require_scope(&room_id, &camera_id, TokenRole::Publisher)?;
+    let claims = match authenticate(&state.auth, &headers, &uri).await {
+        Ok(claims) => claims,
+        Err(error) => {
+            tracing::warn!(room = %room_id, camera = %camera_id, error = %error, "whip ingest rejected: auth failed");
+            return Err(error);
+        }
+    };
+    if let Err(error) = claims.require_scope(&room_id, &camera_id, TokenRole::Publisher) {
+        tracing::warn!(room = %room_id, camera = %camera_id, error = %error, "whip ingest rejected: token scope mismatch");
+        return Err(error);
+    }
 
     // The room must exist and contain this camera.
     let Some(room) = state.store.get_room(&room_id).await? else {
+        tracing::warn!(room = %room_id, camera = %camera_id, "whip ingest rejected: room not found (stale ingest URL from a deleted room?)");
         return Err(AppError::NotFound(format!("room {room_id}")));
     };
     if !room.cameras.iter().any(|camera| camera.id == camera_id) {
+        tracing::warn!(room = %room_id, camera = %camera_id, "whip ingest rejected: camera not part of room");
         return Err(AppError::NotFound(format!(
             "camera {camera_id} is not part of room {room_id}"
         )));

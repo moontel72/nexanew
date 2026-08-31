@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:trace_odd/core/services/api_client.dart';
 
@@ -237,11 +238,15 @@ class WhipClient {
       await pc.close();
       throw WhipException('Could not produce a local SDP offer.');
     }
+    // A host-only offer (STUN unreachable) is still posted: the engine
+    // learns the phone's reflexive candidate from the first RTP packets
+    // even without STUN, so blocking here produced false negatives on
+    // carrier networks that throttle STUN. ICE failures surface through
+    // the connection-state reconnect flow instead.
     if (!_sdpHasPublicCandidate(local.sdp ?? '')) {
-      await pc.close();
-      throw WhipException(
-        'Network blocking STUN/TURN — Please check connection or provide '
-        'TURN credentials.',
+      debugPrint(
+        '[broadcaster] STUN gave no srflx/relay candidate — posting '
+        'host-only offer (reflexive discovery may still connect).',
       );
     }
 
