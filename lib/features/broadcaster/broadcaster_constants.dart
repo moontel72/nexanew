@@ -4,13 +4,17 @@
 /// cubit and UI stay in sync without duplicating literals.
 library;
 
-/// Selectable camera profile (720p / 1080p).
+/// Selectable camera profile (resolution + encoder bitrate ceiling).
 class CameraProfile {
-  const CameraProfile(this.label, this.width, this.height);
+  const CameraProfile(this.label, this.width, this.height, this.bitrateKbps);
 
   final String label;
   final int width;
   final int height;
+
+  /// Video encoder bitrate ceiling in kbps. Lower profiles use lower
+  /// ceilings so a weak mobile uplink still delivers a stable feed.
+  final int bitrateKbps;
 
   @override
   bool operator ==(Object other) =>
@@ -67,10 +71,12 @@ abstract final class BroadcasterConstants {
 }
 
 /// Default profile (720p) used by the initial state and config form.
-const CameraProfile kDefaultCameraProfile = CameraProfile('720p', 1280, 720);
+const CameraProfile kDefaultCameraProfile = CameraProfile('720p', 1280, 720, 2500);
 
-/// Profiles offered in the control UI.
+/// Profiles offered in the control UI (lowest first).
 const List<CameraProfile> kCameraProfiles = <CameraProfile>[
+  CameraProfile('360p', 640, 360, 500),
+  CameraProfile('480p', 854, 480, 800),
   kDefaultCameraProfile,
-  CameraProfile('1080p', 1920, 1080),
+  CameraProfile('1080p', 1920, 1080, 4500),
 ];
