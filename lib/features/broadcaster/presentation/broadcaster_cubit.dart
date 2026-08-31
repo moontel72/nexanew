@@ -422,7 +422,8 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     Emitter<BroadcasterState> emit,
   ) async {
     final s = state;
-    final streaming = s.phase == BroadcasterPhase.live ||
+    final streaming =
+        s.phase == BroadcasterPhase.live ||
         s.phase == BroadcasterPhase.connecting ||
         s.phase == BroadcasterPhase.reconnecting;
     if (!streaming || s.config == null) return;
@@ -537,7 +538,6 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
         turnUrl: config.turnUrl.isEmpty ? null : config.turnUrl,
         turnUsername: config.turnUsername.isEmpty ? null : config.turnUsername,
         turnPassword: config.turnPassword.isEmpty ? null : config.turnPassword,
-        videoBitrateKbps: s.profile.bitrateKbps,
       );
     } catch (err) {
       return _OpenFailed('WHIP ingest failed: $err');
