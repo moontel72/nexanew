@@ -14,7 +14,7 @@ use std::sync::Arc;
 use axum::{
     body::Bytes,
     extract::{Path, State},
-    http::{HeaderMap, StatusCode, Uri},
+    http::{header::CONTENT_TYPE, HeaderMap, StatusCode, Uri},
     response::Response,
 };
 use todd_common::{
@@ -102,4 +102,30 @@ pub async fn close_session(
     state.store.remove_session(&room_id, &session_id).await?;
     state.plane.close_session(&session_id).await?;
     whip_response(StatusCode::OK, None, String::new())
+}
+
+/// WHIP trickle-ICE: clients that send the offer without candidates
+/// (e.g. Larix Broadcaster) PATCH candidate fragments to the session
+/// resource until `a=end-of-candidates`. Without this the engine sees
+/// zero remote candidates and ICE can never form a pair.
+pub async fn trickle(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+    body: Bytes,
+) -> Result<StatusCode, AppError> {
+    let content_type = headers
+        .get(CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if content_type != "application/trickle-ice-sdpfrag" {
+        return Err(AppError::BadRequest(
+            "expected Content-Type application/trickle-ice-sdpfrag".to_string(),
+        ));
+    }
+    let fragment = String::from_utf8(body.to_vec())
+        .map_err(|_| AppError::BadRequest("invalid trickle fragment".to_string()))?;
+    tracing::debug!(session = %session_id, bytes = fragment.len(), "whip trickle candidates");
+    state.plane.trickle_session(&session_id, &fragment).await?;
+    Ok(StatusCode::NO_CONTENT)
 }

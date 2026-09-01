@@ -33,6 +33,11 @@ pub trait MediaPlane: Send + Sync {
 
     async fn close_session(&self, session_id: &str) -> Result<(), AppError>;
 
+    /// Applies a trickle-ICE candidate fragment (WHIP PATCH) to a live
+    /// ingest session. Clients that omit candidates from the offer
+    /// trickle them in afterward.
+    async fn trickle_session(&self, session_id: &str, fragment: &str) -> Result<(), AppError>;
+
     /// WHEP egress: creates a viewer PeerConnection fed from the camera's
     /// live RTP stream of one simulcast layer (`rid` empty = lowest);
     /// returns `(session_id, answer_sdp)`.
@@ -175,6 +180,10 @@ impl MediaPlane for EmbeddedMediaPlane {
 
     async fn close_session(&self, session_id: &str) -> Result<(), AppError> {
         self.engine.stop_session(session_id).await
+    }
+
+    async fn trickle_session(&self, session_id: &str, fragment: &str) -> Result<(), AppError> {
+        self.engine.trickle_session(session_id, fragment).await
     }
 
     async fn create_viewer_session(
@@ -421,6 +430,19 @@ impl MediaPlane for RemoteMediaPlane {
         let url = format!("{}/api/v1/whip/session/{session_id}", self.base);
         self.send(self.client.delete(&url).bearer_auth(&self.internal_token))
             .await?;
+        Ok(())
+    }
+
+    async fn trickle_session(&self, session_id: &str, fragment: &str) -> Result<(), AppError> {
+        let url = format!("{}/api/v1/whip/session/{session_id}", self.base);
+        self.send(
+            self.client
+                .patch(&url)
+                .bearer_auth(&self.internal_token)
+                .header(CONTENT_TYPE, "application/trickle-ice-sdpfrag")
+                .body(fragment.to_owned()),
+        )
+        .await?;
         Ok(())
     }
 

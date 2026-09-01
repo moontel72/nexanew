@@ -427,6 +427,41 @@ impl Engine {
         Ok(())
     }
 
+    /// Applies a trickle-ICE candidate fragment to a live ingest session.
+    /// Clients like Larix Broadcaster send the offer with zero candidates
+    /// and PATCH them in afterward — without this the agent never forms a
+    /// candidate pair and ICE stays in "no candidate pairs" forever.
+    pub async fn trickle_session(&self, session_id: &str, fragment: &str) -> Result<(), AppError> {
+        let pc = self.sessions.get(session_id).map(|s| s.pc.clone());
+        let Some(pc) = pc else {
+            return Err(AppError::NotFound(format!("unknown session {session_id}")));
+        };
+
+        let mut mid: Option<String> = None;
+        let mut mline: Option<u16> = None;
+        for raw in fragment.lines() {
+            let line = raw.trim();
+            if let Some(m) = line.strip_prefix("a=mid:") {
+                mid = Some(m.to_string());
+            } else if let Some(ml) = line.strip_prefix("a=mline-index:") {
+                mline = ml.parse::<u16>().ok();
+            } else if line.starts_with("a=candidate:") {
+                let candidate = line.trim_start_matches("a=").to_string();
+                pc.add_ice_candidate(
+                    webrtc::peer_connection::sdp::ice_candidate::ICECandidateInit {
+                        candidate,
+                        sdp_mid: mid.clone(),
+                        sdp_mline_index: mline,
+                        username_fragment: None,
+                    },
+                )
+                .await
+                .map_err(|e| AppError::Internal(format!("add_ice_candidate failed: {e}")))?;
+            }
+        }
+        Ok(())
+    }
+
     /// Removes sessions whose PeerConnection already died (network loss,
     /// DTLS failure) so rooms and the router don't leak state.
     pub async fn prune_dead_sessions(&self) {

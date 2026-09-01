@@ -38,6 +38,15 @@ pub(crate) async fn create(
     ),
     AppError,
 > {
+    // Diagnostic: how many ICE candidates did the offer carry? Trickle
+    // clients (e.g. Larix) send zero and PATCH them in afterward — the
+    // log line makes that visible without packet captures.
+    let offer_candidates = offer_sdp
+        .lines()
+        .filter(|line| line.starts_with("a=candidate:"))
+        .count();
+    tracing::info!(candidates = offer_candidates, "whip offer received");
+
     let offer = RTCSessionDescription::offer(offer_sdp.to_owned())
         .map_err(|e| AppError::BadRequest(format!("invalid SDP offer: {e}")))?;
 

@@ -82,7 +82,7 @@ fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         )
         .route(
             "/whip/session/{session_id}",
-            axum::routing::delete(routes::whip::close_session),
+            axum::routing::patch(routes::whip::trickle).delete(routes::whip::close_session),
         )
         .route(
             "/whep/watch/{room_id}/{camera_id}",
