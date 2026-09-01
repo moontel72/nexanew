@@ -447,14 +447,12 @@ impl Engine {
                 mline = ml.parse::<u16>().ok();
             } else if line.starts_with("a=candidate:") {
                 let candidate = line.trim_start_matches("a=").to_string();
-                pc.add_ice_candidate(
-                    webrtc::peer_connection::sdp::ice_candidate::ICECandidateInit {
-                        candidate,
-                        sdp_mid: mid.clone(),
-                        sdp_mline_index: mline,
-                        username_fragment: None,
-                    },
-                )
+                pc.add_ice_candidate(webrtc::ice_transport::ice_candidate::RTCIceCandidateInit {
+                    candidate,
+                    sdp_mid: mid.clone(),
+                    sdp_mline_index: mline,
+                    username_fragment: None,
+                })
                 .await
                 .map_err(|e| AppError::Internal(format!("add_ice_candidate failed: {e}")))?;
             }
