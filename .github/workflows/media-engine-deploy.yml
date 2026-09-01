@@ -185,6 +185,17 @@ jobs:
             else
               printf 'STUN_SERVERS=%s\n' 'stun:stun.l.google.com:19302' >> /opt/todd-media-engine/.env
             fi
+            # Disconnected-grace window: browsers throttle background tabs
+            # and stop answering ICE keepalives, so the engine marks such
+            # sessions Disconnected after ~30s. A generous grace lets the
+            # publisher's video track register (and ICE re-establish) when
+            # the operator returns to the phone, instead of the session
+            # being torn down a moment before the video arrives.
+            if [ -n '${{ vars.ICE_DISCONNECTED_GRACE_MS }}' ]; then
+              printf 'ICE_DISCONNECTED_GRACE_MS=%s\n' '${{ vars.ICE_DISCONNECTED_GRACE_MS }}' >> /opt/todd-media-engine/.env
+            else
+              printf 'ICE_DISCONNECTED_GRACE_MS=%s\n' '30000' >> /opt/todd-media-engine/.env
+            fi
             if [ -n '${{ vars.TURN_SERVERS }}' ]; then
               printf 'TURN_SERVERS=%s\n' '${{ vars.TURN_SERVERS }}' >> /opt/todd-media-engine/.env
             fi
