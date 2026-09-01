@@ -10,8 +10,8 @@ use std::sync::Arc;
 use axum::{
     body::Bytes,
     extract::{Path, Query, State},
-    http::{HeaderMap, StatusCode, Uri},
-    response::Response,
+    http::{header::CONTENT_TYPE, HeaderMap, StatusCode, Uri},
+    response::{IntoResponse, Response},
     routing::get,
     Json, Router,
 };
@@ -72,7 +72,7 @@ pub fn routes(engine: Arc<Engine>, auth: AuthConfig, telemetry: Arc<Telemetry>) 
         )
         .route(
             "/api/v1/whip/session/{session_id}",
-            axum::routing::delete(close_session),
+            axum::routing::patch(trickle).delete(close_session),
         )
         .route(
             "/api/v1/whep/watch/{room_id}/{camera_id}",
@@ -158,7 +158,7 @@ async fn ingest(
         .engine
         .start_session(&room_id, &camera_id, &offer)
         .await?;
-    whip_response(StatusCode::CREATED, Some(&session_id), answer)
+    whip_response(StatusCode::CREATED, Some(&session_id), None, answer)
 }
 
 async fn close_session(
@@ -173,7 +173,43 @@ async fn close_session(
     claims.require_role(TokenRole::Publisher)?;
 
     state.engine.stop_session(&session_id).await?;
-    whip_response(StatusCode::OK, None, String::new())
+    whip_response(StatusCode::OK, None, None, String::new())
+}
+
+/// Trickle-ICE PATCH mirror for `MEDIA_PLANE=remote`: the signaling service
+/// forwards WHIP PATCH fragments here; the engine applies them to the live
+/// session. Validation and logging match the signaling-side route.
+async fn trickle(
+    State(state): State<SfuState>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+    body: Bytes,
+) -> Result<Response, AppError> {
+    let content_type = headers
+        .get(CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if content_type != "application/trickle-ice-sdpfrag" {
+        return Err(AppError::BadRequest(
+            "expected Content-Type application/trickle-ice-sdpfrag".to_string(),
+        ));
+    }
+    let fragment = String::from_utf8(body.to_vec())
+        .map_err(|_| AppError::BadRequest("invalid trickle fragment".to_string()))?;
+
+    let candidates = fragment
+        .lines()
+        .filter(|line| line.trim_start().starts_with("a=candidate:"))
+        .count();
+    state.engine.trickle_session(&session_id, &fragment).await?;
+    tracing::info!(session = %session_id, candidates, "whip trickle candidates applied");
+
+    let mut response = StatusCode::NO_CONTENT.into_response();
+    response.headers_mut().insert(
+        CONTENT_TYPE,
+        axum::http::HeaderValue::from_static("application/trickle-ice-sdpfrag"),
+    );
+    Ok(response)
 }
 
 /// WHEP: browser posts a recvonly offer (+ optional `?rid=` layer

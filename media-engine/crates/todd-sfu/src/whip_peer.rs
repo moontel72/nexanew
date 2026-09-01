@@ -171,14 +171,22 @@ pub(crate) async fn create(
 
     // The answer must carry server candidates or the publisher can never
     // reach us — log the count loudly so a zero is visible immediately.
+    // The type mix + IPs make reachability diagnosable at INFO level:
+    // host-only answers with private IPs, or missing srflx/relay entries,
+    // point straight at STUN/TURN/firewall problems.
     let candidate_count = local.sdp.matches("a=candidate").count();
     if candidate_count == 0 {
         tracing::error!(
             "WHIP answer contains no ICE candidates — server-side gathering failed; publisher will hang in Connecting…"
         );
     } else {
+        let (host, srflx, relay) = candidate_counts(&local.sdp);
         tracing::info!(
             candidates = candidate_count,
+            host,
+            srflx,
+            relay,
+            ips = %candidate_ips(&local.sdp).join(","),
             "WHIP answer gathered candidates"
         );
     }
@@ -249,6 +257,26 @@ pub(crate) fn candidate_counts(sdp: &str) -> (usize, usize, usize) {
         }
     }
     (host, srflx, relay)
+}
+
+/// Unique addresses carried by `a=candidate:` lines, in SDP order. Seeing
+/// the actual IPs (public vs private vs link-local) in the answer log makes
+/// publisher-side reachability diagnosable without packet captures.
+fn candidate_ips(sdp: &str) -> Vec<String> {
+    let mut ips: Vec<String> = Vec::new();
+    for line in sdp.lines() {
+        let line = line.trim();
+        let Some(rest) = line.strip_prefix("a=candidate:") else {
+            continue;
+        };
+        // candidate:foundation component protocol priority address port typ …
+        if let Some(addr) = rest.split_whitespace().nth(4) {
+            if !ips.iter().any(|ip| ip == addr) {
+                ips.push(addr.to_string());
+            }
+        }
+    }
+    ips
 }
 
 /// Parses `a=simulcast:send rid=low;mid;high` (and `a=simulcast:send`
@@ -400,6 +428,18 @@ a=candidate:2 1 tcp 1518280447 192.168.1.5 9 typ host tcptype active\r\n";
         assert_eq!(host, 2);
         assert_eq!(srflx, 0);
         assert_eq!(relay, 0);
+    }
+
+    #[test]
+    fn collects_unique_candidate_addresses() {
+        let sdp = "v=0\r\n\
+a=candidate:1 1 udp 2122260223 203.0.113.9 54321 typ host\r\n\
+a=candidate:2 1 udp 1686052607 203.0.113.9 54322 typ srflx\r\n\
+a=candidate:3 1 udp 41819935 10.0.0.4 54323 typ relay\r\n";
+        assert_eq!(
+            candidate_ips(sdp),
+            vec!["203.0.113.9".to_string(), "10.0.0.4".to_string()]
+        );
     }
 
     #[test]

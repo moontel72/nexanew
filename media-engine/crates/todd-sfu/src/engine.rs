@@ -439,6 +439,7 @@ impl Engine {
 
         let mut mid: Option<String> = None;
         let mut mline: Option<u16> = None;
+        let mut applied = 0usize;
         for raw in fragment.lines() {
             let line = raw.trim();
             if let Some(m) = line.strip_prefix("a=mid:") {
@@ -455,8 +456,14 @@ impl Engine {
                 })
                 .await
                 .map_err(|e| AppError::Internal(format!("add_ice_candidate failed: {e}")))?;
+                applied += 1;
             }
         }
+        tracing::info!(
+            session = session_id,
+            candidates = applied,
+            "trickle candidates added to session"
+        );
         Ok(())
     }
 

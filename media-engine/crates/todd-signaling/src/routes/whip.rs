@@ -15,7 +15,7 @@ use axum::{
     body::Bytes,
     extract::{Path, State},
     http::{header::CONTENT_TYPE, HeaderMap, StatusCode, Uri},
-    response::Response,
+    response::{IntoResponse, Response},
 };
 use todd_common::{
     auth::{authenticate, TokenRole},
@@ -71,7 +71,12 @@ pub async fn ingest(
         .await?;
 
     tracing::info!(room = %room_id, camera = %camera_id, session = %session_id, "whip ingest accepted");
-    whip_response(StatusCode::CREATED, Some(&session_id), answer)
+    whip_response(
+        StatusCode::CREATED,
+        Some(&session_id),
+        Some(&state.settings.public_base_url),
+        answer,
+    )
 }
 
 pub async fn close_session(
@@ -101,7 +106,7 @@ pub async fn close_session(
     // engine has already forgotten.
     state.store.remove_session(&room_id, &session_id).await?;
     state.plane.close_session(&session_id).await?;
-    whip_response(StatusCode::OK, None, String::new())
+    whip_response(StatusCode::OK, None, None, String::new())
 }
 
 /// WHIP trickle-ICE: clients that send the offer without candidates
@@ -113,7 +118,7 @@ pub async fn trickle(
     headers: HeaderMap,
     Path(session_id): Path<String>,
     body: Bytes,
-) -> Result<StatusCode, AppError> {
+) -> Result<Response, AppError> {
     let content_type = headers
         .get(CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
@@ -125,7 +130,23 @@ pub async fn trickle(
     }
     let fragment = String::from_utf8(body.to_vec())
         .map_err(|_| AppError::BadRequest("invalid trickle fragment".to_string()))?;
-    tracing::debug!(session = %session_id, bytes = fragment.len(), "whip trickle candidates");
+
+    // Count the candidates so a zero-PATCH situation is visible at INFO
+    // level without packet captures (was DEBUG — invisible in production).
+    let candidates = fragment
+        .lines()
+        .filter(|line| line.trim_start().starts_with("a=candidate:"))
+        .count();
     state.plane.trickle_session(&session_id, &fragment).await?;
-    Ok(StatusCode::NO_CONTENT)
+    tracing::info!(session = %session_id, candidates, "whip trickle candidates applied");
+
+    // Per the WHIP draft the PATCH response is 204; declaring the trickle
+    // content type keeps the session resource spec-shaped for clients that
+    // inspect it.
+    let mut response = StatusCode::NO_CONTENT.into_response();
+    response.headers_mut().insert(
+        CONTENT_TYPE,
+        axum::http::HeaderValue::from_static("application/trickle-ice-sdpfrag"),
+    );
+    Ok(response)
 }

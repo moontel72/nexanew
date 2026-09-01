@@ -10,12 +10,22 @@ use crate::error::AppError;
 /// Builds a WHIP-compliant response (RFC draft-ietf-wish-whip):
 /// the POST returns 201 + SDP answer + `Location` of the session resource;
 /// the DELETE of that resource returns 200.
+///
+/// `base_url` (e.g. `PUBLIC_BASE_URL=https://studio.traceodd.com`) makes the
+/// `Location` header absolute, which the WHIP spec mandates and mobile
+/// clients (Larix Broadcaster) require to derive the session URL for their
+/// trickle-ICE PATCH requests. A relative Location silently breaks that
+/// client-side URL derivation: the client never PATCHes, the server never
+/// sees remote candidates, and ICE can never form a pair. `None` keeps the
+/// legacy relative form (used by the standalone SFU whose response is
+/// proxied and re-built by the signaling service).
 pub fn whip_response(
     status: StatusCode,
     session_id: Option<&str>,
+    base_url: Option<&str>,
     body: String,
 ) -> Result<Response, AppError> {
-    session_response(status, "whip", session_id, body)
+    session_response(status, "whip", session_id, base_url, body)
 }
 
 /// Same as [`whip_response`], but the `Location` points at the WHEP
@@ -25,13 +35,14 @@ pub fn whep_response(
     session_id: Option<&str>,
     body: String,
 ) -> Result<Response, AppError> {
-    session_response(status, "whep", session_id, body)
+    session_response(status, "whep", session_id, None, body)
 }
 
 fn session_response(
     status: StatusCode,
     prefix: &str,
     session_id: Option<&str>,
+    base_url: Option<&str>,
     body: String,
 ) -> Result<Response, AppError> {
     let mut response = body.into_response();
@@ -41,7 +52,14 @@ fn session_response(
         HeaderValue::from_static("application/sdp"),
     );
     if let Some(id) = session_id {
-        let location = HeaderValue::from_str(&format!("/api/v1/{prefix}/session/{id}"))
+        let location = match base_url.filter(|base| !base.is_empty()) {
+            Some(base) => format!(
+                "{}/api/v1/{prefix}/session/{id}",
+                base.trim_end_matches('/')
+            ),
+            None => format!("/api/v1/{prefix}/session/{id}"),
+        };
+        let location = HeaderValue::from_str(&location)
             .map_err(|e| AppError::Internal(format!("invalid session id: {e}")))?;
         response.headers_mut().insert(header::LOCATION, location);
     }
