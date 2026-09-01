@@ -198,6 +198,12 @@ jobs:
             fi
             if [ -n '${{ vars.TURN_SERVERS }}' ]; then
               printf 'TURN_SERVERS=%s\n' '${{ vars.TURN_SERVERS }}' >> /opt/todd-media-engine/.env
+            else
+              # Loopback coturn relay (todd-turn.service) — the engine
+              # allocates relay candidates there; clients see the public
+              # IP via external-ip in turnserver.conf. UDP first, TCP
+              # fallback for networks that block UDP entirely.
+              printf 'TURN_SERVERS=%s\n' 'turn:traceodd:traceodd-turn-2026@127.0.0.1:3478?transport=udp,turn:traceodd:traceodd-turn-2026@127.0.0.1:3478?transport=tcp' >> /opt/todd-media-engine/.env
             fi
             chmod 600 /opt/todd-media-engine/.env
             echo '✅ /opt/todd-media-engine/.env written'
@@ -224,6 +230,40 @@ jobs:
               exit 1
             fi
           REMOTE
+
+      # ---------------------------------------------------------------- #
+      # 1.6 TURN relay (coturn) — viewers/publishers behind UDP-blocked
+      #     networks relay media through it instead of direct ICE.
+      # ---------------------------------------------------------------- #
+      - name: Install TURN relay (coturn)
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "bash -s" <<'REMOTE'
+            set -e
+            if command -v turnserver >/dev/null 2>&1; then
+              echo '✅ coturn already installed'
+              exit 0
+            fi
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -y
+            apt-get install -y coturn
+            echo '✅ coturn installed'
+          REMOTE
+
+      - name: Deploy TURN config and unit
+        run: |
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            media-engine/deploy/coturn/turnserver.conf \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/turnserver.conf
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            media-engine/deploy/systemd/todd-turn.service \
+            ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/etc/systemd/system/todd-turn.service
+          ssh -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }} "
+            set -e
+            systemctl daemon-reload
+            systemctl enable --now todd-turn
+            sleep 1
+            ss -lun | grep 3478 && echo '✅ TURN relay listening on 3478'
+          "
 
       # ---------------------------------------------------------------- #
       # 2. Pull images, re-tag locally, restart both services

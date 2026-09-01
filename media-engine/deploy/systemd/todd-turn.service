@@ -1,0 +1,24 @@
+# T-Odd TURN relay (coturn) — media relay for NAT/UDP-blocked clients.
+#
+# Runs Debian's coturn package with /etc/turnserver.conf (deployed by the
+# media-engine-deploy workflow alongside this unit). The engine reaches
+# the relay on loopback (TURN_SERVERS env) and clients receive relay
+# candidates on the VPS public IP.
+#
+# Install: cp deploy/systemd/todd-turn.service /etc/systemd/system/
+#          systemctl daemon-reload && systemctl enable --now todd-turn
+
+[Unit]
+Description=T-Odd TURN relay (coturn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/turnserver -c /etc/turnserver.conf
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
