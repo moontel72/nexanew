@@ -493,8 +493,16 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
             unawaited(pc.restartIce().catchError((Object _) {}));
           }
           _iceRecoveryTimer?.cancel();
-          _iceRecoveryTimer = Timer(const Duration(seconds: 6), () {
-            if (!isClosed && _started) {
+          // Wait LONGER than the engine's 30s disconnected-grace. A
+          // throttled background tab that regains focus (the operator
+          // picking the phone back up) recovers its ICE and the session
+          // survives — a full reopen costs 40-50s of video encoder
+          // startup, which is exactly the 409 churn the Studio sees.
+          _iceRecoveryTimer = Timer(const Duration(seconds: 45), () {
+            final stillGone =
+                _pc?.connectionState !=
+                RTCPeerConnectionState.RTCPeerConnectionStateConnected;
+            if (!isClosed && _started && stillGone) {
               add(const _RetryConnect());
             }
           });
