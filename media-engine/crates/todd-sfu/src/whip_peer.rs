@@ -191,7 +191,43 @@ pub(crate) async fn create(
         );
     }
 
-    Ok((pc, shutdown, local.sdp))
+    // Trickle-ICE clients (e.g. Larix) send the offer with zero candidates
+    // and the answer MUST echo trickle support (WHIP RFC 9745 §4.6):
+    // `a=ice-options:trickle` plus `a=end-of-candidates` (every server
+    // candidate is already in the answer; none are trickled later via
+    // PATCH responses). Without the echo the client aborts the session
+    // without ever PATCHing its candidates — the 40s offer-retry loop.
+    let mut answer_sdp = local.sdp;
+    let offer_trickle = offer_sdp
+        .lines()
+        .any(|line| line.trim() == "a=ice-options:trickle");
+    if offer_candidates == 0 || offer_trickle {
+        answer_sdp = add_trickle_signaling(&answer_sdp);
+        tracing::info!("trickle ICE signaled in WHIP answer");
+    }
+
+    Ok((pc, shutdown, answer_sdp))
+}
+
+/// Injects the WHIP trickle-ICE signaling attributes into an answer that
+/// already carries every server candidate. Session-level attributes must
+/// precede the first `m=` line; `a=end-of-candidates` tells the client no
+/// trickled candidates will follow via PATCH responses.
+fn add_trickle_signaling(sdp: &str) -> String {
+    let mut extra = String::new();
+    if !sdp.contains("a=ice-options:trickle") {
+        extra.push_str("a=ice-options:trickle\r\n");
+    }
+    if !sdp.contains("a=end-of-candidates") {
+        extra.push_str("a=end-of-candidates\r\n");
+    }
+    if extra.is_empty() {
+        return sdp.to_string();
+    }
+    match sdp.find("\r\nm=") {
+        Some(pos) => format!("{}\r\n{}{}", &sdp[..pos], extra, &sdp[pos..]),
+        None => format!("{sdp}\r\n{extra}"),
+    }
 }
 
 /// First declared SSRC of the video m-section in an offer, excluding RTX
@@ -440,6 +476,22 @@ a=candidate:3 1 udp 41819935 10.0.0.4 54323 typ relay\r\n";
             candidate_ips(sdp),
             vec!["203.0.113.9".to_string(), "10.0.0.4".to_string()]
         );
+    }
+
+    #[test]
+    fn adds_trickle_signaling_before_first_mline() {
+        let sdp =
+            "v=0\r\no=- 1 1 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\n";
+        let out = add_trickle_signaling(sdp);
+        let expected = "v=0\r\no=- 1 1 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\n\
+a=ice-options:trickle\r\na=end-of-candidates\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\n";
+        assert_eq!(out, expected);
+    }
+
+    #[test]
+    fn trickle_signaling_not_duplicated() {
+        let sdp = "v=0\r\na=ice-options:trickle\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\n";
+        assert_eq!(add_trickle_signaling(sdp), sdp);
     }
 
     #[test]
