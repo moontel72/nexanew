@@ -243,10 +243,10 @@ impl Settings {
             ice_public_ips: env_list("ICE_PUBLIC_IPS", ""),
             ice_udp_port_min: parse_u16_opt("ICE_UDP_PORT_MIN")?,
             ice_udp_port_max: parse_u16_opt("ICE_UDP_PORT_MAX")?,
-            ice_disconnected_timeout_ms: parse_u64("ICE_DISCONNECTED_TIMEOUT_MS", 5000)?,
-            ice_failed_timeout_ms: parse_u64("ICE_FAILED_TIMEOUT_MS", 15000)?,
+            ice_disconnected_timeout_ms: parse_u64("ICE_DISCONNECTED_TIMEOUT_MS", 30000)?,
+            ice_failed_timeout_ms: parse_u64("ICE_FAILED_TIMEOUT_MS", 60000)?,
             ice_keepalive_interval_ms: parse_u64("ICE_KEEPALIVE_INTERVAL_MS", 2000)?,
-            ice_disconnected_grace_ms: parse_u64("ICE_DISCONNECTED_GRACE_MS", 30000)?,
+            ice_disconnected_grace_ms: parse_u64("ICE_DISCONNECTED_GRACE_MS", 300000)?,
 
             telemetry_sample_ms: parse_u64("TELEMETRY_SAMPLE_MS", 2000)?,
             telemetry_ws_interval_ms: parse_u64("TELEMETRY_WS_INTERVAL_MS", 1000)?,

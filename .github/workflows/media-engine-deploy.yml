@@ -194,7 +194,22 @@ jobs:
             if [ -n '${{ vars.ICE_DISCONNECTED_GRACE_MS }}' ]; then
               printf 'ICE_DISCONNECTED_GRACE_MS=%s\n' '${{ vars.ICE_DISCONNECTED_GRACE_MS }}' >> /opt/todd-media-engine/.env
             else
-              printf 'ICE_DISCONNECTED_GRACE_MS=%s\n' '30000' >> /opt/todd-media-engine/.env
+              printf 'ICE_DISCONNECTED_GRACE_MS=%s\n' '300000' >> /opt/todd-media-engine/.env
+            fi
+            # Long ICE detection windows: throttled clients (background
+            # tabs, carrier NAT flakiness) stop answering keepalives for
+            # tens of seconds without the media path being dead. Short
+            # timeouts were tearing every session down ~40s in and forcing
+            # publishers into reconnect loops.
+            if [ -n '${{ vars.ICE_DISCONNECTED_TIMEOUT_MS }}' ]; then
+              printf 'ICE_DISCONNECTED_TIMEOUT_MS=%s\n' '${{ vars.ICE_DISCONNECTED_TIMEOUT_MS }}' >> /opt/todd-media-engine/.env
+            else
+              printf 'ICE_DISCONNECTED_TIMEOUT_MS=%s\n' '30000' >> /opt/todd-media-engine/.env
+            fi
+            if [ -n '${{ vars.ICE_FAILED_TIMEOUT_MS }}' ]; then
+              printf 'ICE_FAILED_TIMEOUT_MS=%s\n' '${{ vars.ICE_FAILED_TIMEOUT_MS }}' >> /opt/todd-media-engine/.env
+            else
+              printf 'ICE_FAILED_TIMEOUT_MS=%s\n' '60000' >> /opt/todd-media-engine/.env
             fi
             if [ -n '${{ vars.TURN_SERVERS }}' ]; then
               printf 'TURN_SERVERS=%s\n' '${{ vars.TURN_SERVERS }}' >> /opt/todd-media-engine/.env
