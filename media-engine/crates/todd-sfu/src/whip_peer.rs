@@ -214,16 +214,19 @@ pub(crate) async fn create(
 /// precede the first `m=` line; `a=end-of-candidates` tells the client no
 /// trickled candidates will follow via PATCH responses.
 fn add_trickle_signaling(sdp: &str) -> String {
-    let mut extra = String::new();
+    let mut attrs: Vec<&str> = Vec::new();
     if !sdp.contains("a=ice-options:trickle") {
-        extra.push_str("a=ice-options:trickle\r\n");
+        attrs.push("a=ice-options:trickle");
     }
     if !sdp.contains("a=end-of-candidates") {
-        extra.push_str("a=end-of-candidates\r\n");
+        attrs.push("a=end-of-candidates");
     }
-    if extra.is_empty() {
+    if attrs.is_empty() {
         return sdp.to_string();
     }
+    // Joined without a trailing CRLF: the m= section starts right after
+    // the attributes, no blank line in between.
+    let extra = attrs.join("\r\n");
     match sdp.find("\r\nm=") {
         Some(pos) => format!("{}\r\n{}{}", &sdp[..pos], extra, &sdp[pos..]),
         None => format!("{sdp}\r\n{extra}"),
@@ -490,8 +493,21 @@ a=ice-options:trickle\r\na=end-of-candidates\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r
 
     #[test]
     fn trickle_signaling_not_duplicated() {
-        let sdp = "v=0\r\na=ice-options:trickle\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\n";
+        // Both attributes already present: the SDP must come back unchanged.
+        let sdp = "v=0\r\na=ice-options:trickle\r\na=end-of-candidates\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\n";
         assert_eq!(add_trickle_signaling(sdp), sdp);
+    }
+
+    #[test]
+    fn adds_only_missing_trickle_attributes() {
+        // ice-options present, end-of-candidates missing: only the missing
+        // attribute is injected, with no blank line before the m= line.
+        let sdp = "v=0\r\na=ice-options:trickle\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\n";
+        let out = add_trickle_signaling(sdp);
+        assert_eq!(
+            out,
+            "v=0\r\na=ice-options:trickle\r\na=end-of-candidates\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\n"
+        );
     }
 
     #[test]
