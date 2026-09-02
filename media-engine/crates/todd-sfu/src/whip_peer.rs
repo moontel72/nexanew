@@ -47,6 +47,20 @@ pub(crate) async fn create(
         .count();
     tracing::info!(candidates = offer_candidates, "whip offer received");
 
+    // Diagnostic: which media sections/codecs did the publisher offer?
+    // A missing or rejected video m-line is the classic "audio flows,
+    // tile stays black" failure — surfacing it makes that visible
+    // without packet captures.
+    let offer_media: Vec<&str> = offer_sdp
+        .lines()
+        .filter(|line| line.trim_start().starts_with("m="))
+        .collect();
+    let offer_rtpmap: Vec<&str> = offer_sdp
+        .lines()
+        .filter(|line| line.trim_start().starts_with("a=rtpmap:"))
+        .collect();
+    tracing::info!(?offer_media, ?offer_rtpmap, "whip offer media sections");
+
     let offer = RTCSessionDescription::offer(offer_sdp.to_owned())
         .map_err(|e| AppError::BadRequest(format!("invalid SDP offer: {e}")))?;
 
@@ -205,6 +219,20 @@ pub(crate) async fn create(
         answer_sdp = add_trickle_signaling(&answer_sdp);
         tracing::info!("trickle ICE signaled in WHIP answer");
     }
+
+    // Diagnostic: which m-lines survived negotiation in the answer?
+    // A `m=video 0` line means the video section was rejected during
+    // codec negotiation — the publisher sends audio only and tiles can
+    // never show video.
+    let answer_media: Vec<&str> = answer_sdp
+        .lines()
+        .filter(|line| line.trim_start().starts_with("m="))
+        .collect();
+    let answer_rtpmap: Vec<&str> = answer_sdp
+        .lines()
+        .filter(|line| line.trim_start().starts_with("a=rtpmap:"))
+        .collect();
+    tracing::info!(?answer_media, ?answer_rtpmap, "whip answer media sections");
 
     Ok((pc, shutdown, answer_sdp))
 }
