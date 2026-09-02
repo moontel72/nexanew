@@ -535,6 +535,11 @@ impl Engine {
                 // ingest starts.
                 Some(rid) => rid,
                 None => {
+                    tracing::warn!(
+                        room = room_id,
+                        camera = camera_id,
+                        "whep watch rejected: camera not live (retryable 409)"
+                    );
                     return Err(AppError::Conflict(format!(
                         "camera {camera_id} is not live in room {room_id}"
                     )))
