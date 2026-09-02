@@ -7,7 +7,7 @@ use todd_common::{
     auth::{mint_token, AuthConfig, TokenRole},
     config::{MediaPlaneMode, Settings},
     error::AppError,
-    types::{CameraSpec, Room},
+    types::{CameraSourceKind, CameraSpec, Room},
 };
 use todd_sfu::engine::Engine;
 use todd_telemetry::Telemetry;
@@ -140,39 +140,44 @@ pub fn build_room(
     camera_specs: Vec<CameraSpec>,
     ttl_secs: u64,
 ) -> Result<(Room, HashMap<String, String>, String), AppError> {
-    let cameras: Vec<String> = if camera_specs.is_empty() {
-        vec!["default".to_string()]
-    } else {
-        camera_specs.iter().map(|spec| spec.id.clone()).collect()
-    };
-
     let now = Utc::now();
     let room_id = uuid::Uuid::new_v4().to_string();
+    let issued_at_ms = now.timestamp_millis();
+    let expires_at_ms = issued_at_ms + state.settings.ingest_token_ttl_secs as i64 * 1000;
+
+    // Tokens are persisted on the camera record so the director UI can
+    // re-display the WHIP URL after a page refresh (the minted JWT itself
+    // is the only durable copy otherwise).
+    let mut ingest_tokens = HashMap::new();
+    let mut room_cameras = Vec::new();
+    for spec in camera_specs {
+        let mut camera = spec.into_info();
+        let token = mint_token(
+            &state.settings.jwt_secret,
+            &state.settings.jwt_issuer,
+            &camera.id,
+            TokenRole::Publisher,
+            Some(&room_id),
+            Some(&camera.id),
+            &[],
+            state.settings.ingest_token_ttl_secs,
+        )?;
+        if camera.kind == CameraSourceKind::Whip {
+            camera.ingest_token = Some(token.clone());
+            camera.ingest_token_issued_at_ms = Some(issued_at_ms);
+            camera.ingest_token_expires_at_ms = Some(expires_at_ms);
+        }
+        ingest_tokens.insert(camera.id.clone(), token);
+        room_cameras.push(camera);
+    }
+
     let room = Room {
         id: room_id.clone(),
         name,
         created_at: now,
         expires_at: now + ChronoDuration::seconds(ttl_secs as i64),
-        cameras: camera_specs
-            .into_iter()
-            .map(|spec| spec.into_info())
-            .collect(),
+        cameras: room_cameras,
     };
-
-    let mut ingest_tokens = HashMap::new();
-    for camera in &cameras {
-        let token = mint_token(
-            &state.settings.jwt_secret,
-            &state.settings.jwt_issuer,
-            camera,
-            TokenRole::Publisher,
-            Some(&room_id),
-            Some(camera),
-            &[],
-            state.settings.ingest_token_ttl_secs,
-        )?;
-        ingest_tokens.insert(camera.clone(), token);
-    }
 
     let viewer_token = mint_token(
         &state.settings.jwt_secret,

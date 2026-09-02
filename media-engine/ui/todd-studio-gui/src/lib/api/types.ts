@@ -10,6 +10,12 @@ export interface CameraInfo {
   kind: CameraSourceKind;
   group?: string | null;
   active: boolean;
+  /// Publisher ingest token (WHIP cameras, director-only responses).
+  ingest_token?: string | null;
+  /// Unix ms the ingest token was minted.
+  ingest_token_issued_at_ms?: number | null;
+  /// Unix ms the ingest token expires.
+  ingest_token_expires_at_ms?: number | null;
 }
 
 /// Camera metadata supplied when creating or adding a camera.

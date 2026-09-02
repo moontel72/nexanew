@@ -44,6 +44,16 @@ function kindBadge(kind: CameraSourceKind): string {
   return KIND_BADGE[kind] ?? KIND_BADGE.whip;
 }
 
+/// Reconstructs the one-paste WHIP ingest URL for a camera whose token is
+/// persisted on the server record (survives page refresh / re-login).
+const whipUrlFor = (room: Room, camera: CameraInfo) =>
+  `${window.location.origin}/api/v1/whip/ingest/${room.id}/${camera.id}` +
+  `?token=${encodeURIComponent(camera.ingest_token ?? "")}`;
+
+/// Local clock time (HH:MM) for token issued/expiry display.
+const formatClock = (ms: number) =>
+  new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
 /**
  * "Hand this to the camera operator" card. The primary copy target is a
  * single WHIP URL that already carries `?token=…`, so the operator pastes
@@ -538,6 +548,35 @@ export function InputPanel() {
                           >
                             Remove
                           </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {camera.kind === "whip" && camera.ingest_token && (
+                      <div className="flex flex-col gap-1 rounded border border-border/60 bg-muted/30 p-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            WHIP ingest URL
+                          </span>
+                          <Button
+                            variant="outline"
+                            className="px-2 py-0.5 text-[10px]"
+                            onClick={() => void copy(whipUrlFor(room, camera))}
+                          >
+                            Copy
+                          </Button>
+                        </div>
+                        <div className="break-all font-mono text-[10px] text-muted-foreground">
+                          {whipUrlFor(room, camera)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {camera.ingest_token_issued_at_ms != null &&
+                            `Issued ${formatClock(camera.ingest_token_issued_at_ms)}`}
+                          {camera.ingest_token_issued_at_ms != null &&
+                            camera.ingest_token_expires_at_ms != null &&
+                            " · "}
+                          {camera.ingest_token_expires_at_ms != null &&
+                            `Expires ${formatClock(camera.ingest_token_expires_at_ms)}`}
                         </div>
                       </div>
                     )}

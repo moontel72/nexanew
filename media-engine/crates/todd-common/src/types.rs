@@ -68,6 +68,9 @@ impl CameraSpec {
                 .map(|url| url.trim().to_string())
                 .filter(|url| !url.is_empty()),
             active: false,
+            ingest_token: None,
+            ingest_token_issued_at_ms: None,
+            ingest_token_expires_at_ms: None,
         }
     }
 }
@@ -113,6 +116,17 @@ pub struct CameraInfo {
     /// Populated from live session state when rooms are read.
     #[serde(default)]
     pub active: bool,
+    /// Publisher ingest token minted for this camera. Persisted so the
+    /// director UI can re-display the WHIP URL after a page refresh.
+    /// Redacted from responses to non-director (viewer) tokens.
+    #[serde(default)]
+    pub ingest_token: Option<String>,
+    /// Unix ms when `ingest_token` was minted (director UI expiry display).
+    #[serde(default)]
+    pub ingest_token_issued_at_ms: Option<i64>,
+    /// Unix ms when `ingest_token` expires (`ingest_token_ttl_secs` at mint).
+    #[serde(default)]
+    pub ingest_token_expires_at_ms: Option<i64>,
 }
 
 /// Partial camera metadata update. Every field is optional: omitted

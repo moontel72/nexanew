@@ -44,6 +44,21 @@ fn validate_camera_id(id: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Persists a freshly minted ingest token (plus issued/expiry timestamps)
+/// onto a camera record so the director UI can re-display the WHIP URL
+/// after a page refresh. Only WHIP cameras carry an ingest URL.
+fn stamp_ingest_token(state: &AppState, camera: &mut CameraInfo, token: &str) {
+    use todd_common::types::CameraSourceKind;
+    if camera.kind != CameraSourceKind::Whip {
+        return;
+    }
+    let issued_ms = chrono::Utc::now().timestamp_millis();
+    camera.ingest_token = Some(token.to_string());
+    camera.ingest_token_issued_at_ms = Some(issued_ms);
+    camera.ingest_token_expires_at_ms =
+        Some(issued_ms + state.settings.ingest_token_ttl_secs as i64 * 1000);
+}
+
 /// RTSP/RTMP cameras are pulled by the engine — they must carry a source
 /// URL. WHIP cameras ingest over HTTP and need none.
 fn validate_camera_source(camera: &CameraInfo) -> Result<(), AppError> {
@@ -193,6 +208,16 @@ pub async fn get_room(
             .iter()
             .any(|(_, session_camera)| session_camera == &camera.id);
     }
+
+    // Publisher tokens are director-only material: a viewer-scoped token
+    // may read the room JSON but must never see the ingest JWTs.
+    if claims.role != TokenRole::Admin {
+        for camera in &mut room.cameras {
+            camera.ingest_token = None;
+            camera.ingest_token_issued_at_ms = None;
+            camera.ingest_token_expires_at_ms = None;
+        }
+    }
     Ok(Json(room))
 }
 
@@ -233,7 +258,7 @@ pub async fn add_camera(
     claims.require_perm("studio_director")?;
 
     validate_camera_id(&spec.id)?;
-    let camera = spec.into_info();
+    let mut camera = spec.into_info();
     validate_camera_source(&camera)?;
 
     let Some(room) = state.store.get_room(&room_id).await? else {
@@ -247,6 +272,7 @@ pub async fn add_camera(
     }
 
     let ingest_token = mint_camera_ingest_token(&state, &room_id, &camera.id)?;
+    stamp_ingest_token(&state, &mut camera, &ingest_token);
     let whip_base_url = format!(
         "{}/api/v1/whip/ingest/{}",
         state.settings.public_base_url.trim_end_matches('/'),
@@ -297,22 +323,38 @@ pub async fn rotate_camera_token(
     let Some(room) = state.store.get_room(&room_id).await? else {
         return Err(AppError::NotFound(format!("room {room_id}")));
     };
-    let Some(camera) = room.cameras.iter().find(|camera| camera.id == camera_id) else {
-        return Err(AppError::NotFound(format!(
-            "camera {camera_id} is not part of room {room_id}"
-        )));
-    };
 
     let ingest_token = mint_camera_ingest_token(&state, &room_id, &camera_id)?;
+    let mut camera = room
+        .cameras
+        .iter()
+        .find(|camera| camera.id == camera_id)
+        .cloned()
+        .ok_or_else(|| AppError::NotFound(format!(
+            "camera {camera_id} is not part of room {room_id}"
+        )))?;
+    stamp_ingest_token(&state, &mut camera, &ingest_token);
     let whip_base_url = format!(
         "{}/api/v1/whip/ingest/{}",
         state.settings.public_base_url.trim_end_matches('/'),
         room_id
     );
 
+    // Preserve the room's remaining lifetime on the write.
+    let ttl = room
+        .expires_at
+        .signed_duration_since(chrono::Utc::now())
+        .num_seconds()
+        .max(1) as u64;
+    state.store.upsert_camera(&room_id, &camera, ttl).await?;
+
     tracing::info!(room = %room_id, camera = %camera_id, "camera ingest token rotated");
-    Ok(Json(AddCameraResponse {
+    state.control.publish(ControlEvent::CameraUpdated {
+        room_id: room_id.clone(),
         camera: camera.clone(),
+    });
+    Ok(Json(AddCameraResponse {
+        camera,
         ingest_token,
         whip_base_url,
     }))

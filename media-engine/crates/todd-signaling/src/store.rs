@@ -518,6 +518,9 @@ mod tests {
                 group: None,
                 url: None,
                 active: false,
+                ingest_token: None,
+                ingest_token_issued_at_ms: None,
+                ingest_token_expires_at_ms: None,
             }],
         }
     }
@@ -530,6 +533,9 @@ mod tests {
             group: Some("ground".to_string()),
             url: None,
             active: false,
+            ingest_token: None,
+            ingest_token_issued_at_ms: None,
+            ingest_token_expires_at_ms: None,
         }
     }
 
