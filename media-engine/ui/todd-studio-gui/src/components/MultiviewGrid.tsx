@@ -20,18 +20,22 @@ export function MultiviewGrid({ feeds }: MultiviewGridProps) {
   const telemetry = useTelemetry();
 
   // Liveness comes from the engine's telemetry feed. Primary signal: RTP
-  // ingress — a camera whose packets_in is growing is genuinely sending
-  // media (tracks registered, codec known), so a WHEP watch is guaranteed
-  // to work. The WHIP ICE sessions are a secondary signal covering the
-  // window between track registration and the first RTP sample. Tiles
-  // only start their WHEP watch for live cameras, so reconnect churn
-  // (WHIP takeover) never produces 409 polling — the tile simply waits
-  // until the camera is back. Before the first snapshot arrives
-  // (`telemetry` null) we treat every camera as live to keep the old
-  // blind-watch behaviour as a fallback.
+  // ingress — a camera whose rolling bitrate is above ~1 kbps is genuinely
+  // sending media right now (tracks registered, codec known), so a WHEP
+  // watch is guaranteed to work. `ingress_bps` decays to zero a couple of
+  // seconds after media stops; the lifetime `packets_in` counter must NOT
+  // be used here — it never resets, so a stopped camera stayed "live"
+  // forever (tile stuck on "…" with 409 polling instead of showing OFF).
+  // The WHIP ICE sessions are a secondary signal covering the window
+  // between track registration and the first RTP sample. Tiles only start
+  // their WHEP watch for live cameras, so reconnect churn (WHIP takeover)
+  // never produces 409 polling — the tile simply waits until the camera
+  // is back. Before the first snapshot arrives (`telemetry` null) we treat
+  // every camera as live to keep the old blind-watch behaviour as a
+  // fallback.
   const liveKeys = new Set<string>();
   for (const stream of telemetry?.streams ?? []) {
-    if (stream.packets_in > 0) {
+    if (stream.ingress_bps > 1000) {
       liveKeys.add(`${stream.room_id}/${stream.camera_id}`);
     }
   }
