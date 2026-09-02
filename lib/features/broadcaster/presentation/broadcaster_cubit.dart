@@ -433,6 +433,16 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
         s.phase == BroadcasterPhase.reconnecting;
     if (!streaming || s.config == null) return;
 
+    // A healthy Connected session must NOT be reopened on resume:
+    // tearing it down here kills a working video track (20-30s encoder
+    // restart, which the Studio sees as 409 churn) on every tab switch.
+    // Only restart when the peer actually dropped.
+    final pcState = _pc?.connectionState;
+    if (pcState ==
+        RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+      return;
+    }
+
     // Backgrounded browsers pause video encode while audio continues:
     // reopen the camera + WHIP session so a fresh IDR flows immediately.
     await _restartCapture(emit);

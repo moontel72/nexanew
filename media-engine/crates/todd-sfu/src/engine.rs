@@ -542,7 +542,7 @@ impl Engine {
                     );
                     return Err(AppError::Conflict(format!(
                         "camera {camera_id} is not live in room {room_id}"
-                    )))
+                    )));
                 }
             },
         };
@@ -1472,7 +1472,14 @@ impl Engine {
                     let _ = engine.stop_viewer_session(&id).await;
                 }
             } else {
-                tracing::info!(state = ?state, "peer connection recovered after Disconnected");
+                match state {
+                    RTCPeerConnectionState::Closed => {
+                        tracing::info!("peer connection already closed after Disconnected grace");
+                    }
+                    _ => {
+                        tracing::info!(state = ?state, "peer connection recovered after Disconnected");
+                    }
+                }
             }
         });
     }
