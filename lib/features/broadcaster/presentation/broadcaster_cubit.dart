@@ -503,12 +503,15 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
             unawaited(pc.restartIce().catchError((Object _) {}));
           }
           _iceRecoveryTimer?.cancel();
-          // Wait LONGER than the engine's 30s disconnected-grace. A
-          // throttled background tab that regains focus (the operator
-          // picking the phone back up) recovers its ICE and the session
-          // survives — a full reopen costs 40-50s of video encoder
+          // Wait the engine's full disconnected grace (5 min) before
+          // giving up on the session. A throttled background tab that
+          // regains focus (the operator picking the phone back up)
+          // recovers its ICE and the session survives — a full reopen
+          // costs 40-50s (or minutes on slow encoders) of video encoder
           // startup, which is exactly the 409 churn the Studio sees.
-          _iceRecoveryTimer = Timer(const Duration(seconds: 45), () {
+          // Tearing down at 45s while the engine waits 300s guarantees
+          // the video track never survives its warmup on slow phones.
+          _iceRecoveryTimer = Timer(const Duration(seconds: 300), () {
             final stillGone =
                 _pc?.connectionState !=
                 RTCPeerConnectionState.RTCPeerConnectionStateConnected;
@@ -536,6 +539,12 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     if (config == null || _client == null || _telemetry == null) {
       return const _OpenFailed('Missing connection configuration.');
     }
+
+    // A stale ICE-recovery timer from a previous session must never fire
+    // into this fresh negotiation (it would tear down a healthy new
+    // session 45s after connect).
+    _iceRecoveryTimer?.cancel();
+    _iceRecoveryTimer = null;
 
     // Drop the previous session (if any) before opening a fresh one.
     await _session?.close();

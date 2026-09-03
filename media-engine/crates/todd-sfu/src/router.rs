@@ -184,12 +184,20 @@ impl TrackRouter {
     /// every delivered or dropped packet is recorded in telemetry.
     pub fn forward(&self, room_id: &str, camera_id: &str, chunk: &RtpChunk) {
         let rid = chunk.rid.as_deref().unwrap_or("");
-        let Some(senders) =
-            self.subscribers
-                .get(&(room_id.to_string(), camera_id.to_string(), rid.to_string()))
-        else {
+        let Some(mut senders) = self.subscribers.get_mut(&(
+            room_id.to_string(),
+            camera_id.to_string(),
+            rid.to_string(),
+        )) else {
             return;
         };
+
+        // Prune closed subscriber channels in place: viewer pumps exit
+        // without unsubscribing, so the Vec would otherwise grow without
+        // bound over a long match. `is_closed` is a cheap atomic read, so
+        // the retain costs one pass per forward and fan-out stays O(open
+        // subscribers).
+        senders.retain(|s| !s.is_closed());
 
         let mut delivered = 0usize;
         for sender in senders.iter() {
@@ -276,6 +284,19 @@ impl TrackRouter {
                     && !entry.value().is_audio()
             })
             .map(|entry| entry.key().3)
+    }
+
+    /// All registered publisher SSRCs of a camera (audio + video, every
+    /// layer). The WHIP RTCP pump uses this to scope its PLI drain to its
+    /// own session's tracks.
+    pub fn all_ssrcs(&self, room_id: &str, camera_id: &str) -> Vec<u32> {
+        self.streams
+            .iter()
+            .filter(|entry| {
+                entry.key().0.as_str() == room_id && entry.key().1.as_str() == camera_id
+            })
+            .map(|entry| entry.key().3)
+            .collect()
     }
 
     /// All live audio tracks of a camera as `(rid, ssrc, codec)` —

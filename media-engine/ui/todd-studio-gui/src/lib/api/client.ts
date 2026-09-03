@@ -358,7 +358,9 @@ export function whepWatchUrl(
   cameraId: string,
   rid?: string,
 ): string {
-  const base = `${env.whepBaseUrl}/api/v1/whep/watch/${roomId}/${cameraId}`;
+  // Room/camera IDs are operator-chosen free text — encode them so a
+  // space or special character can never break the URL.
+  const base = `${env.whepBaseUrl}/api/v1/whep/watch/${encodeURIComponent(roomId)}/${encodeURIComponent(cameraId)}`;
   return rid ? `${base}?rid=${encodeURIComponent(rid)}` : base;
 }
 

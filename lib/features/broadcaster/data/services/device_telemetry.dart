@@ -50,6 +50,7 @@ class DeviceTelemetry {
 
   WsSocket? _channel;
   Timer? _timer;
+  Timer? _connectRetry;
   int _generation = 0;
   final Battery _battery = Battery();
   int _lastBytesSent = 0;
@@ -89,8 +90,16 @@ class DeviceTelemetry {
         unawaited(socket.close());
       }
     } catch (_) {
-      // Engine unreachable — next start() reopens the socket.
+      if (generation != _generation) return;
+      // Engine briefly unreachable — retry instead of leaving telemetry
+      // dark for the rest of the session.
       _channel = null;
+      _connectRetry?.cancel();
+      _connectRetry = Timer(const Duration(seconds: 5), () {
+        if (generation == _generation && _channel == null) {
+          unawaited(_connect(generation));
+        }
+      });
     }
   }
 
@@ -179,6 +188,8 @@ class DeviceTelemetry {
     _generation++;
     _timer?.cancel();
     _timer = null;
+    _connectRetry?.cancel();
+    _connectRetry = null;
     final channel = _channel;
     _channel = null;
     if (channel != null) {

@@ -279,6 +279,11 @@ impl Engine {
 
         let session_id = Uuid::new_v4().to_string();
 
+        // Publisher's offer-declared video SSRC: targets the early
+        // keyframe nudge before the video track registers, and scopes the
+        // RTCP pump's PLI drain below.
+        let offer_video_ssrc = whip_peer::first_video_ssrc(offer_sdp);
+
         // RTCP pump: the PLI broker queues keyframe requests, but nothing
         // would ever transmit them — webrtc-rs only sends RTCP when the
         // app calls `write_rtcp`. Without this loop the publisher never
@@ -289,6 +294,9 @@ impl Engine {
             let pump_pc = pc.clone();
             let pump_shutdown = shutdown.clone();
             let broker = self.pli.clone();
+            let pump_router = self.router.clone();
+            let pump_room = room_id.to_string();
+            let pump_camera = camera_id.to_string();
             tokio::spawn(async move {
                 let mut interval = tokio::time::interval(Duration::from_millis(500));
                 interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -296,7 +304,16 @@ impl Engine {
                     tokio::select! {
                         _ = pump_shutdown.cancelled() => break,
                         _ = interval.tick() => {
-                            let plis = broker.take_pending();
+                            // Drain only THIS session's pending PLIs: the
+                            // broker is shared across publishers, and a
+                            // PLI must travel through the PC that owns
+                            // its SSRC. Scope = registered tracks plus the
+                            // offer-declared video SSRC (early watchdog).
+                            let mut ssrcs = pump_router.all_ssrcs(&pump_room, &pump_camera);
+                            if let Some(v) = offer_video_ssrc {
+                                ssrcs.push(v);
+                            }
+                            let plis = broker.take_pending_for(&ssrcs);
                             if plis.is_empty() {
                                 continue;
                             }
@@ -358,7 +375,7 @@ impl Engine {
         // already declared in the offer, so PLI it directly — libwebrtc
         // answers with an IDR and starts the video pipeline. This closes
         // the "audio egress flows, tile 409s forever" failure mode.
-        if let Some(video_ssrc) = whip_peer::first_video_ssrc(offer_sdp) {
+        if let Some(video_ssrc) = offer_video_ssrc {
             let engine = self.clone();
             let room = room_id.to_string();
             let camera = camera_id.to_string();
@@ -369,7 +386,11 @@ impl Engine {
                     if !engine.sessions.contains_key(&sid) {
                         break;
                     }
-                    if engine.router.video_codec_of(&room, &camera, "").is_some() {
+                    // Simulcast publishers register video under layer
+                    // RIDs ("low"/"mid"/"high"), never under "" — the
+                    // exact-rid check missed them and kept PLIing a
+                    // healthy stream. Any live video layer counts.
+                    if engine.router.lowest_video_rid(&room, &camera).is_some() {
                         break;
                     }
                     tracing::warn!(

@@ -250,6 +250,15 @@ class ApiClient {
     return _client.post(Uri.parse(url), headers: headers, body: body);
   }
 
+  /// Raw DELETE with no auth injection — used by the broadcaster's WHIP
+  /// client to close its ingest session (best-effort teardown).
+  Future<http.Response> deleteRaw(
+    String url, {
+    Map<String, String>? headers,
+  }) {
+    return _client.delete(Uri.parse(url), headers: headers);
+  }
+
   // Make PUT request
   Future<dynamic> put(
     String endpoint, {

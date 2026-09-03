@@ -373,13 +373,32 @@ pub(crate) async fn create_viewer(
     })
 }
 
-/// Extracts the first `a=ssrc:<n>` value from an SDP description.
+/// Extracts the first `a=ssrc:<n>` value from the **video** m-section of
+/// an SDP description. Browsers list `m=audio` first in WHEP offers, so a
+/// section-blind scan would register the audio SSRC in the PLI broker's
+/// viewer map and every browser video PLI would be silently dropped —
+/// viewers then wait for natural IDRs instead of getting keyframes on
+/// demand.
 fn first_ssrc_in_sdp(sdp: &str) -> Option<u32> {
-    sdp.lines()
-        .map(str::trim)
-        .find_map(|line| line.strip_prefix("a=ssrc:"))
-        .and_then(|rest| rest.split_whitespace().next())
-        .and_then(|digits| digits.parse().ok())
+    let mut in_video = false;
+    for line in sdp.lines() {
+        let line = line.trim();
+        if line.starts_with("m=") {
+            in_video = line.starts_with("m=video");
+            continue;
+        }
+        if !in_video {
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("a=ssrc:") {
+            if let Some(digits) = rest.split_whitespace().next() {
+                if let Ok(ssrc) = digits.parse::<u32>() {
+                    return Some(ssrc);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Streams a live camera's RTP chunks of one layer into one viewer track.
@@ -574,6 +593,12 @@ mod tests {
     #[test]
     fn extracts_first_ssrc_from_sdp() {
         let sdp = "v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=ssrc:123456 cname:todd\r\na=ssrc:123456 msid:todd cam\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:789012 cname:todd\r\n";
+        assert_eq!(first_ssrc_in_sdp(sdp), Some(123456));
+    }
+
+    #[test]
+    fn skips_audio_ssrc_when_audio_section_comes_first() {
+        let sdp = "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:789012 cname:todd\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=ssrc:123456 cname:todd\r\n";
         assert_eq!(first_ssrc_in_sdp(sdp), Some(123456));
     }
 

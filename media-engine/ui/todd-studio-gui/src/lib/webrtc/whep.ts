@@ -116,6 +116,11 @@ export async function startWhepWatch(opts: {
     pc.close();
     throw new WhepWatchError(`WHEP watch failed (${res.status})`, res.status);
   }
+  // The engine returns the viewer session URL in `Location` — closing it
+  // on teardown frees the engine slot immediately instead of leaving the
+  // viewer session to its disconnected grace (which multiplied stale
+  // sessions on every black-frame watchdog restart).
+  const sessionUrl = res.headers.get("location");
   const answerSdp = await res.text();
   await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
   await opts.videoEl.play().catch(() => undefined);
@@ -125,6 +130,12 @@ export async function startWhepWatch(opts: {
     close() {
       pc.close();
       opts.videoEl.srcObject = null;
+      if (sessionUrl) {
+        fetch(sessionUrl, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => undefined);
+      }
     },
   };
 }

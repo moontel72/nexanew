@@ -40,10 +40,10 @@ export function MultiviewGrid({ feeds }: MultiviewGridProps) {
     }
   }
   for (const session of telemetry?.ice_sessions ?? []) {
-    if (
-      session.kind === "whip" &&
-      (session.state === "connected" || session.state === "connecting")
-    ) {
+    // Only fully "connected" WHIP sessions count. "connecting" means the
+    // offer was accepted but no media path exists yet — starting WHEP on
+    // it produces the exact 409 churn the engine logs (camera not live).
+    if (session.kind === "whip" && session.state === "connected") {
       liveKeys.add(`${session.room_id}/${session.camera_id}`);
     }
   }

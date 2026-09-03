@@ -38,12 +38,42 @@ class WhipUrlParts {
 
 /// A live WHIP ingest session: PeerConnection + captured MediaStream.
 class WhipSession {
-  WhipSession({required this.pc, required this.stream});
+  WhipSession({
+    required this.pc,
+    required this.stream,
+    this.resourceUrl,
+    this.token,
+  });
 
   final RTCPeerConnection pc;
   final MediaStream stream;
 
+  /// Session resource from the 201 response's `Location` header. Sending
+  /// `DELETE` on it frees the engine slot immediately — without it the
+  /// engine keeps the old session for its full disconnected grace (up to
+  /// 5 min) and a quick re-publish restarts on a stale camera state.
+  final String? resourceUrl;
+  final String? token;
+
   Future<void> close() async {
+    final location = resourceUrl;
+    if (location != null && location.isNotEmpty) {
+      // Best-effort, idempotent: the engine may already have pruned the
+      // session. Never let a DELETE failure block the local teardown.
+      try {
+        await ApiClient()
+            .deleteRaw(
+              location,
+              headers: <String, String>{
+                if (token != null && token!.isNotEmpty)
+                  'Authorization': 'Bearer $token',
+              },
+            )
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {
+        // Ignore — session teardown proceeds regardless.
+      }
+    }
     try {
       await pc.close();
     } catch (_) {
@@ -183,6 +213,8 @@ class WhipClient {
         'token is scoped to a different room/camera — use the exact URL the Studio generated',
       404 =>
         'room or camera not found — verify the WHIP URL; rooms are cleared when the engine restarts',
+      409 =>
+        'the engine still has a live session for this camera — retry; it is replaced automatically',
       429 => 'too many attempts — wait a moment and retry',
       _ => 'check the engine base URL and that the engine is reachable',
     };
@@ -280,7 +312,12 @@ class WhipClient {
     await pc.setRemoteDescription(
       RTCSessionDescription(response.body, 'answer'),
     );
-    return WhipSession(pc: pc, stream: stream);
+    return WhipSession(
+      pc: pc,
+      stream: stream,
+      resourceUrl: response.headers['location'],
+      token: token,
+    );
   }
 
   /// Polls until ICE gathering completes (bounded by

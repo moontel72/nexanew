@@ -407,6 +407,12 @@ async fn pump_track(
         "track up"
     );
 
+    // Transient marshal failures must NOT kill the pump: a single
+    // malformed RTP packet would unregister the sole video track and
+    // every WHEP viewer reverts to 409. Tolerate isolated errors; only a
+    // sustained run of them means the track itself is broken.
+    let mut marshal_failures = 0u32;
+
     loop {
         tokio::select! {
             _ = shutdown.cancelled() => break,
@@ -415,6 +421,7 @@ async fn pump_track(
                     let rtp_timestamp = packet.header.timestamp;
                     match packet.marshal() {
                         Ok(bytes) => {
+                            marshal_failures = 0;
                             router.record_ingress(
                                 room_id,
                                 camera_id,
@@ -436,8 +443,12 @@ async fn pump_track(
                             );
                         }
                         Err(e) => {
-                            tracing::warn!(room = room_id, camera = camera_id, error = %e, "rtp marshal failed");
-                            break;
+                            marshal_failures += 1;
+                            tracing::warn!(room = room_id, camera = camera_id, error = %e, consecutive = marshal_failures, "rtp marshal failed");
+                            if marshal_failures >= 50 {
+                                break;
+                            }
+                            continue;
                         }
                     }
                 }

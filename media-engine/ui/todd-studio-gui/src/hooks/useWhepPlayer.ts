@@ -20,7 +20,10 @@ export interface WhepPlayerState {
  * transient engine/network errors). The tile stays in the "waiting" state
  * and connects automatically the moment the camera starts ingesting. */
 const RETRY_BASE_MS = 2000;
-const RETRY_MAX_MS = 15000;
+// Cap at 8s: a longer backoff delays the first successful watch by up to
+// 15s after the camera's video finally starts (the 409 "not live" window
+// is exactly when attempts are at their max).
+const RETRY_MAX_MS = 8000;
 
 /**
  * Backoff for retryable failures. 409 = "camera not live yet" is the
@@ -35,8 +38,10 @@ function nextRetryDelay(attempts: number): number {
 
 /** When a session is up but no frame has been decoded for this long, the
  * hook force-restarts the watch (fresh WHEP POST → fresh keyframe PLI
- * from the SFU). Heals the "LIVE badge but black tile" state. */
-const BLACK_FRAME_RESTART_MS = 4000;
+ * from the SFU). Heals the "LIVE badge but black tile" state. 10s: a slow
+ * encoder's keyframe can take several seconds after the PLI, and a 4s
+ * watchdog kept bouncing sessions before the IDR ever arrived. */
+const BLACK_FRAME_RESTART_MS = 10000;
 
 /**
  * Manages one WHEP viewer stream bound to a <video> element.

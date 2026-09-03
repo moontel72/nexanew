@@ -20,7 +20,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use webrtc::interceptor::stream_info::StreamInfo;
 use webrtc::interceptor::{
     Attributes, Interceptor, InterceptorBuilder, RTCPReader, RTCPReaderFn, RTCPWriter,
@@ -62,20 +62,28 @@ impl PliBroker {
         self.viewer_map.remove(&viewer_ssrc);
     }
 
-    /// Drains pending requests into PLI packets (writer side).
+    /// Drains pending requests into PLI packets (writer side), limited to
+    /// the given publisher SSRCs.
     ///
-    /// `sender_ssrc` mirrors `media_ssrc`: libwebrtc ignores the sender
-    /// SSRC for PLI routing but rejects PLIs whose sender SSRC is 0, and
-    /// the SFU has no outbound SSRC on the publisher leg to use instead.
-    pub fn take_pending(&self) -> Vec<Box<dyn webrtc::rtcp::packet::Packet + Send + Sync>> {
+    /// The broker is shared across every WHIP peer connection, but a PLI
+    /// can only travel through the PC that owns its SSRC — draining the
+    /// whole map from any one pump steals other cameras' keyframe
+    /// requests and sends them down the wrong pipe. Each pump therefore
+    /// passes the SSRC set it owns (its session's tracks). Drained
+    /// entries are removed so dead sessions cannot leak state.
+    pub fn take_pending_for(
+        &self,
+        ssrcs: &[u32],
+    ) -> Vec<Box<dyn webrtc::rtcp::packet::Packet + Send + Sync>> {
         let mut out = Vec::new();
-        for entry in self.pending.iter() {
-            let ssrc = *entry.key();
-            let count = entry.value().swap(0, Ordering::Relaxed);
-            if count > 0 {
+        for ssrc in ssrcs {
+            let Some(entry) = self.pending.remove(ssrc) else {
+                continue;
+            };
+            if entry.1.load(Ordering::Relaxed) > 0 {
                 out.push(Box::new(PictureLossIndication {
-                    sender_ssrc: ssrc,
-                    media_ssrc: ssrc,
+                    sender_ssrc: *ssrc,
+                    media_ssrc: *ssrc,
                 })
                     as Box<dyn webrtc::rtcp::packet::Packet + Send + Sync>);
             }
@@ -99,6 +107,10 @@ impl PliBroker {
 /// Installed on the WHIP API: injects pending PLIs into outbound RTCP.
 pub struct PliWriterInterceptor {
     broker: Arc<PliBroker>,
+    /// Publisher SSRCs bound to this interceptor's peer connection,
+    /// collected from `bind_remote_stream` — used to scope the drain to
+    /// this PC's own tracks only.
+    ssrcs: Arc<DashSet<u32>>,
 }
 
 /// Installed on the WHEP API: observes inbound RTCP for PLIs.
@@ -137,6 +149,7 @@ impl InterceptorBuilder for PliWriterBuilder {
     ) -> std::result::Result<Arc<dyn Interceptor + Send + Sync>, webrtc::interceptor::Error> {
         Ok(Arc::new(PliWriterInterceptor {
             broker: Arc::clone(&self.broker),
+            ssrcs: Arc::new(DashSet::new()),
         }))
     }
 }
@@ -159,11 +172,13 @@ impl Interceptor for PliWriterInterceptor {
         writer: Arc<dyn RTCPWriter + Send + Sync>,
     ) -> Arc<dyn RTCPWriter + Send + Sync> {
         let broker = Arc::clone(&self.broker);
+        let ssrcs = Arc::clone(&self.ssrcs);
         Arc::new(RTCPWriterFn(Box::new(
             move |pkts: &[Box<dyn webrtc::rtcp::packet::Packet + Send + Sync>],
                   attributes: &Attributes| {
                 let writer = Arc::clone(&writer);
                 let broker = Arc::clone(&broker);
+                let ssrcs = Arc::clone(&ssrcs);
                 // The wrapper future must be `Send + Sync`; the inner
                 // writer's future is only `Send`, so run it as an owned
                 // spawned task and await the JoinHandle (which is Sync).
@@ -174,8 +189,9 @@ impl Interceptor for PliWriterInterceptor {
                     let handle = tokio::spawn(async move {
                         // Forward the original batch first.
                         let n = writer.write(&owned_pkts, &owned_attrs).await?;
-                        // Then inject any pending keyframe requests.
-                        let plis = broker.take_pending();
+                        // Then inject this PC's pending keyframe requests.
+                        let own: Vec<u32> = ssrcs.iter().map(|e| *e.key()).collect();
+                        let plis = broker.take_pending_for(&own);
                         if !plis.is_empty() {
                             let _ = writer.write(&plis, &owned_attrs).await;
                         }
@@ -208,13 +224,18 @@ impl Interceptor for PliWriterInterceptor {
 
     async fn bind_remote_stream(
         &self,
-        _info: &StreamInfo,
+        info: &StreamInfo,
         reader: Arc<dyn RTPReader + Send + Sync>,
     ) -> Arc<dyn RTPReader + Send + Sync> {
+        // Publisher tracks bound to this PC: the SSRC set that scopes the
+        // PLI drain in the RTCP writer hook above.
+        self.ssrcs.insert(info.ssrc);
         reader
     }
 
-    async fn unbind_remote_stream(&self, _info: &StreamInfo) {}
+    async fn unbind_remote_stream(&self, info: &StreamInfo) {
+        self.ssrcs.remove(&info.ssrc);
+    }
 
     async fn close(&self) -> std::result::Result<(), webrtc::interceptor::Error> {
         Ok(())
