@@ -56,11 +56,13 @@ abstract final class BroadcasterConstants {
   /// STUN server gives the phone a server-reflexive (srflx) candidate.
   static const String defaultStunUrl = 'stun:stun.l.google.com:19302';
 
-  /// Default capture frame rate.
-  static const int defaultFps = 30;
+  /// Default capture frame rate. 25fps (PAL broadcast standard): ~20%
+  /// less uplink than 30fps and the video encoder reaches its first
+  /// keyframe faster on mid-range phones — the tile goes live sooner.
+  static const int defaultFps = 25;
 
   /// Frame rates offered in the control UI.
-  static const List<int> fpsOptions = <int>[30, 60];
+  static const List<int> fpsOptions = <int>[25, 30, 60];
 
   /// Engine base URL shown as the connection form's hint.
   static const String engineUrlHint = 'https://studio.traceodd.com';
@@ -70,13 +72,15 @@ abstract final class BroadcasterConstants {
   static const Duration rendererDisposeDelay = Duration(seconds: 1);
 }
 
-/// Default profile (720p) used by the initial state and config form.
-const CameraProfile kDefaultCameraProfile = CameraProfile('720p', 1280, 720, 2500);
+/// Default profile (480p): a stable size for mobile uplinks and a fast
+/// encoder start — the 720p default kept re-warming a slow encoder on
+/// every session restart.
+const CameraProfile kDefaultCameraProfile = CameraProfile('480p', 854, 480, 800);
 
 /// Profiles offered in the control UI (lowest first).
 const List<CameraProfile> kCameraProfiles = <CameraProfile>[
   CameraProfile('360p', 640, 360, 500),
-  CameraProfile('480p', 854, 480, 800),
   kDefaultCameraProfile,
+  CameraProfile('720p', 1280, 720, 2500),
   CameraProfile('1080p', 1920, 1080, 4500),
 ];

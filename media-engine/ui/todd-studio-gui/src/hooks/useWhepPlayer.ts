@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
 import {
   startWhepWatch,
   isRetryableWatchError,
+  WhepWatchError,
   type WhepSession,
 } from "../lib/webrtc/whep";
 
@@ -133,10 +134,15 @@ export function useWhepPlayer(
         setRendering(false);
         if (isRetryableWatchError(e)) {
           // Camera not live yet (409) or a transient failure — keep the
-          // tile in the "waiting" state and retry with backoff.
+          // tile in the "waiting" state and retry. 409 = video is still
+          // warming up: poll on a short fixed cadence so the first
+          // successful watch lands within ~2s of the video track going
+          // live, instead of sitting out a grown backoff window (which
+          // the old 15s cap stretched into the next session restart).
+          const notLiveYet = e instanceof WhepWatchError && e.status === 409;
           retryTimer = setTimeout(
-            () => void attempt(attempts + 1),
-            nextRetryDelay(attempts),
+            () => void attempt(notLiveYet ? 0 : attempts + 1),
+            notLiveYet ? 2000 : nextRetryDelay(attempts),
           );
         } else {
           setError(e instanceof Error ? e.message : String(e));
