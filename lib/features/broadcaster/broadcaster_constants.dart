@@ -56,13 +56,13 @@ abstract final class BroadcasterConstants {
   /// STUN server gives the phone a server-reflexive (srflx) candidate.
   static const String defaultStunUrl = 'stun:stun.l.google.com:19302';
 
-  /// Default capture frame rate. 25fps (PAL broadcast standard): ~20%
-  /// less uplink than 30fps and the video encoder reaches its first
-  /// keyframe faster on mid-range phones — the tile goes live sooner.
-  static const int defaultFps = 25;
+  /// Default capture frame rate. 30fps: several Android camera HALs
+  /// expose only 15/30/60 modes — a 25fps ideal made some devices pick a
+  /// mode that never produced frames (audio-only broadcast).
+  static const int defaultFps = 30;
 
   /// Frame rates offered in the control UI.
-  static const List<int> fpsOptions = <int>[25, 30, 60];
+  static const List<int> fpsOptions = <int>[30, 60];
 
   /// Engine base URL shown as the connection form's hint.
   static const String engineUrlHint = 'https://studio.traceodd.com';
