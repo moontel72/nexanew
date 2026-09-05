@@ -19,32 +19,18 @@ export function MultiviewGrid({ feeds }: MultiviewGridProps) {
   const { state, preview } = useDirector();
   const telemetry = useTelemetry();
 
-  // Liveness comes from the engine's telemetry feed. Primary signal: RTP
-  // ingress — a camera whose rolling bitrate is above ~1 kbps is genuinely
-  // sending media right now (tracks registered, codec known), so a WHEP
-  // watch is guaranteed to work. `ingress_bps` decays to zero a couple of
-  // seconds after media stops; the lifetime `packets_in` counter must NOT
-  // be used here — it never resets, so a stopped camera stayed "live"
-  // forever (tile stuck on "…" with 409 polling instead of showing OFF).
-  // The WHIP ICE sessions are a secondary signal covering the window
-  // between track registration and the first RTP sample. Tiles only start
-  // their WHEP watch for live cameras, so reconnect churn (WHIP takeover)
-  // never produces 409 polling — the tile simply waits until the camera
-  // is back. Before the first snapshot arrives (`telemetry` null) we treat
-  // every camera as live to keep the old blind-watch behaviour as a
-  // fallback.
+  // Liveness comes from the engine's telemetry feed. ONLY video bytes
+  // count: a camera whose video RTP is above ~1 kbps is genuinely sending
+  // picture right now, so a WHEP watch will succeed. Audio-only ingress
+  // (Opus, 48 kHz) or a WHIP session that is merely ICE-connected must
+  // NOT start the watch — that produced the 40s-after-broadcast-start
+  // flash: WHEP mounted on audio-only, 409 polling, then a second flash
+  // when the real video track arrived ~2 min later. Now the tile flips
+  // from OFF straight to video exactly once.
   const liveKeys = new Set<string>();
   for (const stream of telemetry?.streams ?? []) {
-    if (stream.ingress_bps > 1000) {
+    if (stream.ingress_bps > 1000 && (stream.clock_rate ?? 48000) >= 90000) {
       liveKeys.add(`${stream.room_id}/${stream.camera_id}`);
-    }
-  }
-  for (const session of telemetry?.ice_sessions ?? []) {
-    // Only fully "connected" WHIP sessions count. "connecting" means the
-    // offer was accepted but no media path exists yet — starting WHEP on
-    // it produces the exact 409 churn the engine logs (camera not live).
-    if (session.kind === "whip" && session.state === "connected") {
-      liveKeys.add(`${session.room_id}/${session.camera_id}`);
     }
   }
   const livenessKnown = telemetry !== null;

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../broadcaster_constants.dart';
 import '../data/services/device_telemetry.dart';
@@ -619,6 +620,11 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
         _reconnectTimer?.cancel();
         _reconnectTimer = null;
         _reconnectAttempt = 0;
+        // Keep the screen awake while broadcasting: Android pauses the
+        // camera the moment the screen locks/backgrounds, so the video
+        // encoder goes silent (audio continues) and the Studio tile 409s
+        // until the operator picks the phone up again.
+        unawaited(WakelockPlus.enable());
         // WHIP 201 only means the engine accepted the offer — media
         // flows only once ICE reaches `connected`. Keep the tile honest:
         // stay in `connecting` until the peer-connection state callback
@@ -713,6 +719,8 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     _iceRecoveryTimer = null;
     _rendererDisposeTimer?.cancel();
     _rendererDisposeTimer = null;
+    // Release the broadcast wake lock — the screen may sleep again.
+    unawaited(WakelockPlus.disable());
     _telemetry?.stop();
     _telemetry = null;
     await _session?.close();

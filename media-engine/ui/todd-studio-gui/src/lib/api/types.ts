@@ -115,6 +115,8 @@ export interface ExportStatus {
 export interface StreamFeedEntry {
   room_id: string;
   camera_id: string;
+  /** RTP clock rate: 48000 = audio, 90000 = video. */
+  clock_rate?: number;
   packets_in: number;
   bytes_in: number;
   packets_dropped: number;

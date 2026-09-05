@@ -87,6 +87,8 @@ pub struct TelemetrySnapshot {
 pub struct StreamFeedEntry {
     pub room_id: String,
     pub camera_id: String,
+    /// RTP clock rate of this feed: 48000 = audio, 90000 = video.
+    pub clock_rate: u32,
     #[serde(flatten)]
     pub stats: StreamSnapshot,
 }
@@ -96,7 +98,7 @@ pub struct StreamFeedEntry {
 #[derive(Clone)]
 pub struct Telemetry {
     pub registry: Arc<Registry>,
-    streams: Arc<DashMap<(String, String), Arc<StreamStats>>>,
+    streams: Arc<DashMap<(String, String, u32), Arc<StreamStats>>>,
     ice: Arc<DashMap<String, IceSessionInfo>>,
     /// (room_id, bus) → (peak_db, rms_db).
     audio_levels: Arc<DashMap<(String, String), (f32, f32)>>,
@@ -127,11 +129,16 @@ impl Telemetry {
         }
     }
 
-    /// Per-camera stream stats, creating the entry on first use. The RTP
+    /// Per-camera, per-codec stream stats (audio 48 kHz and video 90 kHz
+    /// are separate entries), creating the entry on first use. The RTP
     /// clock rate is fixed per stream codec; if the codec is unknown at
     /// first touch, the video-standard 90 kHz is assumed.
     pub fn stream(&self, room_id: &str, camera_id: &str, clock_rate: u32) -> Arc<StreamStats> {
-        let key = (room_id.to_string(), camera_id.to_string());
+        let key = (
+            room_id.to_string(),
+            camera_id.to_string(),
+            clock_rate.max(1),
+        );
         self.streams
             .entry(key.clone())
             .or_insert_with(|| Arc::new(StreamStats::new(clock_rate.max(1))))
@@ -142,7 +149,7 @@ impl Telemetry {
     /// Removes a camera's stream stats (camera torn down).
     pub fn remove_stream(&self, room_id: &str, camera_id: &str) {
         self.streams
-            .remove(&(room_id.to_string(), camera_id.to_string()));
+            .retain(|(r, c, _), _| r != room_id || c != camera_id);
     }
 
     /// Aggregated `(ingress_bps, egress_bps, max_jitter_ms)` across all
@@ -225,10 +232,13 @@ impl Telemetry {
             .map(|entry| StreamFeedEntry {
                 room_id: entry.key().0.clone(),
                 camera_id: entry.key().1.clone(),
+                clock_rate: entry.key().2,
                 stats: entry.value().snapshot(),
             })
             .collect();
-        streams.sort_by(|a, b| (&a.room_id, &a.camera_id).cmp(&(&b.room_id, &b.camera_id)));
+        streams.sort_by(|a, b| {
+            (&a.room_id, &a.camera_id, a.clock_rate).cmp(&(&b.room_id, &b.camera_id, b.clock_rate))
+        });
 
         let mut ice_sessions: Vec<IceSessionInfo> =
             self.ice.iter().map(|entry| entry.value().clone()).collect();

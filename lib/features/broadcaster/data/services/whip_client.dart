@@ -255,6 +255,23 @@ class WhipClient {
     for (final track in stream.getTracks()) {
       await pc.addTrack(track, stream);
     }
+    // Force VP8 first for the video m-line. Several Android devices hang
+    // their hardware H.264 encoder on cold start (MediaCodec never emits
+    // a frame — audio flows, video never arrives, sometimes only after
+    // an app lifecycle event). VP8 is libvpx's software encoder and
+    // starts producing frames immediately.
+    for (final transceiver in await pc.getTransceivers()) {
+      if (transceiver.sender.track?.kind != 'video') continue;
+      try {
+        await transceiver.setCodecPreferences(<RTCRtpCodecCapability>[
+          RTCRtpCodecCapability(mimeType: 'video/VP8', clockRate: 90000),
+          RTCRtpCodecCapability(mimeType: 'video/H264', clockRate: 90000),
+        ]);
+        debugPrint('[broadcaster] video codec preference: VP8 first');
+      } catch (_) {
+        // Preference unsupported on this platform — keep the defaults.
+      }
+    }
 
     final offer = await pc.createOffer(<String, dynamic>{});
     await pc.setLocalDescription(offer);

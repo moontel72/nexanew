@@ -28,6 +28,7 @@ use axum::{
 };
 use futures_util::StreamExt;
 use serde::Serialize;
+use std::time::Duration;
 use todd_common::{
     auth::{authenticate, TokenRole},
     media::{AudioMixView, AudioMixerConfig},
@@ -208,8 +209,22 @@ async fn serve(mut socket: WebSocket, state: Arc<AppState>) {
         return;
     }
 
+    // Keep the socket warm: Cloudflare (and other idle-tracking proxies)
+    // kill WebSockets after ~100s of silence, and the control plane only
+    // sends when a mutation happens — a quiet broadcast would otherwise
+    // bounce the director UI every ~2 minutes with a reconnect flash. A
+    // 30s heartbeat keeps traffic flowing; browsers answer Pongs without
+    // exposing the ping to JavaScript.
+    let mut heartbeat = tokio::time::interval(Duration::from_secs(30));
+    heartbeat.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
     loop {
         tokio::select! {
+            _ = heartbeat.tick() => {
+                if socket.send(Message::Ping(Vec::new().into())).await.is_err() {
+                    break;
+                }
+            }
             event = events.recv() => {
                 match event {
                     Ok(event) => {
