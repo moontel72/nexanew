@@ -375,13 +375,19 @@ impl Engine {
         // already declared in the offer, so PLI it directly — libwebrtc
         // answers with an IDR and starts the video pipeline. This closes
         // the "audio egress flows, tile 409s forever" failure mode.
+        //
+        // The nudge cadence spans 60s: idle encoders (especially cold
+        // H.264 hardware encoders on Android) may not respond to the
+        // first few PLIs. A 20s window gave up before some encoders ever
+        // started — the perpetual 409 the Studio saw was exactly that
+        // gap. Every 5s up to 60s covers even the slowest warmups.
         if let Some(video_ssrc) = offer_video_ssrc {
             let engine = self.clone();
             let room = room_id.to_string();
             let camera = camera_id.to_string();
             let sid = session_id.clone();
             tokio::spawn(async move {
-                for delay in [4u64, 12, 20] {
+                for delay in [4u64, 8, 12, 20, 30, 40, 50, 60] {
                     tokio::time::sleep(Duration::from_secs(delay)).await;
                     if !engine.sessions.contains_key(&sid) {
                         break;
@@ -398,6 +404,7 @@ impl Engine {
                         room = %room,
                         camera = %camera,
                         ssrc = video_ssrc,
+                        delay_secs = delay,
                         "no video RTP yet — sending PLI to publisher"
                     );
                     engine.pli.request_keyframe(video_ssrc);

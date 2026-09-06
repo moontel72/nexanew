@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -434,13 +436,30 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
         s.phase == BroadcasterPhase.reconnecting;
     if (!streaming || s.config == null) return;
 
-    // A healthy Connected session must NOT be reopened on resume:
-    // tearing it down here kills a working video track (20-30s encoder
-    // restart, which the Studio sees as 409 churn) on every tab switch.
-    // Only restart when the peer actually dropped.
+    // Backgrounded mobile browsers pause the video encoder while audio
+    // continues flowing. The PeerConnection can stay `Connected` even
+    // though the video track produces zero RTP — the engine never sees a
+    // video track, WHEP stays 409, and the Studio tile is black forever.
+    //
+    // On mobile (Android / iOS) always restart capture on resume: the
+    // encoder needs a fresh camera handle + IDR to resume, and the 2-3s
+    // restart cost is invisible compared to the 20-30s encoder warmup
+    // that a stale session would require.
+    //
+    // On desktop/web, only restart when the peer actually dropped — the
+    // frame watchdog (10s black-frame restart) handles stalled encoders.
     final pcState = _pc?.connectionState;
     if (pcState ==
         RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+      // Mobile: always restart — the encoder is unreliable after
+      // backgrounding even though the PC stayed connected.
+      if (!kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS)) {
+        await _restartCapture(emit);
+        return;
+      }
+      // Desktop/web: PC is healthy, leave the session alone.
       return;
     }
 

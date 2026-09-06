@@ -287,6 +287,19 @@ class WhipClient {
       await pc.close();
       throw WhipException('Could not produce a local SDP offer.');
     }
+
+    // Audio-only offer guard: if the SDP has no `m=video` line, the video
+    // track was not ready when the offer was created. Posting an
+    // audio-only offer to the engine means it will never register a video
+    // track, and WHEP will 409 forever. Detect this early and fail with a
+    // clear message so the caller can retry with a fresh capture.
+    if (!_sdpHasMediaSection(local.sdp ?? '', 'video')) {
+      await pc.close();
+      throw WhipException(
+        'SDP offer contains no video section — the camera video track '
+        'was not ready. Retry after ensuring the preview is visible.',
+      );
+    }
     // A host-only offer (STUN unreachable) is still posted: the engine
     // learns the phone's reflexive candidate from the first RTP packets
     // even without STUN, so blocking here produced false negatives on
@@ -361,6 +374,23 @@ class WhipClient {
       if (!line.startsWith('a=candidate:')) continue;
       if (line.contains(' typ srflx ') || line.contains(' typ relay ')) {
         return true;
+      }
+    }
+    return false;
+  }
+
+  /// True when the SDP contains an active (non-rejected) media section
+  /// for the given kind (e.g. `video`, `audio`). A rejected section has
+  /// `m=<kind> 0` (port 0) and does not count.
+  static bool _sdpHasMediaSection(String sdp, String kind) {
+    final prefix = 'm=$kind ';
+    for (final line in sdp.split('\r\n')) {
+      if (line.startsWith(prefix)) {
+        // `m=video 0 ...` means the section was rejected (port 0).
+        final rest = line.substring(prefix.length);
+        if (!rest.startsWith('0 ') && !rest.startsWith('0\t')) {
+          return true;
+        }
       }
     }
     return false;
