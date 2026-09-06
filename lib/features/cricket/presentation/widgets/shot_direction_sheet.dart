@@ -256,8 +256,8 @@ class _WagonMapPainter extends CustomPainter {
       final paint = Paint()
         ..style = PaintingStyle.fill
         ..color = active
-            ? accent.withOpacity(0.35)
-            : Colors.white.withOpacity(0.04);
+            ? accent.withValues(alpha: 0.35)
+            : Colors.white.withValues(alpha: 0.04);
       final path = Path()
         ..moveTo(center.dx, center.dy)
         ..arcTo(
@@ -277,11 +277,11 @@ class _WagonMapPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
-        ..color = Colors.white.withOpacity(0.5),
+        ..color = Colors.white.withValues(alpha: 0.5),
     );
 
     // Pitch (batter at the bottom end).
-    final pitch = Paint()..color = Colors.white.withOpacity(0.18);
+    final pitch = Paint()..color = Colors.white.withValues(alpha: 0.18);
     canvas.drawRect(
       Rect.fromCenter(
         center: Offset(center.dx, center.dy + ry - 30),
@@ -298,7 +298,7 @@ class _WagonMapPainter extends CustomPainter {
       final painter = TextPainter(
         text: TextSpan(
           text: zone.label,
-          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 10),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -318,7 +318,7 @@ class _WagonMapPainter extends CustomPainter {
       canvas.drawCircle(
         p,
         radius * 0.09,
-        Paint()..color = accent.withOpacity(0.25),
+        Paint()..color = accent.withValues(alpha: 0.25),
       );
       canvas.drawCircle(p, radius * 0.035, Paint()..color = accent);
     }

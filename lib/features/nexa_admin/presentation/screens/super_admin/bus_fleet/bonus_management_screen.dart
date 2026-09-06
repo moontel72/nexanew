@@ -114,7 +114,7 @@ class _BonusManagementScreenState extends State<BonusManagementScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: staffType,
+                  initialValue: staffType,
                   decoration: const InputDecoration(labelText: 'Staff Type'),
                   items: _staffTypes
                       .map(
@@ -128,7 +128,7 @@ class _BonusManagementScreenState extends State<BonusManagementScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: category,
+                  initialValue: category,
                   decoration: const InputDecoration(
                     labelText: 'Bonus Category',
                   ),
@@ -145,7 +145,7 @@ class _BonusManagementScreenState extends State<BonusManagementScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: amountType,
+                  initialValue: amountType,
                   decoration: const InputDecoration(labelText: 'Amount Type'),
                   items: const [
                     DropdownMenuItem(
@@ -198,7 +198,7 @@ class _BonusManagementScreenState extends State<BonusManagementScreen> {
                 try {
                   if (isEdit) {
                     await _api.put(
-                      '${widget.panelPrefix}/bonuses/${bonus!['id']}',
+                      '${widget.panelPrefix}/bonuses/${bonus['id']}',
                       body: body,
                     );
                   } else {

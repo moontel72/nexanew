@@ -84,7 +84,7 @@ class _TicketManagementScreenState extends State<TicketManagementScreen> {
                   padding: const EdgeInsets.all(12),
                   color: Colors.white,
                   child: DropdownButtonFormField<String>(
-                    value: _selectedRouteId,
+                    initialValue: _selectedRouteId,
                     decoration: const InputDecoration(
                       labelText: 'Select Route',
                       border: OutlineInputBorder(),

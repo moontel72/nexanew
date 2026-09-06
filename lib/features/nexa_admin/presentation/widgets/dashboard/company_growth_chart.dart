@@ -132,7 +132,7 @@ class CompanyGrowthChart extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: isCurrentMonth
                                     ? Colors.blue
-                                    : Colors.blue.withOpacity(0.6),
+                                    : Colors.blue.withValues(alpha: 0.6),
                                 borderRadius: BorderRadius.vertical(
                                   top: Radius.circular(4.r),
                                 ),
@@ -177,7 +177,7 @@ class CompanyGrowthChart extends StatelessWidget {
               width: 12.w,
               height: 12.h,
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.6),
+                color: Colors.blue.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
@@ -327,10 +327,10 @@ class CompanyGrowthChart extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: isGrowing
-            ? Colors.green.withOpacity(0.1)
+            ? Colors.green.withValues(alpha: 0.1)
             : isStable
-                ? Colors.blue.withOpacity(0.1)
-                : Colors.orange.withOpacity(0.1),
+                ? Colors.blue.withValues(alpha: 0.1)
+                : Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8.r),
       ),
       child: Row(

@@ -159,13 +159,13 @@ class PaymentTimelineWidget extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: isFullyPaid
-                    ? AppColors.success.withOpacity(0.1)
-                    : AppColors.warning.withOpacity(0.1),
+                    ? AppColors.success.withValues(alpha: 0.1)
+                    : AppColors.warning.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isFullyPaid
-                      ? AppColors.success.withOpacity(0.3)
-                      : AppColors.warning.withOpacity(0.3),
+                      ? AppColors.success.withValues(alpha: 0.3)
+                      : AppColors.warning.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
@@ -241,9 +241,9 @@ class PaymentTimelineWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.warning.withOpacity(0.05),
+              color: AppColors.warning.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.warning.withOpacity(0.2)),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
@@ -297,7 +297,7 @@ class PaymentTimelineWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _getPaymentMethodColor(payment.method).withOpacity(0.1),
+              color: _getPaymentMethodColor(payment.method).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(

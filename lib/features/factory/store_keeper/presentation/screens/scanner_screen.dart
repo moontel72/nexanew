@@ -244,7 +244,7 @@ class _ScannerScreenState extends State<ScannerScreen>
               Container(
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.1),
+                  color: AppColors.warning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Text(
@@ -366,9 +366,9 @@ class _ScannerScreenState extends State<ScannerScreen>
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.85),
+            color: Colors.black.withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: typeColor.withOpacity(0.6)),
+            border: Border.all(color: typeColor.withValues(alpha: 0.6)),
           ),
           child: Row(
             children: [

@@ -195,7 +195,7 @@ class _OrdersHubScreenState extends State<OrdersHubScreen>
           controller: _tabController,
           indicatorColor: AppColors.white,
           labelColor: AppColors.white,
-          unselectedLabelColor: AppColors.white.withOpacity(0.65),
+          unselectedLabelColor: AppColors.white.withValues(alpha: 0.65),
           tabs: _tabs
               .map(
                 (t) => Tab(
@@ -433,7 +433,7 @@ class _BundleCard extends StatelessWidget {
                 width: 44.w,
                 height: 44.w,
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.12),
+                  color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10.r),
                 ),
                 child: Icon(
@@ -512,9 +512,9 @@ class _BundleCard extends StatelessWidget {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.12),
+                  color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: statusColor.withOpacity(0.4)),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.4)),
                 ),
                 child: Text(
                   statusLabel,
@@ -591,7 +591,7 @@ class _ResellerOrderCard extends StatelessWidget {
                   width: 44.w,
                   height: 44.w,
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.12),
+                    color: AppColors.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                   child: Icon(
@@ -665,9 +665,9 @@ class _ResellerOrderCard extends StatelessWidget {
                     vertical: 4.h,
                   ),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.12),
+                    color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: statusColor.withOpacity(0.4)),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.4)),
                   ),
                   child: Text(
                     statusLabel,
@@ -718,9 +718,9 @@ class _ResellerOrderCard extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: color.withOpacity(0.4)),
+            border: Border.all(color: color.withValues(alpha: 0.4)),
           ),
           child: Text(
             label,

@@ -120,10 +120,10 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
                     margin: const EdgeInsets.symmetric(horizontal: 40),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: const Color(0xFF10B981).withOpacity(0.3),
+                        color: const Color(0xFF10B981).withValues(alpha: 0.3),
                       ),
                     ),
                     child: const Column(
@@ -172,10 +172,10 @@ class _CricketManagerListPageState extends State<CricketManagerListPage> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withOpacity(0.1),
+                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: const Color(0xFF10B981).withOpacity(0.3),
+                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
                         ),
                       ),
                       child: const Row(
@@ -386,7 +386,7 @@ class _ManagerCard extends StatelessWidget {
               message: 'Suspend / Activate',
               child: Switch(
                 value: isActive,
-                activeColor: const Color(0xFF10B981),
+                activeThumbColor: const Color(0xFF10B981),
                 onChanged: (_) => onToggle(),
               ),
             ),

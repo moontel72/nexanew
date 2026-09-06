@@ -440,7 +440,7 @@ class _FleetBlocLoginScreenState extends State<FleetBlocLoginScreen> {
         ),
         backgroundColor: WidgetStateProperty.resolveWith((s) {
           if (s.contains(WidgetState.selected)) {
-            return cfg.accentColor.withOpacity(0.35);
+            return cfg.accentColor.withValues(alpha: 0.35);
           }
           return const Color(0xFF1B2838);
         }),

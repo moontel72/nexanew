@@ -29,10 +29,10 @@ class InvoiceStatusBadge extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: statusConfig.color.withOpacity(0.1),
+          color: statusConfig.color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: statusConfig.color.withOpacity(0.3),
+            color: statusConfig.color.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -62,10 +62,10 @@ class InvoiceStatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: statusConfig.color.withOpacity(0.1),
+        color: statusConfig.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: statusConfig.color.withOpacity(0.3),
+          color: statusConfig.color.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -91,7 +91,7 @@ class InvoiceStatusBadge extends StatelessWidget {
                 Text(
                   statusConfig.description!,
                   style: TextStyles.caption.copyWith(
-                    color: statusConfig.color.withOpacity(0.8),
+                    color: statusConfig.color.withValues(alpha: 0.8),
                     fontSize: fontSize - 2,
                   ),
                 ),
@@ -227,7 +227,7 @@ class TableStatusBadge extends StatelessWidget {
       width: width,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: config.color.withOpacity(0.1),
+        color: config.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -295,8 +295,8 @@ class StatusFilterChip extends StatelessWidget {
       ),
       selected: selected,
       onSelected: onSelected,
-      backgroundColor: selected ? config.color.withOpacity(0.2) : null,
-      selectedColor: config.color.withOpacity(0.2),
+      backgroundColor: selected ? config.color.withValues(alpha: 0.2) : null,
+      selectedColor: config.color.withValues(alpha: 0.2),
       checkmarkColor: config.color,
       avatar: Icon(
         config.icon,

@@ -55,10 +55,6 @@ class CricketAuthBloc extends Bloc<CricketAuthEvent, CricketAuthState> {
     emit(CricketAuthLoading());
     try {
       final result = await _repo.login(e.email, e.password);
-      if (result == null) {
-        emit(const CricketAuthError('Server returned unexpected response.'));
-        return;
-      }
       final token = result['token'] as String;
       final manager = await _repo.getManager();
       emit(CricketAuthLoggedIn(manager: manager, token: token));

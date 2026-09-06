@@ -255,7 +255,7 @@ class _LinkingScreenState extends State<LinkingScreen> {
           width: 36.w,
           height: 36.w,
           decoration: BoxDecoration(
-            color: AppColors.accent.withOpacity(0.1),
+            color: AppColors.accent.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8.r),
           ),
           child: Icon(icon, size: 18.w, color: AppColors.accent),

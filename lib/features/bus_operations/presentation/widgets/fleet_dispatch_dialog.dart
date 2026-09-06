@@ -292,7 +292,7 @@ class FleetDispatchDialog extends StatelessWidget {
                             ),
                           ),
                           DropdownButtonFormField<String>(
-                            value: state.selectedReturn,
+                            initialValue: state.selectedReturn,
                             dropdownColor: AppColors.fleetSurfaceLight,
                             style: const TextStyle(
                               color: AppColors.textInverse,
@@ -442,7 +442,7 @@ class FleetDispatchDialog extends StatelessWidget {
         ),
         const Gap(4),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           dropdownColor: AppColors.fleetSurfaceLight,
           style: const TextStyle(color: AppColors.textInverse),
           decoration: InputDecoration(

@@ -615,7 +615,7 @@ class _FleetDashboardView extends StatelessWidget {
             ySet.add(y.round());
             if (y < minSeatY) minSeatY = y;
             if (firstY == null) firstY = y;
-            if ((y - firstY!).abs() < 5) {
+            if ((y - firstY).abs() < 5) {
               firstRowXs.add(x);
             }
           }
@@ -627,7 +627,7 @@ class _FleetDashboardView extends StatelessWidget {
             if (c is! Map) continue;
             final t = c['type']?.toString() ?? '';
             final y = (c['y'] as num?)?.toDouble();
-            if (y != null && firstY != null && (y - firstY!).abs() < 5) {
+            if (y != null && firstY != null && (y - firstY).abs() < 5) {
               if (t == 'sleeperLower' || t == 'sleeperUpper') {
                 hasBerths = true;
                 break;
@@ -927,7 +927,7 @@ class _SidebarWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF00B4D8).withOpacity(0.4),
+                        color: const Color(0xFF00B4D8).withValues(alpha: 0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -1238,7 +1238,7 @@ class _DispatchListPageState extends State<_DispatchListPage> {
                   Icon(
                     Icons.assignment,
                     size: 64,
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                   ),
                   const Gap(16),
                   const Text(
@@ -1312,8 +1312,8 @@ class _DispatchListPageState extends State<_DispatchListPage> {
                               ),
                               decoration: BoxDecoration(
                                 color: status == 'active'
-                                    ? const Color(0xFF16A34A).withOpacity(0.2)
-                                    : const Color(0xFFF97316).withOpacity(0.2),
+                                    ? const Color(0xFF16A34A).withValues(alpha: 0.2)
+                                    : const Color(0xFFF97316).withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -1395,7 +1395,7 @@ class _DispatchListPageState extends State<_DispatchListPage> {
       label: Text(label, style: const TextStyle(fontSize: 11)),
       style: OutlinedButton.styleFrom(
         foregroundColor: color,
-        side: BorderSide(color: color.withOpacity(0.5)),
+        side: BorderSide(color: color.withValues(alpha: 0.5)),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),

@@ -406,9 +406,9 @@ class _TeamsListPageState extends State<TeamsListPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF10B981).withOpacity(0.15),
+        color: const Color(0xFF10B981).withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4)),
+        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
       ),
       child: Text(
         text,
@@ -554,7 +554,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
                         ? null
                         : detailsCtrl.text.trim(),
                     primaryColor:
-                        '#${selectedColor.value.toRadixString(16).substring(2)}',
+                        '#${selectedColor.toARGB32().toRadixString(16).substring(2)}',
                   );
                   if (ctx.mounted) Navigator.pop(ctx, true);
                 } catch (e) {
@@ -676,13 +676,13 @@ class _TeamsListPageState extends State<TeamsListPage> {
                         Icon(
                           Icons.groups,
                           size: 64,
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           _showingTrash ? 'No trashed teams' : 'No teams found',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
+                            color: Colors.white.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -866,14 +866,14 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                         decoration: BoxDecoration(
                                           color: const Color(
                                             0xFF10B981,
-                                          ).withOpacity(0.2),
+                                          ).withValues(alpha: 0.2),
                                           borderRadius: BorderRadius.circular(
                                             4,
                                           ),
                                           border: Border.all(
                                             color: const Color(
                                               0xFF10B981,
-                                            ).withOpacity(0.5),
+                                            ).withValues(alpha: 0.5),
                                           ),
                                         ),
                                         child: Text(
@@ -898,7 +898,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                                     : t.status == 'inactive'
                                                     ? const Color(0xFF6B7280)
                                                     : const Color(0xFFEF4444))
-                                                .withOpacity(0.2),
+                                                .withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(4),
                                         border: Border.all(
                                           color:
@@ -907,7 +907,7 @@ class _TeamsListPageState extends State<TeamsListPage> {
                                                       : t.status == 'inactive'
                                                       ? const Color(0xFF6B7280)
                                                       : const Color(0xFFEF4444))
-                                                  .withOpacity(0.5),
+                                                  .withValues(alpha: 0.5),
                                         ),
                                       ),
                                       child: Text(

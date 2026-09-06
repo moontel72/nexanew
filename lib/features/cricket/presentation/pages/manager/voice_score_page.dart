@@ -130,7 +130,7 @@ class _VoiceScorePageState extends State<VoiceScorePage> {
                       boxShadow: listening
                           ? [
                               BoxShadow(
-                                color: CricketColors.wicket.withOpacity(0.4),
+                                color: CricketColors.wicket.withValues(alpha: 0.4),
                                 blurRadius: 16,
                                 spreadRadius: 4,
                               ),
@@ -293,7 +293,7 @@ class _ParsedScoreCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [

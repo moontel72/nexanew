@@ -44,14 +44,14 @@ class WagonWheelPainter extends CustomPainter {
 
     // Outer ring
     final ringPaint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
+      ..color = Colors.white.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawCircle(center, radius, ringPaint);
 
     // 30-yard inner circle (dashed)
     final innerPaint = Paint()
-      ..color = Colors.white.withOpacity(0.15)
+      ..color = Colors.white.withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     canvas.drawCircle(center, radius * 0.55, innerPaint);
@@ -69,7 +69,7 @@ class WagonWheelPainter extends CustomPainter {
 
     // Crease lines
     final creasePaint = Paint()
-      ..color = Colors.white.withOpacity(0.6)
+      ..color = Colors.white.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     canvas.drawLine(
@@ -85,7 +85,7 @@ class WagonWheelPainter extends CustomPainter {
 
     // ── Radial guide lines ────────────────────────────────
     final guidePaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = Colors.white.withValues(alpha: 0.1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
     for (int deg = 0; deg < 360; deg += 30) {

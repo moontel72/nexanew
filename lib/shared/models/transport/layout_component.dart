@@ -8,7 +8,6 @@
 //
 // Section 14E: Seat Layout Designer — Component Architecture.
 
-import 'dart:convert';
 
 /// Component types for the modular seat layout canvas.
 enum ComponentType {

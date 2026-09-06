@@ -100,7 +100,7 @@ class AdminTopBar extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 14,
-                        backgroundColor: AppColors.primary.withOpacity(0.12),
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.12),
                         child: Icon(
                           Icons.admin_panel_settings,
                           size: 16,

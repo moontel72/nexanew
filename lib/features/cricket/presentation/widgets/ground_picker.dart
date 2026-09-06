@@ -34,7 +34,7 @@ class GroundPickerField extends StatelessWidget {
           child: ValueListenableBuilder<String?>(
             valueListenable: selected,
             builder: (context, value, _) => DropdownButtonFormField<String?>(
-              value: value,
+              initialValue: value,
               isExpanded: true,
               decoration: cricketFieldDecoration('Ground (optional)'),
               dropdownColor: const Color(0xFF0F2936),

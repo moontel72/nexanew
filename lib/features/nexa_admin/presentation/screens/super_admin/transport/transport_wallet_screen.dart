@@ -177,7 +177,7 @@ class _KpiTile extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: color.withOpacity(0.20)),
+        side: BorderSide(color: color.withValues(alpha: 0.20)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -187,7 +187,7 @@ class _KpiTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.10),
+                color: color.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color),

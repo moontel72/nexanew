@@ -69,7 +69,7 @@ class WormChartPainter extends CustomPainter {
 
     // Grid + axes
     final gridPaint = Paint()
-      ..color = CricketColors.textTertiary.withOpacity(0.4)
+      ..color = CricketColors.textTertiary.withValues(alpha: 0.4)
       ..strokeWidth = 0.5;
     for (var o = 0; o <= maxOvers; o += 5) {
       final x = plotRect.left + plotRect.width * o / maxOvers;

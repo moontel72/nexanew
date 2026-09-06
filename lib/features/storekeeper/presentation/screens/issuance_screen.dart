@@ -102,7 +102,7 @@ class IssuanceScreen extends StatelessWidget {
           style: const TextStyle(color: Colors.white),
         ),
         subtitle: Text(
-          '${iss.status?.toUpperCase() ?? 'PENDING'} · ${_fmt(iss.createdAt)}',
+          '${iss.status.toUpperCase() ?? 'PENDING'} · ${_fmt(iss.createdAt)}',
           style: TextStyle(color: color, fontSize: 11),
         ),
         trailing: iss.status == 'pending'

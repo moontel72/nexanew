@@ -107,7 +107,7 @@ class _StoreKeeperDashboardState extends State<StoreKeeperDashboard> {
                       children: [
                         CircleAvatar(
                           radius: 24.r,
-                          backgroundColor: AppColors.accent.withOpacity(0.2),
+                          backgroundColor: AppColors.accent.withValues(alpha: 0.2),
                           child: Text(
                             state.storeKeeperName.isNotEmpty
                                 ? state.storeKeeperName[0].toUpperCase()
@@ -332,7 +332,7 @@ class _StoreKeeperDashboardState extends State<StoreKeeperDashboard> {
                       Container(
                         padding: EdgeInsets.all(12.w),
                         decoration: BoxDecoration(
-                          color: AppColors.warning.withOpacity(0.1),
+                          color: AppColors.warning.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8.r),
                         ),
                         child: Row(
@@ -411,7 +411,7 @@ class _StoreKeeperDashboardState extends State<StoreKeeperDashboard> {
                 width: 44.w,
                 height: 44.w,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 22.w),

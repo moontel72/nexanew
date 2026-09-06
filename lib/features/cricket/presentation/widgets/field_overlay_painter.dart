@@ -41,7 +41,7 @@ class FieldOverlayPainter extends CustomPainter {
 
     // ── Boundary ring ─────────────────────────────────────
     final boundaryPaint = Paint()
-      ..color = boundaryColor.withOpacity(0.6)
+      ..color = boundaryColor.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawOval(
@@ -51,7 +51,7 @@ class FieldOverlayPainter extends CustomPainter {
 
     // ── Inner 30-yard circle ──────────────────────────────
     final innerPaint = Paint()
-      ..color = Colors.white.withOpacity(0.12)
+      ..color = Colors.white.withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     canvas.drawOval(
@@ -70,7 +70,7 @@ class FieldOverlayPainter extends CustomPainter {
 
     // ── Crease lines ──────────────────────────────────────
     final creasePaint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
+      ..color = Colors.white.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     canvas.drawLine(
@@ -117,7 +117,7 @@ class FieldOverlayPainter extends CustomPainter {
       pos,
       9,
       Paint()
-        ..color = Colors.white.withOpacity(0.7)
+        ..color = Colors.white.withValues(alpha: 0.7)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1,
     );
@@ -133,7 +133,7 @@ class FieldOverlayPainter extends CustomPainter {
         badgeOffset,
         badgeRadius,
         Paint()
-          ..color = Colors.white.withOpacity(0.5)
+          ..color = Colors.white.withValues(alpha: 0.5)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1,
       );
@@ -163,7 +163,7 @@ class FieldOverlayPainter extends CustomPainter {
       text: TextSpan(
         text: player.playerName,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.85),
+          color: Colors.white.withValues(alpha: 0.85),
           fontSize: 9,
           fontWeight: FontWeight.w600,
         ),

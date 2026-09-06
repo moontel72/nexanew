@@ -136,7 +136,7 @@ class _GoodsFleetDriversScreenState extends State<GoodsFleetDriversScreen> {
       };
       if (isEdit) {
         await ApiService().put(
-          '/goods-fleet/drivers/manage/${existing!['id']}',
+          '/goods-fleet/drivers/manage/${existing['id']}',
           data: payload,
         );
       } else {

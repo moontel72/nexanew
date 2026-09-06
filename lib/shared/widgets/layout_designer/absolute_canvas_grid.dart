@@ -611,23 +611,23 @@ class _AbsoluteComponentWidget extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected ? Colors.white : light.withOpacity(0.35),
+                color: isSelected ? Colors.white : light.withValues(alpha: 0.35),
                 width: isSelected ? 2.5 : 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: dark.withOpacity(0.55),
+                  color: dark.withValues(alpha: 0.55),
                   blurRadius: 6,
                   offset: const Offset(2, 3),
                 ),
                 BoxShadow(
-                  color: light.withOpacity(0.25),
+                  color: light.withValues(alpha: 0.25),
                   blurRadius: 3,
                   offset: const Offset(-1, -1),
                 ),
                 if (isSelected)
                   BoxShadow(
-                    color: color.withOpacity(0.6),
+                    color: color.withValues(alpha: 0.6),
                     blurRadius: 14,
                     spreadRadius: 2,
                   ),
@@ -682,7 +682,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
         border: Border.all(color: borderClr, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.18),
+            color: Colors.black.withValues(alpha: 0.18),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -720,7 +720,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
             child: Center(
               child: Icon(
                 Icons.arrow_drop_up,
-                color: Colors.white.withOpacity(0.80),
+                color: Colors.white.withValues(alpha: 0.80),
                 size: arrowSize,
               ),
             ),
@@ -735,7 +735,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
               height: 2.5,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.55),
+                  color: Colors.white.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -749,13 +749,13 @@ class _AbsoluteComponentWidget extends StatelessWidget {
                       angle: 3.1415926535,
                       child: Icon(
                         icon,
-                        color: Colors.white.withOpacity(0.55),
+                        color: Colors.white.withValues(alpha: 0.55),
                         size: _iconSize() * 0.65,
                       ),
                     )
                   : Icon(
                       icon,
-                      color: Colors.white.withOpacity(0.55),
+                      color: Colors.white.withValues(alpha: 0.55),
                       size: _iconSize() * 0.65,
                     ),
             ),
@@ -900,11 +900,11 @@ class _AbsoluteComponentWidget extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [light.withOpacity(0.85), dark.withOpacity(0.85)],
+              colors: [light.withValues(alpha: 0.85), dark.withValues(alpha: 0.85)],
             ),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               width: 1.2,
             ),
           ),
@@ -921,7 +921,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
               width: component.width * 0.22,
               height: component.height * 0.22,
               decoration: BoxDecoration(
-                color: light.withOpacity(0.45),
+                color: light.withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -929,7 +929,7 @@ class _AbsoluteComponentWidget extends StatelessWidget {
         Center(
           child: Icon(
             Icons.table_restaurant,
-            color: Colors.white.withOpacity(0.35),
+            color: Colors.white.withValues(alpha: 0.35),
             size: _iconSize() * 0.9,
           ),
         ),

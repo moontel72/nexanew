@@ -258,13 +258,13 @@ class _DriverSettingsScreenState extends State<DriverSettingsScreen> {
                     padding: EdgeInsets.all(10.w),
                     decoration: BoxDecoration(
                       color: _gpsResult!.startsWith('✅')
-                          ? AppColors.success.withOpacity(0.08)
-                          : AppColors.error.withOpacity(0.08),
+                          ? AppColors.success.withValues(alpha: 0.08)
+                          : AppColors.error.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8.r),
                       border: Border.all(
                         color: _gpsResult!.startsWith('✅')
-                            ? AppColors.success.withOpacity(0.3)
-                            : AppColors.error.withOpacity(0.3),
+                            ? AppColors.success.withValues(alpha: 0.3)
+                            : AppColors.error.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
@@ -312,7 +312,7 @@ class _DriverSettingsScreenState extends State<DriverSettingsScreen> {
                 Container(
                   padding: EdgeInsets.all(10.w),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.06),
+                    color: AppColors.primary.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: Row(

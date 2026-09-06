@@ -116,7 +116,7 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
                 child: Container(
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       width: 2.5,
                     ),
                     borderRadius: BorderRadius.circular(4),
@@ -141,7 +141,7 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
                       color: const Color(0xE50D1B2A),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: const Color(0xFF7C3AED).withOpacity(0.7),
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.7),
                         width: 1.5,
                       ),
                       boxShadow: const [
@@ -418,7 +418,7 @@ class _AbsoluteTransformOverlayState extends State<AbsoluteTransformOverlay> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    const Color(0xFFF97316).withOpacity(0.9),
+                    const Color(0xFFF97316).withValues(alpha: 0.9),
                     Colors.white70,
                   ],
                 ),

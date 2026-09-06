@@ -407,7 +407,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               ySet.add(y.round());
               if (y < minSeatY) minSeatY = y;
               if (firstY == null) firstY = y;
-              if ((y - firstY!).abs() < 5) {
+              if ((y - firstY).abs() < 5) {
                 firstRowXs.add(x);
               }
             }
@@ -419,7 +419,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
               if (c is! Map) continue;
               final t = c['type']?.toString() ?? '';
               final y = (c['y'] as num?)?.toDouble();
-              if (y != null && firstY != null && (y - firstY!).abs() < 5) {
+              if (y != null && firstY != null && (y - firstY).abs() < 5) {
                 if (t == 'sleeperLower' || t == 'sleeperUpper') {
                   hasBerths = true;
                   break;
@@ -599,7 +599,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                   _fieldLabel('Bus Maker / Company'),
                   const SizedBox(height: 4),
                   DropdownButtonFormField<String>(
-                    value: _selectedMaker,
+                    initialValue: _selectedMaker,
                     dropdownColor: const Color(0xFF122442),
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: _inputDecoration(
@@ -818,7 +818,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
                       ),
                     ),
                     value: _hasFrontPartition,
-                    activeColor: const Color(0xFF7C3AED),
+                    activeThumbColor: const Color(0xFF7C3AED),
                     contentPadding: EdgeInsets.zero,
                     onChanged: (v) {
                       setState(() => _hasFrontPartition = v);
@@ -1503,7 +1503,7 @@ class _BusConfigSetupScreenState extends State<BusConfigSetupScreen> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: const Color(0xFF7C3AED).withOpacity(0.15),
+            color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: const Color(0xFF7C3AED), size: 18),

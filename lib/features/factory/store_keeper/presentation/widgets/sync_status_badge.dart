@@ -42,13 +42,13 @@ class _SyncStatusBadgeState extends State<SyncStatusBadge> {
   Widget build(BuildContext context) => Container(
     padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
     decoration: BoxDecoration(
-      color: (_isOnline ? AppColors.success : AppColors.warning).withOpacity(
-        0.1,
+      color: (_isOnline ? AppColors.success : AppColors.warning).withValues(
+        alpha: 0.1,
       ),
       borderRadius: BorderRadius.circular(20.r),
       border: Border.all(
-        color: (_isOnline ? AppColors.success : AppColors.warning).withOpacity(
-          0.3,
+        color: (_isOnline ? AppColors.success : AppColors.warning).withValues(
+          alpha: 0.3,
         ),
       ),
     ),

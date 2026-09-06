@@ -140,7 +140,7 @@ class _PlanFilterSheetState extends State<PlanFilterSheet> {
           onSelected: (selected) {
             setState(() => _selectedType = selected ? type : null);
           },
-          selectedColor: AppColors.primary.withOpacity(0.2),
+          selectedColor: AppColors.primary.withValues(alpha: 0.2),
           labelStyle: TextStyle(
             color: isSelected ? AppColors.primary : Colors.black,
           ),
@@ -160,7 +160,7 @@ class _PlanFilterSheetState extends State<PlanFilterSheet> {
           onSelected: (selected) {
             setState(() => _selectedStatus = selected ? status : null);
           },
-          selectedColor: AppColors.primary.withOpacity(0.2),
+          selectedColor: AppColors.primary.withValues(alpha: 0.2),
           labelStyle: TextStyle(
             color: isSelected ? AppColors.primary : Colors.black,
           ),

@@ -115,15 +115,15 @@ class _DriverPerformanceScreenState extends State<DriverPerformanceScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      _tierColor(tier).withOpacity(0.2),
-                      _tierColor(tier).withOpacity(0.05),
+                      _tierColor(tier).withValues(alpha: 0.2),
+                      _tierColor(tier).withValues(alpha: 0.05),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16.r),
                   border: Border.all(
-                    color: _tierColor(tier).withOpacity(0.5),
+                    color: _tierColor(tier).withValues(alpha: 0.5),
                     width: 2,
                   ),
                 ),
@@ -133,7 +133,7 @@ class _DriverPerformanceScreenState extends State<DriverPerformanceScreen> {
                       width: 60.w,
                       height: 60.w,
                       decoration: BoxDecoration(
-                        color: _tierColor(tier).withOpacity(0.15),
+                        color: _tierColor(tier).withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -305,9 +305,9 @@ class _DriverPerformanceScreenState extends State<DriverPerformanceScreen> {
               Container(
                 padding: EdgeInsets.all(14.w),
                 decoration: BoxDecoration(
-                  color: _tierColor(tier).withOpacity(0.08),
+                  color: _tierColor(tier).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: _tierColor(tier).withOpacity(0.3)),
+                  border: Border.all(color: _tierColor(tier).withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -379,7 +379,7 @@ class _DriverPerformanceScreenState extends State<DriverPerformanceScreen> {
             width: 42.w,
             height: 42.w,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(icon, color: color, size: 22),
@@ -435,9 +435,9 @@ class _DriverPerformanceScreenState extends State<DriverPerformanceScreen> {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 12.h),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
+          color: color.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -454,7 +454,7 @@ class _DriverPerformanceScreenState extends State<DriverPerformanceScreen> {
               label,
               style: TextStyle(
                 fontSize: 11.sp,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
                 fontWeight: FontWeight.w500,
               ),
             ),

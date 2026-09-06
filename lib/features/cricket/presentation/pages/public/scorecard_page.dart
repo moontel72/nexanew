@@ -142,7 +142,7 @@ class _MatchHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CricketColors.textAccent.withOpacity(0.4)),
+        border: Border.all(color: CricketColors.textAccent.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
@@ -263,7 +263,7 @@ class _InningsCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: CricketColors.wicket.withOpacity(0.15),
+                    color: CricketColors.wicket.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(

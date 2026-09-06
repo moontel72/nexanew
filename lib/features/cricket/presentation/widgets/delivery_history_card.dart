@@ -254,7 +254,7 @@ class CorrectionSheet extends StatelessWidget {
                 _EditRow(
                   label: 'RUNS',
                   child: DropdownButtonFormField<int>(
-                    value: s.editRuns,
+                    initialValue: s.editRuns,
                     dropdownColor: const Color(0xFF0F2936),
                     style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
@@ -309,7 +309,7 @@ class CorrectionSheet extends StatelessWidget {
                 const SizedBox(height: 12),
                 SwitchListTile(
                   value: s.editIsWicket,
-                  activeColor: CricketColors.wicket,
+                  activeThumbColor: CricketColors.wicket,
                   title: const Text(
                     'WICKET',
                     style: TextStyle(

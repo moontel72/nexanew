@@ -346,7 +346,7 @@ class _BundleCodeGenerateScreenState extends State<BundleCodeGenerateScreen> {
           padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 8.w),
           decoration: BoxDecoration(
             color: _priority == value
-                ? color.withOpacity(0.1)
+                ? color.withValues(alpha: 0.1)
                 : Colors.grey[100],
             borderRadius: BorderRadius.circular(8.r),
             border: Border.all(

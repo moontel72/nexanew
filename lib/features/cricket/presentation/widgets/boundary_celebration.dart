@@ -99,11 +99,11 @@ class _BoundaryCelebrationState extends State<BoundaryCelebration>
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: _color.withOpacity(0.9),
+                    color: _color.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: _color.withOpacity(0.5),
+                        color: _color.withValues(alpha: 0.5),
                         blurRadius: 24,
                         spreadRadius: 4,
                       ),

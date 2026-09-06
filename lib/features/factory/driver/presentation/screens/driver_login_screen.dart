@@ -48,7 +48,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [_driverBlue.withOpacity(0.08), Colors.white],
+            colors: [_driverBlue.withValues(alpha: 0.08), Colors.white],
           ),
         ),
         child: Center(
@@ -90,7 +90,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
             borderRadius: BorderRadius.circular(20.r),
             boxShadow: [
               BoxShadow(
-                color: _driverBlue.withOpacity(0.3),
+                color: _driverBlue.withValues(alpha: 0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

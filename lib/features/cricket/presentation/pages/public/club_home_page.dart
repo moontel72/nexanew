@@ -444,7 +444,7 @@ class _ClubHeader extends StatelessWidget {
       gradient: LinearGradient(
         colors: [
           CricketColors.inputFill,
-          CricketColors.background.withOpacity(0.5),
+          CricketColors.background.withValues(alpha: 0.5),
         ],
       ),
     ),

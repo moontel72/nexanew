@@ -7,7 +7,6 @@
 //
 // MODULE: 13B — Dynamic Route & Waypoint Line Scheduler
 
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// A single waypoint on the route editor canvas.

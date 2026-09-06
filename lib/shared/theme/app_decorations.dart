@@ -35,7 +35,7 @@ class AppDecorations {
   static InputBorder get inputBorderDisabled => OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide:
-            BorderSide(color: AppColors.gray300.withOpacity(0.5), width: 1),
+            BorderSide(color: AppColors.gray300.withValues(alpha: 0.5), width: 1),
       );
 
   // Card decorations
@@ -44,7 +44,7 @@ class AppDecorations {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -90,7 +90,7 @@ class AppDecorations {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -115,7 +115,7 @@ class AppDecorations {
         ),
         textStyle: TextStyles.buttonLarge,
         elevation: 2,
-        shadowColor: AppColors.primary.withOpacity(0.3),
+        shadowColor: AppColors.primary.withValues(alpha: 0.3),
       );
 
   static ButtonStyle get secondaryButtonStyle => ElevatedButton.styleFrom(
@@ -129,7 +129,7 @@ class AppDecorations {
         ),
         textStyle: TextStyles.buttonLarge,
         elevation: 2,
-        shadowColor: AppColors.secondary.withOpacity(0.3),
+        shadowColor: AppColors.secondary.withValues(alpha: 0.3),
       );
 
   static ButtonStyle get accentButtonStyle => ElevatedButton.styleFrom(
@@ -143,7 +143,7 @@ class AppDecorations {
         ),
         textStyle: TextStyles.buttonLarge,
         elevation: 2,
-        shadowColor: AppColors.accent.withOpacity(0.3),
+        shadowColor: AppColors.accent.withValues(alpha: 0.3),
       );
 
   static ButtonStyle get outlineButtonStyle => OutlinedButton.styleFrom(
@@ -191,25 +191,25 @@ class AppDecorations {
 
   // Badge decorations
   static BoxDecoration get successBadge => BoxDecoration(
-        color: AppColors.success.withOpacity(0.1),
+        color: AppColors.success.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.success),
       );
 
   static BoxDecoration get warningBadge => BoxDecoration(
-        color: AppColors.warning.withOpacity(0.1),
+        color: AppColors.warning.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.warning),
       );
 
   static BoxDecoration get errorBadge => BoxDecoration(
-        color: AppColors.error.withOpacity(0.1),
+        color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.error),
       );
 
   static BoxDecoration get infoBadge => BoxDecoration(
-        color: AppColors.info.withOpacity(0.1),
+        color: AppColors.info.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.info),
       );
@@ -221,7 +221,7 @@ class AppDecorations {
       );
 
   static BoxDecoration get selectedChipDecoration => BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.primary),
       );
@@ -245,7 +245,7 @@ class AppDecorations {
       );
 
   static BoxDecoration get selectedListTileDecoration => BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
+        color: AppColors.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.primary),
       );
@@ -274,7 +274,7 @@ class AppDecorations {
   // Shadow decorations
   static List<BoxShadow> get smallShadow => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 4,
           offset: const Offset(0, 1),
         ),
@@ -282,7 +282,7 @@ class AppDecorations {
 
   static List<BoxShadow> get mediumShadow => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
+          color: Colors.black.withValues(alpha: 0.1),
           blurRadius: 8,
           offset: const Offset(0, 2),
         ),
@@ -290,7 +290,7 @@ class AppDecorations {
 
   static List<BoxShadow> get largeShadow => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.15),
+          color: Colors.black.withValues(alpha: 0.15),
           blurRadius: 16,
           offset: const Offset(0, 4),
         ),
@@ -298,12 +298,12 @@ class AppDecorations {
 
   // Glass morphism effect
   static BoxDecoration get glassDecoration => BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),

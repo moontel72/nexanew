@@ -137,7 +137,7 @@ class AppTheme {
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide:
-              BorderSide(color: AppColors.border.withOpacity(0.5), width: 1),
+              BorderSide(color: AppColors.border.withValues(alpha: 0.5), width: 1),
         ),
         labelStyle: TextStyles.bodyMedium.copyWith(
           color: AppColors.textSecondary,
@@ -153,7 +153,7 @@ class AppTheme {
         backgroundColor: AppColors.gray100,
         deleteIconColor: AppColors.textSecondary,
         disabledColor: AppColors.gray200,
-        selectedColor: AppColors.primary.withOpacity(0.1),
+        selectedColor: AppColors.primary.withValues(alpha: 0.1),
         secondarySelectedColor: AppColors.primary,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         shape: RoundedRectangleBorder(
@@ -248,7 +248,7 @@ class AppTheme {
       dividerColor: const Color(0xFF333333),
       disabledColor: const Color(0xFF666666),
       hintColor: const Color(0xFF999999),
-      shadowColor: Colors.black.withOpacity(0.5),
+      shadowColor: Colors.black.withValues(alpha: 0.5),
       textTheme: const TextTheme(
         displayLarge: TextStyles.headlineLarge,
         displayMedium: TextStyles.headlineMedium,
@@ -375,7 +375,7 @@ class AppTheme {
         backgroundColor: const Color(0xFF2D2D2D),
         deleteIconColor: const Color(0xFF999999),
         disabledColor: const Color(0xFF333333),
-        selectedColor: AppColors.primaryLight.withOpacity(0.2),
+        selectedColor: AppColors.primaryLight.withValues(alpha: 0.2),
         secondarySelectedColor: AppColors.primaryLight,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         shape: RoundedRectangleBorder(

@@ -51,7 +51,7 @@ class CricketVideoPlayer extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: CricketColors.background.withOpacity(0.54),
+              color: CricketColors.background.withValues(alpha: 0.54),
               borderRadius: BorderRadius.circular(4),
             ),
             child: const Icon(

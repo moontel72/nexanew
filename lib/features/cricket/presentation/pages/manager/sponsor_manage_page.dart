@@ -426,7 +426,7 @@ class _LibrarySponsorCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0F2936),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: tierColor.withOpacity(0.3)),
+        border: Border.all(color: tierColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -434,7 +434,7 @@ class _LibrarySponsorCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: tierColor.withOpacity(0.2),
+              color: tierColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(Icons.business, color: tierColor, size: 22),
@@ -516,7 +516,7 @@ class _MatchSponsorCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0F2936),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: tierColor.withOpacity(0.3)),
+        border: Border.all(color: tierColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -524,7 +524,7 @@ class _MatchSponsorCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: tierColor.withOpacity(0.2),
+              color: tierColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(Icons.business, color: tierColor, size: 22),
@@ -582,7 +582,7 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.2),
+      color: color.withValues(alpha: 0.2),
       borderRadius: BorderRadius.circular(4),
     ),
     child: Text(

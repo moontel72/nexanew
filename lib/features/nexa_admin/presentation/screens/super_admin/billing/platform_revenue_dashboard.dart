@@ -347,7 +347,7 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
                       children: companies.take(5).map((company) {
                         return ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                             child: Text(
                               company.name.substring(0, 1).toUpperCase(),
                               style: const TextStyle(
@@ -415,7 +415,7 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(vertical: 8),
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                     child: Text(
                       companyName.substring(0, 1).toUpperCase(),
                       style: const TextStyle(
@@ -450,7 +450,7 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
                     label: Text(
                       '${((paidAmount / totalRevenue) * 100).toStringAsFixed(1)}%',
                     ),
-                    backgroundColor: AppColors.success.withOpacity(0.1),
+                    backgroundColor: AppColors.success.withValues(alpha: 0.1),
                     labelStyle: TextStyle(color: AppColors.success),
                   ),
                 );
@@ -520,7 +520,7 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(statusIcon, color: statusColor, size: 20),
@@ -562,7 +562,7 @@ class _PlatformRevenueDashboardState extends State<PlatformRevenueDashboard> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
+                          color: statusColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(

@@ -277,7 +277,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
         registry.parts.containsKey(SeatPartType.sleeperLower) &&
         registry.parts.containsKey(SeatPartType.sleeperUpper);
 
-    final defaultSpec = PartSpec.defaultFor(activePartType!);
+    final defaultSpec = PartSpec.defaultFor(activePartType);
     final activeSpec = registry?.parts[activePartType];
     final double seatLen = activeSpec?.pixelLength ?? defaultSpec.pixelLength;
     final double fullWidth = activeSpec?.pixelWidth ?? defaultSpec.pixelWidth;
@@ -819,7 +819,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF97316).withOpacity(0.2),
+                  color: const Color(0xFFF97316).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: const Text(
@@ -934,10 +934,10 @@ class _DesignerBodyState extends State<_DesignerBody> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: BoxDecoration(
-              color: active ? const Color(0xFF7C3AED).withOpacity(0.2) : null,
+              color: active ? const Color(0xFF7C3AED).withValues(alpha: 0.2) : null,
               borderRadius: BorderRadius.circular(4),
               border: active
-                  ? Border.all(color: const Color(0xFF7C3AED).withOpacity(0.4))
+                  ? Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.4))
                   : null,
             ),
             child: Row(
@@ -1079,7 +1079,7 @@ class _DesignerBodyState extends State<_DesignerBody> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF7C3AED).withOpacity(0.9),
+                color: const Color(0xFF7C3AED).withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(

@@ -464,7 +464,7 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
-                value: _selectedMatchId,
+                initialValue: _selectedMatchId,
                 dropdownColor: const Color(0xFF0F2936),
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
@@ -618,20 +618,20 @@ class _LiveConsoleTabState extends State<_LiveConsoleTab> {
                         Icon(
                           Icons.sports_cricket,
                           size: 64,
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'Select a match to begin',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
+                            color: Colors.white.withValues(alpha: 0.5),
                             fontSize: 16,
                           ),
                         ),
                         Text(
                           'Manage scoring, cameras, voice input, and sponsors',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                             fontSize: 12,
                           ),
                         ),
@@ -669,7 +669,7 @@ class _GoLivePanel extends StatelessWidget {
               : const [Color(0xFF7F1D1D), Color(0xFFB91C1C)],
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.15)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,7 +701,7 @@ class _GoLivePanel extends StatelessWidget {
                 ? 'Toss recorded — activate the public live stream now.'
                 : 'Toss not recorded yet. Record it in the Scoring Console, then GO LIVE.',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.85),
+              color: Colors.white.withValues(alpha: 0.85),
               fontSize: 12,
             ),
           ),
@@ -746,7 +746,7 @@ class _GoLivePanel extends StatelessWidget {
                       style: TextStyle(color: Colors.white, fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white.withOpacity(0.5)),
+                      side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
                     ),
                     onPressed: () => context.read<MatchListBloc>().add(
                       UpdateMatchStatus(match.id, 'innings_break'),
@@ -766,7 +766,7 @@ class _GoLivePanel extends StatelessWidget {
                       style: TextStyle(color: Colors.white, fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white.withOpacity(0.5)),
+                      side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
                     ),
                     onPressed: () => _confirmEndMatch(context),
                   ),
@@ -1265,7 +1265,7 @@ class _AnalyticsTabState extends State<_AnalyticsTab> {
             ),
             const SizedBox(height: 20),
             DropdownButtonFormField<String>(
-              value: _analyticsMatchId,
+              initialValue: _analyticsMatchId,
               dropdownColor: const Color(0xFF0F2936),
               style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(

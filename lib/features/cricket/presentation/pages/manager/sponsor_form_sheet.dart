@@ -117,7 +117,7 @@ class _SponsorFormSheetState extends State<SponsorFormSheet> {
               ValueListenableBuilder<String>(
                 valueListenable: _tier,
                 builder: (context, value, _) => DropdownButtonFormField<String>(
-                  value: value,
+                  initialValue: value,
                   isExpanded: true,
                   decoration: cricketFieldDecoration('Tier'),
                   dropdownColor: const Color(0xFF0F2936),

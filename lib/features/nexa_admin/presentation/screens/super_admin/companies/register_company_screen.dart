@@ -172,7 +172,7 @@ class _RegisterCompanyScreenState extends State<RegisterCompanyScreen> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                               side: BorderSide(
-                                color: AppColors.error.withOpacity(0.35),
+                                color: AppColors.error.withValues(alpha: 0.35),
                               ),
                             ),
                             child: Padding(

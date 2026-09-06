@@ -220,7 +220,7 @@ class _GenerateFixturesSheetState extends State<GenerateFixturesSheet> {
         const SizedBox(height: 12),
         Text(
           'Teams',
-          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
         ),
         const SizedBox(height: 6),
         ValueListenableBuilder<Set<String>>(
@@ -235,7 +235,7 @@ class _GenerateFixturesSheetState extends State<GenerateFixturesSheet> {
                 return FilterChip(
                   label: Text(t.name),
                   selected: effective.contains(t.id),
-                  selectedColor: const Color(0xFF10B981).withOpacity(0.3),
+                  selectedColor: const Color(0xFF10B981).withValues(alpha: 0.3),
                   backgroundColor: const Color(0xFF0C1D2C),
                   labelStyle: TextStyle(
                     color: effective.contains(t.id)
@@ -311,7 +311,7 @@ class _GenerateFixturesSheetState extends State<GenerateFixturesSheet> {
         ValueListenableBuilder<String>(
           valueListenable: _matchType,
           builder: (context, value, _) => DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             isExpanded: true,
             decoration: cricketFieldDecoration('Default match type'),
             dropdownColor: const Color(0xFF0F2936),
@@ -341,7 +341,7 @@ class _GenerateFixturesSheetState extends State<GenerateFixturesSheet> {
         ValueListenableBuilder<String>(
           valueListenable: _stage,
           builder: (context, value, _) => DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             isExpanded: true,
             decoration: cricketFieldDecoration('Stage'),
             dropdownColor: const Color(0xFF0F2936),

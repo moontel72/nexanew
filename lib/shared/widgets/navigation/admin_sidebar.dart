@@ -133,7 +133,7 @@ class AdminSidebar extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 16,
-                        backgroundColor: AppColors.secondary.withOpacity(0.2),
+                        backgroundColor: AppColors.secondary.withValues(alpha: 0.2),
                         child: const Icon(
                           Icons.admin_panel_settings,
                           size: 18,
@@ -225,7 +225,7 @@ class _PencilTile extends StatelessWidget {
             height: 44,
             margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: selected ? color.withOpacity(0.2) : Colors.transparent,
+              color: selected ? color.withValues(alpha: 0.2) : Colors.transparent,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(

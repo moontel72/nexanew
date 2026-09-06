@@ -20,7 +20,7 @@ class BallBadge extends StatelessWidget {
     } else {
       switch (ball.runs) {
         case 0:
-          bgColor = CricketColors.textTertiary.withOpacity(0.3);
+          bgColor = CricketColors.textTertiary.withValues(alpha: 0.3);
           break;
         case 4:
           bgColor = CricketColors.runFour;

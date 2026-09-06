@@ -163,12 +163,12 @@ class _DriverChatScreenState extends State<DriverChatScreen> {
                 padding: EdgeInsets.all(14.w),
                 decoration: BoxDecoration(
                   color: unread > 0
-                      ? AppColors.primary.withOpacity(0.04)
+                      ? AppColors.primary.withValues(alpha: 0.04)
                       : AppColors.surface,
                   borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(
                     color: unread > 0
-                        ? AppColors.primary.withOpacity(0.25)
+                        ? AppColors.primary.withValues(alpha: 0.25)
                         : AppColors.border,
                   ),
                 ),
@@ -177,7 +177,7 @@ class _DriverChatScreenState extends State<DriverChatScreen> {
                     // Avatar
                     CircleAvatar(
                       radius: 24.r,
-                      backgroundColor: AppColors.primary.withOpacity(0.12),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.12),
                       child: Text(
                         name.isNotEmpty ? name[0].toUpperCase() : '?',
                         style: TextStyle(

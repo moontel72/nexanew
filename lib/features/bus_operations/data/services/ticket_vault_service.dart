@@ -6,7 +6,6 @@
 //
 // MODULE: 8V — Digital QR Ticketing Vault
 
-import 'dart:convert';
 import 'package:hive/hive.dart';
 
 /// A single cached ticket entry stored in Hive.

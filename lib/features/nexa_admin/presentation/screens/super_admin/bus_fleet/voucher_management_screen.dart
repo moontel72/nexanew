@@ -121,7 +121,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: type,
+                  initialValue: type,
                   decoration: const InputDecoration(labelText: 'Type'),
                   items: const [
                     DropdownMenuItem(
@@ -222,7 +222,7 @@ class _VoucherManagementScreenState extends State<VoucherManagementScreen> {
                 try {
                   if (isEdit) {
                     await _api.put(
-                      '${widget.panelPrefix}/vouchers/${voucher!['id']}',
+                      '${widget.panelPrefix}/vouchers/${voucher['id']}',
                       body: body,
                     );
                   } else {

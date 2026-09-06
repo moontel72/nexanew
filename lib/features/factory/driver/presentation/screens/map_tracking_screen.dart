@@ -101,7 +101,7 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
                 Icon(
                   Icons.map,
                   size: 64.sp,
-                  color: AppColors.textSecondary.withOpacity(0.4),
+                  color: AppColors.textSecondary.withValues(alpha: 0.4),
                 ),
                 SizedBox(height: 8.h),
                 Text(
@@ -132,8 +132,8 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
               padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
                 color: _isWithinGeofence
-                    ? AppColors.success.withOpacity(0.2)
-                    : AppColors.warning.withOpacity(0.2),
+                    ? AppColors.success.withValues(alpha: 0.2)
+                    : AppColors.warning.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Row(
@@ -253,13 +253,13 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
         color: _isWithinGeofence
-            ? AppColors.success.withOpacity(0.08)
-            : AppColors.warning.withOpacity(0.08),
+            ? AppColors.success.withValues(alpha: 0.08)
+            : AppColors.warning.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
           color: _isWithinGeofence
-              ? AppColors.success.withOpacity(0.3)
-              : AppColors.warning.withOpacity(0.3),
+              ? AppColors.success.withValues(alpha: 0.3)
+              : AppColors.warning.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -310,9 +310,9 @@ class _DriverMapTrackingScreenState extends State<DriverMapTrackingScreen> {
       padding: EdgeInsets.all(14.w),
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.1),
+        color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

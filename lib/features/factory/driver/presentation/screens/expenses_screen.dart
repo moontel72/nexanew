@@ -157,7 +157,7 @@ class _DriverExpensesScreenState extends State<DriverExpensesScreen> {
                             ),
                             borderRadius: BorderRadius.circular(10.r),
                             color: receiptFile != null
-                                ? AppColors.success.withOpacity(0.06)
+                                ? AppColors.success.withValues(alpha: 0.06)
                                 : AppColors.surface,
                           ),
                           child: Row(
@@ -289,9 +289,9 @@ class _DriverExpensesScreenState extends State<DriverExpensesScreen> {
               return Container(
                 padding: EdgeInsets.all(16.w),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.05),
+                  color: AppColors.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(14.r),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,7 +315,7 @@ class _DriverExpensesScreenState extends State<DriverExpensesScreen> {
                           vertical: 6.h,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.1),
+                          color: AppColors.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6.r),
                         ),
                         child: Row(
@@ -448,7 +448,7 @@ class _DriverExpensesScreenState extends State<DriverExpensesScreen> {
                       borderRadius: BorderRadius.circular(12.r),
                       border: Border.all(
                         color: needsApproval
-                            ? AppColors.error.withOpacity(0.4)
+                            ? AppColors.error.withValues(alpha: 0.4)
                             : AppColors.border,
                       ),
                     ),
@@ -458,7 +458,7 @@ class _DriverExpensesScreenState extends State<DriverExpensesScreen> {
                           width: 44.w,
                           height: 44.w,
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           child: Icon(icon, color: AppColors.primary, size: 22),
@@ -485,8 +485,8 @@ class _DriverExpensesScreenState extends State<DriverExpensesScreen> {
                                         vertical: 2.h,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppColors.error.withOpacity(
-                                          0.15,
+                                        color: AppColors.error.withValues(
+                                          alpha: 0.15,
                                         ),
                                         borderRadius: BorderRadius.circular(
                                           4.r,

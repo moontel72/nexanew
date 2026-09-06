@@ -92,7 +92,7 @@ class ReconciliationScreen extends StatelessWidget {
           style: const TextStyle(color: Colors.white),
         ),
         subtitle: Text(
-          '${rec.status?.toUpperCase() ?? 'DRAFT'} · ${_fmt(rec.createdAt)}',
+          '${rec.status.toUpperCase() ?? 'DRAFT'} · ${_fmt(rec.createdAt)}',
           style: TextStyle(color: color, fontSize: 11),
         ),
       ),

@@ -317,10 +317,10 @@ class _DriverMaintenanceScreenState extends State<DriverMaintenanceScreen> {
                   margin: EdgeInsets.only(bottom: 14.h),
                   padding: EdgeInsets.all(12.w),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10.r),
                     border: Border.all(
-                      color: AppColors.error.withOpacity(0.35),
+                      color: AppColors.error.withValues(alpha: 0.35),
                     ),
                   ),
                   child: Row(
@@ -443,12 +443,12 @@ class _DriverMaintenanceScreenState extends State<DriverMaintenanceScreen> {
                     padding: EdgeInsets.all(14.w),
                     decoration: BoxDecoration(
                       color: isDue
-                          ? AppColors.error.withOpacity(0.03)
+                          ? AppColors.error.withValues(alpha: 0.03)
                           : AppColors.surface,
                       borderRadius: BorderRadius.circular(12.r),
                       border: Border.all(
                         color: isDue
-                            ? AppColors.error.withOpacity(0.3)
+                            ? AppColors.error.withValues(alpha: 0.3)
                             : AppColors.border,
                       ),
                     ),
@@ -459,8 +459,8 @@ class _DriverMaintenanceScreenState extends State<DriverMaintenanceScreen> {
                           height: 44.w,
                           decoration: BoxDecoration(
                             color: isDue
-                                ? AppColors.error.withOpacity(0.1)
-                                : AppColors.primary.withOpacity(0.1),
+                                ? AppColors.error.withValues(alpha: 0.1)
+                                : AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           child: Icon(
@@ -491,8 +491,8 @@ class _DriverMaintenanceScreenState extends State<DriverMaintenanceScreen> {
                                         vertical: 2.h,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppColors.error.withOpacity(
-                                          0.15,
+                                        color: AppColors.error.withValues(
+                                          alpha: 0.15,
                                         ),
                                         borderRadius: BorderRadius.circular(
                                           4.r,

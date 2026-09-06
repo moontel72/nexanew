@@ -109,7 +109,7 @@ class LayoutDesignerBloc
       if (d is Map) {
         final snapshot = d['current_snapshot'];
         if (snapshot is Map) {
-          snap = Map<String, dynamic>.from(snapshot as Map);
+          snap = Map<String, dynamic>.from(snapshot);
           if (!e.cloneFromTemplate) {
             snap['display_name'] ??= d['display_name']?.toString();
           } else {
@@ -117,7 +117,7 @@ class LayoutDesignerBloc
           }
           snap['layout_status'] ??= d['layout_status']?.toString();
         } else {
-          snap = Map<String, dynamic>.from(d as Map);
+          snap = Map<String, dynamic>.from(d);
         }
       } else {
         snap = <String, dynamic>{};

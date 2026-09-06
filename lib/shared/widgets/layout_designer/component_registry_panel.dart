@@ -309,7 +309,7 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
           ],
           if (_available.isNotEmpty)
             DropdownButtonFormField<SeatPartType>(
-              value: null,
+              initialValue: null,
               hint: const Text(
                 'Add part type…',
                 style: TextStyle(color: Colors.white54, fontSize: 12),
@@ -354,7 +354,7 @@ class _ComponentRegistryPanelState extends State<ComponentRegistryPanel> {
               _dimLabel('Driving Position'),
               const SizedBox(height: 4),
               DropdownButtonFormField<DriverPosition>(
-                value: _driverPosition,
+                initialValue: _driverPosition,
                 dropdownColor: const Color(0xFF122442),
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: const InputDecoration(

@@ -260,7 +260,7 @@ class _ScoreHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CricketColors.textAccent.withOpacity(0.4)),
+        border: Border.all(color: CricketColors.textAccent.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [

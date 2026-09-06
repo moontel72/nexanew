@@ -348,7 +348,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
               _loadingTeams
                   ? const CircularProgressIndicator()
                   : DropdownButtonFormField<String>(
-                      value: _selectedTeamId,
+                      initialValue: _selectedTeamId,
                       dropdownColor: const Color(0xFF0F2936),
                       style: const TextStyle(color: Colors.white),
                       decoration: const InputDecoration(
@@ -387,7 +387,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _position,
+                initialValue: _position,
                 dropdownColor: const Color(0xFF0F2936),
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
@@ -414,7 +414,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String?>(
-                value: _role,
+                initialValue: _role,
                 dropdownColor: const Color(0xFF0F2936),
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
@@ -461,7 +461,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String?>(
-                value: _battingStyle,
+                initialValue: _battingStyle,
                 dropdownColor: const Color(0xFF0F2936),
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
@@ -498,7 +498,7 @@ class _PlayerRegisterPageState extends State<PlayerRegisterPage> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String?>(
-                value: _bowlingStyle,
+                initialValue: _bowlingStyle,
                 dropdownColor: const Color(0xFF0F2936),
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(

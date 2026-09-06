@@ -235,9 +235,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               width: double.infinity,
               padding: EdgeInsets.symmetric(vertical: 12.h),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: statusColor.withOpacity(0.3)),
+                border: Border.all(color: statusColor.withValues(alpha: 0.3)),
               ),
               child: Column(
                 children: [
@@ -513,7 +513,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Widget _statCard(String label, int value, IconData icon, Color color) {
     return Expanded(
       child: Card(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.r),
         ),

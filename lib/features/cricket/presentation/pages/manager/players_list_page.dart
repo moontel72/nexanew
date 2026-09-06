@@ -303,7 +303,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.15),
+                color: const Color(0xFF10B981).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -438,7 +438,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                 },
                 child: CircleAvatar(
                   radius: 22,
-                  backgroundColor: posColor.withOpacity(0.2),
+                  backgroundColor: posColor.withValues(alpha: 0.2),
                   backgroundImage: p.photoUrl != null && p.photoUrl!.isNotEmpty
                       ? NetworkImage(_fullUrl(p.photoUrl!))
                       : null,
@@ -480,9 +480,9 @@ class _PlayersListPageState extends State<PlayersListPage> {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: posColor.withOpacity(0.15),
+                        color: posColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: posColor.withOpacity(0.5)),
+                        border: Border.all(color: posColor.withValues(alpha: 0.5)),
                       ),
                       child: Text(
                         _positionLabel(p.position),
@@ -505,7 +505,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFF6B7280).withOpacity(0.4),
+                      color: const Color(0xFF6B7280).withValues(alpha: 0.4),
                     ),
                   ),
                   alignment: Alignment.center,
@@ -910,9 +910,9 @@ class _PlayersListPageState extends State<PlayersListPage> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -997,7 +997,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                   const SizedBox(height: 12),
                   // Position dropdown
                   DropdownButtonFormField<String>(
-                    value: selectedPosition,
+                    initialValue: selectedPosition,
                     dropdownColor: const Color(0xFF0F2936),
                     style: const TextStyle(color: Colors.white),
                     decoration: _darkInputDecoration('Position'),
@@ -1023,7 +1023,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                   const SizedBox(height: 12),
                   // Role Type dropdown
                   DropdownButtonFormField<String?>(
-                    value: selectedRole,
+                    initialValue: selectedRole,
                     dropdownColor: const Color(0xFF0F2936),
                     style: const TextStyle(color: Colors.white),
                     decoration: _darkInputDecoration('Role Type'),
@@ -1054,7 +1054,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                   const SizedBox(height: 12),
                   // Batting style dropdown
                   DropdownButtonFormField<String?>(
-                    value: selectedBattingStyle,
+                    initialValue: selectedBattingStyle,
                     dropdownColor: const Color(0xFF0F2936),
                     style: const TextStyle(color: Colors.white),
                     decoration: _darkInputDecoration('Batting Style'),
@@ -1078,7 +1078,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                   const SizedBox(height: 12),
                   // Bowling style dropdown
                   DropdownButtonFormField<String?>(
-                    value: selectedBowlingStyle,
+                    initialValue: selectedBowlingStyle,
                     dropdownColor: const Color(0xFF0F2936),
                     style: const TextStyle(color: Colors.white),
                     decoration: _darkInputDecoration('Bowling Style'),
@@ -1113,7 +1113,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: selectedStatus,
+                    initialValue: selectedStatus,
                     dropdownColor: const Color(0xFF0F2936),
                     style: const TextStyle(color: Colors.white),
                     decoration: _darkInputDecoration('Status'),
@@ -1130,7 +1130,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                   const SizedBox(height: 12),
                   // Team transfer dropdown
                   DropdownButtonFormField<String>(
-                    value: selectedTeamId,
+                    initialValue: selectedTeamId,
                     dropdownColor: const Color(0xFF0F2936),
                     style: const TextStyle(color: Colors.white),
                     decoration: _darkInputDecoration('Team (Transfer)'),
@@ -1444,7 +1444,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                         Icon(
                           Icons.person_search,
                           size: 64,
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -1452,7 +1452,7 @@ class _PlayersListPageState extends State<PlayersListPage> {
                               ? 'No trashed players'
                               : 'No players found',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
+                            color: Colors.white.withValues(alpha: 0.5),
                           ),
                         ),
                       ],

@@ -117,7 +117,7 @@ class _AssignSponsorSheetState extends State<AssignSponsorSheet> {
                       valueListenable: _sponsor,
                       builder: (context, value, _) =>
                           DropdownButtonFormField<String?>(
-                            value: effective,
+                            initialValue: effective,
                             isExpanded: true,
                             decoration: cricketFieldDecoration('Sponsor *'),
                             dropdownColor: const Color(0xFF0F2936),
@@ -152,7 +152,7 @@ class _AssignSponsorSheetState extends State<AssignSponsorSheet> {
                       valueListenable: _placement,
                       builder: (context, value, _) =>
                           DropdownButtonFormField<String>(
-                            value: value,
+                            initialValue: value,
                             isExpanded: true,
                             decoration: cricketFieldDecoration('Placement'),
                             dropdownColor: const Color(0xFF0F2936),

@@ -100,12 +100,12 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
                   Icon(
                     Icons.image_not_supported,
                     size: 64,
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No teams found',
-                    style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                   ),
                 ],
               ),
@@ -249,10 +249,10 @@ class _TeamMediaCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.2),
+                  color: const Color(0xFF10B981).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
-                    color: const Color(0xFF10B981).withOpacity(0.5),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.5),
                   ),
                 ),
                 child: Text(

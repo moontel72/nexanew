@@ -63,7 +63,7 @@ class _CommentaryTile extends StatelessWidget {
             width: 40,
             padding: const EdgeInsets.symmetric(vertical: 2),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(4),
             ),
             alignment: Alignment.center,
@@ -211,7 +211,7 @@ class FallOfWicketsStrip extends StatelessWidget {
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: CricketColors.wicket.withOpacity(0.15),
+                  color: CricketColors.wicket.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(

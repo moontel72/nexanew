@@ -571,9 +571,7 @@ class SeatSelectionBloc extends Bloc<SeatSelectionEvent, SeatSelectionState> {
           )
           .listen((event) {
             if (isClosed) return;
-            final payload = event.payload is Map
-                ? Map<String, dynamic>.from(event.payload as Map)
-                : <String, dynamic>{};
+            final payload = Map<String, dynamic>.from(event.payload as Map);
             final heldRaw = payload['held_seats'] ?? [];
             final bookedRaw = payload['booked_seats'] ?? [];
             final avail = (payload['available_seats'] ?? 0) as int;

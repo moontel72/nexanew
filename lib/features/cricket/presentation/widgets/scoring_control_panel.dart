@@ -158,7 +158,7 @@ class _TossCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.5)),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,7 +210,7 @@ class _TossCard extends StatelessWidget {
             ),
           if (status == 'scheduled' && canToss && c.showTossForm) ...[
             DropdownButtonFormField<String?>(
-              value: c.tossWinnerTeamId,
+              initialValue: c.tossWinnerTeamId,
               dropdownColor: const Color(0xFF0F2936),
               style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
@@ -228,7 +228,7 @@ class _TossCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: c.tossDecision,
+              initialValue: c.tossDecision,
               dropdownColor: const Color(0xFF0F2936),
               style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
@@ -318,7 +318,7 @@ class _TrackingBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.inputFill,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.warning.withOpacity(0.5)),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
@@ -611,7 +611,7 @@ class _CreaseCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CricketColors.textAccent.withOpacity(0.4)),
+        border: Border.all(color: CricketColors.textAccent.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -735,7 +735,7 @@ class _SelectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: CricketColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accent.withOpacity(0.5)),
+        border: Border.all(color: accent.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -909,7 +909,7 @@ class _BowlerTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: onTap != null
-                ? const Color(0xFF3B82F6).withOpacity(0.6)
+                ? const Color(0xFF3B82F6).withValues(alpha: 0.6)
                 : Colors.transparent,
           ),
         ),
@@ -1150,13 +1150,13 @@ class _RunButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: CricketColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
-            color: busy ? color.withOpacity(0.4) : color,
+            color: busy ? color.withValues(alpha: 0.4) : color,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -1194,14 +1194,14 @@ class _ExtraButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: CricketColors.surface,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+          border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
             color: busy
-                ? AppColors.warning.withOpacity(0.4)
+                ? AppColors.warning.withValues(alpha: 0.4)
                 : AppColors.warning,
             fontSize: 13,
             fontWeight: FontWeight.bold,
@@ -1226,16 +1226,16 @@ class _WicketButton extends StatelessWidget {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: CricketColors.wicket.withOpacity(0.2),
+          color: CricketColors.wicket.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: CricketColors.wicket.withOpacity(0.5)),
+          border: Border.all(color: CricketColors.wicket.withValues(alpha: 0.5)),
         ),
         alignment: Alignment.center,
         child: Text(
           'W',
           style: TextStyle(
             color: busy
-                ? CricketColors.wicket.withOpacity(0.4)
+                ? CricketColors.wicket.withValues(alpha: 0.4)
                 : CricketColors.wicket,
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -1433,7 +1433,7 @@ class WicketSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String?>(
-                  value: c.wicketNextBatterId,
+                  initialValue: c.wicketNextBatterId,
                   dropdownColor: const Color(0xFF0F2936),
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(

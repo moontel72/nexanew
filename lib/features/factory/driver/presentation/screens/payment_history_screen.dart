@@ -122,7 +122,7 @@ class _DriverPaymentHistoryScreenState
                     Text(
                       'Total Earnings',
                       style: TextStyle(
-                        color: AppColors.white.withOpacity(0.85),
+                        color: AppColors.white.withValues(alpha: 0.85),
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w500,
                       ),
@@ -261,7 +261,7 @@ class _DriverPaymentHistoryScreenState
                               width: 44.w,
                               height: 44.w,
                               decoration: BoxDecoration(
-                                color: color.withOpacity(0.1),
+                                color: color.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10.r),
                               ),
                               child: Icon(icon, color: color, size: 22),
@@ -288,11 +288,11 @@ class _DriverPaymentHistoryScreenState
                                         ),
                                         decoration: BoxDecoration(
                                           color: status == 'paid'
-                                              ? AppColors.success.withOpacity(
-                                                  0.12,
+                                              ? AppColors.success.withValues(
+                                                  alpha: 0.12,
                                                 )
-                                              : AppColors.warning.withOpacity(
-                                                  0.12,
+                                              : AppColors.warning.withValues(
+                                                  alpha: 0.12,
                                                 ),
                                           borderRadius: BorderRadius.circular(
                                             4.r,

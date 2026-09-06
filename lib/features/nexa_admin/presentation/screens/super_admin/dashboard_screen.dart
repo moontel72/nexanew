@@ -851,7 +851,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                               label: Text(action.priority.name.toUpperCase()),
                               backgroundColor: _getActionColor(
                                 action.priority,
-                              ).withOpacity(0.2),
+                              ).withValues(alpha: 0.2),
                             ),
                             onTap: () => _handlePendingAction(action),
                           ),
@@ -879,7 +879,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
   /// Build export overlay
   Widget _buildExportOverlay(String exportFormat) {
     return Container(
-      color: Colors.black.withOpacity(0.5),
+      color: Colors.black.withValues(alpha: 0.5),
       child: Center(
         child: Card(
           child: Padding(

@@ -752,8 +752,8 @@ class __FilterDialogState extends State<_FilterDialog> {
       label: Text(label),
       selected: isSelected,
       onSelected: (_) => _toggleStatus(status),
-      backgroundColor: isSelected ? color.withOpacity(0.2) : null,
-      selectedColor: color.withOpacity(0.2),
+      backgroundColor: isSelected ? color.withValues(alpha: 0.2) : null,
+      selectedColor: color.withValues(alpha: 0.2),
       labelStyle: TextStyle(color: isSelected ? color : AppColors.textPrimary),
       checkmarkColor: color,
     );

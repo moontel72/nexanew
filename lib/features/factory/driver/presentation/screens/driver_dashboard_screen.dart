@@ -206,7 +206,7 @@ class FactoryDriverDashboardScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16.r),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -221,7 +221,7 @@ class FactoryDriverDashboardScreen extends StatelessWidget {
                   Text(
                     'Trip Status (4T)',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 13.sp,
                     ),
                   ),
@@ -231,7 +231,7 @@ class FactoryDriverDashboardScreen extends StatelessWidget {
                       vertical: 4.h,
                     ),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.2),
+                      color: statusColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20.r),
                     ),
                     child: Text(
@@ -261,7 +261,7 @@ class FactoryDriverDashboardScreen extends StatelessWidget {
                             shape: BoxShape.circle,
                             color: isActive
                                 ? Colors.white
-                                : Colors.white.withOpacity(0.3),
+                                : Colors.white.withValues(alpha: 0.3),
                             border: isCurrent
                                 ? Border.all(color: AppColors.accent, width: 2)
                                 : null,
@@ -274,7 +274,7 @@ class FactoryDriverDashboardScreen extends StatelessWidget {
                             fontSize: 9.sp,
                             color: isActive
                                 ? Colors.white
-                                : Colors.white.withOpacity(0.4),
+                                : Colors.white.withValues(alpha: 0.4),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -313,7 +313,7 @@ class FactoryDriverDashboardScreen extends StatelessWidget {
               width: 40.w,
               height: 40.w,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10.r),
               ),
               child: Icon(icon, color: AppColors.primary, size: 20.sp),

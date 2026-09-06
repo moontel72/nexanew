@@ -123,7 +123,7 @@ class _PointsTableWidgetState extends State<PointsTableWidget> {
         scrollDirection: Axis.horizontal,
         child: DataTable(
           headingRowColor: WidgetStateProperty.all(
-            AppColors.primaryDark.withOpacity(0.6),
+            AppColors.primaryDark.withValues(alpha: 0.6),
           ),
           dataRowMinHeight: 40,
           dataRowMaxHeight: 44,
@@ -149,7 +149,7 @@ class _PointsTableWidgetState extends State<PointsTableWidget> {
             return DataRow(
               color: WidgetStateProperty.resolveWith<Color?>((states) {
                 if (isHighlight) {
-                  return AppColors.secondary.withOpacity(0.08);
+                  return AppColors.secondary.withValues(alpha: 0.08);
                 }
                 return null;
               }),

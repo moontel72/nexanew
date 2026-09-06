@@ -22,12 +22,12 @@ class TorchButton extends StatelessWidget {
       height: size.w,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isTorchOn ? AppColors.accent : Colors.white.withOpacity(0.9),
+        color: isTorchOn ? AppColors.accent : Colors.white.withValues(alpha: 0.9),
         boxShadow: [
           BoxShadow(
             color: isTorchOn
-                ? AppColors.accent.withOpacity(0.5)
-                : Colors.black.withOpacity(0.2),
+                ? AppColors.accent.withValues(alpha: 0.5)
+                : Colors.black.withValues(alpha: 0.2),
             blurRadius: isTorchOn ? 16 : 8,
             spreadRadius: isTorchOn ? 2 : 0,
           ),

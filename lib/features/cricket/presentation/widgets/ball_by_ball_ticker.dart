@@ -55,7 +55,7 @@ class BallByBallTicker extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: CricketColors.wicket.withOpacity(0.15),
+                color: CricketColors.wicket.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(

@@ -125,7 +125,7 @@ class _CateringItemDialogState extends State<CateringItemDialog> {
               const SizedBox(height: 10),
               // Category dropdown
               DropdownButtonFormField<String>(
-                value: _categoryId,
+                initialValue: _categoryId,
                 dropdownColor: const Color(0xFF1B2838),
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: _dec('Category'),
@@ -152,7 +152,7 @@ class _CateringItemDialogState extends State<CateringItemDialog> {
               const SizedBox(height: 10),
               // Status
               DropdownButtonFormField<String>(
-                value: _status,
+                initialValue: _status,
                 dropdownColor: const Color(0xFF1B2838),
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: _dec('Status'),
@@ -283,7 +283,7 @@ class _StockAdjustDialogState extends State<StockAdjustDialog> {
                   style: TextStyle(color: Colors.white, fontSize: 12),
                 ),
                 selected: _add,
-                selectedColor: Colors.green.withOpacity(0.3),
+                selectedColor: Colors.green.withValues(alpha: 0.3),
                 backgroundColor: const Color(0xFF0D1B2A),
                 onSelected: (_) => setState(() => _add = true),
               ),
@@ -294,7 +294,7 @@ class _StockAdjustDialogState extends State<StockAdjustDialog> {
                   style: TextStyle(color: Colors.white, fontSize: 12),
                 ),
                 selected: !_add,
-                selectedColor: Colors.redAccent.withOpacity(0.3),
+                selectedColor: Colors.redAccent.withValues(alpha: 0.3),
                 backgroundColor: const Color(0xFF0D1B2A),
                 onSelected: (_) => setState(() => _add = false),
               ),

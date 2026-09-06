@@ -102,10 +102,10 @@ class _DriverComplianceScreenState extends State<DriverComplianceScreen> {
                   margin: EdgeInsets.only(bottom: 14.h),
                   padding: EdgeInsets.all(14.w),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12.r),
                     border: Border.all(
-                      color: AppColors.error.withOpacity(0.35),
+                      color: AppColors.error.withValues(alpha: 0.35),
                     ),
                   ),
                   child: Row(
@@ -114,7 +114,7 @@ class _DriverComplianceScreenState extends State<DriverComplianceScreen> {
                         width: 40.w,
                         height: 40.w,
                         decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.2),
+                          color: AppColors.error.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -140,7 +140,7 @@ class _DriverComplianceScreenState extends State<DriverComplianceScreen> {
                             Text(
                               'One or more documents have expired. Your ability to accept new trips may be blocked (4Y). Please renew immediately.',
                               style: TextStyle(
-                                color: AppColors.error.withOpacity(0.8),
+                                color: AppColors.error.withValues(alpha: 0.8),
                                 fontSize: 12.sp,
                               ),
                             ),
@@ -157,10 +157,10 @@ class _DriverComplianceScreenState extends State<DriverComplianceScreen> {
                     margin: EdgeInsets.only(bottom: 10.h),
                     padding: EdgeInsets.all(10.w),
                     decoration: BoxDecoration(
-                      color: AppColors.warning.withOpacity(0.08),
+                      color: AppColors.warning.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8.r),
                       border: Border.all(
-                        color: AppColors.warning.withOpacity(0.3),
+                        color: AppColors.warning.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -175,7 +175,7 @@ class _DriverComplianceScreenState extends State<DriverComplianceScreen> {
                           child: Text(
                             '${_docTypeName(docType)} is expiring soon',
                             style: TextStyle(
-                              color: AppColors.warning.withOpacity(0.9),
+                              color: AppColors.warning.withValues(alpha: 0.9),
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w600,
                             ),
@@ -208,7 +208,7 @@ class _DriverComplianceScreenState extends State<DriverComplianceScreen> {
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(14.r),
                     border: Border.all(
-                      color: statusClr.withOpacity(0.4),
+                      color: statusClr.withValues(alpha: 0.4),
                       width: 1.2,
                     ),
                     boxShadow: [
@@ -228,7 +228,7 @@ class _DriverComplianceScreenState extends State<DriverComplianceScreen> {
                             width: 46.w,
                             height: 46.w,
                             decoration: BoxDecoration(
-                              color: statusClr.withOpacity(0.1),
+                              color: statusClr.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                             child: Icon(icon, color: statusClr, size: 24),
@@ -253,7 +253,7 @@ class _DriverComplianceScreenState extends State<DriverComplianceScreen> {
                                     vertical: 3.h,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: statusClr.withOpacity(0.12),
+                                    color: statusClr.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(4.r),
                                   ),
                                   child: Text(

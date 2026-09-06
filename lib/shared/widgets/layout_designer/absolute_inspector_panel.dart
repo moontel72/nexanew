@@ -323,7 +323,7 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                           const Spacer(),
                           Switch(
                             value: _isReversing,
-                            activeColor: const Color(0xFF3B82F6),
+                            activeThumbColor: const Color(0xFF3B82F6),
                             onChanged: (v) => setState(() => _isReversing = v),
                           ),
                           const Spacer(),
@@ -428,7 +428,7 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
                         _bookable = v;
                         if (!v) _bookingMode = BookingMode.none;
                       }),
-                      activeColor: const Color(0xFF16A34A),
+                      activeThumbColor: const Color(0xFF16A34A),
                       title: const Text(
                         'Bookable',
                         style: TextStyle(color: Colors.white, fontSize: 13),
@@ -466,7 +466,7 @@ class _AbsoluteInspectorPanelState extends State<AbsoluteInspectorPanel> {
 
                     _sectionLabel('GENDER RESTRICTION'),
                     DropdownButtonFormField<String?>(
-                      value: _genderRestriction,
+                      initialValue: _genderRestriction,
                       dropdownColor: const Color(0xFF1A2A3A),
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       decoration: InputDecoration(

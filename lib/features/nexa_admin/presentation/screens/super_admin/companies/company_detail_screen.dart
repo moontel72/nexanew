@@ -1790,7 +1790,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                     ),
                     const SizedBox(height: 16),
                     // ── Fleet Metadata (read-only) ───────────────
-                    if (fleetMeta != null) ...[_buildFleetMetaSection(fleetMeta!)],
+                    if (fleetMeta != null) ...[_buildFleetMetaSection(fleetMeta)],
                     // ── Admin Notes ─────────────────────────────
                     TextField(
                       controller: notesCtrl,

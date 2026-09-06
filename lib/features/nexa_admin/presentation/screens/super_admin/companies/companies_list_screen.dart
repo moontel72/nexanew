@@ -527,7 +527,7 @@ class _CompaniesListScreenState extends State<CompaniesListScreen> {
             );
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary.withOpacity(0.1),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
             foregroundColor: AppColors.primary,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8.r),

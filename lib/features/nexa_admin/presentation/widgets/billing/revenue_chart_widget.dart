@@ -185,7 +185,7 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
         labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         axisLine: AxisLine(color: AppColors.border),
         majorGridLines: MajorGridLines(
-          color: AppColors.border.withOpacity(0.3),
+          color: AppColors.border.withValues(alpha: 0.3),
         ),
       ),
       primaryYAxis: NumericAxis(
@@ -193,7 +193,7 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
         labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         axisLine: AxisLine(color: AppColors.border),
         majorGridLines: MajorGridLines(
-          color: AppColors.border.withOpacity(0.3),
+          color: AppColors.border.withValues(alpha: 0.3),
         ),
       ),
       series: <CartesianSeries>[
@@ -228,7 +228,7 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
         labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         axisLine: AxisLine(color: AppColors.border),
         majorGridLines: MajorGridLines(
-          color: AppColors.border.withOpacity(0.3),
+          color: AppColors.border.withValues(alpha: 0.3),
         ),
       ),
       primaryYAxis: NumericAxis(
@@ -236,7 +236,7 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
         labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         axisLine: AxisLine(color: AppColors.border),
         majorGridLines: MajorGridLines(
-          color: AppColors.border.withOpacity(0.3),
+          color: AppColors.border.withValues(alpha: 0.3),
         ),
       ),
       series: <CartesianSeries>[

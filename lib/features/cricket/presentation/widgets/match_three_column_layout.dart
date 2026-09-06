@@ -124,12 +124,12 @@ class _BowlerTile extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: active
-            ? const Color(0xFF3B82F6).withOpacity(0.15)
+            ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
             : CricketColors.inputFill,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: active
-              ? const Color(0xFF3B82F6).withOpacity(0.6)
+              ? const Color(0xFF3B82F6).withValues(alpha: 0.6)
               : Colors.transparent,
         ),
       ),
@@ -236,8 +236,8 @@ class _BatterTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: batter.dismissed
-              ? CricketColors.wicket.withOpacity(0.5)
-              : CricketColors.complete.withOpacity(0.3),
+              ? CricketColors.wicket.withValues(alpha: 0.5)
+              : CricketColors.complete.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -355,7 +355,7 @@ class _ColumnCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: CricketColors.surface.withOpacity(0.6),
+        color: CricketColors.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: CricketColors.textTertiary),
       ),

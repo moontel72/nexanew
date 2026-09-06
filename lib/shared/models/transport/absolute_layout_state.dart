@@ -303,7 +303,7 @@ class AbsoluteLayoutState {
         registry = ComponentRegistry.fromJson(
           registryJson is Map<String, dynamic>
               ? registryJson
-              : (registryJson as Map).cast<String, dynamic>(),
+              : (registryJson).cast<String, dynamic>(),
         );
       } catch (_) {
         registry = null;

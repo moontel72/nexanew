@@ -661,7 +661,7 @@ class _OwnerView extends StatelessWidget {
             ySet.add(y.round());
             if (y < minSeatY) minSeatY = y;
             if (firstY == null) firstY = y;
-            if ((y - firstY!).abs() < 5) firstRowXs.add(x);
+            if ((y - firstY).abs() < 5) firstRowXs.add(x);
           }
           // Only merge berth pairs (lower+upper at same floor column);
           // standard seats must never be merged so every column is counted.
@@ -670,7 +670,7 @@ class _OwnerView extends StatelessWidget {
             if (c is! Map) continue;
             final t = c['type']?.toString() ?? '';
             final y = (c['y'] as num?)?.toDouble();
-            if (y != null && firstY != null && (y - firstY!).abs() < 5) {
+            if (y != null && firstY != null && (y - firstY).abs() < 5) {
               if (t == 'sleeperLower' || t == 'sleeperUpper') {
                 hasBerths = true;
                 break;
@@ -868,7 +868,7 @@ class _Sidebar extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFDB2777).withOpacity(0.4),
+                        color: const Color(0xFFDB2777).withValues(alpha: 0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),

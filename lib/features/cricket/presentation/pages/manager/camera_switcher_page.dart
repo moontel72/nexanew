@@ -191,7 +191,7 @@ class _CameraSwitcherPageState extends State<CameraSwitcherPage> {
               ],
               const SizedBox(height: 12),
               DropdownButtonFormField<int>(
-                value: cameraNumber,
+                initialValue: cameraNumber,
                 dropdownColor: const Color(0xFF0F2936),
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
@@ -232,7 +232,7 @@ class _CameraSwitcherPageState extends State<CameraSwitcherPage> {
                 // inherit a scheme color that could blend into the button.
                 foregroundColor: Colors.black87,
                 disabledBackgroundColor:
-                    AppColors.secondary.withOpacity(0.35),
+                    AppColors.secondary.withValues(alpha: 0.35),
                 disabledForegroundColor: Colors.black38,
               ),
               // Disabled (dimmed) until a label is typed — no silent no-op.
@@ -288,7 +288,7 @@ class _CameraTileState extends State<_CameraTile> {
         borderRadius: BorderRadius.circular(12),
         border: widget.isActive
             ? Border.all(color: AppColors.secondary, width: 2)
-            : Border.all(color: CricketColors.textSecondary.withOpacity(0.2)),
+            : Border.all(color: CricketColors.textSecondary.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -547,7 +547,7 @@ class _StatusBadge extends StatelessWidget {
     margin: const EdgeInsets.only(right: 6),
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.2),
+      color: color.withValues(alpha: 0.2),
       borderRadius: BorderRadius.circular(4),
     ),
     child: Text(

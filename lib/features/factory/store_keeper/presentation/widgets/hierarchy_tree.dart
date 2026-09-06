@@ -32,7 +32,7 @@ class HierarchyTreeView extends StatelessWidget {
                     width: 36.w,
                     height: 36.w,
                     decoration: BoxDecoration(
-                      color: colors.withOpacity(0.15),
+                      color: colors.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Icon(icon, color: colors, size: 18.w),

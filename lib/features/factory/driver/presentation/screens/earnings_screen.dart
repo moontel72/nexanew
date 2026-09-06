@@ -123,7 +123,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -134,7 +134,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
           Text(
             'Total Earnings',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               fontSize: 14.sp,
             ),
           ),
@@ -151,7 +151,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
           Text(
             'Net Pay: ${fmt.format(earnings.currentBalance)}',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
             ),
@@ -191,7 +191,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             fontSize: 12.sp,
           ),
         ),
@@ -278,9 +278,9 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
     return Container(
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: AppColors.warning.withOpacity(0.1),
+        color: AppColors.warning.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -310,7 +310,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
     return Container(
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.1),
+        color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Text(message, style: TextStyle(color: AppColors.error)),

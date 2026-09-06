@@ -23,7 +23,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trace_odd/core/navigation/panel_routes.dart';
 import 'package:trace_odd/core/services/hardware_scan_service.dart';
 import 'package:trace_odd/core/theme/branding_config.dart';
-import 'package:trace_odd/shared/theme/colors.dart';
 
 mixin ScanViewMixin<T extends StatefulWidget> on State<T> {
   HardwareScanService? _scanService;

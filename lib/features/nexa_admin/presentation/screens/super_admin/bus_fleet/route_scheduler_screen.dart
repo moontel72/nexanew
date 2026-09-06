@@ -748,7 +748,7 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                 try {
                   if (isEdit) {
                     await _api.put(
-                      '${widget.panelPrefix}/routes/${route!['id']}',
+                      '${widget.panelPrefix}/routes/${route['id']}',
                       body: body,
                     );
                     if (stopCtrls.isNotEmpty) {
@@ -766,7 +766,7 @@ class _RouteSchedulerScreenState extends State<RouteSchedulerScreen> {
                         });
                       }
                       await _api.post(
-                        '${widget.panelPrefix}/routes/${route!['id']}/waypoints',
+                        '${widget.panelPrefix}/routes/${route['id']}/waypoints',
                         body: {'waypoints': wps},
                       );
                     }

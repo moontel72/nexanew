@@ -185,10 +185,10 @@ class _DriverDisputesScreenState extends State<DriverDisputesScreen> {
                   margin: EdgeInsets.only(bottom: 12.h),
                   padding: EdgeInsets.all(12.w),
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.08),
+                    color: AppColors.accent.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10.r),
                     border: Border.all(
-                      color: AppColors.accent.withOpacity(0.35),
+                      color: AppColors.accent.withValues(alpha: 0.35),
                     ),
                   ),
                   child: Row(
@@ -203,7 +203,7 @@ class _DriverDisputesScreenState extends State<DriverDisputesScreen> {
                         child: Text(
                           '$unresolvedCount dispute(s) unresolved for >24 hours. Escalation notice triggered (4AB).',
                           style: TextStyle(
-                            color: AppColors.accent.withOpacity(0.9),
+                            color: AppColors.accent.withValues(alpha: 0.9),
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
                           ),
@@ -233,7 +233,7 @@ class _DriverDisputesScreenState extends State<DriverDisputesScreen> {
                     borderRadius: BorderRadius.circular(14.r),
                     border: Border.all(
                       color: isEscalated && status != DisputeStatus.resolved
-                          ? AppColors.accent.withOpacity(0.5)
+                          ? AppColors.accent.withValues(alpha: 0.5)
                           : AppColors.border,
                     ),
                     boxShadow: [
@@ -257,7 +257,7 @@ class _DriverDisputesScreenState extends State<DriverDisputesScreen> {
                                 width: 44.w,
                                 height: 44.w,
                                 decoration: BoxDecoration(
-                                  color: statusClr.withOpacity(0.1),
+                                  color: statusClr.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10.r),
                                 ),
                                 child: Icon(
@@ -288,7 +288,7 @@ class _DriverDisputesScreenState extends State<DriverDisputesScreen> {
                                             vertical: 3.h,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: statusClr.withOpacity(0.12),
+                                            color: statusClr.withValues(alpha: 0.12),
                                             borderRadius: BorderRadius.circular(
                                               4.r,
                                             ),
@@ -399,10 +399,10 @@ class _DriverDisputesScreenState extends State<DriverDisputesScreen> {
                                   width: double.infinity,
                                   padding: EdgeInsets.all(12.w),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.05),
+                                    color: AppColors.primary.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(8.r),
                                     border: Border.all(
-                                      color: AppColors.primary.withOpacity(0.2),
+                                      color: AppColors.primary.withValues(alpha: 0.2),
                                     ),
                                   ),
                                   child: Text(
@@ -467,9 +467,9 @@ class _DriverDisputesScreenState extends State<DriverDisputesScreen> {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10.h),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(color: color.withOpacity(0.25)),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Column(
           children: [
@@ -486,7 +486,7 @@ class _DriverDisputesScreenState extends State<DriverDisputesScreen> {
               label,
               style: TextStyle(
                 fontSize: 11.sp,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
                 fontWeight: FontWeight.w500,
               ),
             ),

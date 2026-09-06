@@ -251,7 +251,7 @@ class _XiRow extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: index < 2
-              ? CricketColors.complete.withOpacity(0.25)
+              ? CricketColors.complete.withValues(alpha: 0.25)
               : CricketColors.inputFill,
           borderRadius: BorderRadius.circular(13),
         ),

@@ -223,7 +223,7 @@ class _DashboardViewState extends State<_DashboardView> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
@@ -540,7 +540,7 @@ class _DashboardViewState extends State<_DashboardView> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.2),
+                    color: statusColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -1195,7 +1195,7 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
             ySet.add(y.round());
             if (y < minSeatY) minSeatY = y;
             if (firstY == null) firstY = y;
-            if ((y - firstY!).abs() < 5) firstRowXs.add(x);
+            if ((y - firstY).abs() < 5) firstRowXs.add(x);
           }
           int lC = 0, rC = 0;
           if (firstRowXs.isNotEmpty) {
@@ -1205,7 +1205,7 @@ class _SubAdminPresetsListPageState extends State<_SubAdminPresetsListPage> {
               if (c is! Map) continue;
               final t = c['type']?.toString() ?? '';
               final y = (c['y'] as num?)?.toDouble();
-              if (y != null && firstY != null && (y - firstY!).abs() < 5) {
+              if (y != null && firstY != null && (y - firstY).abs() < 5) {
                 if (t == 'sleeperLower' || t == 'sleeperUpper') {
                   hasBerths = true;
                   break;
@@ -1533,7 +1533,7 @@ class _Sidebar extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF1F5E6B).withOpacity(0.4),
+                        color: const Color(0xFF1F5E6B).withValues(alpha: 0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -1571,7 +1571,7 @@ class _Sidebar extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1F5E6B).withOpacity(0.3),
+                          color: const Color(0xFF1F5E6B).withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(

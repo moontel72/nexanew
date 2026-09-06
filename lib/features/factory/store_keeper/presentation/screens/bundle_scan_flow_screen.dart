@@ -363,7 +363,7 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
                 width: 64.w,
                 height: 64.w,
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
+                  color: AppColors.success.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -485,7 +485,7 @@ class _BundleScanFlowScreenState extends State<BundleScanFlowScreen> {
             width: 36.w,
             height: 36.w,
             decoration: BoxDecoration(
-              color: AppColors.success.withOpacity(0.1),
+              color: AppColors.success.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8.r),
             ),
             child: Icon(

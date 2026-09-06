@@ -112,7 +112,7 @@ class _StoreKeeperHistoryScreenState extends State<StoreKeeperHistoryScreen> {
                 setState(() => _selectedPeriod = value);
                 _fetchHistory();
               },
-              selectedColor: AppColors.accent.withOpacity(0.2),
+              selectedColor: AppColors.accent.withValues(alpha: 0.2),
               labelStyle: TextStyle(
                 color: selected ? AppColors.accent : AppColors.textSecondary,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
@@ -194,7 +194,7 @@ class _StoreKeeperHistoryScreenState extends State<StoreKeeperHistoryScreen> {
                     width: 44.w,
                     height: 44.w,
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.12),
+                      color: AppColors.success.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                     child: const Icon(

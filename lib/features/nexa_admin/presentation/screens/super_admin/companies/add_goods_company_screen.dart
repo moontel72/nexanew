@@ -258,7 +258,7 @@ class _AddGoodsCompanyScreenState extends State<AddGoodsCompanyScreen> {
         Gap(12.h),
         // Company Type dropdown
         DropdownButtonFormField<String>(
-          value: _selectedCompanyType,
+          initialValue: _selectedCompanyType,
           decoration: const InputDecoration(
             labelText: 'Company Type *',
             prefixIcon: Icon(Icons.category),
@@ -277,7 +277,7 @@ class _AddGoodsCompanyScreenState extends State<AddGoodsCompanyScreen> {
         Gap(12.h),
         // Industry Type dropdown
         DropdownButtonFormField<String>(
-          value: _selectedIndustryType,
+          initialValue: _selectedIndustryType,
           decoration: const InputDecoration(
             labelText: 'Industry *',
             prefixIcon: Icon(Icons.factory),

@@ -141,7 +141,7 @@ class DlsCalculatorPage extends StatelessWidget {
                   color: CricketColors.surface,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: CricketColors.textAccent.withOpacity(0.4),
+                    color: CricketColors.textAccent.withValues(alpha: 0.4),
                   ),
                 ),
                 child: Column(
@@ -204,7 +204,7 @@ class _OversDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<int>(
-      value: value,
+      initialValue: value,
       dropdownColor: const Color(0xFF0F2936),
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(

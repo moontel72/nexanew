@@ -28,7 +28,7 @@ class _ScannerOverlayPainter extends CustomPainter {
     final top = (size.height - scanAreaSize) / 2;
     final cl = scanAreaSize * 0.12;
     final overlayPaint = Paint()
-      ..color = Colors.black.withOpacity(0.55)
+      ..color = Colors.black.withValues(alpha: 0.55)
       ..style = PaintingStyle.fill;
     final path = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
     final cutout = RRect.fromRectAndRadius(
@@ -84,7 +84,7 @@ class _ScannerOverlayPainter extends CustomPainter {
       text: TextSpan(
         text: 'Align code within the frame',
         style: TextStyle(
-          color: Colors.white.withOpacity(0.7),
+          color: Colors.white.withValues(alpha: 0.7),
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),

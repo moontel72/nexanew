@@ -20,7 +20,7 @@ class CricketScoreboard extends StatelessWidget {
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CricketColors.complete.withOpacity(0.3)),
+        border: Border.all(color: CricketColors.complete.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [

@@ -195,7 +195,7 @@ class _MatchFormSheetState extends State<MatchFormSheet> {
         ValueListenableBuilder<String?>(
           valueListenable: _teamA,
           builder: (context, value, _) => DropdownButtonFormField<String?>(
-            value: value,
+            initialValue: value,
             isExpanded: true,
             decoration: cricketFieldDecoration('Team A *'),
             dropdownColor: const Color(0xFF0F2936),
@@ -231,7 +231,7 @@ class _MatchFormSheetState extends State<MatchFormSheet> {
         ValueListenableBuilder<String?>(
           valueListenable: _teamB,
           builder: (context, value, _) => DropdownButtonFormField<String?>(
-            value: value,
+            initialValue: value,
             isExpanded: true,
             decoration: cricketFieldDecoration('Team B *'),
             dropdownColor: const Color(0xFF0F2936),
@@ -286,7 +286,7 @@ class _MatchFormSheetState extends State<MatchFormSheet> {
         ValueListenableBuilder<String>(
           valueListenable: _matchType,
           builder: (context, value, _) => DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             isExpanded: true,
             decoration: cricketFieldDecoration('Match Type'),
             dropdownColor: const Color(0xFF0F2936),
@@ -316,7 +316,7 @@ class _MatchFormSheetState extends State<MatchFormSheet> {
         ValueListenableBuilder<String>(
           valueListenable: _stage,
           builder: (context, value, _) => DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             isExpanded: true,
             decoration: cricketFieldDecoration('Stage'),
             dropdownColor: const Color(0xFF0F2936),
