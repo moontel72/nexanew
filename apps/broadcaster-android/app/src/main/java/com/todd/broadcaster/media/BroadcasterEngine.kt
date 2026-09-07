@@ -303,7 +303,7 @@ class BroadcasterEngine(private val context: Context) {
      * Switches between front and rear cameras.
      */
     fun switchCamera() {
-        (cameraCapturer as? Camera2Capturer)?.switchCamera(null)
+        (cameraCapturer as? Camera2Capturer)?.switchCamera {} 
     }
 
     /**
