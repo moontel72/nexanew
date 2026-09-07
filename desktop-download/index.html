@@ -80,6 +80,18 @@
       color: var(--brand);
       letter-spacing: 0.04em;
     }
+    .native-badge {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 0.4rem;
+      background: var(--brand);
+      color: #fff;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+    }
   </style>
 </head>
 <body>
@@ -97,15 +109,16 @@
       ⬇ Download MSI installer
     </a>
 
-    <p class="ground-note">📱 Ground cameras — Todd Broadcaster</p>
+    <p class="ground-note">📱 Ground cameras — Todd Broadcaster<span class="native-badge">NATIVE</span></p>
     <a class="btn btn-secondary" href="/download/broadcaster/todd-broadcaster.apk">
-      ⬇ Broadcaster — Android APK (modern phones)
-    </a>
-    <a class="btn btn-secondary" href="https://broadcaster.traceodd.com" target="_blank" rel="noreferrer">
-      🌐 Broadcaster — Web app (open on phone)
+      ⬇ Broadcaster — Android APK (Native Kotlin)
     </a>
 
     <p class="note">
+      <strong>New native Kotlin build</strong> — direct WebRTC + Camera2 with a
+      device-tuned H264 encoder, engineered for rock-solid broadcasting on
+      low-end phones (Samsung Galaxy J-series and similar). It replaces the
+      older Flutter app and the retired web broadcaster.<br />
       <strong>Android install:</strong> tap the APK button on your phone,
       open the downloaded file and allow “Install unknown apps” when asked.
       Google Play Protect may show a warning (the app is not on the Play
@@ -113,9 +126,7 @@
       Very old phones (32-bit):
       <a href="/download/broadcaster/todd-broadcaster-32bit.apk">32-bit APK</a> ·
       All files:
-      <a href="/download/broadcaster/" target="_blank" rel="noreferrer">browse folder</a>.<br />
-      The web app installs without any download:
-      <a href="https://broadcaster.traceodd.com" target="_blank" rel="noreferrer">broadcaster.traceodd.com</a>.
+      <a href="/download/broadcaster/" target="_blank" rel="noreferrer">browse folder</a>.
     </p>
 
     <p class="note">

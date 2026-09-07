@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -17,6 +19,26 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // ── Release signing ─────────────────────────────────────────────
+    // CI provides a persistent keystore via environment variables so that
+    // cameramen can update the app in place. When those variables are absent
+    // (local builds / first CI run) the release build falls back to the debug
+    // key so `assembleRelease` still yields an installable app-release.apk.
+    signingConfigs {
+        create("release") {
+            val storeFilePath = System.getenv("BROADCASTER_KEYSTORE_PATH")
+            if (!storeFilePath.isNullOrBlank()) {
+                val store = File(storeFilePath)
+                if (store.exists()) {
+                    storeFile = store
+                    storePassword = System.getenv("BROADCASTER_KEYSTORE_PASSWORD")
+                    keyAlias = System.getenv("BROADCASTER_KEY_ALIAS")
+                    keyPassword = System.getenv("BROADCASTER_KEY_PASSWORD")
+                }
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -24,6 +46,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            val releaseSigning = signingConfigs.getByName("release")
+            signingConfig = if (releaseSigning.storeFile != null) {
+                releaseSigning
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         debug {
             isMinifyEnabled = false
@@ -47,9 +75,11 @@ android {
 
 dependencies {
     // ── WebRTC native (libwebrtc Android build) ──
-    // Provides: PeerConnectionFactory, Camera2Capturer, HardwareVideoEncoderFactory,
-    // SurfaceViewRenderer, AudioDeviceModule — direct access to MediaCodec + libwebrtc C++.
-    implementation("io.github.webrtc-sdk:android:125.0.0")
+    // Stream's pre-compiled WebRTC library — provides the standard org.webrtc.*
+    // package (PeerConnectionFactory, Camera2Capturer, HardwareVideoEncoderFactory,
+    // SurfaceViewRenderer, AudioDeviceModule) with direct access to MediaCodec
+    // + libwebrtc C++. Available on Maven Central, actively maintained.
+    implementation("io.getstream:stream-webrtc-android:1.3.10")
 
     // ── HTTP client for WHIP signaling ──
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
