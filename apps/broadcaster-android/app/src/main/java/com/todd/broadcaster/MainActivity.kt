@@ -1,9 +1,14 @@
 package com.todd.broadcaster
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
@@ -44,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "MainActivity"
         private const val PERMISSION_REQUEST_CODE = 1001
         private const val PREFS_NAME = "todd_broadcaster_prefs"
+        private const val KEY_PERM_EXPLAINED = "perm_explained"
         private const val KEY_BASE_URL = "base_url"
         private const val KEY_ROOM_ID = "room_id"
         private const val KEY_CAMERA_ID = "camera_id"
@@ -135,20 +141,41 @@ class MainActivity : AppCompatActivity() {
     // ── Permissions ──
 
     private fun requestPermissions() {
-        val perms = mutableListOf(
+        // Camera + microphone only. POST_NOTIFICATIONS is NOT declared in the
+        // manifest, so requesting it silently denies and would block the
+        // whole core flow with a misleading "permissions required" toast.
+        val needed = listOf(
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO,
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            perms.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        val needed = perms.filter {
+        ).filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
-        if (needed.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, needed.toTypedArray(), PERMISSION_REQUEST_CODE)
-        } else {
+        if (needed.isEmpty()) {
             onPermissionsGranted()
+            return
+        }
+
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val alreadyExplained = prefs.getBoolean(KEY_PERM_EXPLAINED, false)
+        if (!alreadyExplained) {
+            prefs.edit().putBoolean(KEY_PERM_EXPLAINED, true).apply()
+            // One-time explainer: the system dialogs read "video"/"audio", so
+            // name the real permissions (Camera/Microphone) before they appear.
+            AlertDialog.Builder(this)
+                .setTitle("Permissions Required")
+                .setMessage(
+                    "Broadcaster app ko 2 permissions chahiye:\n\n" +
+                        "1. Camera — video capture ke liye\n" +
+                        "2. Microphone — audio record ke liye\n\n" +
+                        "Aane wale system dialogs mein dono ke liye ALLOW dabayen."
+                )
+                .setCancelable(false)
+                .setPositiveButton("Continue") { _, _ ->
+                    ActivityCompat.requestPermissions(this, needed.toTypedArray(), PERMISSION_REQUEST_CODE)
+                }
+                .show()
+        } else {
+            ActivityCompat.requestPermissions(this, needed.toTypedArray(), PERMISSION_REQUEST_CODE)
         }
     }
 
@@ -156,12 +183,43 @@ class MainActivity : AppCompatActivity() {
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                onPermissionsGranted()
-            } else {
-                Toast.makeText(this, "Camera and microphone permissions are required", Toast.LENGTH_LONG).show()
+        if (requestCode != PERMISSION_REQUEST_CODE) return
+
+        val camGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+        val micGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        if (camGranted && micGranted) {
+            onPermissionsGranted()
+            return
+        }
+
+        // A denied permission whose system dialog will no longer reappear
+        // ("Don't ask again") can only be fixed from Android Settings.
+        val denied = listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+            .filter {
+                ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
             }
+        val permanentlyBlocked = denied.any {
+            !ActivityCompat.shouldShowRequestPermissionRationale(this, it)
+        }
+
+        if (permanentlyBlocked) {
+            AlertDialog.Builder(this)
+                .setTitle("Permissions Blocked")
+                .setMessage(
+                    "Android Settings se Camera aur Microphone permissions allow karen, " +
+                        "phir app dobara kholen."
+                )
+                .setPositiveButton("Open Settings") { _, _ ->
+                    startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+                    )
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        } else {
+            Toast.makeText(this, "Camera aur Microphone permissions zaroori hain", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -190,6 +248,13 @@ class MainActivity : AppCompatActivity() {
     private fun startBroadcast() {
         if (baseUrl.isBlank() || roomId.isBlank() || cameraId.isBlank() || token.isBlank()) {
             showConfigDialog()
+            return
+        }
+
+        // Camera preview must be running (started right after permissions are
+        // granted). Without it createOffer fails with "no video track".
+        if (!engine.isPreviewRunning) {
+            showNotice("Camera preview chalu nahi — Settings mein Camera & Microphone allow kar ke app restart karen")
             return
         }
 
@@ -391,6 +456,21 @@ class MainActivity : AppCompatActivity() {
         etCameraId.setText(cameraId)
         etToken.setText(token)
         etStun.setText(stunUrl)
+
+        // Paste the full ingest URL → fields below fill in live.
+        etFullUrl.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val parsed = IngestUrl.parse(s?.toString().orEmpty())
+                if (parsed != null) {
+                    etBaseUrl.setText(parsed.baseUrl)
+                    etRoomId.setText(parsed.roomId)
+                    etCameraId.setText(parsed.cameraId)
+                    etToken.setText(parsed.token)
+                }
+            }
+        })
 
         val profileLabels = EncoderConfig.PROFILES.map { it.label }.toTypedArray()
         spinnerProfile.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, profileLabels)

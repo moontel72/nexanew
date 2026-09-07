@@ -43,6 +43,10 @@ class BroadcasterEngine(private val context: Context) {
     /** The local preview renderer (SurfaceViewRenderer). */
     var previewRenderer: SurfaceViewRenderer? = null
 
+    /** True once camera capture and tracks are running (offer can be created). */
+    val isPreviewRunning: Boolean
+        get() = videoTrack != null && cameraCapturer != null
+
     /** Connection state callback. */
     var onConnectionState: ((PeerConnection.PeerConnectionState) -> Unit)? = null
 
