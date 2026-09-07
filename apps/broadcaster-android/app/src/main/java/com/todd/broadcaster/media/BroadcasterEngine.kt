@@ -66,12 +66,25 @@ class BroadcasterEngine(private val context: Context) {
 
         eglBase = EglBase.create()
 
-        val encoderFactory = DefaultVideoEncoderFactory(
+        // ── Encoder factory: prefer hardware H.264 ──
+        // DefaultVideoEncoderFactory(enableH264HighProfile=true) drops
+        // Baseline-only hardware H.264 encoders (common on Samsung J-series),
+        // leaving VP8 — which runs in software on these phones and stalls.
+        // enableH264HighProfile=false keeps Baseline H.264; the wrapper below
+        // then restricts the offer to H.264 so negotiation never lands on VP8.
+        val delegate = DefaultVideoEncoderFactory(
             eglBase!!.eglBaseContext,
-            true,  // enableH264HighProfile
-            true,  // forceSWCodecIfHighResolution
+            true,  // enableIntelVp8Encoder (x86-only; no effect on ARM phones)
+            false, // enableH264HighProfile=false → Baseline H.264 accepted
         )
+        val encoderFactory = H264PreferredEncoderFactory(delegate)
         val decoderFactory = DefaultVideoDecoderFactory(eglBase!!.eglBaseContext)
+
+        Log.i(
+            TAG,
+            "Available video encoders: " +
+                encoderFactory.getSupportedCodecs().joinToString { c -> "${c.name} $c" }
+        )
 
         factory = PeerConnectionFactory.builder()
             .setVideoEncoderFactory(encoderFactory)
@@ -338,6 +351,25 @@ class BroadcasterEngine(private val context: Context) {
         factory = null
         eglBase?.release()
         eglBase = null
+    }
+}
+
+/**
+ * Video encoder factory that offers ONLY H.264 when the device has any
+ * hardware H.264 encoder. Low-end phones (Samsung J-series) typically lack a
+ * hardware VP8 encoder; unrestricted negotiation then lands on software VP8,
+ * which stalls and emits almost no frames. Falls back to the delegate's full
+ * codec list when no H.264 encoder exists.
+ */
+private class H264PreferredEncoderFactory(
+    private val delegate: VideoEncoderFactory,
+) : VideoEncoderFactory {
+    override fun createEncoder(info: VideoCodecInfo): VideoEncoder? = delegate.createEncoder(info)
+
+    override fun getSupportedCodecs(): Array<VideoCodecInfo> {
+        val all = delegate.getSupportedCodecs()
+        val h264 = all.filter { it.name.equals("H264", ignoreCase = true) }
+        return if (h264.isNotEmpty()) h264.toTypedArray() else all
     }
 }
 
