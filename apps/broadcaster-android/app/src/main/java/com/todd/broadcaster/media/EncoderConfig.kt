@@ -74,6 +74,21 @@ object EncoderConfig {
     val DEFAULT_PROFILE = PROFILES[1] // 480p — stable on low-end devices
 
     /**
+     * Frame-rate options offered in the UI, ordered low → high.
+     * 30 fps is the default; 60 fps only on devices that can sustain it.
+     */
+    data class FpsOption(val label: String, val fps: Int)
+
+    val FPS_OPTIONS = listOf(
+        FpsOption("15 fps", 15),
+        FpsOption("24 fps", 24),
+        FpsOption("30 fps", 30),
+        FpsOption("60 fps", 60),
+    )
+
+    const val DEFAULT_FPS = 30
+
+    /**
      * Returns the best color format for hardware encoding on this device.
      * Surface input (API 23+) is preferred; falls back to YUV420 semi-planar.
      */

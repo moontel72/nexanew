@@ -8,6 +8,23 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="Full WHIP URL (optional)"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/et_full_url"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Paste full ingest URL here — auto-fills fields below"
+        android:inputType="textUri"
+        android:textSize="14sp"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:text="Engine Base URL"
         android:textSize="12sp"
         android:textColor="#666666"
@@ -88,6 +105,20 @@
         android:hint="stun:stun.l.google.com:19302"
         android:inputType="textUri"
         android:textSize="14sp"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Frame Rate (FPS)"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:layout_marginBottom="4dp" />
+
+    <Spinner
+        android:id="@+id/spinner_fps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginBottom="12dp" />
 
     <TextView

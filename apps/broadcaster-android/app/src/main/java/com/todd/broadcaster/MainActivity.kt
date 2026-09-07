@@ -18,6 +18,7 @@ import com.todd.broadcaster.media.EncoderConfig
 import com.todd.broadcaster.telemetry.DeviceHealth
 import com.todd.broadcaster.telemetry.DeviceTelemetry
 import com.todd.broadcaster.whip.WhipClient
+import com.todd.broadcaster.whip.IngestUrl
 import com.todd.broadcaster.whip.WhipResult
 import com.todd.broadcaster.whip.WhipSession
 import kotlinx.coroutines.*
@@ -49,6 +50,7 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_TOKEN = "token"
         private const val KEY_STUN = "stun_url"
         private const val KEY_PROFILE_IDX = "profile_idx"
+        private const val KEY_FPS = "fps"
         private const val WATCHDOG_INTERVAL_MS = 15_000L
         private const val MAX_WATCHDOG_RESTARTS = 3
         private const val MIN_HEALTHY_BITRATE_KBPS = 50.0
@@ -91,6 +93,7 @@ class MainActivity : AppCompatActivity() {
     private var token = ""
     private var stunUrl = "stun:stun.l.google.com:19302"
     private var profileIdx = EncoderConfig.PROFILES.indexOf(EncoderConfig.DEFAULT_PROFILE)
+    private var fps = EncoderConfig.DEFAULT_FPS
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -174,8 +177,8 @@ class MainActivity : AppCompatActivity() {
         if (!::engine.isInitialized) return
         val profile = EncoderConfig.PROFILES[profileIdx]
         try {
-            engine.startCapture(profile.width, profile.height, 30, "environment")
-            Log.i(TAG, "Camera preview started (${profile.label})")
+            engine.startCapture(profile.width, profile.height, fps, "environment")
+            Log.i(TAG, "Camera preview started (${profile.label} @ ${fps}fps)")
         } catch (e: Exception) {
             Log.e(TAG, "Camera start failed: ${e.message}", e)
             showNotice("Camera error: ${e.message}")
@@ -373,11 +376,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun showConfigDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_config, null)
+        val etFullUrl = dialogView.findViewById<EditText>(R.id.et_full_url)
         val etBaseUrl = dialogView.findViewById<EditText>(R.id.et_base_url)
         val etRoomId = dialogView.findViewById<EditText>(R.id.et_room_id)
         val etCameraId = dialogView.findViewById<EditText>(R.id.et_camera_id)
         val etToken = dialogView.findViewById<EditText>(R.id.et_token)
         val etStun = dialogView.findViewById<EditText>(R.id.et_stun)
+        val spinnerFps = dialogView.findViewById<Spinner>(R.id.spinner_fps)
         val spinnerProfile = dialogView.findViewById<Spinner>(R.id.spinner_profile)
 
         // Populate
@@ -391,15 +396,32 @@ class MainActivity : AppCompatActivity() {
         spinnerProfile.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, profileLabels)
         spinnerProfile.setSelection(profileIdx)
 
+        val fpsLabels = EncoderConfig.FPS_OPTIONS.map { it.label }.toTypedArray()
+        spinnerFps.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, fpsLabels)
+        spinnerFps.setSelection(EncoderConfig.FPS_OPTIONS.indexOfFirst { it.fps == fps }.coerceAtLeast(0))
+
         AlertDialog.Builder(this)
             .setTitle("Broadcaster Config")
             .setView(dialogView)
             .setPositiveButton("Save") { _, _ ->
-                baseUrl = etBaseUrl.text.toString().trim()
-                roomId = etRoomId.text.toString().trim()
-                cameraId = etCameraId.text.toString().trim()
-                token = etToken.text.toString().trim()
+                val fullUrl = etFullUrl.text.toString().trim()
+                // A pasted full WHIP ingest URL wins over the manual fields:
+                // it carries the base URL, room, camera and token in one string.
+                // Shape: https://host/api/v1/whip/ingest/{room}/{camera}?token={jwt}
+                val parsed = if (fullUrl.isNotEmpty()) IngestUrl.parse(fullUrl) else null
+                if (fullUrl.isNotEmpty() && parsed == null) {
+                    Toast.makeText(
+                        this,
+                        "Full WHIP URL parse nahi hui — fields manually bharen",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                baseUrl = parsed?.baseUrl ?: etBaseUrl.text.toString().trim()
+                roomId = parsed?.roomId ?: etRoomId.text.toString().trim()
+                cameraId = parsed?.cameraId ?: etCameraId.text.toString().trim()
+                token = parsed?.token ?: etToken.text.toString().trim()
                 stunUrl = etStun.text.toString().trim().ifEmpty { "stun:stun.l.google.com:19302" }
+                fps = EncoderConfig.FPS_OPTIONS[spinnerFps.selectedItemPosition].fps
                 profileIdx = spinnerProfile.selectedItemPosition
                 saveConfig()
             }
@@ -415,6 +437,8 @@ class MainActivity : AppCompatActivity() {
         token = prefs.getString(KEY_TOKEN, "") ?: ""
         stunUrl = prefs.getString(KEY_STUN, "stun:stun.l.google.com:19302") ?: "stun:stun.l.google.com:19302"
         profileIdx = prefs.getInt(KEY_PROFILE_IDX, EncoderConfig.PROFILES.indexOf(EncoderConfig.DEFAULT_PROFILE))
+        fps = prefs.getInt(KEY_FPS, EncoderConfig.DEFAULT_FPS)
+        if (EncoderConfig.FPS_OPTIONS.none { it.fps == fps }) fps = EncoderConfig.DEFAULT_FPS
     }
 
     private fun saveConfig() {
@@ -425,6 +449,7 @@ class MainActivity : AppCompatActivity() {
             putString(KEY_TOKEN, token)
             putString(KEY_STUN, stunUrl)
             putInt(KEY_PROFILE_IDX, profileIdx)
+            putInt(KEY_FPS, fps)
             apply()
         }
     }
