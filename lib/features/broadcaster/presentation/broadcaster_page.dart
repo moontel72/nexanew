@@ -522,6 +522,10 @@ class _StatusOverlay extends StatelessWidget {
                   const SizedBox(height: 8),
                   _NoticeBanner(message: state.notice!),
                 ],
+                if (state.videoStalled) ...[
+                  const SizedBox(height: 8),
+                  _VideoStallBanner(state: state),
+                ],
                 if (state.phase == BroadcasterPhase.reconnecting) ...[
                   const SizedBox(height: 8),
                   _ReconnectBanner(state: state),
@@ -731,6 +735,76 @@ class _ReconnectBanner extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
         textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+/// Banner shown when the video encoder is connected but not producing
+/// usable output. Includes a manual "Restart Video" button so the
+/// operator can force a capture restart even after the automatic
+/// retry budget is exhausted.
+class _VideoStallBanner extends StatelessWidget {
+  const _VideoStallBanner({required this.state});
+
+  final BroadcasterState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEF4444).withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.videocam_off, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Video stalled',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (state.videoStallMessage != null)
+                  Text(
+                    state.videoStallMessage!,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            height: 30,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFFEF4444),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                textStyle: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onPressed: () =>
+                  context.read<BroadcasterCubit>().add(const RestartVideoRequested()),
+              child: const Text('Restart Video'),
+            ),
+          ),
+        ],
       ),
     );
   }

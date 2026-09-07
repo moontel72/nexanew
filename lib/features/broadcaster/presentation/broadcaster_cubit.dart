@@ -57,6 +57,8 @@ class BroadcasterState {
     this.reconnectDelay,
     this.error,
     this.notice,
+    this.videoStalled = false,
+    this.videoStallMessage,
   });
 
   final BroadcasterPhase phase;
@@ -78,6 +80,16 @@ class BroadcasterState {
   final String? error;
   final String? notice;
 
+  /// True when the video encoder is connected but not producing usable
+  /// output (zero frames, or frames at a bitrate below the healthy
+  /// threshold). The UI shows a stall banner with a manual restart
+  /// button while this flag is set.
+  final bool videoStalled;
+
+  /// Human-readable reason for the current video stall (shown in the
+  /// stall banner). Null when [videoStalled] is false.
+  final String? videoStallMessage;
+
   BroadcasterState copyWith({
     BroadcasterPhase? phase,
     BroadcasterConfig? config,
@@ -94,6 +106,9 @@ class BroadcasterState {
     String? error,
     String? notice,
     bool clearNotice = false,
+    bool? videoStalled,
+    String? videoStallMessage,
+    bool clearVideoStall = false,
   }) {
     return BroadcasterState(
       phase: phase ?? this.phase,
@@ -110,6 +125,8 @@ class BroadcasterState {
       reconnectDelay: reconnectDelay ?? this.reconnectDelay,
       error: error,
       notice: clearNotice ? null : (notice ?? this.notice),
+      videoStalled: clearVideoStall ? false : (videoStalled ?? this.videoStalled),
+      videoStallMessage: clearVideoStall ? null : (videoStallMessage ?? this.videoStallMessage),
     );
   }
 }
@@ -170,6 +187,23 @@ final class _RetryConnect extends BroadcasterEvent {
   const _RetryConnect();
 }
 
+/// Internal: the periodic watchdog detected a video encoder stall.
+final class _VideoStallDetected extends BroadcasterEvent {
+  const _VideoStallDetected(this.reason);
+  final String reason;
+}
+
+/// Internal: the periodic watchdog confirmed the encoder recovered.
+final class _VideoStallCleared extends BroadcasterEvent {
+  const _VideoStallCleared();
+}
+
+/// Operator tapped "Restart Video" in the stall banner — forces an
+/// immediate capture restart regardless of the auto-restart budget.
+final class RestartVideoRequested extends BroadcasterEvent {
+  const RestartVideoRequested();
+}
+
 /// Outcome of one camera-open + WHIP negotiation attempt.
 sealed class _OpenResult {
   const _OpenResult();
@@ -199,9 +233,12 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     on<FpsChanged>(_onFpsChanged);
     on<ToggleAudioMuteRequested>(_onToggleMute);
     on<AppResumed>(_onAppResumed);
+    on<RestartVideoRequested>(_onRestartVideoRequested);
     on<_ConnectionStateChanged>(_onConnectionStateChanged);
     on<_HealthChanged>(_onHealthChanged);
     on<_RetryConnect>(_onRetryConnect);
+    on<_VideoStallDetected>(_onVideoStallDetected);
+    on<_VideoStallCleared>(_onVideoStallCleared);
   }
 
   WhipClient? _client;
@@ -216,12 +253,17 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
   /// otherwise a full capture + WHIP reopen runs (costing the 20-30s video
   /// encoder restart the Studio sees as 409 churn).
   Timer? _iceRecoveryTimer;
-  /// Post-connect watchdog: checks `outbound-rtp` video stats after WHIP
-  /// connects. If the encoder produced zero frames for [Duration(seconds: 15)],
-  /// capture is restarted once — the most common fix for a stalled Android
-  /// hardware encoder that negotiated video but never started producing.
+  /// Post-connect watchdog: periodically checks `outbound-rtp` video
+  /// stats after WHIP connects. Detects both zero-frame stalls and
+  /// low-bitrate stalls (encoder emits frame callbacks with near-empty
+  /// payloads). Restarts capture up to [BroadcasterConstants.videoWatchdogMaxAutoRestarts]
+  /// times, then switches to monitor-only mode with a UI stall banner.
   Timer? _videoWatchdog;
   int _videoWatchdogRestarts = 0;
+  /// Previous `bytesSent` from the video outbound-rtp report, used to
+  /// compute the inter-check bitrate delta.
+  int _videoBytesSentLast = 0;
+  DateTime? _videoBytesSentAt;
   int _reconnectAttempt = 0;
   bool _started = false;
 
@@ -477,6 +519,21 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     await _restartCapture(emit);
   }
 
+  Future<void> _onRestartVideoRequested(
+    RestartVideoRequested event,
+    Emitter<BroadcasterState> emit,
+  ) async {
+    if (!_started || _session == null) return;
+    // Manual restart resets the auto-restart budget so the operator
+    // always gets a fresh attempt regardless of prior watchdog failures.
+    _videoWatchdogRestarts = 0;
+    emit(state.copyWith(
+      notice: 'Restarting video encoder…',
+      clearVideoStall: true,
+    ));
+    await _restartCapture(emit);
+  }
+
   Future<void> _onToggleMute(
     ToggleAudioMuteRequested event,
     Emitter<BroadcasterState> emit,
@@ -560,6 +617,25 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     emit(state.copyWith(health: event.health));
   }
 
+  void _onVideoStallDetected(
+    _VideoStallDetected event,
+    Emitter<BroadcasterState> emit,
+  ) {
+    if (state.videoStalled && state.videoStallMessage == event.reason) return;
+    emit(state.copyWith(
+      videoStalled: true,
+      videoStallMessage: event.reason,
+    ));
+  }
+
+  void _onVideoStallCleared(
+    _VideoStallCleared event,
+    Emitter<BroadcasterState> emit,
+  ) {
+    if (!state.videoStalled) return;
+    emit(state.copyWith(clearVideoStall: true));
+  }
+
   /// Opens the camera, refreshes the preview and negotiates the WHIP
   /// ingest. Pure work — callers emit state based on the result.
   Future<_OpenResult> _attemptOpen() async {
@@ -576,6 +652,8 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     _iceRecoveryTimer = null;
     _videoWatchdog?.cancel();
     _videoWatchdog = null;
+    _videoBytesSentLast = 0;
+    _videoBytesSentAt = null;
     // NOTE: _videoWatchdogRestarts is deliberately NOT reset here — it
     // counts watchdog-driven restarts per broadcast (_onStart resets it).
     // Resetting on every reconnect made the "give up after one restart"
@@ -639,14 +717,15 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     // stop it before opening a fresh one to avoid leaking both.
     _telemetry!.stop();
     _telemetry!.start();
-    // Arm the video-start watchdog: after WHIP connects, give the encoder
-    // 15s to produce at least one frame. If framesEncoded stays at 0, the
-    // encoder never started — restart capture once (the fresh camera
-    // handle + new IDR usually unsticks the hardware encoder).
+    // Arm the periodic video-encoder watchdog: every 15s, check whether
+    // the encoder is producing usable output (frames + bitrate). Restarts
+    // capture automatically up to the budget, then flags the stall in the
+    // UI so the operator can tap "Restart Video" manually.
     _videoWatchdog?.cancel();
-    _videoWatchdog = Timer(const Duration(seconds: 15), () {
-      _checkVideoEncoderStarted();
-    });
+    _videoWatchdog = Timer.periodic(
+      BroadcasterConstants.videoWatchdogInterval,
+      (_) => _checkVideoEncoderStarted(),
+    );
     session.pc.onConnectionState = (RTCPeerConnectionState st) {
       if (!isClosed) add(_ConnectionStateChanged(st));
     };
@@ -685,6 +764,7 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
             reconnectDelay: null,
             error: null,
             clearNotice: true,
+            clearVideoStall: true,
           ),
         );
       case _OpenFailed(:final message):
@@ -762,6 +842,8 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     _iceRecoveryTimer = null;
     _videoWatchdog?.cancel();
     _videoWatchdog = null;
+    _videoBytesSentLast = 0;
+    _videoBytesSentAt = null;
     _rendererDisposeTimer?.cancel();
     _rendererDisposeTimer = null;
     // Release the broadcast wake lock — the screen may sleep again.
@@ -804,68 +886,121 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     return null;
   }
 
-  /// Checks whether the video encoder has produced at least one frame
-  /// since WHIP connected. Called 15s after connect by [_videoWatchdog].
+  /// Periodic video-encoder health check. Called every
+  /// [BroadcasterConstants.videoWatchdogInterval] while the session is
+  /// alive. Detects two stall modes:
   ///
-  /// Budget semantics: [_videoWatchdogRestarts] counts watchdog-driven
-  /// restarts within ONE broadcast (reset only by [_onStart]). On the
-  /// first 0-frame sample the watchdog restarts capture once; the timer
-  /// re-arms after that reconnect, and if the encoder is STILL at 0
-  /// frames it gives up and surfaces the problem instead of looping.
+  /// 1. **Zero-frame stall** — `framesEncoded == 0`: the encoder never
+  ///    started (classic Android MediaCodec hang on cold start).
+  /// 2. **Low-bitrate stall** — frames are encoded but the video uplink
+  ///    bitrate is below [BroadcasterConstants.videoMinHealthyBitrateKbps]:
+  ///    the encoder emits frame callbacks with near-empty payloads
+  ///    (observed at 11-30 kbps in production while the engine never
+  ///    receives a video track-up).
+  ///
+  /// On stall: restarts capture automatically up to
+  /// [BroadcasterConstants.videoWatchdogMaxAutoRestarts] times, then
+  /// switches to monitor-only mode — the stall banner stays visible and
+  /// the operator can tap "Restart Video" to force another attempt.
   void _checkVideoEncoderStarted() {
     final pc = _pc;
     if (pc == null || isClosed || !_started) return;
+    // Only check when the session is actually live or connecting —
+    // a reconnecting session is already being handled by the backoff.
+    if (state.phase != BroadcasterPhase.live &&
+        state.phase != BroadcasterPhase.connecting) {
+      return;
+    }
     pc.getStats().then((stats) {
       if (isClosed || !_started) return;
       var framesEncoded = 0;
+      var bytesSent = 0;
       var foundVideoStats = false;
       for (final report in stats) {
         final values = report.values;
         if (report.type == 'outbound-rtp' && values['kind'] == 'video') {
           foundVideoStats = true;
           framesEncoded = (values['framesEncoded'] as num?)?.toInt() ?? 0;
+          bytesSent = (values['bytesSent'] as num?)?.toInt() ?? 0;
         }
       }
       if (!foundVideoStats) {
-        // No outbound video stats yet — leave the session alone. The
-        // SDP guard already rejected audio-only offers at connect time.
+        // No outbound video stats yet — the transceiver may not have
+        // started sending. Leave the session alone; the next periodic
+        // tick will re-check.
         debugPrint(
-          '[broadcaster] no outbound video stats at watchdog check — '
-          'skipping',
+          '[broadcaster] watchdog: no outbound video stats yet — skipping',
         );
         return;
       }
-      if (framesEncoded > 0) {
-        debugPrint(
-          '[broadcaster] video encoder healthy '
-          '(framesEncoded=$framesEncoded)',
-        );
-        return;
+
+      // Compute the video bitrate since the last watchdog check.
+      final now = DateTime.now();
+      double? videoKbps;
+      if (_videoBytesSentAt != null && bytesSent >= _videoBytesSentLast) {
+        final seconds =
+            now.difference(_videoBytesSentAt!).inMilliseconds / 1000;
+        if (seconds > 0) {
+          videoKbps =
+              (bytesSent - _videoBytesSentLast) * 8 / 1000 / seconds;
+        }
       }
-      // Encoder produced zero frames while the peer connection is up.
-      if (_videoWatchdogRestarts >= 1) {
-        // Already restarted once for this broadcast — give up instead of
-        // looping reconnect attempts.
-        if (state.phase == BroadcasterPhase.live) {
-          add(const _HealthChanged(DeviceHealth(
-            fps: 0.0,
-            uplinkKbps: 0.0,
-          )));
+      _videoBytesSentLast = bytesSent;
+      _videoBytesSentAt = now;
+
+      // ── Healthy: frames flowing at a reasonable bitrate ──
+      if (framesEncoded > 0 &&
+          (videoKbps == null ||
+              videoKbps >= BroadcasterConstants.videoMinHealthyBitrateKbps)) {
+        // Clear any prior stall state.
+        if (state.videoStalled) {
+          if (!isClosed) {
+            add(_VideoStallCleared());
+          }
         }
         debugPrint(
-          '[broadcaster] video encoder still not producing after restart — '
-          'giving up (encoder or camera unavailable).',
+          '[broadcaster] watchdog: video encoder healthy '
+          '(frames=$framesEncoded, kbps=${videoKbps?.toStringAsFixed(1) ?? "n/a"})',
         );
         return;
       }
-      _videoWatchdogRestarts = 1;
+
+      // ── Stall detected ──
+      final String reason;
+      if (framesEncoded == 0) {
+        reason = 'Video encoder produced 0 frames';
+      } else {
+        reason =
+            'Video bitrate too low (${videoKbps?.toStringAsFixed(0) ?? 0} kbps)';
+      }
+      debugPrint('[broadcaster] watchdog: STALL — $reason');
+
+      // Flag the stall in the UI immediately.
+      if (!isClosed) {
+        add(_VideoStallDetected(reason));
+      }
+
+      // Auto-restart budget.
+      if (_videoWatchdogRestarts >=
+          BroadcasterConstants.videoWatchdogMaxAutoRestarts) {
+        debugPrint(
+          '[broadcaster] watchdog: auto-restart budget exhausted '
+          '(${_videoWatchdogRestarts}/${BroadcasterConstants.videoWatchdogMaxAutoRestarts}) '
+          '— monitor-only mode, operator can tap Restart Video',
+        );
+        return;
+      }
+
+      _videoWatchdogRestarts++;
       debugPrint(
-        '[broadcaster] video encoder produced 0 frames after 15s — '
-        'restarting capture',
+        '[broadcaster] watchdog: restarting capture '
+        '(attempt $_videoWatchdogRestarts/${BroadcasterConstants.videoWatchdogMaxAutoRestarts})',
       );
-      add(const _RetryConnect());
+      if (!isClosed) {
+        add(const _RetryConnect());
+      }
     }).catchError((Object _) {
-      // getStats unsupported or failed — skip the watchdog silently.
+      // getStats unsupported or failed — skip this tick silently.
     });
   }
 }

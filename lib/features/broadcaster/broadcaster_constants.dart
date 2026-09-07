@@ -70,6 +70,23 @@ abstract final class BroadcasterConstants {
   /// Delay before the preview renderer is disposed after teardown so a
   /// still-mounted RTCVideoView can detach first.
   static const Duration rendererDisposeDelay = Duration(seconds: 1);
+
+  /// Interval between video-encoder health checks after WHIP connects.
+  /// The first check fires at this delay (giving the encoder time to
+  /// warm up); subsequent checks repeat at the same interval.
+  static const Duration videoWatchdogInterval = Duration(seconds: 15);
+
+  /// Maximum automatic capture restarts the watchdog performs per
+  /// broadcast before switching to monitor-only mode (stall flagged in
+  /// UI, operator can tap "Restart Video" manually).
+  static const int videoWatchdogMaxAutoRestarts = 3;
+
+  /// Minimum healthy video uplink bitrate (kbps). Below this threshold
+  /// the encoder is considered stalled even when `framesEncoded > 0` —
+  /// some Android hardware encoders emit frame callbacks with empty or
+  /// near-empty payloads (11-30 kbps observed in production while the
+  /// engine never receives a video track-up).
+  static const double videoMinHealthyBitrateKbps = 50.0;
 }
 
 /// Default profile (480p): a stable size for mobile uplinks and a fast
