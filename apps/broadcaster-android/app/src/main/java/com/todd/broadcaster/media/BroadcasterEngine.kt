@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.webrtc.*
+import org.webrtc.audio.JavaAudioDeviceModule
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -41,7 +42,6 @@ class BroadcasterEngine(private val context: Context) {
 
     /** The local preview renderer (SurfaceViewRenderer). */
     var previewRenderer: SurfaceViewRenderer? = null
-        private set
 
     /** Connection state callback. */
     var onConnectionState: ((PeerConnection.PeerConnectionState) -> Unit)? = null
@@ -174,7 +174,7 @@ class BroadcasterEngine(private val context: Context) {
 
         // ── Create PeerConnection ──
         val observer = object : PeerConnectionObserver() {
-            override fun onIceGatheringState(state: PeerConnection.IceGatheringState) {
+            override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {
                 Log.d(TAG, "ICE gathering state: $state")
                 if (state == PeerConnection.IceGatheringState.COMPLETE) {
                     val sdp = peerConnection?.localDescription?.description ?: ""
@@ -188,7 +188,7 @@ class BroadcasterEngine(private val context: Context) {
                 onConnectionState?.invoke(state)
             }
 
-            override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) {
+            override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
                 Log.d(TAG, "ICE connection state: $state")
             }
         }
@@ -283,12 +283,11 @@ class BroadcasterEngine(private val context: Context) {
         val latch = CountDownLatch(1)
         var result: Pair<Long, Long>? = null
 
-        pc.stats { reports ->
-            for (report in reports) {
-                val stats = report.stats
-                if (stats.type == "outbound-rtp" && stats.values["kind"] == "video") {
-                    val frames = (stats.values["framesEncoded"] as? Number)?.toLong() ?: 0L
-                    val bytes = (stats.values["bytesSent"] as? Number)?.toLong() ?: 0L
+        pc.getStats { report ->
+            for (stats in report.statsMap.values) {
+                if (stats.type == "outbound-rtp" && stats.members["kind"] == "video") {
+                    val frames = (stats.members["framesEncoded"] as? Number)?.toLong() ?: 0L
+                    val bytes = (stats.members["bytesSent"] as? Number)?.toLong() ?: 0L
                     result = Pair(frames, bytes)
                 }
             }
@@ -303,7 +302,7 @@ class BroadcasterEngine(private val context: Context) {
      * Switches between front and rear cameras.
      */
     fun switchCamera() {
-        (cameraCapturer as? Camera2Capturer)?.switchCamera {} 
+        cameraCapturer?.switchCamera(null)
     }
 
     /**
@@ -353,7 +352,7 @@ abstract class PeerConnectionObserver : PeerConnection.Observer {
     override fun onRemoveStream(stream: MediaStream?) {}
     override fun onDataChannel(dc: DataChannel?) {}
     override fun onRenegotiationNeeded() {}
-    override fun onAddTrack(track: MediaStreamTrack?, streams: Array<out MediaStream>?) {}
+    override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {}
     override fun onTrack(transceiver: RtpTransceiver?) {}
     override fun onRemoveTrack(receiver: RtpReceiver?) {}
 }

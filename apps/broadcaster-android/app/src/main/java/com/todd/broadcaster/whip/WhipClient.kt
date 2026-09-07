@@ -66,7 +66,7 @@ class WhipClient(
 
         try {
             val response = httpClient.newCall(request).execute()
-            val body = response.body.string()
+            val body = response.body?.string().orEmpty()
 
             if (response.code == 201) {
                 val location = response.header("Location")

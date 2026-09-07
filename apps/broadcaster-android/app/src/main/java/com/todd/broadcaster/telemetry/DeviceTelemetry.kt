@@ -132,14 +132,14 @@ class DeviceTelemetry(
             Log.w(TAG, "Max reconnect attempts reached — giving up")
             return
         }
-        val delay = minOf(
+        val delayMs = minOf(
             (1000L * (1 shl reconnectAttempts)),
             MAX_RECONNECT_DELAY_MS
         )
         reconnectAttempts++
-        Log.d(TAG, "Reconnecting in ${delay}ms (attempt $reconnectAttempts)")
+        Log.d(TAG, "Reconnecting in ${delayMs}ms (attempt $reconnectAttempts)")
         scope.launch {
-            delay(delay)
+            delay(delayMs)
             start()
         }
     }

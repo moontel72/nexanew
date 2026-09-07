@@ -70,6 +70,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true   // AGP 8.x: BuildConfig is opt-in; needed for BuildConfig.VERSION_NAME
     }
 }
 
