@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- Camera preview (WebRTC SurfaceViewRenderer) -->
+    <org.webrtc.SurfaceViewRenderer
+        android:id="@+id/preview_renderer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Status overlay (top) -->
+    <FrameLayout
+        android:id="@+id/status_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:padding="12dp"
+        android:background="#80000000">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Status chip -->
+            <TextView
+                android:id="@+id/status_chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ready"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:background="#6B7280" />
+
+            <!-- Health strip (profile | bitrate | frames) -->
+            <TextView
+                android:id="@+id/health_strip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="480p | 0 kbps | 0 frames"
+                android:textColor="#CCCCCC"
+                android:textSize="12sp"
+                android:fontFamily="monospace" />
+
+            <!-- Notice banner (errors, warnings) -->
+            <TextView
+                android:id="@+id/notice_banner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:visibility="gone"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:padding="8dp"
+                android:background="#80EF4444" />
+
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Control bar (bottom) -->
+    <LinearLayout
+        android:id="@+id/control_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#80000000">
+
+        <!-- Stats row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:id="@+id/tv_fps"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="enc: 0"
+                android:textColor="#CCCCCC"
+                android:textSize="12sp"
+                android:fontFamily="monospace" />
+
+            <TextView
+                android:id="@+id/tv_bitrate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="0 kbps"
+                android:textColor="#CCCCCC"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <!-- Buttons row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Config -->
+            <ImageButton
+                android:id="@+id/btn_config"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_settings"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Settings"
+                android:tint="#FFFFFF"
+                android:layout_marginEnd="16dp" />
+
+            <!-- Mute -->
+            <ImageButton
+                android:id="@+id/btn_mute"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_mic"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Mute"
+                android:tint="#FFFFFF"
+                android:layout_marginEnd="16dp" />
+
+            <!-- Go Live / Stop -->
+            <Button
+                android:id="@+id/btn_go_live"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:text="Go Live"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#EF4444"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btn_stop"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:text="Stop"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#6B7280"
+                android:visibility="gone"
+                android:layout_marginEnd="8dp" />
+
+            <!-- Switch camera -->
+            <ImageButton
+                android:id="@+id/btn_switch_cam"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_switch_camera"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Switch Camera"
+                android:tint="#FFFFFF"
+                android:layout_marginStart="16dp" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+</FrameLayout>

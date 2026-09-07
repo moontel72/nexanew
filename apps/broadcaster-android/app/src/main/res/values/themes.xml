@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ToddBroadcaster" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#EF4444</item>
+        <item name="colorPrimaryDark">#B91C1C</item>
+        <item name="colorAccent">#F59E0B</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowBackground">#000000</item>
+    </style>
+</resources>
