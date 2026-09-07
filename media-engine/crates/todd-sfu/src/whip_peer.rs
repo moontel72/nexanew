@@ -298,6 +298,25 @@ pub(crate) fn first_video_ssrc(sdp: &str) -> Option<u32> {
         .find(|ssrc| !rtx_ssrcs.contains(ssrc) && *ssrc != 0)
 }
 
+/// True when the offer carries an active (port ≠ 0) video m-line.
+///
+/// Native WHIP clients (Flutter/libwebrtc, OBS) often omit `a=ssrc`
+/// lines in sendonly offers. `first_video_ssrc()` returns `None` for
+/// those, but the video m-line is still negotiated and the engine must
+/// still try to elicit video from the publisher. This predicate lets
+/// the watchdog arm even without a declared SSRC.
+pub(crate) fn has_video_mline(sdp: &str) -> bool {
+    for line in sdp.lines() {
+        let line = line.trim();
+        if line.starts_with("m=video") {
+            // `m=video 0 ...` means the section was rejected (port 0).
+            let rest = line.strip_prefix("m=video").unwrap_or("").trim();
+            return !rest.starts_with('0');
+        }
+    }
+    false
+}
+
 /// Counts the ICE candidate types present in an SDP offer as
 /// `(host, srflx, relay)`. Offers that carry host candidates only mean
 /// the publisher gathered no public address (no STUN/TURN on the phone),
@@ -565,5 +584,23 @@ a=ssrc:3333333333 cname:video\r\n";
     fn video_ssrc_none_without_video_section() {
         let sdp = "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=ssrc:1111111111 cname:audio\r\n";
         assert_eq!(first_video_ssrc(sdp), None);
+    }
+
+    #[test]
+    fn detects_active_video_mline() {
+        let sdp = "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\nm=video 35112 UDP/TLS/RTP/SAVPF 96\r\n";
+        assert!(has_video_mline(sdp));
+    }
+
+    #[test]
+    fn rejects_port_zero_video_mline() {
+        let sdp = "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\nm=video 0 UDP/TLS/RTP/SAVPF 96\r\n";
+        assert!(!has_video_mline(sdp));
+    }
+
+    #[test]
+    fn no_video_mline_returns_false() {
+        let sdp = "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n";
+        assert!(!has_video_mline(sdp));
     }
 }

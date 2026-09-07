@@ -284,6 +284,23 @@ impl Engine {
         // RTCP pump's PLI drain below.
         let offer_video_ssrc = whip_peer::first_video_ssrc(offer_sdp);
 
+        // Diagnostic: whether the offer declared its video SSRC. Native
+        // clients (Flutter/libwebrtc) typically omit `a=ssrc` in sendonly
+        // offers — the PLI watchdog must arm from the video m-line alone
+        // and resolve the SSRC dynamically once tracks register.
+        let offer_has_video_ssrc_lines = offer_sdp
+            .lines()
+            .any(|l| l.trim().starts_with("a=ssrc:") || l.trim().starts_with("a=ssrc-group:"));
+        let offer_has_video = whip_peer::has_video_mline(offer_sdp);
+        tracing::info!(
+            room = room_id,
+            camera = camera_id,
+            offer_video_ssrc = offer_video_ssrc,
+            offer_has_video_ssrc_lines,
+            offer_has_video,
+            "PLI watchdog state"
+        );
+
         // RTCP pump: the PLI broker queues keyframe requests, but nothing
         // would ever transmit them — webrtc-rs only sends RTCP when the
         // app calls `write_rtcp`. Without this loop the publisher never
@@ -371,17 +388,21 @@ impl Engine {
 
         // Video-start watchdog: phones often begin the audio track
         // immediately while the video encoder stays idle (backgrounded
-        // browser, screen locked, lazy encoder start). The video SSRC is
-        // already declared in the offer, so PLI it directly — libwebrtc
-        // answers with an IDR and starts the video pipeline. This closes
-        // the "audio egress flows, tile 409s forever" failure mode.
+        // browser, screen locked, lazy encoder start). When the offer
+        // declares a video SSRC, PLI it directly — libwebrtc answers
+        // with an IDR and starts the video pipeline. When the offer
+        // omits `a=ssrc` (native Flutter/libwebrtc sendonly offers),
+        // the watchdog still arms from the video m-line presence and
+        // resolves the SSRC dynamically once a track registers.
+        // This closes the "audio egress flows, tile 409s forever"
+        // failure mode.
         //
         // The nudge cadence spans 60s: idle encoders (especially cold
         // H.264 hardware encoders on Android) may not respond to the
         // first few PLIs. A 20s window gave up before some encoders ever
         // started — the perpetual 409 the Studio saw was exactly that
         // gap. Every 5s up to 60s covers even the slowest warmups.
-        if let Some(video_ssrc) = offer_video_ssrc {
+        if offer_video_ssrc.is_some() || offer_has_video {
             let engine = self.clone();
             let room = room_id.to_string();
             let camera = camera_id.to_string();
@@ -399,15 +420,33 @@ impl Engine {
                     if engine.router.lowest_video_rid(&room, &camera).is_some() {
                         break;
                     }
+                    // Resolve the video SSRC dynamically: the offer
+                    // SSRC takes priority, then fall back to whatever
+                    // the router has registered (late-arriving track).
+                    let video_ssrc = offer_video_ssrc
+                        .or_else(|| engine.router.video_ssrc_of(&room, &camera, ""));
+                    let Some(ssrc) = video_ssrc else {
+                        if delay >= 30 {
+                            tracing::warn!(
+                                session = %sid,
+                                room = %room,
+                                camera = %camera,
+                                delay_secs = delay,
+                                "no video RTP and no video SSRC available for PLI — \
+                                 publisher encoder may not have started"
+                            );
+                        }
+                        continue;
+                    };
                     tracing::warn!(
                         session = %sid,
                         room = %room,
                         camera = %camera,
-                        ssrc = video_ssrc,
+                        ssrc,
                         delay_secs = delay,
                         "no video RTP yet — sending PLI to publisher"
                     );
-                    engine.pli.request_keyframe(video_ssrc);
+                    engine.pli.request_keyframe(ssrc);
                 }
             });
         }

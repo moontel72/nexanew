@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
+    show TargetPlatform, debugPrint, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -216,6 +216,12 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
   /// otherwise a full capture + WHIP reopen runs (costing the 20-30s video
   /// encoder restart the Studio sees as 409 churn).
   Timer? _iceRecoveryTimer;
+  /// Post-connect watchdog: checks `outbound-rtp` video stats after WHIP
+  /// connects. If the encoder produced zero frames for [Duration(seconds: 15)],
+  /// capture is restarted once — the most common fix for a stalled Android
+  /// hardware encoder that negotiated video but never started producing.
+  Timer? _videoWatchdog;
+  int _videoWatchdogRestarts = 0;
   int _reconnectAttempt = 0;
   bool _started = false;
 
@@ -252,6 +258,9 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
 
     _started = true;
     _reconnectAttempt = 0;
+    // A fresh broadcast gets a fresh encoder-watchdog budget: one
+    // automatic restart per broadcast (see _checkVideoEncoderStarted).
+    _videoWatchdogRestarts = 0;
     _client = WhipClient(baseUrl: baseUrl);
     _telemetry = DeviceTelemetry(
       wsBaseUrl: wsBaseUrlFor(baseUrl),
@@ -565,6 +574,13 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     // session 45s after connect).
     _iceRecoveryTimer?.cancel();
     _iceRecoveryTimer = null;
+    _videoWatchdog?.cancel();
+    _videoWatchdog = null;
+    // NOTE: _videoWatchdogRestarts is deliberately NOT reset here — it
+    // counts watchdog-driven restarts per broadcast (_onStart resets it).
+    // Resetting on every reconnect made the "give up after one restart"
+    // branch in _checkVideoEncoderStarted unreachable and caused an
+    // infinite ~15s reconnect loop while the encoder stayed dead.
 
     // Drop the previous session (if any) before opening a fresh one.
     await _session?.close();
@@ -623,6 +639,14 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     // stop it before opening a fresh one to avoid leaking both.
     _telemetry!.stop();
     _telemetry!.start();
+    // Arm the video-start watchdog: after WHIP connects, give the encoder
+    // 15s to produce at least one frame. If framesEncoded stays at 0, the
+    // encoder never started — restart capture once (the fresh camera
+    // handle + new IDR usually unsticks the hardware encoder).
+    _videoWatchdog?.cancel();
+    _videoWatchdog = Timer(const Duration(seconds: 15), () {
+      _checkVideoEncoderStarted();
+    });
     session.pc.onConnectionState = (RTCPeerConnectionState st) {
       if (!isClosed) add(_ConnectionStateChanged(st));
     };
@@ -736,6 +760,8 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
     _reconnectTimer = null;
     _iceRecoveryTimer?.cancel();
     _iceRecoveryTimer = null;
+    _videoWatchdog?.cancel();
+    _videoWatchdog = null;
     _rendererDisposeTimer?.cancel();
     _rendererDisposeTimer = null;
     // Release the broadcast wake lock — the screen may sleep again.
@@ -776,5 +802,70 @@ class BroadcasterCubit extends Bloc<BroadcasterEvent, BroadcasterState> {
       return track;
     }
     return null;
+  }
+
+  /// Checks whether the video encoder has produced at least one frame
+  /// since WHIP connected. Called 15s after connect by [_videoWatchdog].
+  ///
+  /// Budget semantics: [_videoWatchdogRestarts] counts watchdog-driven
+  /// restarts within ONE broadcast (reset only by [_onStart]). On the
+  /// first 0-frame sample the watchdog restarts capture once; the timer
+  /// re-arms after that reconnect, and if the encoder is STILL at 0
+  /// frames it gives up and surfaces the problem instead of looping.
+  void _checkVideoEncoderStarted() {
+    final pc = _pc;
+    if (pc == null || isClosed || !_started) return;
+    pc.getStats().then((stats) {
+      if (isClosed || !_started) return;
+      var framesEncoded = 0;
+      var foundVideoStats = false;
+      for (final report in stats) {
+        final values = report.values;
+        if (report.type == 'outbound-rtp' && values['kind'] == 'video') {
+          foundVideoStats = true;
+          framesEncoded = (values['framesEncoded'] as num?)?.toInt() ?? 0;
+        }
+      }
+      if (!foundVideoStats) {
+        // No outbound video stats yet — leave the session alone. The
+        // SDP guard already rejected audio-only offers at connect time.
+        debugPrint(
+          '[broadcaster] no outbound video stats at watchdog check — '
+          'skipping',
+        );
+        return;
+      }
+      if (framesEncoded > 0) {
+        debugPrint(
+          '[broadcaster] video encoder healthy '
+          '(framesEncoded=$framesEncoded)',
+        );
+        return;
+      }
+      // Encoder produced zero frames while the peer connection is up.
+      if (_videoWatchdogRestarts >= 1) {
+        // Already restarted once for this broadcast — give up instead of
+        // looping reconnect attempts.
+        if (state.phase == BroadcasterPhase.live) {
+          add(const _HealthChanged(DeviceHealth(
+            fps: 0.0,
+            uplinkKbps: 0.0,
+          )));
+        }
+        debugPrint(
+          '[broadcaster] video encoder still not producing after restart — '
+          'giving up (encoder or camera unavailable).',
+        );
+        return;
+      }
+      _videoWatchdogRestarts = 1;
+      debugPrint(
+        '[broadcaster] video encoder produced 0 frames after 15s — '
+        'restarting capture',
+      );
+      add(const _RetryConnect());
+    }).catchError((Object _) {
+      // getStats unsupported or failed — skip the watchdog silently.
+    });
   }
 }
