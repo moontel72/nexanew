@@ -49,6 +49,23 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # Explicitly install the exact SDK components AGP 8.2.2 requires.
+      # The setup-android action installs the latest platform (e.g. android-35),
+      # but this project targets compileSdk 34. Auto-download can fail on CI,
+      # so we install them explicitly to ensure they're available.
+      - name: Install required SDK components
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-34" \
+            "build-tools;34.0.0"
+
+      # Regenerate local.properties with the CI SDK path. The file was
+      # previously committed with a Windows path that breaks Linux CI.
+      - name: Regenerate local.properties
+        working-directory: apps/broadcaster-android
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
       # The Gradle wrapper is committed, but regenerate it if it is ever
       # missing so the build never depends on a stale/absent gradlew.
       - name: Prepare Gradle wrapper
