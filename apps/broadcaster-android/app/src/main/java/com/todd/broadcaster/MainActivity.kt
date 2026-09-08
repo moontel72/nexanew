@@ -108,8 +108,13 @@ class MainActivity : AppCompatActivity() {
 
         bindViews()
         loadConfig()
-        requestPermissions()
+        // initEngine() MUST run before requestPermissions(): when camera/mic are
+        // already granted, requestPermissions() invokes onPermissionsGranted()
+        // synchronously, which early-returns if the engine isn't initialized yet —
+        // so startCapture() never runs and isPreviewRunning stays false (the
+        // "Camera preview chalu nahi" notice on every launch after the first).
         initEngine()
+        requestPermissions()
     }
 
     private fun bindViews() {
