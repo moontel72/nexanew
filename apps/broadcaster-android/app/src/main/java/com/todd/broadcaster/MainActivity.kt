@@ -60,6 +60,12 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_TURN_PASS = "turn_pass"
         private const val KEY_PROFILE_IDX = "profile_idx"
         private const val KEY_FPS = "fps"
+
+        // Defaults matching the coturn relay on the media server (see
+        // media-engine/deploy/coturn/turnserver.conf). Editable in the dialog.
+        private const val TURN_DEFAULT_URL = "turn:135.181.46.27:3478"
+        private const val TURN_DEFAULT_USER = "traceodd"
+        private const val TURN_DEFAULT_PASS = "traceodd-turn-2026"
         private const val WATCHDOG_INTERVAL_MS = 15_000L
         private const val MAX_WATCHDOG_RESTARTS = 3
     }
@@ -495,9 +501,9 @@ class MainActivity : AppCompatActivity() {
         etCameraId.setText(cameraId)
         etToken.setText(token)
         etStun.setText(stunUrl)
-        etTurnUrl.setText(turnUrl)
-        etTurnUser.setText(turnUser)
-        etTurnPass.setText(turnPass)
+        etTurnUrl.setText(turnUrl.ifBlank { TURN_DEFAULT_URL })
+        etTurnUser.setText(turnUser.ifBlank { TURN_DEFAULT_USER })
+        etTurnPass.setText(turnPass.ifBlank { TURN_DEFAULT_PASS })
 
         // Paste the full ingest URL → fields below fill in live.
         etFullUrl.addTextChangedListener(object : TextWatcher {

@@ -29,6 +29,9 @@ class BroadcasterEngine(private val context: Context) {
         private const val TAG = "BroadcasterEngine"
         private const val ICE_GATHER_TIMEOUT_MS = 10_000L
         private const val DEFAULT_STUN = "stun:stun.l.google.com:19302"
+
+        /** Media server's own STUN/TURN host (coturn on the VPS). */
+        private const val SELF_STUN = "stun:135.181.46.27:3478"
     }
 
     private var factory: PeerConnectionFactory? = null
@@ -218,11 +221,26 @@ class BroadcasterEngine(private val context: Context) {
         val iceServers = mutableListOf<PeerConnection.IceServer>()
         val effectiveStun = stunUrl.ifEmpty { DEFAULT_STUN }
         iceServers.add(PeerConnection.IceServer.builder(effectiveStun).createIceServer())
+        // Google STUN is blocked on some carrier/CGNAT networks — also ask the
+        // media server's own STUN (same host as the TURN relay below).
+        iceServers.add(PeerConnection.IceServer.builder(SELF_STUN).createIceServer())
         if (!turnUrl.isNullOrEmpty()) {
-            val builder = PeerConnection.IceServer.builder(turnUrl)
-            if (!turnUsername.isNullOrEmpty()) builder.setUsername(turnUsername)
-            if (!turnPassword.isNullOrEmpty()) builder.setPassword(turnPassword)
-            iceServers.add(builder.createIceServer())
+            // Carrier CGNATs often drop LARGE UDP packets while small ones
+            // pass (observed: audio ~70 B flows, video ~1200 B never arrives).
+            // Offer BOTH transports: libwebrtc then picks UDP first and falls
+            // back to the TCP relay when the UDP path starves/dies.
+            val base = turnUrl.trim().trimEnd('/')
+            val variants = if (base.contains("?transport=")) {
+                listOf(base)
+            } else {
+                listOf("$base?transport=udp", "$base?transport=tcp")
+            }
+            for (url in variants) {
+                val builder = PeerConnection.IceServer.builder(url)
+                if (!turnUsername.isNullOrEmpty()) builder.setUsername(turnUsername)
+                if (!turnPassword.isNullOrEmpty()) builder.setPassword(turnPassword)
+                iceServers.add(builder.createIceServer())
+            }
         }
 
         val config = PeerConnection.RTCConfiguration(iceServers).apply {
