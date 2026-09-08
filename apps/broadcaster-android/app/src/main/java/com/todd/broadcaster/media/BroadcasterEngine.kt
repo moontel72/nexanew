@@ -40,6 +40,9 @@ class BroadcasterEngine(private val context: Context) {
     private var cameraCapturer: CameraVideoCapturer? = null
     private var eglBase: EglBase? = null
 
+    /** Fixed open-loop video bitrate, matched to the UI profile (Larix-style). */
+    private var videoBitrateBps = 800_000
+
     /** The local preview renderer (SurfaceViewRenderer). */
     var previewRenderer: SurfaceViewRenderer? = null
 
@@ -58,6 +61,9 @@ class BroadcasterEngine(private val context: Context) {
      * Must be called once before any other method.
      */
     fun initialize() {
+        // Native WebRTC logs (encoder/BWE/pacing) → logcat for field debugging.
+        Logging.enableLogToDebugOutput(Logging.Severity.LS_INFO)
+
         val options = PeerConnectionFactory.InitializationOptions.builder(context)
             .setEnableInternalTracer(false)
             .setFieldTrials("")
@@ -114,6 +120,11 @@ class BroadcasterEngine(private val context: Context) {
     ) {
         val f = factory ?: throw IllegalStateException("Not initialized")
 
+        videoBitrateBps =
+            (EncoderConfig.PROFILES.firstOrNull { it.width == width && it.height == height }
+                ?.bitrateKbps ?: 800) * 1000
+        Log.i(TAG, "Capture ${width}x${height}@${fps}fps → ${videoBitrateBps / 1000} kbps fixed")
+
         // ── Camera ──
         val enumerator = Camera2Enumerator(context)
         val deviceNames = enumerator.deviceNames
@@ -152,6 +163,35 @@ class BroadcasterEngine(private val context: Context) {
         }
 
         Log.i(TAG, "Camera capture started")
+    }
+
+    /**
+     * Removes congestion-control feedback negotiation (transport-cc, goog-remb)
+     * from an SDP so the sender runs open-loop at the fixed profile bitrate.
+     */
+    private fun stripCongestionControl(sdp: String): String {
+        val kept = sdp.split("\r\n", "\n").filterNot { raw ->
+            val l = raw.trim()
+            (l.startsWith("a=rtcp-fb:") && (l.contains("transport-cc") || l.contains("goog-remb"))) ||
+                (l.startsWith("a=extmap:") && (l.contains("transport-wide-cc") || l.contains("goog-remb")))
+        }
+        return kept.joinToString("\r\n")
+    }
+
+    /**
+     * Pins the video sender to the profile bitrate (min = max). The engine
+     * sends no congestion feedback, so without this libwebrtc starves video
+     * to ~30 kbps (the "video starts 30 s late then trickles" symptom).
+     */
+    private fun applyFixedVideoBitrate(pc: PeerConnection) {
+        val sender = pc.senders.firstOrNull { it.track()?.kind() == "video" } ?: return
+        val params = sender.parameters
+        val enc = params.encodings.firstOrNull() ?: return
+        enc.minBitrateBps = videoBitrateBps
+        enc.maxBitrateBps = videoBitrateBps
+        if (sender.setParameters(params)) {
+            Log.i(TAG, "Video sender pinned to ${videoBitrateBps / 1000} kbps (open-loop)")
+        }
     }
 
     /**
@@ -219,6 +259,10 @@ class BroadcasterEngine(private val context: Context) {
         peerConnection!!.addTrack(vt)
         peerConnection!!.addTrack(at)
 
+        // The media engine sends no congestion feedback; libwebrtc's estimator
+        // then starves video to ~30 kbps. Run open-loop at the profile bitrate.
+        applyFixedVideoBitrate(peerConnection!!)
+
         // ── Codec preference: H264 first ──
         // The DefaultVideoEncoderFactory already prefers hardware H264 when available.
         // We log the transceiver setup for debugging; the engine will negotiate
@@ -241,6 +285,14 @@ class BroadcasterEngine(private val context: Context) {
                     if (cont.isActive) cont.resume("")
                     return
                 }
+                // Strip congestion-feedback negotiation (transport-cc / goog-remb)
+                // from the offer: the engine never answers it, and negotiating it
+                // starves the libwebrtc sender to ~30 kbps. Open-loop = the fixed
+                // bitrate applied in applyFixedVideoBitrate().
+                val cleanSdp = SessionDescription(
+                    sdp.type,
+                    stripCongestionControl(sdp.description),
+                )
                 peerConnection!!.setLocalDescription(object : SdpObserver {
                     override fun onCreateSuccess(p0: SessionDescription?) {}
                     override fun onSetSuccess() {
@@ -263,7 +315,7 @@ class BroadcasterEngine(private val context: Context) {
                         Log.e(TAG, "setLocalDescription failed: $p0")
                         if (cont.isActive) cont.resume("")
                     }
-                }, sdp)
+                }, cleanSdp)
             }
             override fun onCreateFailure(error: String?) {
                 Log.e(TAG, "createOffer failed: $error")

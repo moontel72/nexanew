@@ -76,7 +76,42 @@ lists VP8 first (publisher's codec order is preserved).
 - Second Android phone with the new APK → rules out this specific handset.
 - Phone dropdown at 360p/15 fps → capability floor check.
 
-## 6. Constraints (unchanged)
+## 7. UPDATE 2026-09-08 — A22 5G + engine PLIs prove it: sender BWE starvation
+
+New live evidence (session 14:25:46 UTC, room b7f13e87, Cam-05):
+
+```
+14:25:47 peer connection connected + track up Opus (instant)
+14:25:50/58, 14:26:10  engine: no video RTP yet — sending PLI (4/8/12s)  ← engine IS asking
+14:26:17 track up H264  ← first video RTP ~30 s AFTER connect
+14:26:28 next offer      ← app watchdog killed it 11 s after video finally started
+```
+
+Facts established this round:
+- Test phone is a **Galaxy A22 5G (SM-A226B, Dimensity 700, Android 11+)** — fully capable;
+  the J-series assumption was wrong. Larix/Ninja previously pushed video from this phone.
+- Camera preview runs from app open (capture path OK). Codec = H264 hw (42e01f) OK.
+- ICE/network now OK on multiple networks (candidates 4-6; one `candidates=0` stretch was a
+  transient network state; TCP to studio.traceodd.com fine from phone).
+- Engine sends PLIs on schedule yet video RTP stays ~0 for ~30 s, then trickles at ~25-30 kbps
+  (`Video bitrate too low` watchdog restarts every ~41 s kill it right as it starts).
+- The engine sends **no congestion feedback** (no TWCC/REMB to publishers — only the PLI
+  pump writes RTCP). libwebrtc's estimator then starves video to ~30 kbps; audio (fixed
+  rate) flows instantly. Larix/OBS work because they send open-loop fixed bitrate.
+
+Fix (commit `FIX: Open-loop video bitrate and no-progress watchdog`):
+- Strip transport-cc/goog-remb (rtcp-fb + extmap) from the local offer → no BWE negotiation.
+- Pin the video sender min=max bitrate to the UI profile (EncoderConfig bitrate) via
+  `RtpSender.setParameters` → Larix-style fixed CBR.
+- Watchdog now restarts only after 3 consecutive no-progress checks (~45 s) instead of any
+  single sub-50-kbps reading → gives the encoder its warmup window.
+- `Logging.enableLogToDebugOutput(LS_INFO)` → native WebRTC logs in logcat for the next run.
+
+Verify: engine shows `track up codec=H264` quickly, ingress ≥ profile kbps (480p→~800), no
+41 s restart cadence, video renders in Studio. If video still stalls: read logcat for the
+native `webrtc` encoder/BWE lines this build enables.
+
+## 8. Constraints (unchanged)
 
 - Do NOT weaken engine F1–F19 (PLI scope, SDP SSRC parsing, 409-not-live gate, etc.).
 - Client-side codec preference is explicitly allowed by brief #2 suspect 2.

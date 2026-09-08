@@ -59,7 +59,6 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_FPS = "fps"
         private const val WATCHDOG_INTERVAL_MS = 15_000L
         private const val MAX_WATCHDOG_RESTARTS = 3
-        private const val MIN_HEALTHY_BITRATE_KBPS = 50.0
     }
 
     // ── Views ──
@@ -90,6 +89,9 @@ class MainActivity : AppCompatActivity() {
     private var watchdogRestarts = 0
     private var lastBytesSent = 0L
     private var lastBytesSentAt = 0L
+    private var noProgressChecks = 0
+    private var lastCheckFrames = -1L
+    private var lastCheckBytes = -1L
     private var phase = "idle"
 
     // ── Config ──
@@ -304,6 +306,9 @@ class MainActivity : AppCompatActivity() {
 
                     isLive = true
                     watchdogRestarts = 0
+                    noProgressChecks = 0
+                    lastCheckFrames = -1L
+                    lastCheckBytes = -1L
                     lastBytesSent = 0L
                     lastBytesSentAt = 0L
                     updatePhase("live")
@@ -414,11 +419,26 @@ class MainActivity : AppCompatActivity() {
         )
         telemetry?.updateHealth(health)
 
-        // ── Stall detection ──
-        if (framesEncoded == 0L) {
-            handleVideoStall("Encoder produced 0 frames")
-        } else if (videoKbps != null && videoKbps < MIN_HEALTHY_BITRATE_KBPS) {
-            handleVideoStall("Video bitrate too low: ${videoKbps.toInt()} kbps")
+        // ── Stall detection: restart only on NO progress across three
+        // consecutive checks (~45 s). Some encoders take up to ~30 s to emit
+        // their first frame; killing the session on the first slow check
+        // starves them forever (the observed 41 s restart loop).
+        val progressed = framesEncoded > lastCheckFrames || bytesSent > lastCheckBytes
+        lastCheckFrames = framesEncoded
+        lastCheckBytes = bytesSent
+        if (progressed) {
+            noProgressChecks = 0
+        } else {
+            noProgressChecks++
+            Log.w(
+                TAG,
+                "No encoder progress (check $noProgressChecks/3): " +
+                    "$framesEncoded frames, ${videoKbps?.toInt() ?: 0} kbps"
+            )
+            if (noProgressChecks >= 3) {
+                noProgressChecks = 0
+                handleVideoStall("No video progress for 45s")
+            }
         }
     }
 
