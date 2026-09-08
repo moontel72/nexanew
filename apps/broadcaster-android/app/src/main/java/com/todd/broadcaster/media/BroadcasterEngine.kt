@@ -61,14 +61,16 @@ class BroadcasterEngine(private val context: Context) {
      * Must be called once before any other method.
      */
     fun initialize() {
-        // Native WebRTC logs (encoder/BWE/pacing) → logcat for field debugging.
-        Logging.enableLogToDebugOutput(Logging.Severity.LS_INFO)
-
         val options = PeerConnectionFactory.InitializationOptions.builder(context)
             .setEnableInternalTracer(false)
             .setFieldTrials("")
             .createInitializationOptions()
         PeerConnectionFactory.initialize(options)
+
+        // Native WebRTC logs (encoder/BWE/pacing) → logcat for field debugging.
+        // Must come AFTER PeerConnectionFactory.initialize(): the native
+        // library is only loaded there, and Logging JNI crashes before it.
+        Logging.enableLogToDebugOutput(Logging.Severity.LS_INFO)
 
         eglBase = EglBase.create()
 
