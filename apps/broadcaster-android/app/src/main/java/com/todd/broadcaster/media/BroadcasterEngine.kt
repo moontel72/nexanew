@@ -247,6 +247,14 @@ class BroadcasterEngine(private val context: Context) {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
             continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
             candidateNetworkPolicy = PeerConnection.CandidateNetworkPolicy.ALL
+            // Carrier CGNATs drop LARGE UDP packets while audio-sized ones
+            // pass, so ICE keeps the UDP pair "healthy" via tiny keepalives
+            // and video dies silently — libwebrtc never falls back to the
+            // TURN relay on its own. When a relay is configured, force
+            // RELAY policy so all media rides the (UDP/TCP) relay.
+            if (!turnUrl.isNullOrEmpty()) {
+                iceTransportsType = PeerConnection.IceTransportsType.RELAY
+            }
         }
 
         // ── Create PeerConnection ──
