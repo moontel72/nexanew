@@ -214,11 +214,11 @@ jobs:
             if [ -n '${{ vars.TURN_SERVERS }}' ]; then
               printf 'TURN_SERVERS=%s\n' '${{ vars.TURN_SERVERS }}' >> /opt/todd-media-engine/.env
             else
-              # Loopback coturn relay (todd-turn.service) — the engine
-              # allocates relay candidates there; clients see the public
-              # IP via external-ip in turnserver.conf. UDP first, TCP
-              # fallback for networks that block UDP entirely.
-              printf 'TURN_SERVERS=%s\n' 'turn:traceodd:traceodd-turn-2026@127.0.0.1:3478?transport=udp,turn:traceodd:traceodd-turn-2026@127.0.0.1:3478?transport=tcp' >> /opt/todd-media-engine/.env
+              # coturn runs on the HOST (todd-turn.service, external-ip
+              # 135.181.46.27); the engine runs in docker, so loopback is
+              # wrong — use the bridge gateway. UDP only: webrtc-rs cannot
+              # allocate TCP-turn relay candidates.
+              printf 'TURN_SERVERS=%s\n' 'turn:traceodd:traceodd-turn-2026@172.17.0.1:3478?transport=udp' >> /opt/todd-media-engine/.env
             fi
             chmod 600 /opt/todd-media-engine/.env
             echo '✅ /opt/todd-media-engine/.env written'

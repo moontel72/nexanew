@@ -55,6 +55,9 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_CAMERA_ID = "camera_id"
         private const val KEY_TOKEN = "token"
         private const val KEY_STUN = "stun_url"
+        private const val KEY_TURN_URL = "turn_url"
+        private const val KEY_TURN_USER = "turn_user"
+        private const val KEY_TURN_PASS = "turn_pass"
         private const val KEY_PROFILE_IDX = "profile_idx"
         private const val KEY_FPS = "fps"
         private const val WATCHDOG_INTERVAL_MS = 15_000L
@@ -100,6 +103,9 @@ class MainActivity : AppCompatActivity() {
     private var cameraId = ""
     private var token = ""
     private var stunUrl = "stun:stun.l.google.com:19302"
+    private var turnUrl = ""
+    private var turnUser = ""
+    private var turnPass = ""
     private var profileIdx = EncoderConfig.PROFILES.indexOf(EncoderConfig.DEFAULT_PROFILE)
     private var fps = EncoderConfig.DEFAULT_FPS
 
@@ -273,7 +279,12 @@ class MainActivity : AppCompatActivity() {
             // ── Step 1: Create SDP offer with full ICE gather ──
             showNotice("Gathering ICE candidates...")
             val offerSdp = try {
-                engine.createOffer(stunUrl = stunUrl)
+                engine.createOffer(
+                    stunUrl = stunUrl,
+                    turnUrl = turnUrl.ifBlank { null },
+                    turnUsername = turnUser.ifBlank { null },
+                    turnPassword = turnPass.ifBlank { null },
+                )
             } catch (e: Exception) {
                 Log.e(TAG, "Offer creation failed: ${e.message}", e)
                 showNotice("Offer failed: ${e.message}")
@@ -472,6 +483,9 @@ class MainActivity : AppCompatActivity() {
         val etCameraId = dialogView.findViewById<EditText>(R.id.et_camera_id)
         val etToken = dialogView.findViewById<EditText>(R.id.et_token)
         val etStun = dialogView.findViewById<EditText>(R.id.et_stun)
+        val etTurnUrl = dialogView.findViewById<EditText>(R.id.et_turn_url)
+        val etTurnUser = dialogView.findViewById<EditText>(R.id.et_turn_user)
+        val etTurnPass = dialogView.findViewById<EditText>(R.id.et_turn_pass)
         val spinnerFps = dialogView.findViewById<Spinner>(R.id.spinner_fps)
         val spinnerProfile = dialogView.findViewById<Spinner>(R.id.spinner_profile)
 
@@ -481,6 +495,9 @@ class MainActivity : AppCompatActivity() {
         etCameraId.setText(cameraId)
         etToken.setText(token)
         etStun.setText(stunUrl)
+        etTurnUrl.setText(turnUrl)
+        etTurnUser.setText(turnUser)
+        etTurnPass.setText(turnPass)
 
         // Paste the full ingest URL → fields below fill in live.
         etFullUrl.addTextChangedListener(object : TextWatcher {
@@ -526,6 +543,9 @@ class MainActivity : AppCompatActivity() {
                 cameraId = parsed?.cameraId ?: etCameraId.text.toString().trim()
                 token = parsed?.token ?: etToken.text.toString().trim()
                 stunUrl = etStun.text.toString().trim().ifEmpty { "stun:stun.l.google.com:19302" }
+                turnUrl = etTurnUrl.text.toString().trim()
+                turnUser = etTurnUser.text.toString().trim()
+                turnPass = etTurnPass.text.toString().trim()
                 fps = EncoderConfig.FPS_OPTIONS[spinnerFps.selectedItemPosition].fps
                 profileIdx = spinnerProfile.selectedItemPosition
                 saveConfig()
@@ -541,6 +561,9 @@ class MainActivity : AppCompatActivity() {
         cameraId = prefs.getString(KEY_CAMERA_ID, "") ?: ""
         token = prefs.getString(KEY_TOKEN, "") ?: ""
         stunUrl = prefs.getString(KEY_STUN, "stun:stun.l.google.com:19302") ?: "stun:stun.l.google.com:19302"
+        turnUrl = prefs.getString(KEY_TURN_URL, "") ?: ""
+        turnUser = prefs.getString(KEY_TURN_USER, "") ?: ""
+        turnPass = prefs.getString(KEY_TURN_PASS, "") ?: ""
         profileIdx = prefs.getInt(KEY_PROFILE_IDX, EncoderConfig.PROFILES.indexOf(EncoderConfig.DEFAULT_PROFILE))
         fps = prefs.getInt(KEY_FPS, EncoderConfig.DEFAULT_FPS)
         if (EncoderConfig.FPS_OPTIONS.none { it.fps == fps }) fps = EncoderConfig.DEFAULT_FPS
@@ -553,6 +576,9 @@ class MainActivity : AppCompatActivity() {
             putString(KEY_CAMERA_ID, cameraId)
             putString(KEY_TOKEN, token)
             putString(KEY_STUN, stunUrl)
+            putString(KEY_TURN_URL, turnUrl)
+            putString(KEY_TURN_USER, turnUser)
+            putString(KEY_TURN_PASS, turnPass)
             putInt(KEY_PROFILE_IDX, profileIdx)
             putInt(KEY_FPS, fps)
             apply()

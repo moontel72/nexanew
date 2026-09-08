@@ -115,6 +115,49 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="TURN Server (optional — carrier NAT fix)"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/et_turn_url"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="turn:135.181.46.27:3478"
+        android:inputType="textUri"
+        android:textSize="14sp"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+
+        <EditText
+            android:id="@+id/et_turn_user"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="TURN username"
+            android:inputType="text"
+            android:textSize="14sp"
+            android:layout_marginEnd="8dp" />
+
+        <EditText
+            android:id="@+id/et_turn_pass"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="TURN password"
+            android:inputType="textPassword"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:text="Frame Rate (FPS)"
         android:textSize="12sp"
         android:textColor="#666666"
